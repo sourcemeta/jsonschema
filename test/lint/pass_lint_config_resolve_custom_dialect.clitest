@@ -1,0 +1,49 @@
+WRITE v2/dialect.json UNTIL EOF
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.com/my-dialect",
+  "$vocabulary": {
+    "https://json-schema.org/draft/2020-12/vocab/core": true,
+    "https://json-schema.org/draft/2020-12/vocab/applicator": true,
+    "https://json-schema.org/draft/2020-12/vocab/unevaluated": true,
+    "https://json-schema.org/draft/2020-12/vocab/validation": true,
+    "https://json-schema.org/draft/2020-12/vocab/meta-data": true,
+    "https://json-schema.org/draft/2020-12/vocab/format-annotation": true,
+    "https://json-schema.org/draft/2020-12/vocab/content": true
+  },
+  "type": "object"
+}
+EOF
+
+WRITE v2/person.json UNTIL EOF
+{
+  "$schema": "https://example.com/my-dialect",
+  "title": "Person",
+  "description": "A person schema",
+  "type": "object",
+  "examples": [ { "name": "John" } ]
+}
+EOF
+
+WRITE jsonschema.json UNTIL EOF
+{
+  "resolve": {
+    "https://example.com/my-dialect": "./v2/dialect.json"
+  }
+}
+EOF
+
+RUN lint v2/person.json --verbose STDIN /dev/null IN . INTO result_0.txt EXPECTING 0
+
+REPLACE '\\\\' WITH '/' IN result_0.txt
+REPLACE '\\(?!")' WITH '/' IN result_0.txt
+REPLACE $CWD WITH '[CWD]' IN result_0.txt
+
+WRITE expected_0.txt UNTIL EOF
+2> Using extension: .json
+2> Using extension: .yaml
+2> Using extension: .yml
+2> Linting: [CWD]/v2/person.json
+EOF
+
+COMPARE result_0.txt AGAINST expected_0.txt

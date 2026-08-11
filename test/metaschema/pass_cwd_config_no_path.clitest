@@ -1,0 +1,35 @@
+WRITE schema.json UNTIL EOF
+{
+  "$schema": "http://json-schema.org/draft-04/schema#",
+  "title": "Test",
+  "description": "Test schema",
+  "type": "string"
+}
+EOF
+
+WRITE jsonschema.json UNTIL EOF
+{
+  "defaultDialect": "http://json-schema.org/draft-04/schema#",
+  "ignore": [
+    "./jsonschema.json"
+  ]
+}
+EOF
+
+RUN metaschema --verbose STDIN /dev/null IN . INTO result.txt EXPECTING 0
+REPLACE '\\\\' WITH '/' IN result.txt
+REPLACE '\\(?!")' WITH '/' IN result.txt
+
+REPLACE $CWD WITH '[CWD]' IN result.txt
+
+WRITE expected.txt UNTIL EOF
+2> warning: Recursively processing every file in [CWD] as the configuration file does not set an explicit path
+2> Ignoring path from configuration: "[CWD]/jsonschema.json"
+2> Using extension: .json
+2> Using extension: .yaml
+2> Using extension: .yml
+2> ok: [CWD]/schema.json
+2>   matches http://json-schema.org/draft-04/schema#
+EOF
+
+COMPARE result.txt AGAINST expected.txt

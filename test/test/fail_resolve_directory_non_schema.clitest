@@ -1,0 +1,46 @@
+MAKE DIRECTORY schemas
+
+WRITE schemas/schema.json UNTIL EOF
+{
+  "id": "https://example.com",
+  "$schema": "http://json-schema.org/draft-04/schema#",
+  "title": "Test",
+  "description": "Test schema",
+  "definitions": {
+    "foo": { "type": "string" },
+    "bar": { "type": "integer" }
+  }
+}
+EOF
+
+WRITE schemas/test.json UNTIL EOF
+{
+  "target": "https://example.com#/definitions/foo",
+  "tests": [
+    {
+      "description": "Fail",
+      "valid": true,
+      "data": 5
+    }
+  ]
+}
+EOF
+
+// Schema input error
+RUN test schemas/test.json --verbose --jobs 1 --resolve $CWD STDIN /dev/null IN . INTO result_0.txt EXPECTING 4
+REPLACE '\\\\' WITH '/' IN result_0.txt
+REPLACE '\\(?!")' WITH '/' IN result_0.txt
+
+REPLACE $CWD WITH '[CWD]' IN result_0.txt
+
+WRITE expected_0.txt UNTIL EOF
+2> Using parallelism: 1
+2> error: Could not determine the base dialect of the schema
+2>   at file path [CWD]/schemas/test.json
+2>
+2> Are you sure the input is a valid JSON Schema and its base dialect is known?
+2> If the input does not declare the `$schema` keyword, you might want to
+2> explicitly declare a default dialect using `--default-dialect/-d`
+EOF
+
+COMPARE result_0.txt AGAINST expected_0.txt

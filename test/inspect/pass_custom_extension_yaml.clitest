@@ -1,0 +1,70 @@
+WRITE schema.custom UNTIL EOF
+$id: https://example.com
+$schema: https://json-schema.org/draft/2020-12/schema
+type: string
+EOF
+
+RUN inspect schema.custom STDIN /dev/null IN . INTO result.txt EXPECTING 0
+
+WRITE expected.txt UNTIL EOF
+1> (RESOURCE) URI: https://example.com
+1>     Type              : Static
+1>     Root              : https://example.com
+1>     Pointer           :
+1>     File Position     : 1:1
+1>     Base              : https://example.com
+1>     Relative Pointer  :
+1>     Dialect           : https://json-schema.org/draft/2020-12/schema
+1>     Base Dialect      : https://json-schema.org/draft/2020-12/schema
+1>     Parent            : <NONE>
+1>     Property Name     : no
+1>     Orphan            : no
+1>
+1> (POINTER) URI: https://example.com#/$id
+1>     Type              : Static
+1>     Root              : https://example.com
+1>     Pointer           : /$id
+1>     File Position     : 1:1
+1>     Base              : https://example.com
+1>     Relative Pointer  : /$id
+1>     Dialect           : https://json-schema.org/draft/2020-12/schema
+1>     Base Dialect      : https://json-schema.org/draft/2020-12/schema
+1>     Parent            :
+1>     Property Name     : no
+1>     Orphan            : no
+1>
+1> (POINTER) URI: https://example.com#/$schema
+1>     Type              : Static
+1>     Root              : https://example.com
+1>     Pointer           : /$schema
+1>     File Position     : 2:1
+1>     Base              : https://example.com
+1>     Relative Pointer  : /$schema
+1>     Dialect           : https://json-schema.org/draft/2020-12/schema
+1>     Base Dialect      : https://json-schema.org/draft/2020-12/schema
+1>     Parent            :
+1>     Property Name     : no
+1>     Orphan            : no
+1>
+1> (POINTER) URI: https://example.com#/type
+1>     Type              : Static
+1>     Root              : https://example.com
+1>     Pointer           : /type
+1>     File Position     : 3:1
+1>     Base              : https://example.com
+1>     Relative Pointer  : /type
+1>     Dialect           : https://json-schema.org/draft/2020-12/schema
+1>     Base Dialect      : https://json-schema.org/draft/2020-12/schema
+1>     Parent            :
+1>     Property Name     : no
+1>     Orphan            : no
+1>
+1> (REFERENCE) ORIGIN: /$schema
+1>     Type              : Static
+1>     File Position     : 2:1
+1>     Destination       : https://json-schema.org/draft/2020-12/schema
+1>     - (w/o fragment)  : https://json-schema.org/draft/2020-12/schema
+1>     - (fragment)      : <NONE>
+EOF
+
+COMPARE result.txt AGAINST expected.txt

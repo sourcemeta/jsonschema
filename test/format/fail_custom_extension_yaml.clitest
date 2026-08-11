@@ -1,0 +1,19 @@
+WRITE schema.custom UNTIL EOF
+$id: https://example.com
+$schema: https://json-schema.org/draft/2020-12/schema
+type: string
+EOF
+
+// Not supported
+RUN fmt schema.custom STDIN /dev/null IN . INTO result.txt EXPECTING 3
+REPLACE '\\\\' WITH '/' IN result.txt
+REPLACE '\\(?!")' WITH '/' IN result.txt
+
+REPLACE $CWD WITH '[CWD]' IN result.txt
+
+WRITE expected.txt UNTIL EOF
+2> error: This command does not support YAML input files yet
+2>   at file path [CWD]/schema.custom
+EOF
+
+COMPARE result.txt AGAINST expected.txt

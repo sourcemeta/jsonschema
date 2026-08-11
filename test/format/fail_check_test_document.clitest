@@ -1,0 +1,31 @@
+WRITE test.json UNTIL EOF
+{
+  "tests": [
+    {
+      "description": "I expect to pass",
+      "valid": true,
+      "data": {
+        "bar": 1,
+        "foo": 1
+      }
+    }
+  ],
+  "target": "https://example.com/my-schema"
+}
+EOF
+
+// Validation failure
+RUN fmt test.json --check STDIN /dev/null IN . INTO result.txt EXPECTING 2
+REPLACE '\\\\' WITH '/' IN result.txt
+REPLACE '\\(?!")' WITH '/' IN result.txt
+
+REPLACE $CWD WITH '[CWD]' IN result.txt
+
+WRITE expected.txt UNTIL EOF
+2> Interpreting as a test file: [CWD]/test.json
+2> fail: [CWD]/test.json
+2>
+2> Run the `fmt` command without `--check/-c` to fix the formatting
+EOF
+
+COMPARE result.txt AGAINST expected.txt

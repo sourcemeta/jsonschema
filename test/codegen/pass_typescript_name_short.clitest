@@ -1,0 +1,27 @@
+WRITE schema.json UNTIL EOF
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "name": { "type": "string" },
+    "age": { "type": "integer" }
+  },
+  "required": [ "name" ]
+}
+EOF
+
+RUN codegen schema.json -n Person --target typescript STDIN /dev/null IN . INTO result.txt EXPECTING 0
+
+WRITE expected.txt UNTIL EOF
+1> export type PersonName = string;
+1>
+1> export type PersonAge = number;
+1>
+1> export interface Person {
+1>   "name": PersonName;
+1>   "age"?: PersonAge;
+1>   [key: string]: unknown | undefined;
+1> }
+EOF
+
+COMPARE result.txt AGAINST expected.txt

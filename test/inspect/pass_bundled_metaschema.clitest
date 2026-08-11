@@ -1,0 +1,285 @@
+WRITE schema.json UNTIL EOF
+{
+  "$schema": "https://example.com/meta",
+  "$id": "https://example.com/schema",
+  "type": "string",
+  "$defs": {
+    "https://example.com/meta": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "$id": "https://example.com/meta",
+      "$vocabulary": {
+        "https://json-schema.org/draft/2020-12/vocab/core": true,
+        "https://json-schema.org/draft/2020-12/vocab/validation": true
+      },
+      "type": "object"
+    }
+  }
+}
+EOF
+
+RUN inspect schema.json STDIN /dev/null IN . INTO result.txt EXPECTING 0
+
+WRITE expected.txt UNTIL EOF
+1> (RESOURCE) URI: https://example.com/meta
+1>     Type              : Static
+1>     Root              : https://example.com/schema
+1>     Pointer           : /$defs/https:~1~1example.com~1meta
+1>     File Position     : 6:5
+1>     Base              : https://example.com/meta
+1>     Relative Pointer  :
+1>     Dialect           : https://json-schema.org/draft/2020-12/schema
+1>     Base Dialect      : https://json-schema.org/draft/2020-12/schema
+1>     Parent            :
+1>     Property Name     : no
+1>     Orphan            : yes
+1>
+1> (POINTER) URI: https://example.com/meta#/$id
+1>     Type              : Static
+1>     Root              : https://example.com/schema
+1>     Pointer           : /$defs/https:~1~1example.com~1meta/$id
+1>     File Position     : 8:7
+1>     Base              : https://example.com/meta
+1>     Relative Pointer  : /$id
+1>     Dialect           : https://json-schema.org/draft/2020-12/schema
+1>     Base Dialect      : https://json-schema.org/draft/2020-12/schema
+1>     Parent            : /$defs/https:~1~1example.com~1meta
+1>     Property Name     : no
+1>     Orphan            : yes
+1>
+1> (POINTER) URI: https://example.com/meta#/$schema
+1>     Type              : Static
+1>     Root              : https://example.com/schema
+1>     Pointer           : /$defs/https:~1~1example.com~1meta/$schema
+1>     File Position     : 7:7
+1>     Base              : https://example.com/meta
+1>     Relative Pointer  : /$schema
+1>     Dialect           : https://json-schema.org/draft/2020-12/schema
+1>     Base Dialect      : https://json-schema.org/draft/2020-12/schema
+1>     Parent            : /$defs/https:~1~1example.com~1meta
+1>     Property Name     : no
+1>     Orphan            : yes
+1>
+1> (POINTER) URI: https://example.com/meta#/$vocabulary
+1>     Type              : Static
+1>     Root              : https://example.com/schema
+1>     Pointer           : /$defs/https:~1~1example.com~1meta/$vocabulary
+1>     File Position     : 9:7
+1>     Base              : https://example.com/meta
+1>     Relative Pointer  : /$vocabulary
+1>     Dialect           : https://json-schema.org/draft/2020-12/schema
+1>     Base Dialect      : https://json-schema.org/draft/2020-12/schema
+1>     Parent            : /$defs/https:~1~1example.com~1meta
+1>     Property Name     : no
+1>     Orphan            : yes
+1>
+1> (POINTER) URI: https://example.com/meta#/$vocabulary/https:~1~1json-schema.org~1draft~12020-12~1vocab~1core
+1>     Type              : Static
+1>     Root              : https://example.com/schema
+1>     Pointer           : /$defs/https:~1~1example.com~1meta/$vocabulary/https:~1~1json-schema.org~1draft~12020-12~1vocab~1core
+1>     File Position     : 10:9
+1>     Base              : https://example.com/meta
+1>     Relative Pointer  : /$vocabulary/https:~1~1json-schema.org~1draft~12020-12~1vocab~1core
+1>     Dialect           : https://json-schema.org/draft/2020-12/schema
+1>     Base Dialect      : https://json-schema.org/draft/2020-12/schema
+1>     Parent            : /$defs/https:~1~1example.com~1meta
+1>     Property Name     : no
+1>     Orphan            : yes
+1>
+1> (POINTER) URI: https://example.com/meta#/$vocabulary/https:~1~1json-schema.org~1draft~12020-12~1vocab~1validation
+1>     Type              : Static
+1>     Root              : https://example.com/schema
+1>     Pointer           : /$defs/https:~1~1example.com~1meta/$vocabulary/https:~1~1json-schema.org~1draft~12020-12~1vocab~1validation
+1>     File Position     : 11:9
+1>     Base              : https://example.com/meta
+1>     Relative Pointer  : /$vocabulary/https:~1~1json-schema.org~1draft~12020-12~1vocab~1validation
+1>     Dialect           : https://json-schema.org/draft/2020-12/schema
+1>     Base Dialect      : https://json-schema.org/draft/2020-12/schema
+1>     Parent            : /$defs/https:~1~1example.com~1meta
+1>     Property Name     : no
+1>     Orphan            : yes
+1>
+1> (POINTER) URI: https://example.com/meta#/type
+1>     Type              : Static
+1>     Root              : https://example.com/schema
+1>     Pointer           : /$defs/https:~1~1example.com~1meta/type
+1>     File Position     : 13:7
+1>     Base              : https://example.com/meta
+1>     Relative Pointer  : /type
+1>     Dialect           : https://json-schema.org/draft/2020-12/schema
+1>     Base Dialect      : https://json-schema.org/draft/2020-12/schema
+1>     Parent            : /$defs/https:~1~1example.com~1meta
+1>     Property Name     : no
+1>     Orphan            : yes
+1>
+1> (RESOURCE) URI: https://example.com/schema
+1>     Type              : Static
+1>     Root              : https://example.com/schema
+1>     Pointer           :
+1>     File Position     : 1:1
+1>     Base              : https://example.com/schema
+1>     Relative Pointer  :
+1>     Dialect           : https://example.com/meta
+1>     Base Dialect      : https://json-schema.org/draft/2020-12/schema
+1>     Parent            : <NONE>
+1>     Property Name     : no
+1>     Orphan            : no
+1>
+1> (POINTER) URI: https://example.com/schema#/$defs
+1>     Type              : Static
+1>     Root              : https://example.com/schema
+1>     Pointer           : /$defs
+1>     File Position     : 5:3
+1>     Base              : https://example.com/schema
+1>     Relative Pointer  : /$defs
+1>     Dialect           : https://example.com/meta
+1>     Base Dialect      : https://json-schema.org/draft/2020-12/schema
+1>     Parent            :
+1>     Property Name     : no
+1>     Orphan            : no
+1>
+1> (SUBSCHEMA) URI: https://example.com/schema#/$defs/https:~1~1example.com~1meta
+1>     Type              : Static
+1>     Root              : https://example.com/schema
+1>     Pointer           : /$defs/https:~1~1example.com~1meta
+1>     File Position     : 6:5
+1>     Base              : https://example.com/meta
+1>     Relative Pointer  :
+1>     Dialect           : https://json-schema.org/draft/2020-12/schema
+1>     Base Dialect      : https://json-schema.org/draft/2020-12/schema
+1>     Parent            :
+1>     Property Name     : no
+1>     Orphan            : yes
+1>
+1> (POINTER) URI: https://example.com/schema#/$defs/https:~1~1example.com~1meta/$id
+1>     Type              : Static
+1>     Root              : https://example.com/schema
+1>     Pointer           : /$defs/https:~1~1example.com~1meta/$id
+1>     File Position     : 8:7
+1>     Base              : https://example.com/meta
+1>     Relative Pointer  : /$id
+1>     Dialect           : https://json-schema.org/draft/2020-12/schema
+1>     Base Dialect      : https://json-schema.org/draft/2020-12/schema
+1>     Parent            : /$defs/https:~1~1example.com~1meta
+1>     Property Name     : no
+1>     Orphan            : yes
+1>
+1> (POINTER) URI: https://example.com/schema#/$defs/https:~1~1example.com~1meta/$schema
+1>     Type              : Static
+1>     Root              : https://example.com/schema
+1>     Pointer           : /$defs/https:~1~1example.com~1meta/$schema
+1>     File Position     : 7:7
+1>     Base              : https://example.com/meta
+1>     Relative Pointer  : /$schema
+1>     Dialect           : https://json-schema.org/draft/2020-12/schema
+1>     Base Dialect      : https://json-schema.org/draft/2020-12/schema
+1>     Parent            : /$defs/https:~1~1example.com~1meta
+1>     Property Name     : no
+1>     Orphan            : yes
+1>
+1> (POINTER) URI: https://example.com/schema#/$defs/https:~1~1example.com~1meta/$vocabulary
+1>     Type              : Static
+1>     Root              : https://example.com/schema
+1>     Pointer           : /$defs/https:~1~1example.com~1meta/$vocabulary
+1>     File Position     : 9:7
+1>     Base              : https://example.com/meta
+1>     Relative Pointer  : /$vocabulary
+1>     Dialect           : https://json-schema.org/draft/2020-12/schema
+1>     Base Dialect      : https://json-schema.org/draft/2020-12/schema
+1>     Parent            : /$defs/https:~1~1example.com~1meta
+1>     Property Name     : no
+1>     Orphan            : yes
+1>
+1> (POINTER) URI: https://example.com/schema#/$defs/https:~1~1example.com~1meta/$vocabulary/https:~1~1json-schema.org~1draft~12020-12~1vocab~1core
+1>     Type              : Static
+1>     Root              : https://example.com/schema
+1>     Pointer           : /$defs/https:~1~1example.com~1meta/$vocabulary/https:~1~1json-schema.org~1draft~12020-12~1vocab~1core
+1>     File Position     : 10:9
+1>     Base              : https://example.com/meta
+1>     Relative Pointer  : /$vocabulary/https:~1~1json-schema.org~1draft~12020-12~1vocab~1core
+1>     Dialect           : https://json-schema.org/draft/2020-12/schema
+1>     Base Dialect      : https://json-schema.org/draft/2020-12/schema
+1>     Parent            : /$defs/https:~1~1example.com~1meta
+1>     Property Name     : no
+1>     Orphan            : yes
+1>
+1> (POINTER) URI: https://example.com/schema#/$defs/https:~1~1example.com~1meta/$vocabulary/https:~1~1json-schema.org~1draft~12020-12~1vocab~1validation
+1>     Type              : Static
+1>     Root              : https://example.com/schema
+1>     Pointer           : /$defs/https:~1~1example.com~1meta/$vocabulary/https:~1~1json-schema.org~1draft~12020-12~1vocab~1validation
+1>     File Position     : 11:9
+1>     Base              : https://example.com/meta
+1>     Relative Pointer  : /$vocabulary/https:~1~1json-schema.org~1draft~12020-12~1vocab~1validation
+1>     Dialect           : https://json-schema.org/draft/2020-12/schema
+1>     Base Dialect      : https://json-schema.org/draft/2020-12/schema
+1>     Parent            : /$defs/https:~1~1example.com~1meta
+1>     Property Name     : no
+1>     Orphan            : yes
+1>
+1> (POINTER) URI: https://example.com/schema#/$defs/https:~1~1example.com~1meta/type
+1>     Type              : Static
+1>     Root              : https://example.com/schema
+1>     Pointer           : /$defs/https:~1~1example.com~1meta/type
+1>     File Position     : 13:7
+1>     Base              : https://example.com/meta
+1>     Relative Pointer  : /type
+1>     Dialect           : https://json-schema.org/draft/2020-12/schema
+1>     Base Dialect      : https://json-schema.org/draft/2020-12/schema
+1>     Parent            : /$defs/https:~1~1example.com~1meta
+1>     Property Name     : no
+1>     Orphan            : yes
+1>
+1> (POINTER) URI: https://example.com/schema#/$id
+1>     Type              : Static
+1>     Root              : https://example.com/schema
+1>     Pointer           : /$id
+1>     File Position     : 3:3
+1>     Base              : https://example.com/schema
+1>     Relative Pointer  : /$id
+1>     Dialect           : https://example.com/meta
+1>     Base Dialect      : https://json-schema.org/draft/2020-12/schema
+1>     Parent            :
+1>     Property Name     : no
+1>     Orphan            : no
+1>
+1> (POINTER) URI: https://example.com/schema#/$schema
+1>     Type              : Static
+1>     Root              : https://example.com/schema
+1>     Pointer           : /$schema
+1>     File Position     : 2:3
+1>     Base              : https://example.com/schema
+1>     Relative Pointer  : /$schema
+1>     Dialect           : https://example.com/meta
+1>     Base Dialect      : https://json-schema.org/draft/2020-12/schema
+1>     Parent            :
+1>     Property Name     : no
+1>     Orphan            : no
+1>
+1> (POINTER) URI: https://example.com/schema#/type
+1>     Type              : Static
+1>     Root              : https://example.com/schema
+1>     Pointer           : /type
+1>     File Position     : 4:3
+1>     Base              : https://example.com/schema
+1>     Relative Pointer  : /type
+1>     Dialect           : https://example.com/meta
+1>     Base Dialect      : https://json-schema.org/draft/2020-12/schema
+1>     Parent            :
+1>     Property Name     : no
+1>     Orphan            : no
+1>
+1> (REFERENCE) ORIGIN: /$defs/https:~1~1example.com~1meta/$schema
+1>     Type              : Static
+1>     File Position     : 7:7
+1>     Destination       : https://json-schema.org/draft/2020-12/schema
+1>     - (w/o fragment)  : https://json-schema.org/draft/2020-12/schema
+1>     - (fragment)      : <NONE>
+1>
+1> (REFERENCE) ORIGIN: /$schema
+1>     Type              : Static
+1>     File Position     : 2:3
+1>     Destination       : https://example.com/meta
+1>     - (w/o fragment)  : https://example.com/meta
+1>     - (fragment)      : <NONE>
+EOF
+
+COMPARE result.txt AGAINST expected.txt

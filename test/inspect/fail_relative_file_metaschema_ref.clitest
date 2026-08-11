@@ -1,0 +1,29 @@
+WRITE schemas/folder/test.json UNTIL EOF
+{ "$schema": "../meta.json" }
+EOF
+
+WRITE schemas/meta.json UNTIL EOF
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Test",
+  "description": "Test schema",
+  "$vocabulary": { "https://json-schema.org/draft/2020-12/vocab/core": true },
+  "$dynamicAnchor": "meta",
+  "$ref": "https://json-schema.org/draft/2020-12/meta/core"
+}
+EOF
+
+// Schema input error
+RUN inspect schemas/folder/test.json --resolve schemas/meta.json STDIN /dev/null IN . INTO result.txt EXPECTING 4
+REPLACE '\\\\' WITH '/' IN result.txt
+REPLACE '\\(?!")' WITH '/' IN result.txt
+
+REPLACE $CWD WITH '[CWD]' IN result.txt
+
+WRITE expected.txt UNTIL EOF
+2> error: Relative meta-schema URIs are not valid according to the JSON Schema specification
+2>   at identifier ../meta.json
+2>   at file path [CWD]/schemas/folder/test.json
+EOF
+
+COMPARE result.txt AGAINST expected.txt

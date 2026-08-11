@@ -1,0 +1,45 @@
+WRITE schema.json UNTIL EOF
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Test",
+  "description": "Test schema",
+  "properties": {
+    "foo": {
+      "type": "string"
+    }
+  }
+}
+EOF
+
+WRITE instance.json UNTIL EOF
+{ "foo": "bar" }
+EOF
+
+RUN compile schema.json STDIN /dev/null IN . INTO result_0.txt EXPECTING 0
+
+COPY result_0.txt TO template.json
+KEEP LINES MATCHING '^1>' IN template.json
+REPLACE '^1> ?' WITH '' IN template.json
+
+RUN validate schema.json instance.json --verbose --template template.json STDIN /dev/null IN . INTO result_1.txt EXPECTING 0
+REPLACE '\\\\' WITH '/' IN result_1.txt
+REPLACE '\\(?!")' WITH '/' IN result_1.txt
+
+REPLACE $CWD WITH '[CWD]' IN result_1.txt
+
+WRITE expected_1.txt UNTIL EOF
+2> Parsing pre-compiled schema template: [CWD]/template.json
+2> ok: [CWD]/instance.json
+2>   matches [CWD]/schema.json
+2> annotation: "Test schema"
+2>   at instance location "" (line 1, column 1)
+2>   at evaluate path "/description"
+2> annotation: "Test"
+2>   at instance location "" (line 1, column 1)
+2>   at evaluate path "/title"
+2> annotation: "foo"
+2>   at instance location "" (line 1, column 1)
+2>   at evaluate path "/properties"
+EOF
+
+COMPARE result_1.txt AGAINST expected_1.txt

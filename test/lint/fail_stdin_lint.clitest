@@ -1,0 +1,63 @@
+WRITE stdin_0 UNTIL EOF
+{
+  "$schema": "http://json-schema.org/draft-04/schema#",
+  "title": "Test",
+  "description": "Test schema",
+  "type": "string",
+  "enum": [ "foo" ]
+}
+EOF
+
+// Validation failure
+RUN lint - STDIN stdin_0 IN . INTO result_0.txt EXPECTING 2
+
+WRITE expected_0.txt UNTIL EOF
+1> tag:sourcemeta.com,2026:jsonschema/stdin:6:3:
+1>   Setting `type` alongside `enum` is considered an anti-pattern, as the enumeration choices already imply their respective types (enum_with_type)
+1>     at location "/enum"
+1> tag:sourcemeta.com,2026:jsonschema/stdin:5:3:
+1>   Setting `type` alongside `enum` is considered an anti-pattern, as the enumeration choices already imply their respective types (enum_with_type)
+1>     at location "/type"
+EOF
+
+COMPARE result_0.txt AGAINST expected_0.txt
+
+WRITE stdin_1 UNTIL EOF
+{
+  "$schema": "http://json-schema.org/draft-04/schema#",
+  "title": "Test",
+  "description": "Test schema",
+  "type": "string",
+  "enum": [ "foo" ]
+}
+EOF
+
+// Validation failure
+RUN lint - --json STDIN stdin_1 IN . INTO result_1.txt EXPECTING 2
+
+WRITE expected_1.txt UNTIL EOF
+1> {
+1>   "valid": false,
+1>   "health": 0,
+1>   "errors": [
+1>     {
+1>       "path": "tag:sourcemeta.com,2026:jsonschema/stdin",
+1>       "id": "enum_with_type",
+1>       "message": "Setting `type` alongside `enum` is considered an anti-pattern, as the enumeration choices already imply their respective types",
+1>       "description": null,
+1>       "schemaLocation": [ "type" ],
+1>       "position": [ 5, 3, 5, 18 ]
+1>     },
+1>     {
+1>       "path": "tag:sourcemeta.com,2026:jsonschema/stdin",
+1>       "id": "enum_with_type",
+1>       "message": "Setting `type` alongside `enum` is considered an anti-pattern, as the enumeration choices already imply their respective types",
+1>       "description": null,
+1>       "schemaLocation": [ "enum" ],
+1>       "position": [ 6, 3, 6, 19 ]
+1>     }
+1>   ]
+1> }
+EOF
+
+COMPARE result_1.txt AGAINST expected_1.txt

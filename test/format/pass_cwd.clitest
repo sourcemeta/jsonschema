@@ -1,0 +1,51 @@
+WRITE schema_1.json UNTIL EOF
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "description": "Test schema",
+  "additionalProperties": false,
+  "title": "Hello World",
+  "properties": {"foo": {}, "bar": {}}
+}
+EOF
+
+WRITE schema_2.json UNTIL EOF
+{"$schema": "https://json-schema.org/draft/2020-12/schema", "type": "string", "title": "My String", "description": "Test schema"}
+EOF
+
+RUN fmt STDIN /dev/null IN . INTO result.txt EXPECTING 0
+REPLACE '\\\\' WITH '/' IN result.txt
+REPLACE '\\(?!")' WITH '/' IN result.txt
+
+REPLACE $CWD WITH '[CWD]' IN result.txt
+
+WRITE expected.txt UNTIL EOF
+2> warning: Recursively processing every file in [CWD] as no input was provided
+EOF
+
+COMPARE result.txt AGAINST expected.txt
+
+WRITE expected_file_0.txt UNTIL EOF
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Hello World",
+  "description": "Test schema",
+  "properties": {
+    "foo": {},
+    "bar": {}
+  },
+  "additionalProperties": false
+}
+EOF
+
+COMPARE schema_1.json AGAINST expected_file_0.txt
+
+WRITE expected_file_1.txt UNTIL EOF
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "My String",
+  "description": "Test schema",
+  "type": "string"
+}
+EOF
+
+COMPARE schema_2.json AGAINST expected_file_1.txt

@@ -1,0 +1,41 @@
+WRITE schema.json UNTIL EOF
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "x-jsonld-type": "https://schema.org/Person"
+}
+EOF
+
+WRITE instance.json UNTIL EOF
+{}
+EOF
+
+// Other input error
+RUN rdf schema.json instance.json --compact no-such-context.json STDIN /dev/null IN . INTO result_0.txt EXPECTING 6
+REPLACE '\\\\' WITH '/' IN result_0.txt
+REPLACE '\\(?!")' WITH '/' IN result_0.txt
+
+REPLACE $CWD WITH '[CWD]' IN result_0.txt
+
+WRITE expected_0.txt UNTIL EOF
+2> error: No such file or directory
+2>   at file path [CWD]/no-such-context.json
+EOF
+
+COMPARE result_0.txt AGAINST expected_0.txt
+
+// Other input error
+RUN rdf schema.json instance.json --compact no-such-context.json --json STDIN /dev/null IN . INTO result_1.txt EXPECTING 6
+REPLACE '\\\\' WITH '/' IN result_1.txt
+REPLACE '\\(?!")' WITH '/' IN result_1.txt
+
+REPLACE $CWD WITH '[CWD]' IN result_1.txt
+
+WRITE expected_1.txt UNTIL EOF
+1> {
+1>   "error": "No such file or directory",
+1>   "filePath": "[CWD]/no-such-context.json"
+1> }
+EOF
+
+COMPARE result_1.txt AGAINST expected_1.txt

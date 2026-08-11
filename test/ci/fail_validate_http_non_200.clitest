@@ -1,0 +1,23 @@
+WRITE schema.json UNTIL EOF
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Test",
+  "description": "Test schema",
+  "allOf": [ { "$ref": "https://one.sourcemeta.com" } ]
+}
+EOF
+
+WRITE instance.json UNTIL EOF
+{ "type": "string" }
+EOF
+
+// Other input error
+RUN validate schema.json instance.json --http STDIN /dev/null IN . INTO result_0.txt EXPECTING 6
+
+WRITE expected_0.txt UNTIL EOF
+2> error: Failed to parse the JSON document
+2>   at line 2
+2>   at column 1
+EOF
+
+COMPARE result_0.txt AGAINST expected_0.txt

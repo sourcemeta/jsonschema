@@ -1,0 +1,32 @@
+WRITE schema.json UNTIL EOF
+{
+  "id": "https://example.com",
+  "$schema": "http://json-schema.org/draft-04/schema#",
+  "type": "string"
+}
+EOF
+
+WRITE stdin_0 UNTIL EOF
+{
+  "target": "https://example.com",
+  "tests": [
+    {
+      "description": "Unexpected pass",
+      "valid": false,
+      "data": "foo"
+    }
+  ]
+}
+EOF
+
+// Validation failure
+RUN test - --resolve schema.json STDIN stdin_0 IN . INTO result_0.txt EXPECTING 2
+
+WRITE expected_0.txt UNTIL EOF
+1> tag:sourcemeta.com,2026:jsonschema/stdin:
+1>   1/1 FAIL Unexpected pass
+1>
+1> error: Passed but was expected to fail
+EOF
+
+COMPARE result_0.txt AGAINST expected_0.txt

@@ -1,0 +1,166 @@
+WRITE schema.json UNTIL EOF
+{
+  "id": "https://example.com",
+  "$schema": "http://json-schema.org/draft-04/schema#",
+  "title": "Test",
+  "description": "Test schema",
+  "type": "string"
+}
+EOF
+
+WRITE tests/1.json UNTIL EOF
+{
+  "target": "https://example.com",
+  "tests": [
+    {
+      "description": "First test",
+      "valid": true,
+      "data": "foo"
+    }
+  ]
+}
+EOF
+
+WRITE tests/2.json UNTIL EOF
+{
+  "target": "https://example.com",
+  "tests": [
+    {
+      "description": "First test",
+      "valid": true,
+      "data": "foo"
+    },
+    {
+      "description": "First failure",
+      "valid": true,
+      "data": 1
+    }
+  ]
+}
+EOF
+
+WRITE tests/3.json UNTIL EOF
+{
+  "target": "https://example.com",
+  "tests": [
+    {
+      "description": "First test",
+      "valid": true,
+      "data": "bar"
+    }
+  ]
+}
+EOF
+
+WRITE tests/4.json UNTIL EOF
+{
+  "target": "https://example.com",
+  "tests": [
+    {
+      "description": "First test",
+      "valid": true,
+      "data": "baz"
+    }
+  ]
+}
+EOF
+
+WRITE silent.txt UNTIL EOF
+EOF
+
+// The shell original ran this five times to shake out ordering flakes.
+// Repetition belongs to the runner: ctest --repeat until-fail:N
+// Test assertion failure
+RUN test tests --resolve schema.json --json --jobs 3 STDIN /dev/null IN . INTO result.txt EXPECTING 2
+
+COPY result.txt TO report.json
+KEEP LINES MATCHING '^1>' IN report.json
+REPLACE '^1> ?' WITH '' IN report.json
+
+RUN validate $CTRF_SCHEMA report.json STDIN /dev/null IN . INTO validated.txt EXPECTING 0
+
+COMPARE validated.txt AGAINST silent.txt
+
+REPLACE $VERSION WITH '[VERSION]' IN result.txt
+DROP LINES MATCHING '"duration":' IN result.txt
+DROP LINES MATCHING '"start":' IN result.txt
+DROP LINES MATCHING '"stop":' IN result.txt
+DROP LINES MATCHING '"threadId":' IN result.txt
+REPLACE '\\\\' WITH '/' IN result.txt
+REPLACE $CWD WITH '[CWD]' IN result.txt
+
+WRITE expected.txt UNTIL EOF
+1> {
+1>   "reportFormat": "CTRF",
+1>   "specVersion": "0.0.0",
+1>   "results": {
+1>     "tool": {
+1>       "name": "jsonschema",
+1>       "version": "[VERSION]"
+1>     },
+1>     "summary": {
+1>       "tests": 5,
+1>       "passed": 4,
+1>       "failed": 1,
+1>       "pending": 0,
+1>       "skipped": 0,
+1>       "other": 0,
+1>     },
+1>     "tests": [
+1>       {
+1>         "name": "First test",
+1>         "status": "passed",
+1>         "suite": [ "https://example.com" ],
+1>         "type": "unit",
+1>         "filePath": "[CWD]/tests/1.json",
+1>         "line": 4,
+1>         "retries": 0,
+1>         "flaky": false,
+1>       },
+1>       {
+1>         "name": "First test",
+1>         "status": "passed",
+1>         "suite": [ "https://example.com" ],
+1>         "type": "unit",
+1>         "filePath": "[CWD]/tests/2.json",
+1>         "line": 4,
+1>         "retries": 0,
+1>         "flaky": false,
+1>       },
+1>       {
+1>         "name": "First failure",
+1>         "status": "failed",
+1>         "suite": [ "https://example.com" ],
+1>         "type": "unit",
+1>         "filePath": "[CWD]/tests/2.json",
+1>         "line": 9,
+1>         "retries": 0,
+1>         "flaky": false,
+1>         "trace": "error: Schema validation failure\n  The value was expected to be of type string but it was of type integer\n    at instance location \"\"\n    at evaluate path \"/type\"\n"
+1>       },
+1>       {
+1>         "name": "First test",
+1>         "status": "passed",
+1>         "suite": [ "https://example.com" ],
+1>         "type": "unit",
+1>         "filePath": "[CWD]/tests/3.json",
+1>         "line": 4,
+1>         "retries": 0,
+1>         "flaky": false,
+1>       },
+1>       {
+1>         "name": "First test",
+1>         "status": "passed",
+1>         "suite": [ "https://example.com" ],
+1>         "type": "unit",
+1>         "filePath": "[CWD]/tests/4.json",
+1>         "line": 4,
+1>         "retries": 0,
+1>         "flaky": false,
+1>       }
+1>     ]
+1>   }
+1> }
+EOF
+
+COMPARE result.txt AGAINST expected.txt

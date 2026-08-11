@@ -1,0 +1,44 @@
+WRITE schema.json UNTIL EOF
+{
+  "id": "https://example.com",
+  "$schema": "http://json-schema.org/draft-04/schema#",
+  "title": "Test",
+  "description": "Test schema",
+  "type": "string"
+}
+EOF
+
+WRITE project/test_suite.json UNTIL EOF
+{
+  "target": "https://example.com",
+  "tests": [
+    {
+      "description": "A string is valid",
+      "valid": true,
+      "data": "foo"
+    }
+  ]
+}
+EOF
+
+WRITE project/jsonschema.json UNTIL EOF
+{
+  "defaultDialect": "http://json-schema.org/draft-04/schema#",
+  "ignore": [
+    "./jsonschema.json"
+  ]
+}
+EOF
+
+RUN test --resolve $CWD/schema.json STDIN /dev/null IN project INTO result.txt EXPECTING 0
+
+REPLACE '\\\\' WITH '/' IN result.txt
+REPLACE '\\(?!")' WITH '/' IN result.txt
+REPLACE $CWD WITH '[CWD]' IN result.txt
+
+WRITE expected.txt UNTIL EOF
+1> [CWD]/project/test_suite.json: PASS 1/1
+2> warning: Recursively processing every file in [CWD]/project as the configuration file does not set an explicit path
+EOF
+
+COMPARE result.txt AGAINST expected.txt

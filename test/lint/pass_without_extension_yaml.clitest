@@ -1,0 +1,15 @@
+WRITE schema UNTIL EOF
+$schema: http://json-schema.org/draft-06/schema#
+title: Test schema
+description: A test schema
+type: string
+examples:
+  - foo
+EOF
+
+RUN lint schema STDIN /dev/null IN . INTO result_0.txt EXPECTING 0
+
+WRITE expected_0.txt UNTIL EOF
+EOF
+
+COMPARE result_0.txt AGAINST expected_0.txt

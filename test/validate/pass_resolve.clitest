@@ -1,0 +1,54 @@
+MAKE DIRECTORY schemas
+
+MAKE DIRECTORY schemas/nested
+
+WRITE schema.json UNTIL EOF
+{
+  "id": "https://example.com",
+  "$schema": "http://json-schema.org/draft-04/schema#",
+  "title": "Test",
+  "description": "Test schema",
+  "properties": {
+    "foo": { "$ref": "foo" },
+    "bar": { "$ref": "bar" }
+  }
+}
+EOF
+
+WRITE foo.json UNTIL EOF
+{
+  "id": "https://example.com/foo",
+  "$schema": "http://json-schema.org/draft-04/schema#",
+  "type": "integer"
+}
+EOF
+
+WRITE schemas/baz.json UNTIL EOF
+{
+  "id": "https://example.com/baz",
+  "$schema": "http://json-schema.org/draft-04/schema#",
+  "title": "Test",
+  "description": "Test schema",
+  "type": "array"
+}
+EOF
+
+WRITE schemas/ignore-me.txt UNTIL EOF
+Foo Bar
+EOF
+
+WRITE schemas/nested/bar.json UNTIL EOF
+{
+  "id": "https://example.com/bar",
+  "$schema": "http://json-schema.org/draft-04/schema#",
+  "title": "Test",
+  "description": "Test schema",
+  "type": "string"
+}
+EOF
+
+WRITE instance.json UNTIL EOF
+{ "foo": 1 }
+EOF
+
+RUN validate schema.json instance.json --resolve foo.json --resolve schemas STDIN /dev/null IN . INTO result_0.txt EXPECTING 0

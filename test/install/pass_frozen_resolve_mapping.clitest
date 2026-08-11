@@ -1,0 +1,83 @@
+MAKE DIRECTORY source
+
+MAKE DIRECTORY project
+
+WRITE source/main.json UNTIL EOF
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.com/main",
+  "$ref": "https://example.com/types/name"
+}
+EOF
+
+WRITE project/name.json UNTIL EOF
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.com/types/name",
+  "type": "string"
+}
+EOF
+
+WRITE project/jsonschema.json UNTIL EOF
+{
+  "resolve": {
+    "https://example.com/types/name": "./name.json"
+  },
+  "dependencies": {
+    "[CWD_URI]/source/main.json": "./vendor/main.json"
+  }
+}
+EOF
+
+REPLACE '\[CWD_URI\]' WITH $CWD_URI IN project/jsonschema.json
+
+RUN install STDIN /dev/null IN project INTO result_0.txt EXPECTING 0
+REPLACE '\\\\' WITH '/' IN result_0.txt
+REPLACE '\\(?!")' WITH '/' IN result_0.txt
+
+REPLACE $CWD WITH '[CWD]' IN result_0.txt
+REPLACE 'file:///\[CWD\]' WITH 'file://[CWD]' IN result_0.txt
+
+WRITE expected_0.txt UNTIL EOF
+2> Fetching       : file://[CWD]/source/main.json
+2> Installed      : [CWD]/project/vendor/main.json
+EOF
+
+COMPARE result_0.txt AGAINST expected_0.txt
+
+COPY project/jsonschema.lock.json TO lock_before.json
+
+REMOVE project/vendor/main.json
+
+RUN install --frozen STDIN /dev/null IN project INTO result_1.txt EXPECTING 0
+REPLACE '\\\\' WITH '/' IN result_1.txt
+REPLACE '\\(?!")' WITH '/' IN result_1.txt
+
+REPLACE $CWD WITH '[CWD]' IN result_1.txt
+REPLACE 'file:///\[CWD\]' WITH 'file://[CWD]' IN result_1.txt
+
+WRITE expected_1.txt UNTIL EOF
+2> Fetching       : file://[CWD]/source/main.json
+2> Installed      : [CWD]/project/vendor/main.json
+EOF
+
+COMPARE result_1.txt AGAINST expected_1.txt
+
+COMPARE project/jsonschema.lock.json AGAINST lock_before.json
+
+WRITE expected_file_3.txt UNTIL EOF
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.com/main",
+  "$ref": "https://example.com/types/name",
+  "$defs": {
+    "https://example.com/types/name": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "$id": "https://example.com/types/name",
+      "type": "string"
+    }
+  }
+}
+EOF
+
+COMPARE project/vendor/main.json AGAINST expected_file_3.txt

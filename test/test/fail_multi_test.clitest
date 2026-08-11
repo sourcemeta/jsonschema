@@ -1,0 +1,76 @@
+MAKE DIRECTORY tests
+
+WRITE schema.json UNTIL EOF
+{
+  "id": "https://example.com",
+  "$schema": "http://json-schema.org/draft-04/schema#",
+  "title": "Test",
+  "description": "Test schema",
+  "type": "string"
+}
+EOF
+
+WRITE tests/1.json UNTIL EOF
+{
+  "target": "https://example.com",
+  "tests": [
+    {
+      "description": "First test",
+      "valid": true,
+      "data": "foo"
+    },
+    {
+      "description": "First failure",
+      "valid": true,
+      "data": 1
+    }
+  ]
+}
+EOF
+
+WRITE tests/2.json UNTIL EOF
+{
+  "target": "https://example.com",
+  "tests": [
+    {
+      "description": "Invalid type",
+      "valid": false,
+      "data": 1
+    }
+  ]
+}
+EOF
+
+WRITE tests/3.json UNTIL EOF
+{
+  "target": "https://example.com",
+  "tests": [
+    {
+      "description": "Invalid type",
+      "valid": false,
+      "data": []
+    }
+  ]
+}
+EOF
+
+// Validation failure
+RUN test tests --resolve schema.json --jobs 1 STDIN /dev/null IN . INTO result_0.txt EXPECTING 2
+REPLACE '\\\\' WITH '/' IN result_0.txt
+REPLACE '\\(?!")' WITH '/' IN result_0.txt
+
+REPLACE $CWD WITH '[CWD]' IN result_0.txt
+
+WRITE expected_0.txt UNTIL EOF
+1> [CWD]/tests/1.json:
+1>   2/2 FAIL First failure
+1>
+1> error: Schema validation failure
+1>   The value was expected to be of type string but it was of type integer
+1>     at instance location ""
+1>     at evaluate path "/type"
+1> [CWD]/tests/2.json: PASS 1/1
+1> [CWD]/tests/3.json: PASS 1/1
+EOF
+
+COMPARE result_0.txt AGAINST expected_0.txt

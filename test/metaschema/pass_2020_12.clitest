@@ -1,0 +1,20 @@
+WRITE schema.json UNTIL EOF
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Test",
+  "description": "Test schema",
+  "type": "string",
+  "$defs": {
+    "foo": {
+      "type": [ "string", "null" ]
+    }
+  }
+}
+EOF
+
+WRITE silent.txt UNTIL EOF
+EOF
+
+RUN metaschema schema.json STDIN /dev/null IN . INTO result.txt EXPECTING 0
+
+COMPARE result.txt AGAINST silent.txt

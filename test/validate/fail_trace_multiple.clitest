@@ -1,0 +1,36 @@
+WRITE schema.json UNTIL EOF
+{
+  "$schema": "http://json-schema.org/draft-04/schema#",
+  "title": "Test",
+  "description": "Test schema",
+  "type": "string"
+}
+EOF
+
+WRITE instance_1.json UNTIL EOF
+"foo"
+EOF
+
+WRITE instance_2.json UNTIL EOF
+"bar"
+EOF
+
+// Invalid CLI arguments
+RUN validate schema.json instance_1.json instance_2.json --trace STDIN /dev/null IN . INTO result_0.txt EXPECTING 5
+
+WRITE expected_0.txt UNTIL EOF
+2> error: The `--trace/-t` option is only allowed given a single instance
+EOF
+
+COMPARE result_0.txt AGAINST expected_0.txt
+
+// Invalid CLI arguments
+RUN validate schema.json instance_1.json instance_2.json --trace --json STDIN /dev/null IN . INTO result_1.txt EXPECTING 5
+
+WRITE expected_1.txt UNTIL EOF
+1> {
+1>   "error": "The `--trace/-t` option is only allowed given a single instance"
+1> }
+EOF
+
+COMPARE result_1.txt AGAINST expected_1.txt

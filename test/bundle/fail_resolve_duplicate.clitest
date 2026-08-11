@@ -1,0 +1,61 @@
+WRITE schema.json UNTIL EOF
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Test",
+  "description": "Test schema",
+  "$id": "https://example.com",
+  "$ref": "nested"
+}
+EOF
+
+WRITE schemas/remote.json UNTIL EOF
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Test",
+  "description": "Test schema",
+  "$id": "https://example.com/nested",
+  "type": "string"
+}
+EOF
+
+WRITE schemas/duplicated.json UNTIL EOF
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Test",
+  "description": "Test schema",
+  "$id": "https://example.com/nested",
+  "type": "number"
+}
+EOF
+
+// Schema input error
+RUN bundle schema.json --resolve schemas STDIN /dev/null IN . INTO result.txt EXPECTING 4
+REPLACE '\\\\' WITH '/' IN result.txt
+REPLACE '\\(?!")' WITH '/' IN result.txt
+
+REPLACE $CWD WITH '[CWD]' IN result.txt
+
+WRITE expected_0.txt UNTIL EOF
+2> error: Cannot register the same identifier twice
+2>   at identifier https://example.com/nested
+2>   at file path [CWD]/schemas/remote.json
+EOF
+
+COMPARE result.txt AGAINST expected_0.txt
+
+// Schema input error
+RUN bundle schema.json --resolve schemas --json STDIN /dev/null IN . INTO result_json.txt EXPECTING 4
+REPLACE '\\\\' WITH '/' IN result_json.txt
+REPLACE '\\(?!")' WITH '/' IN result_json.txt
+
+REPLACE $CWD WITH '[CWD]' IN result_json.txt
+
+WRITE expected_1.txt UNTIL EOF
+1> {
+1>   "error": "Cannot register the same identifier twice",
+1>   "identifier": "https://example.com/nested",
+1>   "filePath": "[CWD]/schemas/remote.json"
+1> }
+EOF
+
+COMPARE result_json.txt AGAINST expected_1.txt

@@ -1,0 +1,48 @@
+MAKE DIRECTORY bar
+
+WRITE foo/schema.json UNTIL EOF
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "description": "Test schema",
+  "additionalProperties": false,
+  "title": "Hello World",
+  "properties": {"foo": {}, "bar": {}}
+}
+EOF
+
+WRITE jsonschema.json UNTIL EOF
+{
+  "path": "./foo"
+}
+EOF
+
+RUN fmt --debug STDIN /dev/null IN bar INTO result.txt EXPECTING 0
+REPLACE '\\\\' WITH '/' IN result.txt
+REPLACE '\\(?!")' WITH '/' IN result.txt
+
+REPLACE $CWD WITH '[CWD]' IN result.txt
+
+WRITE expected.txt UNTIL EOF
+2> debug: Using configuration file: [CWD]/jsonschema.json
+2> Using extension: .json
+2> Using extension: .yaml
+2> Using extension: .yml
+2> Formatting: [CWD]/foo/schema.json
+EOF
+
+COMPARE result.txt AGAINST expected.txt
+
+WRITE expected_file_0.txt UNTIL EOF
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Hello World",
+  "description": "Test schema",
+  "properties": {
+    "foo": {},
+    "bar": {}
+  },
+  "additionalProperties": false
+}
+EOF
+
+COMPARE foo/schema.json AGAINST expected_file_0.txt

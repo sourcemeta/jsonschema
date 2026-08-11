@@ -1,0 +1,45 @@
+MAKE DIRECTORY schemas
+
+WRITE schemas/schema1 UNTIL EOF
+{
+  "$schema": "http://json-schema.org/draft-06/schema#",
+  "title": "Test",
+  "description": "Test schema",
+  "type": "string",
+  "examples": [ "foo" ]
+}
+EOF
+
+WRITE schemas/schema2 UNTIL EOF
+{
+  "$schema": "http://json-schema.org/draft-06/schema#",
+  "title": "Test 2",
+  "description": "Test schema 2",
+  "type": "number",
+  "examples": [ 1 ]
+}
+EOF
+
+WRITE schemas/ignored.json UNTIL EOF
+{
+  "$schema": "http://json-schema.org/draft-06/schema#",
+  "title": "Ignored",
+  "description": "This file should be ignored",
+  "type": "boolean",
+  "examples": [ true ]
+}
+EOF
+
+RUN lint schemas --extension '' --verbose STDIN /dev/null IN . INTO result_0.txt EXPECTING 0
+REPLACE '\\\\' WITH '/' IN result_0.txt
+REPLACE '\\(?!")' WITH '/' IN result_0.txt
+
+REPLACE $CWD WITH '[CWD]' IN result_0.txt
+
+WRITE expected_0.txt UNTIL EOF
+2> warning: Matching files with no extension
+2> Linting: [CWD]/schemas/schema1
+2> Linting: [CWD]/schemas/schema2
+EOF
+
+COMPARE result_0.txt AGAINST expected_0.txt

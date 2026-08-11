@@ -1,0 +1,83 @@
+WRITE input.json UNTIL EOF
+{
+  "$id": "https://example.com/test-stdin-inspect",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "string"
+}
+EOF
+
+RUN inspect - --json STDIN input.json IN . INTO result.txt EXPECTING 0
+
+WRITE expected.txt UNTIL EOF
+1> {
+1>   "locations": {
+1>     "static": {
+1>       "https://example.com/test-stdin-inspect": {
+1>         "parent": null,
+1>         "type": "resource",
+1>         "root": "https://example.com/test-stdin-inspect",
+1>         "base": "https://example.com/test-stdin-inspect",
+1>         "pointer": "",
+1>         "position": [ 1, 1, 5, 1 ],
+1>         "relativePointer": "",
+1>         "dialect": "https://json-schema.org/draft/2020-12/schema",
+1>         "baseDialect": "https://json-schema.org/draft/2020-12/schema",
+1>         "propertyName": false,
+1>         "orphan": false
+1>       },
+1>       "https://example.com/test-stdin-inspect#/$id": {
+1>         "parent": "",
+1>         "type": "pointer",
+1>         "root": "https://example.com/test-stdin-inspect",
+1>         "base": "https://example.com/test-stdin-inspect",
+1>         "pointer": "/$id",
+1>         "position": [ 2, 3, 2, 49 ],
+1>         "relativePointer": "/$id",
+1>         "dialect": "https://json-schema.org/draft/2020-12/schema",
+1>         "baseDialect": "https://json-schema.org/draft/2020-12/schema",
+1>         "propertyName": false,
+1>         "orphan": false
+1>       },
+1>       "https://example.com/test-stdin-inspect#/$schema": {
+1>         "parent": "",
+1>         "type": "pointer",
+1>         "root": "https://example.com/test-stdin-inspect",
+1>         "base": "https://example.com/test-stdin-inspect",
+1>         "pointer": "/$schema",
+1>         "position": [ 3, 3, 3, 59 ],
+1>         "relativePointer": "/$schema",
+1>         "dialect": "https://json-schema.org/draft/2020-12/schema",
+1>         "baseDialect": "https://json-schema.org/draft/2020-12/schema",
+1>         "propertyName": false,
+1>         "orphan": false
+1>       },
+1>       "https://example.com/test-stdin-inspect#/type": {
+1>         "parent": "",
+1>         "type": "pointer",
+1>         "root": "https://example.com/test-stdin-inspect",
+1>         "base": "https://example.com/test-stdin-inspect",
+1>         "pointer": "/type",
+1>         "position": [ 4, 3, 4, 18 ],
+1>         "relativePointer": "/type",
+1>         "dialect": "https://json-schema.org/draft/2020-12/schema",
+1>         "baseDialect": "https://json-schema.org/draft/2020-12/schema",
+1>         "propertyName": false,
+1>         "orphan": false
+1>       }
+1>     },
+1>     "dynamic": {}
+1>   },
+1>   "references": [
+1>     {
+1>       "type": "static",
+1>       "origin": "/$schema",
+1>       "position": [ 3, 3, 3, 59 ],
+1>       "destination": "https://json-schema.org/draft/2020-12/schema",
+1>       "base": "https://json-schema.org/draft/2020-12/schema",
+1>       "fragment": null
+1>     }
+1>   ]
+1> }
+EOF
+
+COMPARE result.txt AGAINST expected.txt

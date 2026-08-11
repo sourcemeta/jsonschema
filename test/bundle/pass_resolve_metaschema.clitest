@@ -1,0 +1,84 @@
+WRITE schema.json UNTIL EOF
+{
+  "$schema": "https://example.com/meta",
+  "title": "Test",
+  "description": "Test schema",
+  "$id": "https://example.com",
+  "$ref": "nested"
+}
+EOF
+
+WRITE schemas/meta.json UNTIL EOF
+{
+  "$schema": "https://json-schema.org/draft/2019-09/schema",
+  "title": "Test",
+  "description": "Test schema",
+  "$id": "https://example.com/meta",
+  "$vocabulary": {
+    "https://json-schema.org/draft/2019-09/vocab/core": true,
+    "https://json-schema.org/draft/2019-09/vocab/applicator": true,
+    "https://json-schema.org/draft/2019-09/vocab/validation": true,
+    "https://json-schema.org/draft/2019-09/vocab/meta-data": true,
+    "https://json-schema.org/draft/2019-09/vocab/format": false,
+    "https://json-schema.org/draft/2019-09/vocab/content": true
+  }
+}
+EOF
+
+WRITE schemas/remote.json UNTIL EOF
+{
+  "$schema": "https://json-schema.org/draft/2019-09/schema",
+  "title": "Test",
+  "description": "Test schema",
+  "$id": "https://example.com/nested",
+  "type": "string"
+}
+EOF
+
+WRITE silent.txt UNTIL EOF
+EOF
+
+RUN bundle schema.json --resolve schemas STDIN /dev/null IN . INTO result.txt EXPECTING 0
+
+COPY result.txt TO bundled.json
+KEEP LINES MATCHING '^1>' IN bundled.json
+REPLACE '^1> ?' WITH '' IN bundled.json
+
+WRITE expected_0.txt UNTIL EOF
+1> {
+1>   "$schema": "https://example.com/meta",
+1>   "$id": "https://example.com",
+1>   "title": "Test",
+1>   "description": "Test schema",
+1>   "$ref": "nested",
+1>   "$defs": {
+1>     "https://example.com/nested": {
+1>       "$schema": "https://json-schema.org/draft/2019-09/schema",
+1>       "$id": "https://example.com/nested",
+1>       "title": "Test",
+1>       "description": "Test schema",
+1>       "type": "string"
+1>     },
+1>     "https://example.com/meta": {
+1>       "$schema": "https://json-schema.org/draft/2019-09/schema",
+1>       "$id": "https://example.com/meta",
+1>       "$vocabulary": {
+1>         "https://json-schema.org/draft/2019-09/vocab/core": true,
+1>         "https://json-schema.org/draft/2019-09/vocab/applicator": true,
+1>         "https://json-schema.org/draft/2019-09/vocab/validation": true,
+1>         "https://json-schema.org/draft/2019-09/vocab/meta-data": true,
+1>         "https://json-schema.org/draft/2019-09/vocab/format": false,
+1>         "https://json-schema.org/draft/2019-09/vocab/content": true
+1>       },
+1>       "title": "Test",
+1>       "description": "Test schema"
+1>     }
+1>   }
+1> }
+EOF
+
+COMPARE result.txt AGAINST expected_0.txt
+
+RUN fmt bundled.json --check --resolve schemas STDIN /dev/null IN . INTO checked.txt EXPECTING 0
+
+COMPARE checked.txt AGAINST silent.txt

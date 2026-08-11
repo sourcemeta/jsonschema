@@ -1,0 +1,40 @@
+MAKE DIRECTORY dir1
+
+MAKE DIRECTORY dir2
+
+WRITE schema.json UNTIL EOF
+{
+  "$schema": "http://json-schema.org/draft-04/schema#",
+  "title": "Test",
+  "description": "Test schema",
+  "type": "object",
+  "properties": {
+    "name": {
+      "type": "string"
+    }
+  }
+}
+EOF
+
+WRITE dir1/instance_1.json UNTIL EOF
+{ "name": "Alice" }
+EOF
+
+WRITE dir1/instance_2.json UNTIL EOF
+{ "name": "Bob" }
+EOF
+
+WRITE dir2/instance_3.json UNTIL EOF
+{ "name": "Charlie" }
+EOF
+
+WRITE dir2/instance_4.json UNTIL EOF
+{ "name": "Diana" }
+EOF
+
+RUN validate schema.json dir1 dir2 STDIN /dev/null IN . INTO result_0.txt EXPECTING 0
+
+WRITE expected_0.txt UNTIL EOF
+EOF
+
+COMPARE result_0.txt AGAINST expected_0.txt

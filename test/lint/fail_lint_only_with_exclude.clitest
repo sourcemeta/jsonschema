@@ -1,0 +1,18 @@
+WRITE schema.json UNTIL EOF
+{
+  "$schema": "http://json-schema.org/draft-04/schema#",
+  "title": "Test",
+  "description": "Test schema",
+  "type": "string",
+  "enum": [ "foo" ]
+}
+EOF
+
+// Invalid CLI arguments
+RUN lint schema.json --only enum_with_type --exclude const_with_type --verbose STDIN /dev/null IN . INTO result_0.txt EXPECTING 5
+
+WRITE expected_0.txt UNTIL EOF
+2> error: Cannot use --only and --exclude at the same time
+EOF
+
+COMPARE result_0.txt AGAINST expected_0.txt

@@ -1,0 +1,67 @@
+WRITE schema.json UNTIL EOF
+{
+  "title": "Test",
+  "type": "string",
+  "$schema": "http://json-schema.org/draft-06/schema#",
+  "$id": "https://example.com"
+}
+EOF
+
+// Validation failure
+RUN lint schema.json --fix --format STDIN /dev/null IN . INTO result_0.txt EXPECTING 2
+
+WRITE expected_0.txt UNTIL EOF
+1> schema.json:1:1:
+1>   Set a non-empty description at the top level of the schema to explain what the definition is about in detail (top_level_description)
+1>     at location ""
+1> schema.json:1:1:
+1>   Set a non-empty examples array at the top level of the schema to illustrate the expected data (top_level_examples)
+1>     at location ""
+EOF
+
+COMPARE result_0.txt AGAINST expected_0.txt
+
+// Validation failure
+RUN lint schema.json --fix --format --json STDIN /dev/null IN . INTO result_1.txt EXPECTING 2
+REPLACE '\\\\' WITH '/' IN result_1.txt
+REPLACE '\\(?!")' WITH '/' IN result_1.txt
+
+REPLACE $CWD WITH '[CWD]' IN result_1.txt
+
+WRITE expected_1.txt UNTIL EOF
+1> {
+1>   "valid": false,
+1>   "health": 0,
+1>   "errors": [
+1>     {
+1>       "path": "[CWD]/schema.json",
+1>       "id": "top_level_description",
+1>       "message": "Set a non-empty description at the top level of the schema to explain what the definition is about in detail",
+1>       "description": null,
+1>       "schemaLocation": [],
+1>       "position": [ 1, 1, 6, 1 ]
+1>     },
+1>     {
+1>       "path": "[CWD]/schema.json",
+1>       "id": "top_level_examples",
+1>       "message": "Set a non-empty examples array at the top level of the schema to illustrate the expected data",
+1>       "description": null,
+1>       "schemaLocation": [],
+1>       "position": [ 1, 1, 6, 1 ]
+1>     }
+1>   ]
+1> }
+EOF
+
+COMPARE result_1.txt AGAINST expected_1.txt
+
+WRITE expected_file_2.txt UNTIL EOF
+{
+  "$schema": "http://json-schema.org/draft-06/schema#",
+  "$id": "https://example.com",
+  "title": "Test",
+  "type": "string"
+}
+EOF
+
+COMPARE schema.json AGAINST expected_file_2.txt

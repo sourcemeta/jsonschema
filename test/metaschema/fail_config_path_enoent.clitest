@@ -1,0 +1,40 @@
+MAKE DIRECTORY bar
+
+WRITE jsonschema.json UNTIL EOF
+{
+  "path": "./nonexistent"
+}
+EOF
+
+// Other input error
+RUN metaschema --verbose STDIN /dev/null IN bar INTO result.txt EXPECTING 6
+REPLACE '\\\\' WITH '/' IN result.txt
+REPLACE '\\(?!")' WITH '/' IN result.txt
+
+REPLACE $CWD WITH '[CWD]' IN result.txt
+
+WRITE expected.txt UNTIL EOF
+2> Using extension: .json
+2> Using extension: .yaml
+2> Using extension: .yml
+2> error: No such file or directory
+2>   at file path [CWD]/nonexistent
+EOF
+
+COMPARE result.txt AGAINST expected.txt
+
+// Other input error
+RUN metaschema --json STDIN /dev/null IN bar INTO result_json.txt EXPECTING 6
+REPLACE '\\\\' WITH '/' IN result_json.txt
+REPLACE '\\(?!")' WITH '/' IN result_json.txt
+
+REPLACE $CWD WITH '[CWD]' IN result_json.txt
+
+WRITE expected_json.txt UNTIL EOF
+1> {
+1>   "error": "No such file or directory",
+1>   "filePath": "[CWD]/nonexistent"
+1> }
+EOF
+
+COMPARE result_json.txt AGAINST expected_json.txt

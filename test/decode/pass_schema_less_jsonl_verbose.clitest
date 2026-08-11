@@ -1,0 +1,45 @@
+WRITE document.jsonl UNTIL EOF
+{ "count": 1 }
+{ "count": 2 }
+{ "count": 3 }
+{ "count": 4 }
+{ "count": 5 }
+EOF
+
+RUN encode document.jsonl output.binpack STDIN /dev/null IN . INTO encoded.txt EXPECTING 0
+RUN decode output.binpack result.jsonl --verbose STDIN /dev/null IN . INTO decoded.txt EXPECTING 0
+REPLACE '\\\\' WITH '/' IN decoded.txt
+REPLACE '\\(?!")' WITH '/' IN decoded.txt
+
+WRITE expected.jsonl UNTIL EOF
+{
+  "count": 1
+}
+{
+  "count": 2
+}
+{
+  "count": 3
+}
+{
+  "count": 4
+}
+{
+  "count": 5
+}
+EOF
+
+COMPARE result.jsonl AGAINST expected.jsonl
+
+REPLACE $CWD WITH '[CWD]' IN decoded.txt
+
+WRITE expected.txt UNTIL EOF
+2> Interpreting input as JSONL: [CWD]/output.binpack
+2> Decoding entry #0
+2> Decoding entry #1
+2> Decoding entry #2
+2> Decoding entry #3
+2> Decoding entry #4
+EOF
+
+COMPARE decoded.txt AGAINST expected.txt

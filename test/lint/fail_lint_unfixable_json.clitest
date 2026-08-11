@@ -1,0 +1,40 @@
+WRITE schema.json UNTIL EOF
+{
+  "$schema": "http://json-schema.org/draft-04/schema#",
+  "type": "string"
+}
+EOF
+
+// Validation failure
+RUN lint schema.json --json STDIN /dev/null IN . INTO result_0.txt EXPECTING 2
+REPLACE '\\\\' WITH '/' IN result_0.txt
+REPLACE '\\(?!")' WITH '/' IN result_0.txt
+
+REPLACE $CWD WITH '[CWD]' IN result_0.txt
+
+WRITE expected_0.txt UNTIL EOF
+1> {
+1>   "valid": false,
+1>   "health": 0,
+1>   "errors": [
+1>     {
+1>       "path": "[CWD]/schema.json",
+1>       "id": "top_level_title",
+1>       "message": "Set a concise non-empty title at the top level of the schema to explain what the definition is about",
+1>       "description": null,
+1>       "schemaLocation": [],
+1>       "position": [ 1, 1, 4, 1 ]
+1>     },
+1>     {
+1>       "path": "[CWD]/schema.json",
+1>       "id": "top_level_description",
+1>       "message": "Set a non-empty description at the top level of the schema to explain what the definition is about in detail",
+1>       "description": null,
+1>       "schemaLocation": [],
+1>       "position": [ 1, 1, 4, 1 ]
+1>     }
+1>   ]
+1> }
+EOF
+
+COMPARE result_0.txt AGAINST expected_0.txt

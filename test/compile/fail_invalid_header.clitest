@@ -1,0 +1,17 @@
+WRITE schema.json UNTIL EOF
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "string"
+}
+EOF
+
+// Invalid CLI arguments
+RUN compile schema.json --header no-colon STDIN /dev/null IN . INTO result.txt EXPECTING 5
+
+WRITE expected.txt UNTIL EOF
+2> error: HTTP headers must be in the form `Name: Value`
+2>
+2> For example: --header "Authorization: Bearer ${TOKEN}"
+EOF
+
+COMPARE result.txt AGAINST expected.txt

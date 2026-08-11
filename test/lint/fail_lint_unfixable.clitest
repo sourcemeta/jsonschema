@@ -1,0 +1,20 @@
+WRITE schema.json UNTIL EOF
+{
+  "$schema": "http://json-schema.org/draft-04/schema#",
+  "type": "string"
+}
+EOF
+
+// Validation failure
+RUN lint schema.json STDIN /dev/null IN . INTO result_0.txt EXPECTING 2
+
+WRITE expected_0.txt UNTIL EOF
+1> schema.json:1:1:
+1>   Set a concise non-empty title at the top level of the schema to explain what the definition is about (top_level_title)
+1>     at location ""
+1> schema.json:1:1:
+1>   Set a non-empty description at the top level of the schema to explain what the definition is about in detail (top_level_description)
+1>     at location ""
+EOF
+
+COMPARE result_0.txt AGAINST expected_0.txt

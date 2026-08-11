@@ -1,0 +1,27 @@
+WRITE string.json UNTIL EOF
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://example.com/string",
+  "type": "string"
+}
+EOF
+
+WRITE schema.json UNTIL EOF
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://example.com/main",
+  "$ref": "https://example.com/string"
+}
+EOF
+
+RUN upgrade --resolve string.json schema.json STDIN /dev/null IN . INTO result.txt EXPECTING 0
+
+WRITE expected.txt UNTIL EOF
+1> {
+1>   "$schema": "https://json-schema.org/draft/2020-12/schema",
+1>   "$id": "https://example.com/main",
+1>   "$ref": "https://example.com/string"
+1> }
+EOF
+
+COMPARE result.txt AGAINST expected.txt

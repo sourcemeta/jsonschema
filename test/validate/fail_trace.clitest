@@ -1,0 +1,60 @@
+WRITE schema.json UNTIL EOF
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Test",
+  "description": "Test schema",
+  "properties": {
+    "foo": {
+      "type": "string"
+    }
+  }
+}
+EOF
+
+WRITE instance.json UNTIL EOF
+{ "foo": 1 }
+EOF
+
+// Validation failure
+RUN validate schema.json instance.json --trace STDIN /dev/null IN . INTO result_0.txt EXPECTING 2
+REPLACE '\\\\' WITH '/' IN result_0.txt
+REPLACE '\\(?!")' WITH '/' IN result_0.txt
+
+REPLACE $CWD WITH '[CWD]' IN result_0.txt
+REPLACE 'file:///\[CWD\]' WITH 'file://[CWD]' IN result_0.txt
+
+WRITE expected_0.txt UNTIL EOF
+1> @- (annotation) "/description" (AnnotationEmit)
+1>    value "Test schema"
+1>    at instance location "" (line 1, column 1)
+1>    at keyword location "file://[CWD]/schema.json#/description"
+1>    at vocabulary "https://json-schema.org/draft/2020-12/vocab/meta-data"
+1>
+1> @- (annotation) "/title" (AnnotationEmit)
+1>    value "Test"
+1>    at instance location "" (line 1, column 1)
+1>    at keyword location "file://[CWD]/schema.json#/title"
+1>    at vocabulary "https://json-schema.org/draft/2020-12/vocab/meta-data"
+1>
+1> -> (push) "/properties" (LogicalWhenType)
+1>    at instance location "" (line 1, column 1)
+1>    at keyword location "file://[CWD]/schema.json#/properties"
+1>    at vocabulary "https://json-schema.org/draft/2020-12/vocab/applicator"
+1>
+1> -> (push) "/properties/foo/type" (AssertionTypeStrict)
+1>    at instance location "/foo" (line 1, column 3)
+1>    at keyword location "file://[CWD]/schema.json#/properties/foo/type"
+1>    at vocabulary "https://json-schema.org/draft/2020-12/vocab/validation"
+1>
+1> <- (fail) "/properties/foo/type" (AssertionTypeStrict)
+1>    at instance location "/foo" (line 1, column 3)
+1>    at keyword location "file://[CWD]/schema.json#/properties/foo/type"
+1>    at vocabulary "https://json-schema.org/draft/2020-12/vocab/validation"
+1>
+1> <- (fail) "/properties" (LogicalWhenType)
+1>    at instance location "" (line 1, column 1)
+1>    at keyword location "file://[CWD]/schema.json#/properties"
+1>    at vocabulary "https://json-schema.org/draft/2020-12/vocab/applicator"
+EOF
+
+COMPARE result_0.txt AGAINST expected_0.txt

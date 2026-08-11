@@ -1,0 +1,37 @@
+MAKE DIRECTORY instances
+
+WRITE schema.json UNTIL EOF
+{
+  "$schema": "http://json-schema.org/draft-04/schema#",
+  "title": "Test",
+  "description": "Test schema",
+  "type": "object",
+  "properties": {
+    "name": {
+      "type": "string"
+    }
+  }
+}
+EOF
+
+WRITE instances/instance_1.json UNTIL EOF
+{ "name": "Alice" }
+EOF
+
+WRITE instances/instance_2.json UNTIL EOF
+{ "name": 123 }
+EOF
+
+// Validation failure
+RUN validate schema.json instances --fast STDIN /dev/null IN . INTO result_0.txt EXPECTING 2
+REPLACE '\\\\' WITH '/' IN result_0.txt
+REPLACE '\\(?!")' WITH '/' IN result_0.txt
+
+REPLACE $CWD WITH '[CWD]' IN result_0.txt
+
+WRITE expected_0.txt UNTIL EOF
+2> fail: [CWD]/instances/instance_2.json
+2> error: Schema validation failure
+EOF
+
+COMPARE result_0.txt AGAINST expected_0.txt

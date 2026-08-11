@@ -1,0 +1,26 @@
+WRITE this/is/a/very/very/very/very/very/very/very/very/long/nested/path/schema.json UNTIL EOF
+{
+  "type": "string",
+  "$schema": "http://json-schema.org/draft-04/schema#",
+  "title": "Test",
+  "description": "Test schema"
+}
+EOF
+
+// Validation failure
+RUN fmt this/is/a/very/very/very/very/very/very/very/very/long/nested/path/schema.json --check --json --indentation 4 STDIN /dev/null IN . INTO result.txt EXPECTING 2
+REPLACE '\\\\' WITH '/' IN result.txt
+REPLACE '\\(?!")' WITH '/' IN result.txt
+
+REPLACE $CWD WITH '[CWD]' IN result.txt
+
+WRITE expected.txt UNTIL EOF
+1> {
+1>     "valid": false,
+1>     "errors": [
+1>         "[CWD]/this/is/a/very/very/very/very/very/very/very/very/long/nested/path/schema.json"
+1>     ]
+1> }
+EOF
+
+COMPARE result.txt AGAINST expected.txt

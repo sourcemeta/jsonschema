@@ -1,0 +1,45 @@
+WRITE schema.json UNTIL EOF
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "foo": {
+      "not": { "type": "string" }
+    }
+  }
+}
+EOF
+
+// Not supported
+RUN codegen schema.json --target typescript STDIN /dev/null IN . INTO result.txt EXPECTING 3
+REPLACE '\\\\' WITH '/' IN result.txt
+REPLACE '\\(?!")' WITH '/' IN result.txt
+
+REPLACE $CWD WITH '[CWD]' IN result.txt
+
+WRITE expected_0.txt UNTIL EOF
+2> error: Unsupported keyword in subschema
+2>   at keyword not
+2>   at file path [CWD]/schema.json
+2>   at document location "/properties/foo"
+EOF
+
+COMPARE result.txt AGAINST expected_0.txt
+
+// Not supported
+RUN codegen schema.json --target typescript --json STDIN /dev/null IN . INTO result_json.txt EXPECTING 3
+REPLACE '\\\\' WITH '/' IN result_json.txt
+REPLACE '\\(?!")' WITH '/' IN result_json.txt
+
+REPLACE $CWD WITH '[CWD]' IN result_json.txt
+
+WRITE expected_1.txt UNTIL EOF
+1> {
+1>   "error": "Unsupported keyword in subschema",
+1>   "keyword": "not",
+1>   "filePath": "[CWD]/schema.json",
+1>   "location": "/properties/foo"
+1> }
+EOF
+
+COMPARE result_json.txt AGAINST expected_1.txt

@@ -1,0 +1,19 @@
+WRITE schema.yml UNTIL EOF
+$schema: http://json-schema.org/draft-06/schema#
+type: string
+enum: [ foo ]
+EOF
+
+// Not supported
+RUN lint schema.yml --fix STDIN /dev/null IN . INTO result.txt EXPECTING 3
+
+REPLACE '\\\\' WITH '/' IN result.txt
+REPLACE '\\(?!")' WITH '/' IN result.txt
+REPLACE $CWD WITH '[CWD]' IN result.txt
+
+WRITE expected.txt UNTIL EOF
+2> error: The --fix option is not supported for YAML input files
+2>   at file path [CWD]/schema.yml
+EOF
+
+COMPARE result.txt AGAINST expected.txt

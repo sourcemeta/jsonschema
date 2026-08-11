@@ -1,0 +1,38 @@
+WRITE schema.json UNTIL EOF
+{
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "x-jsonld-graph": true,
+    "properties": {
+      "member": {
+        "type": "object",
+        "x-jsonld-id": "https://schema.org/member",
+        "x-jsonld-type": "https://schema.org/Person"
+      }
+    }
+  }
+EOF
+
+WRITE instance.json UNTIL EOF
+{ "member": {} }
+EOF
+
+RUN rdf schema.json instance.json STDIN /dev/null IN . INTO result_0.txt EXPECTING 0
+
+WRITE expected_0.txt UNTIL EOF
+1> [
+1>   {
+1>     "@graph": [
+1>       {
+1>         "https://schema.org/member": [
+1>           {
+1>             "@type": [ "https://schema.org/Person" ]
+1>           }
+1>         ]
+1>       }
+1>     ]
+1>   }
+1> ]
+EOF
+
+COMPARE result_0.txt AGAINST expected_0.txt

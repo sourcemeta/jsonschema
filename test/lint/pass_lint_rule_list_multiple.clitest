@@ -1,0 +1,31 @@
+WRITE rule_zzz.json UNTIL EOF
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "zzz_rule",
+  "description": "Last rule",
+  "required": [ "type" ]
+}
+EOF
+
+WRITE rule_aaa.json UNTIL EOF
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "aaa_rule",
+  "description": "First rule",
+  "required": [ "description" ]
+}
+EOF
+
+RUN lint --rule rule_zzz.json --rule rule_aaa.json --list --only aaa_rule --only zzz_rule STDIN /dev/null IN . INTO result_0.txt EXPECTING 0
+
+WRITE expected_0.txt UNTIL EOF
+1> aaa_rule
+1>   First rule
+1>
+1> zzz_rule
+1>   Last rule
+1>
+1> Number of rules: 2
+EOF
+
+COMPARE result_0.txt AGAINST expected_0.txt

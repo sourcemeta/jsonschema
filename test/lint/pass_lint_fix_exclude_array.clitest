@@ -1,0 +1,42 @@
+WRITE schema.json UNTIL EOF
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Test",
+  "description": "Test schema",
+  "examples": [ "foo" ],
+  "type": "string",
+  "enum": [ "foo" ],
+  "contentMediaType": "application/json",
+  "x-lint-exclude": [
+    "enum_with_type",
+    "content_media_type_without_encoding",
+    "enum_to_const"
+  ]
+}
+EOF
+
+RUN lint schema.json --fix STDIN /dev/null IN . INTO result_0.txt EXPECTING 0
+
+WRITE expected_0.txt UNTIL EOF
+EOF
+
+COMPARE result_0.txt AGAINST expected_0.txt
+
+WRITE expected_file_1.txt UNTIL EOF
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Test",
+  "description": "Test schema",
+  "examples": [ "foo" ],
+  "type": "string",
+  "enum": [ "foo" ],
+  "contentMediaType": "application/json",
+  "x-lint-exclude": [
+    "enum_with_type",
+    "content_media_type_without_encoding",
+    "enum_to_const"
+  ]
+}
+EOF
+
+COMPARE schema.json AGAINST expected_file_1.txt

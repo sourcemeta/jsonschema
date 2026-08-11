@@ -1,0 +1,26 @@
+MAKE DIRECTORY nested/deeper
+
+WRITE schema.json UNTIL EOF
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "string"
+}
+EOF
+
+WRITE expected.txt UNTIL EOF
+1> {
+1>   "$schema": "https://json-schema.org/draft/2020-12/schema",
+1>   "$id": "tag:sourcemeta.com,2026:jsonschema/stdin",
+1>   "type": "string"
+1> }
+EOF
+
+// The identifier of a schema read from standard input must not depend on
+// the directory the command happens to run from
+RUN bundle - STDIN schema.json IN . INTO first.txt EXPECTING 0
+
+COMPARE first.txt AGAINST expected.txt
+
+RUN bundle - STDIN schema.json IN nested/deeper INTO second.txt EXPECTING 0
+
+COMPARE second.txt AGAINST expected.txt

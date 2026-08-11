@@ -1,0 +1,53 @@
+WRITE schema.json UNTIL EOF
+{
+  "id": "https://example.com",
+  "$schema": "http://json-schema.org/draft-04/schema#",
+  "title": "Test",
+  "description": "Test schema",
+  "type": "string"
+}
+EOF
+
+WRITE test.json UNTIL EOF
+{
+  "target": "https://example.com/other",
+  "tests": [
+    {
+      "description": "First test",
+      "valid": true,
+      "data": "foo"
+    },
+    {
+      "description": "Invalid type",
+      "valid": false,
+      "data": 1
+    }
+  ]
+}
+EOF
+
+WRITE jsonschema.json UNTIL EOF
+{
+  "resolve": {
+    "https://example.com/other": "https://example.com"
+  }
+}
+EOF
+
+RUN test $CWD/test.json --resolve $CWD/schema.json --verbose --jobs 1 STDIN /dev/null IN . INTO result.txt EXPECTING 0
+
+REPLACE '\\\\' WITH '/' IN result.txt
+REPLACE '\\(?!")' WITH '/' IN result.txt
+REPLACE $CWD WITH '[CWD]' IN result.txt
+
+WRITE expected.txt UNTIL EOF
+1> [CWD]/test.json:
+1>   1/2 PASS First test
+1>   2/2 PASS Invalid type
+2> Using parallelism: 1
+2> Using extension: .json
+2> Using extension: .yaml
+2> Using extension: .yml
+EOF
+
+COMPARE result.txt AGAINST expected.txt

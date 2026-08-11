@@ -1,0 +1,50 @@
+MAKE DIRECTORY schemas
+
+WRITE schemas/one.json UNTIL EOF
+{
+  "id": "https://example.com/one",
+  "$schema": "http://json-schema.org/draft-04/schema#",
+  "type": [ "string", "number" ]
+}
+EOF
+
+WRITE schemas/two.json UNTIL EOF
+{
+  "id": "https://example.com/two",
+  "$schema": "http://json-schema.org/draft-04/schema#",
+  "type": [ "string", "number" ]
+}
+EOF
+
+WRITE test.json UNTIL EOF
+{
+  "target": [
+    "https://example.com/one",
+    "https://example.com/two"
+  ],
+  "tests": [
+    {
+      "description": "String is valid",
+      "valid": true,
+      "data": "foo"
+    },
+    {
+      "description": "Object is invalid",
+      "valid": false,
+      "data": {}
+    }
+  ]
+}
+EOF
+
+RUN test test.json --resolve schemas STDIN /dev/null IN . INTO result_0.txt EXPECTING 0
+REPLACE '\\\\' WITH '/' IN result_0.txt
+REPLACE '\\(?!")' WITH '/' IN result_0.txt
+
+REPLACE $CWD WITH '[CWD]' IN result_0.txt
+
+WRITE expected_0.txt UNTIL EOF
+1> [CWD]/test.json: PASS 4/4
+EOF
+
+COMPARE result_0.txt AGAINST expected_0.txt

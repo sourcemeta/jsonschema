@@ -1,0 +1,29 @@
+WRITE schema.json UNTIL EOF
+{
+  "$id": "https://example.com",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "string"
+}
+EOF
+
+// Invalid CLI arguments
+RUN compile schema.json --include my-schema STDIN /dev/null IN . INTO result.txt EXPECTING 5
+
+WRITE expected_0.txt UNTIL EOF
+2> error: The include identifier is not a valid C/C++ identifier
+2>   at identifier my-schema
+EOF
+
+COMPARE result.txt AGAINST expected_0.txt
+
+// Invalid CLI arguments
+RUN compile schema.json --include my-schema --json STDIN /dev/null IN . INTO result_json.txt EXPECTING 5
+
+WRITE expected_1.txt UNTIL EOF
+1> {
+1>   "error": "The include identifier is not a valid C/C++ identifier",
+1>   "identifier": "my-schema"
+1> }
+EOF
+
+COMPARE result_json.txt AGAINST expected_1.txt

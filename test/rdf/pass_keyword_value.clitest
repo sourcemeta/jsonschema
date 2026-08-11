@@ -1,0 +1,47 @@
+WRITE schema.json UNTIL EOF
+{
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "weight": {
+        "type": "number",
+        "x-jsonld-id": "https://schema.org/weight",
+        "x-jsonld-value": "https://schema.org/value",
+        "x-jsonld-type": "https://schema.org/QuantitativeValue",
+        "x-jsonld-constants": {
+          "https://schema.org/unitCode": "KGM"
+        }
+      }
+    }
+  }
+EOF
+
+WRITE instance.json UNTIL EOF
+{ "weight": 2.5 }
+EOF
+
+RUN rdf schema.json instance.json STDIN /dev/null IN . INTO result_0.txt EXPECTING 0
+
+WRITE expected_0.txt UNTIL EOF
+1> [
+1>   {
+1>     "https://schema.org/weight": [
+1>       {
+1>         "@type": [ "https://schema.org/QuantitativeValue" ],
+1>         "https://schema.org/value": [
+1>           {
+1>             "@value": 2.5
+1>           }
+1>         ],
+1>         "https://schema.org/unitCode": [
+1>           {
+1>             "@value": "KGM"
+1>           }
+1>         ]
+1>       }
+1>     ]
+1>   }
+1> ]
+EOF
+
+COMPARE result_0.txt AGAINST expected_0.txt

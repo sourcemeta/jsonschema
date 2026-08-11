@@ -1,0 +1,56 @@
+WRITE schemas/schema1 UNTIL EOF
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "description": "Test schema",
+  "additionalProperties": false,
+  "title": "Hello World"
+}
+EOF
+
+WRITE schemas/schema2 UNTIL EOF
+{"$schema": "https://json-schema.org/draft/2020-12/schema", "type": "string", "title": "My String", "description": "Test schema"}
+EOF
+
+WRITE schemas/ignored.json UNTIL EOF
+{"$schema": "https://json-schema.org/draft/2020-12/schema", "type": "number", "title": "Should not be touched"}
+EOF
+
+COPY schemas/ignored.json TO ignored_before.json
+
+RUN fmt schemas --extension '' --verbose STDIN /dev/null IN . INTO result.txt EXPECTING 0
+REPLACE '\\\\' WITH '/' IN result.txt
+REPLACE '\\(?!")' WITH '/' IN result.txt
+
+REPLACE $CWD WITH '[CWD]' IN result.txt
+
+WRITE expected.txt UNTIL EOF
+2> warning: Matching files with no extension
+2> Formatting: [CWD]/schemas/schema1
+2> Formatting: [CWD]/schemas/schema2
+EOF
+
+COMPARE result.txt AGAINST expected.txt
+
+WRITE expected_file_0.txt UNTIL EOF
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Hello World",
+  "description": "Test schema",
+  "additionalProperties": false
+}
+EOF
+
+COMPARE schemas/schema1 AGAINST expected_file_0.txt
+
+WRITE expected_file_1.txt UNTIL EOF
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "My String",
+  "description": "Test schema",
+  "type": "string"
+}
+EOF
+
+COMPARE schemas/schema2 AGAINST expected_file_1.txt
+
+COMPARE schemas/ignored.json AGAINST ignored_before.json

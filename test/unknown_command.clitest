@@ -1,0 +1,11 @@
+// Invalid CLI arguments
+RUN unknown_command STDIN /dev/null IN . INTO result_0.txt EXPECTING 5
+
+WRITE expected_0.txt UNTIL EOF
+2> error: Unknown command
+2>   at command unknown_command
+2>
+2> Run the `help` command for usage information
+EOF
+
+COMPARE result_0.txt AGAINST expected_0.txt

@@ -1,0 +1,15 @@
+WRITE schema.json UNTIL EOF
+{
+  "properties": {
+    "foo": {
+      "type": "string"
+    }
+  }
+}
+EOF
+
+WRITE instance.json UNTIL EOF
+{ "foo": "bar" }
+EOF
+
+RUN validate --default-dialect https://json-schema.org/draft/2020-12/schema schema.json instance.json STDIN /dev/null IN . INTO result_0.txt EXPECTING 0

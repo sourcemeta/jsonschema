@@ -1,0 +1,53 @@
+WRITE schema.json UNTIL EOF
+{
+  "$id": "https://example.com/schema",
+  "$schema": "https://example.com/meta",
+  "$defs": {
+    "https://example.com/meta": {
+      "$id": "https://example.com/meta",
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "$vocabulary": {
+        "https://json-schema.org/draft/2020-12/vocab/core": true,
+        "https://json-schema.org/draft/2020-12/vocab/validation": true
+      },
+      "type": "object"
+    }
+  },
+  "type": "string"
+}
+EOF
+
+RUN fmt schema.json STDIN /dev/null IN . INTO first.txt EXPECTING 0
+
+WRITE expected_0.txt UNTIL EOF
+EOF
+
+COMPARE first.txt AGAINST expected_0.txt
+
+RUN fmt schema.json --check STDIN /dev/null IN . INTO second.txt EXPECTING 0
+
+WRITE expected_1.txt UNTIL EOF
+EOF
+
+COMPARE second.txt AGAINST expected_1.txt
+
+WRITE expected_file_0.txt UNTIL EOF
+{
+  "$schema": "https://example.com/meta",
+  "$id": "https://example.com/schema",
+  "type": "string",
+  "$defs": {
+    "https://example.com/meta": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "$id": "https://example.com/meta",
+      "$vocabulary": {
+        "https://json-schema.org/draft/2020-12/vocab/core": true,
+        "https://json-schema.org/draft/2020-12/vocab/validation": true
+      },
+      "type": "object"
+    }
+  }
+}
+EOF
+
+COMPARE schema.json AGAINST expected_file_0.txt

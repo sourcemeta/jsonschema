@@ -1,0 +1,19 @@
+WRITE schema.json UNTIL EOF
+{
+  "type": "string"
+}
+EOF
+
+WRITE jsonschema.json UNTIL EOF
+{
+  "defaultDialect": "https://json-schema.org/draft/2020-12/schema"
+}
+EOF
+
+RUN codegen $CWD/schema.json --target typescript --verbose STDIN /dev/null IN . INTO result.txt EXPECTING 0
+
+WRITE expected.txt UNTIL EOF
+1> export type Schema = string;
+EOF
+
+COMPARE result.txt AGAINST expected.txt

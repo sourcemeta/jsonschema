@@ -1,0 +1,45 @@
+WRITE nested.json UNTIL EOF
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "string"
+}
+EOF
+
+WRITE instance.json UNTIL EOF
+"Hello World"
+EOF
+
+WRITE schema.json UNTIL EOF
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$ref": "./nested.json"
+}
+EOF
+
+// A relative reference from standard input must fail loudly rather than
+// quietly resolve against whatever sits in the working directory
+// Schema input error
+RUN validate - instance.json STDIN schema.json IN . INTO result_0.txt EXPECTING 4
+
+WRITE expected_0.txt UNTIL EOF
+2> error: Could not resolve the reference to an external schema
+2>   at identifier tag:sourcemeta.com,2026:jsonschema/nested.json
+2>   at file path tag:sourcemeta.com,2026:jsonschema/stdin
+2>
+2> This is likely because you forgot to import such schema using `--resolve/-r`
+EOF
+
+COMPARE result_0.txt AGAINST expected_0.txt
+
+// Schema input error
+RUN validate - instance.json --json STDIN schema.json IN . INTO result_1.txt EXPECTING 4
+
+WRITE expected_1.txt UNTIL EOF
+1> {
+1>   "error": "Could not resolve the reference to an external schema",
+1>   "identifier": "tag:sourcemeta.com,2026:jsonschema/nested.json",
+1>   "filePath": "tag:sourcemeta.com,2026:jsonschema/stdin"
+1> }
+EOF
+
+COMPARE result_1.txt AGAINST expected_1.txt

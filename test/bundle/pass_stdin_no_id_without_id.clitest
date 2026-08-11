@@ -1,0 +1,59 @@
+WRITE other.json UNTIL EOF
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.com/other",
+  "type": "string"
+}
+EOF
+
+WRITE schema.json UNTIL EOF
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "properties": {
+    "local": { "$ref": "#/$defs/string" },
+    "anchored": { "$ref": "#thing" },
+    "external": { "$ref": "https://example.com/other" }
+  },
+  "$defs": {
+    "string": { "$anchor": "thing", "type": "string" }
+  }
+}
+EOF
+
+// Removing identifiers must not leave references dangling against the
+// identifier the schema was assigned for being read from standard input
+RUN bundle - --without-id --resolve other.json STDIN schema.json IN . INTO result_0.txt EXPECTING 0
+
+WRITE expected_0.txt UNTIL EOF
+1> {
+1>   "$schema": "https://json-schema.org/draft/2020-12/schema",
+1>   "properties": {
+1>     "local": {
+1>       "$ref": "#/$defs/string"
+1>     },
+1>     "anchored": {
+1>       "$ref": "#/$defs/string"
+1>     },
+1>     "external": {
+1>       "$ref": "#/$defs/https:~1~1example.com~1other"
+1>     }
+1>   },
+1>   "$defs": {
+1>     "string": {
+1>       "type": "string"
+1>     },
+1>     "https://example.com/other": {
+1>       "$schema": "https://json-schema.org/draft/2020-12/schema",
+1>       "type": "string"
+1>     }
+1>   }
+1> }
+2> warning: You are opting in to remove schema identifiers in the bundled schema.
+2> The only legit use case of this advanced feature we know of is to workaround
+2> non-compliant JSON Schema implementations such as Visual Studio Code.
+2> Otherwise, this is not needed and may harm other use cases. For example,
+2> you will be unable to reference the resulting schema from other schemas
+2> using the --resolve/-r option.
+EOF
+
+COMPARE result_0.txt AGAINST expected_0.txt

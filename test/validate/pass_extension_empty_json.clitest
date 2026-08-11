@@ -1,0 +1,41 @@
+MAKE DIRECTORY instances
+
+WRITE schema.json UNTIL EOF
+{
+  "$schema": "http://json-schema.org/draft-04/schema#",
+  "title": "Test",
+  "description": "Test schema",
+  "type": "object",
+  "properties": {
+    "name": { "type": "string" }
+  }
+}
+EOF
+
+WRITE instances/instance1 UNTIL EOF
+{ "name": "Alice" }
+EOF
+
+WRITE instances/instance2 UNTIL EOF
+{ "name": "Bob" }
+EOF
+
+WRITE instances/ignored.json UNTIL EOF
+{ "name": "Should be ignored" }
+EOF
+
+RUN validate schema.json instances --extension '' --verbose STDIN /dev/null IN . INTO result_0.txt EXPECTING 0
+REPLACE '\\\\' WITH '/' IN result_0.txt
+REPLACE '\\(?!")' WITH '/' IN result_0.txt
+
+REPLACE $CWD WITH '[CWD]' IN result_0.txt
+
+WRITE expected_0.txt UNTIL EOF
+2> warning: Matching files with no extension
+2> ok: [CWD]/instances/instance1
+2>   matches [CWD]/schema.json
+2> ok: [CWD]/instances/instance2
+2>   matches [CWD]/schema.json
+EOF
+
+COMPARE result_0.txt AGAINST expected_0.txt

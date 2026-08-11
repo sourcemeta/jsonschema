@@ -1,0 +1,47 @@
+WRITE schema.json UNTIL EOF
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "properties": { "foo": {} },
+  "type": "object"
+}
+EOF
+
+WRITE test.json UNTIL EOF
+{
+  "tests": [],
+  "target": "https://example.com/my-schema"
+}
+EOF
+
+RUN fmt . STDIN /dev/null IN . INTO result.txt EXPECTING 0
+REPLACE '\\\\' WITH '/' IN result.txt
+REPLACE '\\(?!")' WITH '/' IN result.txt
+
+REPLACE $CWD WITH '[CWD]' IN result.txt
+
+WRITE expected.txt UNTIL EOF
+2> Interpreting as a test file: [CWD]/test.json
+EOF
+
+COMPARE result.txt AGAINST expected.txt
+
+WRITE expected_file_0.txt UNTIL EOF
+{
+  "target": "https://example.com/my-schema",
+  "tests": []
+}
+EOF
+
+COMPARE test.json AGAINST expected_file_0.txt
+
+WRITE expected_file_1.txt UNTIL EOF
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "foo": {}
+  }
+}
+EOF
+
+COMPARE schema.json AGAINST expected_file_1.txt

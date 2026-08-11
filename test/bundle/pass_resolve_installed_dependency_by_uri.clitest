@@ -1,0 +1,62 @@
+MAKE DIRECTORY project/vendor
+
+WRITE source/types.json UNTIL EOF
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.com/types",
+  "type": "string"
+}
+EOF
+
+WRITE project/jsonschema.json UNTIL EOF
+{
+  "dependencies": {
+    "[CWD_URI]/source/types.json": "./vendor/types.json"
+  }
+}
+EOF
+
+REPLACE '\[CWD_URI\]' WITH $CWD_URI IN project/jsonschema.json
+
+RUN install STDIN /dev/null IN project INTO installed.txt EXPECTING 0
+REPLACE '\\\\' WITH '/' IN installed.txt
+REPLACE '\\(?!")' WITH '/' IN installed.txt
+
+REPLACE $CWD WITH '[CWD]' IN installed.txt
+REPLACE 'file:///\[CWD\]' WITH 'file://[CWD]' IN installed.txt
+
+WRITE expected_install.txt UNTIL EOF
+2> Fetching       : file://[CWD]/source/types.json
+2> Installed      : [CWD]/project/vendor/types.json
+EOF
+
+COMPARE installed.txt AGAINST expected_install.txt
+
+WRITE project/schema.json UNTIL EOF
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.com/main",
+  "$ref": "[CWD_URI]/source/types.json"
+}
+EOF
+
+REPLACE '\[CWD_URI\]' WITH $CWD_URI IN project/schema.json
+
+RUN bundle project/schema.json STDIN /dev/null IN . INTO result.txt EXPECTING 0
+
+WRITE expected.txt UNTIL EOF
+1> {
+1>   "$schema": "https://json-schema.org/draft/2020-12/schema",
+1>   "$id": "https://example.com/main",
+1>   "$ref": "https://example.com/types",
+1>   "$defs": {
+1>     "https://example.com/types": {
+1>       "$schema": "https://json-schema.org/draft/2020-12/schema",
+1>       "$id": "https://example.com/types",
+1>       "type": "string"
+1>     }
+1>   }
+1> }
+EOF
+
+COMPARE result.txt AGAINST expected.txt

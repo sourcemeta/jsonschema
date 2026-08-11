@@ -1,0 +1,72 @@
+MAKE DIRECTORY schemas
+
+MAKE DIRECTORY tests
+
+WRITE schemas/1.json UNTIL EOF
+{
+  "id": "https://example.com/1",
+  "$schema": "http://json-schema.org/draft-04/schema#",
+  "title": "Test",
+  "description": "Test schema",
+  "type": "string"
+}
+EOF
+
+WRITE schemas/2.json UNTIL EOF
+{
+  "id": "https://example.com/2",
+  "$schema": "http://json-schema.org/draft-04/schema#",
+  "title": "Test",
+  "description": "Test schema",
+  "type": "array"
+}
+EOF
+
+WRITE tests/1.json UNTIL EOF
+{
+  "target": "https://example.com/1",
+  "tests": [
+    {
+      "description": "First test",
+      "valid": true,
+      "data": "foo"
+    },
+    {
+      "description": "Second test",
+      "valid": false,
+      "data": 1
+    }
+  ]
+}
+EOF
+
+WRITE tests/2.json UNTIL EOF
+{
+  "target": "https://example.com/2",
+  "tests": [
+    {
+      "description": "First test",
+      "valid": true,
+      "data": [ 1, 2, 3 ]
+    },
+    {
+      "description": "Second test",
+      "valid": false,
+      "data": {}
+    }
+  ]
+}
+EOF
+
+RUN test tests --resolve schemas --jobs 1 STDIN /dev/null IN . INTO result_0.txt EXPECTING 0
+REPLACE '\\\\' WITH '/' IN result_0.txt
+REPLACE '\\(?!")' WITH '/' IN result_0.txt
+
+REPLACE $CWD WITH '[CWD]' IN result_0.txt
+
+WRITE expected_0.txt UNTIL EOF
+1> [CWD]/tests/1.json: PASS 2/2
+1> [CWD]/tests/2.json: PASS 2/2
+EOF
+
+COMPARE result_0.txt AGAINST expected_0.txt

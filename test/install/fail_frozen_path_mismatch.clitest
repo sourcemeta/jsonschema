@@ -1,0 +1,84 @@
+MAKE DIRECTORY source
+
+MAKE DIRECTORY project
+
+WRITE source/schema.json UNTIL EOF
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "string"
+}
+EOF
+
+WRITE project/jsonschema.json UNTIL EOF
+{
+  "dependencies": {
+    "[CWD_URI]/source/schema.json": "./vendor/schema.json"
+  }
+}
+EOF
+
+REPLACE '\[CWD_URI\]' WITH $CWD_URI IN project/jsonschema.json
+
+WRITE project/jsonschema.lock.json UNTIL EOF
+{
+  "version": 1,
+  "dependencies": {
+    "[CWD_URI]/source/schema.json": {
+      "path": "[CWD]/project/vendor/WRONG.json",
+      "hash": "abc123",
+      "hashAlgorithm": "sha256"
+    }
+  }
+}
+EOF
+
+REPLACE '\[CWD_URI\]' WITH $CWD_URI IN project/jsonschema.lock.json
+REPLACE '\[CWD\]' WITH $CWD IN project/jsonschema.lock.json
+
+COPY project/jsonschema.lock.json TO lock_before.json
+
+// Validation failure
+RUN install --frozen STDIN /dev/null IN project INTO result_0.txt EXPECTING 2
+REPLACE '\\\\' WITH '/' IN result_0.txt
+REPLACE '\\(?!")' WITH '/' IN result_0.txt
+
+REPLACE $CWD WITH '[CWD]' IN result_0.txt
+REPLACE 'file:///\[CWD\]' WITH 'file://[CWD]' IN result_0.txt
+
+WRITE expected_0.txt UNTIL EOF
+2> Path mismatch  : file://[CWD]/source/schema.json
+2> error: Configured path does not match lock file in frozen mode
+2>   at uri file://[CWD]/source/schema.json
+EOF
+
+COMPARE result_0.txt AGAINST expected_0.txt
+
+// Validation failure
+RUN install --frozen --json STDIN /dev/null IN project INTO result_1.txt EXPECTING 2
+REPLACE '\\\\' WITH '/' IN result_1.txt
+REPLACE '\\(?!")' WITH '/' IN result_1.txt
+
+REPLACE $CWD WITH '[CWD]' IN result_1.txt
+REPLACE 'file:///\[CWD\]' WITH 'file://[CWD]' IN result_1.txt
+
+WRITE expected_1.txt UNTIL EOF
+1> {
+1>   "events": [
+1>     {
+1>       "type": "path-mismatch",
+1>       "uri": "file://[CWD]/source/schema.json"
+1>     },
+1>     {
+1>       "type": "error",
+1>       "uri": "file://[CWD]/source/schema.json",
+1>       "message": "Configured path does not match lock file in frozen mode"
+1>     }
+1>   ]
+1> }
+EOF
+
+COMPARE result_1.txt AGAINST expected_1.txt
+
+COMPARE project/jsonschema.lock.json AGAINST lock_before.json
+
+COMPARE project/jsonschema.lock.json AGAINST lock_before.json

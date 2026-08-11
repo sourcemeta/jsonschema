@@ -1,0 +1,41 @@
+WRITE schema.json UNTIL EOF
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$defs": {
+    "a": { "$id": "https://example.com/same" },
+    "b": { "$id": "https://example.com/same" }
+  }
+}
+EOF
+
+// Schema input error
+RUN lint schema.json STDIN /dev/null IN . INTO result_0.txt EXPECTING 4
+REPLACE '\\\\' WITH '/' IN result_0.txt
+REPLACE '\\(?!")' WITH '/' IN result_0.txt
+
+REPLACE $CWD WITH '[CWD]' IN result_0.txt
+
+WRITE expected_0.txt UNTIL EOF
+2> error: Schema identifier already exists
+2>   at identifier https://example.com/same
+2>   at file path [CWD]/schema.json
+EOF
+
+COMPARE result_0.txt AGAINST expected_0.txt
+
+// Schema input error
+RUN lint schema.json --json STDIN /dev/null IN . INTO result_1.txt EXPECTING 4
+REPLACE '\\\\' WITH '/' IN result_1.txt
+REPLACE '\\(?!")' WITH '/' IN result_1.txt
+
+REPLACE $CWD WITH '[CWD]' IN result_1.txt
+
+WRITE expected_1.txt UNTIL EOF
+1> {
+1>   "error": "Schema identifier already exists",
+1>   "identifier": "https://example.com/same",
+1>   "filePath": "[CWD]/schema.json"
+1> }
+EOF
+
+COMPARE result_1.txt AGAINST expected_1.txt

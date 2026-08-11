@@ -1,0 +1,34 @@
+WRITE test.json UNTIL EOF
+{
+  "target": "https://example.com/unknown",
+  "tests": [
+    {
+      "valid": true,
+      "data": {}
+    },
+    {
+      "valid": true,
+      "data": { "type": 1 }
+    }
+  ]
+}
+EOF
+
+// Schema input error
+RUN test test.json --verbose --jobs 1 STDIN /dev/null IN . INTO result_0.txt EXPECTING 4
+REPLACE '\\\\' WITH '/' IN result_0.txt
+REPLACE '\\(?!")' WITH '/' IN result_0.txt
+
+REPLACE $CWD WITH '[CWD]' IN result_0.txt
+
+WRITE expected_0.txt UNTIL EOF
+1> [CWD]/test.json:
+2> Using parallelism: 1
+2> error: Could not resolve the reference to an external schema
+2>   at identifier https://example.com/unknown
+2>   at file path [CWD]/test.json
+2>
+2> This is likely because you forgot to import such schema using `--resolve/-r`
+EOF
+
+COMPARE result_0.txt AGAINST expected_0.txt

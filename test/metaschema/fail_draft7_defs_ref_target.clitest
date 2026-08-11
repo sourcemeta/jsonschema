@@ -1,0 +1,57 @@
+WRITE metaschema.json UNTIL EOF
+{
+  "$id": "https://example.com/custom-metaschema-draft7",
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "allOf": [
+    { "$ref": "#/$defs/not-a-schema" }
+  ],
+  "$defs": {
+    "not-a-schema": {
+      "type": "object"
+    }
+  }
+}
+EOF
+
+WRITE schema.json UNTIL EOF
+{
+  "$schema": "https://example.com/custom-metaschema-draft7",
+  "type": "string"
+}
+EOF
+
+// Schema input error
+RUN metaschema schema.json --resolve metaschema.json STDIN /dev/null IN . INTO result.txt EXPECTING 4
+REPLACE '\\\\' WITH '/' IN result.txt
+REPLACE '\\(?!")' WITH '/' IN result.txt
+
+REPLACE $CWD WITH '[CWD]' IN result.txt
+
+WRITE expected.txt UNTIL EOF
+2> error: The referenced schema is not considered to be a valid subschema given the dialect and vocabularies in use
+2>   at identifier https://example.com/custom-metaschema-draft7#/$defs/not-a-schema
+2>   at file path [CWD]/schema.json
+2>   at location "/$defs"
+2>
+2> Maybe you meant to use `definitions` instead of `$defs` in this dialect?
+EOF
+
+COMPARE result.txt AGAINST expected.txt
+
+// Schema input error
+RUN metaschema schema.json --resolve metaschema.json --json STDIN /dev/null IN . INTO result_json.txt EXPECTING 4
+REPLACE '\\\\' WITH '/' IN result_json.txt
+REPLACE '\\(?!")' WITH '/' IN result_json.txt
+
+REPLACE $CWD WITH '[CWD]' IN result_json.txt
+
+WRITE expected_json.txt UNTIL EOF
+1> {
+1>   "error": "The referenced schema is not considered to be a valid subschema given the dialect and vocabularies in use",
+1>   "identifier": "https://example.com/custom-metaschema-draft7#/$defs/not-a-schema",
+1>   "filePath": "[CWD]/schema.json",
+1>   "location": "/$defs"
+1> }
+EOF
+
+COMPARE result_json.txt AGAINST expected_json.txt

@@ -1,0 +1,32 @@
+WRITE schema.json UNTIL EOF
+{
+  "type": "string",
+  "$defs": {
+    "foo": {
+      "type": [ "string", "null" ]
+    }
+  }
+}
+EOF
+
+WRITE jsonschema.json UNTIL EOF
+{
+  "defaultDialect": "https://json-schema.org/draft/2020-12/schema"
+}
+EOF
+
+RUN metaschema --verbose $CWD/schema.json STDIN /dev/null IN . INTO result.txt EXPECTING 0
+REPLACE '\\\\' WITH '/' IN result.txt
+REPLACE '\\(?!")' WITH '/' IN result.txt
+
+REPLACE $CWD WITH '[CWD]' IN result.txt
+
+WRITE expected.txt UNTIL EOF
+2> Using extension: .json
+2> Using extension: .yaml
+2> Using extension: .yml
+2> ok: [CWD]/schema.json
+2>   matches https://json-schema.org/draft/2020-12/schema
+EOF
+
+COMPARE result.txt AGAINST expected.txt

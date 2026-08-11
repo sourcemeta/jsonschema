@@ -1,0 +1,28 @@
+WRITE schema.json UNTIL EOF
+{
+  "$schema": "https://example.com/meta",
+  "$id": "https://example.com/schema",
+  "type": "string",
+  "$defs": {
+    "https://example.com/meta": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "$id": "https://example.com/meta",
+      "$vocabulary": {
+        "https://json-schema.org/draft/2020-12/vocab/core": true,
+        "https://json-schema.org/draft/2020-12/vocab/validation": true
+      },
+      "type": "object"
+    }
+  }
+}
+EOF
+
+RUN codegen schema.json --target typescript STDIN /dev/null IN . INTO result.txt EXPECTING 0
+
+WRITE expected.txt UNTIL EOF
+1> export type SchemaMeta = Record<string, unknown>;
+1>
+1> export type Schema = string;
+EOF
+
+COMPARE result.txt AGAINST expected.txt

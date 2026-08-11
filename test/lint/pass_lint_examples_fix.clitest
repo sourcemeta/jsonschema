@@ -1,0 +1,40 @@
+WRITE schema.json UNTIL EOF
+{
+  "$schema": "http://json-schema.org/draft-06/schema#",
+  "title": "Test",
+  "description": "Test schema",
+  "examples": [ {} ],
+  "properties": {
+    "foo": {
+      "type": "string",
+      "examples": [ 1, 2, 3 ]
+    }
+  }
+}
+EOF
+
+RUN lint schema.json --fix STDIN /dev/null IN . INTO result_0.txt EXPECTING 0
+
+WRITE expected_0.txt UNTIL EOF
+2> .
+EOF
+
+COMPARE result_0.txt AGAINST expected_0.txt
+
+WRITE expected_file_1.txt UNTIL EOF
+{
+  "$schema": "http://json-schema.org/draft-06/schema#",
+  "title": "Test",
+  "description": "Test schema",
+  "examples": [
+    {}
+  ],
+  "properties": {
+    "foo": {
+      "type": "string"
+    }
+  }
+}
+EOF
+
+COMPARE schema.json AGAINST expected_file_1.txt

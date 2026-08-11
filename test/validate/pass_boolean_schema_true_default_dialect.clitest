@@ -1,0 +1,14 @@
+WRITE schema.json UNTIL EOF
+true
+EOF
+
+WRITE instance.json UNTIL EOF
+{}
+EOF
+
+RUN validate --default-dialect https://json-schema.org/draft/2020-12/schema schema.json instance.json STDIN /dev/null IN . INTO result_0.txt EXPECTING 0
+
+WRITE expected_0.txt UNTIL EOF
+EOF
+
+COMPARE result_0.txt AGAINST expected_0.txt

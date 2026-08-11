@@ -1,0 +1,29 @@
+WRITE input.json UNTIL EOF
+{ "foo" 1 }
+EOF
+
+// Other input error
+RUN upgrade - STDIN input.json IN . INTO result.txt EXPECTING 6
+
+WRITE expected.txt UNTIL EOF
+2> error: Failed to parse the JSON document
+2>   at line 1
+2>   at column 9
+2>   at file path tag:sourcemeta.com,2026:jsonschema/stdin
+EOF
+
+COMPARE result.txt AGAINST expected.txt
+
+// Other input error
+RUN upgrade - --json STDIN input.json IN . INTO result_json.txt EXPECTING 6
+
+WRITE expected_json.txt UNTIL EOF
+1> {
+1>   "error": "Failed to parse the JSON document",
+1>   "line": 1,
+1>   "column": 9,
+1>   "filePath": "tag:sourcemeta.com,2026:jsonschema/stdin"
+1> }
+EOF
+
+COMPARE result_json.txt AGAINST expected_json.txt

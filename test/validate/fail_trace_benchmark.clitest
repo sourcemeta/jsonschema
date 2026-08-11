@@ -1,0 +1,30 @@
+WRITE schema.json UNTIL EOF
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "string"
+}
+EOF
+
+WRITE instance.json UNTIL EOF
+"hello"
+EOF
+
+// Invalid CLI arguments
+RUN validate schema.json instance.json --trace --benchmark STDIN /dev/null IN . INTO result_0.txt EXPECTING 5
+
+WRITE expected_0.txt UNTIL EOF
+2> error: The `--trace/-t` and `--benchmark/-b` options are mutually exclusive
+EOF
+
+COMPARE result_0.txt AGAINST expected_0.txt
+
+// Invalid CLI arguments
+RUN validate schema.json instance.json --trace --benchmark --json STDIN /dev/null IN . INTO result_1.txt EXPECTING 5
+
+WRITE expected_1.txt UNTIL EOF
+1> {
+1>   "error": "The `--trace/-t` and `--benchmark/-b` options are mutually exclusive"
+1> }
+EOF
+
+COMPARE result_1.txt AGAINST expected_1.txt

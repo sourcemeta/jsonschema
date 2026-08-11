@@ -1,0 +1,25 @@
+WRITE input.json UNTIL EOF
+[ 1, 2, 3 ]
+EOF
+
+// Schema input error
+RUN bundle - STDIN input.json IN . INTO result.txt EXPECTING 4
+
+WRITE expected_0.txt UNTIL EOF
+2> error: The schema file you provided does not represent a valid JSON Schema
+2>   at file path tag:sourcemeta.com,2026:jsonschema/stdin
+EOF
+
+COMPARE result.txt AGAINST expected_0.txt
+
+// Schema input error
+RUN bundle - --json STDIN input.json IN . INTO result_json.txt EXPECTING 4
+
+WRITE expected_1.txt UNTIL EOF
+1> {
+1>   "error": "The schema file you provided does not represent a valid JSON Schema",
+1>   "filePath": "tag:sourcemeta.com,2026:jsonschema/stdin"
+1> }
+EOF
+
+COMPARE result_json.txt AGAINST expected_1.txt

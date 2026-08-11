@@ -1,0 +1,29 @@
+WRITE schema.json UNTIL EOF
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "$defs": {
+    "Positive Int": {
+      "type": "integer",
+      "minimum": 1
+    }
+  }
+}
+EOF
+
+WRITE instance.json UNTIL EOF
+42
+EOF
+
+RUN validate schema.json instance.json --entrypoint '/$$defs/Positive Int' --verbose STDIN /dev/null IN . INTO result.txt EXPECTING 0
+
+REPLACE '\\\\' WITH '/' IN result.txt
+REPLACE '\\(?!")' WITH '/' IN result.txt
+REPLACE $CWD WITH '[CWD]' IN result.txt
+
+WRITE expected.txt UNTIL EOF
+2> ok: [CWD]/instance.json
+2>   matches [CWD]/schema.json
+EOF
+
+COMPARE result.txt AGAINST expected.txt

@@ -1,0 +1,29 @@
+WRITE schema.json UNTIL EOF
+{ "type": "string" }
+EOF
+
+WRITE instance.json UNTIL EOF
+"hello"
+EOF
+
+// Invalid CLI arguments
+RUN validate schema.json instance.json --default-dialect ':::not a URI' STDIN /dev/null IN . INTO result_0.txt EXPECTING 5
+
+WRITE expected_0.txt UNTIL EOF
+2> error: The default dialect is not a valid URI reference
+2>   at value :::not a URI
+EOF
+
+COMPARE result_0.txt AGAINST expected_0.txt
+
+// Invalid CLI arguments
+RUN validate schema.json instance.json --default-dialect ':::not a URI' --json STDIN /dev/null IN . INTO result_1.txt EXPECTING 5
+
+WRITE expected_1.txt UNTIL EOF
+1> {
+1>   "error": "The default dialect is not a valid URI reference",
+1>   "value": ":::not a URI"
+1> }
+EOF
+
+COMPARE result_1.txt AGAINST expected_1.txt

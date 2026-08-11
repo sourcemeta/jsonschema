@@ -1,0 +1,42 @@
+WRITE foo.json UNTIL EOF
+{
+  "$schema": "http://json-schema.org/draft-04/schema#",
+  "title": "Test",
+  "description": "Test schema"
+}
+EOF
+
+WRITE bar.json UNTIL EOF
+{
+  "$schema": "http://json-schema.org/draft-04/schema#",
+  "title": "Test",
+  "description": "Test schema"
+}
+EOF
+
+WRITE baz.json UNTIL EOF
+{
+  "$schema": "https://example.com/unknown",
+  "title": "Test",
+  "description": "Test schema"
+}
+EOF
+
+// Schema input error
+RUN lint $CWD --verbose STDIN /dev/null IN . INTO result_0.txt EXPECTING 4
+REPLACE '\\\\' WITH '/' IN result_0.txt
+REPLACE '\\(?!")' WITH '/' IN result_0.txt
+
+REPLACE $CWD WITH '[CWD]' IN result_0.txt
+
+WRITE expected_0.txt UNTIL EOF
+2> Linting: [CWD]/bar.json
+2> Linting: [CWD]/baz.json
+2> error: Could not resolve the metaschema of the schema
+2>   at identifier https://example.com/unknown
+2>   at file path [CWD]/baz.json
+2>
+2> This is likely because you forgot to import such schema using `--resolve/-r`
+EOF
+
+COMPARE result_0.txt AGAINST expected_0.txt

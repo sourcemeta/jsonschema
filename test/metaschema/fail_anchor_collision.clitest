@@ -1,0 +1,62 @@
+WRITE metaschema.json UNTIL EOF
+{
+  "$id": "https://example.com/custom-metaschema",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$vocabulary": { "https://json-schema.org/draft/2020-12/vocab/core": true },
+  "$anchor": "foo",
+  "$dynamicAnchor": "meta",
+  "$ref": "https://json-schema.org/draft/2020-12/meta/core",
+  "properties": {
+    "bar": {
+      "$anchor": "foo"
+    }
+  }
+}
+EOF
+
+WRITE schema.json UNTIL EOF
+{
+  "$schema": "https://example.com/custom-metaschema",
+  "type": "string"
+}
+EOF
+
+// Schema input error
+RUN metaschema schema.json --resolve metaschema.json STDIN /dev/null IN . INTO result.txt EXPECTING 4
+REPLACE '\\\\' WITH '/' IN result.txt
+REPLACE '\\(?!")' WITH '/' IN result.txt
+
+REPLACE $CWD WITH '[CWD]' IN result.txt
+
+WRITE expected.txt UNTIL EOF
+2> error: Schema anchor already exists
+2>   at identifier https://example.com/custom-metaschema#foo
+2>   at line 9
+2>   at column 5
+2>   at file path [CWD]/metaschema.json
+2>   at location "/properties/bar"
+2>   at other location ""
+EOF
+
+COMPARE result.txt AGAINST expected.txt
+
+// Schema input error
+RUN metaschema schema.json --resolve metaschema.json --json STDIN /dev/null IN . INTO result_json.txt EXPECTING 4
+REPLACE '\\\\' WITH '/' IN result_json.txt
+REPLACE '\\(?!")' WITH '/' IN result_json.txt
+
+REPLACE $CWD WITH '[CWD]' IN result_json.txt
+
+WRITE expected_json.txt UNTIL EOF
+1> {
+1>   "error": "Schema anchor already exists",
+1>   "identifier": "https://example.com/custom-metaschema#foo",
+1>   "line": 9,
+1>   "column": 5,
+1>   "filePath": "[CWD]/metaschema.json",
+1>   "location": "/properties/bar",
+1>   "otherLocation": ""
+1> }
+EOF
+
+COMPARE result_json.txt AGAINST expected_json.txt

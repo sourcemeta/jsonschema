@@ -1,0 +1,54 @@
+MAKE DIRECTORY foo
+
+MAKE DIRECTORY bar
+
+WRITE foo/schema.json UNTIL EOF
+{
+  "$schema": "http://json-schema.org/draft-04/schema#",
+  "title": "Test",
+  "description": "Test schema",
+  "properties": {
+    "foo": {
+      "type": "string",
+      "default": "foo"
+    }
+  }
+}
+EOF
+
+WRITE jsonschema.json UNTIL EOF
+{
+  "path": "./foo"
+}
+EOF
+
+RUN lint --verbose STDIN /dev/null IN bar INTO result_0.txt EXPECTING 0
+REPLACE '\\\\' WITH '/' IN result_0.txt
+REPLACE '\\(?!")' WITH '/' IN result_0.txt
+
+REPLACE $CWD WITH '[CWD]' IN result_0.txt
+
+WRITE expected_0.txt UNTIL EOF
+2> Using extension: .json
+2> Using extension: .yaml
+2> Using extension: .yml
+2> Linting: [CWD]/foo/schema.json
+EOF
+
+COMPARE result_0.txt AGAINST expected_0.txt
+
+WRITE expected_file_1.txt UNTIL EOF
+{
+  "$schema": "http://json-schema.org/draft-04/schema#",
+  "title": "Test",
+  "description": "Test schema",
+  "properties": {
+    "foo": {
+      "type": "string",
+      "default": "foo"
+    }
+  }
+}
+EOF
+
+COMPARE foo/schema.json AGAINST expected_file_1.txt

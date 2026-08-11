@@ -1,0 +1,17 @@
+WRITE schema.yaml UNTIL EOF
+$schema: http://json-schema.org/draft-04/schema#
+id: https://example.com/test
+type: string
+EOF
+
+RUN upgrade schema.yaml STDIN /dev/null IN . INTO result.txt EXPECTING 0
+
+WRITE expected.txt UNTIL EOF
+1> {
+1>   "$schema": "https://json-schema.org/draft/2020-12/schema",
+1>   "$id": "https://example.com/test",
+1>   "type": "string"
+1> }
+EOF
+
+COMPARE result.txt AGAINST expected.txt

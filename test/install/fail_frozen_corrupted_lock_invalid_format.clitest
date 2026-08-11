@@ -1,0 +1,45 @@
+MAKE DIRECTORY project
+
+WRITE project/jsonschema.json UNTIL EOF
+{
+  "dependencies": {
+    "file:///tmp/fake/schema.json": "./vendor/schema.json"
+  }
+}
+EOF
+
+WRITE project/jsonschema.lock.json UNTIL EOF
+{
+  "foo": "bar"
+}
+EOF
+
+// Other input error
+RUN install --frozen STDIN /dev/null IN project INTO result_0.txt EXPECTING 6
+REPLACE '\\\\' WITH '/' IN result_0.txt
+REPLACE '\\(?!")' WITH '/' IN result_0.txt
+
+REPLACE $CWD WITH '[CWD]' IN result_0.txt
+
+WRITE expected_0.txt UNTIL EOF
+2> error: Lock file is corrupted
+2>   at file path [CWD]/project/jsonschema.lock.json
+EOF
+
+COMPARE result_0.txt AGAINST expected_0.txt
+
+// Other input error
+RUN install --frozen --json STDIN /dev/null IN project INTO result_1.txt EXPECTING 6
+REPLACE '\\\\' WITH '/' IN result_1.txt
+REPLACE '\\(?!")' WITH '/' IN result_1.txt
+
+REPLACE $CWD WITH '[CWD]' IN result_1.txt
+
+WRITE expected_1.txt UNTIL EOF
+1> {
+1>   "error": "Lock file is corrupted",
+1>   "filePath": "[CWD]/project/jsonschema.lock.json"
+1> }
+EOF
+
+COMPARE result_1.txt AGAINST expected_1.txt

@@ -1,0 +1,97 @@
+WRITE schema.json UNTIL EOF
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Test",
+  "description": "Test schema",
+  "$id": "https://example.com",
+  "$ref": "other"
+}
+EOF
+
+WRITE remote.json UNTIL EOF
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.com/nested",
+  "title": "Test",
+  "description": "Test schema",
+  "type": "string"
+}
+EOF
+
+WRITE jsonschema.json UNTIL EOF
+{
+  "resolve": {
+    "https://example.com/other": "https://example.com/nested"
+  }
+}
+EOF
+
+RUN compile $CWD/schema.json --resolve $CWD/remote.json --verbose STDIN /dev/null IN . INTO result.txt EXPECTING 0
+
+WRITE expected.txt UNTIL EOF
+1> [
+1>   5,
+1>   false,
+1>   true,
+1>   [
+1>     [
+1>       [
+1>         99,
+1>         [ "$ref" ],
+1>         [],
+1>         "https://example.com#/$ref",
+1>         2,
+1>         [ 10, 1 ]
+1>       ],
+1>       [
+1>         50,
+1>         [ "description" ],
+1>         [],
+1>         "https://example.com#/description",
+1>         2,
+1>         [ 1, "Test schema" ]
+1>       ],
+1>       [
+1>         50,
+1>         [ "title" ],
+1>         [],
+1>         "https://example.com#/title",
+1>         2,
+1>         [ 1, "Test" ]
+1>       ]
+1>     ],
+1>     [
+1>       [
+1>         50,
+1>         [ "description" ],
+1>         [],
+1>         "https://example.com/nested#/description",
+1>         3,
+1>         [ 1, "Test schema" ]
+1>       ],
+1>       [
+1>         50,
+1>         [ "title" ],
+1>         [],
+1>         "https://example.com/nested#/title",
+1>         3,
+1>         [ 1, "Test" ]
+1>       ],
+1>       [
+1>         11,
+1>         [ "type" ],
+1>         [],
+1>         "https://example.com/nested#/type",
+1>         3,
+1>         [ 8, 4 ]
+1>       ]
+1>     ]
+1>   ],
+1>   []
+1> ]
+2> Using extension: .json
+2> Using extension: .yaml
+2> Using extension: .yml
+EOF
+
+COMPARE result.txt AGAINST expected.txt

@@ -1,0 +1,25 @@
+WRITE schema.json UNTIL EOF
+{
+  "$schema": "https://example.com/meta",
+  "$id": "https://example.com/schema",
+  "type": "string",
+  "$defs": {
+    "https://example.com/meta": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "$id": "https://example.com/meta",
+      "$vocabulary": {
+        "https://json-schema.org/draft/2020-12/vocab/core": true,
+        "https://json-schema.org/draft/2020-12/vocab/validation": true
+      },
+      "type": "object"
+    }
+  }
+}
+EOF
+
+WRITE silent.txt UNTIL EOF
+EOF
+
+RUN metaschema schema.json STDIN /dev/null IN . INTO result.txt EXPECTING 0
+
+COMPARE result.txt AGAINST silent.txt

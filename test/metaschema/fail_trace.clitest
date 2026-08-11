@@ -1,0 +1,75 @@
+WRITE schema.json UNTIL EOF
+{
+  "$schema": "http://json-schema.org/draft-04/schema#",
+  "title": "Test",
+  "description": "Test schema",
+  "minimum": "foo"
+}
+EOF
+
+// Metaschema validation failure
+RUN metaschema schema.json --trace STDIN /dev/null IN . INTO result.txt EXPECTING 2
+
+WRITE expected.txt UNTIL EOF
+1> -> (push) "/dependencies" (AssertionPropertyDependencies)
+1>    at instance location "" (line 1, column 1)
+1>    at keyword location "http://json-schema.org/draft-04/schema#/dependencies"
+1>    at vocabulary "http://json-schema.org/draft-04/schema#"
+1>
+1> <- (pass) "/dependencies" (AssertionPropertyDependencies)
+1>    at instance location "" (line 1, column 1)
+1>    at keyword location "http://json-schema.org/draft-04/schema#/dependencies"
+1>    at vocabulary "http://json-schema.org/draft-04/schema#"
+1>
+1> -> (push) "/properties" (LoopPropertiesMatch)
+1>    at instance location "" (line 1, column 1)
+1>    at keyword location "http://json-schema.org/draft-04/schema#/properties"
+1>    at vocabulary "http://json-schema.org/draft-04/schema#"
+1>
+1> -> (push) "/properties/$schema/type" (AssertionTypeStrict)
+1>    at instance location "/$schema" (line 2, column 3)
+1>    at keyword location "http://json-schema.org/draft-04/schema#/properties/$schema/type"
+1>    at vocabulary "http://json-schema.org/draft-04/schema#"
+1>
+1> <- (pass) "/properties/$schema/type" (AssertionTypeStrict)
+1>    at instance location "/$schema" (line 2, column 3)
+1>    at keyword location "http://json-schema.org/draft-04/schema#/properties/$schema/type"
+1>    at vocabulary "http://json-schema.org/draft-04/schema#"
+1>
+1> -> (push) "/properties/title/type" (AssertionTypeStrict)
+1>    at instance location "/title" (line 3, column 3)
+1>    at keyword location "http://json-schema.org/draft-04/schema#/properties/title/type"
+1>    at vocabulary "http://json-schema.org/draft-04/schema#"
+1>
+1> <- (pass) "/properties/title/type" (AssertionTypeStrict)
+1>    at instance location "/title" (line 3, column 3)
+1>    at keyword location "http://json-schema.org/draft-04/schema#/properties/title/type"
+1>    at vocabulary "http://json-schema.org/draft-04/schema#"
+1>
+1> -> (push) "/properties/description/type" (AssertionTypeStrict)
+1>    at instance location "/description" (line 4, column 3)
+1>    at keyword location "http://json-schema.org/draft-04/schema#/properties/description/type"
+1>    at vocabulary "http://json-schema.org/draft-04/schema#"
+1>
+1> <- (pass) "/properties/description/type" (AssertionTypeStrict)
+1>    at instance location "/description" (line 4, column 3)
+1>    at keyword location "http://json-schema.org/draft-04/schema#/properties/description/type"
+1>    at vocabulary "http://json-schema.org/draft-04/schema#"
+1>
+1> -> (push) "/properties/minimum/type" (AssertionTypeStrictAny)
+1>    at instance location "/minimum" (line 5, column 3)
+1>    at keyword location "http://json-schema.org/draft-04/schema#/properties/minimum/type"
+1>    at vocabulary "http://json-schema.org/draft-04/schema#"
+1>
+1> <- (fail) "/properties/minimum/type" (AssertionTypeStrictAny)
+1>    at instance location "/minimum" (line 5, column 3)
+1>    at keyword location "http://json-schema.org/draft-04/schema#/properties/minimum/type"
+1>    at vocabulary "http://json-schema.org/draft-04/schema#"
+1>
+1> <- (fail) "/properties" (LoopPropertiesMatch)
+1>    at instance location "" (line 1, column 1)
+1>    at keyword location "http://json-schema.org/draft-04/schema#/properties"
+1>    at vocabulary "http://json-schema.org/draft-04/schema#"
+EOF
+
+COMPARE result.txt AGAINST expected.txt

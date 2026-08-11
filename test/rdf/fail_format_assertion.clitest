@@ -1,0 +1,86 @@
+WRITE schema.json UNTIL EOF
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "email": {
+      "type": "string",
+      "format": "email",
+      "x-jsonld-id": "https://schema.org/email"
+    }
+  }
+}
+EOF
+
+WRITE instance.json UNTIL EOF
+{ "email": "not an email" }
+EOF
+
+RUN rdf schema.json instance.json STDIN /dev/null IN . INTO result_0.txt EXPECTING 0
+
+WRITE expected_0.txt UNTIL EOF
+1> [
+1>   {
+1>     "https://schema.org/email": [
+1>       {
+1>         "@value": "not an email"
+1>       }
+1>     ]
+1>   }
+1> ]
+EOF
+
+COMPARE result_0.txt AGAINST expected_0.txt
+
+// Validation failure
+RUN rdf schema.json instance.json --format-assertion STDIN /dev/null IN . INTO result_1.txt EXPECTING 2
+REPLACE '\\\\' WITH '/' IN result_1.txt
+REPLACE '\\(?!")' WITH '/' IN result_1.txt
+
+REPLACE $CWD WITH '[CWD]' IN result_1.txt
+REPLACE 'file:///\[CWD\]' WITH 'file://[CWD]' IN result_1.txt
+
+WRITE expected_1.txt UNTIL EOF
+2> fail: [CWD]/instance.json
+2> error: Schema validation failure
+2>   The string value "not an email" was expected to represent a valid email address
+2>     at instance location "/email" (line 1, column 3)
+2>     at evaluate path "/properties/email/format"
+2>   The object value was expected to validate against the single defined property subschema
+2>     at instance location "" (line 1, column 1)
+2>     at evaluate path "/properties"
+EOF
+
+COMPARE result_1.txt AGAINST expected_1.txt
+
+// Validation failure
+RUN rdf schema.json instance.json --format-assertion --json STDIN /dev/null IN . INTO result_2.txt EXPECTING 2
+REPLACE '\\\\' WITH '/' IN result_2.txt
+REPLACE '\\(?!")' WITH '/' IN result_2.txt
+
+REPLACE $CWD WITH '[CWD]' IN result_2.txt
+REPLACE 'file:///\[CWD\]' WITH 'file://[CWD]' IN result_2.txt
+
+WRITE expected_2.txt UNTIL EOF
+1> {
+1>   "valid": false,
+1>   "errors": [
+1>     {
+1>       "keywordLocation": "/properties/email/format",
+1>       "absoluteKeywordLocation": "file://[CWD]/schema.json#/properties/email/format",
+1>       "instanceLocation": "/email",
+1>       "instancePosition": [ 1, 3, 1, 25 ],
+1>       "error": "The string value \"not an email\" was expected to represent a valid email address"
+1>     },
+1>     {
+1>       "keywordLocation": "/properties",
+1>       "absoluteKeywordLocation": "file://[CWD]/schema.json#/properties",
+1>       "instanceLocation": "",
+1>       "instancePosition": [ 1, 1, 1, 27 ],
+1>       "error": "The object value was expected to validate against the single defined property subschema"
+1>     }
+1>   ]
+1> }
+EOF
+
+COMPARE result_2.txt AGAINST expected_2.txt

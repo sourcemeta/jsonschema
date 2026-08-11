@@ -1,0 +1,49 @@
+MAKE DIRECTORY foo
+
+MAKE DIRECTORY bar
+
+WRITE schema.json UNTIL EOF
+{
+  "id": "https://example.com",
+  "$schema": "http://json-schema.org/draft-04/schema#",
+  "title": "Test",
+  "description": "Test schema",
+  "type": "string"
+}
+EOF
+
+WRITE foo/test.json UNTIL EOF
+{
+  "target": "https://example.com",
+  "tests": [
+    {
+      "description": "First test",
+      "valid": true,
+      "data": "foo"
+    }
+  ]
+}
+EOF
+
+WRITE jsonschema.json UNTIL EOF
+{
+  "path": "./foo"
+}
+EOF
+
+RUN test --resolve $CWD/schema.json --verbose --jobs 1 STDIN /dev/null IN bar INTO result_0.txt EXPECTING 0
+REPLACE '\\\\' WITH '/' IN result_0.txt
+REPLACE '\\(?!")' WITH '/' IN result_0.txt
+
+REPLACE $CWD WITH '[CWD]' IN result_0.txt
+
+WRITE expected_0.txt UNTIL EOF
+1> [CWD]/foo/test.json:
+1>   1/1 PASS First test
+2> Using parallelism: 1
+2> Using extension: .json
+2> Using extension: .yaml
+2> Using extension: .yml
+EOF
+
+COMPARE result_0.txt AGAINST expected_0.txt

@@ -1,0 +1,35 @@
+WRITE schema.json UNTIL EOF
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "x-jsonld-type": "https://schema.org/Person"
+}
+EOF
+
+WRITE instance.json UNTIL EOF
+{}
+EOF
+
+// Invalid CLI arguments
+RUN rdf schema.json instance.json --compact STDIN /dev/null IN . INTO result_0.txt EXPECTING 5
+
+WRITE expected_0.txt UNTIL EOF
+2> error: This option must take a value
+2>   at option compact
+2>
+2> Run the `help` command for usage information
+EOF
+
+COMPARE result_0.txt AGAINST expected_0.txt
+
+// Invalid CLI arguments
+RUN rdf schema.json instance.json --json --compact STDIN /dev/null IN . INTO result_1.txt EXPECTING 5
+
+WRITE expected_1.txt UNTIL EOF
+1> {
+1>   "error": "This option must take a value",
+1>   "option": "compact"
+1> }
+EOF
+
+COMPARE result_1.txt AGAINST expected_1.txt

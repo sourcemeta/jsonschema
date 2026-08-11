@@ -1,0 +1,58 @@
+WRITE schema.json UNTIL EOF
+{
+  "$id": "https://example.com",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "x": {
+      "allOf": [
+        { "x-jsonld-datatype": "http://www.w3.org/2001/XMLSchema#date" },
+        { "x-jsonld-datatype": "http://www.w3.org/2001/XMLSchema#string" }
+      ]
+    }
+  }
+}
+EOF
+
+WRITE test.json UNTIL EOF
+{
+  "target": "https://example.com",
+  "tests": [
+    {
+      "description": "Conflicting datatypes",
+      "valid": true,
+      "data": { "x": "v" },
+      "rdf": []
+    },
+    {
+      "description": "No conflicting member",
+      "valid": true,
+      "data": {},
+      "rdf": []
+    }
+  ]
+}
+EOF
+
+// Validation failure
+RUN test test.json --resolve schema.json STDIN /dev/null IN . INTO result_0.txt EXPECTING 2
+REPLACE '\\\\' WITH '/' IN result_0.txt
+REPLACE '\\(?!")' WITH '/' IN result_0.txt
+
+REPLACE $CWD WITH '[CWD]' IN result_0.txt
+
+WRITE expected_0.txt UNTIL EOF
+1> [CWD]/test.json:
+1>   1/2 FAIL Conflicting datatypes
+1>
+1> error: A JSON-LD datatype cannot be assigned more than one value
+1>   at line 7
+1>   at column 17
+1>   at instance location "/x"
+1>   at facet "datatype"
+1>   at schema location https://example.com#/properties/x/allOf/0/x-jsonld-datatype
+1>   at conflicting schema location https://example.com#/properties/x/allOf/1/x-jsonld-datatype
+1>   at file path [CWD]/test.json
+EOF
+
+COMPARE result_0.txt AGAINST expected_0.txt

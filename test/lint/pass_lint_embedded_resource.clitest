@@ -1,0 +1,22 @@
+WRITE schema.json UNTIL EOF
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Test",
+  "description": "Test schema",
+  "examples": [ 1 ],
+  "$id": "https://example.com/main",
+  "$ref": "embedded",
+  "$defs": {
+    "embedded": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "$id": "embedded",
+      "allOf": [ { "$ref": "#/definitions/foo" } ],
+      "definitions": {
+        "foo": { "type": "number" }
+      }
+    }
+  }
+}
+EOF
+
+RUN lint schema.json STDIN /dev/null IN . INTO result_0.txt EXPECTING 0

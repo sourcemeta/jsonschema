@@ -1,0 +1,82 @@
+WRITE schema.json UNTIL EOF
+{
+  "$id": "https://example.com",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "name": { "type": "string", "x-jsonld-id": "https://schema.org/name" }
+  }
+}
+EOF
+
+WRITE test.json UNTIL EOF
+{
+  "target": "https://example.com",
+  "tests": [
+    {
+      "description": "Wrong expectation",
+      "valid": true,
+      "data": { "name": "Ada" },
+      "rdf": []
+    }
+  ]
+}
+EOF
+
+WRITE silent.txt UNTIL EOF
+EOF
+
+// Test assertion failure
+RUN test test.json --resolve schema.json --json STDIN /dev/null IN . INTO result.txt EXPECTING 2
+
+COPY result.txt TO report.json
+KEEP LINES MATCHING '^1>' IN report.json
+REPLACE '^1> ?' WITH '' IN report.json
+
+RUN validate $CTRF_SCHEMA report.json STDIN /dev/null IN . INTO validated.txt EXPECTING 0
+
+COMPARE validated.txt AGAINST silent.txt
+
+REPLACE $VERSION WITH '[VERSION]' IN result.txt
+DROP LINES MATCHING '"duration":' IN result.txt
+DROP LINES MATCHING '"start":' IN result.txt
+DROP LINES MATCHING '"stop":' IN result.txt
+DROP LINES MATCHING '"threadId":' IN result.txt
+REPLACE '\\\\' WITH '/' IN result.txt
+REPLACE $CWD WITH '[CWD]' IN result.txt
+
+WRITE expected.txt UNTIL EOF
+1> {
+1>   "reportFormat": "CTRF",
+1>   "specVersion": "0.0.0",
+1>   "results": {
+1>     "tool": {
+1>       "name": "jsonschema",
+1>       "version": "[VERSION]"
+1>     },
+1>     "summary": {
+1>       "tests": 1,
+1>       "passed": 0,
+1>       "failed": 1,
+1>       "pending": 0,
+1>       "skipped": 0,
+1>       "other": 0,
+1>     },
+1>     "tests": [
+1>       {
+1>         "name": "Wrong expectation",
+1>         "status": "failed",
+1>         "suite": [ "https://example.com" ],
+1>         "type": "unit",
+1>         "filePath": "[CWD]/test.json",
+1>         "line": 4,
+1>         "retries": 0,
+1>         "flaky": false,
+1>         "trace": "error: RDF expansion mismatch\n  at line 8\n  at column 7\n  at file path [CWD]/test.json\n  at location \"/tests/0/rdf\"\n\n[\n  {\n    \"https://schema.org/name\": [\n      {\n        \"@value\": \"Ada\"\n      }\n    ]\n  }\n]\n"
+1>       }
+1>     ]
+1>   }
+1> }
+EOF
+
+COMPARE result.txt AGAINST expected.txt

@@ -1,0 +1,84 @@
+WRITE common.json UNTIL EOF
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.com/common",
+  "type": "string"
+}
+EOF
+
+WRITE a.json UNTIL EOF
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.com/a",
+  "$ref": "common",
+  "$defs": {
+    "https://example.com/common": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "$id": "https://example.com/common",
+      "type": "string"
+    }
+  }
+}
+EOF
+
+WRITE b.json UNTIL EOF
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.com/b",
+  "$ref": "common",
+  "$defs": {
+    "https://example.com/common": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "$id": "https://example.com/common",
+      "type": "string"
+    }
+  }
+}
+EOF
+
+WRITE entry.json UNTIL EOF
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.com/entry",
+  "allOf": [
+    { "$ref": "a" },
+    { "$ref": "b" }
+  ]
+}
+EOF
+
+RUN bundle entry.json --resolve a.json --resolve b.json --resolve common.json STDIN /dev/null IN . INTO result.txt EXPECTING 0
+
+WRITE expected.txt UNTIL EOF
+1> {
+1>   "$schema": "https://json-schema.org/draft/2020-12/schema",
+1>   "$id": "https://example.com/entry",
+1>   "allOf": [
+1>     {
+1>       "$ref": "a"
+1>     },
+1>     {
+1>       "$ref": "b"
+1>     }
+1>   ],
+1>   "$defs": {
+1>     "https://example.com/common": {
+1>       "$schema": "https://json-schema.org/draft/2020-12/schema",
+1>       "$id": "https://example.com/common",
+1>       "type": "string"
+1>     },
+1>     "https://example.com/a": {
+1>       "$schema": "https://json-schema.org/draft/2020-12/schema",
+1>       "$id": "https://example.com/a",
+1>       "$ref": "common"
+1>     },
+1>     "https://example.com/b": {
+1>       "$schema": "https://json-schema.org/draft/2020-12/schema",
+1>       "$id": "https://example.com/b",
+1>       "$ref": "common"
+1>     }
+1>   }
+1> }
+EOF
+
+COMPARE result.txt AGAINST expected.txt

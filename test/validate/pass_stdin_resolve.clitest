@@ -1,0 +1,29 @@
+WRITE defs.json UNTIL EOF
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.com/defs",
+  "type": "string"
+}
+EOF
+
+WRITE instance.json UNTIL EOF
+"hello"
+EOF
+
+WRITE stdin_0 UNTIL EOF
+{"$schema":"https://json-schema.org/draft/2020-12/schema","$ref":"https://example.com/defs"}
+EOF
+
+// Schema from stdin referencing a resolved external schema
+RUN validate - instance.json --resolve defs.json --verbose STDIN stdin_0 IN . INTO result.txt EXPECTING 0
+
+REPLACE '\\\\' WITH '/' IN result.txt
+REPLACE '\\(?!")' WITH '/' IN result.txt
+REPLACE $CWD WITH '[CWD]' IN result.txt
+
+WRITE expected.txt UNTIL EOF
+2> ok: [CWD]/instance.json
+2>   matches tag:sourcemeta.com,2026:jsonschema/stdin
+EOF
+
+COMPARE result.txt AGAINST expected.txt

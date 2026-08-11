@@ -1,0 +1,62 @@
+WRITE rule.json UNTIL EOF
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "require_id",
+  "description": "The root schema must declare an $id",
+  "required": [ "$id" ]
+}
+EOF
+
+WRITE jsonschema.json UNTIL EOF
+{
+  "lint": {
+    "rules": [
+      { "path": "./rule.json", "topLevel": true }
+    ]
+  }
+}
+EOF
+
+WRITE schema.json UNTIL EOF
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}
+EOF
+
+// Validation failure
+RUN lint --only require_id schema.json STDIN /dev/null IN . INTO result_0.txt EXPECTING 2
+
+WRITE expected_0.txt UNTIL EOF
+1> schema.json:1:1:
+1>   The root schema must declare an $id (require_id)
+1>     at location ""
+1>     The object value was expected to define the property "$id"
+EOF
+
+COMPARE result_0.txt AGAINST expected_0.txt
+
+// Validation failure
+RUN lint --only require_id --json schema.json STDIN /dev/null IN . INTO result_1.txt EXPECTING 2
+REPLACE '\\\\' WITH '/' IN result_1.txt
+REPLACE '\\(?!")' WITH '/' IN result_1.txt
+
+REPLACE $CWD WITH '[CWD]' IN result_1.txt
+
+WRITE expected_1.txt UNTIL EOF
+1> {
+1>   "valid": false,
+1>   "health": 0,
+1>   "errors": [
+1>     {
+1>       "path": "[CWD]/schema.json",
+1>       "id": "require_id",
+1>       "message": "The root schema must declare an $id",
+1>       "description": "The object value was expected to define the property \"$id\"",
+1>       "schemaLocation": [],
+1>       "position": [ 1, 1, 3, 1 ]
+1>     }
+1>   ]
+1> }
+EOF
+
+COMPARE result_1.txt AGAINST expected_1.txt

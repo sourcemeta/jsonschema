@@ -1,0 +1,23 @@
+// Invalid CLI arguments
+RUN decode STDIN /dev/null IN . INTO result.txt EXPECTING 5
+REPLACE '\\\\' WITH '/' IN result.txt
+REPLACE '\\(?!")' WITH '/' IN result.txt
+
+WRITE expected.txt UNTIL EOF
+2> error: This command expects a path to a binary file and an output path
+2>
+2> For example: jsonschema decode path/to/output.binpack path/to/document.json
+EOF
+
+COMPARE result.txt AGAINST expected.txt
+
+// Invalid CLI arguments
+RUN decode --json STDIN /dev/null IN . INTO result_json.txt EXPECTING 5
+
+WRITE expected_json.txt UNTIL EOF
+1> {
+1>   "error": "This command expects a path to a binary file and an output path"
+1> }
+EOF
+
+COMPARE result_json.txt AGAINST expected_json.txt

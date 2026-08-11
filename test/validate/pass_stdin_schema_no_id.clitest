@@ -1,0 +1,17 @@
+WRITE instance.json UNTIL EOF
+"hello"
+EOF
+
+WRITE stdin_0 UNTIL EOF
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "string"
+}
+EOF
+
+RUN validate - instance.json STDIN stdin_0 IN . INTO result_0.txt EXPECTING 0
+
+WRITE expected_0.txt UNTIL EOF
+EOF
+
+COMPARE result_0.txt AGAINST expected_0.txt

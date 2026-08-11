@@ -1,0 +1,41 @@
+WRITE schema.json UNTIL EOF
+{
+  "$schema": "http://json-schema.org/draft-04/schema#",
+  "title": "Test",
+  "description": "Test schema",
+  "type": "object"
+}
+EOF
+
+WRITE instance.jsonl UNTIL EOF
+{ "foo": 1 }
+[ { "foo": 2 } ]
+{ "foo": 3 }
+EOF
+
+// Validation failure
+RUN validate schema.json instance.jsonl --verbose STDIN /dev/null IN . INTO result_0.txt EXPECTING 2
+REPLACE '\\\\' WITH '/' IN result_0.txt
+REPLACE '\\(?!")' WITH '/' IN result_0.txt
+
+REPLACE $CWD WITH '[CWD]' IN result_0.txt
+
+WRITE expected_0.txt UNTIL EOF
+2> Interpreting input as JSONL: [CWD]/instance.jsonl
+2> ok: [CWD]/instance.jsonl (entry #1)
+2>   matches [CWD]/schema.json
+2> fail: [CWD]/instance.jsonl (entry #2)
+2>
+2> [
+2>   {
+2>     "foo": 2
+2>   }
+2> ]
+2>
+2> error: Schema validation failure
+2>   The value was expected to be of type object but it was of type array
+2>     at instance location ""
+2>     at evaluate path "/type"
+EOF
+
+COMPARE result_0.txt AGAINST expected_0.txt

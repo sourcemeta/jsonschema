@@ -1,0 +1,44 @@
+WRITE jsonschema.json UNTIL EOF
+{
+  "path": "./schemas",
+  "resolve": {
+    "https://example.com/my-external-schema": "./dependency.json"
+  }
+}
+EOF
+
+WRITE schemas/test.json UNTIL EOF
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.com/test",
+  "$ref": "https://example.com/my-external-schema.json"
+}
+EOF
+
+WRITE dependency.json UNTIL EOF
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "string"
+}
+EOF
+
+RUN bundle schemas/test.json STDIN /dev/null IN . INTO result.txt EXPECTING 0
+REPLACE '\\\\' WITH '/' IN result.txt
+REPLACE '\\(?!")' WITH '/' IN result.txt
+
+WRITE expected.txt UNTIL EOF
+1> {
+1>   "$schema": "https://json-schema.org/draft/2020-12/schema",
+1>   "$id": "https://example.com/test",
+1>   "$ref": "https://example.com/my-external-schema.json",
+1>   "$defs": {
+1>     "https://example.com/my-external-schema.json": {
+1>       "$schema": "https://json-schema.org/draft/2020-12/schema",
+1>       "$id": "https://example.com/my-external-schema.json",
+1>       "type": "string"
+1>     }
+1>   }
+1> }
+EOF
+
+COMPARE result.txt AGAINST expected.txt

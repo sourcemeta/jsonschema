@@ -1,0 +1,49 @@
+WRITE schema.json UNTIL EOF
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Test",
+  "description": "Test schema",
+  "$id": "https://example.com",
+  "$ref": "other"
+}
+EOF
+
+WRITE remote.json UNTIL EOF
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.com/nested",
+  "type": "string"
+}
+EOF
+
+WRITE jsonschema.json UNTIL EOF
+{
+  "resolve": {
+    "https://example.com/other": "https://example.com/nested"
+  }
+}
+EOF
+
+RUN bundle $CWD/schema.json --resolve $CWD/remote.json --verbose STDIN /dev/null IN . INTO result.txt EXPECTING 0
+
+WRITE expected.txt UNTIL EOF
+1> {
+1>   "$schema": "https://json-schema.org/draft/2020-12/schema",
+1>   "$id": "https://example.com",
+1>   "title": "Test",
+1>   "description": "Test schema",
+1>   "$ref": "https://example.com/nested",
+1>   "$defs": {
+1>     "https://example.com/nested": {
+1>       "$schema": "https://json-schema.org/draft/2020-12/schema",
+1>       "$id": "https://example.com/nested",
+1>       "type": "string"
+1>     }
+1>   }
+1> }
+2> Using extension: .json
+2> Using extension: .yaml
+2> Using extension: .yml
+EOF
+
+COMPARE result.txt AGAINST expected.txt

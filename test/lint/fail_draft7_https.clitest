@@ -1,0 +1,20 @@
+WRITE schema.json UNTIL EOF
+{
+  "$schema": "https://json-schema.org/draft-07/schema#",
+  "title": "Test",
+  "description": "Test schema",
+  "examples": [ "foo" ],
+  "type": "string"
+}
+EOF
+
+// Validation failure
+RUN lint schema.json STDIN /dev/null IN . INTO result_0.txt EXPECTING 2
+
+WRITE expected_0.txt UNTIL EOF
+1> schema.json:2:3:
+1>   The official dialect URI of Draft 7 and older must use "http://" instead of "https://" (draft_official_dialect_with_https)
+1>     at location "/$schema"
+EOF
+
+COMPARE result_0.txt AGAINST expected_0.txt

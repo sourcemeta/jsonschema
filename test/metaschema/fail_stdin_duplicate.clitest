@@ -1,0 +1,23 @@
+WRITE input.json UNTIL EOF
+{}
+EOF
+
+// Invalid CLI arguments
+RUN metaschema - - STDIN input.json IN . INTO result.txt EXPECTING 5
+
+WRITE expected.txt UNTIL EOF
+2> error: Cannot read from standard input more than once
+EOF
+
+COMPARE result.txt AGAINST expected.txt
+
+// Invalid CLI arguments
+RUN metaschema - - --json STDIN input.json IN . INTO result_json.txt EXPECTING 5
+
+WRITE expected_json.txt UNTIL EOF
+1> {
+1>   "error": "Cannot read from standard input more than once"
+1> }
+EOF
+
+COMPARE result_json.txt AGAINST expected_json.txt

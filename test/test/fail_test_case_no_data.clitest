@@ -1,0 +1,38 @@
+WRITE test.json UNTIL EOF
+{
+  "target": "http://json-schema.org/draft-04/schema#",
+  "tests": [
+    {
+      "valid": true,
+      "data": {}
+    },
+    {
+      "valid": true,
+      "data": {}
+    },
+    {
+      "valid": true
+    }
+  ]
+}
+EOF
+
+// Other input error
+RUN test test.json STDIN /dev/null IN . INTO result_0.txt EXPECTING 6
+REPLACE '\\\\' WITH '/' IN result_0.txt
+REPLACE '\\(?!")' WITH '/' IN result_0.txt
+
+REPLACE $CWD WITH '[CWD]' IN result_0.txt
+
+WRITE expected_0.txt UNTIL EOF
+1> [CWD]/test.json:
+2> error: Test case documents must contain a `data` or `dataPath` property
+2>   at line 12
+2>   at column 5
+2>   at file path [CWD]/test.json
+2>   at location "/tests/2"
+2>
+2> Learn more here: https://github.com/sourcemeta/jsonschema/blob/main/docs/test.markdown
+EOF
+
+COMPARE result_0.txt AGAINST expected_0.txt

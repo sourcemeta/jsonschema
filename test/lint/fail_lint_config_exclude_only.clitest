@@ -1,0 +1,32 @@
+WRITE jsonschema.json UNTIL EOF
+{
+  "lint": {
+    "exclude": [ "enum_with_type" ]
+  }
+}
+EOF
+
+WRITE schema.json UNTIL EOF
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Test",
+  "description": "Test schema",
+  "examples": [ "foo" ],
+  "type": "string",
+  "enum": [ "foo", "bar" ]
+}
+EOF
+
+// Validation failure
+RUN lint --only enum_with_type schema.json STDIN /dev/null IN . INTO result_0.txt EXPECTING 2
+
+WRITE expected_0.txt UNTIL EOF
+1> schema.json:7:3:
+1>   Setting `type` alongside `enum` is considered an anti-pattern, as the enumeration choices already imply their respective types (enum_with_type)
+1>     at location "/enum"
+1> schema.json:6:3:
+1>   Setting `type` alongside `enum` is considered an anti-pattern, as the enumeration choices already imply their respective types (enum_with_type)
+1>     at location "/type"
+EOF
+
+COMPARE result_0.txt AGAINST expected_0.txt

@@ -1,0 +1,23 @@
+WRITE schema.custom UNTIL EOF
+$id: https://example.com
+$schema: https://json-schema.org/draft/2020-12/schema
+title: Test
+description: A test schema
+examples:
+  - foo
+type: string
+EOF
+
+RUN lint schema.custom STDIN /dev/null IN . INTO result_0.txt EXPECTING 0
+
+WRITE expected_file_0.txt UNTIL EOF
+$id: https://example.com
+$schema: https://json-schema.org/draft/2020-12/schema
+title: Test
+description: A test schema
+examples:
+  - foo
+type: string
+EOF
+
+COMPARE schema.custom AGAINST expected_file_0.txt

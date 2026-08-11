@@ -1,0 +1,38 @@
+WRITE schema.json UNTIL EOF
+{
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "data": {
+        "type": "object",
+        "x-jsonld-id": "https://schema.org/data",
+        "x-jsonld-container": "@index"
+      }
+    }
+  }
+EOF
+
+WRITE instance.json UNTIL EOF
+{ "data": { "a": "foo", "b": "bar" } }
+EOF
+
+RUN rdf schema.json instance.json STDIN /dev/null IN . INTO result_0.txt EXPECTING 0
+
+WRITE expected_0.txt UNTIL EOF
+1> [
+1>   {
+1>     "https://schema.org/data": [
+1>       {
+1>         "@value": "foo",
+1>         "@index": "a"
+1>       },
+1>       {
+1>         "@value": "bar",
+1>         "@index": "b"
+1>       }
+1>     ]
+1>   }
+1> ]
+EOF
+
+COMPARE result_0.txt AGAINST expected_0.txt

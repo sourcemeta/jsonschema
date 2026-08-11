@@ -1,0 +1,49 @@
+MAKE DIRECTORY project
+
+WRITE project/jsonschema.json UNTIL EOF
+{
+  "dependencies": {
+    "https://example.com/other": "./vendor/user.json"
+  }
+}
+EOF
+
+// Other input error
+RUN install https://example.com/schema ./vendor/user.json STDIN /dev/null IN project INTO result_0.txt EXPECTING 6
+REPLACE '\\\\' WITH '/' IN result_0.txt
+REPLACE '\\(?!")' WITH '/' IN result_0.txt
+
+REPLACE $CWD WITH '[CWD]' IN result_0.txt
+
+WRITE expected_0.txt UNTIL EOF
+2> error: Multiple dependencies cannot point to the same path
+2>   at file path [CWD]/project/jsonschema.json
+2>   at location "/dependencies/https:~1~1example.com~1other"
+EOF
+
+COMPARE result_0.txt AGAINST expected_0.txt
+
+// Other input error
+RUN install --json https://example.com/schema ./vendor/user.json STDIN /dev/null IN project INTO result_1.txt EXPECTING 6
+REPLACE '\\\\' WITH '/' IN result_1.txt
+REPLACE '\\(?!")' WITH '/' IN result_1.txt
+
+REPLACE $CWD WITH '[CWD]' IN result_1.txt
+
+WRITE expected_1.txt UNTIL EOF
+1> {
+1>   "error": "Multiple dependencies cannot point to the same path",
+1>   "filePath": "[CWD]/project/jsonschema.json",
+1>   "location": "/dependencies/https:~1~1example.com~1other"
+1> }
+EOF
+
+COMPARE result_1.txt AGAINST expected_1.txt
+
+TREE project INTO listing_0.txt
+KEEP LINES MATCHING '^\./jsonschema\.lock\.json$' IN listing_0.txt
+
+WRITE listing_expected_0.txt UNTIL EOF
+EOF
+
+COMPARE listing_0.txt AGAINST listing_expected_0.txt

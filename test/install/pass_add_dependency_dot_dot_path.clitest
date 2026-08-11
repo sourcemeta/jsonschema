@@ -1,0 +1,63 @@
+MAKE DIRECTORY source
+
+MAKE DIRECTORY project/subdir
+
+WRITE source/user.json UNTIL EOF
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "string"
+}
+EOF
+
+WRITE project/jsonschema.json UNTIL EOF
+{
+  "dependencies": {}
+}
+EOF
+
+RUN install $CWD_URI/source/user.json ../vendor/user.json STDIN /dev/null IN project/subdir INTO result_0.txt EXPECTING 0
+REPLACE '\\\\' WITH '/' IN result_0.txt
+REPLACE '\\(?!")' WITH '/' IN result_0.txt
+
+REPLACE $CWD WITH '[CWD]' IN result_0.txt
+REPLACE 'file:///\[CWD\]' WITH 'file://[CWD]' IN result_0.txt
+
+WRITE expected_0.txt UNTIL EOF
+2> Adding         : file://[CWD]/source/user.json -> ./vendor/user.json
+2> Fetching       : file://[CWD]/source/user.json
+2> Installed      : [CWD]/project/vendor/user.json
+EOF
+
+COMPARE result_0.txt AGAINST expected_0.txt
+
+COPY project/jsonschema.json TO checked_file_1.txt
+REPLACE '\\\\' WITH '/' IN checked_file_1.txt
+REPLACE '\\(?!")' WITH '/' IN checked_file_1.txt
+REPLACE $CWD WITH '[CWD]' IN checked_file_1.txt
+REPLACE 'file:///\[CWD\]' WITH 'file://[CWD]' IN checked_file_1.txt
+
+WRITE expected_file_1.txt UNTIL EOF
+{
+  "dependencies": {
+    "file://[CWD]/source/user.json": "./vendor/user.json"
+  }
+}
+EOF
+
+COMPARE checked_file_1.txt AGAINST expected_file_1.txt
+
+COPY project/vendor/user.json TO checked_file_2.txt
+REPLACE '\\\\' WITH '/' IN checked_file_2.txt
+REPLACE '\\(?!")' WITH '/' IN checked_file_2.txt
+REPLACE $CWD WITH '[CWD]' IN checked_file_2.txt
+REPLACE 'file:///\[CWD\]' WITH 'file://[CWD]' IN checked_file_2.txt
+
+WRITE expected_file_2.txt UNTIL EOF
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "string",
+  "$id": "file://[CWD]/source/user.json"
+}
+EOF
+
+COMPARE checked_file_2.txt AGAINST expected_file_2.txt

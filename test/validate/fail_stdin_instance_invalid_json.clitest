@@ -1,0 +1,36 @@
+WRITE schema.json UNTIL EOF
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "string"
+}
+EOF
+
+WRITE stdin_input UNTIL EOF
+{ "foo" 1 }
+EOF
+
+// Other input error
+RUN validate schema.json - STDIN stdin_input IN . INTO result_0.txt EXPECTING 6
+
+WRITE expected_0.txt UNTIL EOF
+2> error: Failed to parse the JSON document
+2>   at line 1
+2>   at column 9
+2>   at file path tag:sourcemeta.com,2026:jsonschema/stdin
+EOF
+
+COMPARE result_0.txt AGAINST expected_0.txt
+
+// Other input error
+RUN validate schema.json - --json STDIN stdin_input IN . INTO result_1.txt EXPECTING 6
+
+WRITE expected_1.txt UNTIL EOF
+1> {
+1>   "error": "Failed to parse the JSON document",
+1>   "line": 1,
+1>   "column": 9,
+1>   "filePath": "tag:sourcemeta.com,2026:jsonschema/stdin"
+1> }
+EOF
+
+COMPARE result_1.txt AGAINST expected_1.txt

@@ -1,0 +1,66 @@
+MAKE DIRECTORY bar
+
+WRITE foo/example.schema.json UNTIL EOF
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "description": "Test schema",
+  "additionalProperties": false,
+  "title": "Hello World",
+  "properties": {"foo": {}, "bar": {}}
+}
+EOF
+
+WRITE foo/other.json UNTIL EOF
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "title": "Other",
+  "properties": {"foo": {}, "bar": {}}
+}
+EOF
+
+WRITE jsonschema.json UNTIL EOF
+{
+  "path": "./foo",
+  "extension": ".schema.json"
+}
+EOF
+
+RUN fmt --verbose STDIN /dev/null IN bar INTO result.txt EXPECTING 0
+REPLACE '\\\\' WITH '/' IN result.txt
+REPLACE '\\(?!")' WITH '/' IN result.txt
+
+REPLACE $CWD WITH '[CWD]' IN result.txt
+
+WRITE expected.txt UNTIL EOF
+2> Using extension: .schema.json
+2> Formatting: [CWD]/foo/example.schema.json
+EOF
+
+COMPARE result.txt AGAINST expected.txt
+
+WRITE expected_file_0.txt UNTIL EOF
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Hello World",
+  "description": "Test schema",
+  "properties": {
+    "foo": {},
+    "bar": {}
+  },
+  "additionalProperties": false
+}
+EOF
+
+COMPARE foo/example.schema.json AGAINST expected_file_0.txt
+
+WRITE expected_file_1.txt UNTIL EOF
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "title": "Other",
+  "properties": {"foo": {}, "bar": {}}
+}
+EOF
+
+COMPARE foo/other.json AGAINST expected_file_1.txt

@@ -1,0 +1,46 @@
+WRITE schema.json UNTIL EOF
+{
+  "$id": "https://example.com/schema",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "$defs": {
+    "Name": {
+      "type": "string",
+      "minLength": 1
+    }
+  }
+}
+EOF
+
+RUN compile schema.json --entrypoint '#/$$defs/Name' STDIN /dev/null IN . INTO result.txt EXPECTING 0
+
+WRITE expected.txt UNTIL EOF
+1> [
+1>   5,
+1>   false,
+1>   true,
+1>   [
+1>     [
+1>       [
+1>         22,
+1>         [ "minLength" ],
+1>         [],
+1>         "https://example.com/schema#/$defs/Name/minLength",
+1>         2,
+1>         [ 10, 0 ]
+1>       ],
+1>       [
+1>         11,
+1>         [ "type" ],
+1>         [],
+1>         "https://example.com/schema#/$defs/Name/type",
+1>         2,
+1>         [ 8, 4 ]
+1>       ]
+1>     ]
+1>   ],
+1>   []
+1> ]
+EOF
+
+COMPARE result.txt AGAINST expected.txt

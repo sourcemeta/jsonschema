@@ -1,0 +1,24 @@
+WRITE document.json UNTIL EOF
+{ "version": 2.0 }
+EOF
+
+RUN encode document.json output.binpack STDIN /dev/null IN . INTO result.txt EXPECTING 0
+
+WRITE expected.txt UNTIL EOF
+2> original file size: 19 bytes
+2> encoded file size: 11 bytes
+2> compression ratio: 57%
+EOF
+
+COMPARE result.txt AGAINST expected.txt
+
+// The exact byte layout is not asserted here, so prove the round trip instead
+RUN decode output.binpack roundtrip.json STDIN /dev/null IN . INTO decoded.txt EXPECTING 0
+
+WRITE expected_roundtrip.json UNTIL EOF
+{
+  "version": 2.0
+}
+EOF
+
+COMPARE roundtrip.json AGAINST expected_roundtrip.json

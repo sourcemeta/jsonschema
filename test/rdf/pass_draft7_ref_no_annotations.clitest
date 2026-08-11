@@ -1,0 +1,35 @@
+MAKE DIRECTORY schemas
+
+WRITE schema.json UNTIL EOF
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "x-jsonld-type": "https://schema.org/Person",
+  "properties": {
+    "name": { "$ref": "./schemas/name.json" }
+  }
+}
+EOF
+
+WRITE schemas/name.json UNTIL EOF
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "string"
+}
+EOF
+
+WRITE instance.json UNTIL EOF
+{ "name": "Ada" }
+EOF
+
+RUN rdf schema.json --resolve schemas instance.json STDIN /dev/null IN . INTO result_0.txt EXPECTING 0
+
+WRITE expected_0.txt UNTIL EOF
+1> [
+1>   {
+1>     "@type": [ "https://schema.org/Person" ]
+1>   }
+1> ]
+EOF
+
+COMPARE result_0.txt AGAINST expected_0.txt

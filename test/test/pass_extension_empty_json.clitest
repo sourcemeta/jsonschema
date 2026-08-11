@@ -1,0 +1,69 @@
+MAKE DIRECTORY schemas
+
+MAKE DIRECTORY tests
+
+WRITE schemas/schema UNTIL EOF
+{
+  "id": "https://example.com",
+  "$schema": "http://json-schema.org/draft-04/schema#",
+  "title": "Test",
+  "description": "Test schema",
+  "type": "string"
+}
+EOF
+
+WRITE tests/test1 UNTIL EOF
+{
+  "target": "https://example.com",
+  "tests": [
+    {
+      "description": "First test",
+      "valid": true,
+      "data": "foo"
+    }
+  ]
+}
+EOF
+
+WRITE tests/test2 UNTIL EOF
+{
+  "target": "https://example.com",
+  "tests": [
+    {
+      "description": "Second test",
+      "valid": false,
+      "data": 1
+    }
+  ]
+}
+EOF
+
+WRITE tests/ignored.json UNTIL EOF
+{
+  "target": "https://example.com",
+  "tests": [
+    {
+      "description": "Ignored test",
+      "valid": true,
+      "data": "should not run"
+    }
+  ]
+}
+EOF
+
+RUN test tests --resolve schemas --extension '' --verbose --jobs 1 STDIN /dev/null IN . INTO result_0.txt EXPECTING 0
+REPLACE '\\\\' WITH '/' IN result_0.txt
+REPLACE '\\(?!")' WITH '/' IN result_0.txt
+
+REPLACE $CWD WITH '[CWD]' IN result_0.txt
+
+WRITE expected_0.txt UNTIL EOF
+1> [CWD]/tests/test1:
+1>   1/1 PASS First test
+1> [CWD]/tests/test2:
+1>   1/1 PASS Second test
+2> Using parallelism: 1
+2> warning: Matching files with no extension
+EOF
+
+COMPARE result_0.txt AGAINST expected_0.txt

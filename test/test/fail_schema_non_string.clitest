@@ -1,0 +1,35 @@
+WRITE test.json UNTIL EOF
+{
+  "target": 1,
+  "tests": [
+    {
+      "valid": true,
+      "data": {}
+    },
+    {
+      "valid": true,
+      "data": { "type": 1 }
+    }
+  ]
+}
+EOF
+
+// Other input error
+RUN test test.json STDIN /dev/null IN . INTO result_0.txt EXPECTING 6
+REPLACE '\\\\' WITH '/' IN result_0.txt
+REPLACE '\\(?!")' WITH '/' IN result_0.txt
+
+REPLACE $CWD WITH '[CWD]' IN result_0.txt
+
+WRITE expected_0.txt UNTIL EOF
+1> [CWD]/test.json:
+2> error: The test document `target` property must be a URI or an array of URIs
+2>   at line 2
+2>   at column 3
+2>   at file path [CWD]/test.json
+2>   at location "/target"
+2>
+2> Learn more here: https://github.com/sourcemeta/jsonschema/blob/main/docs/test.markdown
+EOF
+
+COMPARE result_0.txt AGAINST expected_0.txt

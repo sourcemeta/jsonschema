@@ -1,0 +1,22 @@
+WRITE test.json UNTIL EOF
+{
+  "target": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "string"
+  },
+  "tests": [
+    { "valid": true, "data": "hello" }
+  ]
+}
+EOF
+
+// Invalid CLI arguments
+RUN test test.json --header no-colon STDIN /dev/null IN . INTO result_0.txt EXPECTING 5
+
+WRITE expected_0.txt UNTIL EOF
+2> error: HTTP headers must be in the form `Name: Value`
+2>
+2> For example: --header "Authorization: Bearer ${TOKEN}"
+EOF
+
+COMPARE result_0.txt AGAINST expected_0.txt

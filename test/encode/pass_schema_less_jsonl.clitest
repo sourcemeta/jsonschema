@@ -1,0 +1,40 @@
+WRITE document.jsonl UNTIL EOF
+{ "count": 1 }
+{ "count": 2 }
+{ "count": 3 }
+{ "count": 4 }
+{ "count": 5 }
+EOF
+
+RUN encode document.jsonl output.binpack STDIN /dev/null IN . INTO result.txt EXPECTING 0
+
+WRITE expected.txt UNTIL EOF
+2> original file size: 75 bytes
+2> encoded file size: 24 bytes
+2> compression ratio: 32%
+EOF
+
+COMPARE result.txt AGAINST expected.txt
+
+// The exact byte layout is not asserted here, so prove the round trip instead
+RUN decode output.binpack roundtrip.jsonl STDIN /dev/null IN . INTO decoded.txt EXPECTING 0
+
+WRITE expected_roundtrip.jsonl UNTIL EOF
+{
+  "count": 1
+}
+{
+  "count": 2
+}
+{
+  "count": 3
+}
+{
+  "count": 4
+}
+{
+  "count": 5
+}
+EOF
+
+COMPARE roundtrip.jsonl AGAINST expected_roundtrip.jsonl

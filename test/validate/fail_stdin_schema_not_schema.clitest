@@ -1,0 +1,29 @@
+WRITE instance.json UNTIL EOF
+{ "foo": "bar" }
+EOF
+
+WRITE stdin_input UNTIL EOF
+[ 1, 2, 3 ]
+EOF
+
+// Schema input error
+RUN validate - instance.json STDIN stdin_input IN . INTO result_0.txt EXPECTING 4
+
+WRITE expected_0.txt UNTIL EOF
+2> error: The schema file you provided does not represent a valid JSON Schema
+2>   at file path tag:sourcemeta.com,2026:jsonschema/stdin
+EOF
+
+COMPARE result_0.txt AGAINST expected_0.txt
+
+// Schema input error
+RUN validate - instance.json --json STDIN stdin_input IN . INTO result_1.txt EXPECTING 4
+
+WRITE expected_1.txt UNTIL EOF
+1> {
+1>   "error": "The schema file you provided does not represent a valid JSON Schema",
+1>   "filePath": "tag:sourcemeta.com,2026:jsonschema/stdin"
+1> }
+EOF
+
+COMPARE result_1.txt AGAINST expected_1.txt

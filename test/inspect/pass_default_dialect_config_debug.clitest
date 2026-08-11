@@ -1,0 +1,111 @@
+WRITE schema.json UNTIL EOF
+{
+  "$id": "https://example.com",
+  "$ref": "#/$defs/string",
+  "$defs": {
+    "string": { "type": "string" }
+  }
+}
+EOF
+
+WRITE jsonschema.json UNTIL EOF
+{
+  "defaultDialect": "https://json-schema.org/draft/2020-12/schema"
+}
+EOF
+
+RUN inspect schema.json --debug STDIN /dev/null IN . INTO result.txt EXPECTING 0
+REPLACE '\\\\' WITH '/' IN result.txt
+REPLACE '\\(?!")' WITH '/' IN result.txt
+
+REPLACE $CWD WITH '[CWD]' IN result.txt
+
+WRITE expected.txt UNTIL EOF
+1> (RESOURCE) URI: https://example.com
+1>     Type              : Static
+1>     Root              : https://example.com
+1>     Pointer           :
+1>     File Position     : 1:1
+1>     Base              : https://example.com
+1>     Relative Pointer  :
+1>     Dialect           : https://json-schema.org/draft/2020-12/schema
+1>     Base Dialect      : https://json-schema.org/draft/2020-12/schema
+1>     Parent            : <NONE>
+1>     Property Name     : no
+1>     Orphan            : no
+1>
+1> (POINTER) URI: https://example.com#/$defs
+1>     Type              : Static
+1>     Root              : https://example.com
+1>     Pointer           : /$defs
+1>     File Position     : 4:3
+1>     Base              : https://example.com
+1>     Relative Pointer  : /$defs
+1>     Dialect           : https://json-schema.org/draft/2020-12/schema
+1>     Base Dialect      : https://json-schema.org/draft/2020-12/schema
+1>     Parent            :
+1>     Property Name     : no
+1>     Orphan            : no
+1>
+1> (SUBSCHEMA) URI: https://example.com#/$defs/string
+1>     Type              : Static
+1>     Root              : https://example.com
+1>     Pointer           : /$defs/string
+1>     File Position     : 5:5
+1>     Base              : https://example.com
+1>     Relative Pointer  : /$defs/string
+1>     Dialect           : https://json-schema.org/draft/2020-12/schema
+1>     Base Dialect      : https://json-schema.org/draft/2020-12/schema
+1>     Parent            :
+1>     Property Name     : no
+1>     Orphan            : yes
+1>
+1> (POINTER) URI: https://example.com#/$defs/string/type
+1>     Type              : Static
+1>     Root              : https://example.com
+1>     Pointer           : /$defs/string/type
+1>     File Position     : 5:17
+1>     Base              : https://example.com
+1>     Relative Pointer  : /$defs/string/type
+1>     Dialect           : https://json-schema.org/draft/2020-12/schema
+1>     Base Dialect      : https://json-schema.org/draft/2020-12/schema
+1>     Parent            : /$defs/string
+1>     Property Name     : no
+1>     Orphan            : yes
+1>
+1> (POINTER) URI: https://example.com#/$id
+1>     Type              : Static
+1>     Root              : https://example.com
+1>     Pointer           : /$id
+1>     File Position     : 2:3
+1>     Base              : https://example.com
+1>     Relative Pointer  : /$id
+1>     Dialect           : https://json-schema.org/draft/2020-12/schema
+1>     Base Dialect      : https://json-schema.org/draft/2020-12/schema
+1>     Parent            :
+1>     Property Name     : no
+1>     Orphan            : no
+1>
+1> (POINTER) URI: https://example.com#/$ref
+1>     Type              : Static
+1>     Root              : https://example.com
+1>     Pointer           : /$ref
+1>     File Position     : 3:3
+1>     Base              : https://example.com
+1>     Relative Pointer  : /$ref
+1>     Dialect           : https://json-schema.org/draft/2020-12/schema
+1>     Base Dialect      : https://json-schema.org/draft/2020-12/schema
+1>     Parent            :
+1>     Property Name     : no
+1>     Orphan            : no
+1>
+1> (REFERENCE) ORIGIN: /$ref
+1>     Type              : Static
+1>     File Position     : 3:3
+1>     Destination       : https://example.com#/$defs/string
+1>     - (w/o fragment)  : https://example.com
+1>     - (fragment)      : /$defs/string
+2> debug: Using configuration file: [CWD]/jsonschema.json
+EOF
+
+COMPARE result.txt AGAINST expected.txt

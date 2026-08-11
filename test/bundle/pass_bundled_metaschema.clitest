@@ -1,0 +1,52 @@
+WRITE schema.json UNTIL EOF
+{
+  "$schema": "https://example.com/meta",
+  "$id": "https://example.com/schema",
+  "type": "string",
+  "$defs": {
+    "https://example.com/meta": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "$id": "https://example.com/meta",
+      "$vocabulary": {
+        "https://json-schema.org/draft/2020-12/vocab/core": true,
+        "https://json-schema.org/draft/2020-12/vocab/validation": true
+      },
+      "type": "object"
+    }
+  }
+}
+EOF
+
+WRITE silent.txt UNTIL EOF
+EOF
+
+RUN bundle schema.json STDIN /dev/null IN . INTO result.txt EXPECTING 0
+
+COPY result.txt TO bundled.json
+KEEP LINES MATCHING '^1>' IN bundled.json
+REPLACE '^1> ?' WITH '' IN bundled.json
+
+WRITE expected_0.txt UNTIL EOF
+1> {
+1>   "$schema": "https://example.com/meta",
+1>   "$id": "https://example.com/schema",
+1>   "type": "string",
+1>   "$defs": {
+1>     "https://example.com/meta": {
+1>       "$schema": "https://json-schema.org/draft/2020-12/schema",
+1>       "$id": "https://example.com/meta",
+1>       "$vocabulary": {
+1>         "https://json-schema.org/draft/2020-12/vocab/core": true,
+1>         "https://json-schema.org/draft/2020-12/vocab/validation": true
+1>       },
+1>       "type": "object"
+1>     }
+1>   }
+1> }
+EOF
+
+COMPARE result.txt AGAINST expected_0.txt
+
+RUN fmt bundled.json --check STDIN /dev/null IN . INTO checked.txt EXPECTING 0
+
+COMPARE checked.txt AGAINST silent.txt

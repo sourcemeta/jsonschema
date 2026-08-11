@@ -1,0 +1,33 @@
+WRITE schema.json UNTIL EOF
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "string"
+}
+EOF
+
+// Invalid CLI arguments
+RUN codegen schema.json --target foo STDIN /dev/null IN . INTO result.txt EXPECTING 5
+
+WRITE expected_0.txt UNTIL EOF
+2> error: Unknown code generation target
+2>   at option target
+2>   with values
+2>   - typescript
+2>
+2> Run the `help` command for usage information
+EOF
+
+COMPARE result.txt AGAINST expected_0.txt
+
+// Invalid CLI arguments
+RUN codegen schema.json --target foo --json STDIN /dev/null IN . INTO result_json.txt EXPECTING 5
+
+WRITE expected_1.txt UNTIL EOF
+1> {
+1>   "error": "Unknown code generation target",
+1>   "option": "target",
+1>   "values": [ "typescript" ]
+1> }
+EOF
+
+COMPARE result_json.txt AGAINST expected_1.txt

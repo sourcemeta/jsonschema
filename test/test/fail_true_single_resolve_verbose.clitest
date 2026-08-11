@@ -1,0 +1,55 @@
+WRITE schema.json UNTIL EOF
+{
+  "id": "https://example.com",
+  "$schema": "http://json-schema.org/draft-04/schema#",
+  "title": "Test",
+  "description": "Test schema",
+  "type": "string"
+}
+EOF
+
+WRITE test.json UNTIL EOF
+{
+  "target": "https://example.com",
+  "tests": [
+    {
+      "description": "First test",
+      "valid": true,
+      "data": "foo"
+    },
+    {
+      "description": "Unexpected",
+      "valid": true,
+      "data": 1
+    },
+    {
+      "description": "Invalid type",
+      "valid": false,
+      "data": 1
+    }
+  ]
+}
+EOF
+
+// Validation failure
+RUN test test.json --resolve schema.json --verbose --jobs 1 STDIN /dev/null IN . INTO result_0.txt EXPECTING 2
+REPLACE '\\\\' WITH '/' IN result_0.txt
+REPLACE '\\(?!")' WITH '/' IN result_0.txt
+
+REPLACE $CWD WITH '[CWD]' IN result_0.txt
+
+WRITE expected_0.txt UNTIL EOF
+1> [CWD]/test.json:
+1>   1/3 PASS First test
+1>   2/3 FAIL Unexpected
+1>
+1> error: Schema validation failure
+1>   The value was expected to be of type string but it was of type integer
+1>     at instance location ""
+1>     at evaluate path "/type"
+1>
+1>   3/3 PASS Invalid type
+2> Using parallelism: 1
+EOF
+
+COMPARE result_0.txt AGAINST expected_0.txt

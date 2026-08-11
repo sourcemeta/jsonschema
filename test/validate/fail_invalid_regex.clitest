@@ -1,0 +1,52 @@
+WRITE schema.json UNTIL EOF
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "string",
+  "pattern": "[invalid("
+}
+EOF
+
+WRITE instance.json UNTIL EOF
+"hello"
+EOF
+
+// Schema input error
+RUN validate schema.json instance.json STDIN /dev/null IN . INTO result_0.txt EXPECTING 4
+REPLACE '\\\\' WITH '/' IN result_0.txt
+REPLACE '\\(?!")' WITH '/' IN result_0.txt
+
+REPLACE $CWD WITH '[CWD]' IN result_0.txt
+REPLACE 'file:///\[CWD\]' WITH 'file://[CWD]' IN result_0.txt
+
+WRITE expected_0.txt UNTIL EOF
+2> error: Invalid regular expression
+2>   at regex [invalid(
+2>   at file path [CWD]/schema.json
+2>   at location "/pattern"
+2>   at base uri file://[CWD]/schema.json
+2>
+2> Detailed regex error messages are not yet supported
+2> Try tools like https://regex101.com to debug further
+EOF
+
+COMPARE result_0.txt AGAINST expected_0.txt
+
+// Schema input error
+RUN validate schema.json instance.json --json STDIN /dev/null IN . INTO result_1.txt EXPECTING 4
+REPLACE '\\\\' WITH '/' IN result_1.txt
+REPLACE '\\(?!")' WITH '/' IN result_1.txt
+
+REPLACE $CWD WITH '[CWD]' IN result_1.txt
+REPLACE 'file:///\[CWD\]' WITH 'file://[CWD]' IN result_1.txt
+
+WRITE expected_1.txt UNTIL EOF
+1> {
+1>   "error": "Invalid regular expression",
+1>   "regex": "[invalid(",
+1>   "filePath": "[CWD]/schema.json",
+1>   "location": "/pattern",
+1>   "baseURI": "file://[CWD]/schema.json"
+1> }
+EOF
+
+COMPARE result_1.txt AGAINST expected_1.txt

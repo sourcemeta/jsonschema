@@ -1,0 +1,37 @@
+WRITE schema.json UNTIL EOF
+{ not json
+EOF
+
+// Other input error
+RUN upgrade schema.json STDIN /dev/null IN . INTO result.txt EXPECTING 6
+REPLACE '\\\\' WITH '/' IN result.txt
+REPLACE '\\(?!")' WITH '/' IN result.txt
+
+REPLACE $CWD WITH '[CWD]' IN result.txt
+
+WRITE expected.txt UNTIL EOF
+2> error: Failed to parse the JSON document
+2>   at line 1
+2>   at column 3
+2>   at file path [CWD]/schema.json
+EOF
+
+COMPARE result.txt AGAINST expected.txt
+
+// Other input error
+RUN upgrade schema.json --json STDIN /dev/null IN . INTO result_json.txt EXPECTING 6
+REPLACE '\\\\' WITH '/' IN result_json.txt
+REPLACE '\\(?!")' WITH '/' IN result_json.txt
+
+REPLACE $CWD WITH '[CWD]' IN result_json.txt
+
+WRITE expected_json.txt UNTIL EOF
+1> {
+1>   "error": "Failed to parse the JSON document",
+1>   "line": 1,
+1>   "column": 3,
+1>   "filePath": "[CWD]/schema.json"
+1> }
+EOF
+
+COMPARE result_json.txt AGAINST expected_json.txt

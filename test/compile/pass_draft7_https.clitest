@@ -1,0 +1,46 @@
+WRITE schema.json UNTIL EOF
+{
+  "$id": "https://example.com",
+  "$schema": "https://json-schema.org/draft-07/schema#",
+  "title": "Test",
+  "description": "Test schema",
+  "additionalProperties": {
+    "type": "string"
+  }
+}
+EOF
+
+RUN compile schema.json STDIN /dev/null IN . INTO result.txt EXPECTING 0
+
+WRITE expected.txt UNTIL EOF
+1> [
+1>   5,
+1>   false,
+1>   true,
+1>   [
+1>     [
+1>       [
+1>         67,
+1>         [ "additionalProperties" ],
+1>         [],
+1>         "https://example.com#/additionalProperties",
+1>         2,
+1>         [ 0 ],
+1>         [
+1>           [
+1>             11,
+1>             [ "type" ],
+1>             [],
+1>             "https://example.com#/additionalProperties/type",
+1>             2,
+1>             [ 8, 4 ]
+1>           ]
+1>         ]
+1>       ]
+1>     ]
+1>   ],
+1>   []
+1> ]
+EOF
+
+COMPARE result.txt AGAINST expected.txt

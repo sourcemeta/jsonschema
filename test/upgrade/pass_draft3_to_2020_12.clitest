@@ -1,0 +1,51 @@
+WRITE schema.json UNTIL EOF
+{
+  "$schema": "http://json-schema.org/draft-03/schema#",
+  "id": "https://example.com/test",
+  "type": "object",
+  "properties": {
+    "name": {
+      "type": "string",
+      "required": true
+    },
+    "age": {
+      "type": "integer",
+      "divisibleBy": 1,
+      "disallow": "string"
+    }
+  },
+  "extends": {
+    "type": "object"
+  }
+}
+EOF
+
+RUN upgrade --to 2020-12 schema.json STDIN /dev/null IN . INTO result.txt EXPECTING 0
+
+WRITE expected.txt UNTIL EOF
+1> {
+1>   "$schema": "https://json-schema.org/draft/2020-12/schema",
+1>   "$id": "https://example.com/test",
+1>   "type": "object",
+1>   "allOf": [
+1>     {
+1>       "type": "object"
+1>     }
+1>   ],
+1>   "required": [ "name" ],
+1>   "properties": {
+1>     "name": {
+1>       "type": "string"
+1>     },
+1>     "age": {
+1>       "type": "integer",
+1>       "not": {
+1>         "type": "string"
+1>       },
+1>       "multipleOf": 1
+1>     }
+1>   }
+1> }
+EOF
+
+COMPARE result.txt AGAINST expected.txt

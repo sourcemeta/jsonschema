@@ -1,0 +1,87 @@
+WRITE schema.json UNTIL EOF
+{
+  "$id": "https://example.com",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "x": {
+      "allOf": [
+        { "x-jsonld-datatype": "http://www.w3.org/2001/XMLSchema#date" },
+        { "x-jsonld-datatype": "http://www.w3.org/2001/XMLSchema#string" }
+      ]
+    }
+  }
+}
+EOF
+
+WRITE test.json UNTIL EOF
+{
+  "target": "https://example.com",
+  "tests": [
+    {
+      "description": "Conflicting datatypes",
+      "valid": true,
+      "data": { "x": "v" },
+      "rdf": []
+    }
+  ]
+}
+EOF
+
+WRITE silent.txt UNTIL EOF
+EOF
+
+// Test assertion failure
+RUN test test.json --resolve schema.json --json STDIN /dev/null IN . INTO result.txt EXPECTING 2
+
+COPY result.txt TO report.json
+KEEP LINES MATCHING '^1>' IN report.json
+REPLACE '^1> ?' WITH '' IN report.json
+
+RUN validate $CTRF_SCHEMA report.json STDIN /dev/null IN . INTO validated.txt EXPECTING 0
+
+COMPARE validated.txt AGAINST silent.txt
+
+REPLACE $VERSION WITH '[VERSION]' IN result.txt
+DROP LINES MATCHING '"duration":' IN result.txt
+DROP LINES MATCHING '"start":' IN result.txt
+DROP LINES MATCHING '"stop":' IN result.txt
+DROP LINES MATCHING '"threadId":' IN result.txt
+REPLACE '\\\\' WITH '/' IN result.txt
+REPLACE $CWD WITH '[CWD]' IN result.txt
+
+WRITE expected.txt UNTIL EOF
+1> {
+1>   "reportFormat": "CTRF",
+1>   "specVersion": "0.0.0",
+1>   "results": {
+1>     "tool": {
+1>       "name": "jsonschema",
+1>       "version": "[VERSION]"
+1>     },
+1>     "summary": {
+1>       "tests": 1,
+1>       "passed": 0,
+1>       "failed": 1,
+1>       "pending": 0,
+1>       "skipped": 0,
+1>       "other": 0,
+1>     },
+1>     "tests": [
+1>       {
+1>         "name": "Conflicting datatypes",
+1>         "status": "failed",
+1>         "suite": [ "https://example.com" ],
+1>         "type": "unit",
+1>         "filePath": "[CWD]/test.json",
+1>         "line": 4,
+1>         "retries": 0,
+1>         "flaky": false,
+1>         "trace": "error: A JSON-LD datatype cannot be assigned more than one value\n  at line 7\n  at column 17\n  at instance location \"/x\"\n  at facet \"datatype\"\n  at schema location https://example.com#/properties/x/allOf/0/x-jsonld-datatype\n  at conflicting schema location https://example.com#/properties/x/allOf/1/x-jsonld-datatype\n  at file path [CWD]/test.json\n"
+1>       }
+1>     ]
+1>   }
+1> }
+EOF
+
+COMPARE result.txt AGAINST expected.txt

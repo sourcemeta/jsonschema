@@ -1,0 +1,32 @@
+WRITE schema.json UNTIL EOF
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "string"
+}
+EOF
+
+WRITE stdin_0 UNTIL EOF
+42
+EOF
+
+// Validation failure
+RUN validate schema.json - --trace STDIN stdin_0 IN . INTO result.txt EXPECTING 2
+
+REPLACE '\\\\' WITH '/' IN result.txt
+REPLACE '\\(?!")' WITH '/' IN result.txt
+REPLACE $CWD WITH '[CWD]' IN result.txt
+REPLACE 'file:///\[CWD\]' WITH 'file://[CWD]' IN result.txt
+
+WRITE expected.txt UNTIL EOF
+1> -> (push) "/type" (AssertionTypeStrict)
+1>    at instance location "" (line 1, column 1)
+1>    at keyword location "file://[CWD]/schema.json#/type"
+1>    at vocabulary "https://json-schema.org/draft/2020-12/vocab/validation"
+1>
+1> <- (fail) "/type" (AssertionTypeStrict)
+1>    at instance location "" (line 1, column 1)
+1>    at keyword location "file://[CWD]/schema.json#/type"
+1>    at vocabulary "https://json-schema.org/draft/2020-12/vocab/validation"
+EOF
+
+COMPARE result.txt AGAINST expected.txt
