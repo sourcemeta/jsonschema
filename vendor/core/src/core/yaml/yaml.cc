@@ -19,11 +19,10 @@ auto parse_yaml(std::basic_istream<JSON::Char, JSON::CharTraits> &stream)
 
   // The parser position is relative to the input after any byte order mark has
   // been stripped, so the mark is added back to resume the stream at the right
-  // byte
-  const auto consumed{static_cast<std::streamoff>(lexer.bom_length()) +
-                      static_cast<std::streamoff>(parser.position())};
-  stream.clear();
-  stream.seekg(start_pos + consumed);
+  // character
+  resume_stream(stream, start_pos,
+                static_cast<std::streamsize>(lexer.bom_length()) +
+                    static_cast<std::streamsize>(parser.position()));
 
   return result;
 }
@@ -62,11 +61,10 @@ auto parse_yaml(std::basic_istream<JSON::Char, JSON::CharTraits> &stream,
 
   // The parser position is relative to the input after any byte order mark has
   // been stripped, so the mark is added back to resume the stream at the right
-  // byte
-  const auto consumed{static_cast<std::streamoff>(lexer.bom_length()) +
-                      static_cast<std::streamoff>(parser.position())};
-  stream.clear();
-  stream.seekg(start_pos + consumed);
+  // character
+  resume_stream(stream, start_pos,
+                static_cast<std::streamsize>(lexer.bom_length()) +
+                    static_cast<std::streamsize>(parser.position()));
 }
 
 auto parse_yaml(const JSON::String &input, JSON &output,

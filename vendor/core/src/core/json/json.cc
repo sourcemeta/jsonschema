@@ -128,11 +128,8 @@ auto parse_json(std::basic_istream<JSON::Char, JSON::CharTraits> &stream,
   const char *cursor{input.data()};
   const char *end{input.data() + input.size()};
   auto result{internal_parse_json(cursor, end, line, column, true)};
-  if (start_position != static_cast<std::streampos>(-1)) {
-    const auto consumed{static_cast<std::streamoff>(cursor - input.data())};
-    stream.clear();
-    stream.seekg(start_position + consumed);
-  }
+  resume_stream(stream, start_position,
+                static_cast<std::streamsize>(cursor - input.data()));
 
   return result;
 }
@@ -157,11 +154,8 @@ auto parse_json(std::basic_istream<JSON::Char, JSON::CharTraits> &stream)
   std::uint64_t line{1};
   std::uint64_t column{0};
   auto result{internal_parse_json(cursor, end, line, column, false)};
-  if (start_position != static_cast<std::streampos>(-1)) {
-    const auto consumed{static_cast<std::streamoff>(cursor - input.data())};
-    stream.clear();
-    stream.seekg(start_position + consumed);
-  }
+  resume_stream(stream, start_position,
+                static_cast<std::streamsize>(cursor - input.data()));
   return result;
 }
 
@@ -217,11 +211,8 @@ auto parse_json(std::basic_istream<JSON::Char, JSON::CharTraits> &stream,
   const char *cursor{input.data()};
   const char *end{input.data() + input.size()};
   internal_parse_json<true>(cursor, end, line, column, callback, true, output);
-  if (start_position != static_cast<std::streampos>(-1)) {
-    const auto consumed{static_cast<std::streamoff>(cursor - input.data())};
-    stream.clear();
-    stream.seekg(start_position + consumed);
-  }
+  resume_stream(stream, start_position,
+                static_cast<std::streamsize>(cursor - input.data()));
 }
 
 auto parse_json(
@@ -244,11 +235,8 @@ auto parse_json(std::basic_istream<JSON::Char, JSON::CharTraits> &stream,
   std::uint64_t line{1};
   std::uint64_t column{0};
   internal_parse_json<true>(cursor, end, line, column, callback, false, output);
-  if (start_position != static_cast<std::streampos>(-1)) {
-    const auto consumed{static_cast<std::streamoff>(cursor - input.data())};
-    stream.clear();
-    stream.seekg(start_position + consumed);
-  }
+  resume_stream(stream, start_position,
+                static_cast<std::streamsize>(cursor - input.data()));
 }
 
 auto parse_json(
