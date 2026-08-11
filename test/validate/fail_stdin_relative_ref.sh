@@ -29,8 +29,8 @@ cd "$TMP"
 
 # A relative reference from standard input must fail loudly rather than
 # quietly resolve against whatever sits in the working directory
-"$1" validate - "$TMP/instance.json" < "$TMP/schema.json" \
-  > "$TMP/output.txt" 2>&1 && EXIT_CODE="$?" || EXIT_CODE="$?"
+"$1" validate - "$TMP/instance.json" < "$TMP/schema.json" 2> "$TMP/stderr.txt" \
+  && EXIT_CODE="$?" || EXIT_CODE="$?"
 # Schema input error
 test "$EXIT_CODE" = "4"
 
@@ -42,4 +42,20 @@ error: Could not resolve the reference to an external schema
 This is likely because you forgot to import such schema using `--resolve/-r`
 EOF
 
-diff "$TMP/output.txt" "$TMP/expected.txt"
+diff "$TMP/stderr.txt" "$TMP/expected.txt"
+
+# JSON error
+"$1" validate - "$TMP/instance.json" --json < "$TMP/schema.json" \
+  > "$TMP/stdout.txt" && EXIT_CODE="$?" || EXIT_CODE="$?"
+# Schema input error
+test "$EXIT_CODE" = "4"
+
+cat << 'EOF' > "$TMP/expected.txt"
+{
+  "error": "Could not resolve the reference to an external schema",
+  "identifier": "tag:sourcemeta.com,2026:jsonschema/nested.json",
+  "filePath": "tag:sourcemeta.com,2026:jsonschema/stdin"
+}
+EOF
+
+diff "$TMP/stdout.txt" "$TMP/expected.txt"
