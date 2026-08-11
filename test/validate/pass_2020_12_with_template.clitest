@@ -22,3 +22,8 @@ KEEP LINES MATCHING '^1>' IN template.json
 REPLACE '^1> ?' WITH '' IN template.json
 
 RUN validate schema.json instance.json --template template.json STDIN /dev/null IN . INTO result_1.txt EXPECTING 0
+
+WRITE expected_1.txt UNTIL EOF
+EOF
+
+COMPARE result_1.txt AGAINST expected_1.txt

@@ -2,10 +2,12 @@
 """Interpreter for the CLI test DSL. Standard library only."""
 
 import argparse
+import collections
 import difflib
 import gzip
 import hashlib
 import os
+import posixpath
 import pathlib
 import re
 import shlex
@@ -253,38 +255,144 @@ class Interpreter:
         os.makedirs(self.resolve(operands[1], line_number), exist_ok=True)
 
 
+Statement = collections.namedtuple("Statement", ("number", "keyword", "operands", "body"))
+
+
+def parse(lines):
+    statements = []
+    index = 0
+    while index < len(lines):
+        stripped = lines[index].strip()
+        number = index + 1
+        index += 1
+        if not stripped or stripped.startswith("//"):
+            continue
+
+        operands = shlex.split(stripped, posix=True)
+        keyword = operands[0]
+        rest = operands[1:]
+        body = None
+
+        if keyword == "WRITE":
+            terminator = rest[2] if len(rest) == 3 else None
+            collected = []
+            while index < len(lines) and lines[index] != terminator:
+                collected.append(lines[index])
+                index += 1
+            if index >= len(lines):
+                raise TestFailure(number, f"unterminated WRITE, expected {terminator}")
+            index += 1
+            body = "".join(item + "\n" for item in collected)
+
+        statements.append(Statement(number, keyword, rest, body))
+    return statements
+
+
+def check(statements):
+    """Reject a test that produces something and then never asserts on it.
+
+    An observation, a derived artifact, or a variable only earns its keep if
+    something later reads it. Without this, a test can run the CLI and silently
+    throw away everything it printed, passing on the exit code alone.
+    """
+    observations, artifacts, variables = {}, {}, {}
+    copies = collections.defaultdict(set)
+    compared, consumed, expanded = set(), set(), set()
+
+    def consume(tokens):
+        for token in tokens:
+            consumed.add(posixpath.normpath(token))
+            # A fixture may equally be passed absolutely, as $CWD/<path>
+            if token.startswith("$CWD/"):
+                consumed.add(posixpath.normpath(token[len("$CWD/"):]))
+
+    for statement in statements:
+        operands = statement.operands
+        for token in operands:
+            expanded.update(re.findall(
+                r"\$\{?([A-Za-z_][A-Za-z0-9_]*)\}?", token))
+
+        if statement.keyword == "RUN" and len(operands) >= 8:
+            observations[posixpath.normpath(operands[-3])] = statement.number
+            consume(operands[:-8] + [operands[-7], operands[-5]])
+        elif statement.keyword == "COMPARE" and len(operands) == 3:
+            compared.update(
+                {posixpath.normpath(operands[0]), posixpath.normpath(operands[2])})
+        elif statement.keyword == "COPY" and len(operands) == 3:
+            copies[posixpath.normpath(operands[0])].add(
+                posixpath.normpath(operands[2]))
+            artifacts[posixpath.normpath(operands[2])] = (statement.number, "COPY")
+            consume([operands[0]])
+        elif statement.keyword == "TREE" and len(operands) == 3:
+            artifacts[posixpath.normpath(operands[2])] = (statement.number, "TREE")
+            consume([operands[0]])
+        elif statement.keyword == "COMPRESS" and len(operands) == 4:
+            artifacts[posixpath.normpath(operands[3])] = (
+                statement.number, "COMPRESS")
+            consume([operands[1]])
+        elif statement.keyword == "CHECKSUM" and len(operands) == 4:
+            variables[operands[3]] = statement.number
+            consume([operands[1]])
+        else:
+            consume(operands)
+
+    def asserted(target):
+        pending, seen = [target], set()
+        while pending:
+            current = pending.pop()
+            if current in compared:
+                return True
+            if current in seen:
+                continue
+            seen.add(current)
+            pending.extend(copies.get(current, ()))
+        return False
+
+    problems = []
+    for target, number in observations.items():
+        # An observation may legitimately flow onwards as the input of a later
+        # command rather than being compared directly, as with a compiled
+        # template. That later command is itself checked, so the chain still
+        # ends in an assertion
+        if not asserted(target) and target not in consumed:
+            problems.append((number, f"nothing compares {target}, so this run "
+                                     "asserts only its exit code"))
+    for target, (number, keyword) in artifacts.items():
+        if target not in consumed and target not in compared:
+            problems.append((number, f"nothing reads {target}, produced by {keyword}"))
+    for name, number in variables.items():
+        if name not in expanded:
+            problems.append((number, f"nothing expands ${name}"))
+    return sorted(problems)
+
+
 def run_script(path, binary, environment):
     with open(path, "r", encoding="utf-8", newline="") as handle:
         lines = handle.read().split("\n")
+
+    try:
+        statements = parse(lines)
+    except TestFailure as failure:
+        print(f"{path}:{failure.line_number}: {failure.message}", file=sys.stderr)
+        return 1
+
+    problems = check(statements)
+    if problems:
+        for number, message in problems:
+            print(f"{path}:{number}: {message}", file=sys.stderr)
+        return 1
 
     sandbox = os.path.realpath(tempfile.mkdtemp(prefix="clitest-")).replace(os.sep, "/")
     interpreter = Interpreter(binary, sandbox, environment)
     number = 0
     try:
-        index = 0
-        while index < len(lines):
-            line = lines[index]
-            number = index + 1
-            index += 1
-            stripped = line.strip()
-            if not stripped or stripped.startswith("//"):
-                continue
-
-            operands = shlex.split(stripped, posix=True)
-            keyword = operands[0]
-            rest = operands[1:]
+        for statement in statements:
+            number = statement.number
+            keyword = statement.keyword
+            rest = statement.operands
 
             if keyword == "WRITE":
-                terminator = rest[2] if len(rest) == 3 else None
-                body = []
-                while index < len(lines) and lines[index] != terminator:
-                    body.append(lines[index])
-                    index += 1
-                if index >= len(lines):
-                    raise TestFailure(number, f"unterminated WRITE, expected {terminator}")
-                index += 1
-                interpreter.command_write(
-                    rest, "".join(item + "\n" for item in body), number)
+                interpreter.command_write(rest, statement.body, number)
             elif keyword == "RUN":
                 interpreter.command_run(rest, number)
             elif keyword == "COMPARE":

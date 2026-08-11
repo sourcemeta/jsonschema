@@ -38,3 +38,8 @@ WRITE expected_roundtrip.jsonl UNTIL EOF
 EOF
 
 COMPARE roundtrip.jsonl AGAINST expected_roundtrip.jsonl
+
+WRITE expected_decoded.txt UNTIL EOF
+EOF
+
+COMPARE decoded.txt AGAINST expected_decoded.txt

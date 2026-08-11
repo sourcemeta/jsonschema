@@ -22,3 +22,9 @@ WRITE expected_file_0.txt UNTIL EOF
 EOF
 
 COMPARE schema AGAINST expected_file_0.txt
+
+WRITE expected_0.txt UNTIL EOF
+2> .
+EOF
+
+COMPARE result_0.txt AGAINST expected_0.txt

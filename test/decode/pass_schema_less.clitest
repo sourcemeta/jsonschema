@@ -12,3 +12,16 @@ WRITE expected.json UNTIL EOF
 EOF
 
 COMPARE decode.json AGAINST expected.json
+
+WRITE expected_decoded.txt UNTIL EOF
+EOF
+
+COMPARE decoded.txt AGAINST expected_decoded.txt
+
+WRITE expected_encoded.txt UNTIL EOF
+2> original file size: 19 bytes
+2> encoded file size: 11 bytes
+2> compression ratio: 57%
+EOF
+
+COMPARE encoded.txt AGAINST expected_encoded.txt
