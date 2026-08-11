@@ -26,7 +26,7 @@ WRITE jsonschema.json UNTIL EOF
 }
 EOF
 
-RUN compile schema.json --resolve remote.json --verbose STDIN /dev/null IN . INTO result.txt EXPECTING 0
+RUN compile $CWD/schema.json --resolve $CWD/remote.json --verbose STDIN /dev/null IN . INTO result.txt EXPECTING 0
 
 WRITE expected.txt UNTIL EOF
 1> [

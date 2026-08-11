@@ -10,7 +10,7 @@ WRITE jsonschema.json UNTIL EOF
 }
 EOF
 
-RUN codegen schema.json --target typescript --verbose STDIN /dev/null IN . INTO result.txt EXPECTING 0
+RUN codegen $CWD/schema.json --target typescript --verbose STDIN /dev/null IN . INTO result.txt EXPECTING 0
 
 WRITE expected.txt UNTIL EOF
 1> export type Schema = string;

@@ -14,7 +14,7 @@ WRITE jsonschema.json UNTIL EOF
 }
 EOF
 
-RUN inspect schema.json --verbose STDIN /dev/null IN . INTO result.txt EXPECTING 0
+RUN inspect $CWD/schema.json --verbose STDIN /dev/null IN . INTO result.txt EXPECTING 0
 
 WRITE expected.txt UNTIL EOF
 1> (RESOURCE) URI: https://example.com

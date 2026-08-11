@@ -14,7 +14,7 @@ WRITE jsonschema.json UNTIL EOF
 EOF
 
 // Validation failure
-RUN lint schema.json --verbose STDIN /dev/null IN . INTO result_0.txt EXPECTING 2
+RUN lint $CWD/schema.json --verbose STDIN /dev/null IN . INTO result_0.txt EXPECTING 2
 REPLACE '\\\\' WITH '/' IN result_0.txt
 REPLACE '\\(?!")' WITH '/' IN result_0.txt
 

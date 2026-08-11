@@ -15,7 +15,7 @@ WRITE jsonschema.json UNTIL EOF
 }
 EOF
 
-RUN metaschema --verbose schema.json STDIN /dev/null IN . INTO result.txt EXPECTING 0
+RUN metaschema --verbose $CWD/schema.json STDIN /dev/null IN . INTO result.txt EXPECTING 0
 REPLACE '\\\\' WITH '/' IN result.txt
 REPLACE '\\(?!")' WITH '/' IN result.txt
 

@@ -219,11 +219,8 @@ class Interpreter:
                 line_number, "usage: COMPRESS GZIP <source> INTO <destination>")
         source = self.resolve(operands[1], line_number)
         destination = self.resolve(operands[3], line_number)
-        try:
-            with open(source, "rb") as handle:
-                payload = handle.read()
-        except FileNotFoundError:
-            raise TestFailure(line_number, f"no such file: {source}")
+        with open(source, "rb") as handle:
+            payload = handle.read()
         os.makedirs(os.path.dirname(destination) or ".", exist_ok=True)
         # A fixed modification time keeps the archive byte for byte reproducible,
         # as the gzip header would otherwise carry the time of the run
@@ -251,6 +248,7 @@ def run_script(path, binary, environment):
 
     sandbox = os.path.realpath(tempfile.mkdtemp(prefix="clitest-")).replace(os.sep, "/")
     interpreter = Interpreter(binary, sandbox, environment)
+    number = 0
     try:
         index = 0
         while index < len(lines):
@@ -298,6 +296,11 @@ def run_script(path, binary, environment):
                 raise TestFailure(number, f"unknown command: {keyword}")
     except TestFailure as failure:
         print(f"{path}:{failure.line_number}: {failure.message}", file=sys.stderr)
+        return 1
+    # Report a missing binary, an unreadable fixture, or any other operating
+    # system error against the line that caused it, rather than as a traceback
+    except OSError as error:
+        print(f"{path}:{number}: {error}", file=sys.stderr)
         return 1
     finally:
         shutil.rmtree(sandbox, ignore_errors=True)
