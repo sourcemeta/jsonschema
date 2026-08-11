@@ -130,15 +130,25 @@ auto weakly_canonical(const std::filesystem::path &path)
     return path;
   }
 
+  // C++ [fs.op.weakly.canonical] defines the result in terms of "the leading
+  // elements of p that exist, if any", leaving the case where nothing exists
+  // unspecified. Standard libraries disagree there: some resolve against the
+  // current working directory while others hand the input back untouched.
+  // Absolutising first makes the result absolute on every platform, and is a
+  // no-op when any leading element exists, as canonicalising that prefix
+  // already yields an absolute path
+  const auto absolute_path{
+      path.is_absolute() ? path : std::filesystem::absolute(path)};
+
   // On Linux, FIFO files (like /dev/fd/XX due to process substitution)
   // cannot be made canonical
   // See https://github.com/sourcemeta/jsonschema/issues/252
-  if (std::filesystem::is_fifo(path)) {
-    return normalize(path);
+  if (std::filesystem::is_fifo(absolute_path)) {
+    return normalize(absolute_path);
   }
 
   try {
-    return normalize(std::filesystem::weakly_canonical(path));
+    return normalize(std::filesystem::weakly_canonical(absolute_path));
   } catch (const std::filesystem::filesystem_error &error) {
     if (error.code() == std::errc::no_such_file_or_directory) {
       throw IOFileNotFoundError{path};
