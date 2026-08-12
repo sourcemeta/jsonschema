@@ -1,0 +1,88 @@
+// The key below differs from the reference in scheme case, in carrying a dot
+// segment, and in the `.json` extension, all at once. Keys are matched by
+// canonical URI, so every one of those spellings still denotes the same schema
+
+MAKE DIRECTORY source
+
+MAKE DIRECTORY project
+
+WRITE source/main.json UNTIL EOF
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.com/main",
+  "$ref": "https://example.com/types/name"
+}
+EOF
+
+WRITE project/name.json UNTIL EOF
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.com/types/name",
+  "type": "string"
+}
+EOF
+
+WRITE project/jsonschema.json UNTIL EOF
+{
+  "resolve": {
+    "HTTPS://Example.com/elsewhere/../types/name.json#": "./name.json"
+  },
+  "dependencies": {
+    "[CWD_URI]/source/main.json": "./vendor/main.json"
+  }
+}
+EOF
+
+REPLACE '\[CWD_URI\]' WITH $CWD_URI IN project/jsonschema.json
+
+RUN install STDIN /dev/null IN project INTO result_0.txt EXPECTING 0
+
+REPLACE $CWD_URI WITH '[CWD_URI]' IN result_0.txt
+REPLACE $CWD WITH '[CWD]' IN result_0.txt
+
+WRITE expected_0.txt UNTIL EOF
+2> Fetching       : [CWD_URI]/source/main.json
+2> Installed      : [CWD]/project/vendor/main.json
+EOF
+
+COMPARE result_0.txt AGAINST expected_0.txt
+
+WRITE expected_main.json UNTIL EOF
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.com/main",
+  "$ref": "https://example.com/types/name",
+  "$defs": {
+    "https://example.com/types/name": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "$id": "https://example.com/types/name",
+      "type": "string"
+    }
+  }
+}
+EOF
+
+COMPARE project/vendor/main.json AGAINST expected_main.json
+
+CHECKSUM SHA256 project/vendor/main.json AS HASH
+
+COPY project/jsonschema.lock.json TO checked_lock.json
+REPLACE $CWD_URI WITH '[CWD_URI]' IN checked_lock.json
+REPLACE $CWD WITH '[CWD]' IN checked_lock.json
+
+WRITE expected_lock.json UNTIL EOF
+{
+  "version": 1,
+  "dependencies": {
+    "[CWD_URI]/source/main.json": {
+      "path": "./vendor/main.json",
+      "hash": "[HASH]",
+      "hashAlgorithm": "sha256"
+    }
+  }
+}
+EOF
+
+REPLACE '\[HASH\]' WITH $HASH IN expected_lock.json
+
+COMPARE checked_lock.json AGAINST expected_lock.json
