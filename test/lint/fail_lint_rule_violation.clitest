@@ -14,9 +14,18 @@ WRITE schema.json UNTIL EOF
 EOF
 
 // Validation failure
-RUN lint --rule rule.json --only require_type schema.json STDIN /dev/null IN . INTO result_0.txt EXPECTING 2
+RUN lint --rule rule.json schema.json STDIN /dev/null IN . INTO result_0.txt EXPECTING 2
 
 WRITE expected_0.txt UNTIL EOF
+1> schema.json:1:1:
+1>   Set a concise non-empty title at the top level of the schema to explain what the definition is about (top_level_title)
+1>     at location ""
+1> schema.json:1:1:
+1>   Set a non-empty description at the top level of the schema to explain what the definition is about in detail (top_level_description)
+1>     at location ""
+1> schema.json:1:1:
+1>   Set a non-empty examples array at the top level of the schema to illustrate the expected data (top_level_examples)
+1>     at location ""
 1> schema.json:1:1:
 1>   Every subschema must declare the type keyword (require_type)
 1>     at location ""

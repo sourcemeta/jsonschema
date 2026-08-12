@@ -17,9 +17,17 @@ WRITE jsonschema.json UNTIL EOF
 }
 EOF
 
+// The subschema below is what makes `topLevel` observable: with the setting
+// only the root is reported, and without it this subschema would be reported
+// too. A schema with a root node alone would look identical either way
 WRITE schema.json UNTIL EOF
 {
-  "$schema": "https://json-schema.org/draft/2020-12/schema"
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$defs": {
+    "inner": {
+      "type": "string"
+    }
+  }
 }
 EOF
 
@@ -43,7 +51,7 @@ REPLACE $CWD WITH '[CWD]' IN result_1.txt
 WRITE expected_1.txt UNTIL EOF
 1> {
 1>   "valid": false,
-1>   "health": 0,
+1>   "health": 50,
 1>   "errors": [
 1>     {
 1>       "path": "[CWD]/schema.json",
@@ -51,7 +59,7 @@ WRITE expected_1.txt UNTIL EOF
 1>       "message": "The root schema must declare an $id",
 1>       "description": "The object value was expected to define the property \"$id\"",
 1>       "schemaLocation": [],
-1>       "position": [ 1, 1, 3, 1 ]
+1>       "position": [ 1, 1, 8, 1 ]
 1>     }
 1>   ]
 1> }

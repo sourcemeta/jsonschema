@@ -1,4 +1,8 @@
-WRITE foo.json UNTIL EOF
+// The schemas live in a subdirectory so that the untouched copies taken below
+// are not themselves picked up by the recursive lint
+MAKE DIRECTORY schemas
+
+WRITE schemas/foo.json UNTIL EOF
 {
   "$schema": "http://json-schema.org/draft-04/schema#",
   "title": "Test",
@@ -6,7 +10,7 @@ WRITE foo.json UNTIL EOF
 }
 EOF
 
-WRITE bar.json UNTIL EOF
+WRITE schemas/bar.json UNTIL EOF
 {
   "$schema": "http://json-schema.org/draft-04/schema#",
   "title": "Test",
@@ -14,7 +18,7 @@ WRITE bar.json UNTIL EOF
 }
 EOF
 
-WRITE baz.json UNTIL EOF
+WRITE schemas/baz.json UNTIL EOF
 {
   "$schema": "http://json-schema.org/draft-04/schema#",
   "title": "Test",
@@ -24,18 +28,27 @@ WRITE baz.json UNTIL EOF
 }
 EOF
 
+COPY schemas/foo.json TO original_foo.json
+COPY schemas/bar.json TO original_bar.json
+COPY schemas/baz.json TO original_baz.json
+
 // Validation failure
-RUN lint $CWD --fix --verbose STDIN /dev/null IN . INTO result_0.txt EXPECTING 2
+RUN lint $CWD/schemas --fix --verbose STDIN /dev/null IN . INTO result_0.txt EXPECTING 2
 
 REPLACE $CWD WITH '[CWD]' IN result_0.txt
 
 WRITE expected_0.txt UNTIL EOF
-1> baz.json:5:16:
+1> schemas/baz.json:5:16:
 1>   External references must point to schemas that can be resolved (invalid_external_ref)
 1>     at location "/allOf/0/$ref"
-2> Linting: [CWD]/bar.json
-2> Linting: [CWD]/baz.json
-2> Linting: [CWD]/foo.json
+2> Linting: [CWD]/schemas/bar.json
+2> Linting: [CWD]/schemas/baz.json
+2> Linting: [CWD]/schemas/foo.json
 EOF
 
 COMPARE result_0.txt AGAINST expected_0.txt
+
+// A failed fix must leave every schema in the directory as it was
+COMPARE schemas/foo.json AGAINST original_foo.json
+COMPARE schemas/bar.json AGAINST original_bar.json
+COMPARE schemas/baz.json AGAINST original_baz.json
