@@ -59,8 +59,6 @@ WRITE tests/2.json UNTIL EOF
 EOF
 
 RUN test tests --resolve schemas --verbose --jobs 1 STDIN /dev/null IN . INTO result_0.txt EXPECTING 0
-REPLACE '\\\\' WITH '/' IN result_0.txt
-REPLACE '\\(?!")' WITH '/' IN result_0.txt
 
 REPLACE $CWD WITH '[CWD]' IN result_0.txt
 

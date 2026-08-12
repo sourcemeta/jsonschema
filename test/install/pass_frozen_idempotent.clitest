@@ -20,14 +20,12 @@ EOF
 REPLACE '\[CWD_URI\]' WITH $CWD_URI IN project/jsonschema.json
 
 RUN install STDIN /dev/null IN project INTO result_0.txt EXPECTING 0
-REPLACE '\\\\' WITH '/' IN result_0.txt
-REPLACE '\\(?!")' WITH '/' IN result_0.txt
 
+REPLACE $CWD_URI WITH '[CWD_URI]' IN result_0.txt
 REPLACE $CWD WITH '[CWD]' IN result_0.txt
-REPLACE 'file:///\[CWD\]' WITH 'file://[CWD]' IN result_0.txt
 
 WRITE expected_0.txt UNTIL EOF
-2> Fetching       : file://[CWD]/source/schema.json
+2> Fetching       : [CWD_URI]/source/schema.json
 2> Installed      : [CWD]/project/vendor/schema.json
 EOF
 
@@ -36,27 +34,23 @@ COMPARE result_0.txt AGAINST expected_0.txt
 COPY project/jsonschema.lock.json TO lock_before.json
 
 RUN install --frozen STDIN /dev/null IN project INTO result_1.txt EXPECTING 0
-REPLACE '\\\\' WITH '/' IN result_1.txt
-REPLACE '\\(?!")' WITH '/' IN result_1.txt
 
+REPLACE $CWD_URI WITH '[CWD_URI]' IN result_1.txt
 REPLACE $CWD WITH '[CWD]' IN result_1.txt
-REPLACE 'file:///\[CWD\]' WITH 'file://[CWD]' IN result_1.txt
 
 WRITE expected_1.txt UNTIL EOF
-2> Up to date     : file://[CWD]/source/schema.json
+2> Up to date     : [CWD_URI]/source/schema.json
 EOF
 
 COMPARE result_1.txt AGAINST expected_1.txt
 
 RUN install --frozen STDIN /dev/null IN project INTO result_2.txt EXPECTING 0
-REPLACE '\\\\' WITH '/' IN result_2.txt
-REPLACE '\\(?!")' WITH '/' IN result_2.txt
 
+REPLACE $CWD_URI WITH '[CWD_URI]' IN result_2.txt
 REPLACE $CWD WITH '[CWD]' IN result_2.txt
-REPLACE 'file:///\[CWD\]' WITH 'file://[CWD]' IN result_2.txt
 
 WRITE expected_2.txt UNTIL EOF
-2> Up to date     : file://[CWD]/source/schema.json
+2> Up to date     : [CWD_URI]/source/schema.json
 EOF
 
 COMPARE result_2.txt AGAINST expected_2.txt

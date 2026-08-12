@@ -11,8 +11,6 @@ EOF
 
 // Schema input error
 RUN validate schema.json instance.json --entrypoint 'https://example.com/foo bar' STDIN /dev/null IN . INTO result_0.txt EXPECTING 4
-REPLACE '\\\\' WITH '/' IN result_0.txt
-REPLACE '\\(?!")' WITH '/' IN result_0.txt
 
 REPLACE $CWD WITH '[CWD]' IN result_0.txt
 
@@ -28,8 +26,6 @@ COMPARE result_0.txt AGAINST expected_0.txt
 
 // Schema input error
 RUN validate schema.json instance.json --entrypoint 'https://example.com/foo bar' --json STDIN /dev/null IN . INTO result_1.txt EXPECTING 4
-REPLACE '\\\\' WITH '/' IN result_1.txt
-REPLACE '\\(?!")' WITH '/' IN result_1.txt
 
 REPLACE $CWD WITH '[CWD]' IN result_1.txt
 

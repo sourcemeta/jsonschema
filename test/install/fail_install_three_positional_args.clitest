@@ -1,7 +1,5 @@
 // Invalid CLI arguments
 RUN install a b c STDIN /dev/null IN . INTO result_0.txt EXPECTING 5
-REPLACE '\\\\' WITH '/' IN result_0.txt
-REPLACE '\\(?!")' WITH '/' IN result_0.txt
 
 WRITE expected_0.txt UNTIL EOF
 2> error: The install command takes either zero or two positional arguments

@@ -27,8 +27,6 @@ COPY schema.json TO original.json
 // Other error
 RUN lint schema.json --fix STDIN /dev/null IN . INTO result.txt EXPECTING 1
 
-REPLACE '\\\\' WITH '/' IN result.txt
-REPLACE '\\(?!")' WITH '/' IN result.txt
 REPLACE $CWD WITH '[CWD]' IN result.txt
 
 WRITE expected.txt UNTIL EOF

@@ -1,7 +1,5 @@
 // Invalid CLI arguments
 RUN encode STDIN /dev/null IN . INTO result.txt EXPECTING 5
-REPLACE '\\\\' WITH '/' IN result.txt
-REPLACE '\\(?!")' WITH '/' IN result.txt
 
 WRITE expected.txt UNTIL EOF
 2> error: This command expects a path to a JSON document and an output path

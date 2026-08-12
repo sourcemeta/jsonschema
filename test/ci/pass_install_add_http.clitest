@@ -1,8 +1,6 @@
 MAKE DIRECTORY project
 
 RUN install https://schemas.sourcemeta.com/sourcemeta/std/v0/jsonrpc/v2.0/identifier ./vendor/identifier.json STDIN /dev/null IN project INTO result_0.txt EXPECTING 0
-REPLACE '\\\\' WITH '/' IN result_0.txt
-REPLACE '\\(?!")' WITH '/' IN result_0.txt
 
 REPLACE $CWD WITH '[CWD]' IN result_0.txt
 
@@ -42,7 +40,6 @@ COMPARE project/vendor/identifier.json AGAINST expected_schema.json
 CHECKSUM SHA256 project/vendor/identifier.json AS HASH
 
 COPY project/jsonschema.lock.json TO checked_lock.json
-REPLACE '\\\\' WITH '/' IN checked_lock.json
 REPLACE $CWD WITH '[CWD]' IN checked_lock.json
 
 WRITE expected_lock.json UNTIL EOF

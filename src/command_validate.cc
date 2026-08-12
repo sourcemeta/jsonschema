@@ -48,7 +48,8 @@ auto get_schema_template(
   if (precompiled.has_value()) {
     sourcemeta::jsonschema::LOG_VERBOSE(options)
         << "Parsing pre-compiled schema template: "
-        << sourcemeta::core::weakly_canonical(precompiled.value()).string()
+        << sourcemeta::core::weakly_canonical(precompiled.value())
+               .generic_string()
         << "\n";
     const auto schema_template{
         sourcemeta::core::read_yaml_or_json(precompiled.value())};
@@ -432,9 +433,9 @@ auto sourcemeta::jsonschema::validate(const sourcemeta::core::Options &options)
             sourcemeta::core::empty_weak_pointer, frame};
         bool subresult{true};
         if (benchmark) {
-          subresult =
-              run_loop(evaluator, schema_template, instance,
-                       instance_path.string(), (int64_t)-1, benchmark_loop);
+          subresult = run_loop(evaluator, schema_template, instance,
+                               instance_path.generic_string(), (int64_t)-1,
+                               benchmark_loop);
           if (!subresult) {
             error << "error: Schema validation failure\n";
             result = false;
@@ -469,15 +470,16 @@ auto sourcemeta::jsonschema::validate(const sourcemeta::core::Options &options)
         } else if (subresult) {
           LOG_VERBOSE(options)
               << "ok: "
-              << sourcemeta::core::weakly_canonical(instance_path).string()
+              << sourcemeta::core::weakly_canonical(instance_path)
+                     .generic_string()
               << "\n  matches " << stdin_path_string(schema_resolution_base)
               << "\n";
           print_annotations(output, options, tracker, std::cerr);
         } else {
-          std::cerr
-              << "fail: "
-              << sourcemeta::core::weakly_canonical(instance_path).string()
-              << "\n";
+          std::cerr << "fail: "
+                    << sourcemeta::core::weakly_canonical(instance_path)
+                           .generic_string()
+                    << "\n";
           std::cerr << error.str();
           print(output, tracker, std::cerr);
           result = false;

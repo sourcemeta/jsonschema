@@ -26,8 +26,6 @@ WRITE this/is/a/very/very/very/long/path/test.json UNTIL EOF
 EOF
 
 RUN test this/is/a/very/very/very/long/path/test.json --json STDIN /dev/null IN . INTO result_0.txt EXPECTING 0
-REPLACE '\\\\' WITH '/' IN result_0.txt
-REPLACE '\\(?!")' WITH '/' IN result_0.txt
 
 COPY result_0.txt TO output.json
 KEEP LINES MATCHING '^1>' IN output.json
@@ -38,8 +36,8 @@ DROP LINES MATCHING '"duration":' IN result_0.txt
 DROP LINES MATCHING '"start":' IN result_0.txt
 DROP LINES MATCHING '"stop":' IN result_0.txt
 DROP LINES MATCHING '"threadId":' IN result_0.txt
+REPLACE $CWD_URI WITH '[CWD_URI]' IN result_0.txt
 REPLACE $CWD WITH '[CWD]' IN result_0.txt
-REPLACE 'file:///\[CWD\]' WITH 'file://[CWD]' IN result_0.txt
 
 WRITE expected_0.txt UNTIL EOF
 1> {
@@ -63,7 +61,7 @@ WRITE expected_0.txt UNTIL EOF
 1>         "name": "Valid string",
 1>         "status": "passed",
 1>         "suite": [
-1>           "file://[CWD]/this/is/a/very/very/very/long/path/schema.json"
+1>           "[CWD_URI]/this/is/a/very/very/very/long/path/schema.json"
 1>         ],
 1>         "type": "unit",
 1>         "filePath": "[CWD]/this/is/a/very/very/very/long/path/test.json",
@@ -75,7 +73,7 @@ WRITE expected_0.txt UNTIL EOF
 1>         "name": "Invalid type",
 1>         "status": "passed",
 1>         "suite": [
-1>           "file://[CWD]/this/is/a/very/very/very/long/path/schema.json"
+1>           "[CWD_URI]/this/is/a/very/very/very/long/path/schema.json"
 1>         ],
 1>         "type": "unit",
 1>         "filePath": "[CWD]/this/is/a/very/very/very/long/path/test.json",

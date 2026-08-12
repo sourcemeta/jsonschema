@@ -36,8 +36,6 @@ EOF
 
 RUN test $CWD/test.json --resolve $CWD/schema.json --verbose --jobs 1 STDIN /dev/null IN . INTO result.txt EXPECTING 0
 
-REPLACE '\\\\' WITH '/' IN result.txt
-REPLACE '\\(?!")' WITH '/' IN result.txt
 REPLACE $CWD WITH '[CWD]' IN result.txt
 
 WRITE expected.txt UNTIL EOF

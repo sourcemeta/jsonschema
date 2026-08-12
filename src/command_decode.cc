@@ -71,7 +71,7 @@ auto sourcemeta::jsonschema::decode(const sourcemeta::core::Options &options)
     LOG_VERBOSE(options) << "Interpreting input as JSONL: "
                          << sourcemeta::core::weakly_canonical(
                                 options.positional().front())
-                                .string()
+                                .generic_string()
                          << "\n";
 
     std::size_t count{0};

@@ -17,15 +17,13 @@ EOF
 
 // Schema input error
 RUN validate schema.json instance.json STDIN /dev/null IN . INTO result_0.txt EXPECTING 4
-REPLACE '\\\\' WITH '/' IN result_0.txt
-REPLACE '\\(?!")' WITH '/' IN result_0.txt
 
+REPLACE $CWD_URI WITH '[CWD_URI]' IN result_0.txt
 REPLACE $CWD WITH '[CWD]' IN result_0.txt
-REPLACE 'file:///\[CWD\]' WITH 'file://[CWD]' IN result_0.txt
 
 WRITE expected_0.txt UNTIL EOF
 2> error: Could not resolve schema reference
-2>   at identifier file://[CWD]/schema.json#/definitions/i-dont-exist
+2>   at identifier [CWD_URI]/schema.json#/definitions/i-dont-exist
 2>   at file path [CWD]/schema.json
 2>   at location "/properties/foo/$ref"
 EOF
@@ -34,16 +32,14 @@ COMPARE result_0.txt AGAINST expected_0.txt
 
 // Schema input error
 RUN validate schema.json instance.json --json STDIN /dev/null IN . INTO result_1.txt EXPECTING 4
-REPLACE '\\\\' WITH '/' IN result_1.txt
-REPLACE '\\(?!")' WITH '/' IN result_1.txt
 
+REPLACE $CWD_URI WITH '[CWD_URI]' IN result_1.txt
 REPLACE $CWD WITH '[CWD]' IN result_1.txt
-REPLACE 'file:///\[CWD\]' WITH 'file://[CWD]' IN result_1.txt
 
 WRITE expected_1.txt UNTIL EOF
 1> {
 1>   "error": "Could not resolve schema reference",
-1>   "identifier": "file://[CWD]/schema.json#/definitions/i-dont-exist",
+1>   "identifier": "[CWD_URI]/schema.json#/definitions/i-dont-exist",
 1>   "filePath": "[CWD]/schema.json",
 1>   "location": "/properties/foo/$ref"
 1> }

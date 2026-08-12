@@ -46,7 +46,7 @@ inline auto load_configuration(
     LOG_DEBUG(options) << "Using configuration file: "
                        << sourcemeta::core::weakly_canonical(
                               configuration_path.value())
-                              .string()
+                              .generic_string()
                        << "\n";
     sourcemeta::core::PointerPositionTracker positions;
     auto property_storage = std::make_shared<std::deque<std::string>>();
@@ -132,7 +132,7 @@ inline auto read_configuration(
     LOG_DEBUG(options)
         << "Ignoring configuration file given extensions mismatch: "
         << sourcemeta::core::weakly_canonical(configuration_path.value())
-               .string()
+               .generic_string()
         << "\n";
     static const std::optional<sourcemeta::blaze::Configuration> empty{
         std::nullopt};

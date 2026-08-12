@@ -101,7 +101,7 @@ auto emit_debug(const sourcemeta::core::Options &options,
   std::cerr << "debug: " << type_names[type_index] << ": " << event.uri << " ("
             << (event.index + 1) << "/" << event.total << ")";
   if (!event.path.empty()) {
-    std::cerr << " -> " << event.path.string();
+    std::cerr << " -> " << event.path.generic_string();
   }
   std::cerr << "\n";
 }
@@ -129,133 +129,139 @@ auto make_on_event(const sourcemeta::core::Options &options,
                    sourcemeta::core::JSON &events_array,
                    const OrphanedBehavior orphaned_behavior)
     -> sourcemeta::blaze::Configuration::FetchEvent::Callback {
-  return [&options, &error_exit_code, is_json, &events_array,
-          orphaned_behavior](
-             const sourcemeta::blaze::Configuration::FetchEvent &event)
-             -> bool {
-    using Type = sourcemeta::blaze::Configuration::FetchEvent::Type;
+  return
+      [&options, &error_exit_code, is_json, &events_array, orphaned_behavior](
+          const sourcemeta::blaze::Configuration::FetchEvent &event) -> bool {
+        using Type = sourcemeta::blaze::Configuration::FetchEvent::Type;
 
-    emit_debug(options, event);
+        emit_debug(options, event);
 
-    switch (event.type) {
-      case Type::FetchStart:
-        if (is_json) {
-          emit_json(events_array, "fetching", "uri", event.uri);
-        } else {
-          std::cerr << padded_label("Fetching") << event.uri << "\n";
+        switch (event.type) {
+          case Type::FetchStart:
+            if (is_json) {
+              emit_json(events_array, "fetching", "uri", event.uri);
+            } else {
+              std::cerr << padded_label("Fetching") << event.uri << "\n";
+            }
+
+            break;
+          case Type::FetchEnd:
+            break;
+          case Type::BundleStart:
+            sourcemeta::jsonschema::LOG_VERBOSE(options)
+                << padded_label("Bundling") << event.uri << "\n";
+            break;
+          case Type::BundleEnd:
+            break;
+          case Type::WriteStart:
+            sourcemeta::jsonschema::LOG_VERBOSE(options)
+                << padded_label("Writing") << event.path.generic_string()
+                << "\n";
+            break;
+          case Type::WriteEnd:
+            break;
+          case Type::VerifyStart:
+            sourcemeta::jsonschema::LOG_VERBOSE(options)
+                << padded_label("Verifying") << event.path.generic_string()
+                << "\n";
+            break;
+          case Type::VerifyEnd:
+            if (is_json) {
+              auto json_event{sourcemeta::core::JSON::make_object()};
+              json_event.assign("type", sourcemeta::core::JSON{"installed"});
+              json_event.assign("uri", sourcemeta::core::JSON{event.uri});
+              json_event.assign(
+                  "path", sourcemeta::core::JSON{event.path.generic_string()});
+              events_array.push_back(std::move(json_event));
+            } else {
+              std::cerr << padded_label("Installed")
+                        << event.path.generic_string() << "\n";
+            }
+
+            break;
+          case Type::UpToDate:
+            if (is_json) {
+              emit_json(events_array, "up-to-date", "uri", event.uri);
+            } else {
+              std::cerr << padded_label("Up to date") << event.uri << "\n";
+            }
+
+            break;
+          case Type::FileMissing:
+            if (is_json) {
+              emit_json(events_array, "file-missing", "path",
+                        event.path.generic_string());
+            } else {
+              std::cerr << padded_label("File missing")
+                        << event.path.generic_string() << "\n";
+            }
+
+            break;
+          case Type::Mismatched:
+            if (is_json) {
+              emit_json(events_array, "mismatched", "path",
+                        event.path.generic_string());
+            } else {
+              std::cerr << padded_label("Mismatched")
+                        << event.path.generic_string() << "\n";
+            }
+
+            break;
+          case Type::PathMismatch:
+            if (is_json) {
+              emit_json(events_array, "path-mismatch", "uri", event.uri);
+            } else {
+              std::cerr << padded_label("Path mismatch") << event.uri << "\n";
+            }
+
+            break;
+          case Type::Untracked:
+            error_exit_code = sourcemeta::jsonschema::EXIT_EXPECTED_FAILURE;
+            if (is_json) {
+              emit_json(events_array, "untracked", "uri", event.uri);
+            } else {
+              std::cerr << padded_label("Untracked") << event.uri << "\n";
+            }
+
+            break;
+          case Type::Orphaned:
+            if (is_json) {
+              emit_json(events_array, "orphaned", "uri", event.uri);
+            } else {
+              std::cerr << padded_label("Orphaned") << event.uri << "\n";
+            }
+
+            if (orphaned_behavior == OrphanedBehavior::Delete) {
+              std::filesystem::remove(event.path);
+            } else {
+              error_exit_code = sourcemeta::jsonschema::EXIT_EXPECTED_FAILURE;
+            }
+
+            break;
+          case Type::Error:
+            error_exit_code =
+                orphaned_behavior == OrphanedBehavior::Error
+                    ? sourcemeta::jsonschema::EXIT_EXPECTED_FAILURE
+                    : sourcemeta::jsonschema::EXIT_OTHER_INPUT_ERROR;
+            if (is_json) {
+              auto json_event{sourcemeta::core::JSON::make_object()};
+              json_event.assign("type", sourcemeta::core::JSON{"error"});
+              json_event.assign("uri", sourcemeta::core::JSON{event.uri});
+              json_event.assign("message",
+                                sourcemeta::core::JSON{event.details});
+              events_array.push_back(std::move(json_event));
+            } else {
+              sourcemeta::jsonschema::try_catch(options, [&]() -> int {
+                throw sourcemeta::jsonschema::InstallError{event.details,
+                                                           event.uri};
+              });
+            }
+
+            break;
         }
 
-        break;
-      case Type::FetchEnd:
-        break;
-      case Type::BundleStart:
-        sourcemeta::jsonschema::LOG_VERBOSE(options)
-            << padded_label("Bundling") << event.uri << "\n";
-        break;
-      case Type::BundleEnd:
-        break;
-      case Type::WriteStart:
-        sourcemeta::jsonschema::LOG_VERBOSE(options)
-            << padded_label("Writing") << event.path.string() << "\n";
-        break;
-      case Type::WriteEnd:
-        break;
-      case Type::VerifyStart:
-        sourcemeta::jsonschema::LOG_VERBOSE(options)
-            << padded_label("Verifying") << event.path.string() << "\n";
-        break;
-      case Type::VerifyEnd:
-        if (is_json) {
-          auto json_event{sourcemeta::core::JSON::make_object()};
-          json_event.assign("type", sourcemeta::core::JSON{"installed"});
-          json_event.assign("uri", sourcemeta::core::JSON{event.uri});
-          json_event.assign("path",
-                            sourcemeta::core::JSON{event.path.string()});
-          events_array.push_back(std::move(json_event));
-        } else {
-          std::cerr << padded_label("Installed") << event.path.string() << "\n";
-        }
-
-        break;
-      case Type::UpToDate:
-        if (is_json) {
-          emit_json(events_array, "up-to-date", "uri", event.uri);
-        } else {
-          std::cerr << padded_label("Up to date") << event.uri << "\n";
-        }
-
-        break;
-      case Type::FileMissing:
-        if (is_json) {
-          emit_json(events_array, "file-missing", "path", event.path.string());
-        } else {
-          std::cerr << padded_label("File missing") << event.path.string()
-                    << "\n";
-        }
-
-        break;
-      case Type::Mismatched:
-        if (is_json) {
-          emit_json(events_array, "mismatched", "path", event.path.string());
-        } else {
-          std::cerr << padded_label("Mismatched") << event.path.string()
-                    << "\n";
-        }
-
-        break;
-      case Type::PathMismatch:
-        if (is_json) {
-          emit_json(events_array, "path-mismatch", "uri", event.uri);
-        } else {
-          std::cerr << padded_label("Path mismatch") << event.uri << "\n";
-        }
-
-        break;
-      case Type::Untracked:
-        error_exit_code = sourcemeta::jsonschema::EXIT_EXPECTED_FAILURE;
-        if (is_json) {
-          emit_json(events_array, "untracked", "uri", event.uri);
-        } else {
-          std::cerr << padded_label("Untracked") << event.uri << "\n";
-        }
-
-        break;
-      case Type::Orphaned:
-        if (is_json) {
-          emit_json(events_array, "orphaned", "uri", event.uri);
-        } else {
-          std::cerr << padded_label("Orphaned") << event.uri << "\n";
-        }
-
-        if (orphaned_behavior == OrphanedBehavior::Delete) {
-          std::filesystem::remove(event.path);
-        } else {
-          error_exit_code = sourcemeta::jsonschema::EXIT_EXPECTED_FAILURE;
-        }
-
-        break;
-      case Type::Error:
-        error_exit_code = orphaned_behavior == OrphanedBehavior::Error
-                              ? sourcemeta::jsonschema::EXIT_EXPECTED_FAILURE
-                              : sourcemeta::jsonschema::EXIT_OTHER_INPUT_ERROR;
-        if (is_json) {
-          auto json_event{sourcemeta::core::JSON::make_object()};
-          json_event.assign("type", sourcemeta::core::JSON{"error"});
-          json_event.assign("uri", sourcemeta::core::JSON{event.uri});
-          json_event.assign("message", sourcemeta::core::JSON{event.details});
-          events_array.push_back(std::move(json_event));
-        } else {
-          sourcemeta::jsonschema::try_catch(options, [&]() -> int {
-            throw sourcemeta::jsonschema::InstallError{event.details,
-                                                       event.uri};
-          });
-        }
-
-        break;
-    }
-
-    return true;
-  };
+        return true;
+      };
 }
 
 } // namespace
@@ -379,7 +385,7 @@ auto sourcemeta::jsonschema::install(const sourcemeta::core::Options &options)
       output_json(events_array);
     } else {
       std::cerr << "No dependencies found\n  at "
-                << configuration_path.value().string() << "\n";
+                << configuration_path.value().generic_string() << "\n";
     }
 
     return;
@@ -410,7 +416,7 @@ auto sourcemeta::jsonschema::install(const sourcemeta::core::Options &options)
                   "Ignoring corrupted lock file");
       } else {
         std::cerr << "warning: Ignoring corrupted lock file\n  at "
-                  << lock_path.string() << "\n";
+                  << lock_path.generic_string() << "\n";
       }
     }
   }

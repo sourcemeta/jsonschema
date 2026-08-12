@@ -127,7 +127,7 @@ auto sourcemeta::jsonschema::rdf(const sourcemeta::core::Options &options)
   const auto instance_display_path{
       instance_from_stdin
           ? std::string{STDIN_DEFAULT_ID}
-          : sourcemeta::core::weakly_canonical(instance_path).string()};
+          : sourcemeta::core::weakly_canonical(instance_path).generic_string()};
 
   sourcemeta::blaze::Evaluator evaluator;
   auto outcome{sourcemeta::blaze::jsonld(evaluator, schema_template, instance)};

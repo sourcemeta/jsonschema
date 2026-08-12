@@ -44,12 +44,12 @@ auto sourcemeta::jsonschema::fmt(const sourcemeta::core::Options &options)
     const auto effective_dialect =
         is_test_document ? TEST_DOCUMENT_DEFAULT_DIALECT : dialect;
     if (is_test_document) {
-      std::cerr << "Interpreting as a test file: " << display_path.string()
-                << "\n";
+      std::cerr << "Interpreting as a test file: "
+                << display_path.generic_string() << "\n";
     }
     const auto &custom_resolver{resolver(options, options.contains("http"),
                                          effective_dialect, configuration)};
-    const auto stdin_label{display_path.string()};
+    const auto stdin_label{display_path.generic_string()};
 
     try {
       if (options.contains("check")) {

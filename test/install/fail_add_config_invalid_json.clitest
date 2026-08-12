@@ -6,8 +6,6 @@ EOF
 
 // Other input error
 RUN install https://example.com/foo ./vendor/foo.json STDIN /dev/null IN project INTO result_0.txt EXPECTING 6
-REPLACE '\\\\' WITH '/' IN result_0.txt
-REPLACE '\\(?!")' WITH '/' IN result_0.txt
 
 REPLACE $CWD WITH '[CWD]' IN result_0.txt
 
@@ -22,8 +20,6 @@ COMPARE result_0.txt AGAINST expected_0.txt
 
 // Other input error
 RUN install --json https://example.com/foo ./vendor/foo.json STDIN /dev/null IN project INTO result_1.txt EXPECTING 6
-REPLACE '\\\\' WITH '/' IN result_1.txt
-REPLACE '\\(?!")' WITH '/' IN result_1.txt
 
 REPLACE $CWD WITH '[CWD]' IN result_1.txt
 
@@ -39,9 +35,9 @@ EOF
 COMPARE result_1.txt AGAINST expected_1.txt
 
 TREE project INTO listing_0.txt
-KEEP LINES MATCHING '^\./jsonschema\.lock\.json$' IN listing_0.txt
 
 WRITE listing_expected_0.txt UNTIL EOF
+./jsonschema.json
 EOF
 
 COMPARE listing_0.txt AGAINST listing_expected_0.txt

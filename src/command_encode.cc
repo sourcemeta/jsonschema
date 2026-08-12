@@ -52,7 +52,8 @@ auto sourcemeta::jsonschema::encode(const sourcemeta::core::Options &options)
   if (document.extension() == ".jsonl") {
     LOG_VERBOSE(options)
         << "Interpreting input as JSONL: "
-        << sourcemeta::core::weakly_canonical(document).string() << "\n";
+        << sourcemeta::core::weakly_canonical(document).generic_string()
+        << "\n";
 
     auto stream{sourcemeta::core::read_file(document)};
     std::ofstream output_stream(

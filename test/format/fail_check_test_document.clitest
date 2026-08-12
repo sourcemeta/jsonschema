@@ -16,8 +16,6 @@ EOF
 
 // Validation failure
 RUN fmt test.json --check STDIN /dev/null IN . INTO result.txt EXPECTING 2
-REPLACE '\\\\' WITH '/' IN result.txt
-REPLACE '\\(?!")' WITH '/' IN result.txt
 
 REPLACE $CWD WITH '[CWD]' IN result.txt
 

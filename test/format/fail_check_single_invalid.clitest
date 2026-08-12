@@ -9,8 +9,6 @@ EOF
 
 // Other input error
 RUN fmt schema.json --check STDIN /dev/null IN . INTO result.txt EXPECTING 6
-REPLACE '\\\\' WITH '/' IN result.txt
-REPLACE '\\(?!")' WITH '/' IN result.txt
 
 REPLACE $CWD WITH '[CWD]' IN result.txt
 

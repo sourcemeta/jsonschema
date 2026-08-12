@@ -39,38 +39,34 @@ COPY project/jsonschema.lock.json TO lock_before.json
 
 // Validation failure
 RUN install --frozen STDIN /dev/null IN project INTO result_0.txt EXPECTING 2
-REPLACE '\\\\' WITH '/' IN result_0.txt
-REPLACE '\\(?!")' WITH '/' IN result_0.txt
 
+REPLACE $CWD_URI WITH '[CWD_URI]' IN result_0.txt
 REPLACE $CWD WITH '[CWD]' IN result_0.txt
-REPLACE 'file:///\[CWD\]' WITH 'file://[CWD]' IN result_0.txt
 
 WRITE expected_0.txt UNTIL EOF
-2> Path mismatch  : file://[CWD]/source/schema.json
+2> Path mismatch  : [CWD_URI]/source/schema.json
 2> error: Configured path does not match lock file in frozen mode
-2>   at uri file://[CWD]/source/schema.json
+2>   at uri [CWD_URI]/source/schema.json
 EOF
 
 COMPARE result_0.txt AGAINST expected_0.txt
 
 // Validation failure
 RUN install --frozen --json STDIN /dev/null IN project INTO result_1.txt EXPECTING 2
-REPLACE '\\\\' WITH '/' IN result_1.txt
-REPLACE '\\(?!")' WITH '/' IN result_1.txt
 
+REPLACE $CWD_URI WITH '[CWD_URI]' IN result_1.txt
 REPLACE $CWD WITH '[CWD]' IN result_1.txt
-REPLACE 'file:///\[CWD\]' WITH 'file://[CWD]' IN result_1.txt
 
 WRITE expected_1.txt UNTIL EOF
 1> {
 1>   "events": [
 1>     {
 1>       "type": "path-mismatch",
-1>       "uri": "file://[CWD]/source/schema.json"
+1>       "uri": "[CWD_URI]/source/schema.json"
 1>     },
 1>     {
 1>       "type": "error",
-1>       "uri": "file://[CWD]/source/schema.json",
+1>       "uri": "[CWD_URI]/source/schema.json",
 1>       "message": "Configured path does not match lock file in frozen mode"
 1>     }
 1>   ]

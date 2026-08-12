@@ -73,8 +73,6 @@ EOF
 // Test assertion failure. Running in parallel, the order of the lines is not
 // part of the contract
 RUN test tests --resolve schema.json --jobs 3 STDIN /dev/null IN . INTO result_0.txt EXPECTING 2
-REPLACE '\\\\' WITH '/' IN result_0.txt
-REPLACE '\\(?!")' WITH '/' IN result_0.txt
 
 REPLACE $CWD WITH '[CWD]' IN result_0.txt
 
@@ -99,8 +97,6 @@ COMPARE result_0.txt AGAINST expected_0.txt
 
 // Test assertion failure. Serially, the order is deterministic
 RUN test tests --resolve schema.json --jobs 1 STDIN /dev/null IN . INTO result_1.txt EXPECTING 2
-REPLACE '\\\\' WITH '/' IN result_1.txt
-REPLACE '\\(?!")' WITH '/' IN result_1.txt
 
 REPLACE $CWD WITH '[CWD]' IN result_1.txt
 

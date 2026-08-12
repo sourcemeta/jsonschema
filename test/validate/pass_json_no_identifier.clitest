@@ -17,10 +17,8 @@ EOF
 
 RUN validate schema.json instance.json --json STDIN /dev/null IN . INTO result.txt EXPECTING 0
 
-REPLACE '\\\\' WITH '/' IN result.txt
-REPLACE '\\(?!")' WITH '/' IN result.txt
+REPLACE $CWD_URI WITH '[CWD_URI]' IN result.txt
 REPLACE $CWD WITH '[CWD]' IN result.txt
-REPLACE 'file:///\[CWD\]' WITH 'file://[CWD]' IN result.txt
 
 WRITE expected.txt UNTIL EOF
 1> {
@@ -28,21 +26,21 @@ WRITE expected.txt UNTIL EOF
 1>   "annotations": [
 1>     {
 1>       "keywordLocation": "/description",
-1>       "absoluteKeywordLocation": "file://[CWD]/schema.json#/description",
+1>       "absoluteKeywordLocation": "[CWD_URI]/schema.json#/description",
 1>       "instanceLocation": "",
 1>       "instancePosition": [ 1, 1, 1, 16 ],
 1>       "annotation": [ "Test schema" ]
 1>     },
 1>     {
 1>       "keywordLocation": "/properties",
-1>       "absoluteKeywordLocation": "file://[CWD]/schema.json#/properties",
+1>       "absoluteKeywordLocation": "[CWD_URI]/schema.json#/properties",
 1>       "instanceLocation": "",
 1>       "instancePosition": [ 1, 1, 1, 16 ],
 1>       "annotation": [ "foo" ]
 1>     },
 1>     {
 1>       "keywordLocation": "/title",
-1>       "absoluteKeywordLocation": "file://[CWD]/schema.json#/title",
+1>       "absoluteKeywordLocation": "[CWD_URI]/schema.json#/title",
 1>       "instanceLocation": "",
 1>       "instancePosition": [ 1, 1, 1, 16 ],
 1>       "annotation": [ "Test" ]

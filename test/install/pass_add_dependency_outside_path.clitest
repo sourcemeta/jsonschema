@@ -18,29 +18,26 @@ WRITE project/jsonschema.json UNTIL EOF
 EOF
 
 RUN install $CWD_URI/source/user.json ../external/user.json STDIN /dev/null IN project INTO result_0.txt EXPECTING 0
-REPLACE '\\\\' WITH '/' IN result_0.txt
-REPLACE '\\(?!")' WITH '/' IN result_0.txt
 
+REPLACE $CWD_URI WITH '[CWD_URI]' IN result_0.txt
 REPLACE $CWD WITH '[CWD]' IN result_0.txt
-REPLACE 'file:///\[CWD\]' WITH 'file://[CWD]' IN result_0.txt
 
 WRITE expected_0.txt UNTIL EOF
-2> Adding         : file://[CWD]/source/user.json -> ../external/user.json
-2> Fetching       : file://[CWD]/source/user.json
+2> Adding         : [CWD_URI]/source/user.json -> ../external/user.json
+2> Fetching       : [CWD_URI]/source/user.json
 2> Installed      : [CWD]/external/user.json
 EOF
 
 COMPARE result_0.txt AGAINST expected_0.txt
 
 COPY project/jsonschema.json TO checked_config.json
-REPLACE '\\\\' WITH '/' IN checked_config.json
+REPLACE $CWD_URI WITH '[CWD_URI]' IN checked_config.json
 REPLACE $CWD WITH '[CWD]' IN checked_config.json
-REPLACE 'file:///\[CWD\]' WITH 'file://[CWD]' IN checked_config.json
 
 WRITE expected_config.json UNTIL EOF
 {
   "dependencies": {
-    "file://[CWD]/source/user.json": "../external/user.json"
+    "[CWD_URI]/source/user.json": "../external/user.json"
   }
 }
 EOF
@@ -48,15 +45,14 @@ EOF
 COMPARE checked_config.json AGAINST expected_config.json
 
 COPY external/user.json TO checked_schema.json
-REPLACE '\\\\' WITH '/' IN checked_schema.json
+REPLACE $CWD_URI WITH '[CWD_URI]' IN checked_schema.json
 REPLACE $CWD WITH '[CWD]' IN checked_schema.json
-REPLACE 'file:///\[CWD\]' WITH 'file://[CWD]' IN checked_schema.json
 
 WRITE expected_schema.json UNTIL EOF
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "type": "string",
-  "$id": "file://[CWD]/source/user.json"
+  "$id": "[CWD_URI]/source/user.json"
 }
 EOF
 
@@ -65,15 +61,14 @@ COMPARE checked_schema.json AGAINST expected_schema.json
 CHECKSUM SHA256 external/user.json AS HASH
 
 COPY project/jsonschema.lock.json TO checked_lock.json
-REPLACE '\\\\' WITH '/' IN checked_lock.json
+REPLACE $CWD_URI WITH '[CWD_URI]' IN checked_lock.json
 REPLACE $CWD WITH '[CWD]' IN checked_lock.json
-REPLACE 'file:///\[CWD\]' WITH 'file://[CWD]' IN checked_lock.json
 
 WRITE expected_lock.json UNTIL EOF
 {
   "version": 1,
   "dependencies": {
-    "file://[CWD]/source/user.json": {
+    "[CWD_URI]/source/user.json": {
       "path": "../external/user.json",
       "hash": "[HASH]",
       "hashAlgorithm": "sha256"

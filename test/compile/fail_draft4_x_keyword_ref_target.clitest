@@ -22,15 +22,13 @@ EOF
 
 // Schema input error
 RUN compile schema.json STDIN /dev/null IN . INTO result.txt EXPECTING 4
-REPLACE '\\\\' WITH '/' IN result.txt
-REPLACE '\\(?!")' WITH '/' IN result.txt
 
+REPLACE $CWD_URI WITH '[CWD_URI]' IN result.txt
 REPLACE $CWD WITH '[CWD]' IN result.txt
-REPLACE 'file:///\[CWD\]' WITH 'file://[CWD]' IN result.txt
 
 WRITE expected_0.txt UNTIL EOF
 2> error: The referenced schema is not considered to be a valid subschema given the dialect and vocabularies in use
-2>   at identifier file://[CWD]/schema.json#/allOf/1/additionalProperties/x-this-is-invalid/$defs/test
+2>   at identifier [CWD_URI]/schema.json#/allOf/1/additionalProperties/x-this-is-invalid/$defs/test
 2>   at file path [CWD]/schema.json
 2>   at location "/allOf/1/additionalProperties/x-this-is-invalid"
 2>
@@ -41,16 +39,14 @@ COMPARE result.txt AGAINST expected_0.txt
 
 // Schema input error
 RUN compile schema.json --json STDIN /dev/null IN . INTO result_json.txt EXPECTING 4
-REPLACE '\\\\' WITH '/' IN result_json.txt
-REPLACE '\\(?!")' WITH '/' IN result_json.txt
 
+REPLACE $CWD_URI WITH '[CWD_URI]' IN result_json.txt
 REPLACE $CWD WITH '[CWD]' IN result_json.txt
-REPLACE 'file:///\[CWD\]' WITH 'file://[CWD]' IN result_json.txt
 
 WRITE expected_1.txt UNTIL EOF
 1> {
 1>   "error": "The referenced schema is not considered to be a valid subschema given the dialect and vocabularies in use",
-1>   "identifier": "file://[CWD]/schema.json#/allOf/1/additionalProperties/x-this-is-invalid/$defs/test",
+1>   "identifier": "[CWD_URI]/schema.json#/allOf/1/additionalProperties/x-this-is-invalid/$defs/test",
 1>   "filePath": "[CWD]/schema.json",
 1>   "location": "/allOf/1/additionalProperties/x-this-is-invalid"
 1> }

@@ -79,8 +79,6 @@ EOF
 
 // Running in parallel, the order of the lines is not part of the contract
 RUN test alpha/tests beta/tests --resolve schemas --jobs 2 STDIN /dev/null IN . INTO result_0.txt EXPECTING 0
-REPLACE '\\\\' WITH '/' IN result_0.txt
-REPLACE '\\(?!")' WITH '/' IN result_0.txt
 
 REPLACE $CWD WITH '[CWD]' IN result_0.txt
 
@@ -97,8 +95,6 @@ COMPARE result_0.txt AGAINST expected_0.txt
 
 // Serially, the order is deterministic
 RUN test alpha/tests beta/tests --resolve schemas --jobs 1 STDIN /dev/null IN . INTO result_1.txt EXPECTING 0
-REPLACE '\\\\' WITH '/' IN result_1.txt
-REPLACE '\\(?!")' WITH '/' IN result_1.txt
 
 REPLACE $CWD WITH '[CWD]' IN result_1.txt
 

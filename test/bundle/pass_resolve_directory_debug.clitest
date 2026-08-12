@@ -19,11 +19,9 @@ WRITE schemas/remote.json UNTIL EOF
 EOF
 
 RUN bundle schema.json --resolve schemas --debug STDIN /dev/null IN . INTO result.txt EXPECTING 0
-REPLACE '\\\\' WITH '/' IN result.txt
-REPLACE '\\(?!")' WITH '/' IN result.txt
 
+REPLACE $CWD_URI WITH '[CWD_URI]' IN result.txt
 REPLACE $CWD WITH '[CWD]' IN result.txt
-REPLACE 'file:///\[CWD\]' WITH 'file://[CWD]' IN result.txt
 
 WRITE expected.txt UNTIL EOF
 1> {
@@ -43,7 +41,7 @@ WRITE expected.txt UNTIL EOF
 1>   }
 1> }
 2> debug: Detecting schema resources from file: [CWD]/schemas/remote.json
-2> debug: Importing schema into the resolution context: file://[CWD]/schemas/remote.json
+2> debug: Importing schema into the resolution context: [CWD_URI]/schemas/remote.json
 2> debug: Importing schema into the resolution context: https://example.com/nested
 EOF
 

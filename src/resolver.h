@@ -208,7 +208,7 @@ static inline auto fetch_schema(const sourcemeta::core::Options &options,
   if (uri.is_file()) {
     const auto path{uri.to_path()};
     LOG_DEBUG(options) << "Attempting to read file reference from disk: "
-                       << path.string() << "\n";
+                       << path.generic_string() << "\n";
     if (std::filesystem::exists(path)) {
       return sourcemeta::core::read_yaml_or_json(path);
     }

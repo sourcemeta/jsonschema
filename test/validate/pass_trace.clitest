@@ -16,49 +16,47 @@ WRITE instance.json UNTIL EOF
 EOF
 
 RUN validate schema.json instance.json --trace STDIN /dev/null IN . INTO result_0.txt EXPECTING 0
-REPLACE '\\\\' WITH '/' IN result_0.txt
-REPLACE '\\(?!")' WITH '/' IN result_0.txt
 
+REPLACE $CWD_URI WITH '[CWD_URI]' IN result_0.txt
 REPLACE $CWD WITH '[CWD]' IN result_0.txt
-REPLACE 'file:///\[CWD\]' WITH 'file://[CWD]' IN result_0.txt
 
 WRITE expected_0.txt UNTIL EOF
 1> @- (annotation) "/description" (AnnotationEmit)
 1>    value "Test schema"
 1>    at instance location "" (line 1, column 1)
-1>    at keyword location "file://[CWD]/schema.json#/description"
+1>    at keyword location "[CWD_URI]/schema.json#/description"
 1>    at vocabulary "https://json-schema.org/draft/2020-12/vocab/meta-data"
 1>
 1> @- (annotation) "/title" (AnnotationEmit)
 1>    value "Test"
 1>    at instance location "" (line 1, column 1)
-1>    at keyword location "file://[CWD]/schema.json#/title"
+1>    at keyword location "[CWD_URI]/schema.json#/title"
 1>    at vocabulary "https://json-schema.org/draft/2020-12/vocab/meta-data"
 1>
 1> -> (push) "/properties" (LogicalWhenType)
 1>    at instance location "" (line 1, column 1)
-1>    at keyword location "file://[CWD]/schema.json#/properties"
+1>    at keyword location "[CWD_URI]/schema.json#/properties"
 1>    at vocabulary "https://json-schema.org/draft/2020-12/vocab/applicator"
 1>
 1> -> (push) "/properties/foo/type" (AssertionTypeStrict)
 1>    at instance location "/foo" (line 1, column 3)
-1>    at keyword location "file://[CWD]/schema.json#/properties/foo/type"
+1>    at keyword location "[CWD_URI]/schema.json#/properties/foo/type"
 1>    at vocabulary "https://json-schema.org/draft/2020-12/vocab/validation"
 1>
 1> <- (pass) "/properties/foo/type" (AssertionTypeStrict)
 1>    at instance location "/foo" (line 1, column 3)
-1>    at keyword location "file://[CWD]/schema.json#/properties/foo/type"
+1>    at keyword location "[CWD_URI]/schema.json#/properties/foo/type"
 1>    at vocabulary "https://json-schema.org/draft/2020-12/vocab/validation"
 1>
 1> @- (annotation) "/properties" (AnnotationEmit)
 1>    value "foo"
 1>    at instance location "" (line 1, column 1)
-1>    at keyword location "file://[CWD]/schema.json#/properties"
+1>    at keyword location "[CWD_URI]/schema.json#/properties"
 1>    at vocabulary "https://json-schema.org/draft/2020-12/vocab/applicator"
 1>
 1> <- (pass) "/properties" (LogicalWhenType)
 1>    at instance location "" (line 1, column 1)
-1>    at keyword location "file://[CWD]/schema.json#/properties"
+1>    at keyword location "[CWD_URI]/schema.json#/properties"
 1>    at vocabulary "https://json-schema.org/draft/2020-12/vocab/applicator"
 EOF
 

@@ -15,8 +15,6 @@ EOF
 
 // Schema input error
 RUN inspect schemas/folder/test.json --resolve schemas/meta.json STDIN /dev/null IN . INTO result.txt EXPECTING 4
-REPLACE '\\\\' WITH '/' IN result.txt
-REPLACE '\\(?!")' WITH '/' IN result.txt
 
 REPLACE $CWD WITH '[CWD]' IN result.txt
 

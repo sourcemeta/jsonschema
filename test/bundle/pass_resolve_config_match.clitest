@@ -23,8 +23,6 @@ WRITE dependency.json UNTIL EOF
 EOF
 
 RUN bundle schemas/test.json STDIN /dev/null IN . INTO result.txt EXPECTING 0
-REPLACE '\\\\' WITH '/' IN result.txt
-REPLACE '\\(?!")' WITH '/' IN result.txt
 
 WRITE expected.txt UNTIL EOF
 1> {

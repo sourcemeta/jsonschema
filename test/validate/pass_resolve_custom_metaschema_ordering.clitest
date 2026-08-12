@@ -30,18 +30,16 @@ WRITE instance.json UNTIL EOF
 EOF
 
 RUN validate schema.json instance.json --resolve zz-meta.json --resolve aa-schema.json --debug STDIN /dev/null IN . INTO result_0.txt EXPECTING 0
-REPLACE '\\\\' WITH '/' IN result_0.txt
-REPLACE '\\(?!")' WITH '/' IN result_0.txt
 
+REPLACE $CWD_URI WITH '[CWD_URI]' IN result_0.txt
 REPLACE $CWD WITH '[CWD]' IN result_0.txt
-REPLACE 'file:///\[CWD\]' WITH 'file://[CWD]' IN result_0.txt
 
 WRITE expected_0.txt UNTIL EOF
 2> debug: Detecting schema resources from file: [CWD]/zz-meta.json
-2> debug: Importing schema into the resolution context: file://[CWD]/zz-meta.json
+2> debug: Importing schema into the resolution context: [CWD_URI]/zz-meta.json
 2> debug: Importing schema into the resolution context: https://example.com/my-meta
 2> debug: Detecting schema resources from file: [CWD]/aa-schema.json
-2> debug: Importing schema into the resolution context: file://[CWD]/aa-schema.json
+2> debug: Importing schema into the resolution context: [CWD_URI]/aa-schema.json
 2> debug: Importing schema into the resolution context: https://example.com/my-schema
 2> ok: [CWD]/instance.json
 2>   matches [CWD]/schema.json

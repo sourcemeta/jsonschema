@@ -1,5 +1,78 @@
 #!/usr/bin/env python3
-"""Interpreter for the CLI test DSL. Standard library only."""
+"""Interpreter for the CLI test DSL. Standard library only.
+
+A test is a sequence of commands, one per line, run against a fresh temporary
+directory. Blank lines and lines whose first non-space characters are `//` are
+ignored. Every other line is split with POSIX shell quoting, so an operand
+containing spaces or a regular expression is single quoted.
+
+    WRITE <path> UNTIL <terminator>     every following line, up to a line equal
+                                        to <terminator>, becomes the file
+    RUN [argument...] STDIN <path> IN <directory> INTO <path> EXPECTING <code>
+    COMPARE <actual> AGAINST <expected>
+    REPLACE <pattern> WITH <replacement> IN <path>
+    DROP LINES MATCHING <pattern> IN <path>
+    KEEP LINES MATCHING <pattern> IN <path>
+    SORT <path>
+    COPY <source> TO <destination>
+    TREE <directory> INTO <destination>
+    COMPRESS GZIP <source> INTO <destination>
+    CHECKSUM SHA256 <path> AS <variable>
+    STAT MTIME <path> INTO <destination>
+    ENV <name> <value>
+    MAKE DIRECTORY <path>
+    REMOVE <path>
+
+The sandbox holds this file's own observations and expectations alongside the
+fixtures, so a test that inspects the filesystem with `TREE` should run the
+command in a subdirectory and list that. Listing the sandbox root instead
+returns the harness's scratch files, and which of them exist depends on how far
+through the script the listing happens.
+
+Paths are relative to the sandbox unless absolute. The sandbox is also named by
+`$CWD`, so `$CWD/schema.json` and `schema.json` are the same file, and a bare
+`$CWD` is its root. `$CWD_URI` is the sandbox as a `file://` URI and is not
+merely "file://" prepended to `$CWD`: on Windows that would read the drive
+letter as the URI authority. `$CORES` is the online processor count, `$VERSION`
+and `$CTRF_SCHEMA` are injected by CMake, and `ENV` and `CHECKSUM` bind more.
+Every variable except `$CWD` is also exported to the process that `RUN` starts.
+
+Expansion happens in operands only, never inside a `WRITE` body. That asymmetry
+is deliberate and load bearing: fixtures are full of `$schema`, `$id` and
+`$defs`, and expanding bodies would require escaping nearly every one of them.
+The cost is that an *operand* that needs a literal dollar has to write `$$`, as
+in a JSON Pointer like `/$$defs/Foo`. `$$` is matched before any name, so it
+never yields a variable reference, and names are matched greedily, so a binding
+called `OUT` cannot consume the front of `$OUTPUT`.
+
+Sharing `$` with the regular expression anchor is safe, because an anchor is
+zero width and so can never be meaningfully followed by a name. `^abc$`, `a{2}$`
+and `a${2}` all pass through untouched. The one shape that does read as a
+variable, `foo$bar`, describes a match that no input could satisfy anyway.
+
+`RUN` is read from the end: the last eight tokens are its trailer, and anything
+before them is passed to the binary. `STDIN /dev/null` means empty input on
+every platform, including where no such file exists. Both output streams are
+captured into one observation file, each line prefixed with `1> ` or `2> `, an
+empty line becoming a bare prefix. CRLF is normalised to LF and one trailing
+newline is dropped, so observations compare identically across platforms.
+
+Patterns are regular expressions applied in multiline mode, which makes `$`
+match before every newline; `\\Z` is the way to mean end of input. A variable
+expanded inside a pattern stands for literal text rather than for more pattern,
+so a sandbox path holding regular expression punctuation still matches itself. A
+replacement is literal text too: backslashes in it are escaped before use, so it
+cannot reference a capture group and cannot introduce a control character.
+
+A test that produces something and never asserts on it is rejected before it
+runs, on the grounds that a command whose result nothing reads is a command
+whose result nobody checked. An observation must reach a `COMPARE`, or be fed to
+a later command that is itself checked, as a compiled template is. A `CHECKSUM`
+variable must be expanded before that name is bound again. A `COPY`, `TREE`,
+`COMPRESS` or `STAT` destination must be read by something. Only the commands
+that read a file for its content count as reading it, so a filter such as
+`REPLACE` or `SORT`, which rewrites a file in place, does not.
+"""
 
 import argparse
 import collections
@@ -7,8 +80,8 @@ import difflib
 import gzip
 import hashlib
 import os
-import posixpath
 import pathlib
+import posixpath
 import re
 import shlex
 import shutil
@@ -62,6 +135,17 @@ class Interpreter:
 
         return VARIABLE.sub(replace, token)
 
+    def expand_pattern(self, token, line_number):
+        def replace(match):
+            if match.group(0) == "$$":
+                return re.escape("$")
+            name = match.group(1) or match.group(2)
+            if name not in self.environment:
+                raise TestFailure(line_number, f"undefined variable: ${name}")
+            return re.escape(self.environment[name])
+
+        return VARIABLE.sub(replace, token)
+
     def resolve(self, path, line_number):
         expanded = self.expand(path, line_number)
         if os.path.isabs(expanded):
@@ -71,11 +155,8 @@ class Interpreter:
     # -- filters -----------------------------------------------------------
 
     def read(self, path, line_number):
-        try:
-            with open(path, "r", encoding="utf-8", newline="") as handle:
-                return handle.read()
-        except FileNotFoundError:
-            raise TestFailure(line_number, f"no such file: {path}")
+        with open(path, "r", encoding="utf-8", newline="") as handle:
+            return handle.read()
 
     def write(self, path, content):
         os.makedirs(os.path.dirname(path) or ".", exist_ok=True)
@@ -190,7 +271,8 @@ class Interpreter:
 
         path = self.resolve(name, line_number)
         content = self.read(path, line_number)
-        expression = re.compile(self.expand(pattern, line_number), re.MULTILINE)
+        expression = re.compile(
+            self.expand_pattern(pattern, line_number), re.MULTILINE)
 
         if keyword == "REPLACE":
             content = expression.sub(
@@ -500,6 +582,9 @@ def run_script(path, binary, environment):
         return 1
     # Report a missing binary, an unreadable fixture, or any other operating
     # system error against the line that caused it, rather than as a traceback
+    except FileNotFoundError as error:
+        print(f"{path}:{number}: no such file: {error.filename}", file=sys.stderr)
+        return 1
     except OSError as error:
         print(f"{path}:{number}: {error}", file=sys.stderr)
         return 1

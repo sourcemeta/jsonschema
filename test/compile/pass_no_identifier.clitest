@@ -10,11 +10,9 @@ WRITE foo/bar/baz/qux/very/long/path/foo/bar/baz/qux/schema.json UNTIL EOF
 EOF
 
 RUN compile foo/bar/baz/qux/very/long/path/foo/bar/baz/qux/schema.json STDIN /dev/null IN . INTO result.txt EXPECTING 0
-REPLACE '\\\\' WITH '/' IN result.txt
-REPLACE '\\(?!")' WITH '/' IN result.txt
 
+REPLACE $CWD_URI WITH '[CWD_URI]' IN result.txt
 REPLACE $CWD WITH '[CWD]' IN result.txt
-REPLACE 'file:///\[CWD\]' WITH 'file://[CWD]' IN result.txt
 
 WRITE expected.txt UNTIL EOF
 1> [
@@ -27,7 +25,7 @@ WRITE expected.txt UNTIL EOF
 1>         50,
 1>         [ "description" ],
 1>         [],
-1>         "file://[CWD]/foo/bar/baz/qux/very/long/path/foo/bar/baz/qux/schema.json#/description",
+1>         "[CWD_URI]/foo/bar/baz/qux/very/long/path/foo/bar/baz/qux/schema.json#/description",
 1>         1,
 1>         [ 1, "Test schema" ]
 1>       ],
@@ -35,7 +33,7 @@ WRITE expected.txt UNTIL EOF
 1>         50,
 1>         [ "title" ],
 1>         [],
-1>         "file://[CWD]/foo/bar/baz/qux/very/long/path/foo/bar/baz/qux/schema.json#/title",
+1>         "[CWD_URI]/foo/bar/baz/qux/very/long/path/foo/bar/baz/qux/schema.json#/title",
 1>         1,
 1>         [ 1, "Test" ]
 1>       ],
@@ -43,7 +41,7 @@ WRITE expected.txt UNTIL EOF
 1>         67,
 1>         [ "additionalProperties" ],
 1>         [],
-1>         "file://[CWD]/foo/bar/baz/qux/very/long/path/foo/bar/baz/qux/schema.json#/additionalProperties",
+1>         "[CWD_URI]/foo/bar/baz/qux/very/long/path/foo/bar/baz/qux/schema.json#/additionalProperties",
 1>         1,
 1>         [ 0 ],
 1>         [
@@ -51,7 +49,7 @@ WRITE expected.txt UNTIL EOF
 1>             11,
 1>             [ "type" ],
 1>             [],
-1>             "file://[CWD]/foo/bar/baz/qux/very/long/path/foo/bar/baz/qux/schema.json#/additionalProperties/type",
+1>             "[CWD_URI]/foo/bar/baz/qux/very/long/path/foo/bar/baz/qux/schema.json#/additionalProperties/type",
 1>             1,
 1>             [ 8, 4 ]
 1>           ],
@@ -59,7 +57,7 @@ WRITE expected.txt UNTIL EOF
 1>             52,
 1>             [],
 1>             [],
-1>             "file://[CWD]/foo/bar/baz/qux/very/long/path/foo/bar/baz/qux/schema.json#/additionalProperties",
+1>             "[CWD_URI]/foo/bar/baz/qux/very/long/path/foo/bar/baz/qux/schema.json#/additionalProperties",
 1>             1,
 1>             [ 0 ]
 1>           ]

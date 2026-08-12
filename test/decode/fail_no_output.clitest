@@ -6,8 +6,6 @@ RUN encode document.json output.binpack STDIN /dev/null IN . INTO encoded.txt EX
 
 // Invalid CLI arguments
 RUN decode output.binpack STDIN /dev/null IN . INTO result.txt EXPECTING 5
-REPLACE '\\\\' WITH '/' IN result.txt
-REPLACE '\\(?!")' WITH '/' IN result.txt
 
 WRITE expected.txt UNTIL EOF
 2> error: This command expects a path to a binary file and an output path

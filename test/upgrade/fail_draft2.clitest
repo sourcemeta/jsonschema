@@ -8,8 +8,6 @@ EOF
 
 // Not supported
 RUN upgrade schema.json STDIN /dev/null IN . INTO result.txt EXPECTING 3
-REPLACE '\\\\' WITH '/' IN result.txt
-REPLACE '\\(?!")' WITH '/' IN result.txt
 
 REPLACE $CWD WITH '[CWD]' IN result.txt
 
@@ -26,8 +24,6 @@ COMPARE result.txt AGAINST expected.txt
 
 // Not supported
 RUN upgrade --json schema.json STDIN /dev/null IN . INTO result_json.txt EXPECTING 3
-REPLACE '\\\\' WITH '/' IN result_json.txt
-REPLACE '\\(?!")' WITH '/' IN result_json.txt
 
 REPLACE $CWD WITH '[CWD]' IN result_json.txt
 

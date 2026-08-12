@@ -42,30 +42,27 @@ EOF
 REPLACE '\[CWD_URI\]' WITH $CWD_URI IN project/jsonschema.json
 
 RUN install STDIN /dev/null IN project INTO result_0.txt EXPECTING 0
-REPLACE '\\\\' WITH '/' IN result_0.txt
-REPLACE '\\(?!")' WITH '/' IN result_0.txt
 
+REPLACE $CWD_URI WITH '[CWD_URI]' IN result_0.txt
 REPLACE $CWD WITH '[CWD]' IN result_0.txt
-REPLACE 'file:///\[CWD\]' WITH 'file://[CWD]' IN result_0.txt
 
 WRITE expected_0.txt UNTIL EOF
-2> Fetching       : file://[CWD]/source/custom_meta.json
+2> Fetching       : [CWD_URI]/source/custom_meta.json
 2> Installed      : [CWD]/project/vendor/custom_meta.json
-2> Fetching       : file://[CWD]/source/my_schema.json
+2> Fetching       : [CWD_URI]/source/my_schema.json
 2> Installed      : [CWD]/project/vendor/my_schema.json
 EOF
 
 COMPARE result_0.txt AGAINST expected_0.txt
 
 COPY project/vendor/custom_meta.json TO checked_meta.json
-REPLACE '\\\\' WITH '/' IN checked_meta.json
+REPLACE $CWD_URI WITH '[CWD_URI]' IN checked_meta.json
 REPLACE $CWD WITH '[CWD]' IN checked_meta.json
-REPLACE 'file:///\[CWD\]' WITH 'file://[CWD]' IN checked_meta.json
 
 WRITE expected_meta.json UNTIL EOF
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "file://[CWD]/source/custom_meta.json",
+  "$id": "[CWD_URI]/source/custom_meta.json",
   "$vocabulary": {
     "https://json-schema.org/draft/2020-12/vocab/core": true,
     "https://json-schema.org/draft/2020-12/vocab/applicator": true,
@@ -77,24 +74,23 @@ EOF
 COMPARE checked_meta.json AGAINST expected_meta.json
 
 COPY project/vendor/my_schema.json TO checked_schema.json
-REPLACE '\\\\' WITH '/' IN checked_schema.json
+REPLACE $CWD_URI WITH '[CWD_URI]' IN checked_schema.json
 REPLACE $CWD WITH '[CWD]' IN checked_schema.json
-REPLACE 'file:///\[CWD\]' WITH 'file://[CWD]' IN checked_schema.json
 
 WRITE expected_schema.json UNTIL EOF
 {
-  "$schema": "file://[CWD]/source/custom_meta.json",
+  "$schema": "[CWD_URI]/source/custom_meta.json",
   "type": "object",
   "properties": {
     "name": {
       "type": "string"
     }
   },
-  "$id": "file://[CWD]/source/my_schema.json",
+  "$id": "[CWD_URI]/source/my_schema.json",
   "$defs": {
-    "file://[CWD]/source/custom_meta.json": {
+    "[CWD_URI]/source/custom_meta.json": {
       "$schema": "https://json-schema.org/draft/2020-12/schema",
-      "$id": "file://[CWD]/source/custom_meta.json",
+      "$id": "[CWD_URI]/source/custom_meta.json",
       "$vocabulary": {
         "https://json-schema.org/draft/2020-12/vocab/core": true,
         "https://json-schema.org/draft/2020-12/vocab/applicator": true,
@@ -111,20 +107,19 @@ CHECKSUM SHA256 project/vendor/custom_meta.json AS HASH_META
 CHECKSUM SHA256 project/vendor/my_schema.json AS HASH_SCHEMA
 
 COPY project/jsonschema.lock.json TO checked_lock.json
-REPLACE '\\\\' WITH '/' IN checked_lock.json
+REPLACE $CWD_URI WITH '[CWD_URI]' IN checked_lock.json
 REPLACE $CWD WITH '[CWD]' IN checked_lock.json
-REPLACE 'file:///\[CWD\]' WITH 'file://[CWD]' IN checked_lock.json
 
 WRITE expected_lock.json UNTIL EOF
 {
   "version": 1,
   "dependencies": {
-    "file://[CWD]/source/custom_meta.json": {
+    "[CWD_URI]/source/custom_meta.json": {
       "path": "./vendor/custom_meta.json",
       "hash": "[HASH_META]",
       "hashAlgorithm": "sha256"
     },
-    "file://[CWD]/source/my_schema.json": {
+    "[CWD_URI]/source/my_schema.json": {
       "path": "./vendor/my_schema.json",
       "hash": "[HASH_SCHEMA]",
       "hashAlgorithm": "sha256"
