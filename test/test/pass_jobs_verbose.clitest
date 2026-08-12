@@ -1,0 +1,77 @@
+WRITE schema.json UNTIL EOF
+{
+  "id": "https://example.com",
+  "$schema": "http://json-schema.org/draft-04/schema#",
+  "title": "Test",
+  "description": "Test schema",
+  "type": "string"
+}
+EOF
+
+WRITE test.json UNTIL EOF
+{
+  "target": "https://example.com",
+  "tests": [
+    {
+      "description": "First test",
+      "valid": true,
+      "data": "foo"
+    },
+    {
+      "description": "Invalid type",
+      "valid": false,
+      "data": 1
+    }
+  ]
+}
+EOF
+
+// Without an explicit count, the tool reports the parallelism the operating
+// system advertises
+RUN test test.json --resolve schema.json --verbose STDIN /dev/null IN . INTO result_0.txt EXPECTING 0
+REPLACE '\\\\' WITH '/' IN result_0.txt
+REPLACE '\\(?!")' WITH '/' IN result_0.txt
+
+REPLACE $CWD WITH '[CWD]' IN result_0.txt
+
+WRITE expected_0.txt UNTIL EOF
+1> [CWD]/test.json:
+1>   1/2 PASS First test
+1>   2/2 PASS Invalid type
+2> Using parallelism: [CORES]
+EOF
+
+REPLACE '\[CORES\]' WITH $CORES IN expected_0.txt
+
+COMPARE result_0.txt AGAINST expected_0.txt
+
+// The shell original asked for one job more than the core count, to be sure
+// the number came from the option rather than the default. Arithmetic is not
+// worth a DSL primitive, so this asks for a fixed count instead
+RUN test test.json --resolve schema.json --verbose --jobs 7 STDIN /dev/null IN . INTO result_1.txt EXPECTING 0
+REPLACE '\\\\' WITH '/' IN result_1.txt
+REPLACE '\\(?!")' WITH '/' IN result_1.txt
+
+REPLACE $CWD WITH '[CWD]' IN result_1.txt
+
+WRITE expected_1.txt UNTIL EOF
+1> [CWD]/test.json:
+1>   1/2 PASS First test
+1>   2/2 PASS Invalid type
+2> Using parallelism: 7
+EOF
+
+COMPARE result_1.txt AGAINST expected_1.txt
+
+// Without --verbose the parallelism is not reported at all
+RUN test test.json --resolve schema.json STDIN /dev/null IN . INTO result_2.txt EXPECTING 0
+REPLACE '\\\\' WITH '/' IN result_2.txt
+REPLACE '\\(?!")' WITH '/' IN result_2.txt
+
+REPLACE $CWD WITH '[CWD]' IN result_2.txt
+
+WRITE expected_2.txt UNTIL EOF
+1> [CWD]/test.json: PASS 2/2
+EOF
+
+COMPARE result_2.txt AGAINST expected_2.txt

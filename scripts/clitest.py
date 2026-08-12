@@ -24,7 +24,7 @@ class TestFailure(Exception):
         self.message = message
 
 
-RESERVED = {"CWD", "CWD_URI"}
+RESERVED = {"CWD", "CWD_URI", "CORES"}
 
 # Shared so that the static checker reads a script exactly as the interpreter
 # does, down to the `$$` escape for a literal dollar sign
@@ -43,6 +43,11 @@ class Interpreter:
         # correct on UNIX and wrong on Windows, where "file://C:/x" parses the
         # drive letter as the URI authority
         self.environment["CWD_URI"] = pathlib.Path(sandbox).as_uri()
+        # The tool defaults its parallelism to the online processor count, which
+        # is the number reported here too. Neither this nor the tool narrows it
+        # by CPU affinity or by a container quota, so the two only part company
+        # across Windows processor groups, and then loudly rather than silently
+        self.environment["CORES"] = str(os.cpu_count() or 1)
 
     # -- variables ---------------------------------------------------------
 
@@ -243,6 +248,22 @@ class Interpreter:
         with open(self.resolve(operands[1], line_number), "rb") as handle:
             self.environment[name] = hashlib.sha256(handle.read()).hexdigest()
 
+    def command_sort(self, operands, line_number):
+        if len(operands) != 1:
+            raise TestFailure(line_number, "usage: SORT <file>")
+        path = self.resolve(operands[0], line_number)
+        content = self.read(path, line_number)
+        self.write(path, "".join(
+            line + "\n" for line in sorted(content.splitlines())))
+
+    def command_stat(self, operands, line_number):
+        if len(operands) != 4 or operands[0] != "MTIME" or operands[2] != "INTO":
+            raise TestFailure(
+                line_number, "usage: STAT MTIME <file> INTO <destination>")
+        path = self.resolve(operands[1], line_number)
+        self.write(self.resolve(operands[3], line_number),
+                   f"{os.stat(path).st_mtime_ns}\n")
+
     def command_remove(self, operands, line_number):
         if len(operands) != 1:
             raise TestFailure(line_number, "usage: REMOVE <path>")
@@ -379,6 +400,9 @@ def check(statements):
         elif statement.keyword == "CHECKSUM" and len(operands) == 4:
             definitions.append((position, operands[3], statement.number))
             collect(consumed, [operands[1]])
+        elif statement.keyword == "STAT" and len(operands) == 4:
+            record(artifacts, operands[3], (statement.number, "STAT"))
+            collect(consumed, [operands[1]])
         elif statement.keyword == "ENV" and len(operands) == 2:
             # Tracked so that a path spelled through a variable still resolves
             if "$" not in operands[1]:
@@ -461,6 +485,10 @@ def run_script(path, binary, environment):
                 interpreter.command_compress(rest, number)
             elif keyword == "CHECKSUM":
                 interpreter.command_checksum(rest, number)
+            elif keyword == "SORT":
+                interpreter.command_sort(rest, number)
+            elif keyword == "STAT":
+                interpreter.command_stat(rest, number)
             elif keyword == "REMOVE":
                 interpreter.command_remove(rest, number)
             elif keyword == "MAKE":
