@@ -44,3 +44,15 @@ EOF
 COMPARE result_1.txt AGAINST expected_1.txt
 
 COMPARE project/jsonschema.lock.json AGAINST lock_before.json
+
+REPLACE '\\\\' WITH '/' IN result_0.txt
+REPLACE '\\(?!")' WITH '/' IN result_0.txt
+REPLACE $CWD WITH '[CWD]' IN result_0.txt
+REPLACE 'file:///\[CWD\]' WITH 'file://[CWD]' IN result_0.txt
+
+WRITE expected_0.txt UNTIL EOF
+2> Fetching       : file://[CWD]/source/schema.json
+2> Installed      : [CWD]/project/vendor/schema.json
+EOF
+
+COMPARE result_0.txt AGAINST expected_0.txt

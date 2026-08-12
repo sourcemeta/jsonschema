@@ -2,10 +2,12 @@
 """Interpreter for the CLI test DSL. Standard library only."""
 
 import argparse
+import collections
 import difflib
 import gzip
 import hashlib
 import os
+import posixpath
 import pathlib
 import re
 import shlex
@@ -23,6 +25,11 @@ class TestFailure(Exception):
 
 
 RESERVED = {"CWD", "CWD_URI"}
+
+# Shared so that the static checker reads a script exactly as the interpreter
+# does, down to the `$$` escape for a literal dollar sign
+VARIABLE = re.compile(
+    r"\$\$|\$\{([A-Za-z_][A-Za-z0-9_]*)\}|\$([A-Za-z_][A-Za-z0-9_]*)")
 
 
 class Interpreter:
@@ -48,9 +55,7 @@ class Interpreter:
                 raise TestFailure(line_number, f"undefined variable: ${name}")
             return self.environment[name]
 
-        return re.sub(
-            r"\$\$|\$\{([A-Za-z_][A-Za-z0-9_]*)\}|\$([A-Za-z_][A-Za-z0-9_]*)",
-            replace, token)
+        return VARIABLE.sub(replace, token)
 
     def resolve(self, path, line_number):
         expanded = self.expand(path, line_number)
@@ -253,38 +258,193 @@ class Interpreter:
         os.makedirs(self.resolve(operands[1], line_number), exist_ok=True)
 
 
+Statement = collections.namedtuple("Statement", ("number", "keyword", "operands", "body"))
+
+
+def parse(lines):
+    statements = []
+    index = 0
+    while index < len(lines):
+        stripped = lines[index].strip()
+        number = index + 1
+        index += 1
+        if not stripped or stripped.startswith("//"):
+            continue
+
+        operands = shlex.split(stripped, posix=True)
+        keyword = operands[0]
+        rest = operands[1:]
+        body = None
+
+        if keyword == "WRITE":
+            terminator = rest[2] if len(rest) == 3 else None
+            collected = []
+            while index < len(lines) and lines[index] != terminator:
+                collected.append(lines[index])
+                index += 1
+            if index >= len(lines):
+                raise TestFailure(number, f"unterminated WRITE, expected {terminator}")
+            index += 1
+            body = "".join(item + "\n" for item in collected)
+
+        statements.append(Statement(number, keyword, rest, body))
+    return statements
+
+
+def check(statements):
+    """Reject a test that produces something and then never asserts on it.
+
+    An observation, a derived artifact, or a variable only earns its keep if
+    something later reads it. Without this, a test can run the CLI and silently
+    throw away everything it printed, passing on the exit code alone.
+    """
+    observations, artifacts = {}, {}
+    copies = collections.defaultdict(set)
+    compared, consumed = set(), set()
+    # Kept in statement order so that redefining a name cannot hide an earlier
+    # definition that nothing ever used
+    definitions = []
+    expansions = collections.defaultdict(list)
+
+    bindings = {}
+
+    def target_of(token):
+        # The sandbox may be named explicitly, so that $CWD/<path> and <path>
+        # denote the same file
+        if token == "$CWD":
+            return "."
+        if token.startswith("$CWD/"):
+            token = token[len("$CWD/"):]
+
+        unresolved = False
+
+        def substitute(match):
+            nonlocal unresolved
+            if match.group(0) == "$$":
+                return "$"
+            name = match.group(1) or match.group(2)
+            if name in bindings:
+                return bindings[name]
+            unresolved = True
+            return ""
+
+        # Expanded exactly as the interpreter would, so that an escaped dollar
+        # stays a literal and one variable name cannot swallow the prefix of
+        # another. A path built from a value only known at run time, such as a
+        # checksum, is left for the interpreter to judge rather than misjudged
+        # here
+        resolved = VARIABLE.sub(substitute, token)
+        return None if unresolved else posixpath.normpath(resolved)
+
+    def record(mapping, token, value):
+        target = target_of(token)
+        if target is not None:
+            mapping[target] = value
+
+    def collect(destination, tokens):
+        for token in tokens:
+            target = target_of(token)
+            if target is not None:
+                destination.add(target)
+
+    for position, statement in enumerate(statements):
+        operands = statement.operands
+        for token in operands:
+            for match in VARIABLE.finditer(token):
+                name = match.group(1) or match.group(2)
+                # A `$$` match names nothing, being an escaped dollar sign
+                if name is not None:
+                    expansions[name].append(position)
+
+        # Only the commands below read a file for its content. A filter such as
+        # REPLACE rewrites an observation in place, which neither asserts it nor
+        # hands it to anything else, so it must never count as a use
+        if statement.keyword == "RUN" and len(operands) >= 8:
+            record(observations, operands[-3], statement.number)
+            collect(consumed, operands[:-8] + [operands[-7], operands[-5]])
+        elif statement.keyword == "COMPARE" and len(operands) == 3:
+            collect(compared, [operands[0], operands[2]])
+        elif statement.keyword == "COPY" and len(operands) == 3:
+            source, destination = target_of(operands[0]), target_of(operands[2])
+            if source is not None and destination is not None:
+                copies[source].add(destination)
+            record(artifacts, operands[2], (statement.number, "COPY"))
+            collect(consumed, [operands[0]])
+        elif statement.keyword == "TREE" and len(operands) == 3:
+            record(artifacts, operands[2], (statement.number, "TREE"))
+            collect(consumed, [operands[0]])
+        elif statement.keyword == "COMPRESS" and len(operands) == 4:
+            record(artifacts, operands[3], (statement.number, "COMPRESS"))
+            collect(consumed, [operands[1]])
+        elif statement.keyword == "CHECKSUM" and len(operands) == 4:
+            definitions.append((position, operands[3], statement.number))
+            collect(consumed, [operands[1]])
+        elif statement.keyword == "ENV" and len(operands) == 2:
+            # Tracked so that a path spelled through a variable still resolves
+            if "$" not in operands[1]:
+                bindings[operands[0]] = operands[1]
+
+    def asserted(target):
+        pending, seen = [target], set()
+        while pending:
+            current = pending.pop()
+            if current in compared:
+                return True
+            if current in seen:
+                continue
+            seen.add(current)
+            pending.extend(copies.get(current, ()))
+        return False
+
+    problems = []
+    for target, number in observations.items():
+        # An observation may legitimately flow onwards as the input of a later
+        # command rather than being compared directly, as with a compiled
+        # template. That later command is itself checked, so the chain still
+        # ends in an assertion
+        if not asserted(target) and target not in consumed:
+            problems.append((number, f"nothing compares {target}, so this run "
+                                     "asserts only its exit code"))
+    for target, (number, keyword) in artifacts.items():
+        if target not in consumed and target not in compared:
+            problems.append((number, f"nothing reads {target}, produced by {keyword}"))
+    for index, (position, name, number) in enumerate(definitions):
+        # Only a use before the name is bound again can justify this definition
+        rebound = min(
+            (later for later, other, _ in definitions[index + 1:] if other == name),
+            default=len(statements))
+        if not any(position < use < rebound for use in expansions[name]):
+            problems.append((number, f"nothing expands ${name}"))
+    return sorted(problems)
+
+
 def run_script(path, binary, environment):
     with open(path, "r", encoding="utf-8", newline="") as handle:
         lines = handle.read().split("\n")
+
+    try:
+        statements = parse(lines)
+    except TestFailure as failure:
+        print(f"{path}:{failure.line_number}: {failure.message}", file=sys.stderr)
+        return 1
+
+    problems = check(statements)
+    if problems:
+        for number, message in problems:
+            print(f"{path}:{number}: {message}", file=sys.stderr)
+        return 1
 
     sandbox = os.path.realpath(tempfile.mkdtemp(prefix="clitest-")).replace(os.sep, "/")
     interpreter = Interpreter(binary, sandbox, environment)
     number = 0
     try:
-        index = 0
-        while index < len(lines):
-            line = lines[index]
-            number = index + 1
-            index += 1
-            stripped = line.strip()
-            if not stripped or stripped.startswith("//"):
-                continue
-
-            operands = shlex.split(stripped, posix=True)
-            keyword = operands[0]
-            rest = operands[1:]
+        for statement in statements:
+            number = statement.number
+            keyword = statement.keyword
+            rest = statement.operands
 
             if keyword == "WRITE":
-                terminator = rest[2] if len(rest) == 3 else None
-                body = []
-                while index < len(lines) and lines[index] != terminator:
-                    body.append(lines[index])
-                    index += 1
-                if index >= len(lines):
-                    raise TestFailure(number, f"unterminated WRITE, expected {terminator}")
-                index += 1
-                interpreter.command_write(
-                    rest, "".join(item + "\n" for item in body), number)
+                interpreter.command_write(rest, statement.body, number)
             elif keyword == "RUN":
                 interpreter.command_run(rest, number)
             elif keyword == "COMPARE":

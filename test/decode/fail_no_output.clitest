@@ -27,3 +27,11 @@ WRITE expected_json.txt UNTIL EOF
 EOF
 
 COMPARE result_json.txt AGAINST expected_json.txt
+
+WRITE expected_encoded.txt UNTIL EOF
+2> original file size: 19 bytes
+2> encoded file size: 11 bytes
+2> compression ratio: 57%
+EOF
+
+COMPARE encoded.txt AGAINST expected_encoded.txt

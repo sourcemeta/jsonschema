@@ -19,3 +19,13 @@ WRITE other.json UNTIL EOF
 EOF
 
 RUN lint schema.json --resolve other.json --verbose STDIN /dev/null IN . INTO result_0.txt EXPECTING 0
+
+REPLACE '\\\\' WITH '/' IN result_0.txt
+REPLACE '\\(?!")' WITH '/' IN result_0.txt
+REPLACE $CWD WITH '[CWD]' IN result_0.txt
+
+WRITE expected_0.txt UNTIL EOF
+2> Linting: [CWD]/schema.json
+EOF
+
+COMPARE result_0.txt AGAINST expected_0.txt

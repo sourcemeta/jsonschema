@@ -69,3 +69,8 @@ EOF
 COMPARE result_0.txt AGAINST expected_0.txt
 
 RUN validate $CTRF_SCHEMA output.json STDIN /dev/null IN . INTO result_1.txt EXPECTING 0
+
+WRITE expected_1.txt UNTIL EOF
+EOF
+
+COMPARE result_1.txt AGAINST expected_1.txt

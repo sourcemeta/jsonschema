@@ -22,3 +22,8 @@ WRITE expected_roundtrip.json UNTIL EOF
 EOF
 
 COMPARE roundtrip.json AGAINST expected_roundtrip.json
+
+WRITE expected_decoded.txt UNTIL EOF
+EOF
+
+COMPARE decoded.txt AGAINST expected_decoded.txt
