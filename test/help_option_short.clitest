@@ -1,8 +1,9 @@
 RUN -h STDIN /dev/null IN . INTO result.txt EXPECTING 0
 REPLACE '\.exe' WITH '' IN result.txt
+REPLACE $VERSION WITH '[VERSION]' IN result.txt
 
 WRITE expected.txt UNTIL EOF
-1> JSON Schema CLI - v16.7.0
+1> JSON Schema CLI - v[VERSION]
 1> Usage: jsonschema <command> [arguments...]
 1>
 1> Global Options:
