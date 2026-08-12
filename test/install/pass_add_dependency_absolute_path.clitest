@@ -16,8 +16,6 @@ WRITE project/jsonschema.json UNTIL EOF
 EOF
 
 RUN install $CWD_URI/source/user.json $CWD/project/vendor/user.json STDIN /dev/null IN project INTO result_0.txt EXPECTING 0
-REPLACE '\\\\' WITH '/' IN result_0.txt
-REPLACE '\\(?!")' WITH '/' IN result_0.txt
 
 REPLACE $CWD WITH '[CWD]' IN result_0.txt
 REPLACE 'file:///\[CWD\]' WITH 'file://[CWD]' IN result_0.txt
@@ -31,8 +29,6 @@ EOF
 COMPARE result_0.txt AGAINST expected_0.txt
 
 COPY project/jsonschema.json TO checked_file_1.txt
-REPLACE '\\\\' WITH '/' IN checked_file_1.txt
-REPLACE '\\(?!")' WITH '/' IN checked_file_1.txt
 REPLACE $CWD WITH '[CWD]' IN checked_file_1.txt
 REPLACE 'file:///\[CWD\]' WITH 'file://[CWD]' IN checked_file_1.txt
 

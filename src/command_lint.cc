@@ -113,8 +113,8 @@ static auto get_lint_callback(sourcemeta::core::JSON &errors_array,
         if (entry.from_stdin) {
           std::cout << sourcemeta::jsonschema::STDIN_DEFAULT_ID;
         } else {
-          std::cout
-              << std::filesystem::relative(entry.resolution_base).string();
+          std::cout << std::filesystem::relative(entry.resolution_base)
+                           .generic_string();
         }
         if (position.has_value()) {
           const auto [line, column, end_line, end_column] = position.value();
@@ -211,7 +211,7 @@ load_rules_from_options(sourcemeta::blaze::SchemaTransformer &bundle,
     const std::filesystem::path rule_path{
         std::filesystem::weakly_canonical(rule_path_string)};
     sourcemeta::jsonschema::LOG_VERBOSE(options)
-        << "Loading custom rule: " << rule_path.string() << "\n";
+        << "Loading custom rule: " << rule_path.generic_string() << "\n";
     const auto configuration_path{
         sourcemeta::jsonschema::find_configuration(rule_path)};
     const auto &configuration{sourcemeta::jsonschema::read_configuration(
@@ -261,7 +261,8 @@ auto sourcemeta::jsonschema::lint(const sourcemeta::core::Options &options)
     }
 
     const auto canonical_configuration_path{
-        std::filesystem::weakly_canonical(configuration_path.value()).string()};
+        std::filesystem::weakly_canonical(configuration_path.value())
+            .generic_string()};
     if (seen_configurations.contains(canonical_configuration_path)) {
       continue;
     }
@@ -284,7 +285,7 @@ auto sourcemeta::jsonschema::lint(const sourcemeta::core::Options &options)
         resolver(options, options.contains("http"), dialect, configuration)};
     for (const auto &rule : configuration.value().lint.rules) {
       LOG_VERBOSE(options) << "Loading custom rule from configuration: "
-                           << rule.path.string() << "\n";
+                           << rule.path.generic_string() << "\n";
       load_rule(bundle, rule_names, rule.path, dialect, custom_resolver,
                 sourcemeta::jsonschema::format_assertion_tweaks(options),
                 rule.top_level ? sourcemeta::blaze::SchemaRule::Scope::TopLevel

@@ -34,8 +34,6 @@ COMPARE result_0.txt AGAINST expected_0.txt
 
 // Validation failure
 RUN rdf schema.json instance.json --format-assertion STDIN /dev/null IN . INTO result_1.txt EXPECTING 2
-REPLACE '\\\\' WITH '/' IN result_1.txt
-REPLACE '\\(?!")' WITH '/' IN result_1.txt
 
 REPLACE $CWD WITH '[CWD]' IN result_1.txt
 REPLACE 'file:///\[CWD\]' WITH 'file://[CWD]' IN result_1.txt
@@ -55,8 +53,6 @@ COMPARE result_1.txt AGAINST expected_1.txt
 
 // Validation failure
 RUN rdf schema.json instance.json --format-assertion --json STDIN /dev/null IN . INTO result_2.txt EXPECTING 2
-REPLACE '\\\\' WITH '/' IN result_2.txt
-REPLACE '\\(?!")' WITH '/' IN result_2.txt
 
 REPLACE $CWD WITH '[CWD]' IN result_2.txt
 REPLACE 'file:///\[CWD\]' WITH 'file://[CWD]' IN result_2.txt

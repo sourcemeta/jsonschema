@@ -32,8 +32,6 @@ EOF
 REPLACE '\[CWD_URI\]' WITH $CWD_URI IN project/jsonschema.json
 
 RUN install STDIN /dev/null IN project INTO result_0.txt EXPECTING 0
-REPLACE '\\\\' WITH '/' IN result_0.txt
-REPLACE '\\(?!")' WITH '/' IN result_0.txt
 
 REPLACE $CWD WITH '[CWD]' IN result_0.txt
 REPLACE 'file:///\[CWD\]' WITH 'file://[CWD]' IN result_0.txt
@@ -50,8 +48,6 @@ COPY project/jsonschema.lock.json TO lock_before.json
 REMOVE project/vendor/main.json
 
 RUN install --frozen STDIN /dev/null IN project INTO result_1.txt EXPECTING 0
-REPLACE '\\\\' WITH '/' IN result_1.txt
-REPLACE '\\(?!")' WITH '/' IN result_1.txt
 
 REPLACE $CWD WITH '[CWD]' IN result_1.txt
 REPLACE 'file:///\[CWD\]' WITH 'file://[CWD]' IN result_1.txt

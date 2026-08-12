@@ -32,8 +32,6 @@ EOF
 
 RUN test --resolve $CWD/schema.json STDIN /dev/null IN project INTO result.txt EXPECTING 0
 
-REPLACE '\\\\' WITH '/' IN result.txt
-REPLACE '\\(?!")' WITH '/' IN result.txt
 REPLACE $CWD WITH '[CWD]' IN result.txt
 
 WRITE expected.txt UNTIL EOF

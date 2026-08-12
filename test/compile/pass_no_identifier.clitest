@@ -10,8 +10,6 @@ WRITE foo/bar/baz/qux/very/long/path/foo/bar/baz/qux/schema.json UNTIL EOF
 EOF
 
 RUN compile foo/bar/baz/qux/very/long/path/foo/bar/baz/qux/schema.json STDIN /dev/null IN . INTO result.txt EXPECTING 0
-REPLACE '\\\\' WITH '/' IN result.txt
-REPLACE '\\(?!")' WITH '/' IN result.txt
 
 REPLACE $CWD WITH '[CWD]' IN result.txt
 REPLACE 'file:///\[CWD\]' WITH 'file://[CWD]' IN result.txt

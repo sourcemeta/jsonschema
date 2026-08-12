@@ -74,7 +74,8 @@ auto print_rdf_failure(const sourcemeta::jsonschema::InputJSON &entry,
              << error.inert_override_location.value() << "\n";
     }
 
-    stream << "  at file path " << entry.resolution_base.string() << "\n";
+    stream << "  at file path " << entry.resolution_base.generic_string()
+           << "\n";
 
     if (error.inert_override_location.has_value()) {
       stream << "\nThe x-jsonld-override mark was ignored because it does not "
@@ -99,7 +100,8 @@ auto print_rdf_failure(const sourcemeta::jsonschema::InputJSON &entry,
       stream << "  at column " << std::get<1>(position.value()) << "\n";
     }
 
-    stream << "  at file path " << entry.resolution_base.string() << "\n";
+    stream << "  at file path " << entry.resolution_base.generic_string()
+           << "\n";
     stream << "  at location \"" << sourcemeta::core::to_string(location)
            << "\"\n\n";
     sourcemeta::core::prettify(outcome.rdf.value(), stream);

@@ -28,8 +28,6 @@ examples:
 EOF
 
 RUN lint schemas --extension '' --verbose STDIN /dev/null IN . INTO result_0.txt EXPECTING 0
-REPLACE '\\\\' WITH '/' IN result_0.txt
-REPLACE '\\(?!")' WITH '/' IN result_0.txt
 
 REPLACE $CWD WITH '[CWD]' IN result_0.txt
 

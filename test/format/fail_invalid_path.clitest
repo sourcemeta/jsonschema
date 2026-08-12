@@ -1,7 +1,5 @@
 // Other input error
 RUN fmt does_not_exist.json STDIN /dev/null IN . INTO result.txt EXPECTING 6
-REPLACE '\\\\' WITH '/' IN result.txt
-REPLACE '\\(?!")' WITH '/' IN result.txt
 
 REPLACE $CWD WITH '[CWD]' IN result.txt
 

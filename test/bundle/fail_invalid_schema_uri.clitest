@@ -7,8 +7,6 @@ EOF
 
 // Schema input error
 RUN bundle schema.json STDIN /dev/null IN . INTO result.txt EXPECTING 4
-REPLACE '\\\\' WITH '/' IN result.txt
-REPLACE '\\(?!")' WITH '/' IN result.txt
 
 REPLACE $CWD WITH '[CWD]' IN result.txt
 

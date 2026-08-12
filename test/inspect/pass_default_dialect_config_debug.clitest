@@ -15,8 +15,6 @@ WRITE jsonschema.json UNTIL EOF
 EOF
 
 RUN inspect schema.json --debug STDIN /dev/null IN . INTO result.txt EXPECTING 0
-REPLACE '\\\\' WITH '/' IN result.txt
-REPLACE '\\(?!")' WITH '/' IN result.txt
 
 REPLACE $CWD WITH '[CWD]' IN result.txt
 

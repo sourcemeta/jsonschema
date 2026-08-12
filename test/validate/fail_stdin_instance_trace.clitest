@@ -12,8 +12,6 @@ EOF
 // Validation failure
 RUN validate schema.json - --trace STDIN stdin_0 IN . INTO result.txt EXPECTING 2
 
-REPLACE '\\\\' WITH '/' IN result.txt
-REPLACE '\\(?!")' WITH '/' IN result.txt
 REPLACE $CWD WITH '[CWD]' IN result.txt
 REPLACE 'file:///\[CWD\]' WITH 'file://[CWD]' IN result.txt
 

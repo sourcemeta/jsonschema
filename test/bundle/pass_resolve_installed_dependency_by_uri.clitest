@@ -19,8 +19,6 @@ EOF
 REPLACE '\[CWD_URI\]' WITH $CWD_URI IN project/jsonschema.json
 
 RUN install STDIN /dev/null IN project INTO installed.txt EXPECTING 0
-REPLACE '\\\\' WITH '/' IN installed.txt
-REPLACE '\\(?!")' WITH '/' IN installed.txt
 
 REPLACE $CWD WITH '[CWD]' IN installed.txt
 REPLACE 'file:///\[CWD\]' WITH 'file://[CWD]' IN installed.txt

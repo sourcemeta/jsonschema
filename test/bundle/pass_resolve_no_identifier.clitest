@@ -18,8 +18,6 @@ WRITE silent.txt UNTIL EOF
 EOF
 
 RUN bundle schema.json --resolve nested.json STDIN /dev/null IN . INTO result.txt EXPECTING 0
-REPLACE '\\\\' WITH '/' IN result.txt
-REPLACE '\\(?!")' WITH '/' IN result.txt
 
 COPY result.txt TO bundled.json
 KEEP LINES MATCHING '^1>' IN bundled.json

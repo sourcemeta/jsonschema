@@ -23,8 +23,6 @@ EOF
 
 // Other input error
 RUN validate schema.json instance.json --resolve schemas STDIN /dev/null IN . INTO result_0.txt EXPECTING 6
-REPLACE '\\\\' WITH '/' IN result_0.txt
-REPLACE '\\(?!")' WITH '/' IN result_0.txt
 
 REPLACE $CWD WITH '[CWD]' IN result_0.txt
 
@@ -39,8 +37,6 @@ COMPARE result_0.txt AGAINST expected_0.txt
 
 // Other input error
 RUN validate schema.json instance.json --resolve schemas --json STDIN /dev/null IN . INTO result_1.txt EXPECTING 6
-REPLACE '\\\\' WITH '/' IN result_1.txt
-REPLACE '\\(?!")' WITH '/' IN result_1.txt
 
 REPLACE $CWD WITH '[CWD]' IN result_1.txt
 

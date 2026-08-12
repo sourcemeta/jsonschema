@@ -18,8 +18,6 @@ EOF
 
 // Metaschema validation failure
 RUN metaschema schemas --json STDIN /dev/null IN . INTO result.txt EXPECTING 2
-REPLACE '\\\\' WITH '/' IN result.txt
-REPLACE '\\(?!")' WITH '/' IN result.txt
 
 REPLACE $CWD WITH '[CWD]' IN result.txt
 

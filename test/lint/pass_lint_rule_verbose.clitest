@@ -15,8 +15,6 @@ WRITE schema.json UNTIL EOF
 EOF
 
 RUN lint --rule rule.json --only require_type --verbose schema.json STDIN /dev/null IN . INTO result_0.txt EXPECTING 0
-REPLACE '\\\\' WITH '/' IN result_0.txt
-REPLACE '\\(?!")' WITH '/' IN result_0.txt
 
 REPLACE $CWD WITH '[CWD]' IN result_0.txt
 

@@ -61,8 +61,6 @@ EOF
 
 // Other input error. Serially the run aborts before reaching the fourth file
 RUN test tests --resolve schema.json --jobs 1 STDIN /dev/null IN . INTO result_0.txt EXPECTING 6
-REPLACE '\\\\' WITH '/' IN result_0.txt
-REPLACE '\\(?!")' WITH '/' IN result_0.txt
 
 REPLACE $CWD WITH '[CWD]' IN result_0.txt
 
@@ -85,8 +83,6 @@ COMPARE result_0.txt AGAINST expected_0.txt
 // the parse error aborts the run is a race, so drop those lines and assert
 // every line that is deterministic
 RUN test tests --resolve schema.json --jobs 4 STDIN /dev/null IN . INTO result_1.txt EXPECTING 6
-REPLACE '\\\\' WITH '/' IN result_1.txt
-REPLACE '\\(?!")' WITH '/' IN result_1.txt
 
 REPLACE $CWD WITH '[CWD]' IN result_1.txt
 

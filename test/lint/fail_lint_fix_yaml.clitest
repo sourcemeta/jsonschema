@@ -6,8 +6,6 @@ EOF
 
 // Not supported
 RUN lint schema.yaml --fix STDIN /dev/null IN . INTO result_0.txt EXPECTING 3
-REPLACE '\\\\' WITH '/' IN result_0.txt
-REPLACE '\\(?!")' WITH '/' IN result_0.txt
 
 REPLACE $CWD WITH '[CWD]' IN result_0.txt
 
@@ -20,8 +18,6 @@ COMPARE result_0.txt AGAINST expected_0.txt
 
 // Not supported
 RUN lint schema.yaml --fix --json STDIN /dev/null IN . INTO result_1.txt EXPECTING 3
-REPLACE '\\\\' WITH '/' IN result_1.txt
-REPLACE '\\(?!")' WITH '/' IN result_1.txt
 
 REPLACE $CWD WITH '[CWD]' IN result_1.txt
 

@@ -17,8 +17,6 @@ EOF
 // Schema from stdin referencing a resolved external schema
 RUN validate - instance.json --resolve defs.json --verbose STDIN stdin_0 IN . INTO result.txt EXPECTING 0
 
-REPLACE '\\\\' WITH '/' IN result.txt
-REPLACE '\\(?!")' WITH '/' IN result.txt
 REPLACE $CWD WITH '[CWD]' IN result.txt
 
 WRITE expected.txt UNTIL EOF

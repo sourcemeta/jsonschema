@@ -485,7 +485,7 @@ inline auto stdin_path_string(const std::filesystem::path &p) -> std::string {
     return std::string{STDIN_DEFAULT_ID};
   }
 
-  return sourcemeta::core::weakly_canonical(p).string();
+  return sourcemeta::core::weakly_canonical(p).generic_string();
 }
 
 template <typename Exception>
@@ -563,10 +563,12 @@ inline auto print_exception(const bool is_json, const Exception &exception)
                 }) {
     const auto &resolve_path_value{exception.resolve_path()};
     if (is_json) {
-      error_json.assign("resolvePath",
-                        sourcemeta::core::JSON{resolve_path_value.string()});
+      error_json.assign(
+          "resolvePath",
+          sourcemeta::core::JSON{resolve_path_value.generic_string()});
     } else {
-      std::cerr << "  at resolve path " << resolve_path_value.string() << "\n";
+      std::cerr << "  at resolve path " << resolve_path_value.generic_string()
+                << "\n";
     }
   }
 
@@ -692,14 +694,14 @@ inline auto print_exception(const bool is_json, const Exception &exception)
                        }) {
     if (is_json) {
       error_json.assign(
-          "filePath",
-          sourcemeta::core::JSON{
-              sourcemeta::core::weakly_canonical(exception.path1()).string()});
+          "filePath", sourcemeta::core::JSON{
+                          sourcemeta::core::weakly_canonical(exception.path1())
+                              .generic_string()});
     } else {
-      std::cerr
-          << "  at file path "
-          << sourcemeta::core::weakly_canonical(exception.path1()).string()
-          << "\n";
+      std::cerr << "  at file path "
+                << sourcemeta::core::weakly_canonical(exception.path1())
+                       .generic_string()
+                << "\n";
     }
   }
 

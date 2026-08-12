@@ -6,8 +6,6 @@ EOF
 
 // Other input error
 RUN codegen schema.json --target typescript STDIN /dev/null IN . INTO result.txt EXPECTING 6
-REPLACE '\\\\' WITH '/' IN result.txt
-REPLACE '\\(?!")' WITH '/' IN result.txt
 
 REPLACE $CWD WITH '[CWD]' IN result.txt
 
@@ -22,8 +20,6 @@ COMPARE result.txt AGAINST expected_0.txt
 
 // Other input error
 RUN codegen schema.json --target typescript --json STDIN /dev/null IN . INTO result_json.txt EXPECTING 6
-REPLACE '\\\\' WITH '/' IN result_json.txt
-REPLACE '\\(?!")' WITH '/' IN result_json.txt
 
 REPLACE $CWD WITH '[CWD]' IN result_json.txt
 

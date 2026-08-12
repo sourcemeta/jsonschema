@@ -38,7 +38,6 @@ DROP LINES MATCHING '"duration":' IN result.txt
 DROP LINES MATCHING '"start":' IN result.txt
 DROP LINES MATCHING '"stop":' IN result.txt
 DROP LINES MATCHING '"threadId":' IN result.txt
-REPLACE '\\\\' WITH '/' IN result.txt
 REPLACE $CWD WITH '[CWD]' IN result.txt
 
 WRITE expected.txt UNTIL EOF

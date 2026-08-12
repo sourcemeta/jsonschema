@@ -28,8 +28,6 @@ EOF
 
 // Validation failure
 RUN lint STDIN /dev/null IN project INTO result_0.txt EXPECTING 2
-REPLACE '\\\\' WITH '/' IN result_0.txt
-REPLACE '\\(?!")' WITH '/' IN result_0.txt
 
 WRITE expected_0.txt UNTIL EOF
 1> schemas/sample.json:1:1:
@@ -47,8 +45,6 @@ COMPARE result_0.txt AGAINST expected_0.txt
 
 // Validation failure
 RUN lint --json STDIN /dev/null IN project INTO result_1.txt EXPECTING 2
-REPLACE '\\\\' WITH '/' IN result_1.txt
-REPLACE '\\(?!")' WITH '/' IN result_1.txt
 
 REPLACE $CWD WITH '[CWD]' IN result_1.txt
 

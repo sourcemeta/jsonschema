@@ -37,8 +37,6 @@ COMPARE result_0.txt AGAINST expected_0.txt
 
 // Validation failure
 RUN lint --only require_id --json schema.json STDIN /dev/null IN . INTO result_1.txt EXPECTING 2
-REPLACE '\\\\' WITH '/' IN result_1.txt
-REPLACE '\\(?!")' WITH '/' IN result_1.txt
 
 REPLACE $CWD WITH '[CWD]' IN result_1.txt
 

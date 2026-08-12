@@ -27,8 +27,6 @@ EOF
 
 // Validation failure
 RUN validate schema.json instances STDIN /dev/null IN . INTO result_0.txt EXPECTING 2
-REPLACE '\\\\' WITH '/' IN result_0.txt
-REPLACE '\\(?!")' WITH '/' IN result_0.txt
 
 REPLACE $CWD WITH '[CWD]' IN result_0.txt
 

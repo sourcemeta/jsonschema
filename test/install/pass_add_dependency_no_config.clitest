@@ -10,8 +10,6 @@ WRITE source/user.json UNTIL EOF
 EOF
 
 RUN install $CWD_URI/source/user.json ./vendor/user.json STDIN /dev/null IN project INTO result_0.txt EXPECTING 0
-REPLACE '\\\\' WITH '/' IN result_0.txt
-REPLACE '\\(?!")' WITH '/' IN result_0.txt
 
 REPLACE $CWD WITH '[CWD]' IN result_0.txt
 REPLACE 'file:///\[CWD\]' WITH 'file://[CWD]' IN result_0.txt
@@ -25,7 +23,6 @@ EOF
 COMPARE result_0.txt AGAINST expected_0.txt
 
 COPY project/jsonschema.json TO checked_config.json
-REPLACE '\\\\' WITH '/' IN checked_config.json
 REPLACE $CWD WITH '[CWD]' IN checked_config.json
 REPLACE 'file:///\[CWD\]' WITH 'file://[CWD]' IN checked_config.json
 
@@ -40,7 +37,6 @@ EOF
 COMPARE checked_config.json AGAINST expected_config.json
 
 COPY project/vendor/user.json TO checked_schema.json
-REPLACE '\\\\' WITH '/' IN checked_schema.json
 REPLACE $CWD WITH '[CWD]' IN checked_schema.json
 REPLACE 'file:///\[CWD\]' WITH 'file://[CWD]' IN checked_schema.json
 
@@ -57,7 +53,6 @@ COMPARE checked_schema.json AGAINST expected_schema.json
 CHECKSUM SHA256 project/vendor/user.json AS HASH
 
 COPY project/jsonschema.lock.json TO checked_lock.json
-REPLACE '\\\\' WITH '/' IN checked_lock.json
 REPLACE $CWD WITH '[CWD]' IN checked_lock.json
 REPLACE 'file:///\[CWD\]' WITH 'file://[CWD]' IN checked_lock.json
 

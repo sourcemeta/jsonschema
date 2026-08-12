@@ -263,7 +263,7 @@ handle_json_entry(const std::filesystem::path &entry_path,
 
         // TODO: Print a verbose message for what is getting parsed
         auto parsed{read_file(canonical)};
-        result.push_back({canonical.string(), std::move(canonical),
+        result.push_back({canonical.generic_string(), std::move(canonical),
                           std::move(parsed.document),
                           std::move(parsed.positions), 0, false, parsed.yaml,
                           false, std::move(parsed.property_storage)});
@@ -276,7 +276,7 @@ handle_json_entry(const std::filesystem::path &entry_path,
                        return sourcemeta::core::is_under_path(canonical,
                                                               prefix);
                      })) {
-      const auto canonical_string{canonical.string()};
+      const auto canonical_string{canonical.generic_string()};
       if (canonical_string.ends_with(".jsonl.gz")) {
         LOG_VERBOSE(options) << "Interpreting input as GZIP-compressed JSONL: "
                              << canonical_string << "\n";
@@ -289,7 +289,7 @@ handle_json_entry(const std::filesystem::path &entry_path,
                    stream, sourcemeta::core::JSONL::Mode::GZIP}) {
             // TODO: Get real positions for JSONL
             sourcemeta::core::PointerPositionTracker positions;
-            result.push_back({canonical.string(),
+            result.push_back({canonical.generic_string(),
                               canonical,
                               document,
                               std::move(positions),
@@ -312,14 +312,15 @@ handle_json_entry(const std::filesystem::path &entry_path,
         }
       } else if (canonical.extension() == ".jsonl") {
         LOG_VERBOSE(options)
-            << "Interpreting input as JSONL: " << canonical.string() << "\n";
+            << "Interpreting input as JSONL: " << canonical.generic_string()
+            << "\n";
         auto stream{sourcemeta::core::read_file(canonical)};
         std::size_t index{0};
         try {
           for (const auto &document : sourcemeta::core::JSONL{stream}) {
             // TODO: Get real positions for JSONL
             sourcemeta::core::PointerPositionTracker positions;
-            result.push_back({canonical.string(),
+            result.push_back({canonical.generic_string(),
                               canonical,
                               document,
                               std::move(positions),
@@ -382,17 +383,17 @@ handle_json_entry(const std::filesystem::path &entry_path,
 
         if (documents.size() > 1) {
           LOG_VERBOSE(options) << "Interpreting input as YAML multi-document: "
-                               << canonical.string() << "\n";
+                               << canonical.generic_string() << "\n";
           std::size_t index{0};
           for (auto &entry : documents) {
-            result.push_back({canonical.string(), canonical,
+            result.push_back({canonical.generic_string(), canonical,
                               std::move(entry.document),
                               std::move(entry.positions), index, true, true,
                               false, std::move(entry.property_storage)});
             index += 1;
           }
         } else if (documents.size() == 1) {
-          result.push_back({canonical.string(), std::move(canonical),
+          result.push_back({canonical.generic_string(), std::move(canonical),
                             std::move(documents.front().document),
                             std::move(documents.front().positions), 0, false,
                             true, false,
@@ -405,7 +406,7 @@ handle_json_entry(const std::filesystem::path &entry_path,
         }
         // TODO: Print a verbose message for what is getting parsed
         auto parsed{read_file(canonical)};
-        result.push_back({canonical.string(), std::move(canonical),
+        result.push_back({canonical.generic_string(), std::move(canonical),
                           std::move(parsed.document),
                           std::move(parsed.positions), 0, false, parsed.yaml,
                           false, std::move(parsed.property_storage)});
@@ -442,14 +443,15 @@ inline auto for_each_json(const std::vector<std::string_view> &arguments,
                                 : current_path;
 
     if (!configuration_path.has_value()) {
-      LOG_WARNING() << "Recursively processing every file in "
-                    << sourcemeta::core::weakly_canonical(current_path).string()
-                    << " as no input was provided\n";
+      LOG_WARNING()
+          << "Recursively processing every file in "
+          << sourcemeta::core::weakly_canonical(current_path).generic_string()
+          << " as no input was provided\n";
     } else if (configuration.has_value() &&
                !configuration.value().absolute_path_explicit) {
       LOG_WARNING()
           << "Recursively processing every file in "
-          << sourcemeta::core::weakly_canonical(scan_path).string()
+          << sourcemeta::core::weakly_canonical(scan_path).generic_string()
           << " as the configuration file does not set an explicit path\n";
     }
 

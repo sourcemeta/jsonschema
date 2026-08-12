@@ -25,8 +25,6 @@ WRITE test.json UNTIL EOF
 EOF
 
 RUN test test.json --resolve schema.json --json STDIN /dev/null IN . INTO result_0.txt EXPECTING 0
-REPLACE '\\\\' WITH '/' IN result_0.txt
-REPLACE '\\(?!")' WITH '/' IN result_0.txt
 
 COPY result_0.txt TO output.json
 KEEP LINES MATCHING '^1>' IN output.json

@@ -22,8 +22,6 @@ KEEP LINES MATCHING '^1>' IN template.json
 REPLACE '^1> ?' WITH '' IN template.json
 
 RUN validate schema.json instance.json --verbose --template template.json STDIN /dev/null IN . INTO result_1.txt EXPECTING 0
-REPLACE '\\\\' WITH '/' IN result_1.txt
-REPLACE '\\(?!")' WITH '/' IN result_1.txt
 
 REPLACE $CWD WITH '[CWD]' IN result_1.txt
 

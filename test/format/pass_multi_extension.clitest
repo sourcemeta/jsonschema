@@ -11,8 +11,6 @@ WRITE schema_2.schema.json UNTIL EOF
 EOF
 
 RUN fmt --extension .schema.json -v STDIN /dev/null IN . INTO result.txt EXPECTING 0
-REPLACE '\\\\' WITH '/' IN result.txt
-REPLACE '\\(?!")' WITH '/' IN result.txt
 
 REPLACE $CWD WITH '[CWD]' IN result.txt
 

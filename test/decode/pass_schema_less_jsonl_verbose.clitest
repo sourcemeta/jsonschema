@@ -8,8 +8,6 @@ EOF
 
 RUN encode document.jsonl output.binpack STDIN /dev/null IN . INTO encoded.txt EXPECTING 0
 RUN decode output.binpack result.jsonl --verbose STDIN /dev/null IN . INTO decoded.txt EXPECTING 0
-REPLACE '\\\\' WITH '/' IN decoded.txt
-REPLACE '\\(?!")' WITH '/' IN decoded.txt
 
 WRITE expected.jsonl UNTIL EOF
 {

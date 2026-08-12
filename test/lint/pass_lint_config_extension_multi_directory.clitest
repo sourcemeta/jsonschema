@@ -45,8 +45,6 @@ WRITE proj2/schemas/bar.test.json UNTIL EOF
 EOF
 
 RUN lint proj1/schemas proj2/schemas --verbose STDIN /dev/null IN . INTO result_0.txt EXPECTING 0
-REPLACE '\\\\' WITH '/' IN result_0.txt
-REPLACE '\\(?!")' WITH '/' IN result_0.txt
 
 REPLACE $CWD WITH '[CWD]' IN result_0.txt
 

@@ -25,8 +25,6 @@ EOF
 
 // Validation failure
 RUN lint --rule rule_type.json --rule rule_description.json --only require_type --only require_description --json schema.json STDIN /dev/null IN . INTO result_0.txt EXPECTING 2
-REPLACE '\\\\' WITH '/' IN result_0.txt
-REPLACE '\\(?!")' WITH '/' IN result_0.txt
 
 REPLACE $CWD WITH '[CWD]' IN result_0.txt
 

@@ -4,8 +4,6 @@ EOF
 
 // Invalid CLI arguments
 RUN rdf schema.json STDIN /dev/null IN . INTO result_0.txt EXPECTING 5
-REPLACE '\\\\' WITH '/' IN result_0.txt
-REPLACE '\\(?!")' WITH '/' IN result_0.txt
 
 WRITE expected_0.txt UNTIL EOF
 2> error: This command expects a path to a schema and a path to an instance to promote to JSON-LD

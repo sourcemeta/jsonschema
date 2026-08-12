@@ -7,8 +7,6 @@ EOF
 
 // Schema input error
 RUN compile schema.json --entrypoint 'https://example.com/foo bar' STDIN /dev/null IN . INTO result.txt EXPECTING 4
-REPLACE '\\\\' WITH '/' IN result.txt
-REPLACE '\\(?!")' WITH '/' IN result.txt
 
 REPLACE $CWD WITH '[CWD]' IN result.txt
 
@@ -24,8 +22,6 @@ COMPARE result.txt AGAINST expected_0.txt
 
 // Schema input error
 RUN compile schema.json --entrypoint 'https://example.com/foo bar' --json STDIN /dev/null IN . INTO result_json.txt EXPECTING 4
-REPLACE '\\\\' WITH '/' IN result_json.txt
-REPLACE '\\(?!")' WITH '/' IN result_json.txt
 
 REPLACE $CWD WITH '[CWD]' IN result_json.txt
 

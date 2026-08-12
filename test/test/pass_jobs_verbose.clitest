@@ -29,8 +29,6 @@ EOF
 // Without an explicit count, the tool reports the parallelism the operating
 // system advertises
 RUN test test.json --resolve schema.json --verbose STDIN /dev/null IN . INTO result_0.txt EXPECTING 0
-REPLACE '\\\\' WITH '/' IN result_0.txt
-REPLACE '\\(?!")' WITH '/' IN result_0.txt
 
 REPLACE $CWD WITH '[CWD]' IN result_0.txt
 
@@ -49,8 +47,6 @@ COMPARE result_0.txt AGAINST expected_0.txt
 // the number came from the option rather than the default. Arithmetic is not
 // worth a DSL primitive, so this asks for a fixed count instead
 RUN test test.json --resolve schema.json --verbose --jobs 7 STDIN /dev/null IN . INTO result_1.txt EXPECTING 0
-REPLACE '\\\\' WITH '/' IN result_1.txt
-REPLACE '\\(?!")' WITH '/' IN result_1.txt
 
 REPLACE $CWD WITH '[CWD]' IN result_1.txt
 
@@ -65,8 +61,6 @@ COMPARE result_1.txt AGAINST expected_1.txt
 
 // Without --verbose the parallelism is not reported at all
 RUN test test.json --resolve schema.json STDIN /dev/null IN . INTO result_2.txt EXPECTING 0
-REPLACE '\\\\' WITH '/' IN result_2.txt
-REPLACE '\\(?!")' WITH '/' IN result_2.txt
 
 REPLACE $CWD WITH '[CWD]' IN result_2.txt
 
