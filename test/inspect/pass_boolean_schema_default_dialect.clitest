@@ -4,16 +4,16 @@ EOF
 
 RUN inspect schema.json --default-dialect https://json-schema.org/draft/2020-12/schema STDIN /dev/null IN . INTO result.txt EXPECTING 0
 
+REPLACE $CWD_URI WITH '[CWD_URI]' IN result.txt
 REPLACE $CWD WITH '[CWD]' IN result.txt
-REPLACE 'file:///\[CWD\]' WITH 'file://[CWD]' IN result.txt
 
 WRITE expected.txt UNTIL EOF
-1> (RESOURCE) URI: file://[CWD]/schema.json
+1> (RESOURCE) URI: [CWD_URI]/schema.json
 1>     Type              : Static
-1>     Root              : file://[CWD]/schema.json
+1>     Root              : [CWD_URI]/schema.json
 1>     Pointer           :
 1>     File Position     : 1:1
-1>     Base              : file://[CWD]/schema.json
+1>     Base              : [CWD_URI]/schema.json
 1>     Relative Pointer  :
 1>     Dialect           : https://json-schema.org/draft/2020-12/schema
 1>     Base Dialect      : https://json-schema.org/draft/2020-12/schema

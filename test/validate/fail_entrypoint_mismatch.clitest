@@ -18,8 +18,8 @@ EOF
 // Validation failure
 RUN validate schema.json instance.json --entrypoint /\$$defs/PositiveInt --verbose STDIN /dev/null IN . INTO result_0.txt EXPECTING 2
 
+REPLACE $CWD_URI WITH '[CWD_URI]' IN result_0.txt
 REPLACE $CWD WITH '[CWD]' IN result_0.txt
-REPLACE 'file:///\[CWD\]' WITH 'file://[CWD]' IN result_0.txt
 
 WRITE expected_0.txt UNTIL EOF
 2> fail: [CWD]/instance.json
@@ -34,8 +34,8 @@ COMPARE result_0.txt AGAINST expected_0.txt
 // Validation failure
 RUN validate schema.json instance.json --entrypoint /\$$defs/PositiveInt --json STDIN /dev/null IN . INTO result_1.txt EXPECTING 2
 
+REPLACE $CWD_URI WITH '[CWD_URI]' IN result_1.txt
 REPLACE $CWD WITH '[CWD]' IN result_1.txt
-REPLACE 'file:///\[CWD\]' WITH 'file://[CWD]' IN result_1.txt
 
 WRITE expected_1.txt UNTIL EOF
 1> {
@@ -43,7 +43,7 @@ WRITE expected_1.txt UNTIL EOF
 1>   "errors": [
 1>     {
 1>       "keywordLocation": "/minimum",
-1>       "absoluteKeywordLocation": "file://[CWD]/schema.json#/$defs/PositiveInt/minimum",
+1>       "absoluteKeywordLocation": "[CWD_URI]/schema.json#/$defs/PositiveInt/minimum",
 1>       "instanceLocation": "",
 1>       "instancePosition": [ 1, 1, 1, 2 ],
 1>       "error": "The integer value -5 was expected to be greater than or equal to the integer 1"

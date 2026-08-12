@@ -29,8 +29,8 @@ EOF
 // Schema input error
 RUN test test.json --resolve schema.json STDIN /dev/null IN . INTO result_0.txt EXPECTING 4
 
+REPLACE $CWD_URI WITH '[CWD_URI]' IN result_0.txt
 REPLACE $CWD WITH '[CWD]' IN result_0.txt
-REPLACE 'file:///\[CWD\]' WITH 'file://[CWD]' IN result_0.txt
 
 WRITE expected_0.txt UNTIL EOF
 1> [CWD]/test.json:
@@ -47,8 +47,8 @@ COMPARE result_0.txt AGAINST expected_0.txt
 // Schema input error
 RUN test test.json --resolve schema.json --json STDIN /dev/null IN . INTO result_1.txt EXPECTING 4
 
+REPLACE $CWD_URI WITH '[CWD_URI]' IN result_1.txt
 REPLACE $CWD WITH '[CWD]' IN result_1.txt
-REPLACE 'file:///\[CWD\]' WITH 'file://[CWD]' IN result_1.txt
 
 WRITE expected_1.txt UNTIL EOF
 1> {

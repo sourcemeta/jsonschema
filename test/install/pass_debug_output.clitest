@@ -21,37 +21,37 @@ REPLACE '\[CWD_URI\]' WITH $CWD_URI IN project/jsonschema.json
 
 RUN install --debug STDIN /dev/null IN project INTO result_0.txt EXPECTING 0
 
+REPLACE $CWD_URI WITH '[CWD_URI]' IN result_0.txt
 REPLACE $CWD WITH '[CWD]' IN result_0.txt
-REPLACE 'file:///\[CWD\]' WITH 'file://[CWD]' IN result_0.txt
 
 WRITE expected_0.txt UNTIL EOF
-2> debug: fetch/start: file://[CWD]/source/user.json (1/1) -> [CWD]/project/vendor/user.json
-2> Fetching       : file://[CWD]/source/user.json
+2> debug: fetch/start: [CWD_URI]/source/user.json (1/1) -> [CWD]/project/vendor/user.json
+2> Fetching       : [CWD_URI]/source/user.json
 2> debug: Attempting to read file reference from disk: [CWD]/source/user.json
-2> debug: fetch/end: file://[CWD]/source/user.json (1/1) -> [CWD]/project/vendor/user.json
-2> debug: bundle/start: file://[CWD]/source/user.json (1/1) -> [CWD]/project/vendor/user.json
-2> Bundling       : file://[CWD]/source/user.json
-2> debug: bundle/end: file://[CWD]/source/user.json (1/1) -> [CWD]/project/vendor/user.json
-2> debug: write/start: file://[CWD]/source/user.json (1/1) -> [CWD]/project/vendor/user.json
+2> debug: fetch/end: [CWD_URI]/source/user.json (1/1) -> [CWD]/project/vendor/user.json
+2> debug: bundle/start: [CWD_URI]/source/user.json (1/1) -> [CWD]/project/vendor/user.json
+2> Bundling       : [CWD_URI]/source/user.json
+2> debug: bundle/end: [CWD_URI]/source/user.json (1/1) -> [CWD]/project/vendor/user.json
+2> debug: write/start: [CWD_URI]/source/user.json (1/1) -> [CWD]/project/vendor/user.json
 2> Writing        : [CWD]/project/vendor/user.json
-2> debug: write/end: file://[CWD]/source/user.json (1/1) -> [CWD]/project/vendor/user.json
-2> debug: verify/start: file://[CWD]/source/user.json (1/1) -> [CWD]/project/vendor/user.json
+2> debug: write/end: [CWD_URI]/source/user.json (1/1) -> [CWD]/project/vendor/user.json
+2> debug: verify/start: [CWD_URI]/source/user.json (1/1) -> [CWD]/project/vendor/user.json
 2> Verifying      : [CWD]/project/vendor/user.json
-2> debug: verify/end: file://[CWD]/source/user.json (1/1) -> [CWD]/project/vendor/user.json
+2> debug: verify/end: [CWD_URI]/source/user.json (1/1) -> [CWD]/project/vendor/user.json
 2> Installed      : [CWD]/project/vendor/user.json
 EOF
 
 COMPARE result_0.txt AGAINST expected_0.txt
 
 COPY project/vendor/user.json TO checked_schema.json
+REPLACE $CWD_URI WITH '[CWD_URI]' IN checked_schema.json
 REPLACE $CWD WITH '[CWD]' IN checked_schema.json
-REPLACE 'file:///\[CWD\]' WITH 'file://[CWD]' IN checked_schema.json
 
 WRITE expected_schema.json UNTIL EOF
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "type": "string",
-  "$id": "file://[CWD]/source/user.json"
+  "$id": "[CWD_URI]/source/user.json"
 }
 EOF
 
@@ -60,14 +60,14 @@ COMPARE checked_schema.json AGAINST expected_schema.json
 CHECKSUM SHA256 project/vendor/user.json AS HASH
 
 COPY project/jsonschema.lock.json TO checked_lock.json
+REPLACE $CWD_URI WITH '[CWD_URI]' IN checked_lock.json
 REPLACE $CWD WITH '[CWD]' IN checked_lock.json
-REPLACE 'file:///\[CWD\]' WITH 'file://[CWD]' IN checked_lock.json
 
 WRITE expected_lock.json UNTIL EOF
 {
   "version": 1,
   "dependencies": {
-    "file://[CWD]/source/user.json": {
+    "[CWD_URI]/source/user.json": {
       "path": "./vendor/user.json",
       "hash": "[HASH]",
       "hashAlgorithm": "sha256"

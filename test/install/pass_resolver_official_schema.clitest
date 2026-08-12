@@ -21,11 +21,11 @@ REPLACE '\[CWD_URI\]' WITH $CWD_URI IN project/jsonschema.json
 
 RUN install STDIN /dev/null IN project INTO result_0.txt EXPECTING 0
 
+REPLACE $CWD_URI WITH '[CWD_URI]' IN result_0.txt
 REPLACE $CWD WITH '[CWD]' IN result_0.txt
-REPLACE 'file:///\[CWD\]' WITH 'file://[CWD]' IN result_0.txt
 
 WRITE expected_0.txt UNTIL EOF
-2> Fetching       : file://[CWD]/source/schema.json
+2> Fetching       : [CWD_URI]/source/schema.json
 2> Installed      : [CWD]/project/vendor/schema.json
 EOF
 
@@ -34,14 +34,14 @@ COMPARE result_0.txt AGAINST expected_0.txt
 CHECKSUM SHA256 project/vendor/schema.json AS HASH
 
 COPY project/jsonschema.lock.json TO checked_lock.json
+REPLACE $CWD_URI WITH '[CWD_URI]' IN checked_lock.json
 REPLACE $CWD WITH '[CWD]' IN checked_lock.json
-REPLACE 'file:///\[CWD\]' WITH 'file://[CWD]' IN checked_lock.json
 
 WRITE expected_lock.json UNTIL EOF
 {
   "version": 1,
   "dependencies": {
-    "file://[CWD]/source/schema.json": {
+    "[CWD_URI]/source/schema.json": {
       "path": "./vendor/schema.json",
       "hash": "[HASH]",
       "hashAlgorithm": "sha256"
@@ -56,8 +56,8 @@ COMPARE checked_lock.json AGAINST expected_lock.json
 
 RUN validate $CWD/project/vendor/schema.json $CWD/source/schema.json STDIN /dev/null IN . INTO result_1.txt EXPECTING 0
 
+REPLACE $CWD_URI WITH '[CWD_URI]' IN result_1.txt
 REPLACE $CWD WITH '[CWD]' IN result_1.txt
-REPLACE 'file:///\[CWD\]' WITH 'file://[CWD]' IN result_1.txt
 
 WRITE expected_1.txt UNTIL EOF
 EOF

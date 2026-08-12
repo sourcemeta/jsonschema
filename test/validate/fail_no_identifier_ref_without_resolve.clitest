@@ -14,12 +14,12 @@ EOF
 // Schema input error
 RUN validate schema.json instance.json --verbose STDIN /dev/null IN . INTO result_0.txt EXPECTING 4
 
+REPLACE $CWD_URI WITH '[CWD_URI]' IN result_0.txt
 REPLACE $CWD WITH '[CWD]' IN result_0.txt
-REPLACE 'file:///\[CWD\]' WITH 'file://[CWD]' IN result_0.txt
 
 WRITE expected_0.txt UNTIL EOF
 2> error: Could not resolve the reference to an external schema
-2>   at identifier file://[CWD]/schemas/other.json
+2>   at identifier [CWD_URI]/schemas/other.json
 2>   at file path [CWD]/schema.json
 2>
 2> This is likely because the file does not exist

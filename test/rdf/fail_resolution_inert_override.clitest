@@ -25,8 +25,8 @@ EOF
 // Schema input error
 RUN rdf schema.json instance.json STDIN /dev/null IN . INTO result_0.txt EXPECTING 4
 
+REPLACE $CWD_URI WITH '[CWD_URI]' IN result_0.txt
 REPLACE $CWD WITH '[CWD]' IN result_0.txt
-REPLACE 'file:///\[CWD\]' WITH 'file://[CWD]' IN result_0.txt
 
 WRITE expected_0.txt UNTIL EOF
 2> error: A JSON-LD datatype cannot be assigned more than one value
@@ -34,9 +34,9 @@ WRITE expected_0.txt UNTIL EOF
 2>   at column 3
 2>   at instance location "/price"
 2>   at facet "datatype"
-2>   at schema location file://[CWD]/schema.json#/properties/price/allOf/0/x-jsonld-datatype
-2>   at conflicting schema location file://[CWD]/schema.json#/properties/price/allOf/1/x-jsonld-datatype
-2>   at inert override location file://[CWD]/schema.json#/properties/price/allOf/0/x-jsonld-override
+2>   at schema location [CWD_URI]/schema.json#/properties/price/allOf/0/x-jsonld-datatype
+2>   at conflicting schema location [CWD_URI]/schema.json#/properties/price/allOf/1/x-jsonld-datatype
+2>   at inert override location [CWD_URI]/schema.json#/properties/price/allOf/0/x-jsonld-override
 2>   at file path [CWD]/instance.json
 2>
 2> The x-jsonld-override mark was ignored because it does not enclose the
@@ -50,8 +50,8 @@ COMPARE result_0.txt AGAINST expected_0.txt
 // Schema input error
 RUN rdf schema.json instance.json --json STDIN /dev/null IN . INTO result_1.txt EXPECTING 4
 
+REPLACE $CWD_URI WITH '[CWD_URI]' IN result_1.txt
 REPLACE $CWD WITH '[CWD]' IN result_1.txt
-REPLACE 'file:///\[CWD\]' WITH 'file://[CWD]' IN result_1.txt
 
 WRITE expected_1.txt UNTIL EOF
 1> {
@@ -60,9 +60,9 @@ WRITE expected_1.txt UNTIL EOF
 1>   "column": 3,
 1>   "instanceLocation": "/price",
 1>   "facet": "datatype",
-1>   "schemaLocation": "file://[CWD]/schema.json#/properties/price/allOf/0/x-jsonld-datatype",
-1>   "conflictingSchemaLocation": "file://[CWD]/schema.json#/properties/price/allOf/1/x-jsonld-datatype",
-1>   "inertOverrideLocation": "file://[CWD]/schema.json#/properties/price/allOf/0/x-jsonld-override",
+1>   "schemaLocation": "[CWD_URI]/schema.json#/properties/price/allOf/0/x-jsonld-datatype",
+1>   "conflictingSchemaLocation": "[CWD_URI]/schema.json#/properties/price/allOf/1/x-jsonld-datatype",
+1>   "inertOverrideLocation": "[CWD_URI]/schema.json#/properties/price/allOf/0/x-jsonld-override",
 1>   "filePath": "[CWD]/instance.json"
 1> }
 EOF

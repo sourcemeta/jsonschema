@@ -35,8 +35,8 @@ COMPARE result_0.txt AGAINST expected_0.txt
 // Validation failure
 RUN rdf schema.json instance.json --format-assertion STDIN /dev/null IN . INTO result_1.txt EXPECTING 2
 
+REPLACE $CWD_URI WITH '[CWD_URI]' IN result_1.txt
 REPLACE $CWD WITH '[CWD]' IN result_1.txt
-REPLACE 'file:///\[CWD\]' WITH 'file://[CWD]' IN result_1.txt
 
 WRITE expected_1.txt UNTIL EOF
 2> fail: [CWD]/instance.json
@@ -54,8 +54,8 @@ COMPARE result_1.txt AGAINST expected_1.txt
 // Validation failure
 RUN rdf schema.json instance.json --format-assertion --json STDIN /dev/null IN . INTO result_2.txt EXPECTING 2
 
+REPLACE $CWD_URI WITH '[CWD_URI]' IN result_2.txt
 REPLACE $CWD WITH '[CWD]' IN result_2.txt
-REPLACE 'file:///\[CWD\]' WITH 'file://[CWD]' IN result_2.txt
 
 WRITE expected_2.txt UNTIL EOF
 1> {
@@ -63,14 +63,14 @@ WRITE expected_2.txt UNTIL EOF
 1>   "errors": [
 1>     {
 1>       "keywordLocation": "/properties/email/format",
-1>       "absoluteKeywordLocation": "file://[CWD]/schema.json#/properties/email/format",
+1>       "absoluteKeywordLocation": "[CWD_URI]/schema.json#/properties/email/format",
 1>       "instanceLocation": "/email",
 1>       "instancePosition": [ 1, 3, 1, 25 ],
 1>       "error": "The string value \"not an email\" was expected to represent a valid email address"
 1>     },
 1>     {
 1>       "keywordLocation": "/properties",
-1>       "absoluteKeywordLocation": "file://[CWD]/schema.json#/properties",
+1>       "absoluteKeywordLocation": "[CWD_URI]/schema.json#/properties",
 1>       "instanceLocation": "",
 1>       "instancePosition": [ 1, 1, 1, 27 ],
 1>       "error": "The object value was expected to validate against the single defined property subschema"

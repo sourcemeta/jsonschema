@@ -17,18 +17,18 @@ EOF
 
 RUN validate schema.json instance.json --trace --fast STDIN /dev/null IN . INTO result_0.txt EXPECTING 0
 
+REPLACE $CWD_URI WITH '[CWD_URI]' IN result_0.txt
 REPLACE $CWD WITH '[CWD]' IN result_0.txt
-REPLACE 'file:///\[CWD\]' WITH 'file://[CWD]' IN result_0.txt
 
 WRITE expected_0.txt UNTIL EOF
 1> -> (push) "/properties/foo/type" (AssertionPropertyTypeStrict)
 1>    at instance location "/foo" (line 1, column 3)
-1>    at keyword location "file://[CWD]/schema.json#/properties/foo/type"
+1>    at keyword location "[CWD_URI]/schema.json#/properties/foo/type"
 1>    at vocabulary "https://json-schema.org/draft/2020-12/vocab/validation"
 1>
 1> <- (pass) "/properties/foo/type" (AssertionPropertyTypeStrict)
 1>    at instance location "/foo" (line 1, column 3)
-1>    at keyword location "file://[CWD]/schema.json#/properties/foo/type"
+1>    at keyword location "[CWD_URI]/schema.json#/properties/foo/type"
 1>    at vocabulary "https://json-schema.org/draft/2020-12/vocab/validation"
 EOF
 

@@ -16,8 +16,8 @@ EOF
 // Validation failure
 RUN validate schema.json instance.jsonl --json --continue STDIN /dev/null IN . INTO result_0.txt EXPECTING 2
 
+REPLACE $CWD_URI WITH '[CWD_URI]' IN result_0.txt
 REPLACE $CWD WITH '[CWD]' IN result_0.txt
-REPLACE 'file:///\[CWD\]' WITH 'file://[CWD]' IN result_0.txt
 
 WRITE expected_0.txt UNTIL EOF
 1> {
@@ -28,7 +28,7 @@ WRITE expected_0.txt UNTIL EOF
 1>   "errors": [
 1>     {
 1>       "keywordLocation": "/type",
-1>       "absoluteKeywordLocation": "file://[CWD]/schema.json#/type",
+1>       "absoluteKeywordLocation": "[CWD_URI]/schema.json#/type",
 1>       "instanceLocation": "",
 1>       "error": "The value was expected to be of type object but it was of type array"
 1>     }
@@ -39,7 +39,7 @@ WRITE expected_0.txt UNTIL EOF
 1>   "errors": [
 1>     {
 1>       "keywordLocation": "/type",
-1>       "absoluteKeywordLocation": "file://[CWD]/schema.json#/type",
+1>       "absoluteKeywordLocation": "[CWD_URI]/schema.json#/type",
 1>       "instanceLocation": "",
 1>       "error": "The value was expected to be of type object but it was of type integer"
 1>     }

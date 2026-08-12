@@ -28,11 +28,11 @@ REPLACE '\[CWD_URI\]' WITH $CWD_URI IN project/jsonschema.json
 
 RUN install STDIN /dev/null IN project INTO result_0.txt EXPECTING 0
 
+REPLACE $CWD_URI WITH '[CWD_URI]' IN result_0.txt
 REPLACE $CWD WITH '[CWD]' IN result_0.txt
-REPLACE 'file:///\[CWD\]' WITH 'file://[CWD]' IN result_0.txt
 
 WRITE expected_0.txt UNTIL EOF
-2> Fetching       : file://[CWD]/source/user.json
+2> Fetching       : [CWD_URI]/source/user.json
 2> Installed      : [CWD]/project/vendor/user.json
 EOF
 
@@ -40,27 +40,27 @@ COMPARE result_0.txt AGAINST expected_0.txt
 
 RUN install $CWD_URI/source/product.json ./vendor/product.json STDIN /dev/null IN project INTO result_1.txt EXPECTING 0
 
+REPLACE $CWD_URI WITH '[CWD_URI]' IN result_1.txt
 REPLACE $CWD WITH '[CWD]' IN result_1.txt
-REPLACE 'file:///\[CWD\]' WITH 'file://[CWD]' IN result_1.txt
 
 WRITE expected_1.txt UNTIL EOF
-2> Adding         : file://[CWD]/source/product.json -> ./vendor/product.json
-2> Fetching       : file://[CWD]/source/product.json
+2> Adding         : [CWD_URI]/source/product.json -> ./vendor/product.json
+2> Fetching       : [CWD_URI]/source/product.json
 2> Installed      : [CWD]/project/vendor/product.json
-2> Up to date     : file://[CWD]/source/user.json
+2> Up to date     : [CWD_URI]/source/user.json
 EOF
 
 COMPARE result_1.txt AGAINST expected_1.txt
 
 COPY project/jsonschema.json TO checked_config.json
+REPLACE $CWD_URI WITH '[CWD_URI]' IN checked_config.json
 REPLACE $CWD WITH '[CWD]' IN checked_config.json
-REPLACE 'file:///\[CWD\]' WITH 'file://[CWD]' IN checked_config.json
 
 WRITE expected_config.json UNTIL EOF
 {
   "dependencies": {
-    "file://[CWD]/source/product.json": "./vendor/product.json",
-    "file://[CWD]/source/user.json": "./vendor/user.json"
+    "[CWD_URI]/source/product.json": "./vendor/product.json",
+    "[CWD_URI]/source/user.json": "./vendor/user.json"
   }
 }
 EOF
@@ -68,14 +68,14 @@ EOF
 COMPARE checked_config.json AGAINST expected_config.json
 
 COPY project/vendor/product.json TO checked_product.json
+REPLACE $CWD_URI WITH '[CWD_URI]' IN checked_product.json
 REPLACE $CWD WITH '[CWD]' IN checked_product.json
-REPLACE 'file:///\[CWD\]' WITH 'file://[CWD]' IN checked_product.json
 
 WRITE expected_product.json UNTIL EOF
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "type": "object",
-  "$id": "file://[CWD]/source/product.json"
+  "$id": "[CWD_URI]/source/product.json"
 }
 EOF
 
@@ -85,19 +85,19 @@ CHECKSUM SHA256 project/vendor/product.json AS HASH_PRODUCT
 CHECKSUM SHA256 project/vendor/user.json AS HASH_USER
 
 COPY project/jsonschema.lock.json TO checked_lock.json
+REPLACE $CWD_URI WITH '[CWD_URI]' IN checked_lock.json
 REPLACE $CWD WITH '[CWD]' IN checked_lock.json
-REPLACE 'file:///\[CWD\]' WITH 'file://[CWD]' IN checked_lock.json
 
 WRITE expected_lock.json UNTIL EOF
 {
   "version": 1,
   "dependencies": {
-    "file://[CWD]/source/product.json": {
+    "[CWD_URI]/source/product.json": {
       "path": "./vendor/product.json",
       "hash": "[HASH_PRODUCT]",
       "hashAlgorithm": "sha256"
     },
-    "file://[CWD]/source/user.json": {
+    "[CWD_URI]/source/user.json": {
       "path": "./vendor/user.json",
       "hash": "[HASH_USER]",
       "hashAlgorithm": "sha256"
