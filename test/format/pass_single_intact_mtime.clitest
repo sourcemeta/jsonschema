@@ -1,0 +1,30 @@
+// The shell original slept for a second so that a rewrite would show up even
+// at one second timestamp granularity. Modern filesystems record nanoseconds,
+// so an immediate rewrite is detectable without the delay
+
+WRITE schema.json UNTIL EOF
+{
+  "$schema": "http://json-schema.org/draft-04/schema#",
+  "title": "Test",
+  "description": "Test schema",
+  "type": "string"
+}
+EOF
+
+COPY schema.json TO original.json
+
+STAT MTIME schema.json INTO mtime_before.txt
+
+RUN fmt schema.json STDIN /dev/null IN . INTO result_0.txt EXPECTING 0
+
+WRITE expected_0.txt UNTIL EOF
+EOF
+
+COMPARE result_0.txt AGAINST expected_0.txt
+
+STAT MTIME schema.json INTO mtime_after.txt
+
+// An already formatted schema must be left untouched, timestamp included
+COMPARE mtime_after.txt AGAINST mtime_before.txt
+
+COMPARE schema.json AGAINST original.json
