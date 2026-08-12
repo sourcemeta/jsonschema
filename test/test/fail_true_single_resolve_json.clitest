@@ -25,9 +25,7 @@ EOF
 // Test assertion failure
 RUN test test.json --resolve schema.json --json STDIN /dev/null IN . INTO result.txt EXPECTING 2
 
-COPY result.txt TO report.json
-KEEP LINES MATCHING '^1>' IN report.json
-REPLACE '^1> ?' WITH '' IN report.json
+EXTRACT STDOUT FROM result.txt INTO report.json
 
 RUN validate $CTRF_SCHEMA report.json STDIN /dev/null IN . INTO validated.txt EXPECTING 0
 
