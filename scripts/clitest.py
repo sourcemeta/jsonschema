@@ -26,6 +26,11 @@ class TestFailure(Exception):
 
 RESERVED = {"CWD", "CWD_URI"}
 
+# Shared so that the static checker reads a script exactly as the interpreter
+# does, down to the `$$` escape for a literal dollar sign
+VARIABLE = re.compile(
+    r"\$\$|\$\{([A-Za-z_][A-Za-z0-9_]*)\}|\$([A-Za-z_][A-Za-z0-9_]*)")
+
 
 class Interpreter:
     def __init__(self, binary, sandbox, environment):
@@ -50,9 +55,7 @@ class Interpreter:
                 raise TestFailure(line_number, f"undefined variable: ${name}")
             return self.environment[name]
 
-        return re.sub(
-            r"\$\$|\$\{([A-Za-z_][A-Za-z0-9_]*)\}|\$([A-Za-z_][A-Za-z0-9_]*)",
-            replace, token)
+        return VARIABLE.sub(replace, token)
 
     def resolve(self, path, line_number):
         expanded = self.expand(path, line_number)
@@ -295,46 +298,74 @@ def check(statements):
     something later reads it. Without this, a test can run the CLI and silently
     throw away everything it printed, passing on the exit code alone.
     """
-    observations, artifacts, variables = {}, {}, {}
+    observations, artifacts = {}, {}
     copies = collections.defaultdict(set)
-    compared, consumed, expanded = set(), set(), set()
+    compared, consumed = set(), set()
+    # Kept in statement order so that redefining a name cannot hide an earlier
+    # definition that nothing ever used
+    definitions = []
+    expansions = collections.defaultdict(list)
 
-    def consume(tokens):
+    bindings = {}
+
+    def target_of(token):
+        # A fixture may equally be passed absolutely, as $CWD/<path>
+        if token.startswith("$CWD/"):
+            token = token[len("$CWD/"):]
+        for name, value in bindings.items():
+            token = token.replace("${" + name + "}", value).replace("$" + name, value)
+        # A path built from anything still unresolved, such as a checksum, can
+        # only be known by running the script, so decline to judge it rather
+        # than misjudge it
+        return None if "$" in token else posixpath.normpath(token)
+
+    def record(mapping, token, value):
+        target = target_of(token)
+        if target is not None:
+            mapping[target] = value
+
+    def collect(destination, tokens):
         for token in tokens:
-            consumed.add(posixpath.normpath(token))
-            # A fixture may equally be passed absolutely, as $CWD/<path>
-            if token.startswith("$CWD/"):
-                consumed.add(posixpath.normpath(token[len("$CWD/"):]))
+            target = target_of(token)
+            if target is not None:
+                destination.add(target)
 
-    for statement in statements:
+    for position, statement in enumerate(statements):
         operands = statement.operands
         for token in operands:
-            expanded.update(re.findall(
-                r"\$\{?([A-Za-z_][A-Za-z0-9_]*)\}?", token))
+            for match in VARIABLE.finditer(token):
+                name = match.group(1) or match.group(2)
+                # A `$$` match names nothing, being an escaped dollar sign
+                if name is not None:
+                    expansions[name].append(position)
 
+        # Only the commands below read a file for its content. A filter such as
+        # REPLACE rewrites an observation in place, which neither asserts it nor
+        # hands it to anything else, so it must never count as a use
         if statement.keyword == "RUN" and len(operands) >= 8:
-            observations[posixpath.normpath(operands[-3])] = statement.number
-            consume(operands[:-8] + [operands[-7], operands[-5]])
+            record(observations, operands[-3], statement.number)
+            collect(consumed, operands[:-8] + [operands[-7], operands[-5]])
         elif statement.keyword == "COMPARE" and len(operands) == 3:
-            compared.update(
-                {posixpath.normpath(operands[0]), posixpath.normpath(operands[2])})
+            collect(compared, [operands[0], operands[2]])
         elif statement.keyword == "COPY" and len(operands) == 3:
-            copies[posixpath.normpath(operands[0])].add(
-                posixpath.normpath(operands[2]))
-            artifacts[posixpath.normpath(operands[2])] = (statement.number, "COPY")
-            consume([operands[0]])
+            source, destination = target_of(operands[0]), target_of(operands[2])
+            if source is not None and destination is not None:
+                copies[source].add(destination)
+            record(artifacts, operands[2], (statement.number, "COPY"))
+            collect(consumed, [operands[0]])
         elif statement.keyword == "TREE" and len(operands) == 3:
-            artifacts[posixpath.normpath(operands[2])] = (statement.number, "TREE")
-            consume([operands[0]])
+            record(artifacts, operands[2], (statement.number, "TREE"))
+            collect(consumed, [operands[0]])
         elif statement.keyword == "COMPRESS" and len(operands) == 4:
-            artifacts[posixpath.normpath(operands[3])] = (
-                statement.number, "COMPRESS")
-            consume([operands[1]])
+            record(artifacts, operands[3], (statement.number, "COMPRESS"))
+            collect(consumed, [operands[1]])
         elif statement.keyword == "CHECKSUM" and len(operands) == 4:
-            variables[operands[3]] = statement.number
-            consume([operands[1]])
-        else:
-            consume(operands)
+            definitions.append((position, operands[3], statement.number))
+            collect(consumed, [operands[1]])
+        elif statement.keyword == "ENV" and len(operands) == 2:
+            # Tracked so that a path spelled through a variable still resolves
+            if "$" not in operands[1]:
+                bindings[operands[0]] = operands[1]
 
     def asserted(target):
         pending, seen = [target], set()
@@ -360,8 +391,12 @@ def check(statements):
     for target, (number, keyword) in artifacts.items():
         if target not in consumed and target not in compared:
             problems.append((number, f"nothing reads {target}, produced by {keyword}"))
-    for name, number in variables.items():
-        if name not in expanded:
+    for index, (position, name, number) in enumerate(definitions):
+        # Only a use before the name is bound again can justify this definition
+        rebound = min(
+            (later for later, other, _ in definitions[index + 1:] if other == name),
+            default=len(statements))
+        if not any(position < use < rebound for use in expansions[name]):
             problems.append((number, f"nothing expands ${name}"))
     return sorted(problems)
 
