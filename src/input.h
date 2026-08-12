@@ -113,7 +113,8 @@ inline auto parse_ignore(const sourcemeta::core::Options &options)
   if (options.contains("ignore")) {
     for (const auto &ignore : options.at("ignore")) {
       const auto canonical{std::filesystem::weakly_canonical(ignore)};
-      LOG_VERBOSE(options) << "Ignoring path: " << canonical << "\n";
+      LOG_VERBOSE(options) << "Ignoring path: \"" << canonical.generic_string()
+                           << "\"\n";
       result.insert(canonical);
     }
   }
@@ -128,8 +129,8 @@ merge_configuration_ignore(const std::filesystem::path &configuration_path,
   const auto &configuration{load_configuration(options, configuration_path)};
   assert(configuration.has_value());
   for (const auto &ignore_path : configuration.value().ignore) {
-    LOG_VERBOSE(options) << "Ignoring path from configuration: " << ignore_path
-                         << "\n";
+    LOG_VERBOSE(options) << "Ignoring path from configuration: \""
+                         << ignore_path.generic_string() << "\"\n";
     blacklist.insert(ignore_path);
   }
 }

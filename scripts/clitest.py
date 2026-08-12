@@ -58,9 +58,11 @@ empty line becoming a bare prefix. CRLF is normalised to LF and one trailing
 newline is dropped, so observations compare identically across platforms.
 
 Patterns are regular expressions applied in multiline mode, which makes `$`
-match before every newline; `\\Z` is the way to mean end of input. A replacement
-is literal text: backslashes in it are escaped before use, so it cannot
-reference a capture group and cannot introduce a control character.
+match before every newline; `\\Z` is the way to mean end of input. A variable
+expanded inside a pattern stands for literal text rather than for more pattern,
+so a sandbox path holding regular expression punctuation still matches itself. A
+replacement is literal text too: backslashes in it are escaped before use, so it
+cannot reference a capture group and cannot introduce a control character.
 
 A test that produces something and never asserts on it is rejected before it
 runs, on the grounds that a command whose result nothing reads is a command
@@ -130,6 +132,17 @@ class Interpreter:
             if name not in self.environment:
                 raise TestFailure(line_number, f"undefined variable: ${name}")
             return self.environment[name]
+
+        return VARIABLE.sub(replace, token)
+
+    def expand_pattern(self, token, line_number):
+        def replace(match):
+            if match.group(0) == "$$":
+                return re.escape("$")
+            name = match.group(1) or match.group(2)
+            if name not in self.environment:
+                raise TestFailure(line_number, f"undefined variable: ${name}")
+            return re.escape(self.environment[name])
 
         return VARIABLE.sub(replace, token)
 
@@ -258,7 +271,8 @@ class Interpreter:
 
         path = self.resolve(name, line_number)
         content = self.read(path, line_number)
-        expression = re.compile(self.expand(pattern, line_number), re.MULTILINE)
+        expression = re.compile(
+            self.expand_pattern(pattern, line_number), re.MULTILINE)
 
         if keyword == "REPLACE":
             content = expression.sub(
@@ -568,6 +582,9 @@ def run_script(path, binary, environment):
         return 1
     # Report a missing binary, an unreadable fixture, or any other operating
     # system error against the line that caused it, rather than as a traceback
+    except FileNotFoundError as error:
+        print(f"{path}:{number}: no such file: {error.filename}", file=sys.stderr)
+        return 1
     except OSError as error:
         print(f"{path}:{number}: {error}", file=sys.stderr)
         return 1
