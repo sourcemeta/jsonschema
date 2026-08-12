@@ -1,6 +1,8 @@
 // The shell original slept for a second so that a rewrite would show up even
-// at one second timestamp granularity. Modern filesystems record nanoseconds,
-// so an immediate rewrite is detectable without the delay
+// at one second timestamp granularity. That delay is dropped here, which rests
+// on the sub-second timestamps that APFS, ext4 and NTFS all keep. Somewhere too
+// coarse to separate the two readings, a rewrite of identical bytes would slip
+// through and this would pass without having proven anything
 
 WRITE schema.json UNTIL EOF
 {

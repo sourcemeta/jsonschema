@@ -43,8 +43,10 @@ class Interpreter:
         # correct on UNIX and wrong on Windows, where "file://C:/x" parses the
         # drive letter as the URI authority
         self.environment["CWD_URI"] = pathlib.Path(sandbox).as_uri()
-        # The level of parallelism the tool defaults to, which it derives from
-        # the same count the operating system reports here
+        # The tool defaults its parallelism to the online processor count, which
+        # is the number reported here too. Neither this nor the tool narrows it
+        # by CPU affinity or by a container quota, so the two only part company
+        # across Windows processor groups, and then loudly rather than silently
         self.environment["CORES"] = str(os.cpu_count() or 1)
 
     # -- variables ---------------------------------------------------------
