@@ -18,7 +18,8 @@ WRITE jsonschema.json UNTIL EOF
 EOF
 
 // The title, description and examples below satisfy the built-in top level
-// rules, so that the custom rule is the only thing this run can trip over
+// rules, so the schema stays clean under the full rule set and this test only
+// fails if a rule regresses on it
 WRITE schema.json UNTIL EOF
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
