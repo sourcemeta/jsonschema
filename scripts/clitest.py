@@ -23,6 +23,12 @@ containing spaces or a regular expression is single quoted.
     MAKE DIRECTORY <path>
     REMOVE <path>
 
+The sandbox holds this file's own observations and expectations alongside the
+fixtures, so a test that inspects the filesystem with `TREE` should run the
+command in a subdirectory and list that. Listing the sandbox root instead
+returns the harness's scratch files, and which of them exist depends on how far
+through the script the listing happens.
+
 Paths are relative to the sandbox unless absolute. The sandbox is also named by
 `$CWD`, so `$CWD/schema.json` and `schema.json` are the same file, and a bare
 `$CWD` is its root. `$CWD_URI` is the sandbox as a `file://` URI and is not

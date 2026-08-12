@@ -1,11 +1,15 @@
+// The command runs in a subdirectory so that the listing below sees only what
+// the command itself left behind, rather than this test's own scratch files
+MAKE DIRECTORY project
+
 // Other input error
-RUN install STDIN /dev/null IN . INTO result_0.txt EXPECTING 6
+RUN install STDIN /dev/null IN project INTO result_0.txt EXPECTING 6
 
 REPLACE $CWD WITH '[CWD]' IN result_0.txt
 
 WRITE expected_0.txt UNTIL EOF
 2> error: Could not find a jsonschema.json configuration file
-2>   at file path [CWD]
+2>   at file path [CWD]/project
 2>
 2> Learn more here: https://github.com/sourcemeta/jsonschema/blob/main/docs/install.markdown
 EOF
@@ -13,21 +17,20 @@ EOF
 COMPARE result_0.txt AGAINST expected_0.txt
 
 // Other input error
-RUN install --json STDIN /dev/null IN . INTO result_1.txt EXPECTING 6
+RUN install --json STDIN /dev/null IN project INTO result_1.txt EXPECTING 6
 
 REPLACE $CWD WITH '[CWD]' IN result_1.txt
 
 WRITE expected_1.txt UNTIL EOF
 1> {
 1>   "error": "Could not find a jsonschema.json configuration file",
-1>   "filePath": "[CWD]"
+1>   "filePath": "[CWD]/project"
 1> }
 EOF
 
 COMPARE result_1.txt AGAINST expected_1.txt
 
-TREE . INTO listing_0.txt
-KEEP LINES MATCHING '^\./jsonschema\.lock\.json$' IN listing_0.txt
+TREE project INTO listing_0.txt
 
 WRITE listing_expected_0.txt UNTIL EOF
 EOF
