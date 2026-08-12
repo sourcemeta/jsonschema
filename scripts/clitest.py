@@ -309,15 +309,32 @@ def check(statements):
     bindings = {}
 
     def target_of(token):
-        # A fixture may equally be passed absolutely, as $CWD/<path>
+        # The sandbox may be named explicitly, so that $CWD/<path> and <path>
+        # denote the same file
+        if token == "$CWD":
+            return "."
         if token.startswith("$CWD/"):
             token = token[len("$CWD/"):]
-        for name, value in bindings.items():
-            token = token.replace("${" + name + "}", value).replace("$" + name, value)
-        # A path built from anything still unresolved, such as a checksum, can
-        # only be known by running the script, so decline to judge it rather
-        # than misjudge it
-        return None if "$" in token else posixpath.normpath(token)
+
+        unresolved = False
+
+        def substitute(match):
+            nonlocal unresolved
+            if match.group(0) == "$$":
+                return "$"
+            name = match.group(1) or match.group(2)
+            if name in bindings:
+                return bindings[name]
+            unresolved = True
+            return ""
+
+        # Expanded exactly as the interpreter would, so that an escaped dollar
+        # stays a literal and one variable name cannot swallow the prefix of
+        # another. A path built from a value only known at run time, such as a
+        # checksum, is left for the interpreter to judge rather than misjudged
+        # here
+        resolved = VARIABLE.sub(substitute, token)
+        return None if unresolved else posixpath.normpath(resolved)
 
     def record(mapping, token, value):
         target = target_of(token)
