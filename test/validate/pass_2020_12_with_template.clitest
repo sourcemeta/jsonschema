@@ -17,9 +17,7 @@ EOF
 
 RUN compile schema.json STDIN /dev/null IN . INTO result_0.txt EXPECTING 0
 
-COPY result_0.txt TO template.json
-KEEP LINES MATCHING '^1>' IN template.json
-REPLACE '^1> ?' WITH '' IN template.json
+EXTRACT STDOUT FROM result_0.txt INTO template.json
 
 RUN validate schema.json instance.json --template template.json STDIN /dev/null IN . INTO result_1.txt EXPECTING 0
 

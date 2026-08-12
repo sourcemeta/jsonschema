@@ -12,7 +12,7 @@ containing spaces or a regular expression is single quoted.
     COMPARE <actual> AGAINST <expected>
     REPLACE <pattern> WITH <replacement> IN <path>
     DROP LINES MATCHING <pattern> IN <path>
-    KEEP LINES MATCHING <pattern> IN <path>
+    EXTRACT STDOUT FROM <observation> INTO <destination>
     SORT <path>
     COPY <source> TO <destination>
     TREE <directory> INTO <destination>
@@ -266,7 +266,7 @@ class Interpreter:
             if len(operands) != 5 or operands[0] != "LINES" \
                     or operands[1] != "MATCHING" or operands[3] != "IN":
                 raise TestFailure(
-                    line_number, f"usage: {keyword} LINES MATCHING <regex> IN <file>")
+                    line_number, "usage: DROP LINES MATCHING <regex> IN <file>")
             pattern, replacement, name = operands[2], None, operands[4]
 
         path = self.resolve(name, line_number)
@@ -278,10 +278,9 @@ class Interpreter:
             content = expression.sub(
                 self.expand(replacement, line_number).replace("\\", "\\\\"), content)
         else:
-            keep = keyword == "KEEP"
             content = "".join(
                 line for line in content.splitlines(keepends=True)
-                if bool(expression.search(line)) == keep)
+                if not expression.search(line))
         self.write(path, content)
 
     def command_tree(self, operands, line_number):
@@ -329,6 +328,22 @@ class Interpreter:
             raise TestFailure(line_number, f"{name} is reserved and cannot be set")
         with open(self.resolve(operands[1], line_number), "rb") as handle:
             self.environment[name] = hashlib.sha256(handle.read()).hexdigest()
+
+    def command_extract(self, operands, line_number):
+        if len(operands) != 5 or operands[0] != "STDOUT" \
+                or operands[1] != "FROM" or operands[3] != "INTO":
+            raise TestFailure(
+                line_number,
+                "usage: EXTRACT STDOUT FROM <observation> INTO <destination>")
+        content = self.read(self.resolve(operands[2], line_number), line_number)
+        extracted = []
+        for line in content.splitlines():
+            if line == "1>":
+                extracted.append("")
+            elif line.startswith("1> "):
+                extracted.append(line[len("1> "):])
+        self.write(self.resolve(operands[4], line_number),
+                   "".join(line + "\n" for line in extracted))
 
     def command_sort(self, operands, line_number):
         if len(operands) != 1:
@@ -482,6 +497,9 @@ def check(statements):
         elif statement.keyword == "CHECKSUM" and len(operands) == 4:
             definitions.append((position, operands[3], statement.number))
             collect(consumed, [operands[1]])
+        elif statement.keyword == "EXTRACT" and len(operands) == 5:
+            record(artifacts, operands[4], (statement.number, "EXTRACT"))
+            collect(consumed, [operands[2]])
         elif statement.keyword == "STAT" and len(operands) == 4:
             record(artifacts, operands[3], (statement.number, "STAT"))
             collect(consumed, [operands[1]])
@@ -557,7 +575,7 @@ def run_script(path, binary, environment):
                 interpreter.command_compare(rest, number)
             elif keyword == "ENV":
                 interpreter.command_env(rest, number)
-            elif keyword in ("REPLACE", "DROP", "KEEP"):
+            elif keyword in ("REPLACE", "DROP"):
                 interpreter.command_filter(keyword, rest, number)
             elif keyword == "TREE":
                 interpreter.command_tree(rest, number)
@@ -567,6 +585,8 @@ def run_script(path, binary, environment):
                 interpreter.command_compress(rest, number)
             elif keyword == "CHECKSUM":
                 interpreter.command_checksum(rest, number)
+            elif keyword == "EXTRACT":
+                interpreter.command_extract(rest, number)
             elif keyword == "SORT":
                 interpreter.command_sort(rest, number)
             elif keyword == "STAT":

@@ -33,9 +33,7 @@ EOF
 
 RUN bundle schema.json --resolve schemas --ignore schemas/duplicated.json STDIN /dev/null IN . INTO result.txt EXPECTING 0
 
-COPY result.txt TO bundled.json
-KEEP LINES MATCHING '^1>' IN bundled.json
-REPLACE '^1> ?' WITH '' IN bundled.json
+EXTRACT STDOUT FROM result.txt INTO bundled.json
 
 WRITE expected_0.txt UNTIL EOF
 1> {

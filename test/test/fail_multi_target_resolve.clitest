@@ -53,9 +53,7 @@ COMPARE result_0.txt AGAINST expected_0.txt
 // Validation failure
 RUN test test.json --resolve schemas --json STDIN /dev/null IN . INTO result_1.txt EXPECTING 2
 
-COPY result_1.txt TO output.json
-KEEP LINES MATCHING '^1>' IN output.json
-REPLACE '^1> ?' WITH '' IN output.json
+EXTRACT STDOUT FROM result_1.txt INTO output.json
 
 REPLACE $VERSION WITH '[VERSION]' IN result_1.txt
 DROP LINES MATCHING '"duration":' IN result_1.txt

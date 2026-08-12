@@ -46,9 +46,7 @@ EOF
 // Other input error
 RUN test tests --resolve schema.json --json --jobs 2 STDIN /dev/null IN . INTO result_0.txt EXPECTING 6
 
-COPY result_0.txt TO output.json
-KEEP LINES MATCHING '^1>' IN output.json
-REPLACE '^1> ?' WITH '' IN output.json
+EXTRACT STDOUT FROM result_0.txt INTO output.json
 
 REPLACE $VERSION WITH '[VERSION]' IN result_0.txt
 DROP LINES MATCHING '"duration":' IN result_0.txt
@@ -111,9 +109,7 @@ RUN validate $CTRF_SCHEMA output.json STDIN /dev/null IN . INTO result_1.txt EXP
 // Other input error
 RUN test tests --resolve schema.json --json --jobs 1 STDIN /dev/null IN . INTO result_2.txt EXPECTING 6
 
-COPY result_2.txt TO output.json
-KEEP LINES MATCHING '^1>' IN output.json
-REPLACE '^1> ?' WITH '' IN output.json
+EXTRACT STDOUT FROM result_2.txt INTO output.json
 
 REPLACE $VERSION WITH '[VERSION]' IN result_2.txt
 DROP LINES MATCHING '"duration":' IN result_2.txt
