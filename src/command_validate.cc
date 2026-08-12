@@ -143,7 +143,6 @@ auto process_entry(
     std::uint64_t benchmark_loop, bool trace, bool fast_mode, bool json_output,
     bool continue_on_error, const std::filesystem::path &schema_resolution_base,
     const sourcemeta::core::Options &options, bool &result) -> bool {
-  std::ostringstream error;
   sourcemeta::blaze::SimpleOutput output{entry.second};
   sourcemeta::blaze::TraceOutput trace_output{
       sourcemeta::blaze::schema_walker, custom_resolver,
@@ -157,7 +156,6 @@ auto process_entry(
                              : static_cast<std::int64_t>(-1),
                          benchmark_loop);
     if (!subresult) {
-      error << "error: Schema validation failure\n";
       result = false;
     }
   } else if (trace) {
@@ -221,7 +219,6 @@ auto process_entry(
     } else {
       std::cerr << "\n";
     }
-    std::cerr << error.str();
     sourcemeta::jsonschema::print(output, entry.positions, std::cerr);
     result = false;
     if (entry.multidocument && !continue_on_error) {
@@ -425,7 +422,6 @@ auto sourcemeta::jsonschema::validate(const sourcemeta::core::Options &options)
           }
           return sourcemeta::core::read_yaml_or_json(instance_path);
         }()};
-        std::ostringstream error;
         sourcemeta::blaze::SimpleOutput output{instance};
         sourcemeta::blaze::TraceOutput trace_output{
             sourcemeta::blaze::schema_walker, custom_resolver,
@@ -437,7 +433,6 @@ auto sourcemeta::jsonschema::validate(const sourcemeta::core::Options &options)
                                instance_path.generic_string(), (int64_t)-1,
                                benchmark_loop);
           if (!subresult) {
-            error << "error: Schema validation failure\n";
             result = false;
           }
         } else if (trace) {
@@ -480,7 +475,6 @@ auto sourcemeta::jsonschema::validate(const sourcemeta::core::Options &options)
                     << sourcemeta::core::weakly_canonical(instance_path)
                            .generic_string()
                     << "\n";
-          std::cerr << error.str();
           print(output, tracker, std::cerr);
           result = false;
         }

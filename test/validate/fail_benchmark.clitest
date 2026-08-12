@@ -26,7 +26,6 @@ WRITE expected_0.txt UNTIL EOF
 1> instance.json: FAIL [TIMING]
 2> fail: [CWD]/instance.json
 2> error: Schema validation failure
-2> error: Schema validation failure
 EOF
 
 COMPARE result_0.txt AGAINST expected_0.txt
