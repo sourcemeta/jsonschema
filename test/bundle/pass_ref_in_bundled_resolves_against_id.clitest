@@ -22,6 +22,9 @@ EOF
 
 RUN bundle entry.json STDIN /dev/null IN . INTO result.txt EXPECTING 0
 
+// Taken before the placeholders go in, so the bundle keeps its real identifiers
+EXTRACT STDOUT FROM result.txt INTO bundled.json
+
 REPLACE $CWD_URI WITH '[CWD_URI]' IN result.txt
 REPLACE $CWD WITH '[CWD]' IN result.txt
 
@@ -47,3 +50,11 @@ WRITE expected.txt UNTIL EOF
 EOF
 
 COMPARE result.txt AGAINST expected.txt
+
+// Prove the emitted bundle is well formed JSON, as the sibling bundle tests do
+WRITE silent.txt UNTIL EOF
+EOF
+
+RUN fmt bundled.json --check STDIN /dev/null IN . INTO checked.txt EXPECTING 0
+
+COMPARE checked.txt AGAINST silent.txt

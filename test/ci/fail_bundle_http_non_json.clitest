@@ -1,3 +1,6 @@
+// The remote answers 200 with an HTML body, so this covers a
+// response that is not JSON at all, as distinct from the sibling
+// test where the body is JSON but not a schema
 WRITE schema.json UNTIL EOF
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
@@ -7,12 +10,8 @@ WRITE schema.json UNTIL EOF
 }
 EOF
 
-WRITE instance.json UNTIL EOF
-{ "type": "string" }
-EOF
-
 // Other input error
-RUN validate schema.json instance.json --http STDIN /dev/null IN . INTO result_0.txt EXPECTING 6
+RUN bundle schema.json --http STDIN /dev/null IN . INTO result_0.txt EXPECTING 6
 
 WRITE expected_0.txt UNTIL EOF
 2> error: Failed to parse the JSON document

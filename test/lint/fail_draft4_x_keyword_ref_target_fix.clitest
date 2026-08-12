@@ -24,6 +24,8 @@ WRITE schema.json UNTIL EOF
 EOF
 
 // Schema input error
+COPY schema.json TO original.json
+
 RUN lint schema.json --fix STDIN /dev/null IN . INTO result_0.txt EXPECTING 4
 
 REPLACE $CWD_URI WITH '[CWD_URI]' IN result_0.txt
@@ -56,3 +58,6 @@ WRITE expected_1.txt UNTIL EOF
 EOF
 
 COMPARE result_1.txt AGAINST expected_1.txt
+
+// A failed fix must leave the schema exactly as it was
+COMPARE schema.json AGAINST original.json

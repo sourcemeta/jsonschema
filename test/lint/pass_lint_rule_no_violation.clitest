@@ -7,14 +7,19 @@ WRITE rule.json UNTIL EOF
 }
 EOF
 
+// The title, description and examples below satisfy the built-in top level
+// rules, so that the custom rule is the only thing this run can trip over
 WRITE schema.json UNTIL EOF
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Test",
+  "description": "Test schema",
+  "examples": [ "foo" ],
   "type": "string"
 }
 EOF
 
-RUN lint --rule rule.json --only require_type schema.json STDIN /dev/null IN . INTO result_0.txt EXPECTING 0
+RUN lint --rule rule.json schema.json STDIN /dev/null IN . INTO result_0.txt EXPECTING 0
 
 WRITE expected_0.txt UNTIL EOF
 EOF
