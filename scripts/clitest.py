@@ -10,7 +10,9 @@ containing spaces or a regular expression is single quoted.
                                         to <terminator>, becomes the file
     RUN [argument...] STDIN <path> IN <directory> INTO <path> EXPECTING <code>
     COMPARE <actual> AGAINST <expected>
-    REPLACE <pattern> WITH <replacement> IN <path>
+    REPLACE <text> WITH <replacement> IN <path>
+    REPLACE MATCHING <pattern> WITH <replacement> IN <path>
+    DROP LINES CONTAINING <text> IN <path>
     DROP LINES MATCHING <pattern> IN <path>
     EXTRACT STDOUT FROM <observation> INTO <destination>
     SORT <path>
@@ -57,12 +59,17 @@ captured into one observation file, each line prefixed with `1> ` or `2> `, an
 empty line becoming a bare prefix. CRLF is normalised to LF and one trailing
 newline is dropped, so observations compare identically across platforms.
 
-Patterns are regular expressions applied in multiline mode, which makes `$`
-match before every newline; `\\Z` is the way to mean end of input. A variable
-expanded inside a pattern stands for literal text rather than for more pattern,
-so a sandbox path holding regular expression punctuation still matches itself. A
-replacement is literal text too: backslashes in it are escaped before use, so it
-cannot reference a capture group and cannot introduce a control character.
+A filter matches literal text by default, which is what nearly every one of them
+wants: a sandbox path, a hash, a version number. `MATCHING` opts into a regular
+expression instead, applied in multiline mode, which makes `$` match before
+every newline, with `\\Z` meaning end of input.
+
+Keeping the two apart is what removes escaping from the language. A literal
+operand needs none, because nothing in it is special. A pattern needs none
+either, because it is taken verbatim and never expands a variable, so a sandbox
+path full of regular expression punctuation can never leak into one. The two
+forms never meet. A replacement is literal in both, and is expanded, so it
+cannot reference a capture group.
 
 A test that produces something and never asserts on it is rejected before it
 runs, on the grounds that a command whose result nothing reads is a command
@@ -135,16 +142,20 @@ class Interpreter:
 
         return VARIABLE.sub(replace, token)
 
-    def expand_pattern(self, token, line_number):
-        def replace(match):
-            if match.group(0) == "$$":
-                return re.escape("$")
-            name = match.group(1) or match.group(2)
-            if name not in self.environment:
-                raise TestFailure(line_number, f"undefined variable: ${name}")
-            return re.escape(self.environment[name])
-
-        return VARIABLE.sub(replace, token)
+    def compile_pattern(self, token, line_number):
+        # A pattern is the one operand that is not expanded. Refusing to build
+        # one out of a variable is what keeps the two forms from ever meeting,
+        # and so is what removes the escaping rule that would otherwise be
+        # needed to stop an expanded path from being read as more pattern
+        if VARIABLE.search(token):
+            raise TestFailure(
+                line_number,
+                f"a pattern is taken verbatim and cannot expand a variable, "
+                f"so use the literal form instead: {token}")
+        try:
+            return re.compile(token, re.MULTILINE)
+        except re.error as error:
+            raise TestFailure(line_number, f"bad pattern: {error}")
 
     def resolve(self, path, line_number):
         expanded = self.expand(path, line_number)
@@ -256,32 +267,49 @@ class Interpreter:
                 fromfile=operands[2], tofile=operands[0])
             raise TestFailure(line_number, "".join(diff))
 
-    def command_filter(self, keyword, operands, line_number):
-        if keyword == "REPLACE":
-            if len(operands) != 5 or operands[1] != "WITH" or operands[3] != "IN":
-                raise TestFailure(
-                    line_number, "usage: REPLACE <regex> WITH <replacement> IN <file>")
-            pattern, replacement, name = operands[0], operands[2], operands[4]
+    def command_replace(self, operands, line_number):
+        # The two forms are told apart by length, so that replacing the literal
+        # text "MATCHING" stays possible
+        if len(operands) == 6 and operands[0] == "MATCHING" \
+                and operands[2] == "WITH" and operands[4] == "IN":
+            expression = self.compile_pattern(operands[1], line_number)
+            replacement, name = operands[3], operands[5]
+        elif len(operands) == 5 and operands[1] == "WITH" \
+                and operands[3] == "IN":
+            expression, replacement, name = None, operands[2], operands[4]
         else:
-            if len(operands) != 5 or operands[0] != "LINES" \
-                    or operands[1] != "MATCHING" or operands[3] != "IN":
-                raise TestFailure(
-                    line_number, "usage: DROP LINES MATCHING <regex> IN <file>")
-            pattern, replacement, name = operands[2], None, operands[4]
+            raise TestFailure(
+                line_number,
+                "usage: REPLACE [MATCHING] <pattern> WITH <replacement> IN <file>")
 
         path = self.resolve(name, line_number)
         content = self.read(path, line_number)
-        expression = re.compile(
-            self.expand_pattern(pattern, line_number), re.MULTILINE)
-
-        if keyword == "REPLACE":
-            content = expression.sub(
-                self.expand(replacement, line_number).replace("\\", "\\\\"), content)
+        expanded = self.expand(replacement, line_number)
+        if expression is None:
+            content = content.replace(
+                self.expand(operands[0], line_number), expanded)
         else:
-            content = "".join(
-                line for line in content.splitlines(keepends=True)
-                if not expression.search(line))
+            # Substituting through a function rather than a template string is
+            # what keeps the replacement literal without escaping it first
+            content = expression.sub(lambda match: expanded, content)
         self.write(path, content)
+
+    def command_drop(self, operands, line_number):
+        if len(operands) != 5 or operands[0] != "LINES" or operands[3] != "IN" \
+                or operands[1] not in ("CONTAINING", "MATCHING"):
+            raise TestFailure(
+                line_number,
+                "usage: DROP LINES CONTAINING|MATCHING <pattern> IN <file>")
+
+        path = self.resolve(operands[4], line_number)
+        lines = self.read(path, line_number).splitlines(keepends=True)
+        if operands[1] == "CONTAINING":
+            text = self.expand(operands[2], line_number)
+            kept = [line for line in lines if text not in line]
+        else:
+            expression = self.compile_pattern(operands[2], line_number)
+            kept = [line for line in lines if not expression.search(line)]
+        self.write(path, "".join(kept))
 
     def command_tree(self, operands, line_number):
         if len(operands) != 3 or operands[1] != "INTO":
@@ -575,8 +603,10 @@ def run_script(path, binary, environment):
                 interpreter.command_compare(rest, number)
             elif keyword == "ENV":
                 interpreter.command_env(rest, number)
-            elif keyword in ("REPLACE", "DROP"):
-                interpreter.command_filter(keyword, rest, number)
+            elif keyword == "REPLACE":
+                interpreter.command_replace(rest, number)
+            elif keyword == "DROP":
+                interpreter.command_drop(rest, number)
             elif keyword == "TREE":
                 interpreter.command_tree(rest, number)
             elif keyword == "COPY":

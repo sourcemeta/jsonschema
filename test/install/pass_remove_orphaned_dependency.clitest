@@ -27,7 +27,7 @@ WRITE project/jsonschema.json UNTIL EOF
 }
 EOF
 
-REPLACE '\[CWD_URI\]' WITH $CWD_URI IN project/jsonschema.json
+REPLACE '[CWD_URI]' WITH $CWD_URI IN project/jsonschema.json
 
 RUN install STDIN /dev/null IN project INTO result_0.txt EXPECTING 0
 
@@ -88,8 +88,8 @@ WRITE expected_lock.json UNTIL EOF
 }
 EOF
 
-REPLACE '\[HASH_A\]' WITH $HASH_A IN expected_lock.json
-REPLACE '\[HASH_B\]' WITH $HASH_B IN expected_lock.json
+REPLACE '[HASH_A]' WITH $HASH_A IN expected_lock.json
+REPLACE '[HASH_B]' WITH $HASH_B IN expected_lock.json
 
 COMPARE checked_lock.json AGAINST expected_lock.json
 
@@ -101,7 +101,7 @@ WRITE project/jsonschema.json UNTIL EOF
 }
 EOF
 
-REPLACE '\[CWD_URI\]' WITH $CWD_URI IN project/jsonschema.json
+REPLACE '[CWD_URI]' WITH $CWD_URI IN project/jsonschema.json
 
 RUN install STDIN /dev/null IN project INTO result_1.txt EXPECTING 0
 
@@ -142,6 +142,6 @@ WRITE expected_lock_after.json UNTIL EOF
 }
 EOF
 
-REPLACE '\[HASH_A\]' WITH $HASH_A IN expected_lock_after.json
+REPLACE '[HASH_A]' WITH $HASH_A IN expected_lock_after.json
 
 COMPARE checked_lock_after.json AGAINST expected_lock_after.json

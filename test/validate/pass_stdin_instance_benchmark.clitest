@@ -17,7 +17,7 @@ EOF
 RUN validate schema.json - --benchmark STDIN stdin_0 IN . INTO result.txt EXPECTING 0
 
 // Timings vary per run, so normalise every decimal number
-REPLACE '[0-9]+\.[0-9]+' WITH '<FLOAT>' IN result.txt
+REPLACE MATCHING '[0-9]+\.[0-9]+' WITH '<FLOAT>' IN result.txt
 
 WRITE expected.txt UNTIL EOF
 1> tag:sourcemeta.com,2026:jsonschema/stdin: PASS <FLOAT> +- <FLOAT> us (<FLOAT>)

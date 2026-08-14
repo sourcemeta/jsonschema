@@ -25,7 +25,7 @@ WRITE project/jsonschema.json UNTIL EOF
 }
 EOF
 
-REPLACE '\[CWD_URI\]' WITH $CWD_URI IN project/jsonschema.json
+REPLACE '[CWD_URI]' WITH $CWD_URI IN project/jsonschema.json
 
 RUN install STDIN /dev/null IN project INTO result_0.txt EXPECTING 0
 
