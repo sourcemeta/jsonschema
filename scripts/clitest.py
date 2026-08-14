@@ -47,10 +47,12 @@ in a JSON Pointer like `/$$defs/Foo`. `$$` is matched before any name, so it
 never yields a variable reference, and names are matched greedily, so a binding
 called `OUT` cannot consume the front of `$OUTPUT`.
 
-Sharing `$` with the regular expression anchor is safe, because an anchor is
-zero width and so can never be meaningfully followed by a name. `^abc$`, `a{2}$`
-and `a${2}` all pass through untouched. The one shape that does read as a
-variable, `foo$bar`, describes a match that no input could satisfy anyway.
+A pattern is never expanded, so `$` in one is the regular expression anchor and
+nothing else: `^abc$`, `a{2}$` and `$$` all mean what they say, and a dollar
+sign that really does precede a name is escaped, as in `\\$schema`. What
+remains, an unescaped `$` followed by a name, is rejected rather than matched.
+An anchor is zero width, so such a pattern could match no input at all, and an
+author who writes one almost certainly wanted the literal form.
 
 `RUN` is read from the end: the last eight tokens are its trailer, and anything
 before them is passed to the binary. `STDIN /dev/null` means empty input on
@@ -112,6 +114,29 @@ VARIABLE = re.compile(
     r"\$\$|\$\{([A-Za-z_][A-Za-z0-9_]*)\}|\$([A-Za-z_][A-Za-z0-9_]*)")
 
 
+def variable_reference(pattern):
+    """The first variable reference in a pattern, or None if it holds none.
+
+    Read with the same scanner as an operand, but a pattern is a regular
+    expression rather than text, so two of its shapes are not references at
+    all. A backslash escapes what follows it, making `\\$schema` a dollar sign
+    before a name, and `$$` is a pair of anchors rather than an escaped dollar.
+    """
+    index = 0
+    while index < len(pattern):
+        if pattern[index] == "\\":
+            index += 2
+            continue
+        match = VARIABLE.match(pattern, index)
+        if match is None:
+            index += 1
+        elif match.group(0) == "$$":
+            index = match.end()
+        else:
+            return match.group(0)
+    return None
+
+
 class Interpreter:
     def __init__(self, binary, sandbox, environment):
         self.binary = binary
@@ -147,10 +172,11 @@ class Interpreter:
         # one out of a variable is what keeps the two forms from ever meeting,
         # and so is what removes the escaping rule that would otherwise be
         # needed to stop an expanded path from being read as more pattern
-        if VARIABLE.search(token):
+        reference = variable_reference(token)
+        if reference is not None:
             raise TestFailure(
                 line_number,
-                f"a pattern is taken verbatim and cannot expand a variable, "
+                f"a pattern is taken verbatim and cannot expand {reference}, "
                 f"so use the literal form instead: {token}")
         try:
             return re.compile(token, re.MULTILINE)
