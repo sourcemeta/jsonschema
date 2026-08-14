@@ -10,7 +10,9 @@ containing spaces or a regular expression is single quoted.
                                         to <terminator>, becomes the file
     RUN [argument...] STDIN <path> IN <directory> INTO <path> EXPECTING <code>
     COMPARE <actual> AGAINST <expected>
-    REPLACE <pattern> WITH <replacement> IN <path>
+    REPLACE <text> WITH <replacement> IN <path>
+    REPLACE MATCHING <pattern> WITH <replacement> IN <path>
+    DROP LINES CONTAINING <text> IN <path>
     DROP LINES MATCHING <pattern> IN <path>
     EXTRACT STDOUT FROM <observation> INTO <destination>
     SORT <path>
@@ -45,10 +47,13 @@ in a JSON Pointer like `/$$defs/Foo`. `$$` is matched before any name, so it
 never yields a variable reference, and names are matched greedily, so a binding
 called `OUT` cannot consume the front of `$OUTPUT`.
 
-Sharing `$` with the regular expression anchor is safe, because an anchor is
-zero width and so can never be meaningfully followed by a name. `^abc$`, `a{2}$`
-and `a${2}` all pass through untouched. The one shape that does read as a
-variable, `foo$bar`, describes a match that no input could satisfy anyway.
+A pattern is never expanded, so `$` in one is the regular expression anchor and
+nothing else: `^abc$`, `a{2}$` and `$$` all mean what they say, and a dollar
+sign that really does precede a name is written `\\$schema`, or `[$a]` inside a
+character class. What remains, an unescaped `$` followed by a name and outside
+a class, is rejected rather than matched. An anchor is zero width, so such a
+pattern could match no input at all, and an author who writes one almost
+certainly wanted the literal form.
 
 `RUN` is read from the end: the last eight tokens are its trailer, and anything
 before them is passed to the binary. `STDIN /dev/null` means empty input on
@@ -57,12 +62,17 @@ captured into one observation file, each line prefixed with `1> ` or `2> `, an
 empty line becoming a bare prefix. CRLF is normalised to LF and one trailing
 newline is dropped, so observations compare identically across platforms.
 
-Patterns are regular expressions applied in multiline mode, which makes `$`
-match before every newline; `\\Z` is the way to mean end of input. A variable
-expanded inside a pattern stands for literal text rather than for more pattern,
-so a sandbox path holding regular expression punctuation still matches itself. A
-replacement is literal text too: backslashes in it are escaped before use, so it
-cannot reference a capture group and cannot introduce a control character.
+A filter matches literal text by default, which is what nearly every one of them
+wants: a sandbox path, a hash, a version number. `MATCHING` opts into a regular
+expression instead, applied in multiline mode, which makes `$` match before
+every newline, with `\\Z` meaning end of input.
+
+Keeping the two apart is what removes escaping from the language. A literal
+operand needs none, because nothing in it is special. A pattern needs none
+either, because it is taken verbatim and never expands a variable, so a sandbox
+path full of regular expression punctuation can never leak into one. The two
+forms never meet. A replacement is literal in both, and is expanded, so it
+cannot reference a capture group.
 
 A test that produces something and never asserts on it is rejected before it
 runs, on the grounds that a command whose result nothing reads is a command
@@ -105,6 +115,56 @@ VARIABLE = re.compile(
     r"\$\$|\$\{([A-Za-z_][A-Za-z0-9_]*)\}|\$([A-Za-z_][A-Za-z0-9_]*)")
 
 
+def end_of_character_class(pattern, index):
+    """The index just past the character class opening at `index`.
+
+    A closing bracket is itself an ordinary character when it opens the class,
+    after an optional negating caret. An unterminated class is not a class at
+    all, so it is left for the engine to reject.
+    """
+    cursor = index + 1
+    if cursor < len(pattern) and pattern[cursor] == "^":
+        cursor += 1
+    if cursor < len(pattern) and pattern[cursor] == "]":
+        cursor += 1
+    while cursor < len(pattern):
+        if pattern[cursor] == "\\":
+            cursor += 2
+        elif pattern[cursor] == "]":
+            return cursor + 1
+        else:
+            cursor += 1
+    return index + 1
+
+
+def variable_reference(pattern):
+    """The first variable reference in a pattern, or None if it holds none.
+
+    Read with the same scanner as an operand, but a pattern is a regular
+    expression rather than text, so three of its shapes are not references at
+    all. A backslash escapes what follows it, making `\\$schema` a dollar sign
+    before a name. `$$` is a pair of anchors rather than an escaped dollar. And
+    a dollar sign inside a character class is an ordinary character, so `[$a]`
+    is a class holding one.
+    """
+    index = 0
+    while index < len(pattern):
+        if pattern[index] == "\\":
+            index += 2
+            continue
+        if pattern[index] == "[":
+            index = end_of_character_class(pattern, index)
+            continue
+        match = VARIABLE.match(pattern, index)
+        if match is None:
+            index += 1
+        elif match.group(0) == "$$":
+            index = match.end()
+        else:
+            return match.group(0)
+    return None
+
+
 class Interpreter:
     def __init__(self, binary, sandbox, environment):
         self.binary = binary
@@ -135,16 +195,21 @@ class Interpreter:
 
         return VARIABLE.sub(replace, token)
 
-    def expand_pattern(self, token, line_number):
-        def replace(match):
-            if match.group(0) == "$$":
-                return re.escape("$")
-            name = match.group(1) or match.group(2)
-            if name not in self.environment:
-                raise TestFailure(line_number, f"undefined variable: ${name}")
-            return re.escape(self.environment[name])
-
-        return VARIABLE.sub(replace, token)
+    def compile_pattern(self, token, line_number):
+        # A pattern is the one operand that is not expanded. Refusing to build
+        # one out of a variable is what keeps the two forms from ever meeting,
+        # and so is what removes the escaping rule that would otherwise be
+        # needed to stop an expanded path from being read as more pattern
+        reference = variable_reference(token)
+        if reference is not None:
+            raise TestFailure(
+                line_number,
+                f"a pattern is taken verbatim and cannot expand {reference}, "
+                f"so use the literal form instead: {token}")
+        try:
+            return re.compile(token, re.MULTILINE)
+        except re.error as error:
+            raise TestFailure(line_number, f"bad pattern: {error}")
 
     def resolve(self, path, line_number):
         expanded = self.expand(path, line_number)
@@ -256,32 +321,49 @@ class Interpreter:
                 fromfile=operands[2], tofile=operands[0])
             raise TestFailure(line_number, "".join(diff))
 
-    def command_filter(self, keyword, operands, line_number):
-        if keyword == "REPLACE":
-            if len(operands) != 5 or operands[1] != "WITH" or operands[3] != "IN":
-                raise TestFailure(
-                    line_number, "usage: REPLACE <regex> WITH <replacement> IN <file>")
-            pattern, replacement, name = operands[0], operands[2], operands[4]
+    def command_replace(self, operands, line_number):
+        # The two forms are told apart by length, so that replacing the literal
+        # text "MATCHING" stays possible
+        if len(operands) == 6 and operands[0] == "MATCHING" \
+                and operands[2] == "WITH" and operands[4] == "IN":
+            expression = self.compile_pattern(operands[1], line_number)
+            replacement, name = operands[3], operands[5]
+        elif len(operands) == 5 and operands[1] == "WITH" \
+                and operands[3] == "IN":
+            expression, replacement, name = None, operands[2], operands[4]
         else:
-            if len(operands) != 5 or operands[0] != "LINES" \
-                    or operands[1] != "MATCHING" or operands[3] != "IN":
-                raise TestFailure(
-                    line_number, "usage: DROP LINES MATCHING <regex> IN <file>")
-            pattern, replacement, name = operands[2], None, operands[4]
+            raise TestFailure(
+                line_number,
+                "usage: REPLACE [MATCHING] <pattern> WITH <replacement> IN <file>")
 
         path = self.resolve(name, line_number)
         content = self.read(path, line_number)
-        expression = re.compile(
-            self.expand_pattern(pattern, line_number), re.MULTILINE)
-
-        if keyword == "REPLACE":
-            content = expression.sub(
-                self.expand(replacement, line_number).replace("\\", "\\\\"), content)
+        expanded = self.expand(replacement, line_number)
+        if expression is None:
+            content = content.replace(
+                self.expand(operands[0], line_number), expanded)
         else:
-            content = "".join(
-                line for line in content.splitlines(keepends=True)
-                if not expression.search(line))
+            # Substituting through a function rather than a template string is
+            # what keeps the replacement literal without escaping it first
+            content = expression.sub(lambda match: expanded, content)
         self.write(path, content)
+
+    def command_drop(self, operands, line_number):
+        if len(operands) != 5 or operands[0] != "LINES" or operands[3] != "IN" \
+                or operands[1] not in ("CONTAINING", "MATCHING"):
+            raise TestFailure(
+                line_number,
+                "usage: DROP LINES CONTAINING|MATCHING <pattern> IN <file>")
+
+        path = self.resolve(operands[4], line_number)
+        lines = self.read(path, line_number).splitlines(keepends=True)
+        if operands[1] == "CONTAINING":
+            text = self.expand(operands[2], line_number)
+            kept = [line for line in lines if text not in line]
+        else:
+            expression = self.compile_pattern(operands[2], line_number)
+            kept = [line for line in lines if not expression.search(line)]
+        self.write(path, "".join(kept))
 
     def command_tree(self, operands, line_number):
         if len(operands) != 3 or operands[1] != "INTO":
@@ -467,7 +549,19 @@ def check(statements):
 
     for position, statement in enumerate(statements):
         operands = statement.operands
-        for token in operands:
+        # A pattern is never expanded, so a name appearing inside one is not a
+        # use of that name, however it is spelled. Reading it as one would let
+        # a checksum nothing ever expands pass this check
+        if statement.keyword == "REPLACE" and len(operands) == 6 \
+                and operands[0] == "MATCHING":
+            scanned = operands[:1] + operands[2:]
+        elif statement.keyword == "DROP" and len(operands) == 5 \
+                and operands[1] == "MATCHING":
+            scanned = operands[:2] + operands[3:]
+        else:
+            scanned = operands
+
+        for token in scanned:
             for match in VARIABLE.finditer(token):
                 name = match.group(1) or match.group(2)
                 # A `$$` match names nothing, being an escaped dollar sign
@@ -575,8 +669,10 @@ def run_script(path, binary, environment):
                 interpreter.command_compare(rest, number)
             elif keyword == "ENV":
                 interpreter.command_env(rest, number)
-            elif keyword in ("REPLACE", "DROP"):
-                interpreter.command_filter(keyword, rest, number)
+            elif keyword == "REPLACE":
+                interpreter.command_replace(rest, number)
+            elif keyword == "DROP":
+                interpreter.command_drop(rest, number)
             elif keyword == "TREE":
                 interpreter.command_tree(rest, number)
             elif keyword == "COPY":

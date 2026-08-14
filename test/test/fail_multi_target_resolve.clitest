@@ -56,11 +56,11 @@ RUN test test.json --resolve schemas --json STDIN /dev/null IN . INTO result_1.t
 EXTRACT STDOUT FROM result_1.txt INTO output.json
 
 REPLACE $VERSION WITH '[VERSION]' IN result_1.txt
-DROP LINES MATCHING '"duration":' IN result_1.txt
-DROP LINES MATCHING '"start":' IN result_1.txt
-DROP LINES MATCHING '"stop":' IN result_1.txt
-DROP LINES MATCHING '"threadId":' IN result_1.txt
-DROP LINES MATCHING '"trace":' IN result_1.txt
+DROP LINES CONTAINING '"duration":' IN result_1.txt
+DROP LINES CONTAINING '"start":' IN result_1.txt
+DROP LINES CONTAINING '"stop":' IN result_1.txt
+DROP LINES CONTAINING '"threadId":' IN result_1.txt
+DROP LINES CONTAINING '"trace":' IN result_1.txt
 REPLACE $CWD WITH '[CWD]' IN result_1.txt
 
 WRITE expected_1.txt UNTIL EOF

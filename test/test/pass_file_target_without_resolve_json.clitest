@@ -30,10 +30,10 @@ RUN test this/is/a/very/very/very/long/path/test.json --json STDIN /dev/null IN 
 EXTRACT STDOUT FROM result_0.txt INTO output.json
 
 REPLACE $VERSION WITH '[VERSION]' IN result_0.txt
-DROP LINES MATCHING '"duration":' IN result_0.txt
-DROP LINES MATCHING '"start":' IN result_0.txt
-DROP LINES MATCHING '"stop":' IN result_0.txt
-DROP LINES MATCHING '"threadId":' IN result_0.txt
+DROP LINES CONTAINING '"duration":' IN result_0.txt
+DROP LINES CONTAINING '"start":' IN result_0.txt
+DROP LINES CONTAINING '"stop":' IN result_0.txt
+DROP LINES CONTAINING '"threadId":' IN result_0.txt
 REPLACE $CWD_URI WITH '[CWD_URI]' IN result_0.txt
 REPLACE $CWD WITH '[CWD]' IN result_0.txt
 

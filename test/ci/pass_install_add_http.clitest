@@ -55,7 +55,7 @@ WRITE expected_lock.json UNTIL EOF
 }
 EOF
 
-REPLACE '\[HASH\]' WITH $HASH IN expected_lock.json
+REPLACE '[HASH]' WITH $HASH IN expected_lock.json
 
 COMPARE checked_lock.json AGAINST expected_lock.json
 

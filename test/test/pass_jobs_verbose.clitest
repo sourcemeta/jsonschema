@@ -39,7 +39,7 @@ WRITE expected_0.txt UNTIL EOF
 2> Using parallelism: [CORES]
 EOF
 
-REPLACE '\[CORES\]' WITH $CORES IN expected_0.txt
+REPLACE '[CORES]' WITH $CORES IN expected_0.txt
 
 COMPARE result_0.txt AGAINST expected_0.txt
 

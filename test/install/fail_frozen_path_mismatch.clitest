@@ -17,7 +17,7 @@ WRITE project/jsonschema.json UNTIL EOF
 }
 EOF
 
-REPLACE '\[CWD_URI\]' WITH $CWD_URI IN project/jsonschema.json
+REPLACE '[CWD_URI]' WITH $CWD_URI IN project/jsonschema.json
 
 WRITE project/jsonschema.lock.json UNTIL EOF
 {
@@ -32,8 +32,8 @@ WRITE project/jsonschema.lock.json UNTIL EOF
 }
 EOF
 
-REPLACE '\[CWD_URI\]' WITH $CWD_URI IN project/jsonschema.lock.json
-REPLACE '\[CWD\]' WITH $CWD IN project/jsonschema.lock.json
+REPLACE '[CWD_URI]' WITH $CWD_URI IN project/jsonschema.lock.json
+REPLACE '[CWD]' WITH $CWD IN project/jsonschema.lock.json
 
 COPY project/jsonschema.lock.json TO lock_before.json
 

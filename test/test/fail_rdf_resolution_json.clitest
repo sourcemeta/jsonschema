@@ -41,10 +41,10 @@ RUN validate $CTRF_SCHEMA report.json STDIN /dev/null IN . INTO validated.txt EX
 COMPARE validated.txt AGAINST silent.txt
 
 REPLACE $VERSION WITH '[VERSION]' IN result.txt
-DROP LINES MATCHING '"duration":' IN result.txt
-DROP LINES MATCHING '"start":' IN result.txt
-DROP LINES MATCHING '"stop":' IN result.txt
-DROP LINES MATCHING '"threadId":' IN result.txt
+DROP LINES CONTAINING '"duration":' IN result.txt
+DROP LINES CONTAINING '"start":' IN result.txt
+DROP LINES CONTAINING '"stop":' IN result.txt
+DROP LINES CONTAINING '"threadId":' IN result.txt
 REPLACE $CWD WITH '[CWD]' IN result.txt
 
 WRITE expected.txt UNTIL EOF
