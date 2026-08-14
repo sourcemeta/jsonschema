@@ -49,10 +49,11 @@ called `OUT` cannot consume the front of `$OUTPUT`.
 
 A pattern is never expanded, so `$` in one is the regular expression anchor and
 nothing else: `^abc$`, `a{2}$` and `$$` all mean what they say, and a dollar
-sign that really does precede a name is escaped, as in `\\$schema`. What
-remains, an unescaped `$` followed by a name, is rejected rather than matched.
-An anchor is zero width, so such a pattern could match no input at all, and an
-author who writes one almost certainly wanted the literal form.
+sign that really does precede a name is written `\\$schema`, or `[$a]` inside a
+character class. What remains, an unescaped `$` followed by a name and outside
+a class, is rejected rather than matched. An anchor is zero width, so such a
+pattern could match no input at all, and an author who writes one almost
+certainly wanted the literal form.
 
 `RUN` is read from the end: the last eight tokens are its trailer, and anything
 before them is passed to the binary. `STDIN /dev/null` means empty input on
@@ -114,18 +115,45 @@ VARIABLE = re.compile(
     r"\$\$|\$\{([A-Za-z_][A-Za-z0-9_]*)\}|\$([A-Za-z_][A-Za-z0-9_]*)")
 
 
+def end_of_character_class(pattern, index):
+    """The index just past the character class opening at `index`.
+
+    A closing bracket is itself an ordinary character when it opens the class,
+    after an optional negating caret. An unterminated class is not a class at
+    all, so it is left for the engine to reject.
+    """
+    cursor = index + 1
+    if cursor < len(pattern) and pattern[cursor] == "^":
+        cursor += 1
+    if cursor < len(pattern) and pattern[cursor] == "]":
+        cursor += 1
+    while cursor < len(pattern):
+        if pattern[cursor] == "\\":
+            cursor += 2
+        elif pattern[cursor] == "]":
+            return cursor + 1
+        else:
+            cursor += 1
+    return index + 1
+
+
 def variable_reference(pattern):
     """The first variable reference in a pattern, or None if it holds none.
 
     Read with the same scanner as an operand, but a pattern is a regular
-    expression rather than text, so two of its shapes are not references at
+    expression rather than text, so three of its shapes are not references at
     all. A backslash escapes what follows it, making `\\$schema` a dollar sign
-    before a name, and `$$` is a pair of anchors rather than an escaped dollar.
+    before a name. `$$` is a pair of anchors rather than an escaped dollar. And
+    a dollar sign inside a character class is an ordinary character, so `[$a]`
+    is a class holding one.
     """
     index = 0
     while index < len(pattern):
         if pattern[index] == "\\":
             index += 2
+            continue
+        if pattern[index] == "[":
+            index = end_of_character_class(pattern, index)
             continue
         match = VARIABLE.match(pattern, index)
         if match is None:
@@ -521,7 +549,19 @@ def check(statements):
 
     for position, statement in enumerate(statements):
         operands = statement.operands
-        for token in operands:
+        # A pattern is never expanded, so a name appearing inside one is not a
+        # use of that name, however it is spelled. Reading it as one would let
+        # a checksum nothing ever expands pass this check
+        if statement.keyword == "REPLACE" and len(operands) == 6 \
+                and operands[0] == "MATCHING":
+            scanned = operands[:1] + operands[2:]
+        elif statement.keyword == "DROP" and len(operands) == 5 \
+                and operands[1] == "MATCHING":
+            scanned = operands[:2] + operands[3:]
+        else:
+            scanned = operands
+
+        for token in scanned:
             for match in VARIABLE.finditer(token):
                 name = match.group(1) or match.group(2)
                 # A `$$` match names nothing, being an escaped dollar sign

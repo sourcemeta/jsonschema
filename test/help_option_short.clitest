@@ -1,5 +1,5 @@
 RUN -h STDIN /dev/null IN . INTO result.txt EXPECTING 0
-REPLACE '\.exe' WITH '' IN result.txt
+REPLACE .exe WITH '' IN result.txt
 REPLACE $VERSION WITH '[VERSION]' IN result.txt
 
 WRITE expected.txt UNTIL EOF
