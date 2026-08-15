@@ -295,3 +295,7 @@ yours. This is the same way that managing your proprietary code with
 [Git](https://git-scm.com) does not make your code subject to the
 [GPL](https://www.gnu.org/licenses/gpl-3.0.en.html). For any other use, please
 refer to the full [license](./LICENSE).
+
+*If you still require a non-copyleft license to run this tool inside your
+organisation, reach out to
+[hello@sourcemeta.com](mailto:hello@sourcemeta.com).*
