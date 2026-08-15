@@ -297,5 +297,6 @@ yours. This is the same way that managing your proprietary code with
 refer to the full [license](./LICENSE).
 
 *If you still require a non-copyleft license to run this tool inside your
-organisation, reach out to
-[hello@sourcemeta.com](mailto:hello@sourcemeta.com).*
+organisation, see our [licensing page](https://www.sourcemeta.com/licensing/)
+and reach out to [hello@sourcemeta.com](mailto:hello@sourcemeta.com) to discuss
+further*
