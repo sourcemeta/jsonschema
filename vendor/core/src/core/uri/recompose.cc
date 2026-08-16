@@ -4,8 +4,6 @@
 
 #include "escaping.h"
 
-#include <array>       // std::array
-#include <charconv>    // std::to_chars
 #include <cstdint>     // std::uint32_t
 #include <optional>    // std::optional
 #include <string>      // std::string
@@ -119,11 +117,7 @@ auto recompose_authority(std::string &output,
 
   if (port.has_value()) {
     output += ':';
-    std::array<char, 20> port_buffer{};
-    const auto [end_pointer, error_code] =
-        std::to_chars(port_buffer.data(),
-                      port_buffer.data() + port_buffer.size(), port.value());
-    output.append(port_buffer.data(), end_pointer);
+    digits_append(output, port.value());
   }
 }
 

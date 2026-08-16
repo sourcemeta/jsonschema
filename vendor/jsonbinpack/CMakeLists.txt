@@ -36,6 +36,12 @@ if(JSONBINPACK_INSTALL)
     COMPONENT sourcemeta_jsonbinpack_dev)
 endif()
 
+if(JSONBINPACK_ADDRESS_SANITIZER)
+  sourcemeta_sanitizer(TYPE address)
+elseif(JSONBINPACK_UNDEFINED_SANITIZER)
+  sourcemeta_sanitizer(TYPE undefined)
+endif()
+
 # Runtime
 if(JSONBINPACK_RUNTIME)
   add_subdirectory(src/runtime)
@@ -44,12 +50,6 @@ endif()
 # Compiler
 if(JSONBINPACK_COMPILER)
   add_subdirectory(src/compiler)
-endif()
-
-if(JSONBINPACK_ADDRESS_SANITIZER)
-  sourcemeta_sanitizer(TYPE address)
-elseif(JSONBINPACK_UNDEFINED_SANITIZER)
-  sourcemeta_sanitizer(TYPE undefined)
 endif()
 
 if(JSONBINPACK_DOCS)

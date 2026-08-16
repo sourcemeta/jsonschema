@@ -1,8 +1,6 @@
 #include <sourcemeta/core/semver.h>
 #include <sourcemeta/core/text.h>
 
-#include <array>    // std::array
-#include <charconv> // std::to_chars
 #include <limits>   // std::numeric_limits
 #include <optional> // std::optional, std::nullopt
 #include <string>   // std::string
@@ -428,21 +426,13 @@ auto SemVer::operator<(const SemVer &other) const noexcept -> bool {
 }
 
 auto SemVer::to_string() const -> std::string {
-  std::array<char, 20> buffer{};
-
-  auto [major_end, major_error] =
-      std::to_chars(buffer.data(), buffer.data() + buffer.size(), this->major_);
-  std::string result{buffer.data(), major_end};
+  std::string result;
+  digits_append(result, this->major_);
   result += '.';
-
-  auto [minor_end, minor_error] =
-      std::to_chars(buffer.data(), buffer.data() + buffer.size(), this->minor_);
-  result.append(buffer.data(), minor_end);
+  digits_append(result, this->minor_);
   result += '.';
+  digits_append(result, this->patch_);
 
-  auto [patch_end, patch_error] =
-      std::to_chars(buffer.data(), buffer.data() + buffer.size(), this->patch_);
-  result.append(buffer.data(), patch_end);
   if (!this->pre_release_.empty()) {
     result += '-';
     result.append(this->pre_release_.data(), this->pre_release_.size());

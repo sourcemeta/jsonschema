@@ -1,4 +1,5 @@
 vendorpull https://github.com/sourcemeta/vendorpull 89f348a97842e05aeab45d338d41fb02031fad62
+mimalloc https://github.com/microsoft/mimalloc v3.4.4
 jsontestsuite https://github.com/nst/JSONTestSuite d64aefb55228d9584d3e5b2433f720ea8fd00c82
 yaml-test-suite https://github.com/yaml/yaml-test-suite data-2022-01-17
 cmark-gfm https://github.com/github/cmark-gfm 587a12bb54d95ac37241377e6ddc93ea0e45439b

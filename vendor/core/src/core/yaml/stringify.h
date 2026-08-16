@@ -3,6 +3,7 @@
 
 #include <sourcemeta/core/json.h>
 #include <sourcemeta/core/jsonpointer.h>
+#include <sourcemeta/core/text.h>
 #include <sourcemeta/core/yaml_roundtrip.h>
 
 #include <array>       // std::array
@@ -441,13 +442,9 @@ inline auto write_inline_value(OutputStream &stream, const JSON &value,
         stream.write("false", 5);
       }
       break;
-    case JSON::Type::Integer: {
-      std::array<char, 20> buffer{};
-      const auto [end_pointer, error_code] = std::to_chars(
-          buffer.data(), buffer.data() + buffer.size(), value.to_integer());
-      stream.write(buffer.data(),
-                   static_cast<std::streamsize>(end_pointer - buffer.data()));
-    } break;
+    case JSON::Type::Integer:
+      digits_write(stream, value.to_integer());
+      break;
     case JSON::Type::Real: {
       const auto real{value.to_real()};
       if (real == 0.0) {

@@ -44,6 +44,7 @@ option(SOURCEMETA_CORE_GZIP "Build the Sourcemeta Core GZIP library" ON)
 option(SOURCEMETA_CORE_HTML "Build the Sourcemeta Core HTML library" ON)
 option(SOURCEMETA_CORE_CSS "Build the Sourcemeta Core CSS library" ON)
 option(SOURCEMETA_CORE_MARKDOWN "Build the Sourcemeta Core Markdown library" ON)
+option(SOURCEMETA_CORE_DIFF "Build the Sourcemeta Core Diff library" ON)
 option(SOURCEMETA_CORE_TESTS "Build the Sourcemeta Core tests" OFF)
 option(SOURCEMETA_CORE_TESTS_CI "Build the Sourcemeta Core CI tests" OFF)
 option(SOURCEMETA_CORE_BENCHMARK "Build the Sourcemeta Core benchmarks" OFF)
@@ -52,6 +53,7 @@ option(SOURCEMETA_CORE_INSTALL "Install the Sourcemeta Core library" ON)
 option(SOURCEMETA_CORE_ADDRESS_SANITIZER "Build Sourcemeta Core with an address sanitizer" OFF)
 option(SOURCEMETA_CORE_UNDEFINED_SANITIZER "Build Sourcemeta Core with an undefined behavior sanitizer" OFF)
 option(SOURCEMETA_CORE_CONTRIB_GOOGLEBENCHMARK "Build the GoogleBenchmark library for downstream consumers" OFF)
+option(SOURCEMETA_CORE_USE_SYSTEM_ALLOCATOR "Always use the system allocator" OFF)
 
 include(Sourcemeta)
 
@@ -65,6 +67,14 @@ if(SOURCEMETA_CORE_ADDRESS_SANITIZER)
   sourcemeta_sanitizer(TYPE address)
 elseif(SOURCEMETA_CORE_UNDEFINED_SANITIZER)
   sourcemeta_sanitizer(TYPE undefined)
+endif()
+
+if((SOURCEMETA_OS_LINUX OR SOURCEMETA_OS_MACOS)
+   AND NOT SOURCEMETA_CORE_ADDRESS_SANITIZER
+   AND NOT SOURCEMETA_CORE_UNDEFINED_SANITIZER
+   AND NOT SOURCEMETA_CORE_USE_SYSTEM_ALLOCATOR)
+  message(STATUS "Using the mimalloc allocator")
+  find_package(Mimalloc REQUIRED)
 endif()
 
 # TODO: Turn this into a re-usable utility CMake function
@@ -248,6 +258,10 @@ if(SOURCEMETA_CORE_MARKDOWN)
   add_subdirectory(src/core/markdown)
 endif()
 
+if(SOURCEMETA_CORE_DIFF)
+  add_subdirectory(src/core/diff)
+endif()
+
 if(SOURCEMETA_CORE_DOCS)
   sourcemeta_target_doxygen(CONFIG "${PROJECT_SOURCE_DIR}/doxygen/Doxyfile.in"
     OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/website")
@@ -421,6 +435,10 @@ if(SOURCEMETA_CORE_TESTS)
 
   if(SOURCEMETA_CORE_MARKDOWN)
     add_subdirectory(test/markdown)
+  endif()
+
+  if(SOURCEMETA_CORE_DIFF)
+    add_subdirectory(test/diff)
   endif()
 
   if(PROJECT_IS_TOP_LEVEL)

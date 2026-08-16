@@ -10,7 +10,11 @@ target_link_libraries(sourcemeta_core_test
 target_link_libraries(sourcemeta_core_test
   PRIVATE sourcemeta::core::options)
 target_link_libraries(sourcemeta_core_test
+  PRIVATE sourcemeta::core::text)
+target_link_libraries(sourcemeta_core_test
   PRIVATE sourcemeta::core::stacktrace)
+target_link_libraries(sourcemeta_core_test
+  PRIVATE sourcemeta::core::diff)
 
 # A dedicated, always-static entry point library. Linking it into every test
 # executable provides a default `main()` through static archive resolution,
