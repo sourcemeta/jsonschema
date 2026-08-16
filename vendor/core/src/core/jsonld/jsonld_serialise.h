@@ -3,6 +3,7 @@
 
 #include <sourcemeta/core/json.h>
 #include <sourcemeta/core/numeric.h>
+#include <sourcemeta/core/text.h>
 
 #include <algorithm> // std::copy
 #include <array>     // std::array
@@ -209,12 +210,8 @@ inline auto typed_literal_lexical_form(const JSON &value,
       if (is_floating_point_datatype(datatype)) {
         return scientific_lexical_form(static_cast<double>(value.to_integer()));
       }
-      std::array<char, 20> buffer{};
-      const auto conversion{std::to_chars(
-          buffer.data(), buffer.data() + buffer.size(), value.to_integer())};
-      assert(conversion.ec == std::errc{});
-      return JSON::String{buffer.data(), static_cast<std::size_t>(
-                                             conversion.ptr - buffer.data())};
+      DigitsBuffer buffer;
+      return JSON::String{digits_view(value.to_integer(), buffer)};
     }
     case JSON::Type::Real:
       return is_floating_point_datatype(datatype)

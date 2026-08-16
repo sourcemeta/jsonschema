@@ -50,6 +50,13 @@ if(PROJECT_IS_TOP_LEVEL)
   sourcemeta_enable_simd()
 endif()
 
+# Enable the sanitizers before defining any target
+if(BLAZE_ADDRESS_SANITIZER)
+  sourcemeta_sanitizer(TYPE address)
+elseif(BLAZE_UNDEFINED_SANITIZER)
+  sourcemeta_sanitizer(TYPE undefined)
+endif()
+
 if(BLAZE_FOUNDATION)
   add_subdirectory(src/foundation)
 endif()
@@ -104,12 +111,6 @@ endif()
 
 if(BLAZE_CONTRIB)
   add_subdirectory(contrib)
-endif()
-
-if(BLAZE_ADDRESS_SANITIZER)
-  sourcemeta_sanitizer(TYPE address)
-elseif(BLAZE_UNDEFINED_SANITIZER)
-  sourcemeta_sanitizer(TYPE undefined)
 endif()
 
 if(BLAZE_DOCS)

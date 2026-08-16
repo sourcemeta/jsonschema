@@ -1,11 +1,9 @@
 #include <sourcemeta/core/dns.h>
 #include <sourcemeta/core/http.h>
+#include <sourcemeta/core/text.h>
 
-#include <array>       // std::array
-#include <charconv>    // std::to_chars
 #include <chrono>      // std::chrono::seconds
 #include <cstddef>     // std::size_t
-#include <limits>      // std::numeric_limits
 #include <optional>    // std::optional, std::nullopt
 #include <string>      // std::string
 #include <string_view> // std::string_view
@@ -174,17 +172,11 @@ auto http_serialize_cookie(const HTTPCookie &cookie, std::string &out) -> bool {
   }
 
   // Format the max age into a stack buffer, avoiding an intermediate heap
-  // allocation. A non-negative representation never exceeds these digits
-  std::array<char, std::numeric_limits<std::chrono::seconds::rep>::digits10 + 2>
-      max_age_buffer;
+  // allocation
+  DigitsBuffer max_age_buffer;
   std::string_view max_age;
   if (cookie.max_age.has_value()) {
-    const auto result{std::to_chars(
-        max_age_buffer.data(), max_age_buffer.data() + max_age_buffer.size(),
-        cookie.max_age->count())};
-    max_age = std::string_view{
-        max_age_buffer.data(),
-        static_cast<std::size_t>(result.ptr - max_age_buffer.data())};
+    max_age = digits_view(cookie.max_age->count(), max_age_buffer);
   }
 
   out.reserve(out.size() + required_size(cookie, max_age));

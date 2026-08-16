@@ -13,7 +13,7 @@
 #include <sstream>         // std::ostringstream
 #include <string>          // std::string
 #include <string_view>     // std::string_view
-#include <type_traits> // std::is_integral_v, std::is_same_v, std::remove_cv_t
+#include <type_traits> // std::is_integral_v, std::is_same_v, std::remove_cv_t, std::is_convertible_v, std::is_pointer_v, std::remove_cvref_t
 #include <utility> // std::cmp_equal, std::cmp_not_equal, std::cmp_less, std::cmp_greater, std::cmp_less_equal, std::cmp_greater_equal
 
 /// @defgroup test Test
@@ -152,8 +152,19 @@ auto test_compare_greater_equal(const Left &left, const Right &right) -> bool {
   }
 }
 
+template <typename Type>
+concept test_streamable =
+    requires(std::ostream &stream, const Type &value) { stream << value; };
+
+// A pointer is not taken as text, as it may be null and as comparing two of
+// them compares addresses rather than the characters they point to
+template <typename Type>
+concept test_diffable_string =
+    test_streamable<Type> && !std::is_pointer_v<std::remove_cvref_t<Type>> &&
+    std::is_convertible_v<const Type &, std::string_view>;
+
 template <typename Type> auto test_stringify(const Type &value) -> std::string {
-  if constexpr (requires(std::ostream &stream) { stream << value; }) {
+  if constexpr (test_streamable<Type>) {
     std::ostringstream stream;
     stream << value;
     return stream.str();
@@ -162,9 +173,25 @@ template <typename Type> auto test_stringify(const Type &value) -> std::string {
   }
 }
 
+/// @ingroup test
+///
+/// Render the differences between two strings in the unified format, or nothing
+/// if showing both values as they are is just as informative.
+SOURCEMETA_CORE_TEST_EXPORT
+auto test_stringify_difference(std::string_view actual,
+                               std::string_view expected) -> std::string;
+
 template <typename Left, typename Right>
 auto test_describe_mismatch(std::string_view expression, const Left &left,
                             const Right &right) -> std::string {
+  if constexpr (test_diffable_string<Left> && test_diffable_string<Right>) {
+    const auto difference{test_stringify_difference(left, right)};
+    if (!difference.empty()) {
+      return std::string{"expected "} + std::string{expression} + "\n" +
+             difference;
+    }
+  }
+
   return std::string{"expected "} + std::string{expression} +
          "\n  actual:   " + test_stringify(left) +
          "\n  expected: " + test_stringify(right);

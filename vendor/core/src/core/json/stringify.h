@@ -2,6 +2,7 @@
 #define SOURCEMETA_CORE_JSON_STRINGIFY_H_
 
 #include <sourcemeta/core/json_value.h>
+#include <sourcemeta/core/text.h>
 
 #include "grammar.h"
 
@@ -62,13 +63,7 @@ auto stringify(
     const std::int64_t value,
     std::basic_ostream<typename JSON::Char, typename JSON::CharTraits> &stream)
     -> void {
-  std::array<char, 20> buffer{};
-  const auto [end_pointer, error_code] =
-      std::to_chars(buffer.data(), buffer.data() + buffer.size(), value);
-  stream.write(buffer.data(),
-               static_cast<typename std::basic_ostream<
-                   typename JSON::Char, typename JSON::CharTraits>::int_type>(
-                   end_pointer - buffer.data()));
+  digits_write(stream, value);
 }
 
 template <template <typename T> typename Allocator>

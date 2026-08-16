@@ -5,15 +5,20 @@
 #include <sourcemeta/core/text_export.h>
 #endif
 
+#include <algorithm>   // std::max
 #include <array>       // std::array
-#include <concepts>    // std::same_as
+#include <charconv>    // std::to_chars
+#include <concepts>    // std::same_as, std::integral
 #include <cstddef>     // std::size_t
-#include <cstdint>     // std::int8_t
+#include <cstdint>     // std::int8_t, std::uint64_t
 #include <filesystem>  // std::filesystem::path
+#include <ios>         // std::streamsize
+#include <limits>      // std::numeric_limits
 #include <optional>    // std::optional
 #include <ostream>     // std::ostream
 #include <string>      // std::string
 #include <string_view> // std::string_view
+#include <type_traits> // std::remove_cv_t
 #include <utility>     // std::pair
 #include <vector>      // std::vector
 
@@ -575,6 +580,115 @@ auto join_to(std::ostream &stream, const Range &items,
     stream << item;
     first = false;
   }
+}
+
+/// @ingroup text
+///
+/// The integer types that can be spelled out in decimal. Booleans are excluded
+/// because they have a textual form of their own that callers rarely want
+/// rendered as a digit.
+template <typename Type>
+concept text_spellable_integer =
+    std::integral<Type> && !std::same_as<std::remove_cv_t<Type>, bool> &&
+    sizeof(Type) <= sizeof(std::uint64_t);
+
+/// @ingroup text
+///
+/// The exact number of characters that the decimal spelling of an integer type
+/// can require. The largest magnitude needs one character more than the type
+/// represents without loss, and a signed type needs one more again for a sign.
+template <typename Integer>
+  requires text_spellable_integer<Integer>
+inline constexpr std::size_t digits_capacity{
+    static_cast<std::size_t>(std::numeric_limits<Integer>::digits10) + 1 +
+    (std::numeric_limits<Integer>::is_signed ? 1U : 0U)};
+
+/// @ingroup text
+///
+/// A buffer wide enough for the decimal spelling of any integer of up to 64
+/// bits, including a leading sign. That bound is twenty characters, reached by
+/// both the largest unsigned value and the smallest signed one.
+using DigitsBuffer = std::array<char, std::max(digits_capacity<std::uint64_t>,
+                                               digits_capacity<std::int64_t>)>;
+
+/// @ingroup text
+///
+/// Write the decimal spelling of an integer into a caller-provided buffer,
+/// returning a view of the characters written. That view stays valid for as
+/// long as the buffer does. For example:
+///
+/// ```cpp
+/// #include <sourcemeta/core/text.h>
+/// #include <cassert>
+///
+/// sourcemeta::core::DigitsBuffer buffer;
+/// assert(sourcemeta::core::digits_view(1234, buffer) == "1234");
+/// ```
+///
+/// Use this when the result feeds a lookup or another view-taking interface.
+/// It never consults a locale, so a digit grouping separator can never appear
+/// in the result.
+///
+/// Any sufficiently large buffer is accepted, so a caller that only ever
+/// formats a narrow type can size one down to its capacity. Requiring the
+/// buffer to fit the widest possible value is what makes the conversion unable
+/// to fail, which is why it reports no error.
+template <typename Integer, std::size_t Capacity>
+  requires text_spellable_integer<Integer> &&
+           (Capacity >= digits_capacity<Integer>)
+inline auto digits_view(const Integer value,
+                        std::array<char, Capacity> &buffer) noexcept
+    -> std::string_view {
+  const auto result{
+      std::to_chars(buffer.data(), buffer.data() + buffer.size(), value)};
+  return {buffer.data(), static_cast<std::size_t>(result.ptr - buffer.data())};
+}
+
+/// @ingroup text
+///
+/// Append the decimal spelling of an integer to a string like output sink. For
+/// example:
+///
+/// ```cpp
+/// #include <sourcemeta/core/text.h>
+/// #include <cassert>
+/// #include <string>
+///
+/// std::string result{"port="};
+/// sourcemeta::core::digits_append(result, 8080);
+/// assert(result == "port=8080");
+/// ```
+template <typename Output, typename Integer>
+  requires text_spellable_integer<Integer>
+inline auto digits_append(Output &output, const Integer value) -> void {
+  std::array<char, digits_capacity<Integer>> buffer;
+  const auto digits{digits_view(value, buffer)};
+  output.append(digits.data(), digits.size());
+}
+
+/// @ingroup text
+///
+/// Write the decimal spelling of an integer to a stream. For example:
+///
+/// ```cpp
+/// #include <sourcemeta/core/text.h>
+/// #include <iostream>
+///
+/// sourcemeta::core::digits_write(std::cout, 1234);
+/// // prints: 1234
+/// ```
+///
+/// Prefer this to the stream insertion operator wherever the output has a
+/// machine-readable grammar. Insertion formats through the stream's imbued
+/// locale, so a locale carrying a digit grouping separator would otherwise
+/// break the result apart.
+template <typename CharT, typename Traits, typename Integer>
+  requires text_spellable_integer<Integer>
+inline auto digits_write(std::basic_ostream<CharT, Traits> &stream,
+                         const Integer value) -> void {
+  std::array<char, digits_capacity<Integer>> buffer;
+  const auto digits{digits_view(value, buffer)};
+  stream.write(digits.data(), static_cast<std::streamsize>(digits.size()));
 }
 
 /// @ingroup text

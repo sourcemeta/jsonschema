@@ -66,6 +66,14 @@ function(sourcemeta_library)
 
   add_library(${ALIAS_NAME} ALIAS ${TARGET_NAME})
 
+  if(Mimalloc_FOUND)
+    if(SOURCEMETA_LIBRARY_SOURCES)
+      target_link_libraries(${TARGET_NAME} PRIVATE Mimalloc::Mimalloc)
+    else()
+      target_link_libraries(${TARGET_NAME} INTERFACE Mimalloc::Mimalloc)
+    endif()
+  endif()
+
   if(NOT SOURCEMETA_LIBRARY_VARIANT)
     set(include_dir "${CMAKE_CURRENT_SOURCE_DIR}/include")
   else()

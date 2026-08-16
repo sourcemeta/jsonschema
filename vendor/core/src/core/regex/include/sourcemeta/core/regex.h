@@ -95,6 +95,8 @@ enum class RegexDialect : std::uint8_t {
 /// - Regexes assume Unicode
 /// - Regexes are case sensitive
 /// - No matching happens (only boolean validation)
+/// - When optimising for matching, a pattern that only needs a yes or no
+///   answer may compile to a faster form that cannot rewrite a subject
 ///
 /// For example:
 ///
@@ -109,8 +111,8 @@ enum class RegexDialect : std::uint8_t {
 /// ```
 SOURCEMETA_CORE_REGEX_EXPORT
 auto to_regex(const std::string_view pattern,
-              const RegexDialect dialect = RegexDialect::Permissive)
-    -> std::optional<Regex>;
+              const RegexDialect dialect = RegexDialect::Permissive,
+              const bool optimise_for_match = true) -> std::optional<Regex>;
 
 /// @ingroup regex
 ///
@@ -145,6 +147,28 @@ auto matches_if_valid(const std::string_view pattern,
                       const std::string_view value,
                       const RegexDialect dialect = RegexDialect::Permissive)
     -> bool;
+
+/// @ingroup regex
+///
+/// Replace every match of a regular expression with the given text, which is
+/// inserted literally. The regular expression must have been compiled without
+/// optimising for matching, and the behaviour is undefined otherwise. A subject
+/// that exhausts a matching resource is left alone, just as it would count as a
+/// failure to match. For example:
+///
+/// ```cpp
+/// #include <sourcemeta/core/regex.h>
+/// #include <cassert>
+///
+/// const auto regex{sourcemeta::core::to_regex("[0-9]+",
+///   sourcemeta::core::RegexDialect::Permissive, false)};
+/// assert(regex.has_value());
+/// assert(sourcemeta::core::replace_all(regex.value(), "a1b22c", "#") ==
+///        "a#b#c");
+/// ```
+SOURCEMETA_CORE_REGEX_EXPORT
+auto replace_all(const Regex &regex, const std::string_view subject,
+                 const std::string_view replacement) -> std::string;
 
 /// @ingroup regex
 ///

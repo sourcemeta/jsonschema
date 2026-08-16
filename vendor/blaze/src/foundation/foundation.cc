@@ -260,13 +260,14 @@ auto sourcemeta::blaze::dialect(const sourcemeta::core::JSON &schema,
   return dialect_value.to_string();
 }
 
-// A meta-schema that is not known to the resolver may still be embedded in
-// the document itself. Across every official base dialect, the only
-// containers that can hold embedded resources are `$defs` and `definitions`,
-// which no custom dialect can redefine away. A candidate only counts if its
-// entire meta-schema chain terminates at an official base dialect and every
-// embedded link declares its identifier and sits in a container in a way
-// that is valid for such base dialect
+// A meta-schema that the document embeds takes precedence over what the
+// resolver knows about, at every link of the chain, as the document pins the
+// exact meta-schemas it is described by. Across every official base dialect,
+// the only containers that can hold embedded resources are `$defs` and
+// `definitions`, which no custom dialect can redefine away. A candidate only
+// counts if its entire meta-schema chain terminates at an official base
+// dialect and every embedded link declares its identifier and sits in a
+// container in a way that is valid for such base dialect
 auto sourcemeta::blaze::metaschema_try_embedded(
     const sourcemeta::core::JSON &schema, const std::string_view identifier,
     const SchemaResolver &resolver) -> const sourcemeta::core::JSON * {
@@ -319,28 +320,26 @@ auto sourcemeta::blaze::metaschema_try_embedded(
       break;
     }
 
+    if (sourcemeta::core::URI::is_uri(dialect_uri)) {
+      const auto next{sourcemeta::blaze::embedded_metaschema_candidate(
+          schema, dialect_uri)};
+      if (next.first) {
+        links.push_back({.schema = next.first,
+                         .identifier = dialect_uri,
+                         .container = next.second});
+        current = next.first;
+        current_identifier = dialect_uri;
+        continue;
+      }
+    }
+
     auto remote{resolver(dialect_uri)};
-    if (remote.has_value()) {
-      resolved.push_back(std::move(remote).value());
-      current = &resolved.back();
-      current_identifier = dialect_uri;
-      continue;
-    }
-
-    if (!sourcemeta::core::URI::is_uri(dialect_uri)) {
+    if (!remote.has_value()) {
       return nullptr;
     }
 
-    const auto next{
-        sourcemeta::blaze::embedded_metaschema_candidate(schema, dialect_uri)};
-    if (!next.first) {
-      return nullptr;
-    }
-
-    links.push_back({.schema = next.first,
-                     .identifier = dialect_uri,
-                     .container = next.second});
-    current = next.first;
+    resolved.push_back(std::move(remote).value());
+    current = &resolved.back();
     current_identifier = dialect_uri;
   }
 

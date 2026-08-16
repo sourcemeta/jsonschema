@@ -6,6 +6,7 @@
 #include "iregexp.h"
 #include "permissive.h"
 
+#include <cassert>      // assert
 #include <charconv>     // std::from_chars
 #include <cstddef>      // std::size_t
 #include <cstdint>      // std::uint32_t
@@ -14,6 +15,7 @@
 #include <string_view>  // std::string_view
 #include <system_error> // std::errc
 #include <utility>      // std::unreachable
+#include <variant>      // std::holds_alternative, std::get_if
 
 namespace sourcemeta::core {
 
@@ -91,8 +93,8 @@ auto lookbehinds_as_lookaheads(const std::string &pattern) -> std::string {
 
 } // namespace
 
-auto to_regex(const std::string_view pattern, const RegexDialect dialect)
-    -> std::optional<Regex> {
+auto to_regex(const std::string_view pattern, const RegexDialect dialect,
+              const bool optimise_for_match) -> std::optional<Regex> {
   if (dialect != RegexDialect::Permissive) {
     const auto translated{
         translate_iregexp(pattern, dialect == RegexDialect::IRegexp)};
@@ -107,52 +109,59 @@ auto to_regex(const std::string_view pattern, const RegexDialect dialect)
                                                  PCRE2_MATCH_INVALID_UTF);
   }
 
-  if (pattern == ".*" || pattern == "^.*$" || pattern == "^(.*)$" ||
-      pattern == "(.*)" || pattern == "[\\s\\S]*" || pattern == "^[\\s\\S]*$") {
-    return RegexTypeNoop{};
+  // These forms answer whether a subject matches without consulting an engine,
+  // but they cannot report what a match covered, so rewriting a subject with
+  // one is impossible and they are skipped when the caller needs that
+  if (optimise_for_match) {
+    if (pattern == ".*" || pattern == "^.*$" || pattern == "^(.*)$" ||
+        pattern == "(.*)" || pattern == "[\\s\\S]*" ||
+        pattern == "^[\\s\\S]*$") {
+      return RegexTypeNoop{};
 
-    // Note that the JSON Schema specification does not impose the use of any
-    // regular expression flag. Given popular adoption, we assume `.` matches
-    // new line characters (as in the `DOTALL`) option
-  } else if (pattern == ".+" || pattern == "^.+$" || pattern == "^(.+)$" ||
-             pattern == ".") {
-    return RegexTypeNonEmpty{};
-  }
-
-  const char *const pattern_data{pattern.empty() ? "" : pattern.data()};
-
-  const std::regex PREFIX_REGEX{R"(^\^([a-zA-Z0-9-_/@]+)(\.\*)?)"};
-  std::cmatch matches_prefix;
-  if (std::regex_match(pattern_data, pattern_data + pattern.size(),
-                       matches_prefix, PREFIX_REGEX)) {
-    return RegexTypePrefix{matches_prefix[1].str()};
-  }
-
-  const std::regex RANGE_REGEX{R"(^\^\.\{(\d+),(\d+)\}\$$)"};
-  std::cmatch matches_range;
-  if (std::regex_match(pattern_data, pattern_data + pattern.size(),
-                       matches_range, RANGE_REGEX)) {
-    const auto minimum_string = matches_range[1].str();
-    const auto maximum_string = matches_range[2].str();
-    std::size_t minimum{};
-    std::size_t maximum{};
-    const auto minimum_result =
-        std::from_chars(minimum_string.data(),
-                        minimum_string.data() + minimum_string.size(), minimum);
-    const auto maximum_result =
-        std::from_chars(maximum_string.data(),
-                        maximum_string.data() + maximum_string.size(), maximum);
-    if (minimum_result.ec != std::errc{} || maximum_result.ec != std::errc{}) {
-      return std::nullopt;
+      // Note that the JSON Schema specification does not impose the use of any
+      // regular expression flag. Given popular adoption, we assume `.` matches
+      // new line characters (as in the `DOTALL`) option
+    } else if (pattern == ".+" || pattern == "^.+$" || pattern == "^(.+)$" ||
+               pattern == ".") {
+      return RegexTypeNonEmpty{};
     }
 
-    // ECMA-262 defines "numbers out of order in {} quantifier" as a
-    // SyntaxError, so such a pattern is not a valid regular expression
-    if (minimum > maximum) {
-      return std::nullopt;
+    const char *const pattern_data{pattern.empty() ? "" : pattern.data()};
+
+    const std::regex PREFIX_REGEX{R"(^\^([a-zA-Z0-9-_/@]+)(\.\*)?)"};
+    std::cmatch matches_prefix;
+    if (std::regex_match(pattern_data, pattern_data + pattern.size(),
+                         matches_prefix, PREFIX_REGEX)) {
+      return RegexTypePrefix{matches_prefix[1].str()};
     }
 
-    return RegexTypeRange{minimum, maximum};
+    const std::regex RANGE_REGEX{R"(^\^\.\{(\d+),(\d+)\}\$$)"};
+    std::cmatch matches_range;
+    if (std::regex_match(pattern_data, pattern_data + pattern.size(),
+                         matches_range, RANGE_REGEX)) {
+      const auto minimum_string = matches_range[1].str();
+      const auto maximum_string = matches_range[2].str();
+      std::size_t minimum{};
+      std::size_t maximum{};
+      const auto minimum_result = std::from_chars(
+          minimum_string.data(), minimum_string.data() + minimum_string.size(),
+          minimum);
+      const auto maximum_result = std::from_chars(
+          maximum_string.data(), maximum_string.data() + maximum_string.size(),
+          maximum);
+      if (minimum_result.ec != std::errc{} ||
+          maximum_result.ec != std::errc{}) {
+        return std::nullopt;
+      }
+
+      // ECMA-262 defines "numbers out of order in {} quantifier" as a
+      // SyntaxError, so such a pattern is not a valid regular expression
+      if (minimum > maximum) {
+        return std::nullopt;
+      }
+
+      return RegexTypeRange{minimum, maximum};
+    }
   }
 
   const auto translated{translate_permissive(std::string{pattern})};
@@ -203,6 +212,49 @@ auto matches(const Regex &regex, const std::string_view value) -> bool {
   }
 
   std::unreachable();
+}
+
+auto replace_all(const Regex &regex, const std::string_view subject,
+                 const std::string_view replacement) -> std::string {
+  assert(std::holds_alternative<RegexTypePCRE2>(regex));
+  const RegexTypePCRE2 *pcre2_regex{std::get_if<RegexTypePCRE2>(&regex)};
+  auto *pcre2_code_ptr{static_cast<pcre2_code *>(pcre2_regex->code.get())};
+
+  constexpr std::uint32_t options{
+      PCRE2_SUBSTITUTE_GLOBAL | PCRE2_SUBSTITUTE_LITERAL |
+      PCRE2_SUBSTITUTE_OVERFLOW_LENGTH | PCRE2_NO_UTF_CHECK};
+
+  // A replacement that only shortens the subject fits on the first attempt,
+  // and anything longer reports what it needs rather than truncating
+  std::string result(subject.size() + 1, '\0');
+  PCRE2_SIZE result_size{result.size()};
+  int substitute_result{pcre2_substitute(
+      pcre2_code_ptr, reinterpret_cast<PCRE2_SPTR>(subject.data()),
+      subject.size(), 0, options, nullptr, nullptr,
+      reinterpret_cast<PCRE2_SPTR>(replacement.data()), replacement.size(),
+      reinterpret_cast<PCRE2_UCHAR *>(result.data()), &result_size)};
+
+  // The room an overflow needs is reported back through the length, which stays
+  // unset when the substitution ran out of memory for something else. Only the
+  // former can be retried, as the latter would size the buffer from a sentinel
+  if (substitute_result == PCRE2_ERROR_NOMEMORY && result_size != PCRE2_UNSET) {
+    result.resize(result_size);
+    result_size = result.size();
+    substitute_result = pcre2_substitute(
+        pcre2_code_ptr, reinterpret_cast<PCRE2_SPTR>(subject.data()),
+        subject.size(), 0, options, nullptr, nullptr,
+        reinterpret_cast<PCRE2_SPTR>(replacement.data()), replacement.size(),
+        reinterpret_cast<PCRE2_UCHAR *>(result.data()), &result_size);
+  }
+
+  // Exhausting a matching resource counts as finding nothing to rewrite, which
+  // keeps this consistent with how matching treats the same condition
+  if (substitute_result < 0) {
+    return std::string{subject};
+  }
+
+  result.resize(result_size);
+  return result;
 }
 
 auto matches_if_valid(const std::string_view pattern,

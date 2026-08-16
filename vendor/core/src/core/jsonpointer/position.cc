@@ -1,10 +1,9 @@
 #include <sourcemeta/core/json_value.h>
 #include <sourcemeta/core/jsonpointer.h>
+#include <sourcemeta/core/text.h>
 
 #include <algorithm>   // std::count_if
-#include <array>       // std::array
 #include <cassert>     // assert
-#include <charconv>    // std::to_chars
 #include <cstddef>     // std::size_t
 #include <cstdint>     // std::uint64_t
 #include <optional>    // std::optional
@@ -121,11 +120,9 @@ auto PointerPositionTracker::get(const Pointer &pointer) const
         // reference token.
         // See https://www.rfc-editor.org/rfc/rfc6901#section-4
         const auto &properties{this->trie[node].property_children};
-        std::array<char, 20> buffer{};
-        const auto [end_pointer, error_code] = std::to_chars(
-            buffer.data(), buffer.data() + buffer.size(), token.to_index());
+        DigitsBuffer buffer;
         const auto property_iterator{
-            properties.find(std::string_view{buffer.data(), end_pointer})};
+            properties.find(digits_view(token.to_index(), buffer))};
         if (property_iterator == properties.end()) {
           return std::nullopt;
         }
