@@ -4,10 +4,11 @@
 #include <sourcemeta/core/io.h>
 #include <sourcemeta/core/json.h>
 
-#include <iostream> // std::cerr, std::cout
-#include <sstream>  // std::ostringstream
-#include <string>   // std::string
-#include <utility>  // std::move
+#include <iostream>    // std::cerr, std::cout
+#include <sstream>     // std::ostringstream
+#include <string>      // std::string
+#include <string_view> // std::string_view
+#include <utility>     // std::move, std::unreachable
 
 #include "command.h"
 #include "error.h"
@@ -18,41 +19,42 @@
 
 namespace {
 
+auto diff_operation_name(const sourcemeta::core::Diff::Operation::Type type)
+    -> std::string_view {
+  switch (type) {
+    case sourcemeta::core::Diff::Operation::Type::Equal:
+      return "equal";
+    case sourcemeta::core::Diff::Operation::Type::Delete:
+      return "delete";
+    case sourcemeta::core::Diff::Operation::Type::Insert:
+      return "insert";
+    default:
+      std::unreachable();
+  }
+}
+
 auto to_diff_json(const sourcemeta::core::Diff &difference)
     -> sourcemeta::core::JSON {
   auto operations{sourcemeta::core::JSON::make_array()};
 
   for (const auto &operation : difference.operations) {
-    auto entry{sourcemeta::core::JSON::make_object()};
+    // An insertion is the only operation that reads the modified input, as
+    // the lines it introduces are not present in the original one
+    const auto insertion{operation.type ==
+                         sourcemeta::core::Diff::Operation::Type::Insert};
+    const auto &tokens{insertion ? difference.modified : difference.original};
+    const auto start{insertion ? operation.modified_start
+                               : operation.original_start};
+    const auto end{insertion ? operation.modified_end : operation.original_end};
+
     auto lines{sourcemeta::core::JSON::make_array()};
-
-    switch (operation.type) {
-      case sourcemeta::core::Diff::Operation::Type::Equal:
-        entry.assign("type", sourcemeta::core::JSON{"equal"});
-        for (auto index{operation.original_start};
-             index < operation.original_end; ++index) {
-          lines.push_back(sourcemeta::core::JSON{difference.original[index]});
-        }
-
-        break;
-      case sourcemeta::core::Diff::Operation::Type::Delete:
-        entry.assign("type", sourcemeta::core::JSON{"delete"});
-        for (auto index{operation.original_start};
-             index < operation.original_end; ++index) {
-          lines.push_back(sourcemeta::core::JSON{difference.original[index]});
-        }
-
-        break;
-      case sourcemeta::core::Diff::Operation::Type::Insert:
-        entry.assign("type", sourcemeta::core::JSON{"insert"});
-        for (auto index{operation.modified_start};
-             index < operation.modified_end; ++index) {
-          lines.push_back(sourcemeta::core::JSON{difference.modified[index]});
-        }
-
-        break;
+    for (auto index{start}; index < end; ++index) {
+      lines.push_back(sourcemeta::core::JSON{tokens[index]});
     }
 
+    auto entry{sourcemeta::core::JSON::make_object()};
+    entry.assign("type",
+                 sourcemeta::core::JSON{diff_operation_name(operation.type)});
     entry.assign("lines", std::move(lines));
     operations.push_back(std::move(entry));
   }

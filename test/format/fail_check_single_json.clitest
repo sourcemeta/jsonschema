@@ -3,7 +3,7 @@ WRITE this/is/a/very/very/very/very/very/very/long/path/schema.json UNTIL EOF
   "type": "string",
   "$schema": "http://json-schema.org/draft-04/schema#",
   "title": "Test",
-  "description": "Test schema"
+  "description": "Test schema for formatting"
 }
 EOF
 
@@ -36,11 +36,14 @@ WRITE expected.txt UNTIL EOF
 1>         },
 1>         {
 1>           "type": "delete",
-1>           "lines": [ "  \"description\": \"Test schema\"" ]
+1>           "lines": [ "  \"description\": \"Test schema for formatting\"" ]
 1>         },
 1>         {
 1>           "type": "insert",
-1>           "lines": [ "  \"description\": \"Test schema\",", "  \"type\": \"string\"" ]
+1>           "lines": [
+1>             "  \"description\": \"Test schema for formatting\",",
+1>             "  \"type\": \"string\""
+1>           ]
 1>         },
 1>         {
 1>           "type": "equal",
