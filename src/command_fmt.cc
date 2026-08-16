@@ -1,12 +1,14 @@
 #include <sourcemeta/blaze/format.h>
 #include <sourcemeta/blaze/foundation.h>
+#include <sourcemeta/core/diff.h>
 #include <sourcemeta/core/io.h>
 #include <sourcemeta/core/json.h>
 
-#include <iostream> // std::cerr, std::cout
-#include <sstream>  // std::ostringstream
-#include <utility>  // std::move
-#include <vector>   // std::vector
+#include <iostream>    // std::cerr, std::cout
+#include <sstream>     // std::ostringstream
+#include <string>      // std::string
+#include <string_view> // std::string_view
+#include <utility>     // std::move, std::unreachable
 
 #include "command.h"
 #include "error.h"
@@ -15,12 +17,80 @@
 #include "resolver.h"
 #include "utils.h"
 
+namespace {
+
+auto diff_operation_name(const sourcemeta::core::Diff::Operation::Type type)
+    -> std::string_view {
+  switch (type) {
+    case sourcemeta::core::Diff::Operation::Type::Equal:
+      return "equal";
+    case sourcemeta::core::Diff::Operation::Type::Delete:
+      return "delete";
+    case sourcemeta::core::Diff::Operation::Type::Insert:
+      return "insert";
+    default:
+      std::unreachable();
+  }
+}
+
+auto to_diff_json(const sourcemeta::core::Diff &difference)
+    -> sourcemeta::core::JSON {
+  auto operations{sourcemeta::core::JSON::make_array()};
+
+  for (const auto &operation : difference.operations) {
+    // An insertion is the only operation that reads the modified input, as
+    // the lines it introduces are not present in the original one
+    const auto insertion{operation.type ==
+                         sourcemeta::core::Diff::Operation::Type::Insert};
+    const auto &tokens{insertion ? difference.modified : difference.original};
+    const auto start{insertion ? operation.modified_start
+                               : operation.original_start};
+    const auto end{insertion ? operation.modified_end : operation.original_end};
+
+    auto lines{sourcemeta::core::JSON::make_array()};
+    for (auto index{start}; index < end; ++index) {
+      lines.push_back(sourcemeta::core::JSON{tokens[index]});
+    }
+
+    auto entry{sourcemeta::core::JSON::make_object()};
+    entry.assign("type",
+                 sourcemeta::core::JSON{diff_operation_name(operation.type)});
+    entry.assign("lines", std::move(lines));
+    operations.push_back(std::move(entry));
+  }
+
+  return operations;
+}
+
+auto report_check_failure(const std::string &current,
+                          const std::string &expected, const std::string &label,
+                          const bool output_json,
+                          sourcemeta::core::JSON &errors) -> void {
+  const auto difference{sourcemeta::core::diff(
+      current, expected, sourcemeta::core::Diff::Mode::Line,
+      sourcemeta::core::Diff::Algorithm::Myers)};
+
+  if (output_json) {
+    auto entry{sourcemeta::core::JSON::make_object()};
+    entry.assign("path", sourcemeta::core::JSON{label});
+    entry.assign("diff", to_diff_json(difference));
+    errors.push_back(std::move(entry));
+  } else {
+    std::cerr << "fail: " << label << "\n";
+    sourcemeta::core::stringify(
+        difference, std::cerr, sourcemeta::core::Diff::Format::Unified,
+        {.original_label = "current", .modified_label = "expected"});
+  }
+}
+
+} // namespace
+
 auto sourcemeta::jsonschema::fmt(const sourcemeta::core::Options &options)
     -> void {
   validate_http_headers(options);
   const bool output_json{options.contains("json")};
   bool result{true};
-  std::vector<std::string> failed_files;
+  auto errors{sourcemeta::core::JSON::make_array()};
   const auto indentation{parse_indentation(options)};
 
   const auto handle_stdin = [&]() {
@@ -66,11 +136,9 @@ auto sourcemeta::jsonschema::fmt(const sourcemeta::core::Options &options)
 
         if (raw_stdin == expected.str()) {
           LOG_VERBOSE(options) << "ok: " << stdin_label << "\n";
-        } else if (output_json) {
-          failed_files.push_back(stdin_label);
-          result = false;
         } else {
-          std::cerr << "fail: " << stdin_label << "\n";
+          report_check_failure(raw_stdin, expected.str(), stdin_label,
+                               output_json, errors);
           result = false;
         }
       } else {
@@ -162,11 +230,9 @@ auto sourcemeta::jsonschema::fmt(const sourcemeta::core::Options &options)
       if (options.contains("check")) {
         if (current == expected.str()) {
           LOG_VERBOSE(options) << "ok: " << entry.first << "\n";
-        } else if (output_json) {
-          failed_files.push_back(entry.first);
-          result = false;
         } else {
-          std::cerr << "fail: " << entry.first << "\n";
+          report_check_failure(current, expected.str(), entry.first,
+                               output_json, errors);
           result = false;
         }
       } else {
@@ -240,12 +306,7 @@ auto sourcemeta::jsonschema::fmt(const sourcemeta::core::Options &options)
     output_json_object.assign("valid", sourcemeta::core::JSON{result});
 
     if (!result) {
-      auto errors_array{sourcemeta::core::JSON::make_array()};
-      for (auto &file_path : failed_files) {
-        errors_array.push_back(sourcemeta::core::JSON{std::move(file_path)});
-      }
-
-      output_json_object.assign("errors", sourcemeta::core::JSON{errors_array});
+      output_json_object.assign("errors", std::move(errors));
     }
 
     sourcemeta::core::prettify(output_json_object, std::cout, indentation);
