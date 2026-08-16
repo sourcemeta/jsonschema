@@ -7,6 +7,14 @@ RUN fmt --check - STDIN input.json IN . INTO result.txt EXPECTING 2
 
 WRITE expected.txt UNTIL EOF
 2> fail: tag:sourcemeta.com,2026:jsonschema/stdin
+2> --- current
+2> +++ expected
+2> @@ -1 +1,4 @@
+2> -{"$schema":"https://json-schema.org/draft/2020-12/schema","type":"string"}
+2> +{
+2> +  "$schema": "https://json-schema.org/draft/2020-12/schema",
+2> +  "type": "string"
+2> +}
 2>
 2> Run the `fmt` command without `--check/-c` to fix the formatting
 EOF
@@ -19,7 +27,28 @@ RUN fmt --check - --json STDIN input.json IN . INTO result_json.txt EXPECTING 2
 WRITE expected_json.txt UNTIL EOF
 1> {
 1>   "valid": false,
-1>   "errors": [ "tag:sourcemeta.com,2026:jsonschema/stdin" ]
+1>   "errors": [
+1>     {
+1>       "path": "tag:sourcemeta.com,2026:jsonschema/stdin",
+1>       "diff": [
+1>         {
+1>           "type": "delete",
+1>           "lines": [
+1>             "{\"$schema\":\"https://json-schema.org/draft/2020-12/schema\",\"type\":\"string\"}"
+1>           ]
+1>         },
+1>         {
+1>           "type": "insert",
+1>           "lines": [
+1>             "{",
+1>             "  \"$schema\": \"https://json-schema.org/draft/2020-12/schema\",",
+1>             "  \"type\": \"string\"",
+1>             "}"
+1>           ]
+1>         }
+1>       ]
+1>     }
+1>   ]
 1> }
 EOF
 

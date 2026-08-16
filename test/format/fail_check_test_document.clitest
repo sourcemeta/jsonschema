@@ -22,6 +22,22 @@ REPLACE $CWD WITH '[CWD]' IN result.txt
 WRITE expected.txt UNTIL EOF
 2> Interpreting as a test file: [CWD]/test.json
 2> fail: [CWD]/test.json
+2> --- current
+2> +++ expected
+2> @@ -1,4 +1,5 @@
+2>  {
+2> +  "target": "https://example.com/my-schema",
+2>    "tests": [
+2>      {
+2>        "description": "I expect to pass",
+2> @@ -8,6 +9,5 @@
+2>          "foo": 1
+2>        }
+2>      }
+2> -  ],
+2> -  "target": "https://example.com/my-schema"
+2> +  ]
+2>  }
 2>
 2> Run the `fmt` command without `--check/-c` to fix the formatting
 EOF

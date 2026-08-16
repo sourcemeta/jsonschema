@@ -14,6 +14,17 @@ REPLACE $CWD WITH '[CWD]' IN result.txt
 
 WRITE expected.txt UNTIL EOF
 2> fail: [CWD]/schema.json
+2> --- current
+2> +++ expected
+2> @@ -1,6 +1,6 @@
+2>  {
+2> -  "type": "string",
+2>    "$schema": "http://json-schema.org/draft-04/schema#",
+2>    "title": "Test",
+2> -  "description": "Test schema"
+2> +  "description": "Test schema",
+2> +  "type": "string"
+2>  }
 2>
 2> Run the `fmt` command without `--check/-c` to fix the formatting
 EOF

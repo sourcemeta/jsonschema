@@ -33,8 +33,70 @@ WRITE expected.txt UNTIL EOF
 1> {
 1>   "valid": false,
 1>   "errors": [
-1>     "[CWD]/schemas/1.json",
-1>     "[CWD]/schemas/2.json"
+1>     {
+1>       "path": "[CWD]/schemas/1.json",
+1>       "diff": [
+1>         {
+1>           "type": "equal",
+1>           "lines": [ "{" ]
+1>         },
+1>         {
+1>           "type": "delete",
+1>           "lines": [ "  \"type\": \"string\"," ]
+1>         },
+1>         {
+1>           "type": "equal",
+1>           "lines": [
+1>             "  \"$schema\": \"http://json-schema.org/draft-04/schema#\",",
+1>             "  \"title\": \"Test\","
+1>           ]
+1>         },
+1>         {
+1>           "type": "delete",
+1>           "lines": [ "  \"description\": \"Test schema\"" ]
+1>         },
+1>         {
+1>           "type": "insert",
+1>           "lines": [ "  \"description\": \"Test schema\",", "  \"type\": \"string\"" ]
+1>         },
+1>         {
+1>           "type": "equal",
+1>           "lines": [ "}" ]
+1>         }
+1>       ]
+1>     },
+1>     {
+1>       "path": "[CWD]/schemas/2.json",
+1>       "diff": [
+1>         {
+1>           "type": "equal",
+1>           "lines": [ "{" ]
+1>         },
+1>         {
+1>           "type": "delete",
+1>           "lines": [ "  \"type\": \"string\"," ]
+1>         },
+1>         {
+1>           "type": "equal",
+1>           "lines": [
+1>             "  \"$schema\": \"http://json-schema.org/draft-04/schema#\",",
+1>             "  \"title\": \"Test\","
+1>           ]
+1>         },
+1>         {
+1>           "type": "delete",
+1>           "lines": [ "  \"description\": \"Test schema\"" ]
+1>         },
+1>         {
+1>           "type": "insert",
+1>           "lines": [ "  \"description\": \"Test schema\",", "  \"type\": \"string\"" ]
+1>         },
+1>         {
+1>           "type": "equal",
+1>           "lines": [ "}" ]
+1>         }
+1>       ]
+1>     }
 1>   ]
 1> }
 EOF

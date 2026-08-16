@@ -19,6 +19,15 @@ test "$EXIT_CODE" = "2"
 
 cat << 'EOF' > "$TMP/expected.txt"
 fail: tag:sourcemeta.com,2026:jsonschema/stdin
+--- current
++++ expected
+@@ -1 +1,4 @@
+-{"$schema":"https://json-schema.org/draft/2020-12/schema","type":"string"}
+\ No newline at end of file
++{
++  "$schema": "https://json-schema.org/draft/2020-12/schema",
++  "type": "string"
++}
 
 Run the `fmt` command without `--check/-c` to fix the formatting
 EOF
@@ -35,7 +44,28 @@ test "$EXIT_CODE" = "2"
 cat << 'EOF' > "$TMP/expected.txt"
 {
   "valid": false,
-  "errors": [ "tag:sourcemeta.com,2026:jsonschema/stdin" ]
+  "errors": [
+    {
+      "path": "tag:sourcemeta.com,2026:jsonschema/stdin",
+      "diff": [
+        {
+          "type": "delete",
+          "lines": [
+            "{\"$schema\":\"https://json-schema.org/draft/2020-12/schema\",\"type\":\"string\"}"
+          ]
+        },
+        {
+          "type": "insert",
+          "lines": [
+            "{",
+            "  \"$schema\": \"https://json-schema.org/draft/2020-12/schema\",",
+            "  \"type\": \"string\"",
+            "}"
+          ]
+        }
+      ]
+    }
+  ]
 }
 EOF
 
