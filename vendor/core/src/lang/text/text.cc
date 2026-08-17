@@ -82,6 +82,29 @@ auto truncate(std::string &input, const std::size_t maximum_length,
   input.append(marker);
 }
 
+auto replace(const std::string_view input, const std::string_view target,
+             const std::string_view replacement) -> std::string {
+  if (target.empty()) {
+    return std::string{input};
+  }
+
+  std::string result;
+  result.reserve(input.size());
+  std::size_t index{0};
+
+  while (true) {
+    const auto match{input.find(target, index)};
+    if (match == std::string_view::npos) {
+      result.append(input.substr(index));
+      return result;
+    }
+
+    result.append(input.substr(index, match - index));
+    result.append(replacement);
+    index = match + target.size();
+  }
+}
+
 auto trim(const std::string_view input) noexcept -> std::string_view {
   std::string_view result{input};
   while (!result.empty() && is_ascii_whitespace(result.front())) {

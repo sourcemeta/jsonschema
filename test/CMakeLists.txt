@@ -1,9 +1,6 @@
-find_package(Python3 REQUIRED COMPONENTS Interpreter)
-
 macro(add_jsonschema_test name)
   add_test(NAME JSONSchema.${name} COMMAND
-    "${Python3_EXECUTABLE}"
-    "${PROJECT_SOURCE_DIR}/scripts/clitest.py"
+    "$<TARGET_FILE:sourcemeta_core_clitest>"
     "${CMAKE_CURRENT_SOURCE_DIR}/${name}.clitest"
     --binary "$<TARGET_FILE:jsonschema_cli>"
     --environment "VERSION=${PROJECT_VERSION}"
@@ -22,8 +19,7 @@ endmacro()
 macro(add_jsonschema_test_ci name)
   if(JSONSCHEMA_TESTS_CI)
     add_test(NAME JSONSchema.ci.${name} COMMAND
-      "${Python3_EXECUTABLE}"
-      "${PROJECT_SOURCE_DIR}/scripts/clitest.py"
+      "$<TARGET_FILE:sourcemeta_core_clitest>"
       "${CMAKE_CURRENT_SOURCE_DIR}/ci/${name}.clitest"
       --binary "$<TARGET_FILE:jsonschema_cli>"
       --environment "VERSION=${PROJECT_VERSION}")

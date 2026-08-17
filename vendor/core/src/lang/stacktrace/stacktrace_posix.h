@@ -12,9 +12,9 @@
 #include <initializer_list> // std::initializer_list
 
 #include <dlfcn.h>        // dladdr, Dl_info
-#include <execinfo.h>     // backtrace
 #include <sys/ucontext.h> // ucontext_t
 #include <unistd.h>       // write, getpid, STDERR_FILENO
+#include <unwind.h>       // _Unwind_*, _URC_*
 
 namespace {
 
@@ -101,12 +101,36 @@ auto write_frame(int file_descriptor, int frame_index, void *address) -> void {
   write_text(file_descriptor, "\n");
 }
 
+struct frame_buffer {
+  std::array<void *, maximum_frames> frames{};
+  int count{0};
+};
+
+auto collect_frame(_Unwind_Context *context, void *argument)
+    -> _Unwind_Reason_Code {
+  auto *buffer{static_cast<frame_buffer *>(argument)};
+  const auto program_counter{_Unwind_GetIP(context)};
+  if (program_counter == 0) {
+    return _URC_END_OF_STACK;
+  }
+
+  const auto index{static_cast<std::size_t>(buffer->count)};
+  // NOLINTNEXTLINE(performance-no-int-to-ptr)
+  buffer->frames[index] = reinterpret_cast<void *>(program_counter);
+  buffer->count = buffer->count + 1;
+  return buffer->count == maximum_frames ? _URC_NORMAL_STOP : _URC_NO_REASON;
+}
+
+// We walk the stack through the unwinder that the C++ exception machinery
+// already links in on every platform, rather than through `<execinfo.h>`. The
+// latter is a GNU extension that musl based systems like Alpine Linux do not
+// ship, and where it does exist it is implemented on top of this same unwinder
 __attribute__((noinline)) auto write_backtrace(int file_descriptor,
                                                int frames_to_skip,
                                                void *crash_pc = nullptr)
     -> void {
-  std::array<void *, maximum_frames> frames{};
-  const int captured{::backtrace(frames.data(), maximum_frames)};
+  frame_buffer buffer{};
+  _Unwind_Backtrace(&collect_frame, &buffer);
 
   int frame_index{0};
   void *suppress_saddr{nullptr};
@@ -120,8 +144,8 @@ __attribute__((noinline)) auto write_backtrace(int file_descriptor,
     }
   }
 
-  for (int index{frames_to_skip}; index < captured; ++index) {
-    void *address{frames[static_cast<std::size_t>(index)]};
+  for (int index{frames_to_skip}; index < buffer.count; ++index) {
+    void *address{buffer.frames[static_cast<std::size_t>(index)]};
     if (suppress_saddr != nullptr) {
       Dl_info frame_information{};
       if (::dladdr(address, &frame_information) != 0 &&
@@ -169,7 +193,7 @@ alignas(16) std::array<unsigned char, alternate_stack_size> alternate_stack{};
 
 } // namespace
 
-// NOTE: `backtrace`, `dladdr`, and `strlen` are not on POSIX's strict
+// NOTE: `_Unwind_Backtrace`, `dladdr`, and `strlen` are not on POSIX's strict
 // async-signal-safe list but are reentrant in practice for the synchronous
 // faults we care about (null derefs, bad casts, divide-by-zero). We
 // deliberately do not demangle. `__cxa_demangle` allocates, which is the one
