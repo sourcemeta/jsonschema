@@ -16,6 +16,8 @@ target_link_libraries(sourcemeta_core_test
 target_link_libraries(sourcemeta_core_test
   PRIVATE sourcemeta::core::diff)
 
+add_subdirectory(clitest)
+
 # A dedicated, always-static entry point library. Linking it into every test
 # executable provides a default `main()` through static archive resolution,
 # while a suite that defines its own `main()` transparently overrides it. This

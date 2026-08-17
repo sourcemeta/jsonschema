@@ -120,6 +120,40 @@ auto utf32_to_utf8(const std::u32string_view input) -> std::string {
   return output;
 }
 
+auto to_valid_utf8(const std::string_view input) -> std::string {
+  std::string result;
+  result.reserve(input.size());
+  std::size_t index{0};
+
+  while (index < input.size()) {
+    const auto size{utf8_sequence_size(input.substr(index))};
+    if (size > 0) {
+      result.append(input.substr(index, size));
+      index += size;
+      continue;
+    }
+
+    result.append("\xEF\xBF\xBD");
+
+    // Skip the whole maximal subpart, which is the lead byte plus however many
+    // of the bytes it called for did turn out to be well-formed tails. A byte
+    // the lead does not admit opens a subpart of its own rather than joining
+    // this one, which is why a surrogate yields three replacements and not one
+    const auto lead{static_cast<unsigned char>(input[index])};
+    const std::size_t width{utf8_lead_byte_size(lead)};
+    std::size_t length{width == 0 ? std::size_t{0} : std::size_t{1}};
+    while (length > 0 && length < width && index + length < input.size() &&
+           is_utf8_tail(lead, length,
+                        static_cast<unsigned char>(input[index + length]))) {
+      length += 1;
+    }
+
+    index += (length > 0 ? length : 1);
+  }
+
+  return result;
+}
+
 auto utf32_to_utf8_lenient(const std::u32string_view input) -> std::string {
   std::string output;
   for (const auto codepoint : input) {
