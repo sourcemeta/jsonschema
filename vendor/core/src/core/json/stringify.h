@@ -25,7 +25,7 @@ auto indent(std::basic_ostream<CharT, Traits> &stream,
             const std::size_t indentation, const std::size_t indent_by)
     -> void {
   for (std::size_t index{0}; index < indentation * indent_by; index++) {
-    stream.put(internal::token_whitespace_space<CharT>);
+    stream.put(internal::TOKEN_WHITESPACE_SPACE<CharT>);
   }
 }
 } // namespace sourcemeta::core::internal
@@ -33,48 +33,41 @@ auto indent(std::basic_ostream<CharT, Traits> &stream,
 namespace sourcemeta::core {
 
 template <template <typename T> typename Allocator>
-auto stringify(
-    const std::nullptr_t,
-    std::basic_ostream<typename JSON::Char, typename JSON::CharTraits> &stream)
+auto stringify(const std::nullptr_t,
+               std::basic_ostream<JSON::Char, JSON::CharTraits> &stream)
     -> void {
-  stream.write(
-      internal::constant_null<typename JSON::Char, typename JSON::CharTraits>.data(),
-      internal::constant_null<typename JSON::Char, typename JSON::CharTraits>.size());
+  stream.write(internal::CONSTANT_NULL<JSON::Char, JSON::CharTraits>.data(),
+               internal::CONSTANT_NULL<JSON::Char, JSON::CharTraits>.size());
 }
 
 template <template <typename T> typename Allocator>
-auto stringify(
-    const bool value,
-    std::basic_ostream<typename JSON::Char, typename JSON::CharTraits> &stream)
+auto stringify(const bool value,
+               std::basic_ostream<JSON::Char, JSON::CharTraits> &stream)
     -> void {
   if (value) {
-    stream.write(
-        internal::constant_true<typename JSON::Char, typename JSON::CharTraits>.data(),
-        internal::constant_true<typename JSON::Char, typename JSON::CharTraits>.size());
+    stream.write(internal::CONSTANT_TRUE<JSON::Char, JSON::CharTraits>.data(),
+                 internal::CONSTANT_TRUE<JSON::Char, JSON::CharTraits>.size());
   } else {
-    stream.write(
-        internal::constant_false<typename JSON::Char, typename JSON::CharTraits>.data(),
-        internal::constant_false<typename JSON::Char, typename JSON::CharTraits>.size());
+    stream.write(internal::CONSTANT_FALSE<JSON::Char, JSON::CharTraits>.data(),
+                 internal::CONSTANT_FALSE<JSON::Char, JSON::CharTraits>.size());
   }
 }
 
 template <template <typename T> typename Allocator>
-auto stringify(
-    const std::int64_t value,
-    std::basic_ostream<typename JSON::Char, typename JSON::CharTraits> &stream)
+auto stringify(const std::int64_t value,
+               std::basic_ostream<JSON::Char, JSON::CharTraits> &stream)
     -> void {
   digits_write(stream, value);
 }
 
 template <template <typename T> typename Allocator>
-auto stringify(
-    const double value, const bool is_integral,
-    std::basic_ostream<typename JSON::Char, typename JSON::CharTraits> &stream)
+auto stringify(const double value, const bool is_integral,
+               std::basic_ostream<JSON::Char, JSON::CharTraits> &stream)
     -> void {
   // RFC 8259 Section 6 permits the -0.0 number syntax and parsing preserves
   // the sign of a zero, so serialisation keeps the sign as well and the
   // round trip is lossless
-  if (value == static_cast<double>(0.0)) {
+  if (value == 0.0) {
     if (std::signbit(value)) {
       stream.write("-0.0", 4);
     } else {
@@ -103,16 +96,15 @@ auto stringify(
 }
 
 template <template <typename T> typename Allocator>
-auto stringify(
-    const typename JSON::String &document,
-    std::basic_ostream<typename JSON::Char, typename JSON::CharTraits> &stream)
+auto stringify(const typename JSON::String &document,
+               std::basic_ostream<JSON::Char, JSON::CharTraits> &stream)
     -> void {
-  stream.put(internal::token_string_quote<typename JSON::Char>);
+  stream.put(internal::TOKEN_STRING_QUOTE<JSON::Char>);
   for (const auto character : document) {
     switch (character) {
-      case internal::token_string_escape<typename JSON::Char>:
-      case internal::token_string_quote<typename JSON::Char>:
-        stream.put(internal::token_string_escape<typename JSON::Char>);
+      case internal::TOKEN_STRING_ESCAPE<JSON::Char>:
+      case internal::TOKEN_STRING_QUOTE<JSON::Char>:
+        stream.put(internal::TOKEN_STRING_ESCAPE<JSON::Char>);
         stream.put(character);
         break;
 
@@ -121,8 +113,8 @@ auto stringify(
 
       // Null
       case '\u0000':
-        stream.put(internal::token_string_escape<typename JSON::Char>);
-        stream.put(internal::token_string_escape_unicode<typename JSON::Char>);
+        stream.put(internal::TOKEN_STRING_ESCAPE<JSON::Char>);
+        stream.put(internal::TOKEN_STRING_ESCAPE_UNICODE<JSON::Char>);
         stream.put('0');
         stream.put('0');
         stream.put('0');
@@ -130,8 +122,8 @@ auto stringify(
         break;
       // Start of heading
       case '\u0001':
-        stream.put(internal::token_string_escape<typename JSON::Char>);
-        stream.put(internal::token_string_escape_unicode<typename JSON::Char>);
+        stream.put(internal::TOKEN_STRING_ESCAPE<JSON::Char>);
+        stream.put(internal::TOKEN_STRING_ESCAPE_UNICODE<JSON::Char>);
         stream.put('0');
         stream.put('0');
         stream.put('0');
@@ -139,8 +131,8 @@ auto stringify(
         break;
       // Start of text
       case '\u0002':
-        stream.put(internal::token_string_escape<typename JSON::Char>);
-        stream.put(internal::token_string_escape_unicode<typename JSON::Char>);
+        stream.put(internal::TOKEN_STRING_ESCAPE<JSON::Char>);
+        stream.put(internal::TOKEN_STRING_ESCAPE_UNICODE<JSON::Char>);
         stream.put('0');
         stream.put('0');
         stream.put('0');
@@ -148,8 +140,8 @@ auto stringify(
         break;
       // End of text
       case '\u0003':
-        stream.put(internal::token_string_escape<typename JSON::Char>);
-        stream.put(internal::token_string_escape_unicode<typename JSON::Char>);
+        stream.put(internal::TOKEN_STRING_ESCAPE<JSON::Char>);
+        stream.put(internal::TOKEN_STRING_ESCAPE_UNICODE<JSON::Char>);
         stream.put('0');
         stream.put('0');
         stream.put('0');
@@ -157,8 +149,8 @@ auto stringify(
         break;
       // End of transmission
       case '\u0004':
-        stream.put(internal::token_string_escape<typename JSON::Char>);
-        stream.put(internal::token_string_escape_unicode<typename JSON::Char>);
+        stream.put(internal::TOKEN_STRING_ESCAPE<JSON::Char>);
+        stream.put(internal::TOKEN_STRING_ESCAPE_UNICODE<JSON::Char>);
         stream.put('0');
         stream.put('0');
         stream.put('0');
@@ -166,8 +158,8 @@ auto stringify(
         break;
       // Enquiry
       case '\u0005':
-        stream.put(internal::token_string_escape<typename JSON::Char>);
-        stream.put(internal::token_string_escape_unicode<typename JSON::Char>);
+        stream.put(internal::TOKEN_STRING_ESCAPE<JSON::Char>);
+        stream.put(internal::TOKEN_STRING_ESCAPE_UNICODE<JSON::Char>);
         stream.put('0');
         stream.put('0');
         stream.put('0');
@@ -175,8 +167,8 @@ auto stringify(
         break;
       // Acknowledge
       case '\u0006':
-        stream.put(internal::token_string_escape<typename JSON::Char>);
-        stream.put(internal::token_string_escape_unicode<typename JSON::Char>);
+        stream.put(internal::TOKEN_STRING_ESCAPE<JSON::Char>);
+        stream.put(internal::TOKEN_STRING_ESCAPE_UNICODE<JSON::Char>);
         stream.put('0');
         stream.put('0');
         stream.put('0');
@@ -184,8 +176,8 @@ auto stringify(
         break;
       // Bell
       case '\u0007':
-        stream.put(internal::token_string_escape<typename JSON::Char>);
-        stream.put(internal::token_string_escape_unicode<typename JSON::Char>);
+        stream.put(internal::TOKEN_STRING_ESCAPE<JSON::Char>);
+        stream.put(internal::TOKEN_STRING_ESCAPE_UNICODE<JSON::Char>);
         stream.put('0');
         stream.put('0');
         stream.put('0');
@@ -193,26 +185,23 @@ auto stringify(
         break;
       // Backspace
       case '\b':
-        stream.put(internal::token_string_escape<typename JSON::Char>);
-        stream.put(
-            internal::token_string_escape_backspace<typename JSON::Char>);
+        stream.put(internal::TOKEN_STRING_ESCAPE<JSON::Char>);
+        stream.put(internal::TOKEN_STRING_ESCAPE_BACKSPACE<JSON::Char>);
         break;
       // Horizontal tab
       case '\t':
-        stream.put(internal::token_string_escape<typename JSON::Char>);
-        stream.put(
-            internal::token_string_escape_tabulation<typename JSON::Char>);
+        stream.put(internal::TOKEN_STRING_ESCAPE<JSON::Char>);
+        stream.put(internal::TOKEN_STRING_ESCAPE_TABULATION<JSON::Char>);
         break;
       // Line feed
       case '\n':
-        stream.put(internal::token_string_escape<typename JSON::Char>);
-        stream.put(
-            internal::token_string_escape_line_feed<typename JSON::Char>);
+        stream.put(internal::TOKEN_STRING_ESCAPE<JSON::Char>);
+        stream.put(internal::TOKEN_STRING_ESCAPE_LINE_FEED<JSON::Char>);
         break;
       // Vertical tab
       case '\u000B':
-        stream.put(internal::token_string_escape<typename JSON::Char>);
-        stream.put(internal::token_string_escape_unicode<typename JSON::Char>);
+        stream.put(internal::TOKEN_STRING_ESCAPE<JSON::Char>);
+        stream.put(internal::TOKEN_STRING_ESCAPE_UNICODE<JSON::Char>);
         stream.put('0');
         stream.put('0');
         stream.put('0');
@@ -220,20 +209,18 @@ auto stringify(
         break;
       // Form feed
       case '\f':
-        stream.put(internal::token_string_escape<typename JSON::Char>);
-        stream.put(
-            internal::token_string_escape_form_feed<typename JSON::Char>);
+        stream.put(internal::TOKEN_STRING_ESCAPE<JSON::Char>);
+        stream.put(internal::TOKEN_STRING_ESCAPE_FORM_FEED<JSON::Char>);
         break;
       // Carriage return
       case '\r':
-        stream.put(internal::token_string_escape<typename JSON::Char>);
-        stream.put(
-            internal::token_string_escape_carriage_return<typename JSON::Char>);
+        stream.put(internal::TOKEN_STRING_ESCAPE<JSON::Char>);
+        stream.put(internal::TOKEN_STRING_ESCAPE_CARRIAGE_RETURN<JSON::Char>);
         break;
       // Shift out
       case '\u000E':
-        stream.put(internal::token_string_escape<typename JSON::Char>);
-        stream.put(internal::token_string_escape_unicode<typename JSON::Char>);
+        stream.put(internal::TOKEN_STRING_ESCAPE<JSON::Char>);
+        stream.put(internal::TOKEN_STRING_ESCAPE_UNICODE<JSON::Char>);
         stream.put('0');
         stream.put('0');
         stream.put('0');
@@ -241,8 +228,8 @@ auto stringify(
         break;
       // Shift in
       case '\u000F':
-        stream.put(internal::token_string_escape<typename JSON::Char>);
-        stream.put(internal::token_string_escape_unicode<typename JSON::Char>);
+        stream.put(internal::TOKEN_STRING_ESCAPE<JSON::Char>);
+        stream.put(internal::TOKEN_STRING_ESCAPE_UNICODE<JSON::Char>);
         stream.put('0');
         stream.put('0');
         stream.put('0');
@@ -250,8 +237,8 @@ auto stringify(
         break;
       // Data link escape
       case '\u0010':
-        stream.put(internal::token_string_escape<typename JSON::Char>);
-        stream.put(internal::token_string_escape_unicode<typename JSON::Char>);
+        stream.put(internal::TOKEN_STRING_ESCAPE<JSON::Char>);
+        stream.put(internal::TOKEN_STRING_ESCAPE_UNICODE<JSON::Char>);
         stream.put('0');
         stream.put('0');
         stream.put('1');
@@ -259,8 +246,8 @@ auto stringify(
         break;
       // Device control 1
       case '\u0011':
-        stream.put(internal::token_string_escape<typename JSON::Char>);
-        stream.put(internal::token_string_escape_unicode<typename JSON::Char>);
+        stream.put(internal::TOKEN_STRING_ESCAPE<JSON::Char>);
+        stream.put(internal::TOKEN_STRING_ESCAPE_UNICODE<JSON::Char>);
         stream.put('0');
         stream.put('0');
         stream.put('1');
@@ -268,8 +255,8 @@ auto stringify(
         break;
       // Device control 2
       case '\u0012':
-        stream.put(internal::token_string_escape<typename JSON::Char>);
-        stream.put(internal::token_string_escape_unicode<typename JSON::Char>);
+        stream.put(internal::TOKEN_STRING_ESCAPE<JSON::Char>);
+        stream.put(internal::TOKEN_STRING_ESCAPE_UNICODE<JSON::Char>);
         stream.put('0');
         stream.put('0');
         stream.put('1');
@@ -277,8 +264,8 @@ auto stringify(
         break;
       // Device control 3
       case '\u0013':
-        stream.put(internal::token_string_escape<typename JSON::Char>);
-        stream.put(internal::token_string_escape_unicode<typename JSON::Char>);
+        stream.put(internal::TOKEN_STRING_ESCAPE<JSON::Char>);
+        stream.put(internal::TOKEN_STRING_ESCAPE_UNICODE<JSON::Char>);
         stream.put('0');
         stream.put('0');
         stream.put('1');
@@ -286,8 +273,8 @@ auto stringify(
         break;
       // Device control 4
       case '\u0014':
-        stream.put(internal::token_string_escape<typename JSON::Char>);
-        stream.put(internal::token_string_escape_unicode<typename JSON::Char>);
+        stream.put(internal::TOKEN_STRING_ESCAPE<JSON::Char>);
+        stream.put(internal::TOKEN_STRING_ESCAPE_UNICODE<JSON::Char>);
         stream.put('0');
         stream.put('0');
         stream.put('1');
@@ -295,8 +282,8 @@ auto stringify(
         break;
       // Negative acknowledge
       case '\u0015':
-        stream.put(internal::token_string_escape<typename JSON::Char>);
-        stream.put(internal::token_string_escape_unicode<typename JSON::Char>);
+        stream.put(internal::TOKEN_STRING_ESCAPE<JSON::Char>);
+        stream.put(internal::TOKEN_STRING_ESCAPE_UNICODE<JSON::Char>);
         stream.put('0');
         stream.put('0');
         stream.put('1');
@@ -304,8 +291,8 @@ auto stringify(
         break;
       // Synchronous idle
       case '\u0016':
-        stream.put(internal::token_string_escape<typename JSON::Char>);
-        stream.put(internal::token_string_escape_unicode<typename JSON::Char>);
+        stream.put(internal::TOKEN_STRING_ESCAPE<JSON::Char>);
+        stream.put(internal::TOKEN_STRING_ESCAPE_UNICODE<JSON::Char>);
         stream.put('0');
         stream.put('0');
         stream.put('1');
@@ -313,8 +300,8 @@ auto stringify(
         break;
       // End of transmission block
       case '\u0017':
-        stream.put(internal::token_string_escape<typename JSON::Char>);
-        stream.put(internal::token_string_escape_unicode<typename JSON::Char>);
+        stream.put(internal::TOKEN_STRING_ESCAPE<JSON::Char>);
+        stream.put(internal::TOKEN_STRING_ESCAPE_UNICODE<JSON::Char>);
         stream.put('0');
         stream.put('0');
         stream.put('1');
@@ -322,8 +309,8 @@ auto stringify(
         break;
       // Cancel
       case '\u0018':
-        stream.put(internal::token_string_escape<typename JSON::Char>);
-        stream.put(internal::token_string_escape_unicode<typename JSON::Char>);
+        stream.put(internal::TOKEN_STRING_ESCAPE<JSON::Char>);
+        stream.put(internal::TOKEN_STRING_ESCAPE_UNICODE<JSON::Char>);
         stream.put('0');
         stream.put('0');
         stream.put('1');
@@ -331,8 +318,8 @@ auto stringify(
         break;
       // End of medium
       case '\u0019':
-        stream.put(internal::token_string_escape<typename JSON::Char>);
-        stream.put(internal::token_string_escape_unicode<typename JSON::Char>);
+        stream.put(internal::TOKEN_STRING_ESCAPE<JSON::Char>);
+        stream.put(internal::TOKEN_STRING_ESCAPE_UNICODE<JSON::Char>);
         stream.put('0');
         stream.put('0');
         stream.put('1');
@@ -340,8 +327,8 @@ auto stringify(
         break;
       // Substitute
       case '\u001A':
-        stream.put(internal::token_string_escape<typename JSON::Char>);
-        stream.put(internal::token_string_escape_unicode<typename JSON::Char>);
+        stream.put(internal::TOKEN_STRING_ESCAPE<JSON::Char>);
+        stream.put(internal::TOKEN_STRING_ESCAPE_UNICODE<JSON::Char>);
         stream.put('0');
         stream.put('0');
         stream.put('1');
@@ -349,8 +336,8 @@ auto stringify(
         break;
       // Escape
       case '\u001B':
-        stream.put(internal::token_string_escape<typename JSON::Char>);
-        stream.put(internal::token_string_escape_unicode<typename JSON::Char>);
+        stream.put(internal::TOKEN_STRING_ESCAPE<JSON::Char>);
+        stream.put(internal::TOKEN_STRING_ESCAPE_UNICODE<JSON::Char>);
         stream.put('0');
         stream.put('0');
         stream.put('1');
@@ -358,8 +345,8 @@ auto stringify(
         break;
       // File separator
       case '\u001C':
-        stream.put(internal::token_string_escape<typename JSON::Char>);
-        stream.put(internal::token_string_escape_unicode<typename JSON::Char>);
+        stream.put(internal::TOKEN_STRING_ESCAPE<JSON::Char>);
+        stream.put(internal::TOKEN_STRING_ESCAPE_UNICODE<JSON::Char>);
         stream.put('0');
         stream.put('0');
         stream.put('1');
@@ -367,8 +354,8 @@ auto stringify(
         break;
       // Group separator
       case '\u001D':
-        stream.put(internal::token_string_escape<typename JSON::Char>);
-        stream.put(internal::token_string_escape_unicode<typename JSON::Char>);
+        stream.put(internal::TOKEN_STRING_ESCAPE<JSON::Char>);
+        stream.put(internal::TOKEN_STRING_ESCAPE_UNICODE<JSON::Char>);
         stream.put('0');
         stream.put('0');
         stream.put('1');
@@ -376,8 +363,8 @@ auto stringify(
         break;
       // Record separator
       case '\u001E':
-        stream.put(internal::token_string_escape<typename JSON::Char>);
-        stream.put(internal::token_string_escape_unicode<typename JSON::Char>);
+        stream.put(internal::TOKEN_STRING_ESCAPE<JSON::Char>);
+        stream.put(internal::TOKEN_STRING_ESCAPE_UNICODE<JSON::Char>);
         stream.put('0');
         stream.put('0');
         stream.put('1');
@@ -385,8 +372,8 @@ auto stringify(
         break;
       // Unit separator
       case '\u001F':
-        stream.put(internal::token_string_escape<typename JSON::Char>);
-        stream.put(internal::token_string_escape_unicode<typename JSON::Char>);
+        stream.put(internal::TOKEN_STRING_ESCAPE<JSON::Char>);
+        stream.put(internal::TOKEN_STRING_ESCAPE_UNICODE<JSON::Char>);
         stream.put('0');
         stream.put('0');
         stream.put('1');
@@ -397,58 +384,55 @@ auto stringify(
     }
   }
 
-  stream.put(internal::token_string_quote<typename JSON::Char>);
+  stream.put(internal::TOKEN_STRING_QUOTE<JSON::Char>);
 }
 
 template <template <typename T> typename Allocator>
-auto stringify(
-    const typename JSON::Array &document,
-    std::basic_ostream<typename JSON::Char, typename JSON::CharTraits> &stream)
+auto stringify(const typename JSON::Array &document,
+               std::basic_ostream<JSON::Char, JSON::CharTraits> &stream)
     -> void {
-  stream.put(internal::token_array_begin<typename JSON::Char>);
+  stream.put(internal::TOKEN_ARRAY_BEGIN<JSON::Char>);
   const auto end{std::cend(document)};
   for (auto iterator = std::cbegin(document); iterator != end; ++iterator) {
     stringify<Allocator>(*iterator, stream);
     if (std::next(iterator) != end) {
-      stream.put(internal::token_array_delimiter<typename JSON::Char>);
+      stream.put(internal::TOKEN_ARRAY_DELIMITER<JSON::Char>);
     }
   }
 
-  stream.put(internal::token_array_end<typename JSON::Char>);
+  stream.put(internal::TOKEN_ARRAY_END<JSON::Char>);
 }
 
 template <template <typename T> typename Allocator>
-auto stringify(
-    const typename JSON::Object &document,
-    std::basic_ostream<typename JSON::Char, typename JSON::CharTraits> &stream)
+auto stringify(const typename JSON::Object &document,
+               std::basic_ostream<JSON::Char, JSON::CharTraits> &stream)
     -> void {
-  stream.put(internal::token_object_begin<typename JSON::Char>);
+  stream.put(internal::TOKEN_OBJECT_BEGIN<JSON::Char>);
 
   const auto end{std::cend(document)};
   for (auto iterator = std::cbegin(document); iterator != end; ++iterator) {
     stringify<Allocator>(iterator->first, stream);
-    stream.put(internal::token_object_key_delimiter<typename JSON::Char>);
+    stream.put(internal::TOKEN_OBJECT_KEY_DELIMITER<JSON::Char>);
     stringify<Allocator>(iterator->second, stream);
     if (std::next(iterator) != end) {
-      stream.put(internal::token_object_delimiter<typename JSON::Char>);
+      stream.put(internal::TOKEN_OBJECT_DELIMITER<JSON::Char>);
     }
   }
 
-  stream.put(internal::token_object_end<typename JSON::Char>);
+  stream.put(internal::TOKEN_OBJECT_END<JSON::Char>);
 }
 
 template <template <typename T> typename Allocator>
-auto prettify(
-    const typename JSON::Object &document,
-    std::basic_ostream<typename JSON::Char, typename JSON::CharTraits> &stream,
-    const std::size_t, const std::size_t) -> void;
+auto prettify(const typename JSON::Object &document,
+              std::basic_ostream<JSON::Char, JSON::CharTraits> &stream,
+              const std::size_t indentation, const std::size_t indent_by)
+    -> void;
 
 template <template <typename T> typename Allocator>
-auto prettify(
-    const typename JSON::Array &document,
-    std::basic_ostream<typename JSON::Char, typename JSON::CharTraits> &stream,
-    const std::size_t indentation, const std::size_t indent_by,
-    const std::size_t property_size) -> void {
+auto prettify(const typename JSON::Array &document,
+              std::basic_ostream<JSON::Char, JSON::CharTraits> &stream,
+              const std::size_t indentation, const std::size_t indent_by,
+              const std::size_t property_size) -> void {
   const auto end{std::cend(document)};
   const auto effective_indentation{(indentation * indent_by) + property_size};
 
@@ -456,19 +440,19 @@ auto prettify(
 
   bool prettify_in_place{effective_indentation < internal::LINE_WIDTH};
   std::ostringstream inplace;
-  inplace.put(internal::token_array_begin<typename JSON::Char>);
+  inplace.put(internal::TOKEN_ARRAY_BEGIN<JSON::Char>);
   for (auto iterator = std::cbegin(document); iterator != end; ++iterator) {
     if (iterator->is_object() || iterator->is_array()) {
       prettify_in_place = false;
       break;
     }
 
-    inplace.put(internal::token_whitespace_space<typename JSON::Char>);
+    inplace.put(internal::TOKEN_WHITESPACE_SPACE<JSON::Char>);
     prettify<Allocator>(*iterator, inplace, indentation, indent_by);
     if (std::next(iterator) == end) {
-      inplace.put(internal::token_whitespace_space<typename JSON::Char>);
+      inplace.put(internal::TOKEN_WHITESPACE_SPACE<JSON::Char>);
     } else {
-      inplace.put(internal::token_array_delimiter<typename JSON::Char>);
+      inplace.put(internal::TOKEN_ARRAY_DELIMITER<JSON::Char>);
     }
 
     if (inplace.str().size() + effective_indentation >= internal::LINE_WIDTH) {
@@ -479,19 +463,19 @@ auto prettify(
 
   if (prettify_in_place) {
     stream << inplace.str();
-    stream.put(internal::token_array_end<typename JSON::Char>);
+    stream.put(internal::TOKEN_ARRAY_END<JSON::Char>);
     return;
   }
 
-  stream.put(internal::token_array_begin<typename JSON::Char>);
+  stream.put(internal::TOKEN_ARRAY_BEGIN<JSON::Char>);
   for (auto iterator = std::cbegin(document); iterator != end; ++iterator) {
-    stream.put(internal::token_whitespace_line_feed<typename JSON::Char>);
+    stream.put(internal::TOKEN_WHITESPACE_LINE_FEED<JSON::Char>);
     internal::indent(stream, indentation + 1, indent_by);
     prettify<Allocator>(*iterator, stream, indentation + 1, indent_by);
     if (std::next(iterator) == end) {
-      stream.put(internal::token_whitespace_line_feed<typename JSON::Char>);
+      stream.put(internal::TOKEN_WHITESPACE_LINE_FEED<JSON::Char>);
     } else {
-      stream.put(internal::token_array_delimiter<typename JSON::Char>);
+      stream.put(internal::TOKEN_ARRAY_DELIMITER<JSON::Char>);
     }
   }
 
@@ -499,33 +483,33 @@ auto prettify(
     internal::indent(stream, indentation, indent_by);
   }
 
-  stream.put(internal::token_array_end<typename JSON::Char>);
+  stream.put(internal::TOKEN_ARRAY_END<JSON::Char>);
 }
 
 template <template <typename T> typename Allocator>
-auto prettify(
-    const typename JSON::Object &document,
-    std::basic_ostream<typename JSON::Char, typename JSON::CharTraits> &stream,
-    const std::size_t indentation, const std::size_t indent_by) -> void {
-  stream.put(internal::token_object_begin<typename JSON::Char>);
+auto prettify(const typename JSON::Object &document,
+              std::basic_ostream<JSON::Char, JSON::CharTraits> &stream,
+              const std::size_t indentation, const std::size_t indent_by)
+    -> void {
+  stream.put(internal::TOKEN_OBJECT_BEGIN<JSON::Char>);
 
   const auto end{std::cend(document)};
   for (auto iterator = std::cbegin(document); iterator != end; ++iterator) {
-    stream.put(internal::token_whitespace_line_feed<typename JSON::Char>);
+    stream.put(internal::TOKEN_WHITESPACE_LINE_FEED<JSON::Char>);
     internal::indent(stream, indentation + 1, indent_by);
     const auto current_position{stream.tellp()};
     stringify<Allocator>(iterator->first, stream);
-    stream.put(internal::token_object_key_delimiter<typename JSON::Char>);
-    stream.put(internal::token_whitespace_space<typename JSON::Char>);
+    stream.put(internal::TOKEN_OBJECT_KEY_DELIMITER<JSON::Char>);
+    stream.put(internal::TOKEN_WHITESPACE_SPACE<JSON::Char>);
     prettify<Allocator>(
         iterator->second, stream, indentation + 1, indent_by,
         // Pass the length of the property name as encoded in JSON
         // to help determine the actual current column
         static_cast<std::size_t>(stream.tellp() - current_position));
     if (std::next(iterator) == end) {
-      stream.put(internal::token_whitespace_line_feed<typename JSON::Char>);
+      stream.put(internal::TOKEN_WHITESPACE_LINE_FEED<JSON::Char>);
     } else {
-      stream.put(internal::token_object_delimiter<typename JSON::Char>);
+      stream.put(internal::TOKEN_OBJECT_DELIMITER<JSON::Char>);
     }
   }
 
@@ -533,13 +517,12 @@ auto prettify(
     internal::indent(stream, indentation, indent_by);
   }
 
-  stream.put(internal::token_object_end<typename JSON::Char>);
+  stream.put(internal::TOKEN_OBJECT_END<JSON::Char>);
 }
 
 template <template <typename T> typename Allocator>
-auto stringify(
-    const JSON &document,
-    std::basic_ostream<typename JSON::Char, typename JSON::CharTraits> &stream)
+auto stringify(const JSON &document,
+               std::basic_ostream<JSON::Char, JSON::CharTraits> &stream)
     -> void {
   switch (document.type()) {
     case JSON::Type::Null:
@@ -575,11 +558,11 @@ auto stringify(
 // TODO: Get rid of unused Allocator templates in this file
 
 template <template <typename T> typename Allocator>
-auto prettify(
-    const JSON &document,
-    std::basic_ostream<typename JSON::Char, typename JSON::CharTraits> &stream,
-    const std::size_t indentation = 0, const std::size_t indent_by = 2,
-    const std::size_t property_size = 0) -> void {
+auto prettify(const JSON &document,
+              std::basic_ostream<JSON::Char, JSON::CharTraits> &stream,
+              const std::size_t indentation = 0,
+              const std::size_t indent_by = 2,
+              const std::size_t property_size = 0) -> void {
   switch (document.type()) {
     case JSON::Type::Null:
       stringify<Allocator>(nullptr, stream);

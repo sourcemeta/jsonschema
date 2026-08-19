@@ -48,7 +48,7 @@ auto print_usage(std::string_view program) -> void {
 }
 
 auto has_line_terminator(const std::string_view value) -> bool {
-  return value.find('\n') != std::string_view::npos;
+  return value.contains('\n');
 }
 
 auto print_diagnostic(std::string_view message) -> void {
@@ -88,9 +88,9 @@ auto test_register(std::string_view name, std::function<void()> body,
 
 auto test_suite_from_path(std::string_view path) -> std::string {
   std::string stem{std::filesystem::path{path}.stem().string()};
-  static constexpr std::string_view suffix{"_test"};
-  if (stem.size() > suffix.size() && stem.ends_with(suffix)) {
-    stem.erase(stem.size() - suffix.size());
+  static constexpr std::string_view SUFFIX{"_test"};
+  if (stem.size() > SUFFIX.size() && stem.ends_with(SUFFIX)) {
+    stem.erase(stem.size() - SUFFIX.size());
   }
 
   return stem;

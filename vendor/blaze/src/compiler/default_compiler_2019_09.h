@@ -155,8 +155,8 @@ auto compiler_2019_09_applicator_contains_with_options(
 
   Instructions children{compile(context, schema_context,
                                 relative_dynamic_context(),
-                                sourcemeta::core::empty_weak_pointer,
-                                sourcemeta::core::empty_weak_pointer)};
+                                sourcemeta::core::EMPTY_WEAK_POINTER,
+                                sourcemeta::core::EMPTY_WEAK_POINTER)};
 
   if (annotate && annotations_enabled(context, dynamic_context.keyword)) {
     children.push_back(
@@ -281,8 +281,8 @@ auto compiler_2019_09_applicator_unevaluateditems(
 
   Instructions children{compile(context, schema_context,
                                 relative_dynamic_context(),
-                                sourcemeta::core::empty_weak_pointer,
-                                sourcemeta::core::empty_weak_pointer)};
+                                sourcemeta::core::EMPTY_WEAK_POINTER,
+                                sourcemeta::core::EMPTY_WEAK_POINTER)};
 
   if (annotations_enabled(context, dynamic_context.keyword)) {
     children.push_back(
@@ -325,8 +325,8 @@ auto compiler_2019_09_applicator_unevaluatedproperties(
 
   Instructions children{compile(context, schema_context,
                                 relative_dynamic_context(),
-                                sourcemeta::core::empty_weak_pointer,
-                                sourcemeta::core::empty_weak_pointer)};
+                                sourcemeta::core::EMPTY_WEAK_POINTER,
+                                sourcemeta::core::EMPTY_WEAK_POINTER)};
 
   if (annotations_enabled(context, dynamic_context.keyword)) {
     children.push_back(

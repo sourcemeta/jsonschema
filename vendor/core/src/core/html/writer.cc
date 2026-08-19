@@ -6,10 +6,10 @@ namespace sourcemeta::core {
 
 auto HTMLBuffer::grow(const std::size_t needed) -> void {
   const auto current_size{
-      this->cursor_
+      (this->cursor_ != nullptr)
           ? static_cast<std::size_t>(this->cursor_ - this->buffer_.data())
           : 0};
-  auto new_capacity{this->buffer_.empty() ? 1024uz : this->buffer_.size() * 2};
+  auto new_capacity{this->buffer_.empty() ? 1024UZ : this->buffer_.size() * 2};
   while (new_capacity < current_size + needed) {
     new_capacity *= 2;
   }
@@ -20,7 +20,7 @@ auto HTMLBuffer::grow(const std::size_t needed) -> void {
 }
 
 auto HTMLBuffer::write(std::ostream &stream) -> void {
-  if (this->cursor_) {
+  if (this->cursor_ != nullptr) {
     const auto size{
         static_cast<std::size_t>(this->cursor_ - this->buffer_.data())};
     stream.write(this->buffer_.data(), static_cast<std::streamsize>(size));

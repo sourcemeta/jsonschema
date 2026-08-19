@@ -29,9 +29,9 @@ auto canonical_decompose_recursive(const char32_t codepoint,
   if (codepoint >= HANGUL_SBASE && codepoint < HANGUL_SBASE + HANGUL_SCOUNT) {
     const auto index{static_cast<std::size_t>(codepoint - HANGUL_SBASE)};
     output.push_back(
-        static_cast<char32_t>(HANGUL_LBASE + index / HANGUL_NCOUNT));
+        static_cast<char32_t>(HANGUL_LBASE + (index / HANGUL_NCOUNT)));
     output.push_back(static_cast<char32_t>(
-        HANGUL_VBASE + (index % HANGUL_NCOUNT) / HANGUL_TCOUNT));
+        HANGUL_VBASE + ((index % HANGUL_NCOUNT) / HANGUL_TCOUNT)));
     const auto t_index{index % HANGUL_TCOUNT};
     if (t_index != 0) {
       output.push_back(static_cast<char32_t>(HANGUL_TBASE + t_index));
@@ -80,7 +80,7 @@ auto try_compose(const char32_t starter, const char32_t combining) noexcept
     const auto l_index{static_cast<std::size_t>(starter - HANGUL_LBASE)};
     const auto v_index{static_cast<std::size_t>(combining - HANGUL_VBASE)};
     return static_cast<char32_t>(
-        HANGUL_SBASE + (l_index * HANGUL_VCOUNT + v_index) * HANGUL_TCOUNT);
+        HANGUL_SBASE + (((l_index * HANGUL_VCOUNT) + v_index) * HANGUL_TCOUNT));
   }
 
   if (starter >= HANGUL_SBASE && starter < HANGUL_SBASE + HANGUL_SCOUNT &&

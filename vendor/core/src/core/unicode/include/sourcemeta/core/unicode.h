@@ -206,8 +206,7 @@ auto wide_to_utf8(const std::wstring_view input) -> std::string;
 /// assert(sourcemeta::core::utf8_lead_byte_size(0xF0) == 4);
 /// assert(sourcemeta::core::utf8_lead_byte_size(0x80) == 0);
 /// ```
-inline constexpr auto utf8_lead_byte_size(const unsigned char byte)
-    -> std::uint8_t {
+constexpr auto utf8_lead_byte_size(const unsigned char byte) -> std::uint8_t {
   if (byte < 0x80) {
     return 1;
   }
@@ -245,9 +244,9 @@ inline constexpr auto utf8_lead_byte_size(const unsigned char byte)
 /// // A surrogate lead admits no byte above %x9F
 /// assert(!sourcemeta::core::is_utf8_tail(0xED, 1, 0xA0));
 /// ```
-inline constexpr auto is_utf8_tail(const unsigned char lead,
-                                   const std::size_t position,
-                                   const unsigned char byte) -> bool {
+constexpr auto is_utf8_tail(const unsigned char lead,
+                            const std::size_t position,
+                            const unsigned char byte) -> bool {
   const unsigned char lower{static_cast<unsigned char>(
       position > 1 ? 0x80
                    : (lead == 0xE0 ? 0xA0 : (lead == 0xF0 ? 0x90 : 0x80)))};
@@ -270,8 +269,7 @@ inline constexpr auto is_utf8_tail(const unsigned char lead,
 /// // A surrogate is not a scalar value, so it is not well-formed
 /// assert(sourcemeta::core::utf8_sequence_size("\xED\xA0\x80") == 0);
 /// ```
-inline constexpr auto utf8_sequence_size(const std::string_view input)
-    -> std::size_t {
+constexpr auto utf8_sequence_size(const std::string_view input) -> std::size_t {
   if (input.empty()) {
     return 0;
   }
@@ -304,7 +302,7 @@ inline constexpr auto utf8_sequence_size(const std::string_view input)
 /// assert(!sourcemeta::core::is_utf8_continuation(0x7F));
 /// assert(!sourcemeta::core::is_utf8_continuation(0xC0));
 /// ```
-inline constexpr auto is_utf8_continuation(const unsigned char byte) -> bool {
+constexpr auto is_utf8_continuation(const unsigned char byte) -> bool {
   return byte >= 0x80 && byte <= 0xBF;
 }
 
@@ -320,7 +318,7 @@ inline constexpr auto is_utf8_continuation(const unsigned char byte) -> bool {
 /// assert(sourcemeta::core::utf8_codepoint_count("abc") == 3);
 /// assert(sourcemeta::core::utf8_codepoint_count("caf\xc3\xa9") == 4);
 /// ```
-inline constexpr auto utf8_codepoint_count(const std::string_view input)
+constexpr auto utf8_codepoint_count(const std::string_view input)
     -> std::size_t {
   std::size_t count{0};
   for (const auto byte : input) {
@@ -347,9 +345,9 @@ inline constexpr auto utf8_codepoint_count(const std::string_view input)
 /// assert(sourcemeta::core::utf8_codepoint_within("abc", 1, 5));
 /// assert(!sourcemeta::core::utf8_codepoint_within("abc", 4, 5));
 /// ```
-inline constexpr auto utf8_codepoint_within(const std::string_view input,
-                                            const std::size_t minimum,
-                                            const std::size_t maximum) -> bool {
+constexpr auto utf8_codepoint_within(const std::string_view input,
+                                     const std::size_t minimum,
+                                     const std::size_t maximum) -> bool {
   const auto bytes{input.size()};
 
   // A code point is at least one byte, so the count never exceeds the byte
@@ -401,7 +399,7 @@ inline constexpr auto utf8_codepoint_within(const std::string_view input,
 /// assert(!sourcemeta::core::is_surrogate(0xD7FF));
 /// assert(!sourcemeta::core::is_surrogate(0xE000));
 /// ```
-inline constexpr auto is_surrogate(const char32_t codepoint) -> bool {
+constexpr auto is_surrogate(const char32_t codepoint) -> bool {
   return codepoint >= 0xD800 && codepoint <= 0xDFFF;
 }
 
@@ -419,7 +417,7 @@ inline constexpr auto is_surrogate(const char32_t codepoint) -> bool {
 /// assert(!sourcemeta::core::is_valid_codepoint(0xD800));
 /// assert(!sourcemeta::core::is_valid_codepoint(0x110000));
 /// ```
-inline constexpr auto is_valid_codepoint(const char32_t codepoint) -> bool {
+constexpr auto is_valid_codepoint(const char32_t codepoint) -> bool {
   return codepoint <= 0x10FFFF && !is_surrogate(codepoint);
 }
 
@@ -438,7 +436,7 @@ inline constexpr auto is_valid_codepoint(const char32_t codepoint) -> bool {
 /// assert(!sourcemeta::core::is_ucschar(0x0041));
 /// assert(!sourcemeta::core::is_ucschar(0xE000));
 /// ```
-inline constexpr auto is_ucschar(const char32_t codepoint) -> bool {
+constexpr auto is_ucschar(const char32_t codepoint) -> bool {
   if (codepoint >= 0xA0 && codepoint <= 0xD7FF) {
     return true;
   }
@@ -474,7 +472,7 @@ inline constexpr auto is_ucschar(const char32_t codepoint) -> bool {
 /// assert(!sourcemeta::core::is_iprivate(0x0041));
 /// assert(!sourcemeta::core::is_iprivate(0xF8FF + 1));
 /// ```
-inline constexpr auto is_iprivate(const char32_t codepoint) -> bool {
+constexpr auto is_iprivate(const char32_t codepoint) -> bool {
   if (codepoint >= 0xE000 && codepoint <= 0xF8FF) {
     return true;
   }
@@ -502,7 +500,7 @@ inline constexpr auto is_iprivate(const char32_t codepoint) -> bool {
 /// assert(sourcemeta::core::utf8_codepoint_byte_count(0x4E2D) == 3);
 /// assert(sourcemeta::core::utf8_codepoint_byte_count(0x1F600) == 4);
 /// ```
-inline constexpr auto utf8_codepoint_byte_count(const char32_t codepoint)
+constexpr auto utf8_codepoint_byte_count(const char32_t codepoint)
     -> std::uint8_t {
   if (codepoint < 0x80) {
     return 1;
@@ -717,9 +715,8 @@ auto is_nfc(const std::u32string_view input) -> bool;
 /// assert(sourcemeta::core::utf8_codepoint_length("\xf0\x9f\x98\x80", 0) == 4);
 /// assert(sourcemeta::core::utf8_codepoint_length("\xed\xa0\x80", 0) == 0);
 /// ```
-inline constexpr auto
-utf8_codepoint_length(const std::string_view input,
-                      const std::string_view::size_type position)
+constexpr auto utf8_codepoint_length(const std::string_view input,
+                                     const std::string_view::size_type position)
     -> std::size_t {
   if (position >= input.size()) {
     return 0;
@@ -791,8 +788,8 @@ utf8_codepoint_length(const std::string_view input,
 /// assert(result.value().second == 2);
 /// assert(!sourcemeta::core::utf8_decode("\xED\xA0\x80", 0).has_value());
 /// ```
-inline constexpr auto utf8_decode(const std::string_view input,
-                                  const std::string_view::size_type position)
+constexpr auto utf8_decode(const std::string_view input,
+                           const std::string_view::size_type position)
     -> std::optional<std::pair<char32_t, std::size_t>> {
   const auto size{utf8_codepoint_length(input, position)};
   if (size == 0) {

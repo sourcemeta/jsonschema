@@ -7,6 +7,7 @@
 
 #include <sourcemeta/core/json.h>
 
+#include <cstdint>     // std::uint8_t
 #include <optional>    // std::optional
 #include <string>      // std::string
 #include <string_view> // std::string_view
@@ -156,6 +157,62 @@ auto oauth_has_audience(const JSON &claims, const std::string_view audience)
 /// ```
 SOURCEMETA_CORE_OAUTH_EXPORT
 auto oauth_has_scope(const JSON &claims, const std::string_view value) -> bool;
+
+/// @ingroup oauth
+/// What a scope rule decides about a set of access token claims.
+enum class OAuthScopeDecision : std::uint8_t {
+  /// The granted scope satisfies the rule.
+  Accepted,
+  /// The granted scope does not satisfy the rule, the token carrying no
+  /// readable scope at all included.
+  Refused,
+  /// The rule is not one this can read, so it decides nothing either way and
+  /// what that means is left to the caller.
+  Unreadable
+};
+
+/// @ingroup oauth
+/// Decide whether the scope an access token grants satisfies a rule shaped
+/// like an individual claim request (OpenID Connect Core 1.0 Section 5.5.1),
+/// bridging that shape onto the `scope` claim, which RFC 6749 Section 3.3
+/// makes "a list of space-delimited, case-sensitive strings" whose "order does
+/// not matter".
+///
+/// Because the claim is a set rather than a value, a rule naming a `value` or
+/// any member of `values` is satisfied by that one being granted, and a rule
+/// constraining neither asks only that some scope be carried at all, which a
+/// claim of nothing but delimiters does not, since Section 3.3 makes every
+/// scope token at least one character long. Matching is by whole token and
+/// code points, as `oauth_has_scope` does it.
+///
+/// A `null` rule is one "being requested in the default manner" (Section
+/// 5.5.1) rather than a malformed one, and since it constrains neither member
+/// it too asks only that some scope be carried. That is stricter than the
+/// unconditional acceptance `oidc_claim_request_accepts` gives a null request,
+/// which is handed a claim the caller has already found rather than looking
+/// one up. A rule that is neither null nor an object, or whose `value` is
+/// not a string, or whose `values` is not an array of strings, is reported as
+/// unreadable rather than refused. Whether an unreadable rule denies is a
+/// deployment's policy rather than anything these specifications settle, so it
+/// is not decided here. The rule is read before the claims are, so an
+/// unreadable one is reported as such even where the token grants nothing. For
+/// example:
+///
+/// ```cpp
+/// #include <sourcemeta/core/oauth.h>
+/// #include <sourcemeta/core/json.h>
+/// #include <cassert>
+///
+/// const auto claims{
+///     sourcemeta::core::parse_json(R"JSON({"scope":"read write"})JSON")};
+/// const auto rule{
+///     sourcemeta::core::parse_json(R"JSON({"values":["admin","write"]})JSON")};
+/// assert(sourcemeta::core::oauth_scope_request_accepts(claims, rule) ==
+///        sourcemeta::core::OAuthScopeDecision::Accepted);
+/// ```
+SOURCEMETA_CORE_OAUTH_EXPORT
+auto oauth_scope_request_accepts(const JSON &claims, const JSON &request)
+    -> OAuthScopeDecision;
 
 /// @ingroup oauth
 /// Whether a set of access token claims carries the DPoP confirmation that

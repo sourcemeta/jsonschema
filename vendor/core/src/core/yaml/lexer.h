@@ -5,6 +5,7 @@
 #include <sourcemeta/core/unicode.h>
 #include <sourcemeta/core/yaml_error.h>
 
+#include <algorithm>    // std::max
 #include <charconv>     // std::from_chars
 #include <cstdint>      // std::uint8_t, std::uint64_t
 #include <deque>        // std::deque
@@ -313,7 +314,6 @@ public:
     return this->scan_plain_scalar();
   }
 
-public:
   [[nodiscard]] auto line() const noexcept -> std::uint64_t {
     if (this->position_ >= this->input_.size() && this->column_ > 1) {
       return this->line_ + 1;
@@ -1157,9 +1157,8 @@ private:
           current_empty_indent++;
           this->advance(1);
         } else if (this->peek() == '\n' || this->peek() == '\r') {
-          if (current_empty_indent > max_leading_empty_indent) {
-            max_leading_empty_indent = current_empty_indent;
-          }
+          max_leading_empty_indent =
+              std::max(current_empty_indent, max_leading_empty_indent);
           content_indent = 0;
           current_empty_indent = 0;
           this->advance(1);
@@ -1313,7 +1312,7 @@ private:
           trailing_newlines += '\n';
         } else {
           blank_line_count++;
-          if (original) {
+          if (original != nullptr) {
             if (line_indent > content_indent) {
               *original += original_trailing;
               original_trailing.clear();
@@ -1380,7 +1379,7 @@ private:
         had_line_break = false;
         previous_started_with_whitespace = starts_with_whitespace;
 
-        if (original) {
+        if (original != nullptr) {
           *original += original_trailing;
           original_trailing.clear();
         }
@@ -1388,7 +1387,7 @@ private:
 
       for (std::size_t index = content_indent; index < line_indent; ++index) {
         buffer += ' ';
-        if (original) {
+        if (original != nullptr) {
           *original += ' ';
         }
       }
@@ -1397,7 +1396,7 @@ private:
              this->peek() != '\r') {
         const auto character{this->peek()};
         buffer += character;
-        if (original) {
+        if (original != nullptr) {
           *original += character;
         }
         this->advance(1);
@@ -1412,7 +1411,7 @@ private:
           trailing_newlines += '\n';
         } else {
           had_line_break = true;
-          if (original) {
+          if (original != nullptr) {
             original_trailing += '\n';
           }
         }
@@ -1433,7 +1432,7 @@ private:
         for (std::size_t count = 0; count < blank_line_count; ++count) {
           buffer += '\n';
         }
-        if (original) {
+        if (original != nullptr) {
           *original += original_trailing;
         }
       }
@@ -1451,7 +1450,7 @@ private:
         }
       } else if (had_line_break || blank_line_count > 0) {
         buffer += '\n';
-        if (original && !original_trailing.empty()) {
+        if ((original != nullptr) && !original_trailing.empty()) {
           *original += '\n';
         }
       }
@@ -1470,8 +1469,9 @@ private:
                  .column = start_column,
                  .scalar_style = style,
                  .chomping = block_chomping,
-                 .block_original = original ? std::string_view{*original}
-                                            : std::string_view{},
+                 .block_original = (original != nullptr)
+                                       ? std::string_view{*original}
+                                       : std::string_view{},
                  .explicit_indent = explicit_indent,
                  .indent_before_chomping = indent_first};
   }

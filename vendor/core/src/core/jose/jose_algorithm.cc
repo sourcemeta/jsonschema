@@ -12,33 +12,44 @@ auto to_jws_algorithm(const std::string_view value) noexcept
     -> std::optional<JWSAlgorithm> {
   if (value == "RS256") {
     return JWSAlgorithm::RS256;
-  } else if (value == "RS384") {
-    return JWSAlgorithm::RS384;
-  } else if (value == "RS512") {
-    return JWSAlgorithm::RS512;
-  } else if (value == "PS256") {
-    return JWSAlgorithm::PS256;
-  } else if (value == "PS384") {
-    return JWSAlgorithm::PS384;
-  } else if (value == "PS512") {
-    return JWSAlgorithm::PS512;
-  } else if (value == "ES256") {
-    return JWSAlgorithm::ES256;
-  } else if (value == "ES384") {
-    return JWSAlgorithm::ES384;
-  } else if (value == "ES512") {
-    return JWSAlgorithm::ES512;
-  } else if (value == "EdDSA") {
-    return JWSAlgorithm::EdDSA;
-  } else if (value == "HS256") {
-    return JWSAlgorithm::HS256;
-  } else if (value == "HS384") {
-    return JWSAlgorithm::HS384;
-  } else if (value == "HS512") {
-    return JWSAlgorithm::HS512;
-  } else {
-    return std::nullopt;
   }
+  if (value == "RS384") {
+    return JWSAlgorithm::RS384;
+  }
+  if (value == "RS512") {
+    return JWSAlgorithm::RS512;
+  }
+  if (value == "PS256") {
+    return JWSAlgorithm::PS256;
+  }
+  if (value == "PS384") {
+    return JWSAlgorithm::PS384;
+  }
+  if (value == "PS512") {
+    return JWSAlgorithm::PS512;
+  }
+  if (value == "ES256") {
+    return JWSAlgorithm::ES256;
+  }
+  if (value == "ES384") {
+    return JWSAlgorithm::ES384;
+  }
+  if (value == "ES512") {
+    return JWSAlgorithm::ES512;
+  }
+  if (value == "EdDSA") {
+    return JWSAlgorithm::EdDSA;
+  }
+  if (value == "HS256") {
+    return JWSAlgorithm::HS256;
+  }
+  if (value == "HS384") {
+    return JWSAlgorithm::HS384;
+  }
+  if (value == "HS512") {
+    return JWSAlgorithm::HS512;
+  }
+  return std::nullopt;
 }
 
 auto jws_algorithm_name(const JWSAlgorithm algorithm) noexcept
@@ -126,27 +137,35 @@ auto to_jwe_algorithm(const std::string_view value) noexcept
     -> std::optional<JWEAlgorithm> {
   if (value == "RSA-OAEP") {
     return JWEAlgorithm::RSA_OAEP;
-  } else if (value == "RSA-OAEP-256") {
-    return JWEAlgorithm::RSA_OAEP_256;
-  } else if (value == "ECDH-ES") {
-    return JWEAlgorithm::ECDH_ES;
-  } else if (value == "ECDH-ES+A128KW") {
-    return JWEAlgorithm::ECDH_ES_A128KW;
-  } else if (value == "ECDH-ES+A192KW") {
-    return JWEAlgorithm::ECDH_ES_A192KW;
-  } else if (value == "ECDH-ES+A256KW") {
-    return JWEAlgorithm::ECDH_ES_A256KW;
-  } else if (value == "A128KW") {
-    return JWEAlgorithm::A128KW;
-  } else if (value == "A192KW") {
-    return JWEAlgorithm::A192KW;
-  } else if (value == "A256KW") {
-    return JWEAlgorithm::A256KW;
-  } else if (value == "dir") {
-    return JWEAlgorithm::DIR;
-  } else {
-    return std::nullopt;
   }
+  if (value == "RSA-OAEP-256") {
+    return JWEAlgorithm::RSA_OAEP_256;
+  }
+  if (value == "ECDH-ES") {
+    return JWEAlgorithm::ECDH_ES;
+  }
+  if (value == "ECDH-ES+A128KW") {
+    return JWEAlgorithm::ECDH_ES_A128KW;
+  }
+  if (value == "ECDH-ES+A192KW") {
+    return JWEAlgorithm::ECDH_ES_A192KW;
+  }
+  if (value == "ECDH-ES+A256KW") {
+    return JWEAlgorithm::ECDH_ES_A256KW;
+  }
+  if (value == "A128KW") {
+    return JWEAlgorithm::A128KW;
+  }
+  if (value == "A192KW") {
+    return JWEAlgorithm::A192KW;
+  }
+  if (value == "A256KW") {
+    return JWEAlgorithm::A256KW;
+  }
+  if (value == "dir") {
+    return JWEAlgorithm::DIR;
+  }
+  return std::nullopt;
 }
 
 auto jwe_algorithm_name(const JWEAlgorithm algorithm) noexcept
@@ -181,19 +200,23 @@ auto to_jwe_encryption(const std::string_view value) noexcept
     -> std::optional<JWEEncryption> {
   if (value == "A128GCM") {
     return JWEEncryption::A128GCM;
-  } else if (value == "A192GCM") {
-    return JWEEncryption::A192GCM;
-  } else if (value == "A256GCM") {
-    return JWEEncryption::A256GCM;
-  } else if (value == "A128CBC-HS256") {
-    return JWEEncryption::A128CBC_HS256;
-  } else if (value == "A192CBC-HS384") {
-    return JWEEncryption::A192CBC_HS384;
-  } else if (value == "A256CBC-HS512") {
-    return JWEEncryption::A256CBC_HS512;
-  } else {
-    return std::nullopt;
   }
+  if (value == "A192GCM") {
+    return JWEEncryption::A192GCM;
+  }
+  if (value == "A256GCM") {
+    return JWEEncryption::A256GCM;
+  }
+  if (value == "A128CBC-HS256") {
+    return JWEEncryption::A128CBC_HS256;
+  }
+  if (value == "A192CBC-HS384") {
+    return JWEEncryption::A192CBC_HS384;
+  }
+  if (value == "A256CBC-HS512") {
+    return JWEEncryption::A256CBC_HS512;
+  }
+  return std::nullopt;
 }
 
 auto jwe_encryption_name(const JWEEncryption encryption) noexcept

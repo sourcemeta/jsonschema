@@ -221,13 +221,12 @@ auto process_context(ExpansionState &state, ActiveContext &active_context,
       } else {
         const auto &vocabulary_string{vocabulary.to_string()};
         // In 1.0, @vocab must be an absolute IRI or blank node identifier.
-        if (state.processing_1_0 &&
-            vocabulary_string.find(':') == JSON::String::npos) {
+        if (state.processing_1_0 && !vocabulary_string.contains(':')) {
           throw JSONLDError("Invalid vocab mapping", location, {KEYWORD_VOCAB});
         }
         active_context.vocabulary =
             expand_iri(state, active_context, vocabulary_string, true, true,
-                       nullptr, nullptr, empty_weak_pointer);
+                       nullptr, nullptr, EMPTY_WEAK_POINTER);
       }
     }
 

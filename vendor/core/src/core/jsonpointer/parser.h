@@ -83,7 +83,7 @@ parse_token_begin:
   // by a '/' (%x2F) character.
   // See https://www.rfc-editor.org/rfc/rfc6901#section-3
   switch (character) {
-    case internal::token_pointer_slash<JSON::Char>:
+    case internal::TOKEN_POINTER_SLASH<JSON::Char>:
       goto parse_token_content;
     default:
       throw PointerParseError(column);
@@ -103,31 +103,31 @@ parse_token_content:
   switch (character) {
       // Note that leading zeros are not allowed
       // See https://www.rfc-editor.org/rfc/rfc6901#section-4
-    case internal::token_pointer_number_zero<JSON::Char>:
+    case internal::TOKEN_POINTER_NUMBER_ZERO<JSON::Char>:
       column += 1;
       stream.ignore();
       goto parse_token_index_end;
-    case internal::token_pointer_number_one<JSON::Char>:
-    case internal::token_pointer_number_two<JSON::Char>:
-    case internal::token_pointer_number_three<JSON::Char>:
-    case internal::token_pointer_number_four<JSON::Char>:
-    case internal::token_pointer_number_five<JSON::Char>:
-    case internal::token_pointer_number_six<JSON::Char>:
-    case internal::token_pointer_number_seven<JSON::Char>:
-    case internal::token_pointer_number_eight<JSON::Char>:
-    case internal::token_pointer_number_nine<JSON::Char>:
+    case internal::TOKEN_POINTER_NUMBER_ONE<JSON::Char>:
+    case internal::TOKEN_POINTER_NUMBER_TWO<JSON::Char>:
+    case internal::TOKEN_POINTER_NUMBER_THREE<JSON::Char>:
+    case internal::TOKEN_POINTER_NUMBER_FOUR<JSON::Char>:
+    case internal::TOKEN_POINTER_NUMBER_FIVE<JSON::Char>:
+    case internal::TOKEN_POINTER_NUMBER_SIX<JSON::Char>:
+    case internal::TOKEN_POINTER_NUMBER_SEVEN<JSON::Char>:
+    case internal::TOKEN_POINTER_NUMBER_EIGHT<JSON::Char>:
+    case internal::TOKEN_POINTER_NUMBER_NINE<JSON::Char>:
       column += 1;
       stream.ignore();
       if constexpr (!CheckOnly) {
         string.put(character);
       }
       goto parse_token_index_rest_any;
-    case internal::token_pointer_slash<JSON::Char>:
+    case internal::TOKEN_POINTER_SLASH<JSON::Char>:
       if constexpr (!CheckOnly) {
         result.emplace_back("");
       }
       goto parse_token_begin;
-    case internal::token_pointer_tilde<JSON::Char>:
+    case internal::TOKEN_POINTER_TILDE<JSON::Char>:
       column += 1;
       stream.ignore();
       goto parse_token_escape_tilde;
@@ -160,7 +160,7 @@ parse_token_index_end:
   }
   character = JSON::CharTraits::to_char_type(code);
   switch (character) {
-    case internal::token_pointer_slash<JSON::Char>:
+    case internal::TOKEN_POINTER_SLASH<JSON::Char>:
       column += 1;
       stream.ignore();
       if constexpr (!CheckOnly) {
@@ -185,7 +185,7 @@ parse_token_index_rest_any:
   }
   character = JSON::CharTraits::to_char_type(code);
   switch (character) {
-    case internal::token_pointer_slash<JSON::Char>:
+    case internal::TOKEN_POINTER_SLASH<JSON::Char>:
       column += 1;
       stream.ignore();
       if constexpr (!CheckOnly) {
@@ -193,16 +193,16 @@ parse_token_index_rest_any:
         internal::reset(string);
       }
       goto parse_token_content;
-    case internal::token_pointer_number_zero<JSON::Char>:
-    case internal::token_pointer_number_one<JSON::Char>:
-    case internal::token_pointer_number_two<JSON::Char>:
-    case internal::token_pointer_number_three<JSON::Char>:
-    case internal::token_pointer_number_four<JSON::Char>:
-    case internal::token_pointer_number_five<JSON::Char>:
-    case internal::token_pointer_number_six<JSON::Char>:
-    case internal::token_pointer_number_seven<JSON::Char>:
-    case internal::token_pointer_number_eight<JSON::Char>:
-    case internal::token_pointer_number_nine<JSON::Char>:
+    case internal::TOKEN_POINTER_NUMBER_ZERO<JSON::Char>:
+    case internal::TOKEN_POINTER_NUMBER_ONE<JSON::Char>:
+    case internal::TOKEN_POINTER_NUMBER_TWO<JSON::Char>:
+    case internal::TOKEN_POINTER_NUMBER_THREE<JSON::Char>:
+    case internal::TOKEN_POINTER_NUMBER_FOUR<JSON::Char>:
+    case internal::TOKEN_POINTER_NUMBER_FIVE<JSON::Char>:
+    case internal::TOKEN_POINTER_NUMBER_SIX<JSON::Char>:
+    case internal::TOKEN_POINTER_NUMBER_SEVEN<JSON::Char>:
+    case internal::TOKEN_POINTER_NUMBER_EIGHT<JSON::Char>:
+    case internal::TOKEN_POINTER_NUMBER_NINE<JSON::Char>:
       column += 1;
       stream.ignore();
       if constexpr (!CheckOnly) {
@@ -230,13 +230,13 @@ parse_token_property_rest_any:
   }
   character = JSON::CharTraits::to_char_type(code);
   switch (character) {
-    case internal::token_pointer_slash<JSON::Char>:
+    case internal::TOKEN_POINTER_SLASH<JSON::Char>:
       if constexpr (!CheckOnly) {
         result.emplace_back(string.str());
         internal::reset(string);
       }
       goto parse_token_content;
-    case internal::token_pointer_tilde<JSON::Char>:
+    case internal::TOKEN_POINTER_TILDE<JSON::Char>:
       goto parse_token_escape_tilde;
     default:
       if constexpr (!CheckOnly) {
@@ -258,14 +258,14 @@ parse_token_escape_tilde:
   // reference token.
   // See https://www.rfc-editor.org/rfc/rfc6901#section-3
   switch (character) {
-    case internal::token_pointer_number_zero<JSON::Char>:
+    case internal::TOKEN_POINTER_NUMBER_ZERO<JSON::Char>:
       if constexpr (!CheckOnly) {
-        string.put(internal::token_pointer_tilde<JSON::Char>);
+        string.put(internal::TOKEN_POINTER_TILDE<JSON::Char>);
       }
       goto parse_token_property_rest_any;
-    case internal::token_pointer_number_one<JSON::Char>:
+    case internal::TOKEN_POINTER_NUMBER_ONE<JSON::Char>:
       if constexpr (!CheckOnly) {
-        string.put(internal::token_pointer_slash<JSON::Char>);
+        string.put(internal::TOKEN_POINTER_SLASH<JSON::Char>);
       }
       goto parse_token_property_rest_any;
     default:

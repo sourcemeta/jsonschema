@@ -197,9 +197,9 @@ auto create_term_definition(ExpansionState &state,
         } else {
           definition.iri = term;
         }
-      } else if (term.find('/') != JSON::String::npos) {
+      } else if (term.contains('/')) {
         definition.iri = expand_iri(state, active_context, term, false, true,
-                                    nullptr, nullptr, empty_weak_pointer);
+                                    nullptr, nullptr, EMPTY_WEAK_POINTER);
       } else if (active_context.vocabulary.has_value()) {
         definition.iri = active_context.vocabulary.value() + term;
       }
@@ -213,11 +213,11 @@ auto create_term_definition(ExpansionState &state,
         const bool iri_like_colon{colon_position != JSON::String::npos &&
                                   colon_position != 0 &&
                                   colon_position + 1 != term.size()};
-        if (iri_like_colon || term.find('/') != JSON::String::npos) {
+        if (iri_like_colon || term.contains('/')) {
           auto probe{active_context};
           const auto expanded_term{expand_iri(state, probe, term, false, true,
                                               nullptr, nullptr,
-                                              empty_weak_pointer)};
+                                              EMPTY_WEAK_POINTER)};
           if (expanded_term.has_value() && expanded_term != definition.iri) {
             throw JSONLDError("Invalid IRI mapping", term_pointer);
           }
@@ -226,7 +226,7 @@ auto create_term_definition(ExpansionState &state,
     }
   } else if (value.is_object()) {
     const bool has_id{id_entry != nullptr};
-    const JSON *const id{id_entry};
+    const JSON *const identifier{id_entry};
     if (const auto *reverse_entry{
             value.try_at(KEYWORD_REVERSE, KEYWORD_REVERSE_HASH)}) {
       if (has_id || value.defines(KEYWORD_NEST, KEYWORD_NEST_HASH)) {
@@ -247,16 +247,16 @@ auto create_term_definition(ExpansionState &state,
         defined[term] = true;
         return;
       }
-      if (definition.iri.value().find(':') == JSON::String::npos) {
+      if (!definition.iri.value().contains(':')) {
         throw JSONLDError("Invalid IRI mapping", term_pointer,
                           {KEYWORD_REVERSE});
       }
-    } else if (has_id && !id->is_null() &&
-               (!id->is_string() || id->to_string() != term)) {
-      if (!id->is_string()) {
+    } else if (has_id && !identifier->is_null() &&
+               (!identifier->is_string() || identifier->to_string() != term)) {
+      if (!identifier->is_string()) {
         throw JSONLDError("Invalid IRI mapping", term_pointer, {KEYWORD_ID});
       }
-      const auto &id_value{id->to_string()};
+      const auto &id_value{identifier->to_string()};
       if (!is_keyword(id_value) && has_keyword_form(id_value)) {
         defined[term] = true;
         return;
@@ -265,8 +265,7 @@ auto create_term_definition(ExpansionState &state,
                                   &local_context, &defined, context_pointer);
       const auto &mapping{definition.iri};
       if (!mapping.has_value() ||
-          (!is_keyword(mapping.value()) &&
-           mapping.value().find(':') == JSON::String::npos &&
+          (!is_keyword(mapping.value()) && !mapping.value().contains(':') &&
            !active_context.vocabulary.has_value())) {
         throw JSONLDError("Invalid IRI mapping", term_pointer, {KEYWORD_ID});
       }
@@ -280,18 +279,18 @@ auto create_term_definition(ExpansionState &state,
         const bool iri_like_colon{colon_position != JSON::String::npos &&
                                   colon_position != 0 &&
                                   colon_position + 1 != term.size()};
-        if (iri_like_colon || term.find('/') != JSON::String::npos) {
+        if (iri_like_colon || term.contains('/')) {
           auto probe{active_context};
           const auto expanded_term{expand_iri(state, probe, term, false, true,
                                               nullptr, nullptr,
-                                              empty_weak_pointer)};
+                                              EMPTY_WEAK_POINTER)};
           if (expanded_term.has_value() && expanded_term != mapping) {
             throw JSONLDError("Invalid IRI mapping", term_pointer,
                               {KEYWORD_ID});
           }
         }
       }
-    } else if (term.find(':') != JSON::String::npos && !term.starts_with(':') &&
+    } else if (term.contains(':') && !term.starts_with(':') &&
                !term.ends_with(':')) {
       const auto colon{term.find(':')};
       const auto prefix{term.substr(0, colon)};
@@ -311,9 +310,9 @@ auto create_term_definition(ExpansionState &state,
       } else {
         definition.iri = term;
       }
-    } else if (term.find('/') != JSON::String::npos) {
+    } else if (term.contains('/')) {
       definition.iri = expand_iri(state, active_context, term, false, true,
-                                  nullptr, nullptr, empty_weak_pointer);
+                                  nullptr, nullptr, EMPTY_WEAK_POINTER);
     } else if (active_context.vocabulary.has_value()) {
       definition.iri = active_context.vocabulary.value() + term;
     }
@@ -329,7 +328,7 @@ auto create_term_definition(ExpansionState &state,
       if (!type.has_value() || type.value().starts_with("_:") ||
           (type.value() != KEYWORD_ID && type.value() != KEYWORD_VOCAB &&
            type.value() != KEYWORD_JSON && type.value() != KEYWORD_NONE &&
-           type.value().find(':') == JSON::String::npos) ||
+           !type.value().contains(':')) ||
           (state.processing_1_0 &&
            (type.value() == KEYWORD_JSON || type.value() == KEYWORD_NONE))) {
         throw JSONLDError("Invalid type mapping", term_pointer, {KEYWORD_TYPE});
@@ -490,7 +489,7 @@ auto create_term_definition(ExpansionState &state,
         // not matter.
         ActiveContext probe{active_context};
         state.protected_override = true;
-        process_context(state, probe, *context_entry, empty_weak_pointer);
+        process_context(state, probe, *context_entry, EMPTY_WEAK_POINTER);
         state.protected_override = saved_override;
         state.context_protected = saved_context_protected;
       } catch (const JSONLDError &error) {
@@ -514,8 +513,7 @@ auto create_term_definition(ExpansionState &state,
     if (const auto *prefix_entry{
             value.try_at(KEYWORD_PREFIX, KEYWORD_PREFIX_HASH)};
         prefix_entry != nullptr && !definition.reverse) {
-      if (state.processing_1_0 || term.find(':') != JSON::String::npos ||
-          term.find('/') != JSON::String::npos) {
+      if (state.processing_1_0 || term.contains(':') || term.contains('/')) {
         throw JSONLDError("Invalid term definition", term_pointer,
                           {KEYWORD_PREFIX});
       }
@@ -610,8 +608,8 @@ auto create_term_definition(ExpansionState &state,
     throw JSONLDError("Invalid term definition", term_pointer);
   }
 
-  if (simple_term && term.find(':') == JSON::String::npos &&
-      term.find('/') == JSON::String::npos && definition.iri.has_value() &&
+  if (simple_term && !term.contains(':') && !term.contains('/') &&
+      definition.iri.has_value() &&
       (ends_with_gen_delim(definition.iri.value()) ||
        definition.iri.value().starts_with("_:"))) {
     definition.prefix = true;

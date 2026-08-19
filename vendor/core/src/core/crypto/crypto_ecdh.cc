@@ -31,12 +31,12 @@ auto kdf_concat(const std::string_view shared_secret,
     -> std::optional<std::string> {
   // The construction encodes each length and the key length in bits as a 32-bit
   // field, so an input that would not fit cannot be represented
-  constexpr std::size_t maximum_field{
+  constexpr std::size_t MAXIMUM_FIELD{
       std::numeric_limits<std::uint32_t>::max()};
-  if (algorithm_id.size() > maximum_field ||
-      party_u_info.size() > maximum_field ||
-      party_v_info.size() > maximum_field ||
-      derived_key_bytes > maximum_field / 8u) {
+  if (algorithm_id.size() > MAXIMUM_FIELD ||
+      party_u_info.size() > MAXIMUM_FIELD ||
+      party_v_info.size() > MAXIMUM_FIELD ||
+      derived_key_bytes > MAXIMUM_FIELD / 8U) {
     return std::nullopt;
   }
 
@@ -49,7 +49,7 @@ auto kdf_concat(const std::string_view shared_secret,
   append_length_prefixed(other_info, party_u_info);
   append_length_prefixed(other_info, party_v_info);
   append_big_endian_uint32(other_info,
-                           static_cast<std::uint32_t>(derived_key_bytes * 8u));
+                           static_cast<std::uint32_t>(derived_key_bytes * 8U));
 
   // Each round hashes the big-endian round counter, the shared secret, and
   // OtherInfo, taking blocks until the requested length is reached

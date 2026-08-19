@@ -76,7 +76,8 @@ auto compact_value(const ActiveContext &active_context,
 
     if (type_matches && index_ok) {
       return contents;
-    } else if (type_disabled) {
+    }
+    if (type_disabled) {
       // Value compaction is disabled, but the @type IRI is still compacted in
       // the full form below.
     } else if (!contents.is_string()) {

@@ -55,31 +55,31 @@ public:
       -> std::optional<SemVer>;
 
   /// The major version number.
-  [[nodiscard]] SOURCEMETA_FORCEINLINE inline auto major() const noexcept
+  [[nodiscard]] SOURCEMETA_FORCEINLINE auto major() const noexcept
       -> std::uint64_t {
     return this->major_;
   }
 
   /// The minor version number.
-  [[nodiscard]] SOURCEMETA_FORCEINLINE inline auto minor() const noexcept
+  [[nodiscard]] SOURCEMETA_FORCEINLINE auto minor() const noexcept
       -> std::uint64_t {
     return this->minor_;
   }
 
   /// The patch version number.
-  [[nodiscard]] SOURCEMETA_FORCEINLINE inline auto patch() const noexcept
+  [[nodiscard]] SOURCEMETA_FORCEINLINE auto patch() const noexcept
       -> std::uint64_t {
     return this->patch_;
   }
 
   /// The pre-release identifier, or empty if none is present.
-  [[nodiscard]] SOURCEMETA_FORCEINLINE inline auto pre_release() const noexcept
+  [[nodiscard]] SOURCEMETA_FORCEINLINE auto pre_release() const noexcept
       -> std::string_view {
     return this->pre_release_;
   }
 
   /// The build metadata, or empty if none is present.
-  [[nodiscard]] SOURCEMETA_FORCEINLINE inline auto build() const noexcept
+  [[nodiscard]] SOURCEMETA_FORCEINLINE auto build() const noexcept
       -> std::string_view {
     return this->build_;
   }
@@ -89,8 +89,8 @@ public:
   // determining version *precedence*, but two versions with different build
   // metadata are distinct versions.
   // See https://semver.org/spec/v2.0.0.html#spec-item-10
-  SOURCEMETA_FORCEINLINE inline auto
-  operator==(const SemVer &other) const noexcept -> bool {
+  SOURCEMETA_FORCEINLINE auto operator==(const SemVer &other) const noexcept
+      -> bool {
     return this->major_ == other.major_ && this->minor_ == other.minor_ &&
            this->patch_ == other.patch_ &&
            this->pre_release_ == other.pre_release_ &&
@@ -99,23 +99,23 @@ public:
 
   auto operator<(const SemVer &other) const noexcept -> bool;
 
-  SOURCEMETA_FORCEINLINE inline auto
-  operator!=(const SemVer &other) const noexcept -> bool {
+  SOURCEMETA_FORCEINLINE auto operator!=(const SemVer &other) const noexcept
+      -> bool {
     return !(*this == other);
   }
 
-  SOURCEMETA_FORCEINLINE inline auto
-  operator>(const SemVer &other) const noexcept -> bool {
+  SOURCEMETA_FORCEINLINE auto operator>(const SemVer &other) const noexcept
+      -> bool {
     return other < *this;
   }
 
-  SOURCEMETA_FORCEINLINE inline auto
-  operator<=(const SemVer &other) const noexcept -> bool {
+  SOURCEMETA_FORCEINLINE auto operator<=(const SemVer &other) const noexcept
+      -> bool {
     return !(other < *this);
   }
 
-  SOURCEMETA_FORCEINLINE inline auto
-  operator>=(const SemVer &other) const noexcept -> bool {
+  SOURCEMETA_FORCEINLINE auto operator>=(const SemVer &other) const noexcept
+      -> bool {
     return !(*this < other);
   }
 

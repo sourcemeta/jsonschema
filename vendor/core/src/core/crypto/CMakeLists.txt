@@ -3,16 +3,16 @@ sourcemeta_library(NAMESPACE sourcemeta PROJECT core NAME crypto
     sha512.h sha1.h
     fnv128.h
     uuid.h crc32.h base64.h secure.h verify.h sign.h aes_gcm.h aes_cbc_hmac.h
-    aes_kw.h rsa_oaep.h ecdh.h
+    aes_kw.h rsa_oaep.h ecdh.h hkdf.h
   SOURCES crypto_sha256.cc crypto_hmac_sha256.cc crypto_hmac_sha384.cc
     crypto_hmac_sha512.cc
     crypto_sha384.cc
     crypto_sha512.cc crypto_sha1.cc
     crypto_uuid.cc crypto_fnv128.cc crypto_crc32.cc crypto_base64.cc
     crypto_random.cc crypto_sign_rsa.cc crypto_aes_gcm.cc crypto_aes_cbc_hmac.cc
-    crypto_aes_kw.cc crypto_ecdh.cc
+    crypto_aes_kw.cc crypto_ecdh.cc crypto_hkdf.cc
     crypto_sha2_64.h crypto_sha256_other.h crypto_random.h crypto_helpers.h
-    crypto_der.h crypto_aes.h)
+    crypto_der.h crypto_aes.h crypto_kdf.h crypto_hkdf_loop.h)
 
 target_link_libraries(sourcemeta_core_crypto
   PRIVATE sourcemeta::core::text sourcemeta::core::numeric)
@@ -27,6 +27,7 @@ if(SOURCEMETA_CORE_CRYPTO_USE_SYSTEM_OPENSSL)
     crypto_verify_openssl.cc crypto_secure_equals_openssl.cc
     crypto_sign_openssl.cc crypto_aes_gcm_openssl.cc crypto_aes_cbc_openssl.cc
     crypto_aes_kw_openssl.cc crypto_rsa_oaep_openssl.cc crypto_ecdh_openssl.cc
+    crypto_hkdf_openssl.cc
     crypto_openssl.h crypto_pkcs8.h)
   target_link_libraries(sourcemeta_core_crypto PRIVATE OpenSSL::Crypto)
 elseif(APPLE)
@@ -118,8 +119,10 @@ elseif(APPLE)
     crypto_verify_apple.cc crypto_secure_equals_apple.cc
     crypto_sign_apple.cc crypto_aes_gcm_apple.cc crypto_aes_cbc_apple.cc
     crypto_aes_kw_apple.cc crypto_rsa_oaep_apple.cc crypto_ecdh_apple.cc
+    crypto_hkdf_apple.cc
     crypto_eddsa_cryptokit.mm "${CRYPTOKIT_OBJECT}"
     crypto_eddsa.h crypto_eddsa_apple.h crypto_apple.h crypto_aes_apple.h
+    crypto_kdf_apple.h
     crypto_bignum.h crypto_shake256.h crypto_pkcs8.h)
 
   # The generated Objective-C interface header lives in the build tree
@@ -149,6 +152,7 @@ elseif(WIN32)
     crypto_verify_windows.cc crypto_secure_equals_generic.cc
     crypto_sign_windows.cc crypto_aes_gcm_windows.cc crypto_aes_cbc_windows.cc
     crypto_aes_kw_windows.cc crypto_rsa_oaep_windows.cc crypto_ecdh_windows.cc
+    crypto_hkdf_windows.cc
     crypto_eddsa.h
     crypto_windows.h crypto_aes_kw_loop.h
     crypto_bignum.h crypto_ecc.h crypto_shake256.h crypto_pkcs8.h)
@@ -163,7 +167,7 @@ else()
     crypto_sha512_other.cc crypto_random_other.cc crypto_verify_other.cc
     crypto_secure_equals_generic.cc crypto_sign_other.cc
     crypto_aes_gcm_other.cc crypto_aes_cbc_other.cc crypto_aes_kw_other.cc
-    crypto_rsa_oaep_other.cc crypto_ecdh_other.cc
+    crypto_rsa_oaep_other.cc crypto_ecdh_other.cc crypto_hkdf_other.cc
     crypto_aes_block.h crypto_aes_kw_loop.h crypto_sha1_other.h
     crypto_bignum.h crypto_ecc.h crypto_eddsa.h crypto_shake256.h
     crypto_pkcs8.h crypto_other.h)

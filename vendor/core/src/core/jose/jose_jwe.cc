@@ -1,7 +1,7 @@
+#include <sourcemeta/core/jose_compact.h>
 #include <sourcemeta/core/jose_jwe.h>
 
 #include <sourcemeta/core/crypto.h>
-#include <sourcemeta/core/text.h>
 
 #include <optional>    // std::optional, std::nullopt
 #include <string_view> // std::string_view
@@ -23,34 +23,16 @@ namespace sourcemeta::core {
 auto JWE::parse(const std::string_view input, JWE &result) -> bool {
   // The compact serialization is exactly five base64url segments joined by dots
   // (RFC 7516 Section 7.1)
-  const auto first{split_once(input, '.')};
-  if (!first.has_value()) {
+  const auto segments{jose_compact_segments<5>(input)};
+  if (!segments.has_value()) {
     return false;
   }
 
-  const auto second{split_once(first->second, '.')};
-  if (!second.has_value()) {
-    return false;
-  }
-
-  const auto third{split_once(second->second, '.')};
-  if (!third.has_value()) {
-    return false;
-  }
-
-  const auto fourth{split_once(third->second, '.')};
-  if (!fourth.has_value()) {
-    return false;
-  }
-
-  const auto header_segment{first->first};
-  const auto encrypted_key_segment{second->first};
-  const auto iv_segment{third->first};
-  const auto ciphertext_segment{fourth->first};
-  const auto tag_segment{fourth->second};
-  if (tag_segment.find('.') != std::string_view::npos) {
-    return false;
-  }
+  const auto header_segment{segments->at(0)};
+  const auto encrypted_key_segment{segments->at(1)};
+  const auto iv_segment{segments->at(2)};
+  const auto ciphertext_segment{segments->at(3)};
+  const auto tag_segment{segments->at(4)};
 
   auto header_bytes{base64url_decode(header_segment)};
   auto encrypted_key_bytes{base64url_decode(encrypted_key_segment)};

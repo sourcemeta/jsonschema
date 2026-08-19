@@ -270,8 +270,8 @@ auto flush(const std::filesystem::path &path) -> void {
   CloseHandle(hFile);
 
 #else
-  auto fd = ::open(path.c_str(), O_RDWR);
-  if (fd == -1) {
+  auto descriptor = ::open(path.c_str(), O_RDWR);
+  if (descriptor == -1) {
     const auto error_code = std::error_code{errno, std::generic_category()};
     if (error_code == std::errc::no_such_file_or_directory) {
       throw IOFileNotFoundError{path};
@@ -284,14 +284,14 @@ auto flush(const std::filesystem::path &path) -> void {
                                             path, error_code};
   }
 
-  if (::fsync(fd) == -1) {
+  if (::fsync(descriptor) == -1) {
     const auto error_code = std::error_code{errno, std::generic_category()};
-    ::close(fd);
+    ::close(descriptor);
     throw std::filesystem::filesystem_error{"failed to flush the file to disk",
                                             path, error_code};
   }
 
-  ::close(fd);
+  ::close(descriptor);
 
   // After syncing a file, we should also sync the directory to ensure
   // durability

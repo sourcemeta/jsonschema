@@ -86,7 +86,7 @@ auto nest_target(JSON &result, const TermDefinition *const definition,
     if (iterator == active_context.terms.cend() ||
         !iterator->second.iri.has_value() ||
         iterator->second.iri.value() != KEYWORD_NEST) {
-      throw JSONLDError("Invalid @nest value", empty_weak_pointer);
+      throw JSONLDError("Invalid @nest value", EMPTY_WEAK_POINTER);
     }
   }
   if (!result.defines(key)) {
@@ -105,8 +105,8 @@ auto compact(ExpansionState &state, const ActiveContext &active_context,
              const std::optional<JSON::String> &active_property,
              const JSON &element, const bool compact_arrays) -> JSON {
   const NestingDepthScope scope{state.depth};
-  if (state.depth > ExpansionState::maximum_depth) {
-    throw JSONLDError("Maximum nesting depth exceeded", empty_weak_pointer);
+  if (state.depth > ExpansionState::MAXIMUM_DEPTH) {
+    throw JSONLDError("Maximum nesting depth exceeded", EMPTY_WEAK_POINTER);
   }
 
   if (!element.is_object() && !element.is_array()) {
@@ -172,7 +172,7 @@ auto compact(ExpansionState &state, const ActiveContext &active_context,
     const bool saved_context_protected{state.context_protected};
     state.protected_override = true;
     process_context(state, scoped, scoped_definition->context.value(),
-                    empty_weak_pointer);
+                    EMPTY_WEAK_POINTER);
     state.protected_override = saved_override;
     state.context_protected = saved_context_protected;
     scoped_inverse = create_inverse_context(scoped);
@@ -228,7 +228,7 @@ auto compact(ExpansionState &state, const ActiveContext &active_context,
       if (iterator != context.terms.cend() &&
           iterator->second.context.has_value()) {
         process_context(state, typed, iterator->second.context.value(),
-                        empty_weak_pointer, false);
+                        EMPTY_WEAK_POINTER, false);
         typed_changed = true;
       }
     }
@@ -446,7 +446,7 @@ auto compact(ExpansionState &state, const ActiveContext &active_context,
             if (member.is_object() &&
                 member.defines(KEYWORD_LIST, KEYWORD_LIST_HASH)) {
               throw JSONLDError("Compaction to list of lists",
-                                empty_weak_pointer);
+                                EMPTY_WEAK_POINTER);
             }
           }
         }

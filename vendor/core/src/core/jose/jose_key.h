@@ -37,7 +37,7 @@ inline auto jwk_rsa_modulus_is_allowed(const std::string_view modulus) noexcept
   }
 
   const auto leading{static_cast<std::uint8_t>(modulus[offset])};
-  const auto bits{(modulus.size() - offset - 1) * 8 +
+  const auto bits{((modulus.size() - offset - 1) * 8) +
                   (8 - static_cast<std::size_t>(std::countl_zero(leading)))};
   return bits >= MINIMUM_RSA_MODULUS_BITS;
 }
@@ -47,13 +47,14 @@ inline auto jwk_ec_coordinate_bytes(const std::string_view curve)
     -> std::optional<std::size_t> {
   if (curve == "P-256") {
     return 32;
-  } else if (curve == "P-384") {
-    return 48;
-  } else if (curve == "P-521") {
-    return 66;
-  } else {
-    return std::nullopt;
   }
+  if (curve == "P-384") {
+    return 48;
+  }
+  if (curve == "P-521") {
+    return 66;
+  }
+  return std::nullopt;
 }
 
 // The key octet length is fixed per Edwards curve (RFC 8032 Sections 5.1.5 and
@@ -62,11 +63,11 @@ inline auto jwk_okp_key_bytes(const std::string_view curve)
     -> std::optional<std::size_t> {
   if (curve == "Ed25519") {
     return 32;
-  } else if (curve == "Ed448") {
-    return 57;
-  } else {
-    return std::nullopt;
   }
+  if (curve == "Ed448") {
+    return 57;
+  }
+  return std::nullopt;
 }
 
 // Both mappings are only reached after the curve has been validated above
@@ -74,20 +75,19 @@ inline auto jwk_to_elliptic_curve(const std::string_view curve) noexcept
     -> EllipticCurve {
   if (curve == "P-256") {
     return EllipticCurve::P256;
-  } else if (curve == "P-384") {
-    return EllipticCurve::P384;
-  } else {
-    return EllipticCurve::P521;
   }
+  if (curve == "P-384") {
+    return EllipticCurve::P384;
+  }
+  return EllipticCurve::P521;
 }
 
 inline auto jwk_to_edwards_curve(const std::string_view curve) noexcept
     -> EdwardsCurve {
   if (curve == "Ed25519") {
     return EdwardsCurve::Ed25519;
-  } else {
-    return EdwardsCurve::Ed448;
   }
+  return EdwardsCurve::Ed448;
 }
 
 // The JWK curve name each elliptic curve carries (RFC 7518 Section 6.2.1.1),

@@ -418,8 +418,8 @@ auto idna_passes_bidi_rule(const std::u32string_view label) noexcept -> bool {
 }
 
 auto idna_is_valid_a_label(const std::string_view label) -> bool {
-  constexpr std::string_view prefix{"xn--"};
-  if (!label.starts_with(prefix)) {
+  constexpr std::string_view PREFIX{"xn--"};
+  if (!label.starts_with(PREFIX)) {
     return false;
   }
 
@@ -437,8 +437,8 @@ auto idna_is_valid_a_label(const std::string_view label) -> bool {
 
   // The substring after the prefix. Constructing the view via (data, size)
   // avoids `std::string_view::substr`, which is not noexcept.
-  const std::string_view encoded{label.data() + prefix.size(),
-                                 label.size() - prefix.size()};
+  const std::string_view encoded{label.data() + PREFIX.size(),
+                                 label.size() - PREFIX.size()};
 
   std::u32string decoded;
   return validate_a_label_body(encoded, decoded);

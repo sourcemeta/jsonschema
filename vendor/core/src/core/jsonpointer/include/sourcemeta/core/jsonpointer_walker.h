@@ -15,7 +15,7 @@ namespace sourcemeta::core {
 /// ordering is guaranteed. If you expect any ordering, sort afterwards.
 template <typename PointerT> class GenericPointerWalker {
 private:
-  using internal = typename std::vector<PointerT>;
+  using internal = std::vector<PointerT>;
 
 public:
   /// Construct a walker over every location in a JSON document
@@ -24,18 +24,18 @@ public:
     this->walk(document, accumulator);
   }
 
-  using const_iterator = typename internal::const_iterator;
+  using const_iterator = internal::const_iterator;
   [[nodiscard]] auto begin() const -> const_iterator {
-    return this->pointers.begin();
+    return this->pointers_.begin();
   };
   [[nodiscard]] auto end() const -> const_iterator {
-    return this->pointers.end();
+    return this->pointers_.end();
   };
   [[nodiscard]] auto cbegin() const -> const_iterator {
-    return this->pointers.cbegin();
+    return this->pointers_.cbegin();
   };
   [[nodiscard]] auto cend() const -> const_iterator {
-    return this->pointers.cend();
+    return this->pointers_.cend();
   };
 
 private:
@@ -68,7 +68,7 @@ private:
 
       std::reverse(pending.begin() + static_cast<std::ptrdiff_t>(start),
                    pending.end());
-      this->pointers.push_back(std::move(entry.second));
+      this->pointers_.push_back(std::move(entry.second));
     }
   }
 
@@ -78,7 +78,7 @@ private:
 #if defined(_MSC_VER)
 #pragma warning(disable : 4251)
 #endif
-  internal pointers;
+  internal pointers_;
 #if defined(_MSC_VER)
 #pragma warning(default : 4251)
 #endif

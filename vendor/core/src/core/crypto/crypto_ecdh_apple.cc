@@ -22,16 +22,16 @@ auto ecdh_derive(const PrivateKey &private_key, const PublicKey &public_key)
     return std::nullopt;
   }
 
-  auto parameters{CFDictionaryCreate(kCFAllocatorDefault, nullptr, nullptr, 0,
-                                     &kCFTypeDictionaryKeyCallBacks,
-                                     &kCFTypeDictionaryValueCallBacks)};
+  const auto *parameters{CFDictionaryCreate(
+      kCFAllocatorDefault, nullptr, nullptr, 0, &kCFTypeDictionaryKeyCallBacks,
+      &kCFTypeDictionaryValueCallBacks)};
   if (parameters == nullptr) {
     return std::nullopt;
   }
 
   // The standard exchange returns the agreed point x coordinate, and the peer
   // key was validated on the curve when it was parsed
-  auto shared{SecKeyCopyKeyExchangeResult(
+  const auto *shared{SecKeyCopyKeyExchangeResult(
       private_internal->key, kSecKeyAlgorithmECDHKeyExchangeStandard,
       public_internal->key, parameters, nullptr)};
   CFRelease(parameters);

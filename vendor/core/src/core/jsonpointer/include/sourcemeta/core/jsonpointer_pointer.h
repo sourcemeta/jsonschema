@@ -27,7 +27,7 @@ public:
   /// A single reference token within this pointer
   using Token = GenericToken<PropertyT, Hash>;
   /// The JSON value type used for serialisation
-  using Value = typename Token::Value;
+  using Value = Token::Value;
   /// The underlying sequence container of tokens
   using Container = std::vector<Token>;
 
@@ -40,7 +40,7 @@ public:
   /// const sourcemeta::core::Pointer pointer;
   /// assert(pointer.empty());
   /// ```
-  GenericPointer() noexcept : data{} {}
+  GenericPointer() noexcept : data_{} {}
 
   /// This constructor is the preferred way of creating a pointer.
   /// For example:
@@ -54,61 +54,61 @@ public:
   /// assert(pointer.size() == 3);
   /// ```
   GenericPointer(std::initializer_list<Token> tokens)
-      : data{std::move(tokens)} {}
+      : data_{std::move(tokens)} {}
 
   // Member types
-  using value_type = typename Container::value_type;
-  using allocator_type = typename Container::allocator_type;
-  using size_type = typename Container::size_type;
-  using difference_type = typename Container::difference_type;
-  using reference = typename Container::reference;
-  using const_reference = typename Container::const_reference;
-  using pointer = typename Container::pointer;
-  using const_pointer = typename Container::const_pointer;
-  using iterator = typename Container::iterator;
-  using const_iterator = typename Container::const_iterator;
-  using reverse_iterator = typename Container::reverse_iterator;
-  using const_reverse_iterator = typename Container::const_reverse_iterator;
+  using value_type = Container::value_type;
+  using allocator_type = Container::allocator_type;
+  using size_type = Container::size_type;
+  using difference_type = Container::difference_type;
+  using reference = Container::reference;
+  using const_reference = Container::const_reference;
+  using pointer = Container::pointer;
+  using const_pointer = Container::const_pointer;
+  using iterator = Container::iterator;
+  using const_iterator = Container::const_iterator;
+  using reverse_iterator = Container::reverse_iterator;
+  using const_reverse_iterator = Container::const_reverse_iterator;
 
   /// Get a mutable begin iterator on the pointer
-  auto begin() noexcept -> iterator { return this->data.begin(); }
+  auto begin() noexcept -> iterator { return this->data_.begin(); }
   /// Get a mutable end iterator on the pointer
-  auto end() noexcept -> iterator { return this->data.end(); }
+  auto end() noexcept -> iterator { return this->data_.end(); }
   /// Get a constant begin iterator on the pointer
   [[nodiscard]] auto begin() const noexcept -> const_iterator {
-    return this->data.begin();
+    return this->data_.begin();
   }
   /// Get a constant end iterator on the pointer
   [[nodiscard]] auto end() const noexcept -> const_iterator {
-    return this->data.end();
+    return this->data_.end();
   }
   /// Get a constant begin iterator on the pointer
   [[nodiscard]] auto cbegin() const noexcept -> const_iterator {
-    return this->data.cbegin();
+    return this->data_.cbegin();
   }
   /// Get a constant end iterator on the pointer
   [[nodiscard]] auto cend() const noexcept -> const_iterator {
-    return this->data.cend();
+    return this->data_.cend();
   }
   /// Get a mutable reverse begin iterator on the pointer
-  auto rbegin() noexcept -> reverse_iterator { return this->data.rbegin(); }
+  auto rbegin() noexcept -> reverse_iterator { return this->data_.rbegin(); }
   /// Get a mutable reverse end iterator on the pointer
-  auto rend() noexcept -> reverse_iterator { return this->data.rend(); }
+  auto rend() noexcept -> reverse_iterator { return this->data_.rend(); }
   /// Get a constant reverse begin iterator on the pointer
   [[nodiscard]] auto rbegin() const noexcept -> const_reverse_iterator {
-    return this->data.rbegin();
+    return this->data_.rbegin();
   }
   /// Get a constant reverse end iterator on the pointer
   [[nodiscard]] auto rend() const noexcept -> const_reverse_iterator {
-    return this->data.rend();
+    return this->data_.rend();
   }
   /// Get a constant reverse begin iterator on the pointer
   [[nodiscard]] auto crbegin() const noexcept -> const_reverse_iterator {
-    return this->data.crbegin();
+    return this->data_.crbegin();
   }
   /// Get a constant reverse end iterator on the pointer
   [[nodiscard]] auto crend() const noexcept -> const_reverse_iterator {
-    return this->data.crend();
+    return this->data_.crend();
   }
 
   /// Access a token in a JSON Pointer at a given index.
@@ -124,7 +124,7 @@ public:
   /// ```
   [[nodiscard]] auto at(const size_type index) const -> const_reference {
     assert(this->size() > index);
-    return this->data[index];
+    return this->data_[index];
   }
 
   /// Access the last token in a JSON Pointer
@@ -140,7 +140,7 @@ public:
   /// ```
   [[nodiscard]] SOURCEMETA_FORCEINLINE auto back() const -> const_reference {
     assert(!this->empty());
-    return this->data.back();
+    return this->data_.back();
   }
 
   /// Get the number of tokens in a JSON Pointer.
@@ -154,7 +154,7 @@ public:
   /// assert(pointer.size() == 2);
   /// ```
   [[nodiscard]] SOURCEMETA_FORCEINLINE auto size() const noexcept -> size_type {
-    return this->data.size();
+    return this->data_.size();
   }
 
   /// Check if a JSON Pointer is the empty pointer.
@@ -170,7 +170,7 @@ public:
   /// assert(!non_empty_pointer.empty());
   /// ```
   [[nodiscard]] SOURCEMETA_FORCEINLINE auto empty() const noexcept -> bool {
-    return this->data.empty();
+    return this->data_.empty();
   }
 
   /// Emplace a token into the back of a JSON Pointer.
@@ -188,7 +188,7 @@ public:
   /// ```
   template <class... Args>
   SOURCEMETA_FORCEINLINE auto emplace_back(Args &&...args) -> reference {
-    return this->data.emplace_back(std::forward<Args>(args)...);
+    return this->data_.emplace_back(std::forward<Args>(args)...);
   }
 
   /// Reserve capacity for a JSON Pointer. For example:
@@ -199,8 +199,8 @@ public:
   /// sourcemeta::core::Pointer pointer;
   /// pointer.reserve(1024);
   /// ```
-  auto reserve(const typename Container::size_type capacity) -> void {
-    this->data.reserve(capacity);
+  auto reserve(const Container::size_type capacity) -> void {
+    this->data_.reserve(capacity);
   }
 
   /// Push a copy of a JSON Pointer into the back of a JSON Pointer.
@@ -227,18 +227,19 @@ public:
   push_back(const GenericPointer<PropertyT, Hash> &other) -> void {
     if (other.empty()) {
       return;
-    } else if (other.size() == 1) {
+    }
+    if (other.size() == 1) {
       this->emplace_back(other.back());
       return;
     }
 
-    this->reserve(this->data.size() + other.size());
+    this->reserve(this->data_.size() + other.size());
 // TODO: Remove once GitHub Actions ship proper C++23 support
 #if __cpp_lib_containers_ranges >= 202202L
-    this->data.append_range(other.data);
+    this->data_.append_range(other.data_);
 #else
-    std::copy(other.data.cbegin(), other.data.cend(),
-              std::back_inserter(this->data));
+    std::copy(other.data_.cbegin(), other.data_.cend(),
+              std::back_inserter(this->data_));
 #endif
   }
 
@@ -266,14 +267,15 @@ public:
       -> void {
     if (other.empty()) {
       return;
-    } else if (other.size() == 1) {
+    }
+    if (other.size() == 1) {
       this->emplace_back(std::move(other.back()));
       return;
     }
 
-    this->reserve(this->data.size() + other.size());
-    std::move(other.data.begin(), other.data.end(),
-              std::back_inserter(this->data));
+    this->reserve(this->data_.size() + other.size());
+    std::move(other.data_.begin(), other.data_.end(),
+              std::back_inserter(this->data_));
   }
 
   /// Push a JSON Pointer into the back of a JSON WeakPointer. Make sure that
@@ -305,22 +307,23 @@ public:
   {
     if (other.empty()) {
       return;
-    } else if (other.size() == 1) {
+    }
+    if (other.size() == 1) {
       const auto &token{other.back()};
       if (token.is_property()) {
         // We should make sure to re-use the existing hash
-        this->data.emplace_back(token.to_property(), token.property_hash());
+        this->data_.emplace_back(token.to_property(), token.property_hash());
       } else {
-        this->data.emplace_back(token.to_index());
+        this->data_.emplace_back(token.to_index());
       }
     } else {
-      this->reserve(this->data.size() + other.size());
+      this->reserve(this->data_.size() + other.size());
       for (const auto &token : other) {
         if (token.is_property()) {
           // We should make sure to re-use the existing hash
-          this->data.emplace_back(token.to_property(), token.property_hash());
+          this->data_.emplace_back(token.to_property(), token.property_hash());
         } else {
-          this->data.emplace_back(token.to_index());
+          this->data_.emplace_back(token.to_index());
         }
       }
     }
@@ -344,9 +347,9 @@ public:
   /// assert(pointer.at(0).to_property() == "foo");
   /// assert(pointer.at(1).to_property() == "bar");
   /// ```
-  SOURCEMETA_FORCEINLINE auto
-  push_back(const typename Token::Property &property) -> void {
-    this->data.emplace_back(property);
+  SOURCEMETA_FORCEINLINE auto push_back(const Token::Property &property)
+      -> void {
+    this->data_.emplace_back(property);
   }
 
   /// Move a property token into the back of a JSON Pointer.
@@ -366,9 +369,8 @@ public:
   /// assert(pointer.at(0).to_property() == "foo");
   /// assert(pointer.at(1).to_property() == "bar");
   /// ```
-  SOURCEMETA_FORCEINLINE auto push_back(typename Token::Property &&property)
-      -> void {
-    this->data.emplace_back(std::move(property));
+  SOURCEMETA_FORCEINLINE auto push_back(Token::Property &&property) -> void {
+    this->data_.emplace_back(std::move(property));
   }
 
   /// Push an index token into the back of a JSON Pointer.
@@ -389,9 +391,8 @@ public:
   /// assert(pointer.at(0).to_property() == "foo");
   /// assert(pointer.at(1).to_index() == 0);
   /// ```
-  SOURCEMETA_FORCEINLINE auto push_back(const typename Token::Index &index)
-      -> void {
-    this->data.emplace_back(index);
+  SOURCEMETA_FORCEINLINE auto push_back(const Token::Index &index) -> void {
+    this->data_.emplace_back(index);
   }
 
   /// Remove the last token of a JSON Pointer. For example:
@@ -408,7 +409,7 @@ public:
   /// ```
   auto pop_back() -> void {
     assert(!this->empty());
-    this->data.pop_back();
+    this->data_.pop_back();
   }
 
   /// Remove a number of tokens from the back of a JSON Pointer. For example:
@@ -426,7 +427,7 @@ public:
   auto pop_back(const size_type count) -> void {
     assert(this->size() >= count);
     for (std::size_t index = 0; index < count; index++) {
-      this->data.pop_back();
+      this->data_.pop_back();
     }
   }
 
@@ -471,16 +472,16 @@ public:
   [[nodiscard]] auto slice(const std::size_t index) const
       -> GenericPointer<PropertyT, Hash> {
     assert(index <= this->size());
-    auto new_begin{this->data.cbegin()};
+    auto new_begin{this->data_.cbegin()};
     std::advance(new_begin, index);
     GenericPointer<PropertyT, Hash> result;
     result.reserve(this->size() - index);
 // TODO: Remove once GitHub Actions ship proper C++23 support
 #if __cpp_lib_containers_ranges >= 202202L
-    result.data.append_range(
-        std::ranges::subrange(new_begin, this->data.cend()));
+    result.data_.append_range(
+        std::ranges::subrange(new_begin, this->data_.cend()));
 #else
-    std::copy(new_begin, this->data.cend(), std::back_inserter(result.data));
+    std::copy(new_begin, this->data_.cend(), std::back_inserter(result.data_));
 #endif
     return result;
   }
@@ -506,17 +507,17 @@ public:
       -> GenericPointer<PropertyT, Hash> {
     assert(start <= end);
     assert(end <= this->size());
-    auto new_begin{this->data.cbegin()};
+    auto new_begin{this->data_.cbegin()};
     std::advance(new_begin, start);
-    auto new_end{this->data.cbegin()};
+    auto new_end{this->data_.cbegin()};
     std::advance(new_end, end);
     GenericPointer<PropertyT, Hash> result;
     result.reserve(end - start);
 // TODO: Remove once GitHub Actions ship proper C++23 support
 #if __cpp_lib_containers_ranges >= 202202L
-    result.data.append_range(std::ranges::subrange(new_begin, new_end));
+    result.data_.append_range(std::ranges::subrange(new_begin, new_end));
 #else
-    std::copy(new_begin, new_end, std::back_inserter(result.data));
+    std::copy(new_begin, new_end, std::back_inserter(result.data_));
 #endif
     return result;
   }
@@ -550,7 +551,7 @@ public:
   /// const sourcemeta::core::Pointer pointer{"foo"};
   /// assert(pointer.concat("bar") == sourcemeta::core::Pointer{"foo", "bar"});
   /// ```
-  [[nodiscard]] auto concat(const typename Token::Property &property) const
+  [[nodiscard]] auto concat(const Token::Property &property) const
       -> GenericPointer<PropertyT, Hash> {
     GenericPointer<PropertyT, Hash> result{*this};
     result.push_back(property);
@@ -567,7 +568,7 @@ public:
   /// const sourcemeta::core::Pointer pointer{"foo"};
   /// assert(pointer.concat(0) == sourcemeta::core::Pointer{"foo", 0});
   /// ```
-  [[nodiscard]] auto concat(const typename Token::Index &index) const
+  [[nodiscard]] auto concat(const Token::Index &index) const
       -> GenericPointer<PropertyT, Hash> {
     GenericPointer<PropertyT, Hash> result{*this};
     result.push_back(index);
@@ -587,9 +588,9 @@ public:
   /// ```
   [[nodiscard]] auto
   starts_with(const GenericPointer<PropertyT, Hash> &other) const -> bool {
-    return other.data.size() <= this->data.size() &&
-           std::equal(other.data.cbegin(), other.data.cend(),
-                      this->data.cbegin());
+    return other.data_.size() <= this->data_.size() &&
+           std::equal(other.data_.cbegin(), other.data_.cend(),
+                      this->data_.cbegin());
   }
 
   /// Check whether a JSON Pointer plus a given tail starts with another JSON
@@ -609,9 +610,8 @@ public:
     if (other.size() == this->size() + 1) {
       assert(!other.empty());
       return other.starts_with(*this) && other.back() == tail;
-    } else {
-      return this->starts_with(other);
     }
+    return this->starts_with(other);
   }
 
   /// Check whether a JSON Pointer starts with another JSON Pointer followed
@@ -633,8 +633,8 @@ public:
                                  const StringT &tail) const -> bool {
     const auto prefix_size{other.size()};
     return this->size() > prefix_size && this->starts_with(other) &&
-           this->data[prefix_size].is_property() &&
-           this->data[prefix_size].to_property() == tail;
+           this->data_[prefix_size].is_property() &&
+           this->data_[prefix_size].to_property() == tail;
   }
 
   /// Check whether a JSON Pointer starts with another JSON Pointer followed
@@ -659,8 +659,8 @@ public:
     const auto prefix_size{other.size()};
     return this->size() > prefix_size + 1 &&
            this->starts_with(other, tail_left) &&
-           this->data[prefix_size + 1].is_property() &&
-           this->data[prefix_size + 1].to_property() == tail_right;
+           this->data_[prefix_size + 1].is_property() &&
+           this->data_[prefix_size + 1].to_property() == tail_right;
   }
 
   /// Check whether two JSON Pointers are equal up to a given number of
@@ -677,12 +677,12 @@ public:
   /// ```
   [[nodiscard]] auto shares_prefix(const GenericPointer<PropertyT, Hash> &other,
                                    const size_type prefix_size) const -> bool {
-    return this->data.size() >= prefix_size &&
-           other.data.size() >= prefix_size &&
-           std::equal(this->data.cbegin(),
-                      std::next(this->data.cbegin(),
+    return this->data_.size() >= prefix_size &&
+           other.data_.size() >= prefix_size &&
+           std::equal(this->data_.cbegin(),
+                      std::next(this->data_.cbegin(),
                                 static_cast<difference_type>(prefix_size)),
-                      other.data.cbegin());
+                      other.data_.cbegin());
   }
 
   /// Check whether a JSON Pointer starts with another JSON Pointer without
@@ -700,8 +700,8 @@ public:
   [[nodiscard]] auto
   starts_with_strict(const GenericPointer<PropertyT, Hash> &other) const
       -> bool {
-    return this->data.size() > other.data.size() &&
-           this->shares_prefix(other, other.data.size());
+    return this->data_.size() > other.data_.size() &&
+           this->shares_prefix(other, other.data_.size());
   }
 
   /// Check whether a JSON Pointer starts with the initial part of another JSON
@@ -721,12 +721,13 @@ public:
     const auto prefix_size{other.size()};
     if (prefix_size == 0) {
       return true;
-    } else if (this->size() < prefix_size - 1) {
+    }
+    if (this->size() < prefix_size - 1) {
       return false;
     }
 
     for (std::size_t index = 0; index < prefix_size - 1; index++) {
-      if (this->data[index] != other.data[index]) {
+      if (this->data_[index] != other.data_[index]) {
         return false;
       }
     }
@@ -753,24 +754,23 @@ public:
       -> GenericPointer<PropertyT, Hash> {
     typename Container::size_type index{0};
     while (index < prefix.size()) {
-      if (index >= this->size() || prefix.data[index] != this->data[index]) {
+      if (index >= this->size() || prefix.data_[index] != this->data_[index]) {
         return *this;
-      } else {
-        index++;
       }
+      index++;
     }
 
     assert(index == prefix.size());
     assert(this->starts_with(prefix));
-    auto new_begin{this->data.cbegin()};
+    auto new_begin{this->data_.cbegin()};
     std::advance(new_begin, index);
     GenericPointer<PropertyT, Hash> result{replacement};
 // TODO: Remove once GitHub Actions ship proper C++23 support
 #if __cpp_lib_containers_ranges >= 202202L
-    result.data.append_range(
-        std::ranges::subrange(new_begin, this->data.cend()));
+    result.data_.append_range(
+        std::ranges::subrange(new_begin, this->data_.cend()));
 #else
-    std::copy(new_begin, this->data.cend(), std::back_inserter(result.data));
+    std::copy(new_begin, this->data_.cend(), std::back_inserter(result.data_));
 #endif
     return result;
   }
@@ -798,26 +798,25 @@ public:
 
     typename Container::size_type index{0};
     while (index < base.size()) {
-      if (index >= this->size() || base.data[index] != this->data[index]) {
+      if (index >= this->size() || base.data_[index] != this->data_[index]) {
         return *this;
-      } else {
-        index++;
       }
+      index++;
     }
 
     // Make a pointer from the remaining tokens
-    auto new_begin{this->data.cbegin()};
+    auto new_begin{this->data_.cbegin()};
     std::advance(new_begin, index);
     GenericPointer<PropertyT, Hash> result;
-    const auto remaining{static_cast<typename Container::size_type>(
-        this->data.cend() - new_begin)};
-    result.data.reserve(remaining);
+    const auto remaining{
+        static_cast<Container::size_type>(this->data_.cend() - new_begin)};
+    result.data_.reserve(remaining);
 // TODO: Remove once GitHub Actions ship proper C++23 support
 #if __cpp_lib_containers_ranges >= 202202L
-    result.data.append_range(
-        std::ranges::subrange(new_begin, this->data.cend()));
+    result.data_.append_range(
+        std::ranges::subrange(new_begin, this->data_.cend()));
 #else
-    std::copy(new_begin, this->data.cend(), std::back_inserter(result.data));
+    std::copy(new_begin, this->data_.cend(), std::back_inserter(result.data_));
 #endif
     return result;
   }
@@ -826,14 +825,14 @@ public:
   [[nodiscard]] auto
   operator==(const GenericPointer<PropertyT, Hash> &other) const noexcept
       -> bool {
-    return this->data == other.data;
+    return this->data_ == other.data_;
   }
 
   /// Compare with a reference wrapper
   [[nodiscard]] auto
   operator==(const std::reference_wrapper<const GenericPointer<PropertyT, Hash>>
                  &other) const noexcept -> bool {
-    return this->data == other.get().data;
+    return this->data_ == other.get().data_;
   }
 
   /// Overload to support ordering of JSON Pointers. Typically for sorting
@@ -841,14 +840,14 @@ public:
   [[nodiscard]] auto
   operator<(const GenericPointer<PropertyT, Hash> &other) const noexcept
       -> bool {
-    return this->data < other.data;
+    return this->data_ < other.data_;
   }
 
   /// Compare with a reference wrapper for ordering
   [[nodiscard]] auto
   operator<(const std::reference_wrapper<const GenericPointer<PropertyT, Hash>>
                 &other) const noexcept -> bool {
-    return this->data < other.get().data;
+    return this->data_ < other.get().data_;
   }
 
   /// Hash functor for use with containers
@@ -885,7 +884,7 @@ public:
   private:
     // Intentionally only fold hash.a for performance, as the first
     // 16 bytes already provide sufficient entropy for bucketing
-    static auto property_hash(const typename Hash::hash_type &hash) noexcept
+    static auto property_hash(const Hash::HashType &hash) noexcept
         -> std::size_t {
       return static_cast<std::size_t>(hash.a) ^
              static_cast<std::size_t>(hash.a >> 64);
@@ -928,7 +927,7 @@ public:
   /// Serialise a JSON Pointer as a JSON array of tokens
   [[nodiscard]] auto to_json() const -> Value {
     auto result{Value::make_array()};
-    for (const auto &token : this->data) {
+    for (const auto &token : this->data_) {
       result.push_back(token.to_json());
     }
 
@@ -949,8 +948,7 @@ public:
       if (element.is_string()) {
         result.emplace_back(element.to_string());
       } else if (element.is_integer() && element.to_integer() >= 0) {
-        result.emplace_back(
-            static_cast<typename Token::Index>(element.to_integer()));
+        result.emplace_back(static_cast<Token::Index>(element.to_integer()));
       } else {
         return std::nullopt;
       }
@@ -960,7 +958,7 @@ public:
   }
 
 private:
-  Container data;
+  Container data_;
 };
 
 } // namespace sourcemeta::core

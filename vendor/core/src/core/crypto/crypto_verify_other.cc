@@ -21,7 +21,7 @@ namespace sourcemeta::core {
 // The big integer capacity must hold the product of two maximum-size operands
 // plus a normalisation limb and Knuth's implicit leading-zero digit, otherwise
 // the modular reduction would index past the fixed-capacity word array
-static_assert(Bignum::capacity >= 2 * ((MAXIMUM_KEY_BYTES + 7) / 8) + 2);
+static_assert(Bignum::CAPACITY >= 2 * ((MAXIMUM_KEY_BYTES + 7) / 8) + 2);
 
 namespace {
 

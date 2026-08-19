@@ -41,7 +41,7 @@ enum class HTTPMethod : std::uint8_t {
 /// assert(sourcemeta::core::http_method_string(
 ///            sourcemeta::core::HTTPMethod::GET) == "GET");
 /// ```
-inline constexpr auto http_method_string(const HTTPMethod method) noexcept
+constexpr auto http_method_string(const HTTPMethod method) noexcept
     -> std::string_view {
   switch (method) {
     case HTTPMethod::GET:

@@ -13,7 +13,7 @@ auto is_rfc3339_partialtime_no_secfrac(const std::string_view value) -> bool {
   if (!is_digit(value[0]) || !is_digit(value[1])) {
     return false;
   }
-  const auto hour{static_cast<unsigned int>(value[0] - '0') * 10 +
+  const auto hour{(static_cast<unsigned int>(value[0] - '0') * 10) +
                   static_cast<unsigned int>(value[1] - '0')};
   if (hour > 23) {
     return false;
@@ -27,7 +27,7 @@ auto is_rfc3339_partialtime_no_secfrac(const std::string_view value) -> bool {
   if (!is_digit(value[3]) || !is_digit(value[4])) {
     return false;
   }
-  const auto minute{static_cast<unsigned int>(value[3] - '0') * 10 +
+  const auto minute{(static_cast<unsigned int>(value[3] - '0') * 10) +
                     static_cast<unsigned int>(value[4] - '0')};
   if (minute > 59) {
     return false;
@@ -41,7 +41,7 @@ auto is_rfc3339_partialtime_no_secfrac(const std::string_view value) -> bool {
   if (!is_digit(value[6]) || !is_digit(value[7])) {
     return false;
   }
-  const auto second{static_cast<unsigned int>(value[6] - '0') * 10 +
+  const auto second{(static_cast<unsigned int>(value[6] - '0') * 10) +
                     static_cast<unsigned int>(value[7] - '0')};
   if (second > 60) {
     return false;

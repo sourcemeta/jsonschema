@@ -1,3 +1,4 @@
+#include <sourcemeta/core/jose_compact.h>
 #include <sourcemeta/core/jose_jwt.h>
 
 #include <sourcemeta/core/crypto.h>
@@ -42,12 +43,12 @@ auto string_claim(const sourcemeta::core::JSON &object,
 // equal, and RFC 7515 Section 4.1.9 makes the media type case-insensitive
 auto strip_application_prefix(const std::string_view value)
     -> std::string_view {
-  constexpr std::string_view prefix{"application/"};
-  if (value.size() > prefix.size() &&
-      sourcemeta::core::equals_ignore_case(value.substr(0, prefix.size()),
-                                           prefix) &&
-      value.find('/', prefix.size()) == std::string_view::npos) {
-    return value.substr(prefix.size());
+  constexpr std::string_view PREFIX{"application/"};
+  if (value.size() > PREFIX.size() &&
+      sourcemeta::core::equals_ignore_case(value.substr(0, PREFIX.size()),
+                                           PREFIX) &&
+      value.find('/', PREFIX.size()) == std::string_view::npos) {
+    return value.substr(PREFIX.size());
   }
 
   return value;
@@ -84,22 +85,14 @@ namespace sourcemeta::core {
 auto JWT::parse(const std::string_view input, JWT &result) -> bool {
   // The compact serialization is exactly three base64url segments joined by
   // dots (RFC 7515 Section 7.1)
-  const auto first{split_once(input, '.')};
-  if (!first.has_value()) {
+  const auto segments{jose_compact_segments<3>(input)};
+  if (!segments.has_value()) {
     return false;
   }
 
-  const auto second{split_once(first->second, '.')};
-  if (!second.has_value()) {
-    return false;
-  }
-
-  const auto header_segment{first->first};
-  const auto payload_segment{second->first};
-  const auto signature_segment{second->second};
-  if (signature_segment.find('.') != std::string_view::npos) {
-    return false;
-  }
+  const auto header_segment{segments->at(0)};
+  const auto payload_segment{segments->at(1)};
+  const auto signature_segment{segments->at(2)};
 
   auto header_bytes{base64url_decode(header_segment)};
   auto payload_bytes{base64url_decode(payload_segment)};

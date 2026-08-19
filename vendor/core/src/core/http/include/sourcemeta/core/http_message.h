@@ -24,7 +24,7 @@ namespace sourcemeta::core {
 /// assert(sourcemeta::core::http_is_status_line("HTTP/1.1 200 OK"));
 /// assert(!sourcemeta::core::http_is_status_line("Content-Type: text/html"));
 /// ```
-inline constexpr auto http_is_status_line(const std::string_view line) noexcept
+constexpr auto http_is_status_line(const std::string_view line) noexcept
     -> bool {
   // The prefix cannot open a field line, as RFC 9110 §5.6.2 defines tchar
   // as "any VCHAR, except delimiters" where delimiters include the slash,

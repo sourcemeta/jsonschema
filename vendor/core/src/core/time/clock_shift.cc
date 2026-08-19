@@ -20,10 +20,10 @@ static_assert(std::ratio_less_equal_v<Clock::period, std::ratio<1>>);
 // shifting the wrong way would be worse than ignoring it
 auto bounded_ticks(const std::chrono::seconds span) noexcept
     -> Clock::duration {
-  constexpr auto limit{
+  constexpr auto LIMIT{
       std::chrono::duration_cast<std::chrono::seconds>(Clock::duration::max())};
   return std::chrono::duration_cast<Clock::duration>(
-      std::clamp(span, std::chrono::seconds::zero(), limit));
+      std::clamp(span, std::chrono::seconds::zero(), LIMIT));
 }
 
 } // namespace

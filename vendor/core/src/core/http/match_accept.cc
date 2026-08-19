@@ -20,7 +20,7 @@ auto http_match_accept(const std::string_view accept_header,
   }
 
   std::string_view best{};
-  float best_quality{0.0f};
+  float best_quality{0.0F};
   std::uint8_t best_specificity{0};
   std::size_t best_order{candidates.size()};
 
@@ -37,7 +37,7 @@ auto http_match_accept(const std::string_view accept_header,
     assert(candidate_slash > 0);
     assert(candidate_slash < candidate_type.size() - 1);
     assert(candidate_type.find_first_of(" \t,;*") == std::string_view::npos);
-    float candidate_quality{0.0f};
+    float candidate_quality{0.0F};
     std::uint8_t candidate_specificity{0};
     http_for_each_media_range(
         accept_header,
@@ -55,7 +55,7 @@ auto http_match_accept(const std::string_view accept_header,
             candidate_specificity = specificity;
           }
         });
-    if (candidate_quality > 0.0f &&
+    if (candidate_quality > 0.0F &&
         (candidate_quality > best_quality ||
          (candidate_quality == best_quality &&
           candidate_specificity > best_specificity) ||

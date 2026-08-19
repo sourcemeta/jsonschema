@@ -23,22 +23,21 @@ template <typename T>
 concept json_auto_has_mapped_type = requires { typename T::mapped_type; };
 
 /// @ingroup json
-template <typename T> struct json_auto_is_basic_string : std::false_type {};
+template <typename T> struct JSONAutoIsBasicString : std::false_type {};
 template <typename CharT, typename Traits, typename Alloc>
-struct json_auto_is_basic_string<std::basic_string<CharT, Traits, Alloc>>
+struct JSONAutoIsBasicString<std::basic_string<CharT, Traits, Alloc>>
     : std::true_type {};
 
 /// @ingroup json
-template <typename T>
-struct json_auto_is_basic_string_view : std::false_type {};
+template <typename T> struct JSONAutoIsBasicStringView : std::false_type {};
 template <typename CharT, typename Traits>
-struct json_auto_is_basic_string_view<std::basic_string_view<CharT, Traits>>
+struct JSONAutoIsBasicStringView<std::basic_string_view<CharT, Traits>>
     : std::true_type {};
 
 /// @ingroup json
-template <typename T> struct json_auto_is_bitset : std::false_type {};
+template <typename T> struct JSONAutoIsBitset : std::false_type {};
 template <std::size_t N>
-struct json_auto_is_bitset<std::bitset<N>> : std::true_type {};
+struct JSONAutoIsBitset<std::bitset<N>> : std::true_type {};
 
 /// @ingroup json
 template <typename T> struct json_auto_bitset_size;
@@ -76,8 +75,7 @@ concept json_auto_list_like =
       { type.cend() } -> std::same_as<typename T::const_iterator>;
     } && json_auto_supports_auto<T> && !json_auto_has_mapped_type<T> &&
     !json_auto_has_method_from<T> && !json_auto_has_method_to<T> &&
-    !json_auto_is_basic_string<T>::value &&
-    !json_auto_is_basic_string_view<T>::value;
+    !JSONAutoIsBasicString<T>::value && !JSONAutoIsBasicStringView<T>::value;
 
 /// @ingroup json
 template <typename T>
@@ -98,18 +96,18 @@ concept json_auto_has_reverse_iterator =
     requires { typename T::reverse_iterator; };
 
 /// @ingroup json
-template <typename T> struct json_auto_is_pair : std::false_type {};
+template <typename T> struct JSONAutoIsPair : std::false_type {};
 
 /// @ingroup json
 template <typename U, typename V>
-struct json_auto_is_pair<std::pair<U, V>> : std::true_type {};
+struct JSONAutoIsPair<std::pair<U, V>> : std::true_type {};
 
 /// @ingroup json
-template <typename T> struct json_auto_is_variant : std::false_type {};
+template <typename T> struct JSONAutoIsVariant : std::false_type {};
 
 /// @ingroup json
 template <typename... Ts>
-struct json_auto_is_variant<std::variant<Ts...>> : std::true_type {};
+struct JSONAutoIsVariant<std::variant<Ts...>> : std::true_type {};
 
 /// @ingroup json
 template <typename T>
@@ -138,7 +136,7 @@ auto to_json(const std::pair<L, R> &value) -> JSON;
 template <json_auto_tuple_mono T> auto to_json(const T &value) -> JSON;
 template <json_auto_tuple_poly T> auto to_json(const T &value) -> JSON;
 template <typename T>
-  requires json_auto_is_variant<T>::value
+  requires JSONAutoIsVariant<T>::value
 auto to_json(const T &value) -> JSON;
 #endif
 
@@ -164,9 +162,8 @@ template <typename T>
 auto from_json(const JSON &value) -> std::optional<T> {
   if (value.is_boolean()) {
     return value.to_boolean();
-  } else {
-    return std::nullopt;
   }
+  return std::nullopt;
 }
 
 /// @ingroup json
@@ -177,9 +174,8 @@ auto from_json(const JSON &value) -> std::optional<T> {
   // silently narrowed one
   if (value.is_integer() && std::in_range<T>(value.to_integer())) {
     return static_cast<T>(value.to_integer());
-  } else {
-    return std::nullopt;
   }
+  return std::nullopt;
 }
 
 /// @ingroup json
@@ -188,9 +184,8 @@ template <typename T>
 auto from_json(const JSON &value) -> std::optional<T> {
   if (value.is_decimal()) {
     return value.to_decimal();
-  } else {
-    return std::nullopt;
   }
+  return std::nullopt;
 }
 
 // TODO: How can we keep this in the hash header that does not yet know about
@@ -257,9 +252,8 @@ auto from_json(const JSON &value) -> std::optional<T> {
     using file_time_type = std::filesystem::file_time_type;
     return file_time_type{file_time_type::duration{
         static_cast<file_time_type::duration::rep>(value.to_integer())}};
-  } else {
-    return std::nullopt;
   }
+  return std::nullopt;
 }
 
 /// @ingroup json
@@ -278,17 +272,16 @@ template <typename T>
 auto from_json(const JSON &value) -> std::optional<T> {
   if (value.is_string()) {
     return value.to_string();
-  } else {
-    return std::nullopt;
   }
+  return std::nullopt;
 }
 
 /// @ingroup json
 template <typename T>
-  requires json_auto_is_bitset<T>::value
+  requires JSONAutoIsBitset<T>::value
 auto to_json(const T &bitset) -> JSON {
-  constexpr std::size_t N{json_auto_bitset_size<T>::value};
-  if constexpr (N <= 64) {
+  constexpr std::size_t BIT_COUNT{json_auto_bitset_size<T>::value};
+  if constexpr (BIT_COUNT <= 64) {
     return JSON{static_cast<std::int64_t>(bitset.to_ullong())};
   } else {
     return JSON{bitset.to_string()};
@@ -297,21 +290,20 @@ auto to_json(const T &bitset) -> JSON {
 
 /// @ingroup json
 template <typename T>
-  requires json_auto_is_bitset<T>::value
+  requires JSONAutoIsBitset<T>::value
 auto from_json(const JSON &value) -> std::optional<T> {
-  constexpr std::size_t N{json_auto_bitset_size<T>::value};
-  if constexpr (N <= 64) {
+  constexpr std::size_t BIT_COUNT{json_auto_bitset_size<T>::value};
+  if constexpr (BIT_COUNT <= 64) {
     if (value.is_integer()) {
       return T{static_cast<unsigned long long>(value.to_integer())};
-    } else {
-      return std::nullopt;
     }
+    return std::nullopt;
+
   } else {
     if (value.is_string()) {
       return T{value.to_string()};
-    } else {
-      return std::nullopt;
     }
+    return std::nullopt;
   }
 }
 
@@ -331,13 +323,12 @@ auto from_json(const JSON &value) -> std::optional<T> {
 
 /// @ingroup json
 template <typename T>
-  requires json_auto_is_basic_string<T>::value
+  requires JSONAutoIsBasicString<T>::value
 auto from_json(const JSON &value) -> std::optional<T> {
   if (value.is_string()) {
     return value.to_string();
-  } else {
-    return std::nullopt;
   }
+  return std::nullopt;
 }
 
 /// @ingroup json
@@ -353,9 +344,8 @@ template <typename T>
 auto from_json(const JSON &value) -> std::optional<T> {
   if (value.is_integer()) {
     return static_cast<T>(value.to_integer());
-  } else {
-    return std::nullopt;
   }
+  return std::nullopt;
 }
 
 /// @ingroup json
@@ -372,14 +362,13 @@ auto from_json(const JSON &value) -> std::optional<T> {
   if (value.is_null()) {
     return std::optional<T>{
         std::optional<typename T::value_type>{std::nullopt}};
-  } else {
-    auto result{from_json<typename T::value_type>(value)};
-    if (!result.has_value()) {
-      return std::nullopt;
-    }
-
-    return result;
   }
+  auto result{from_json<typename T::value_type>(value)};
+  if (!result.has_value()) {
+    return std::nullopt;
+  }
+
+  return result;
 }
 
 /// @ingroup json
@@ -590,7 +579,7 @@ auto to_json(const std::pair<L, R> &value) -> JSON {
 
 /// @ingroup json
 template <typename T>
-  requires json_auto_is_pair<T>::value
+  requires JSONAutoIsPair<T>::value
 auto from_json(const JSON &value) -> std::optional<T> {
   if (!value.is_array() || value.size() != 2) {
     return std::nullopt;
@@ -644,7 +633,8 @@ template <json_auto_tuple_poly T> auto to_json(const T &value) -> JSON {
 
 #ifndef DOXYGEN
 template <typename T, std::size_t... Indices>
-auto from_json_tuple_poly(const JSON &value, std::index_sequence<Indices...>)
+auto from_json_tuple_poly(
+    const JSON &value, [[maybe_unused]] std::index_sequence<Indices...> indices)
     -> T {
   return {from_json<std::tuple_element_t<Indices, T>>(value.at(Indices))
               .value()...};
@@ -669,7 +659,7 @@ auto from_json(const JSON &value) -> std::optional<T> {
 
 /// @ingroup json
 template <typename T>
-  requires json_auto_is_variant<T>::value
+  requires JSONAutoIsVariant<T>::value
 auto to_json(const T &value) -> JSON {
   auto result{JSON::make_array()};
   result.push_back(JSON{static_cast<std::int64_t>(value.index())});
@@ -695,16 +685,15 @@ auto from_json_variant_impl(const JSON &data, std::size_t index)
       }
 
       return std::nullopt;
-    } else {
-      return from_json_variant_impl<T, Index + 1>(data, index);
     }
+    return from_json_variant_impl<T, Index + 1>(data, index);
   }
 }
 #endif
 
 /// @ingroup json
 template <typename T>
-  requires json_auto_is_variant<T>::value
+  requires JSONAutoIsVariant<T>::value
 auto from_json(const JSON &value) -> std::optional<T> {
   if (!value.is_array() || value.size() != 2 || !value.at(0).is_integer()) {
     return std::nullopt;
@@ -713,9 +702,8 @@ auto from_json(const JSON &value) -> std::optional<T> {
   const auto index{static_cast<std::size_t>(value.at(0).to_integer())};
   if (index >= std::variant_size_v<T>) {
     return std::nullopt;
-  } else {
-    return from_json_variant_impl<T>(value.at(1), index);
   }
+  return from_json_variant_impl<T>(value.at(1), index);
 }
 
 } // namespace sourcemeta::core

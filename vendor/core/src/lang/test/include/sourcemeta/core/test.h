@@ -217,7 +217,7 @@ inline auto test_c_string_label(const char *const value) -> std::string_view {
 // lives for the duration of a single comparison call, so the usual hazards of
 // reference members do not apply here.
 /// A pair of operands captured by reference for one comparison.
-template <typename Left, typename Right> struct test_operands {
+template <typename Left, typename Right> struct TestOperands {
   // NOLINTBEGIN(cppcoreguidelines-avoid-const-or-ref-data-members)
   /// The left-hand operand.
   const Left &left;
@@ -233,7 +233,7 @@ template <typename Left, typename Right> struct test_operands {
 template <typename Left, typename Right, typename Comparator>
 auto test_expect_comparison(std::string_view file, int line,
                             std::string_view expression,
-                            const test_operands<Left, Right> &operands,
+                            const TestOperands<Left, Right> &operands,
                             Comparator comparator) -> void {
   if (!comparator(operands.left, operands.right)) {
     test_report_failure(
@@ -281,7 +281,7 @@ auto test_expect_comparison(std::string_view file, int line,
 #define SOURCEMETA_CORE_TEST_COMPARE(actual, expected, comparator, operation)  \
   ::sourcemeta::core::test_expect_comparison(                                  \
       __FILE__, __LINE__, #actual " " operation " " #expected,                 \
-      ::sourcemeta::core::test_operands{(actual), (expected)},                 \
+      ::sourcemeta::core::TestOperands{(actual), (expected)},                  \
       [](const auto &sourcemeta_test_left,                                     \
          const auto &sourcemeta_test_right) {                                  \
         return ::sourcemeta::core::comparator(sourcemeta_test_left,            \

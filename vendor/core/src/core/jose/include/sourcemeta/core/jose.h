@@ -7,6 +7,7 @@
 
 // NOLINTBEGIN(misc-include-cleaner)
 #include <sourcemeta/core/jose_algorithm.h>
+#include <sourcemeta/core/jose_compact.h>
 #include <sourcemeta/core/jose_decrypt.h>
 #include <sourcemeta/core/jose_encrypt.h>
 #include <sourcemeta/core/jose_error.h>

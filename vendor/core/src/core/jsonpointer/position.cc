@@ -12,20 +12,20 @@
 namespace sourcemeta::core {
 
 auto PointerPositionTracker::ensure_index() const -> void {
-  if (this->indexed) {
+  if (this->indexed_) {
     return;
   }
 
-  this->indexed = true;
-  this->trie.push_back({.position = std::nullopt,
-                        .index_children = {},
-                        .property_children = {}});
+  this->indexed_ = true;
+  this->trie_.push_back({.position = std::nullopt,
+                         .index_children = {},
+                         .property_children = {}});
 
   std::size_t current_node{0};
   std::vector<std::pair<std::size_t, std::pair<std::uint64_t, std::uint64_t>>>
       node_stack;
 
-  for (const auto &event : this->events) {
+  for (const auto &event : this->events_) {
     switch (event.phase) {
       case JSON::ParsePhase::Pre:
         node_stack.emplace_back(current_node,
@@ -35,14 +35,15 @@ auto PointerPositionTracker::ensure_index() const -> void {
           case JSON::ParseContext::Property: {
             assert(event.property != nullptr);
             const std::string_view key{*event.property};
-            auto iterator{this->trie[current_node].property_children.find(key)};
-            if (iterator == this->trie[current_node].property_children.end()) {
-              const auto node_index{this->trie.size()};
-              this->trie.push_back({.position = std::nullopt,
-                                    .index_children = {},
-                                    .property_children = {}});
-              this->trie[current_node].property_children.emplace(key,
-                                                                 node_index);
+            auto iterator{
+                this->trie_[current_node].property_children.find(key)};
+            if (iterator == this->trie_[current_node].property_children.end()) {
+              const auto node_index{this->trie_.size()};
+              this->trie_.push_back({.position = std::nullopt,
+                                     .index_children = {},
+                                     .property_children = {}});
+              this->trie_[current_node].property_children.emplace(key,
+                                                                  node_index);
               current_node = node_index;
             } else {
               current_node = iterator->second;
@@ -51,14 +52,14 @@ auto PointerPositionTracker::ensure_index() const -> void {
           }
           case JSON::ParseContext::Index: {
             auto iterator{
-                this->trie[current_node].index_children.find(event.index)};
-            if (iterator == this->trie[current_node].index_children.end()) {
-              const auto node_index{this->trie.size()};
-              this->trie.push_back({.position = std::nullopt,
-                                    .index_children = {},
-                                    .property_children = {}});
-              this->trie[current_node].index_children.emplace(event.index,
-                                                              node_index);
+                this->trie_[current_node].index_children.find(event.index)};
+            if (iterator == this->trie_[current_node].index_children.end()) {
+              const auto node_index{this->trie_.size()};
+              this->trie_.push_back({.position = std::nullopt,
+                                     .index_children = {},
+                                     .property_children = {}});
+              this->trie_[current_node].index_children.emplace(event.index,
+                                                               node_index);
               current_node = node_index;
             } else {
               current_node = iterator->second;
@@ -72,7 +73,7 @@ auto PointerPositionTracker::ensure_index() const -> void {
         break;
       case JSON::ParsePhase::Post:
         assert(!node_stack.empty());
-        this->trie[current_node].position =
+        this->trie_[current_node].position =
             Position{node_stack.back().second.first,
                      node_stack.back().second.second, event.line, event.column};
         current_node = node_stack.back().first;
@@ -85,18 +86,21 @@ auto PointerPositionTracker::ensure_index() const -> void {
   }
 }
 
-auto PointerPositionTracker::operator()(
-    const JSON::ParsePhase phase, const JSON::Type, const std::uint64_t line,
-    const std::uint64_t column, const JSON::ParseContext context,
-    const std::size_t index, const JSON::String &property) -> void {
-  this->events.push_back({.phase = phase,
-                          .context = context,
-                          .index = index,
-                          .property = context == JSON::ParseContext::Property
-                                          ? &property
-                                          : nullptr,
-                          .line = line,
-                          .column = column});
+auto PointerPositionTracker::operator()(const JSON::ParsePhase phase,
+                                        [[maybe_unused]] const JSON::Type type,
+                                        const std::uint64_t line,
+                                        const std::uint64_t column,
+                                        const JSON::ParseContext context,
+                                        const std::size_t index,
+                                        const JSON::String &property) -> void {
+  this->events_.push_back({.phase = phase,
+                           .context = context,
+                           .index = index,
+                           .property = context == JSON::ParseContext::Property
+                                           ? &property
+                                           : nullptr,
+                           .line = line,
+                           .column = column});
 }
 
 auto PointerPositionTracker::get(const Pointer &pointer) const
@@ -105,21 +109,21 @@ auto PointerPositionTracker::get(const Pointer &pointer) const
   std::size_t node{0};
   for (const auto &token : pointer) {
     if (token.is_property()) {
-      const auto &children{this->trie[node].property_children};
+      const auto &children{this->trie_[node].property_children};
       const auto iterator{children.find(std::string_view{token.to_property()})};
       if (iterator == children.end()) {
         return std::nullopt;
       }
       node = iterator->second;
     } else {
-      const auto &children{this->trie[node].index_children};
+      const auto &children{this->trie_[node].index_children};
       const auto iterator{children.find(token.to_index())};
       if (iterator == children.end()) {
         // If the currently referenced value is a JSON object, the new
         // referenced value is the object member with the name identified by the
         // reference token.
         // See https://www.rfc-editor.org/rfc/rfc6901#section-4
-        const auto &properties{this->trie[node].property_children};
+        const auto &properties{this->trie_[node].property_children};
         DigitsBuffer buffer;
         const auto property_iterator{
             properties.find(digits_view(token.to_index(), buffer))};
@@ -133,12 +137,12 @@ auto PointerPositionTracker::get(const Pointer &pointer) const
     }
   }
 
-  return this->trie[node].position;
+  return this->trie_[node].position;
 }
 
 auto PointerPositionTracker::size() const -> std::size_t {
   return static_cast<std::size_t>(
-      std::count_if(this->events.cbegin(), this->events.cend(),
+      std::count_if(this->events_.cbegin(), this->events_.cend(),
                     [](const Event &event) -> bool {
                       return event.phase == JSON::ParsePhase::Post;
                     }));
@@ -149,7 +153,7 @@ auto PointerPositionTracker::to_json() const -> JSON {
   Pointer current;
   std::vector<std::pair<std::uint64_t, std::uint64_t>> start_stack;
 
-  for (const auto &event : this->events) {
+  for (const auto &event : this->events_) {
     switch (event.phase) {
       case JSON::ParsePhase::Pre:
         start_stack.emplace_back(event.line, event.column);

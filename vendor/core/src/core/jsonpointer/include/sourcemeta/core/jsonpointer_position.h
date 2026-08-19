@@ -55,7 +55,7 @@ public:
   /// The start and end line and column numbers of a value
   using Position =
       std::tuple<std::uint64_t, std::uint64_t, std::uint64_t, std::uint64_t>;
-  auto operator()(const JSON::ParsePhase phase, const JSON::Type,
+  auto operator()(const JSON::ParsePhase phase, const JSON::Type type,
                   const std::uint64_t line, const std::uint64_t column,
                   const JSON::ParseContext context, const std::size_t index,
                   const JSON::String &property) -> void;
@@ -91,9 +91,9 @@ private:
 #if defined(_MSC_VER)
 #pragma warning(disable : 4251)
 #endif
-  std::vector<Event> events;
-  mutable bool indexed{false};
-  mutable std::vector<TrieNode> trie;
+  std::vector<Event> events_;
+  mutable bool indexed_{false};
+  mutable std::vector<TrieNode> trie_;
 #if defined(_MSC_VER)
 #pragma warning(default : 4251)
 #endif

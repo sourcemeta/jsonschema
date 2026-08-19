@@ -151,7 +151,11 @@ enum class OAuthAssertionError : std::uint8_t {
   IssuedInFuture,
   /// The identifier was already seen within its window, a replay (RFC 7523
   /// Section 3 check 7).
-  Replay
+  Replay,
+  /// The assertion claims a longer life than local policy allows, names no
+  /// interval at all, or leaves out the issue time the bound needs (RFC 7523
+  /// Section 3 check 4, Section 5).
+  Lifetime
 };
 
 /// @ingroup oauth
@@ -168,6 +172,14 @@ struct OAuthAssertionVerifyOptions {
   /// null or when the assertion carries no identifier (RFC 7523 Section 3
   /// check 7).
   OAuthDPoPReplayStore *replay_store{nullptr};
+  /// The longest life an assertion may claim between its issue and expiration
+  /// times, unbounded when unset. RFC 7523 Section 3 check 4 notes a server
+  /// "may reject JWTs with an "exp" claim value that is unreasonably far in
+  /// the future", and Section 5 names the "maximum JWT lifetime allowed" among
+  /// the values two parties agree out of band. A negative bound refuses every
+  /// assertion, and a bound of zero admits only one whose expiration is the
+  /// very instant it was issued.
+  std::optional<std::chrono::seconds> maximum_lifetime{};
 };
 
 /// @ingroup oauth

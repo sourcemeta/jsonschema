@@ -2,6 +2,7 @@
 
 #include "helpers.h"
 
+#include <algorithm>   // std::max
 #include <optional>    // std::optional, std::nullopt
 #include <string_view> // std::string_view
 
@@ -16,9 +17,9 @@ auto http_negotiate_encoding(
     return HTTPContentEncoding::Identity;
   }
 
-  float gzip_quality{0.0f};
-  float identity_quality{0.0f};
-  float wildcard_quality{0.0f};
+  float gzip_quality{0.0F};
+  float identity_quality{0.0F};
+  float wildcard_quality{0.0F};
   bool gzip_listed{false};
   bool identity_listed{false};
   bool wildcard_listed{false};
@@ -29,19 +30,13 @@ auto http_negotiate_encoding(
         if (equals_ignore_case(token, "gzip") ||
             equals_ignore_case(token, "x-gzip")) {
           gzip_listed = true;
-          if (quality > gzip_quality) {
-            gzip_quality = quality;
-          }
+          gzip_quality = std::max(quality, gzip_quality);
         } else if (equals_ignore_case(token, "identity")) {
           identity_listed = true;
-          if (quality > identity_quality) {
-            identity_quality = quality;
-          }
+          identity_quality = std::max(quality, identity_quality);
         } else if (token == "*") {
           wildcard_listed = true;
-          if (quality > wildcard_quality) {
-            wildcard_quality = quality;
-          }
+          wildcard_quality = std::max(quality, wildcard_quality);
         }
       });
 
@@ -52,12 +47,12 @@ auto http_negotiate_encoding(
     if (wildcard_listed) {
       identity_quality = wildcard_quality;
     } else {
-      identity_quality = 1.0f;
+      identity_quality = 1.0F;
     }
   }
 
-  const bool gzip_acceptable{gzip_quality > 0.0f};
-  const bool identity_acceptable{identity_quality > 0.0f};
+  const bool gzip_acceptable{gzip_quality > 0.0F};
+  const bool identity_acceptable{identity_quality > 0.0F};
 
   if (!gzip_acceptable && !identity_acceptable) {
     return std::nullopt;

@@ -21,9 +21,9 @@ namespace sourcemeta::core::internal {
 // solidus (U+005C), and the control characters U+0000 to U+001F.
 // See
 // https://www.ecma-international.org/wp-content/uploads/ECMA-404_2nd_edition_december_2017.pdf
-template <typename CharT> static constexpr CharT token_string_quote{'\u0022'};
-template <typename CharT> static constexpr CharT token_string_escape{'\u005C'};
-template <typename CharT> static constexpr CharT token_string_solidus{'\u002F'};
+template <typename CharT> static constexpr CharT TOKEN_STRING_QUOTE{'\u0022'};
+template <typename CharT> static constexpr CharT TOKEN_STRING_ESCAPE{'\u005C'};
+template <typename CharT> static constexpr CharT TOKEN_STRING_SOLIDUS{'\u002F'};
 
 // There are two-character escape sequence representations of some characters.
 //
@@ -38,31 +38,31 @@ template <typename CharT> static constexpr CharT token_string_solidus{'\u002F'};
 // See
 // https://www.ecma-international.org/wp-content/uploads/ECMA-404_2nd_edition_december_2017.pdf
 template <typename CharT>
-static constexpr CharT token_string_escape_backspace{'\u0062'};
+static constexpr CharT TOKEN_STRING_ESCAPE_BACKSPACE{'\u0062'};
 template <typename CharT>
-static constexpr CharT token_string_escape_form_feed{'\u0066'};
+static constexpr CharT TOKEN_STRING_ESCAPE_FORM_FEED{'\u0066'};
 template <typename CharT>
-static constexpr CharT token_string_escape_line_feed{'\u006E'};
+static constexpr CharT TOKEN_STRING_ESCAPE_LINE_FEED{'\u006E'};
 template <typename CharT>
-static constexpr CharT token_string_escape_carriage_return{'\u0072'};
+static constexpr CharT TOKEN_STRING_ESCAPE_CARRIAGE_RETURN{'\u0072'};
 template <typename CharT>
-static constexpr CharT token_string_escape_tabulation{'\u0074'};
+static constexpr CharT TOKEN_STRING_ESCAPE_TABULATION{'\u0074'};
 template <typename CharT>
-static constexpr CharT token_string_escape_unicode{'\u0075'};
+static constexpr CharT TOKEN_STRING_ESCAPE_UNICODE{'\u0075'};
 
 // Array
-template <typename CharT> static constexpr CharT token_array_begin{'\u005B'};
-template <typename CharT> static constexpr CharT token_array_end{'\u005D'};
+template <typename CharT> static constexpr CharT TOKEN_ARRAY_BEGIN{'\u005B'};
+template <typename CharT> static constexpr CharT TOKEN_ARRAY_END{'\u005D'};
 template <typename CharT>
-static constexpr CharT token_array_delimiter{'\u002C'};
+static constexpr CharT TOKEN_ARRAY_DELIMITER{'\u002C'};
 
 // Object
-template <typename CharT> static constexpr CharT token_object_begin{'\u007B'};
-template <typename CharT> static constexpr CharT token_object_end{'\u007D'};
+template <typename CharT> static constexpr CharT TOKEN_OBJECT_BEGIN{'\u007B'};
+template <typename CharT> static constexpr CharT TOKEN_OBJECT_END{'\u007D'};
 template <typename CharT>
-static constexpr CharT token_object_key_delimiter{'\u003A'};
+static constexpr CharT TOKEN_OBJECT_KEY_DELIMITER{'\u003A'};
 template <typename CharT>
-static constexpr CharT token_object_delimiter{'\u002C'};
+static constexpr CharT TOKEN_OBJECT_DELIMITER{'\u002C'};
 
 // These are the three literal name tokens:
 // true  U+0074 U+0072 U+0075 U+0065
@@ -72,19 +72,19 @@ static constexpr CharT token_object_delimiter{'\u002C'};
 // https://www.ecma-international.org/wp-content/uploads/ECMA-404_2nd_edition_december_2017.pdf
 
 // Boolean
-template <typename CharT> static constexpr CharT token_true{'\u0074'};
+template <typename CharT> static constexpr CharT TOKEN_TRUE{'\u0074'};
 template <typename CharT, typename Traits>
-static constexpr std::basic_string_view<CharT, Traits> constant_true{
+static constexpr std::basic_string_view<CharT, Traits> CONSTANT_TRUE{
     "\u0074\u0072\u0075\u0065"};
-template <typename CharT> static constexpr CharT token_false{'\u0066'};
+template <typename CharT> static constexpr CharT TOKEN_FALSE{'\u0066'};
 template <typename CharT, typename Traits>
-static constexpr std::basic_string_view<CharT, Traits> constant_false{
+static constexpr std::basic_string_view<CharT, Traits> CONSTANT_FALSE{
     "\u0066\u0061\u006C\u0073\u0065"};
 
 // Null
-template <typename CharT> static constexpr CharT token_null{'\u006E'};
+template <typename CharT> static constexpr CharT TOKEN_NULL{'\u006E'};
 template <typename CharT, typename Traits>
-static constexpr std::basic_string_view<CharT, Traits> constant_null{
+static constexpr std::basic_string_view<CharT, Traits> CONSTANT_NULL{
     "\u006E\u0075\u006C\u006C"};
 
 // A number is a sequence of decimal digits with no superfluous leading zero.
@@ -95,23 +95,23 @@ static constexpr std::basic_string_view<CharT, Traits> constant_null{
 // See
 // https://www.ecma-international.org/wp-content/uploads/ECMA-404_2nd_edition_december_2017.pdf
 template <typename CharT>
-static constexpr CharT token_number_decimal_point{'\u002E'};
+static constexpr CharT TOKEN_NUMBER_DECIMAL_POINT{'\u002E'};
 template <typename CharT>
-static constexpr CharT token_number_exponent_uppercase{'\u0045'};
+static constexpr CharT TOKEN_NUMBER_EXPONENT_UPPERCASE{'\u0045'};
 template <typename CharT>
-static constexpr CharT token_number_exponent_lowercase{'\u0065'};
-template <typename CharT> static constexpr CharT token_number_plus{'\u002B'};
-template <typename CharT> static constexpr CharT token_number_minus{'\u002D'};
-template <typename CharT> static constexpr CharT token_number_zero{'\u0030'};
-template <typename CharT> static constexpr CharT token_number_one{'\u0031'};
-template <typename CharT> static constexpr CharT token_number_two{'\u0032'};
-template <typename CharT> static constexpr CharT token_number_three{'\u0033'};
-template <typename CharT> static constexpr CharT token_number_four{'\u0034'};
-template <typename CharT> static constexpr CharT token_number_five{'\u0035'};
-template <typename CharT> static constexpr CharT token_number_six{'\u0036'};
-template <typename CharT> static constexpr CharT token_number_seven{'\u0037'};
-template <typename CharT> static constexpr CharT token_number_eight{'\u0038'};
-template <typename CharT> static constexpr CharT token_number_nine{'\u0039'};
+static constexpr CharT TOKEN_NUMBER_EXPONENT_LOWERCASE{'\u0065'};
+template <typename CharT> static constexpr CharT TOKEN_NUMBER_PLUS{'\u002B'};
+template <typename CharT> static constexpr CharT TOKEN_NUMBER_MINUS{'\u002D'};
+template <typename CharT> static constexpr CharT TOKEN_NUMBER_ZERO{'\u0030'};
+template <typename CharT> static constexpr CharT TOKEN_NUMBER_ONE{'\u0031'};
+template <typename CharT> static constexpr CharT TOKEN_NUMBER_TWO{'\u0032'};
+template <typename CharT> static constexpr CharT TOKEN_NUMBER_THREE{'\u0033'};
+template <typename CharT> static constexpr CharT TOKEN_NUMBER_FOUR{'\u0034'};
+template <typename CharT> static constexpr CharT TOKEN_NUMBER_FIVE{'\u0035'};
+template <typename CharT> static constexpr CharT TOKEN_NUMBER_SIX{'\u0036'};
+template <typename CharT> static constexpr CharT TOKEN_NUMBER_SEVEN{'\u0037'};
+template <typename CharT> static constexpr CharT TOKEN_NUMBER_EIGHT{'\u0038'};
+template <typename CharT> static constexpr CharT TOKEN_NUMBER_NINE{'\u0039'};
 
 // Whitespace is any sequence of one or more of the following code points:
 // character tabulation (U+0009), line feed (U+000A), carriage return (U+000D),
@@ -119,13 +119,13 @@ template <typename CharT> static constexpr CharT token_number_nine{'\u0039'};
 // See
 // https://www.ecma-international.org/wp-content/uploads/ECMA-404_2nd_edition_december_2017.pdf
 template <typename CharT>
-static constexpr CharT token_whitespace_tabulation{'\u0009'};
+static constexpr CharT TOKEN_WHITESPACE_TABULATION{'\u0009'};
 template <typename CharT>
-static constexpr CharT token_whitespace_line_feed{'\u000A'};
+static constexpr CharT TOKEN_WHITESPACE_LINE_FEED{'\u000A'};
 template <typename CharT>
-static constexpr CharT token_whitespace_carriage_return{'\u000D'};
+static constexpr CharT TOKEN_WHITESPACE_CARRIAGE_RETURN{'\u000D'};
 template <typename CharT>
-static constexpr CharT token_whitespace_space{'\u0020'};
+static constexpr CharT TOKEN_WHITESPACE_SPACE{'\u0020'};
 
 } // namespace sourcemeta::core::internal
 

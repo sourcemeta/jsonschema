@@ -48,7 +48,7 @@ concept any_decimal = (std::same_as<Ts, Decimal> || ...);
 /// assert(!sourcemeta::core::is_digit('a'));
 /// assert(!sourcemeta::core::is_digit(' '));
 /// ```
-inline constexpr auto is_digit(const char character) -> bool {
+constexpr auto is_digit(const char character) -> bool {
   return character >= '0' && character <= '9';
 }
 
@@ -66,7 +66,7 @@ inline constexpr auto is_digit(const char character) -> bool {
 /// assert(!sourcemeta::core::is_positive_digit('0'));
 /// assert(!sourcemeta::core::is_positive_digit('a'));
 /// ```
-inline constexpr auto is_positive_digit(const char character) -> bool {
+constexpr auto is_positive_digit(const char character) -> bool {
   return character >= '1' && character <= '9';
 }
 
@@ -95,35 +95,34 @@ auto divide_floor(const Dividend &dividend, const Divisor &divisor) {
     assert(decimal_divisor > Decimal{0});
     if (decimal_divisor == Decimal{1}) {
       return decimal_dividend;
-    } else if (decimal_dividend >= Decimal{0}) {
-      return decimal_dividend.divide_integer(decimal_divisor);
-    } else {
-      const Decimal absolute_dividend{
-          decimal_dividend.is_signed() ? -decimal_dividend : decimal_dividend};
-      const Decimal quotient{absolute_dividend.divide_integer(decimal_divisor)};
-      if (absolute_dividend % decimal_divisor == Decimal{0}) {
-        return -quotient;
-      } else {
-        return -(quotient + Decimal{1});
-      }
     }
+    if (decimal_dividend >= Decimal{0}) {
+      return decimal_dividend.divide_integer(decimal_divisor);
+    }
+    const Decimal absolute_dividend{
+        decimal_dividend.is_signed() ? -decimal_dividend : decimal_dividend};
+    const Decimal quotient{absolute_dividend.divide_integer(decimal_divisor)};
+    if (absolute_dividend % decimal_divisor == Decimal{0}) {
+      return -quotient;
+    }
+    return -(quotient + Decimal{1});
+
   } else {
     const auto signed_dividend{static_cast<std::int64_t>(dividend)};
     const auto unsigned_divisor{static_cast<std::uint64_t>(divisor)};
     assert(unsigned_divisor > 0);
     if (unsigned_divisor == 1) {
       return signed_dividend;
-    } else if (signed_dividend >= 0) {
+    }
+    if (signed_dividend >= 0) {
       return static_cast<std::int64_t>(
           static_cast<std::uint64_t>(signed_dividend) / unsigned_divisor);
-    } else {
-      // Negate in unsigned to avoid UB for INT64_MIN
-      const std::uint64_t absolute_dividend{
-          static_cast<std::uint64_t>(0) -
-          static_cast<std::uint64_t>(signed_dividend)};
-      return -(static_cast<std::int64_t>(
-          1 + ((absolute_dividend - 1) / unsigned_divisor)));
-    }
+    } // Negate in unsigned to avoid UB for INT64_MIN
+    const std::uint64_t absolute_dividend{
+        static_cast<std::uint64_t>(0) -
+        static_cast<std::uint64_t>(signed_dividend)};
+    return -(static_cast<std::int64_t>(
+        1 + ((absolute_dividend - 1) / unsigned_divisor)));
   }
 }
 
@@ -141,43 +140,41 @@ auto divide_ceil(const Dividend &dividend, const Divisor &divisor) {
     assert(decimal_divisor > Decimal{0});
     if (decimal_divisor == Decimal{1}) {
       return decimal_dividend;
-    } else if (decimal_dividend >= Decimal{0}) {
+    }
+    if (decimal_dividend >= Decimal{0}) {
       const Decimal quotient{decimal_dividend.divide_integer(decimal_divisor)};
       if (decimal_dividend % decimal_divisor == Decimal{0}) {
         return quotient;
-      } else {
-        return quotient + Decimal{1};
       }
-    } else {
-      const Decimal absolute_dividend{
-          decimal_dividend.is_signed() ? -decimal_dividend : decimal_dividend};
-      return -(absolute_dividend.divide_integer(decimal_divisor));
+      return quotient + Decimal{1};
     }
+    const Decimal absolute_dividend{
+        decimal_dividend.is_signed() ? -decimal_dividend : decimal_dividend};
+    return -(absolute_dividend.divide_integer(decimal_divisor));
+
   } else {
     const auto signed_dividend{static_cast<std::int64_t>(dividend)};
     const auto unsigned_divisor{static_cast<std::uint64_t>(divisor)};
     assert(unsigned_divisor > 0);
     if (unsigned_divisor == 1) {
       return signed_dividend;
-    } else if (signed_dividend >= 0) {
+    }
+    if (signed_dividend >= 0) {
       if (static_cast<std::uint64_t>(signed_dividend) + unsigned_divisor <
           unsigned_divisor) {
         return static_cast<std::int64_t>(
             (static_cast<std::uint64_t>(signed_dividend) / unsigned_divisor) +
             1 - (1 / unsigned_divisor));
-      } else {
-        return static_cast<std::int64_t>(
-            (static_cast<std::uint64_t>(signed_dividend) + unsigned_divisor -
-             1) /
-            unsigned_divisor);
       }
-    } else {
-      // Negate in unsigned to avoid UB for INT64_MIN
-      return -(static_cast<std::int64_t>(
-          (static_cast<std::uint64_t>(0) -
-           static_cast<std::uint64_t>(signed_dividend)) /
-          unsigned_divisor));
-    }
+      return static_cast<std::int64_t>(
+          (static_cast<std::uint64_t>(signed_dividend) + unsigned_divisor - 1) /
+          unsigned_divisor);
+
+    } // Negate in unsigned to avoid UB for INT64_MIN
+    return -(static_cast<std::int64_t>(
+        (static_cast<std::uint64_t>(0) -
+         static_cast<std::uint64_t>(signed_dividend)) /
+        unsigned_divisor));
   }
 }
 
@@ -228,7 +225,10 @@ auto count_multiples(const Minimum &minimum, const Maximum &maximum,
 
 /// @ingroup numeric
 /// The maximum value representable by an unsigned integer of T bits
+// The upper-case spelling this constant would otherwise take collides with the
+// UINT_MAX macro from the C standard library
 template <unsigned int T>
+// NOLINTNEXTLINE(readability-identifier-naming)
 constexpr auto uint_max = []() -> std::uint64_t {
   static_assert(T > 0 && T < 64, "uint_max<T> requires 0 < T < 64");
   return (std::uint64_t{1} << T) - 1;
@@ -255,9 +255,8 @@ constexpr auto is_within(const T &value, const std::uint64_t lower,
   if (value >= 0) {
     return static_cast<std::uint64_t>(value) >= lower &&
            static_cast<std::uint64_t>(value) <= higher;
-  } else {
-    return false;
   }
+  return false;
 }
 
 /// @ingroup numeric
@@ -277,9 +276,8 @@ template <typename T> auto abs(const T &value) {
     if (value < 0) {
       // Negate in unsigned to avoid UB for INT64_MIN
       return static_cast<std::uint64_t>(0) - static_cast<std::uint64_t>(value);
-    } else {
-      return static_cast<std::uint64_t>(value);
     }
+    return static_cast<std::uint64_t>(value);
   }
 }
 
@@ -324,11 +322,11 @@ constexpr auto correct_ieee754(const Real value) -> Real {
   const Real next{base + 1};
   if (next - value <= threshold) {
     return next;
-  } else if (value - base <= threshold) {
-    return base;
-  } else {
-    return value;
   }
+  if (value - base <= threshold) {
+    return base;
+  }
+  return value;
 }
 
 /// @ingroup numeric
@@ -385,19 +383,19 @@ auto real_equal(const Real left, const Real right) -> bool {
   // Map the sign-and-magnitude bit pattern to a biased ordering in which
   // adjacent representable values differ by one, so their distance counts the
   // units in the last place between them
-  constexpr Bits sign_bit{Bits{1} << (8 * sizeof(Bits) - 1)};
+  constexpr Bits SIGN_BIT{Bits{1} << ((8 * sizeof(Bits)) - 1)};
   const Bits left_bits{std::bit_cast<Bits>(left)};
   const Bits right_bits{std::bit_cast<Bits>(right)};
-  const Bits left_biased{(sign_bit & left_bits) != 0
+  const Bits left_biased{(SIGN_BIT & left_bits) != 0
                              ? static_cast<Bits>(~left_bits + Bits{1})
-                             : static_cast<Bits>(sign_bit | left_bits)};
-  const Bits right_biased{(sign_bit & right_bits) != 0
+                             : static_cast<Bits>(SIGN_BIT | left_bits)};
+  const Bits right_biased{(SIGN_BIT & right_bits) != 0
                               ? static_cast<Bits>(~right_bits + Bits{1})
-                              : static_cast<Bits>(sign_bit | right_bits)};
-  constexpr Bits maximum_units_in_last_place{4};
+                              : static_cast<Bits>(SIGN_BIT | right_bits)};
+  constexpr Bits MAXIMUM_UNITS_IN_LAST_PLACE{4};
   return (left_biased >= right_biased
               ? left_biased - right_biased
-              : right_biased - left_biased) <= maximum_units_in_last_place;
+              : right_biased - left_biased) <= MAXIMUM_UNITS_IN_LAST_PLACE;
 }
 
 } // namespace sourcemeta::core

@@ -37,7 +37,7 @@ auto to_double(const std::string_view input) noexcept -> std::optional<double> {
   // is not guaranteed to be null-terminated, so it must be bounded first.
   // Darwin documents that a null locale argument selects the C locale, so a
   // failed locale construction still yields the intended behavior
-  static const locale_t c_locale{newlocale(LC_ALL_MASK, "C", nullptr)};
+  static const locale_t C_LOCALE{newlocale(LC_ALL_MASK, "C", nullptr)};
   std::array<char, 64> buffer;
   std::string overflow;
   const char *start{nullptr};
@@ -57,7 +57,7 @@ auto to_double(const std::string_view input) noexcept -> std::optional<double> {
 
   errno = 0;
   char *end{nullptr};
-  const auto value{strtod_l(start, &end, c_locale)};
+  const auto value{strtod_l(start, &end, C_LOCALE)};
   if (end != start + input.size()) {
     return std::nullopt;
   }

@@ -44,14 +44,14 @@ auto reverse_ordering(const std::strong_ordering ordering)
 auto integer_real_ordering(const std::int64_t left, const double right)
     -> std::strong_ordering {
   // Real values in a JSON document are always finite
-  constexpr double lowest{-9223372036854775808.0};
-  constexpr double past_highest{9223372036854775808.0};
+  constexpr double LOWEST{-9223372036854775808.0};
+  constexpr double PAST_HIGHEST{9223372036854775808.0};
   const double floor_of_right{std::floor(right)};
-  if (floor_of_right >= past_highest) {
+  if (floor_of_right >= PAST_HIGHEST) {
     return std::strong_ordering::less;
   }
 
-  if (floor_of_right < lowest) {
+  if (floor_of_right < LOWEST) {
     return std::strong_ordering::greater;
   }
 
@@ -112,19 +112,19 @@ auto cross_numeric_ordering(const JSON &left, const JSON &right)
 
 } // namespace
 
-JSON::JSON(const std::int64_t value) : current_type{Type::Integer} {
+JSON::JSON(const std::int64_t value) : current_type_{Type::Integer} {
   this->data_integer = value;
 }
 
-JSON::JSON(const std::size_t value) : current_type{Type::Integer} {
+JSON::JSON(const std::size_t value) : current_type_{Type::Integer} {
   this->data_integer = static_cast<Integer>(value);
 }
 
-JSON::JSON(const int value) : current_type{Type::Integer} {
+JSON::JSON(const int value) : current_type_{Type::Integer} {
   this->data_integer = value;
 }
 
-JSON::JSON(const double value) : current_type{Type::Real} {
+JSON::JSON(const double value) : current_type_{Type::Real} {
   // Numeric values that cannot be represented as sequences of digits (such as
   // Infinity and NaN) are not permitted. See
   // https://www.ecma-international.org/wp-content/uploads/ECMA-404_2nd_edition_december_2017.pdf
@@ -137,43 +137,43 @@ JSON::JSON(const double value) : current_type{Type::Real} {
 
 JSON::JSON(const float value) : JSON(static_cast<Real>(value)) {}
 
-JSON::JSON(const bool value) : current_type{Type::Boolean} {
+JSON::JSON(const bool value) : current_type_{Type::Boolean} {
   this->data_boolean = value;
 }
 
 JSON::JSON(const std::nullptr_t) {}
 
-JSON::JSON(const String &value) : current_type{Type::String} {
+JSON::JSON(const String &value) : current_type_{Type::String} {
   std::construct_at(&this->data_string, value);
 }
 
-JSON::JSON(String &&value) : current_type{Type::String} {
+JSON::JSON(String &&value) : current_type_{Type::String} {
   std::construct_at(&this->data_string, std::move(value));
 }
 
 JSON::JSON(const std::basic_string_view<Char, CharTraits> &value)
-    : current_type{Type::String} {
+    : current_type_{Type::String} {
   std::construct_at(&this->data_string, value);
 }
 
-JSON::JSON(const Char *const value) : current_type{Type::String} {
+JSON::JSON(const Char *const value) : current_type_{Type::String} {
   std::construct_at(&this->data_string, value);
 }
 
-JSON::JSON(const Array &value) : current_type{Type::Array} {
+JSON::JSON(const Array &value) : current_type_{Type::Array} {
   std::construct_at(&this->data_array, value);
 }
 
-JSON::JSON(std::initializer_list<typename Object::pair_value_type> values)
-    : current_type{Type::Object} {
+JSON::JSON(std::initializer_list<Object::pair_value_type> values)
+    : current_type_{Type::Object} {
   std::construct_at(&this->data_object, values);
 }
 
-JSON::JSON(const Object &value) : current_type{Type::Object} {
+JSON::JSON(const Object &value) : current_type_{Type::Object} {
   std::construct_at(&this->data_object, value);
 }
 
-JSON::JSON(const Decimal &value) : current_type{Type::Decimal} {
+JSON::JSON(const Decimal &value) : current_type_{Type::Decimal} {
   if (value.is_nan() || value.is_infinite()) {
     throw std::invalid_argument("JSON does not support Infinity or NaN");
   }
@@ -181,7 +181,7 @@ JSON::JSON(const Decimal &value) : current_type{Type::Decimal} {
   std::construct_at(&this->data_decimal, value);
 }
 
-JSON::JSON(Decimal &&value) : current_type{Type::Decimal} {
+JSON::JSON(Decimal &&value) : current_type_{Type::Decimal} {
   if (value.is_nan() || value.is_infinite()) {
     throw std::invalid_argument("JSON does not support Infinity or NaN");
   }
@@ -192,28 +192,28 @@ JSON::JSON(Decimal &&value) : current_type{Type::Decimal} {
 JSON::JSON(const JSON &other) {
   // Fast path for non-container sources avoids the work-list allocation that
   // would otherwise dominate the cost of copying a scalar value
-  switch (other.current_type) {
+  switch (other.current_type_) {
     case Type::Null:
       return;
     case Type::Boolean:
       this->data_boolean = other.data_boolean;
-      this->current_type = Type::Boolean;
+      this->current_type_ = Type::Boolean;
       return;
     case Type::Integer:
       this->data_integer = other.data_integer;
-      this->current_type = Type::Integer;
+      this->current_type_ = Type::Integer;
       return;
     case Type::Real:
       this->data_real = other.data_real;
-      this->current_type = Type::Real;
+      this->current_type_ = Type::Real;
       return;
     case Type::String:
       std::construct_at(&this->data_string, other.data_string);
-      this->current_type = Type::String;
+      this->current_type_ = Type::String;
       return;
     case Type::Decimal:
       std::construct_at(&this->data_decimal, other.data_decimal);
-      this->current_type = Type::Decimal;
+      this->current_type_ = Type::Decimal;
       return;
     case Type::Array:
     case Type::Object:
@@ -242,34 +242,34 @@ JSON::JSON(const JSON &other) {
       tasks.pop_back();
       const JSON &source{*task.source};
       JSON &destination{*task.destination};
-      switch (source.current_type) {
+      switch (source.current_type_) {
         case Type::Null:
           break;
         case Type::Boolean:
           destination.data_boolean = source.data_boolean;
-          destination.current_type = Type::Boolean;
+          destination.current_type_ = Type::Boolean;
           break;
         case Type::Integer:
           destination.data_integer = source.data_integer;
-          destination.current_type = Type::Integer;
+          destination.current_type_ = Type::Integer;
           break;
         case Type::Real:
           destination.data_real = source.data_real;
-          destination.current_type = Type::Real;
+          destination.current_type_ = Type::Real;
           break;
         case Type::String:
           std::construct_at(&destination.data_string, source.data_string);
-          destination.current_type = Type::String;
+          destination.current_type_ = Type::String;
           break;
         case Type::Decimal:
           std::construct_at(&destination.data_decimal, source.data_decimal);
-          destination.current_type = Type::Decimal;
+          destination.current_type_ = Type::Decimal;
           break;
         case Type::Array: {
           std::construct_at(&destination.data_array, Array{});
-          destination.current_type = Type::Array;
-          const auto &source_data{source.data_array.data};
-          auto &destination_data{destination.data_array.data};
+          destination.current_type_ = Type::Array;
+          const auto &source_data{source.data_array.data_};
+          auto &destination_data{destination.data_array.data_};
           destination_data.reserve(source_data.size());
           for (std::size_t index = 0; index < source_data.size(); ++index) {
             destination_data.emplace_back(nullptr);
@@ -282,9 +282,9 @@ JSON::JSON(const JSON &other) {
         }
         case Type::Object: {
           std::construct_at(&destination.data_object, Object{});
-          destination.current_type = Type::Object;
-          const auto &source_data{source.data_object.data};
-          auto &destination_data{destination.data_object.data};
+          destination.current_type_ = Type::Object;
+          const auto &source_data{source.data_object.data_};
+          auto &destination_data{destination.data_object.data_};
           destination_data.reserve(source_data.size());
           for (const auto &entry : source_data) {
             destination_data.emplace_back(entry.first, JSON{nullptr},
@@ -307,8 +307,8 @@ JSON::JSON(const JSON &other) {
   }
 }
 
-JSON::JSON(JSON &&other) noexcept : current_type{other.current_type} {
-  switch (other.current_type) {
+JSON::JSON(JSON &&other) noexcept : current_type_{other.current_type_} {
+  switch (other.current_type_) {
     case Type::Boolean:
       this->data_boolean = other.data_boolean;
       break;
@@ -320,15 +320,15 @@ JSON::JSON(JSON &&other) noexcept : current_type{other.current_type} {
       break;
     case Type::String:
       std::construct_at(&this->data_string, std::move(other.data_string));
-      other.current_type = Type::Null;
+      other.current_type_ = Type::Null;
       break;
     case Type::Array:
       std::construct_at(&this->data_array, std::move(other.data_array));
-      other.current_type = Type::Null;
+      other.current_type_ = Type::Null;
       break;
     case Type::Object:
       std::construct_at(&this->data_object, std::move(other.data_object));
-      other.current_type = Type::Null;
+      other.current_type_ = Type::Null;
       break;
     case Type::Decimal:
       std::construct_at(&this->data_decimal, std::move(other.data_decimal));
@@ -337,7 +337,7 @@ JSON::JSON(JSON &&other) noexcept : current_type{other.current_type} {
       // moved-from state owns no heap coefficient, making this a no-op
       // branch rather than a deallocation
       other.data_decimal.~Decimal();
-      other.current_type = Type::Null;
+      other.current_type_ = Type::Null;
       break;
     default:
       break;
@@ -354,44 +354,44 @@ auto JSON::operator=(const JSON &other) -> JSON & {
   // buffered into a local first, because the source may be nested inside this
   // value, and tearing this value down would otherwise free the storage still
   // being read from
-  switch (other.current_type) {
+  switch (other.current_type_) {
     case Type::Null:
       this->~JSON();
-      this->current_type = Type::Null;
+      this->current_type_ = Type::Null;
       return *this;
     case Type::Boolean: {
       const auto value{other.data_boolean};
       this->~JSON();
       this->data_boolean = value;
-      this->current_type = Type::Boolean;
+      this->current_type_ = Type::Boolean;
       return *this;
     }
     case Type::Integer: {
       const auto value{other.data_integer};
       this->~JSON();
       this->data_integer = value;
-      this->current_type = Type::Integer;
+      this->current_type_ = Type::Integer;
       return *this;
     }
     case Type::Real: {
       const auto value{other.data_real};
       this->~JSON();
       this->data_real = value;
-      this->current_type = Type::Real;
+      this->current_type_ = Type::Real;
       return *this;
     }
     case Type::String: {
       String value{other.data_string};
       this->~JSON();
       std::construct_at(&this->data_string, std::move(value));
-      this->current_type = Type::String;
+      this->current_type_ = Type::String;
       return *this;
     }
     case Type::Decimal: {
       Decimal value{other.data_decimal};
       this->~JSON();
       std::construct_at(&this->data_decimal, std::move(value));
-      this->current_type = Type::Decimal;
+      this->current_type_ = Type::Decimal;
       return *this;
     }
     case Type::Array:
@@ -431,21 +431,22 @@ JSON::~JSON() {
   // own container children, so containers full of scalars cost no heap
   // allocation. Allocation failures during destruction have no sensible
   // recovery, so terminate
-  if (this->current_type == Type::Array || this->current_type == Type::Object) {
+  if (this->current_type_ == Type::Array ||
+      this->current_type_ == Type::Object) {
     try {
       std::vector<JSON> pending;
 
-      if (this->current_type == Type::Array) {
-        for (auto &child : this->data_array.data) {
-          if (child.current_type == Type::Array ||
-              child.current_type == Type::Object) {
+      if (this->current_type_ == Type::Array) {
+        for (auto &child : this->data_array.data_) {
+          if (child.current_type_ == Type::Array ||
+              child.current_type_ == Type::Object) {
             pending.push_back(std::move(child));
           }
         }
       } else {
-        for (auto &entry : this->data_object.data) {
-          if (entry.second.current_type == Type::Array ||
-              entry.second.current_type == Type::Object) {
+        for (auto &entry : this->data_object.data_) {
+          if (entry.second.current_type_ == Type::Array ||
+              entry.second.current_type_ == Type::Object) {
             pending.push_back(std::move(entry.second));
           }
         }
@@ -454,24 +455,24 @@ JSON::~JSON() {
       while (!pending.empty()) {
         JSON node = std::move(pending.back());
         pending.pop_back();
-        if (node.current_type == Type::Array) {
-          for (auto &child : node.data_array.data) {
-            if (child.current_type == Type::Array ||
-                child.current_type == Type::Object) {
+        if (node.current_type_ == Type::Array) {
+          for (auto &child : node.data_array.data_) {
+            if (child.current_type_ == Type::Array ||
+                child.current_type_ == Type::Object) {
               pending.push_back(std::move(child));
             }
           }
           node.data_array.~JSONArray();
-          node.current_type = Type::Null;
+          node.current_type_ = Type::Null;
         } else {
-          for (auto &entry : node.data_object.data) {
-            if (entry.second.current_type == Type::Array ||
-                entry.second.current_type == Type::Object) {
+          for (auto &entry : node.data_object.data_) {
+            if (entry.second.current_type_ == Type::Array ||
+                entry.second.current_type_ == Type::Object) {
               pending.push_back(std::move(entry.second));
             }
           }
           node.data_object.~JSONObject();
-          node.current_type = Type::Null;
+          node.current_type_ = Type::Null;
         }
       }
     } catch (...) {
@@ -487,7 +488,7 @@ auto JSON::make_array() -> JSON { return JSON{Array{}}; }
 auto JSON::make_array(std::initializer_list<JSON> values) -> JSON {
   JSON result{nullptr};
   std::construct_at(&result.data_array, values);
-  result.current_type = Type::Array;
+  result.current_type_ = Type::Array;
   return result;
 }
 
@@ -515,19 +516,20 @@ auto JSON::size(const String &value) noexcept -> std::size_t {
 // arbitrary precision expansion, so this comparison is not noexcept
 auto JSON::operator<(const JSON &other) const -> bool {
   if (this->is_number() && other.is_number() &&
-      this->current_type != other.current_type) {
+      this->current_type_ != other.current_type_) {
     return std::is_lt(cross_numeric_ordering(*this, other));
   }
 
   if (this->type() != other.type()) {
-    return this->current_type < other.current_type;
+    return this->current_type_ < other.current_type_;
   }
 
   switch (this->type()) {
     case Type::Null:
       return false;
     case Type::Boolean:
-      return this->to_boolean() < other.to_boolean();
+      return static_cast<int>(this->to_boolean()) <
+             static_cast<int>(other.to_boolean());
     case Type::Integer:
       return this->to_integer() < other.to_integer();
     case Type::Real:
@@ -561,15 +563,15 @@ auto JSON::operator>=(const JSON &other) const -> bool {
 // arbitrary precision expansion, so this comparison is not noexcept
 auto JSON::operator==(const JSON &other) const -> bool {
   if (this->is_number() && other.is_number() &&
-      this->current_type != other.current_type) {
+      this->current_type_ != other.current_type_) {
     return std::is_eq(cross_numeric_ordering(*this, other));
   }
 
-  if (this->current_type != other.current_type) {
+  if (this->current_type_ != other.current_type_) {
     return false;
   }
 
-  switch (this->current_type) {
+  switch (this->current_type_) {
     case Type::Boolean:
       return this->data_boolean == other.data_boolean;
     case Type::Integer:
@@ -601,7 +603,8 @@ auto JSON::operator+(const JSON &other) const -> JSON {
                           : other.is_integer() ? Decimal{other.to_integer()}
                                                : Decimal{other.to_real()};
     return JSON{left + right};
-  } else if (this->is_integer() && other.is_integer()) {
+  }
+  if (this->is_integer() && other.is_integer()) {
     const auto left{this->to_integer()};
     const auto right{other.to_integer()};
     // Promote to arbitrary precision when the sum would not fit, since signed
@@ -612,13 +615,14 @@ auto JSON::operator+(const JSON &other) const -> JSON {
     }
 
     return JSON{left + right};
-  } else if (this->is_integer() && other.is_real()) {
-    return JSON{this->as_real() + other.to_real()};
-  } else if (this->is_real() && other.is_integer()) {
-    return JSON{this->to_real() + other.as_real()};
-  } else {
-    return JSON{this->to_real() + other.to_real()};
   }
+  if (this->is_integer() && other.is_real()) {
+    return JSON{this->as_real() + other.to_real()};
+  }
+  if (this->is_real() && other.is_integer()) {
+    return JSON{this->to_real() + other.as_real()};
+  }
+  return JSON{this->to_real() + other.to_real()};
 }
 
 auto JSON::operator-(const JSON &other) const -> JSON {
@@ -633,7 +637,8 @@ auto JSON::operator-(const JSON &other) const -> JSON {
                           : other.is_integer() ? Decimal{other.to_integer()}
                                                : Decimal{other.to_real()};
     return JSON{left - right};
-  } else if (this->is_integer() && other.is_integer()) {
+  }
+  if (this->is_integer() && other.is_integer()) {
     const auto left{this->to_integer()};
     const auto right{other.to_integer()};
     // Promote to arbitrary precision when the difference would not fit, since
@@ -644,13 +649,14 @@ auto JSON::operator-(const JSON &other) const -> JSON {
     }
 
     return JSON{left - right};
-  } else if (this->is_integer() && other.is_real()) {
-    return JSON{this->as_real() - other.to_real()};
-  } else if (this->is_real() && other.is_integer()) {
-    return JSON{this->to_real() - other.as_real()};
-  } else {
-    return JSON{this->to_real() - other.to_real()};
   }
+  if (this->is_integer() && other.is_real()) {
+    return JSON{this->as_real() - other.to_real()};
+  }
+  if (this->is_real() && other.is_integer()) {
+    return JSON{this->to_real() - other.as_real()};
+  }
+  return JSON{this->to_real() - other.to_real()};
 }
 
 auto JSON::operator+=(const JSON &additive) -> JSON & {
@@ -680,12 +686,11 @@ auto JSON::operator-=(const JSON &substractive) -> JSON & {
       this->data_string};
 }
 
-[[nodiscard]] auto JSON::at_or(const String &key,
-                               const typename Object::hash_type hash,
+[[nodiscard]] auto JSON::at_or(const String &key, const Object::hash_type hash,
                                const JSON &otherwise) const -> const JSON & {
   assert(this->is_object());
-  const auto result{this->try_at(key, hash)};
-  return result ? *result : otherwise;
+  const auto *const result{this->try_at(key, hash)};
+  return (result != nullptr) ? *result : otherwise;
 }
 
 [[nodiscard]] auto JSON::at_or(const String &key, const JSON &otherwise) const
@@ -702,34 +707,37 @@ auto JSON::operator-=(const JSON &substractive) -> JSON & {
     return std::ranges::fold_left(
         this->as_object(), static_cast<std::uint64_t>(0),
         [](const std::uint64_t accumulator,
-           const typename Object::value_type &pair) -> std::uint64_t {
+           const Object::value_type &pair) -> std::uint64_t {
           return accumulator + (pair.first.size() * sizeof(Char)) +
                  pair.second.estimated_byte_size();
         });
-  } else if (this->is_array()) {
+  }
+  if (this->is_array()) {
     return std::ranges::fold_left(
         this->as_array(), static_cast<std::uint64_t>(0),
         [](const std::uint64_t accumulator, const JSON &item) -> std::uint64_t {
           return accumulator + item.estimated_byte_size();
         });
-  } else if (this->is_string()) {
+  }
+  if (this->is_string()) {
     // Keep in mind that standard strings might reserve more
     // space than what it is actually used by the string
     return this->byte_size() * sizeof(Char);
-  } else if (this->is_integer()) {
-    return sizeof(Integer);
-  } else if (this->is_real()) {
-    return sizeof(Real);
-  } else if (this->is_boolean()) {
-    return sizeof(bool);
-  } else {
-    // The size of the union
-    return 8;
   }
+  if (this->is_integer()) {
+    return sizeof(Integer);
+  }
+  if (this->is_real()) {
+    return sizeof(Real);
+  }
+  if (this->is_boolean()) {
+    return sizeof(bool);
+  } // The size of the union
+  return 8;
 }
 
 [[nodiscard]] auto JSON::fast_hash() const -> std::uint64_t {
-  switch (this->current_type) {
+  switch (this->current_type_) {
     case Type::Null:
       return 2;
     case Type::Boolean:
@@ -764,7 +772,7 @@ auto JSON::operator-=(const JSON &substractive) -> JSON & {
       return std::ranges::fold_left(
           this->as_object(), static_cast<std::uint64_t>(7),
           [](const std::uint64_t accumulator,
-             const typename Object::value_type &pair) -> std::uint64_t {
+             const Object::value_type &pair) -> std::uint64_t {
             return accumulator + 1 + pair.first.size() +
                    pair.second.fast_hash();
           });
@@ -878,7 +886,7 @@ JSON::defines_any(std::initializer_list<JSON::String> keys) const -> bool {
 
 [[nodiscard]] auto JSON::unique() const -> bool {
   assert(this->is_array());
-  const auto &items{this->data_array.data};
+  const auto &items{this->data_array.data_};
   const auto size{items.size()};
 
   // Arrays of 0 or 1 item are unique by definition
@@ -908,7 +916,7 @@ JSON::defines_any(std::initializer_list<JSON::String> keys) const -> bool {
 
 [[nodiscard]] auto JSON::unique_keys() const -> bool {
   assert(this->is_object());
-  const auto &entries{this->data_object.data};
+  const auto &entries{this->data_object.data_};
   const auto size{entries.size()};
 
   // Objects of 0 or 1 member have unique keys by definition
@@ -930,36 +938,34 @@ JSON::defines_any(std::initializer_list<JSON::String> keys) const -> bool {
 
 auto JSON::push_back(const JSON &value) -> void {
   assert(this->is_array());
-  return this->data_array.data.push_back(value);
+  this->data_array.data_.push_back(value);
 }
 
 auto JSON::push_back(JSON &&value) -> void {
   assert(this->is_array());
-  return this->data_array.data.push_back(std::move(value));
+  this->data_array.data_.push_back(std::move(value));
 }
 
 auto JSON::push_back_if_unique(const JSON &value)
     -> std::pair<std::reference_wrapper<const JSON>, bool> {
   assert(this->is_array());
-  auto &array_data{this->as_array().data};
+  auto &array_data{this->as_array().data_};
   if (!std::ranges::contains(array_data, value)) {
     array_data.push_back(value);
     return {array_data.back(), true};
-  } else {
-    return {*std::ranges::find(array_data, value), false};
   }
+  return {*std::ranges::find(array_data, value), false};
 }
 
 auto JSON::push_back_if_unique(JSON &&value)
     -> std::pair<std::reference_wrapper<const JSON>, bool> {
   assert(this->is_array());
-  auto &array_data{this->as_array().data};
+  auto &array_data{this->as_array().data_};
   if (!std::ranges::contains(array_data, value)) {
     array_data.push_back(std::move(value));
     return {array_data.back(), true};
-  } else {
-    return {*std::ranges::find(array_data, value), false};
   }
+  return {*std::ranges::find(array_data, value), false};
 }
 
 auto JSON::assign(const JSON::String &key, const JSON &value) -> void {
@@ -1010,7 +1016,7 @@ auto JSON::assign_assume_new(JSON::String &&key, JSON &&value,
                                               hash);
 }
 
-auto JSON::erase(const JSON::String &key) -> typename Object::size_type {
+auto JSON::erase(const JSON::String &key) -> Object::size_type {
   assert(this->is_object());
   return this->data_object.erase(key);
 }
@@ -1019,30 +1025,29 @@ auto JSON::erase_keys(std::initializer_list<JSON::String> keys) -> void {
   this->erase_keys(keys.begin(), keys.end());
 }
 
-auto JSON::erase(typename JSON::Array::const_iterator position) ->
-    typename JSON::Array::iterator {
+auto JSON::erase(JSON::Array::const_iterator position)
+    -> JSON::Array::iterator {
   assert(this->is_array());
-  return this->data_array.data.erase(position);
+  return this->data_array.data_.erase(position);
 }
 
-auto JSON::erase(typename JSON::Array::const_iterator first,
-                 typename JSON::Array::const_iterator last) ->
-    typename JSON::Array::iterator {
+auto JSON::erase(JSON::Array::const_iterator first,
+                 JSON::Array::const_iterator last) -> JSON::Array::iterator {
   assert(this->is_array());
-  return this->data_array.data.erase(first, last);
+  return this->data_array.data_.erase(first, last);
 }
 
 auto JSON::erase_if(const std::function<bool(const JSON &)> &predicate)
     -> void {
   assert(this->is_array());
-  std::erase_if(this->data_array.data, predicate);
+  std::erase_if(this->data_array.data_, predicate);
 }
 
 auto JSON::clear() -> void {
   if (this->is_object()) {
     this->data_object.clear();
   } else {
-    this->data_array.data.clear();
+    this->data_array.data_.clear();
   }
 }
 
@@ -1062,8 +1067,9 @@ auto JSON::merge(const JSON::Object &other) -> void {
   }
 
   for (const auto &pair : other) {
-    const auto maybe_key{this->try_at(pair.first, pair.hash)};
-    if (maybe_key && maybe_key->is_object() && pair.second.is_object()) {
+    auto *const maybe_key{this->try_at(pair.first, pair.hash)};
+    if ((maybe_key != nullptr) && maybe_key->is_object() &&
+        pair.second.is_object()) {
       this->at(pair.first, pair.hash).merge(pair.second.as_object());
     } else {
       this->assign(pair.first, pair.second);
@@ -1100,10 +1106,10 @@ auto JSON::reorder(const KeyComparison &compare) -> void {
   this->data_object.reorder(compare);
 }
 
-auto JSON::rename(const JSON::String &key, JSON::String &&to) -> void {
+auto JSON::rename(const JSON::String &key, JSON::String &&target) -> void {
   assert(this->is_object());
   auto &object{this->data_object};
-  object.rename(key, object.hash(key), std::move(to), object.hash(to));
+  object.rename(key, object.hash(key), std::move(target), object.hash(target));
 }
 
 auto JSON::into(const JSON &other) -> void { this->operator=(other); }
@@ -1117,7 +1123,7 @@ auto JSON::into_array() -> void { this->into(JSON::make_array()); }
 auto JSON::into_object() -> void { this->into(JSON::make_object()); }
 
 auto JSON::maybe_destruct_union() -> void {
-  switch (this->current_type) {
+  switch (this->current_type_) {
     case Type::String:
       this->data_string.~basic_string();
       break;
@@ -1134,7 +1140,7 @@ auto JSON::maybe_destruct_union() -> void {
       break;
   }
 
-  this->current_type = Type::Null;
+  this->current_type_ = Type::Null;
 }
 
 } // namespace sourcemeta::core

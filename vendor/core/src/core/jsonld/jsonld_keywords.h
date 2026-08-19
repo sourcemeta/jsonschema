@@ -79,8 +79,8 @@ inline constexpr auto KEYWORD_DEFAULT_HASH{JSON::Object::hash(KEYWORD_DEFAULT)};
 // token. (A namespace-scope JSON::String constant would trip clang-tidy's
 // throwing-static-initialization check, hence the function-local static.)
 inline auto keyword_context() -> const JSON::String & {
-  static const JSON::String value{KEYWORD_CONTEXT};
-  return value;
+  static const JSON::String VALUE{KEYWORD_CONTEXT};
+  return VALUE;
 }
 
 inline auto is_keyword(const JSON::StringView value) -> bool {

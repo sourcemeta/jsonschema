@@ -188,8 +188,8 @@ auto compiler_draft4_applicator_not(const Context &context,
 
   Instructions children{compile(context, schema_context,
                                 relative_dynamic_context(),
-                                sourcemeta::core::empty_weak_pointer,
-                                sourcemeta::core::empty_weak_pointer)};
+                                sourcemeta::core::EMPTY_WEAK_POINTER,
+                                sourcemeta::core::EMPTY_WEAK_POINTER)};
 
   // TODO: Be smarter about how we treat `unevaluatedItems` like how we do for
   // `unevaluatedProperties`

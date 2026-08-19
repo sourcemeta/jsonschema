@@ -40,10 +40,10 @@ public:
       -> bool;
 
 private:
-  std::uint64_t line{0};
-  std::uint64_t column{0};
+  std::uint64_t line_{0};
+  std::uint64_t column_{0};
   auto parse_next() -> JSON;
-  std::basic_istream<JSON::Char, JSON::CharTraits> *data{};
+  std::basic_istream<JSON::Char, JSON::CharTraits> *data_{};
 
 // Exporting symbols that depends on the standard C++ library is considered
 // safe.
@@ -54,7 +54,7 @@ private:
   // Use PIMPL idiom to hide internal details, mainly
   // templated members, which are tricky to DLL-export.
   struct Internal;
-  std::unique_ptr<Internal> internal{};
+  std::unique_ptr<Internal> internal_{};
 #if defined(_MSC_VER)
 #pragma warning(default : 4251)
 #endif

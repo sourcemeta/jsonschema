@@ -82,7 +82,7 @@ auto BinaryReader::get_qword() -> std::uint64_t {
 }
 
 auto BinaryReader::position() const -> std::size_t {
-  if (this->view_) {
+  if (this->view_ != nullptr) {
     return this->offset_;
   }
 
@@ -96,7 +96,7 @@ auto BinaryReader::position() const -> std::size_t {
 }
 
 auto BinaryReader::seek(const std::size_t position) -> void {
-  if (this->view_) {
+  if (this->view_ != nullptr) {
     if (position > this->view_->size()) {
       throw IOReadOutOfBoundsError{};
     }
@@ -114,7 +114,7 @@ auto BinaryReader::seek(const std::size_t position) -> void {
 
 auto BinaryReader::get_bytes(std::byte *destination, const std::size_t size)
     -> void {
-  if (this->view_) {
+  if (this->view_ != nullptr) {
     if (size > this->view_->size() - this->offset_) {
       throw IOReadOutOfBoundsError{};
     }
@@ -137,7 +137,7 @@ auto BinaryReader::get_bytes(std::byte *destination, const std::size_t size)
 }
 
 auto BinaryReader::has_more_data() const -> bool {
-  if (this->view_) {
+  if (this->view_ != nullptr) {
     return this->offset_ < this->view_->size();
   }
 

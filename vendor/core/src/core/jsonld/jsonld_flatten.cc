@@ -59,8 +59,8 @@ auto flatten(BlankNodeState &state, const JSON &element) -> JSON {
 
     auto graph_array{JSON::make_array()};
     const auto &graph{node_map.at(graph_name)};
-    for (const auto &id : sorted_ids(graph)) {
-      const auto &node{graph.at(id)};
+    for (const auto &identifier : sorted_ids(graph)) {
+      const auto &node{graph.at(identifier)};
       if (!is_reference_only(node)) {
         graph_array.push_back(node);
       }
@@ -70,8 +70,8 @@ auto flatten(BlankNodeState &state, const JSON &element) -> JSON {
   }
 
   auto flattened{JSON::make_array()};
-  for (const auto &id : sorted_ids(default_graph)) {
-    const auto &node{default_graph.at(id)};
+  for (const auto &identifier : sorted_ids(default_graph)) {
+    const auto &node{default_graph.at(identifier)};
     if (!is_reference_only(node)) {
       flattened.push_back(node);
     }

@@ -166,7 +166,7 @@ public:
                const SchemaResolver &resolver,
                std::string_view default_dialect = "",
                std::string_view default_id = "",
-               const Paths &paths = {sourcemeta::core::empty_weak_pointer})
+               const Paths &paths = {sourcemeta::core::EMPTY_WEAK_POINTER})
       -> void;
 
   /// Access the analysed schema locations
@@ -197,7 +197,7 @@ public:
   [[nodiscard]] auto
   uri(const Location &location,
       const sourcemeta::core::WeakPointer &relative_schema_location =
-          sourcemeta::core::empty_weak_pointer) const
+          sourcemeta::core::EMPTY_WEAK_POINTER) const
       -> sourcemeta::core::JSON::String;
 
   /// Get the location associated by traversing a pointer from another location
@@ -229,7 +229,7 @@ public:
   [[nodiscard]] auto
   dereference(const Location &location,
               const sourcemeta::core::WeakPointer &relative_schema_location =
-                  sourcemeta::core::empty_weak_pointer) const
+                  sourcemeta::core::EMPTY_WEAK_POINTER) const
       -> std::pair<SchemaReferenceType,
                    std::optional<std::reference_wrapper<const Location>>>;
 

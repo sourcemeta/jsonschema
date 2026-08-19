@@ -27,7 +27,7 @@ auto is_ipv4(const std::string_view address) -> bool {
     const auto octet_start{position};
     unsigned int value{0};
     while (position < address.size() && is_digit(address[position])) {
-      value = value * 10 + static_cast<unsigned int>(address[position] - '0');
+      value = (value * 10) + static_cast<unsigned int>(address[position] - '0');
       position += 1;
     }
 

@@ -117,13 +117,37 @@ auto required_size(const sourcemeta::core::HTTPCookie &cookie,
 
 namespace sourcemeta::core {
 
+auto http_expire_cookie(const HTTPCookie &cookie) -> HTTPCookie {
+  HTTPCookie result{cookie};
+  result.value = {};
+  result.max_age = std::chrono::seconds{0};
+  return result;
+}
+
 auto http_cookie_valid(const HTTPCookie &cookie) -> bool {
+  // Every length ceiling is weighed before the scans below, so an oversized
+  // input is refused without a pass over it
+
+  // RFC 6265bis §5.7 ignores a cookie whose name and value are together longer
+  // than the ceiling, so one that large can never be stored
+  if (cookie.name.size() + cookie.value.size() >
+      HTTP_COOKIE_MAXIMUM_NAME_VALUE_LENGTH) {
+    return false;
+  }
+
   if (!sourcemeta::core::http_is_token(cookie.name) ||
       !is_cookie_value(cookie.value)) {
     return false;
   }
 
-  if (cookie.path.has_value() && !is_attribute_value(*cookie.path)) {
+  // RFC 6265bis §5.6 ignores an over-long attribute value while keeping the
+  // rest of the cookie, which would silently change the scope the server asked
+  // for. The path is the only attribute a caller can make that long, since a
+  // host name is already bounded by RFC 1123 §2.1 and a lifetime by the digits
+  // of a second count
+  if (cookie.path.has_value() &&
+      (cookie.path->size() > HTTP_COOKIE_MAXIMUM_ATTRIBUTE_VALUE_LENGTH ||
+       !is_attribute_value(*cookie.path))) {
     return false;
   }
 

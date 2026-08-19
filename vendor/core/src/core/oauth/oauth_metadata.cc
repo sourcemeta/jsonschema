@@ -383,12 +383,11 @@ auto oauth_is_issuer_identifier(const std::string_view value) -> bool {
 auto oauth_well_known_url(const std::string_view identifier,
                           const OAuthWellKnownKind kind, std::string &sink)
     -> bool {
-  static constexpr std::string_view scheme{"https://"};
+  static constexpr std::string_view SCHEME{"https://"};
   // Reject a missing scheme or a fragment, then require a non-empty host so an
   // authority such as ":443" with no host is not accepted (RFC 3986
   // Section 3.2)
-  if (!identifier.starts_with(scheme) ||
-      identifier.find('#') != std::string_view::npos) {
+  if (!identifier.starts_with(SCHEME) || identifier.contains('#')) {
     return false;
   }
 
@@ -419,7 +418,7 @@ auto oauth_well_known_url(const std::string_view identifier,
       break;
   }
 
-  static constexpr std::string_view infix{"/.well-known/"};
+  static constexpr std::string_view INFIX{"/.well-known/"};
   if (kind == OAuthWellKnownKind::OpenIDConfigurationAppended) {
     // RFC 8414 Section 5: the legacy OpenID Connect form appends the well-known
     // string after the path rather than inserting it
@@ -428,9 +427,9 @@ auto oauth_well_known_url(const std::string_view identifier,
       base.remove_suffix(1);
     }
 
-    sink.reserve(sink.size() + base.size() + infix.size() + suffix.size());
+    sink.reserve(sink.size() + base.size() + INFIX.size() + suffix.size());
     sink.append(base);
-    sink.append(infix);
+    sink.append(INFIX);
     sink.append(suffix);
     return true;
   }
@@ -446,7 +445,7 @@ auto oauth_well_known_url(const std::string_view identifier,
   // and the path, with any terminating slash on the path removed first
   auto authority{without_query};
   std::string_view path;
-  const auto path_position{without_query.find('/', scheme.size())};
+  const auto path_position{without_query.find('/', SCHEME.size())};
   if (path_position != std::string_view::npos) {
     authority = without_query.substr(0, path_position);
     path = without_query.substr(path_position);
@@ -456,10 +455,10 @@ auto oauth_well_known_url(const std::string_view identifier,
     path.remove_suffix(1);
   }
 
-  sink.reserve(sink.size() + authority.size() + infix.size() + suffix.size() +
+  sink.reserve(sink.size() + authority.size() + INFIX.size() + suffix.size() +
                path.size() + query.size());
   sink.append(authority);
-  sink.append(infix);
+  sink.append(INFIX);
   sink.append(suffix);
   sink.append(path);
   sink.append(query);

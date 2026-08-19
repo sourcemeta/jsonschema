@@ -25,11 +25,11 @@ auto to_oidc_subject_type(const std::string_view name) noexcept
     -> std::optional<OIDCSubjectType> {
   if (name == "public") {
     return OIDCSubjectType::Public;
-  } else if (name == "pairwise") {
-    return OIDCSubjectType::Pairwise;
-  } else {
-    return std::nullopt;
   }
+  if (name == "pairwise") {
+    return OIDCSubjectType::Pairwise;
+  }
+  return std::nullopt;
 }
 
 auto oidc_pairwise_subject(const std::string_view sector_identifier,

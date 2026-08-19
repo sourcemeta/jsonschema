@@ -41,18 +41,18 @@ auto from_asctime(const std::string_view value) noexcept
     return std::nullopt;
   }
   if ((value[8] != ' ' &&
-       !std::isdigit(static_cast<unsigned char>(value[8]))) ||
-      !std::isdigit(static_cast<unsigned char>(value[9])) ||
-      !std::isdigit(static_cast<unsigned char>(value[11])) ||
-      !std::isdigit(static_cast<unsigned char>(value[12])) ||
-      !std::isdigit(static_cast<unsigned char>(value[14])) ||
-      !std::isdigit(static_cast<unsigned char>(value[15])) ||
-      !std::isdigit(static_cast<unsigned char>(value[17])) ||
-      !std::isdigit(static_cast<unsigned char>(value[18])) ||
-      !std::isdigit(static_cast<unsigned char>(value[20])) ||
-      !std::isdigit(static_cast<unsigned char>(value[21])) ||
-      !std::isdigit(static_cast<unsigned char>(value[22])) ||
-      !std::isdigit(static_cast<unsigned char>(value[23]))) {
+       (std::isdigit(static_cast<unsigned char>(value[8])) == 0)) ||
+      (std::isdigit(static_cast<unsigned char>(value[9])) == 0) ||
+      (std::isdigit(static_cast<unsigned char>(value[11])) == 0) ||
+      (std::isdigit(static_cast<unsigned char>(value[12])) == 0) ||
+      (std::isdigit(static_cast<unsigned char>(value[14])) == 0) ||
+      (std::isdigit(static_cast<unsigned char>(value[15])) == 0) ||
+      (std::isdigit(static_cast<unsigned char>(value[17])) == 0) ||
+      (std::isdigit(static_cast<unsigned char>(value[18])) == 0) ||
+      (std::isdigit(static_cast<unsigned char>(value[20])) == 0) ||
+      (std::isdigit(static_cast<unsigned char>(value[21])) == 0) ||
+      (std::isdigit(static_cast<unsigned char>(value[22])) == 0) ||
+      (std::isdigit(static_cast<unsigned char>(value[23])) == 0)) {
     return std::nullopt;
   }
   std::string normalised{value};

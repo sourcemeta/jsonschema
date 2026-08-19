@@ -232,7 +232,7 @@ auto hex_to_bytes(const std::string_view input, const bool allow_odd_length)
   }
 
   std::string result;
-  result.reserve(input.size() / 2 + 1);
+  result.reserve((input.size() / 2) + 1);
 
   std::size_t index{0};
   if (odd_length) {
@@ -259,13 +259,13 @@ auto hex_to_bytes(const std::string_view input, const bool allow_odd_length)
 }
 
 auto bytes_to_hex(const std::string_view input) -> std::string {
-  static constexpr std::string_view digits{"0123456789abcdef"};
+  static constexpr std::string_view DIGITS{"0123456789abcdef"};
   std::string result;
   result.reserve(input.size() * 2);
   for (const auto character : input) {
     const auto byte{static_cast<unsigned char>(character)};
-    result.push_back(digits[byte >> 4u]);
-    result.push_back(digits[byte & 0x0fu]);
+    result.push_back(DIGITS[byte >> 4U]);
+    result.push_back(DIGITS[byte & 0x0fU]);
   }
 
   return result;

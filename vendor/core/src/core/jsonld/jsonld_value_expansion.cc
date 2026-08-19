@@ -23,7 +23,7 @@ auto expand_value(ExpansionState &state, ActiveContext &active_context,
       auto result{JSON::make_object()};
       const auto identifier{expand_iri(state, active_context, value.to_string(),
                                        true, false, nullptr, nullptr,
-                                       empty_weak_pointer)};
+                                       EMPTY_WEAK_POINTER)};
       result.assign_assume_new(JSON::String{KEYWORD_ID},
                                identifier.has_value() ? JSON{identifier.value()}
                                                       : JSON{nullptr},
@@ -34,7 +34,7 @@ auto expand_value(ExpansionState &state, ActiveContext &active_context,
       auto result{JSON::make_object()};
       const auto identifier{expand_iri(state, active_context, value.to_string(),
                                        true, true, nullptr, nullptr,
-                                       empty_weak_pointer)};
+                                       EMPTY_WEAK_POINTER)};
       result.assign_assume_new(JSON::String{KEYWORD_ID},
                                identifier.has_value() ? JSON{identifier.value()}
                                                       : JSON{nullptr},

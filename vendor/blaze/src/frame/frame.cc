@@ -254,10 +254,10 @@ auto find_nearest_bases(const MapType &bases,
 
   if (default_base.has_value()) {
     return {{StringType{default_base.value()}},
-            sourcemeta::core::empty_weak_pointer};
+            sourcemeta::core::EMPTY_WEAK_POINTER};
   }
 
-  return {{}, sourcemeta::core::empty_weak_pointer};
+  return {{}, sourcemeta::core::EMPTY_WEAK_POINTER};
 }
 
 struct DialectAtPointer {
@@ -305,9 +305,9 @@ auto find_dialect_and_all_bases(const DialectMapType &base_dialects,
   }
 
   if (result.every_base.empty() ||
-      result.every_base.back().second != sourcemeta::core::empty_weak_pointer) {
+      result.every_base.back().second != sourcemeta::core::EMPTY_WEAK_POINTER) {
     result.every_base.emplace_back(std::string_view{},
-                                   sourcemeta::core::empty_weak_pointer);
+                                   sourcemeta::core::EMPTY_WEAK_POINTER);
   }
 
   return result;
@@ -1057,7 +1057,7 @@ auto SchemaFrame::analyse(const sourcemeta::core::JSON &root,
             const auto &parent_pointer{
                 combined.dialect_match.has_value()
                     ? combined.dialect_match->second
-                    : sourcemeta::core::empty_weak_pointer};
+                    : sourcemeta::core::EMPTY_WEAK_POINTER};
             const auto parent_subschema_it{subschemas.find(parent_pointer)};
             const bool parent_property_name{
                 parent_subschema_it != subschemas.cend() &&

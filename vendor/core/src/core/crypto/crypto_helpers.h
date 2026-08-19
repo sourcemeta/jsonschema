@@ -26,10 +26,10 @@ inline constexpr std::size_t MAXIMUM_KEY_BYTES{512};
 // their counters and length fields
 inline auto append_big_endian_uint32(std::string &target,
                                      const std::uint32_t value) -> void {
-  target.push_back(static_cast<char>((value >> 24u) & 0xffu));
-  target.push_back(static_cast<char>((value >> 16u) & 0xffu));
-  target.push_back(static_cast<char>((value >> 8u) & 0xffu));
-  target.push_back(static_cast<char>(value & 0xffu));
+  target.push_back(static_cast<char>((value >> 24U) & 0xffU));
+  target.push_back(static_cast<char>((value >> 16U) & 0xffU));
+  target.push_back(static_cast<char>((value >> 8U) & 0xffU));
+  target.push_back(static_cast<char>(value & 0xffU));
 }
 
 // The same guard for a raw buffer, so a secret that a fixed-size digest array

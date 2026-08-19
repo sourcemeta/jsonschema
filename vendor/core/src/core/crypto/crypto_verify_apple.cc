@@ -85,7 +85,7 @@ auto native_rsa_key(const std::string_view modulus,
   sourcemeta::core::der_append_length(der, body.size());
   der.append(body);
 
-  auto key_data{make_data(der)};
+  const auto *key_data{make_data(der)};
   if (key_data == nullptr) {
     return nullptr;
   }
@@ -94,7 +94,7 @@ auto native_rsa_key(const std::string_view modulus,
       {kSecAttrKeyType, kSecAttrKeyClass}};
   std::array<const void *, 2> attribute_values{
       {kSecAttrKeyTypeRSA, kSecAttrKeyClassPublic}};
-  auto attributes{CFDictionaryCreate(
+  const auto *attributes{CFDictionaryCreate(
       kCFAllocatorDefault, attribute_keys.data(), attribute_values.data(),
       static_cast<CFIndex>(attribute_keys.size()),
       &kCFTypeDictionaryKeyCallBacks, &kCFTypeDictionaryValueCallBacks)};
@@ -103,7 +103,7 @@ auto native_rsa_key(const std::string_view modulus,
     return nullptr;
   }
 
-  auto key{SecKeyCreateWithData(key_data, attributes, nullptr)};
+  auto *key{SecKeyCreateWithData(key_data, attributes, nullptr)};
   CFRelease(attributes);
   CFRelease(key_data);
   return key;
@@ -126,7 +126,7 @@ auto native_ec_key(const sourcemeta::core::EllipticCurve curve,
   point.append(sourcemeta::core::pad_left(stripped_x, width, '\x00'));
   point.append(sourcemeta::core::pad_left(stripped_y, width, '\x00'));
 
-  auto key_data{make_data(point)};
+  const auto *key_data{make_data(point)};
   if (key_data == nullptr) {
     return nullptr;
   }
@@ -135,7 +135,7 @@ auto native_ec_key(const sourcemeta::core::EllipticCurve curve,
       {kSecAttrKeyType, kSecAttrKeyClass}};
   std::array<const void *, 2> attribute_values{
       {kSecAttrKeyTypeECSECPrimeRandom, kSecAttrKeyClassPublic}};
-  auto attributes{CFDictionaryCreate(
+  const auto *attributes{CFDictionaryCreate(
       kCFAllocatorDefault, attribute_keys.data(), attribute_values.data(),
       static_cast<CFIndex>(attribute_keys.size()),
       &kCFTypeDictionaryKeyCallBacks, &kCFTypeDictionaryValueCallBacks)};
@@ -144,7 +144,7 @@ auto native_ec_key(const sourcemeta::core::EllipticCurve curve,
     return nullptr;
   }
 
-  auto key{SecKeyCreateWithData(key_data, attributes, nullptr)};
+  auto *key{SecKeyCreateWithData(key_data, attributes, nullptr)};
   CFRelease(attributes);
   CFRelease(key_data);
   return key;
@@ -170,12 +170,12 @@ auto encode_ecdsa_signature(const std::string_view raw_signature)
 auto verify_with_algorithm(SecKeyRef key, const SecKeyAlgorithm algorithm,
                            const std::string_view message,
                            const std::string_view signature) -> bool {
-  auto message_data{make_data(message)};
-  auto signature_data{make_data(signature)};
+  const auto *message_data{make_data(message)};
+  const auto *signature_data{make_data(signature)};
   auto result{false};
   if (message_data != nullptr && signature_data != nullptr) {
     result = SecKeyVerifySignature(key, algorithm, message_data, signature_data,
-                                   nullptr) == true;
+                                   nullptr) == 1;
   }
 
   if (signature_data != nullptr) {

@@ -56,19 +56,19 @@ auto from_rfc850_date(const std::string_view value) noexcept
       rest[10] != ' ' || rest.substr(19) != " GMT") {
     return std::nullopt;
   }
-  if (!std::isdigit(static_cast<unsigned char>(rest[1])) ||
-      !std::isdigit(static_cast<unsigned char>(rest[2])) ||
-      !std::isdigit(static_cast<unsigned char>(rest[8])) ||
-      !std::isdigit(static_cast<unsigned char>(rest[9])) ||
-      !std::isdigit(static_cast<unsigned char>(rest[11])) ||
-      !std::isdigit(static_cast<unsigned char>(rest[12])) ||
-      !std::isdigit(static_cast<unsigned char>(rest[14])) ||
-      !std::isdigit(static_cast<unsigned char>(rest[15])) ||
-      !std::isdigit(static_cast<unsigned char>(rest[17])) ||
-      !std::isdigit(static_cast<unsigned char>(rest[18]))) {
+  if ((std::isdigit(static_cast<unsigned char>(rest[1])) == 0) ||
+      (std::isdigit(static_cast<unsigned char>(rest[2])) == 0) ||
+      (std::isdigit(static_cast<unsigned char>(rest[8])) == 0) ||
+      (std::isdigit(static_cast<unsigned char>(rest[9])) == 0) ||
+      (std::isdigit(static_cast<unsigned char>(rest[11])) == 0) ||
+      (std::isdigit(static_cast<unsigned char>(rest[12])) == 0) ||
+      (std::isdigit(static_cast<unsigned char>(rest[14])) == 0) ||
+      (std::isdigit(static_cast<unsigned char>(rest[15])) == 0) ||
+      (std::isdigit(static_cast<unsigned char>(rest[17])) == 0) ||
+      (std::isdigit(static_cast<unsigned char>(rest[18])) == 0)) {
     return std::nullopt;
   }
-  const int two_digit_year{(rest[8] - '0') * 10 + (rest[9] - '0')};
+  const int two_digit_year{((rest[8] - '0') * 10) + (rest[9] - '0')};
   const auto current_year{current_utc_year()};
   if (!current_year.has_value()) {
     return std::nullopt;

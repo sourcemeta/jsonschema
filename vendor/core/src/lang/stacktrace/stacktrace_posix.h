@@ -18,9 +18,9 @@
 
 namespace {
 
-constexpr int maximum_frames{128};
-constexpr std::size_t hex_buffer_size{2 + (sizeof(std::uintptr_t) * 2)};
-constexpr std::size_t decimal_buffer_size{24};
+constexpr int MAXIMUM_FRAMES{128};
+constexpr std::size_t HEX_BUFFER_SIZE{2 + (sizeof(std::uintptr_t) * 2)};
+constexpr std::size_t DECIMAL_BUFFER_SIZE{24};
 
 auto raw_write(int file_descriptor, const char *data, std::size_t size)
     -> void {
@@ -32,8 +32,8 @@ auto write_text(int file_descriptor, const char *text) -> void {
 }
 
 auto write_hex(int file_descriptor, std::uintptr_t value) -> void {
-  constexpr const char *digits{"0123456789abcdef"};
-  std::array<char, hex_buffer_size> buffer{{'0', 'x'}};
+  constexpr const char *DIGITS{"0123456789abcdef"};
+  std::array<char, HEX_BUFFER_SIZE> buffer{{'0', 'x'}};
   std::size_t index{2};
   if (value == 0) {
     buffer[index++] = '0';
@@ -41,7 +41,7 @@ auto write_hex(int file_descriptor, std::uintptr_t value) -> void {
     std::array<char, sizeof(std::uintptr_t) * 2> temporary{};
     std::size_t length{0};
     while (value != 0) {
-      temporary[length++] = digits[value & 0xF];
+      temporary[length++] = DIGITS[value & 0xF];
       value >>= 4;
     }
     while (length > 0) {
@@ -52,12 +52,12 @@ auto write_hex(int file_descriptor, std::uintptr_t value) -> void {
 }
 
 auto write_decimal(int file_descriptor, unsigned long value) -> void {
-  std::array<char, decimal_buffer_size> buffer{};
+  std::array<char, DECIMAL_BUFFER_SIZE> buffer{};
   std::size_t length{0};
   if (value == 0) {
     buffer[length++] = '0';
   } else {
-    std::array<char, decimal_buffer_size> temporary{};
+    std::array<char, DECIMAL_BUFFER_SIZE> temporary{};
     std::size_t temporary_length{0};
     while (value != 0) {
       temporary[temporary_length++] = static_cast<char>('0' + (value % 10));
@@ -101,14 +101,14 @@ auto write_frame(int file_descriptor, int frame_index, void *address) -> void {
   write_text(file_descriptor, "\n");
 }
 
-struct frame_buffer {
-  std::array<void *, maximum_frames> frames{};
+struct FrameBuffer {
+  std::array<void *, MAXIMUM_FRAMES> frames{};
   int count{0};
 };
 
 auto collect_frame(_Unwind_Context *context, void *argument)
     -> _Unwind_Reason_Code {
-  auto *buffer{static_cast<frame_buffer *>(argument)};
+  auto *buffer{static_cast<FrameBuffer *>(argument)};
   const auto program_counter{_Unwind_GetIP(context)};
   if (program_counter == 0) {
     return _URC_END_OF_STACK;
@@ -118,7 +118,7 @@ auto collect_frame(_Unwind_Context *context, void *argument)
   // NOLINTNEXTLINE(performance-no-int-to-ptr)
   buffer->frames[index] = reinterpret_cast<void *>(program_counter);
   buffer->count = buffer->count + 1;
-  return buffer->count == maximum_frames ? _URC_NORMAL_STOP : _URC_NO_REASON;
+  return buffer->count == MAXIMUM_FRAMES ? _URC_NORMAL_STOP : _URC_NO_REASON;
 }
 
 // We walk the stack through the unwinder that the C++ exception machinery
@@ -129,7 +129,7 @@ __attribute__((noinline)) auto write_backtrace(int file_descriptor,
                                                int frames_to_skip,
                                                void *crash_pc = nullptr)
     -> void {
-  frame_buffer buffer{};
+  FrameBuffer buffer{};
   _Unwind_Backtrace(&collect_frame, &buffer);
 
   int frame_index{0};
@@ -180,7 +180,7 @@ auto extract_crash_pc(void *context) -> void * {
   return reinterpret_cast<void *>(program_counter);
 }
 
-constexpr const char *separator{"========================================"
+constexpr const char *SEPARATOR{"========================================"
                                 "========================================\n"};
 
 std::atomic<bool> crash_handler_installed{false};
@@ -188,8 +188,8 @@ std::atomic<bool> crash_handler_installed{false};
 // A stack-overflow fault arrives on an already-exhausted stack, so the handler
 // must run on a separate region to be able to produce a trace. This is sized
 // generously to leave room for the backtrace machinery
-constexpr std::size_t alternate_stack_size{1 << 16};
-alignas(16) std::array<unsigned char, alternate_stack_size> alternate_stack{};
+constexpr std::size_t ALTERNATE_STACK_SIZE{1 << 16};
+alignas(16) std::array<unsigned char, ALTERNATE_STACK_SIZE> alternate_stack{};
 
 } // namespace
 
@@ -205,11 +205,11 @@ alignas(16) std::array<unsigned char, alternate_stack_size> alternate_stack{};
 // NOLINTNEXTLINE(misc-definitions-in-headers)
 extern "C" __attribute__((visibility("default"))) auto
 sourcemeta_core_stacktrace_crash_handler(int signal_number,
-                                         siginfo_t * /*info*/, void *context)
-    -> void {
+                                         [[maybe_unused]] siginfo_t *info,
+                                         void *context) -> void {
   const int file_descriptor{STDERR_FILENO};
   write_text(file_descriptor, "\n");
-  write_text(file_descriptor, separator);
+  write_text(file_descriptor, SEPARATOR);
   write_text(file_descriptor, "signal:  ");
   write_decimal(file_descriptor, static_cast<unsigned long>(signal_number));
   write_text(file_descriptor, " (");
@@ -240,7 +240,7 @@ sourcemeta_core_stacktrace_crash_handler(int signal_number,
   write_text(file_descriptor, "\n\n");
   write_backtrace(file_descriptor, /*frames_to_skip=*/1,
                   extract_crash_pc(context));
-  write_text(file_descriptor, separator);
+  write_text(file_descriptor, SEPARATOR);
 
   struct sigaction default_action{};
   default_action.sa_handler = SIG_DFL;
@@ -281,12 +281,12 @@ __attribute__((visibility("default"))) auto stacktrace_on_crash() -> void {
 // NOLINTNEXTLINE(misc-definitions-in-headers)
 __attribute__((noinline, visibility("default"))) auto stacktrace() -> void {
   const int file_descriptor{STDERR_FILENO};
-  write_text(file_descriptor, separator);
+  write_text(file_descriptor, SEPARATOR);
   write_text(file_descriptor, "pid:     ");
   write_decimal(file_descriptor, static_cast<unsigned long>(::getpid()));
   write_text(file_descriptor, "\n\n");
   write_backtrace(file_descriptor, /*frames_to_skip=*/1);
-  write_text(file_descriptor, separator);
+  write_text(file_descriptor, SEPARATOR);
 }
 
 } // namespace sourcemeta::core

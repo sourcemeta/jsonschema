@@ -164,7 +164,10 @@ inline auto clitest_variable_at(const std::string_view token,
   }
 
   if (token[after] == '$') {
-    return CLITestVariable{CLITestVariable::Type::Escape, index, 2, {}};
+    return CLITestVariable{.type = CLITestVariable::Type::Escape,
+                           .start = index,
+                           .length = 2,
+                           .name = {}};
   }
 
   if (!clitest_is_name_start(token[after])) {
@@ -176,8 +179,10 @@ inline auto clitest_variable_at(const std::string_view token,
     cursor += 1;
   }
 
-  return CLITestVariable{CLITestVariable::Type::Reference, index,
-                         cursor - index, token.substr(after, cursor - after)};
+  return CLITestVariable{.type = CLITestVariable::Type::Reference,
+                         .start = index,
+                         .length = cursor - index,
+                         .name = token.substr(after, cursor - after)};
 }
 
 // The first variable form at or after the given index, if any
@@ -277,7 +282,7 @@ inline auto clitest_substitute(const std::string_view token,
     } else {
       const auto binding{bindings.find(variable->name)};
       if (binding == bindings.cend()) {
-        return {std::move(value), variable->name};
+        return {.value = std::move(value), .missing = variable->name};
       }
 
       value.append(binding->second);
@@ -286,7 +291,7 @@ inline auto clitest_substitute(const std::string_view token,
     index = variable->start + variable->length;
   }
 
-  return {std::move(value), {}};
+  return {.value = std::move(value), .missing = {}};
 }
 
 // The index just past the character class opening at the given index. A closing
@@ -557,7 +562,8 @@ inline auto clitest_target_of(const std::string_view token,
   std::string_view rest{token};
   if (rest == "$CWD") {
     return ".";
-  } else if (rest.starts_with("$CWD/")) {
+  }
+  if (rest.starts_with("$CWD/")) {
     rest.remove_prefix(5);
   }
 
@@ -589,8 +595,9 @@ inline auto clitest_is_pattern_operand(const CLITestStatement &statement,
   if (statement.keyword == "REPLACE" && statement.operands.size() == 6 &&
       statement.operands.front() == "MATCHING") {
     return index == 1;
-  } else if (statement.keyword == "DROP" && statement.operands.size() == 5 &&
-             statement.operands[1] == "MATCHING") {
+  }
+  if (statement.keyword == "DROP" && statement.operands.size() == 5 &&
+      statement.operands[1] == "MATCHING") {
     return index == 2;
   }
 
@@ -611,7 +618,8 @@ inline auto clitest_asserted(
 
     if (compared.contains(current)) {
       return true;
-    } else if (seen.contains(current)) {
+    }
+    if (seen.contains(current)) {
       continue;
     }
 
@@ -655,9 +663,10 @@ inline auto clitest_check(const std::vector<CLITestStatement> &statements,
         const auto reference{clitest_pattern_variable(operands[index])};
         if (reference.has_value()) {
           problems.push_back(
-              {statement.line,
-               "a pattern cannot expand this name, so use the literal form",
-               std::string{reference->name}});
+              {.line = statement.line,
+               .message =
+                   "a pattern cannot expand this name, so use the literal form",
+               .context = std::string{reference->name}});
         }
 
         continue;
@@ -686,9 +695,11 @@ inline auto clitest_check(const std::vector<CLITestStatement> &statements,
           clitest_target_of(operands[operands.size() - 3], bindings)};
       if (destination.has_value()) {
         observations.push_back(
-            {destination.value(), statement.line,
-             "nothing compares this file, so the run asserts only its "
-             "exit code"});
+            {.target = destination.value(),
+             .line = statement.line,
+             .message =
+                 "nothing compares this file, so the run asserts only its "
+                 "exit code"});
       }
 
       for (std::size_t index{0}; index + 8 < operands.size(); index += 1) {
@@ -714,49 +725,59 @@ inline auto clitest_check(const std::vector<CLITestStatement> &statements,
       }
 
       if (destination.has_value()) {
-        artifacts.push_back({destination.value(), statement.line,
-                             "nothing reads the file this copy produced"});
+        artifacts.push_back(
+            {.target = destination.value(),
+             .line = statement.line,
+             .message = "nothing reads the file this copy produced"});
       }
 
       clitest_collect(consumed, operands[0], bindings);
     } else if (statement.keyword == "TREE" && operands.size() == 3) {
       const auto destination{clitest_target_of(operands[2], bindings)};
       if (destination.has_value()) {
-        artifacts.push_back({destination.value(), statement.line,
-                             "nothing reads the listing this produced"});
+        artifacts.push_back(
+            {.target = destination.value(),
+             .line = statement.line,
+             .message = "nothing reads the listing this produced"});
       }
 
       clitest_collect(consumed, operands[0], bindings);
     } else if (statement.keyword == "COMPRESS" && operands.size() == 4) {
       const auto destination{clitest_target_of(operands[3], bindings)};
       if (destination.has_value()) {
-        artifacts.push_back({destination.value(), statement.line,
-                             "nothing reads the archive this produced"});
+        artifacts.push_back(
+            {.target = destination.value(),
+             .line = statement.line,
+             .message = "nothing reads the archive this produced"});
       }
 
       clitest_collect(consumed, operands[1], bindings);
     } else if (statement.keyword == "CHECKSUM" && operands.size() == 4) {
-      definitions.push_back({operands[3], position, statement.line});
+      definitions.push_back(
+          {.name = operands[3], .position = position, .line = statement.line});
       clitest_collect(consumed, operands[1], bindings);
     } else if (statement.keyword == "EXTRACT" && operands.size() == 5) {
       const auto destination{clitest_target_of(operands[4], bindings)};
       if (destination.has_value()) {
-        artifacts.push_back({destination.value(), statement.line,
-                             "nothing reads what this extracted"});
+        artifacts.push_back({.target = destination.value(),
+                             .line = statement.line,
+                             .message = "nothing reads what this extracted"});
       }
 
       clitest_collect(consumed, operands[2], bindings);
     } else if (statement.keyword == "STAT" && operands.size() == 4) {
       const auto destination{clitest_target_of(operands[3], bindings)};
       if (destination.has_value()) {
-        artifacts.push_back({destination.value(), statement.line,
-                             "nothing reads the timestamp this produced"});
+        artifacts.push_back(
+            {.target = destination.value(),
+             .line = statement.line,
+             .message = "nothing reads the timestamp this produced"});
       }
 
       clitest_collect(consumed, operands[1], bindings);
     } else if (statement.keyword == "ENV" && operands.size() == 2) {
       // Tracked so that a path spelled through a variable still resolves
-      if (operands[1].find('$') == std::string::npos) {
+      if (!operands[1].contains('$')) {
         bindings.insert_or_assign(operands[0], operands[1]);
       }
     }
@@ -769,15 +790,18 @@ inline auto clitest_check(const std::vector<CLITestStatement> &statements,
     // assertion
     if (!clitest_asserted(observation.target, compared, copies) &&
         !consumed.contains(observation.target)) {
-      problems.push_back(
-          {observation.line, observation.message, observation.target});
+      problems.push_back({.line = observation.line,
+                          .message = observation.message,
+                          .context = observation.target});
     }
   }
 
   for (const auto &artifact : artifacts) {
     if (!consumed.contains(artifact.target) &&
         !compared.contains(artifact.target)) {
-      problems.push_back({artifact.line, artifact.message, artifact.target});
+      problems.push_back({.line = artifact.line,
+                          .message = artifact.message,
+                          .context = artifact.target});
     }
   }
 
@@ -804,9 +828,9 @@ inline auto clitest_check(const std::vector<CLITestStatement> &statements,
     }
 
     if (!justified) {
-      problems.push_back({definitions[index].line,
-                          "nothing expands this variable",
-                          definitions[index].name});
+      problems.push_back({.line = definitions[index].line,
+                          .message = "nothing expands this variable",
+                          .context = definitions[index].name});
     }
   }
 
@@ -840,7 +864,7 @@ inline auto clitest_environment(const std::filesystem::path &sandbox,
       "CORES", std::to_string(std::max(static_cast<std::size_t>(
                                            std::thread::hardware_concurrency()),
                                        static_cast<std::size_t>(1))));
-  return {sandbox, std::move(bindings)};
+  return {.sandbox = sandbox, .bindings = std::move(bindings)};
 }
 
 inline auto clitest_expand(const CLITestEnvironment &environment,
@@ -889,7 +913,7 @@ inline auto clitest_lines(const std::string_view content) -> CLITestLines {
     values.pop_back();
   }
 
-  return {std::move(values), terminated};
+  return {.values = std::move(values), .terminated = terminated};
 }
 
 inline auto clitest_join(const std::vector<std::string_view> &lines,
@@ -1210,9 +1234,10 @@ inline auto clitest_command_drop(const CLITestCommand &command) -> void {
 
   if (command.at(1) == "CONTAINING") {
     const auto text{command.expand(2)};
-    std::erase_if(lines.values, [&text](const std::string_view candidate) {
-      return candidate.find(text) != std::string_view::npos;
-    });
+    std::erase_if(lines.values,
+                  [&text](const std::string_view candidate) -> bool {
+                    return candidate.contains(text);
+                  });
   } else {
     const auto regex{sourcemeta::core::to_regex(command.at(2))};
     if (!regex.has_value()) {
@@ -1221,9 +1246,10 @@ inline auto clitest_command_drop(const CLITestCommand &command) -> void {
 
     // The terminator is kept out of the subject, so that an anchor in a pattern
     // means the end of the line an author was looking at
-    std::erase_if(lines.values, [&regex](const std::string_view candidate) {
-      return sourcemeta::core::matches(regex.value(), candidate);
-    });
+    std::erase_if(lines.values,
+                  [&regex](const std::string_view candidate) -> bool {
+                    return sourcemeta::core::matches(regex.value(), candidate);
+                  });
   }
 
   command.write(4, clitest_join(lines.values, lines.terminated));
@@ -1255,7 +1281,7 @@ inline auto clitest_command_sort(const CLITestCommand &command) -> void {
 
   const auto content{command.read(0)};
   auto lines{clitest_lines(content)};
-  std::sort(lines.values.begin(), lines.values.end());
+  std::ranges::sort(lines.values);
   // A filter that rewrites a file in place changes its order, not its shape, so
   // a file that ended without a terminator still does
   command.write(0, clitest_join(lines.values, lines.terminated));
@@ -1302,7 +1328,7 @@ inline auto clitest_command_tree(const CLITestCommand &command) -> void {
   }
 
   // Ordered by code point, which for this encoding is the order of the bytes
-  std::sort(entries.begin(), entries.end());
+  std::ranges::sort(entries);
 
   std::string result;
   for (const auto &entry : entries) {
@@ -1383,7 +1409,8 @@ inline auto clitest_interpret(const std::vector<CLITestStatement> &statements,
                               const std::string &binary,
                               CLITestEnvironment &environment) -> void {
   for (const auto &statement : statements) {
-    const CLITestCommand command{statement, environment, binary};
+    const CLITestCommand command{
+        .statement = statement, .environment = environment, .binary = binary};
     const auto &keyword{statement.keyword};
 
     if (keyword == "WRITE") {

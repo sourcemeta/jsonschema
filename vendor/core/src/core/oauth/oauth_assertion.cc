@@ -62,6 +62,8 @@ auto map_verification_error(const JWTVerificationError error)
       return OAuthAssertionError::NotYetValid;
     case JWTVerificationError::IssuedAt:
       return OAuthAssertionError::IssuedInFuture;
+    case JWTVerificationError::Lifetime:
+      return OAuthAssertionError::Lifetime;
   }
 
   std::unreachable();
@@ -122,7 +124,8 @@ auto verify_assertion(
 
   const auto error{jwt_verify(token, keys, options.allowed_algorithms,
                               expected_issuer, *match, now, options.clock_skew,
-                              expected_subject, std::nullopt)};
+                              expected_subject, std::nullopt,
+                              options.maximum_lifetime)};
   if (error.has_value()) {
     return map_verification_error(error.value());
   }

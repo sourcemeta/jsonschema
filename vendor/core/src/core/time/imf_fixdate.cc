@@ -43,18 +43,18 @@ auto from_imf_fixdate(const std::string_view value) noexcept
       value[22] != ':' || value[25] != ' ' || value.substr(26) != "GMT") {
     return std::nullopt;
   }
-  if (!std::isdigit(static_cast<unsigned char>(value[5])) ||
-      !std::isdigit(static_cast<unsigned char>(value[6])) ||
-      !std::isdigit(static_cast<unsigned char>(value[12])) ||
-      !std::isdigit(static_cast<unsigned char>(value[13])) ||
-      !std::isdigit(static_cast<unsigned char>(value[14])) ||
-      !std::isdigit(static_cast<unsigned char>(value[15])) ||
-      !std::isdigit(static_cast<unsigned char>(value[17])) ||
-      !std::isdigit(static_cast<unsigned char>(value[18])) ||
-      !std::isdigit(static_cast<unsigned char>(value[20])) ||
-      !std::isdigit(static_cast<unsigned char>(value[21])) ||
-      !std::isdigit(static_cast<unsigned char>(value[23])) ||
-      !std::isdigit(static_cast<unsigned char>(value[24]))) {
+  if ((std::isdigit(static_cast<unsigned char>(value[5])) == 0) ||
+      (std::isdigit(static_cast<unsigned char>(value[6])) == 0) ||
+      (std::isdigit(static_cast<unsigned char>(value[12])) == 0) ||
+      (std::isdigit(static_cast<unsigned char>(value[13])) == 0) ||
+      (std::isdigit(static_cast<unsigned char>(value[14])) == 0) ||
+      (std::isdigit(static_cast<unsigned char>(value[15])) == 0) ||
+      (std::isdigit(static_cast<unsigned char>(value[17])) == 0) ||
+      (std::isdigit(static_cast<unsigned char>(value[18])) == 0) ||
+      (std::isdigit(static_cast<unsigned char>(value[20])) == 0) ||
+      (std::isdigit(static_cast<unsigned char>(value[21])) == 0) ||
+      (std::isdigit(static_cast<unsigned char>(value[23])) == 0) ||
+      (std::isdigit(static_cast<unsigned char>(value[24])) == 0)) {
     return std::nullopt;
   }
   std::istringstream stream{std::string{value}};

@@ -128,10 +128,9 @@ public:
           const auto iterator{find_variable(variables, name)};
           if (iterator == variables.end()) {
             return std::nullopt;
-          } else {
-            return std::make_tuple(std::string_view{iterator->second},
-                                   std::nullopt, false);
           }
+          return std::make_tuple(std::string_view{iterator->second},
+                                 std::nullopt, false);
         },
         mode);
   }

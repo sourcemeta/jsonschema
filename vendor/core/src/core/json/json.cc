@@ -21,18 +21,18 @@
 
 namespace sourcemeta::core {
 
-template <bool should_throw>
+template <bool ShouldThrow>
 static auto internal_parse_json(const char *&cursor, const char *end,
                                 std::uint64_t &line, std::uint64_t &column,
                                 const JSON::ParseCallback &callback,
                                 const bool track_positions, JSON &output)
-    -> std::conditional_t<should_throw, void, bool> {
+    -> std::conditional_t<ShouldThrow, void, bool> {
   const char *buffer_start{cursor};
   // Tape entries address the input with 32-bit offsets and lengths, so a larger
   // input cannot be represented without truncation
   if (std::cmp_greater(end - cursor,
                        std::numeric_limits<std::uint32_t>::max())) {
-    if constexpr (should_throw) {
+    if constexpr (ShouldThrow) {
       throw JSONParseError(line, column);
     } else {
       return false;
@@ -42,7 +42,7 @@ static auto internal_parse_json(const char *&cursor, const char *end,
   std::vector<TapeEntry> tape;
   tape.reserve(static_cast<std::size_t>(end - cursor) / 8);
 
-  if constexpr (should_throw) {
+  if constexpr (ShouldThrow) {
     if (callback || track_positions) {
       scan_json<true>(cursor, end, buffer_start, line, column, tape);
     } else {
@@ -92,10 +92,10 @@ static auto skip_trailing_whitespace(const char *cursor, const char *end)
     -> const char * {
   using namespace internal;
   while (cursor != end &&
-         (*cursor == token_whitespace_tabulation<JSON::Char> ||
-          *cursor == token_whitespace_line_feed<JSON::Char> ||
-          *cursor == token_whitespace_carriage_return<JSON::Char> ||
-          *cursor == token_whitespace_space<JSON::Char>)) {
+         (*cursor == TOKEN_WHITESPACE_TABULATION<JSON::Char> ||
+          *cursor == TOKEN_WHITESPACE_LINE_FEED<JSON::Char> ||
+          *cursor == TOKEN_WHITESPACE_CARRIAGE_RETURN<JSON::Char> ||
+          *cursor == TOKEN_WHITESPACE_SPACE<JSON::Char>)) {
     ++cursor;
   }
 
@@ -111,7 +111,7 @@ static auto position_of(const char *begin, const char *target,
   line = 1;
   column = 1;
   for (const char *iterator{begin}; iterator != target; ++iterator) {
-    if (*iterator == token_whitespace_line_feed<JSON::Char>) {
+    if (*iterator == TOKEN_WHITESPACE_LINE_FEED<JSON::Char>) {
       line += 1;
       column = 1;
     } else {

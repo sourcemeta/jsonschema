@@ -79,7 +79,7 @@ auto sourcemeta::jsonschema::metaschema(
         sourcemeta::blaze::TraceOutput output{
             sourcemeta::blaze::schema_walker, custom_resolver,
             trace_callback(entry.positions, std::cout),
-            sourcemeta::core::empty_weak_pointer, frame};
+            sourcemeta::core::EMPTY_WEAK_POINTER, frame};
         result = evaluator.validate(cache.at(std::string{dialect}),
                                     entry.second, std::ref(output));
       } else if (json_output) {

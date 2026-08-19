@@ -115,7 +115,7 @@ auto dependencies_internal(
   for (const auto &entry : found) {
     dependencies_internal(std::get<0>(entry), walker, resolver, callback,
                           default_dialect, std::get<1>(entry),
-                          {sourcemeta::core::empty_weak_pointer}, visited);
+                          {sourcemeta::core::EMPTY_WEAK_POINTER}, visited);
   }
 }
 

@@ -13,7 +13,7 @@ namespace sourcemeta::core {
 
 auto markdown_to_html(const std::string_view input, const bool safe)
     -> std::string {
-  [[maybe_unused]] static const bool cmark_initialized{
+  [[maybe_unused]] static const bool CMARK_INITIALIZED{
       (cmark_gfm_core_extensions_ensure_registered(), true)};
 
   // cmark-gfm toggles process-global special-character tables when syntax
@@ -22,18 +22,18 @@ auto markdown_to_html(const std::string_view input, const bool safe)
   static std::mutex cmark_mutex;
   const std::scoped_lock lock{cmark_mutex};
 
-  static constexpr auto base_options{
+  static constexpr auto BASE_OPTIONS{
       CMARK_OPT_VALIDATE_UTF8 | CMARK_OPT_FOOTNOTES |
       CMARK_OPT_STRIKETHROUGH_DOUBLE_TILDE | CMARK_OPT_GITHUB_PRE_LANG};
   // This cmark-gfm suppresses raw HTML and unsafe links by default, so raw
   // output requires explicitly opting out through CMARK_OPT_UNSAFE
-  const int options{safe ? base_options : (base_options | CMARK_OPT_UNSAFE)};
+  const int options{safe ? BASE_OPTIONS : (BASE_OPTIONS | CMARK_OPT_UNSAFE)};
 
   auto *parser{cmark_parser_new(options)};
 
-  static constexpr std::array<const char *, 5> extension_names{
+  static constexpr std::array<const char *, 5> EXTENSION_NAMES{
       {"table", "autolink", "strikethrough", "tagfilter", "tasklist"}};
-  for (const auto *name : extension_names) {
+  for (const auto *name : EXTENSION_NAMES) {
     auto *extension{cmark_find_syntax_extension(name)};
     if (extension != nullptr) {
       cmark_parser_attach_syntax_extension(parser, extension);

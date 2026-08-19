@@ -26,6 +26,8 @@ auto to_verification_error(const sourcemeta::core::JWTClaimError error)
       return JWTVerificationError::NotBefore;
     case JWTClaimError::IssuedAt:
       return JWTVerificationError::IssuedAt;
+    case JWTClaimError::Lifetime:
+      return JWTVerificationError::Lifetime;
   }
 
   std::unreachable();
@@ -42,7 +44,8 @@ auto jwt_verify(const JWT &token, const JWKS &keys,
                 const std::chrono::system_clock::time_point now,
                 const JWTClockSkew clock_skew,
                 const std::optional<std::string_view> expected_subject,
-                const std::optional<std::string_view> expected_type)
+                const std::optional<std::string_view> expected_type,
+                const std::optional<std::chrono::seconds> maximum_lifetime)
     -> std::optional<JWTVerificationError> {
   // RFC 8725 Section 3.1: "Libraries MUST enable the caller to specify a
   // supported set of algorithms and MUST NOT use any other algorithms when
@@ -92,7 +95,7 @@ auto jwt_verify(const JWT &token, const JWKS &keys,
 
   const auto claim_error{jwt_check_claims(token, expected_issuer,
                                           expected_audience, now, clock_skew,
-                                          expected_subject)};
+                                          expected_subject, maximum_lifetime)};
   if (claim_error.has_value()) {
     return to_verification_error(claim_error.value());
   }

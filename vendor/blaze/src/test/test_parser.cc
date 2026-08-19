@@ -145,10 +145,10 @@ auto TestSuite::parse(const sourcemeta::core::JSON &document,
                       const std::string_view default_id,
                       const std::optional<Tweaks> &tweaks) -> TestSuite {
   assert(std::filesystem::is_directory(base_path));
-  TEST_ERROR_IF(!document.is_object(), tracker, sourcemeta::core::empty_pointer,
+  TEST_ERROR_IF(!document.is_object(), tracker, sourcemeta::core::EMPTY_POINTER,
                 "The test document must be an object");
   TEST_ERROR_IF(!document.defines("target"), tracker,
-                sourcemeta::core::empty_pointer,
+                sourcemeta::core::EMPTY_POINTER,
                 "The test document must contain a `target` property");
   TEST_ERROR_IF(!document.at("target").is_string() &&
                     !document.at("target").is_array(),
@@ -156,7 +156,7 @@ auto TestSuite::parse(const sourcemeta::core::JSON &document,
                 "The test document `target` property must be a URI or an "
                 "array of URIs");
   TEST_ERROR_IF(!document.defines("tests"), tracker,
-                sourcemeta::core::empty_pointer,
+                sourcemeta::core::EMPTY_POINTER,
                 "The test document must contain a `tests` property");
   TEST_ERROR_IF(!document.at("tests").is_array(), tracker,
                 sourcemeta::core::Pointer{"tests"},

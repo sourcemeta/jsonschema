@@ -152,14 +152,14 @@ inline auto parse_pkcs8(const std::string_view der) -> std::optional<PKCS8Key> {
 
   // The object identifiers are raw DER content bytes, kept as escaped literals
   // NOLINTBEGIN(modernize-raw-string-literal)
-  constexpr std::string_view rsa{"\x2a\x86\x48\x86\xf7\x0d\x01\x01\x01", 9};
-  constexpr std::string_view rsa_pss{"\x2a\x86\x48\x86\xf7\x0d\x01\x01\x0a", 9};
-  constexpr std::string_view elliptic_curve{"\x2a\x86\x48\xce\x3d\x02\x01", 7};
-  constexpr std::string_view ed25519{"\x2b\x65\x70", 3};
-  constexpr std::string_view ed448{"\x2b\x65\x71", 3};
+  constexpr std::string_view RSA{"\x2a\x86\x48\x86\xf7\x0d\x01\x01\x01", 9};
+  constexpr std::string_view RSA_PSS{"\x2a\x86\x48\x86\xf7\x0d\x01\x01\x0a", 9};
+  constexpr std::string_view ELLIPTIC_CURVE{"\x2a\x86\x48\xce\x3d\x02\x01", 7};
+  constexpr std::string_view ED25519{"\x2b\x65\x70", 3};
+  constexpr std::string_view ED448{"\x2b\x65\x71", 3};
   // NOLINTEND(modernize-raw-string-literal)
 
-  if (oid->content == rsa || oid->content == rsa_pss) {
+  if (oid->content == RSA || oid->content == RSA_PSS) {
     if (!rsa_private_key_acceptable(private_key->content)) {
       return std::nullopt;
     }
@@ -168,35 +168,35 @@ inline auto parse_pkcs8(const std::string_view der) -> std::optional<PKCS8Key> {
                     .curve = {},
                     .edwards_curve = {},
                     .key = private_key->content,
-                    .rsa_pss_restricted = oid->content == rsa_pss};
+                    .rsa_pss_restricted = oid->content == RSA_PSS};
   }
 
-  if (oid->content == ed25519 || oid->content == ed448) {
+  if (oid->content == ED25519 || oid->content == ED448) {
     return PKCS8Key{.kind = PKCS8KeyKind::Edwards,
                     .curve = {},
-                    .edwards_curve = oid->content == ed25519
+                    .edwards_curve = oid->content == ED25519
                                          ? EdwardsCurve::Ed25519
                                          : EdwardsCurve::Ed448,
                     .key = private_key->content};
   }
 
-  if (oid->content == elliptic_curve) {
+  if (oid->content == ELLIPTIC_CURVE) {
     const auto curve_oid{der_read(oid->rest)};
     if (!curve_oid.has_value() || curve_oid->tag != 0x06) {
       return std::nullopt;
     }
 
     // NOLINTBEGIN(modernize-raw-string-literal)
-    constexpr std::string_view p256{"\x2a\x86\x48\xce\x3d\x03\x01\x07", 8};
-    constexpr std::string_view p384{"\x2b\x81\x04\x00\x22", 5};
-    constexpr std::string_view p521{"\x2b\x81\x04\x00\x23", 5};
+    constexpr std::string_view P256{"\x2a\x86\x48\xce\x3d\x03\x01\x07", 8};
+    constexpr std::string_view P384{"\x2b\x81\x04\x00\x22", 5};
+    constexpr std::string_view P521{"\x2b\x81\x04\x00\x23", 5};
     // NOLINTEND(modernize-raw-string-literal)
     EllipticCurve curve{};
-    if (curve_oid->content == p256) {
+    if (curve_oid->content == P256) {
       curve = EllipticCurve::P256;
-    } else if (curve_oid->content == p384) {
+    } else if (curve_oid->content == P384) {
       curve = EllipticCurve::P384;
-    } else if (curve_oid->content == p521) {
+    } else if (curve_oid->content == P521) {
       curve = EllipticCurve::P521;
     } else {
       return std::nullopt;

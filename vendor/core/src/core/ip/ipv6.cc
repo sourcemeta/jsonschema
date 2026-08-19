@@ -118,7 +118,7 @@ auto fill_ipv6_run(const std::string_view run,
     const auto piece{run.substr(position, colon == std::string_view::npos
                                               ? std::string_view::npos
                                               : colon - position)};
-    if (piece.find('.') != std::string_view::npos) {
+    if (piece.contains('.')) {
       for (const auto octet : ipv4_octets(piece)) {
         output[length] = octet;
         length += 1;

@@ -386,7 +386,7 @@ auto is_rfc3339_duration(const std::string_view value) -> bool;
 /// assert(!sourcemeta::core::is_leap_year(1900));
 /// assert(!sourcemeta::core::is_leap_year(2021));
 /// ```
-inline constexpr auto is_leap_year(const std::uint16_t year) -> bool {
+constexpr auto is_leap_year(const std::uint16_t year) -> bool {
   return (year % 4 == 0) && (year % 100 != 0 || year % 400 == 0);
 }
 
@@ -404,16 +404,15 @@ inline constexpr auto is_leap_year(const std::uint16_t year) -> bool {
 /// assert(sourcemeta::core::max_day_in_month(2, 2021) == 28);
 /// assert(sourcemeta::core::max_day_in_month(4, 2024) == 30);
 /// ```
-inline constexpr auto max_day_in_month(const std::uint8_t month,
-                                       const std::uint16_t year)
-    -> std::uint8_t {
+constexpr auto max_day_in_month(const std::uint8_t month,
+                                const std::uint16_t year) -> std::uint8_t {
   assert(month >= 1 && month <= 12);
-  constexpr std::array<std::uint8_t, 13> days{
+  constexpr std::array<std::uint8_t, 13> DAYS{
       {0, 31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31}};
   if (month == 2 && is_leap_year(year)) {
     return 29;
   }
-  return days[month];
+  return DAYS[month];
 }
 
 } // namespace sourcemeta::core

@@ -661,7 +661,12 @@ auto URI::is_gen_delim(const char character) noexcept -> bool {
 
 auto URI::is_uri(const std::string_view input) noexcept -> bool {
   try {
-    std::optional<std::string> scheme, userinfo, host, path, query, fragment;
+    std::optional<std::string> scheme;
+    std::optional<std::string> userinfo;
+    std::optional<std::string> host;
+    std::optional<std::string> path;
+    std::optional<std::string> query;
+    std::optional<std::string> fragment;
     std::optional<std::uint32_t> port;
     bool ip_literal{false};
     return do_parse<true, false>(input, scheme, userinfo, host, port, path,
@@ -673,7 +678,12 @@ auto URI::is_uri(const std::string_view input) noexcept -> bool {
 
 auto URI::is_uri_reference(const std::string_view input) noexcept -> bool {
   try {
-    std::optional<std::string> scheme, userinfo, host, path, query, fragment;
+    std::optional<std::string> scheme;
+    std::optional<std::string> userinfo;
+    std::optional<std::string> host;
+    std::optional<std::string> path;
+    std::optional<std::string> query;
+    std::optional<std::string> fragment;
     std::optional<std::uint32_t> port;
     bool ip_literal{false};
     do_parse<true, false>(input, scheme, userinfo, host, port, path, query,
@@ -684,9 +694,85 @@ auto URI::is_uri_reference(const std::string_view input) noexcept -> bool {
   }
 }
 
+auto URI::is_absolute_path_reference(const std::string_view input) noexcept
+    -> bool {
+  // RFC 3986 Section 4.2: a relative reference beginning with a single slash.
+  // Two slashes would make it a network-path reference, naming an authority
+  // of its own, and the second slash is not a pchar so the path-absolute
+  // production refuses it on its own terms
+  if (input.empty() || input.front() != URI_SLASH) {
+    return false;
+  }
+
+  // RFC 3986 Section 3.4 and Section 3.5: query and fragment both admit the
+  // slash and the question mark on top of pchar, so the scan only has to widen
+  // once each delimiter is passed
+  bool within_path{true};
+  bool within_query{false};
+  for (std::string_view::size_type position{1}; position < input.size();
+       position += 1) {
+    const auto character{input[position]};
+    if (character == URI_SLASH) {
+      // RFC 3986 Section 3.3: segment-nz requires at least one pchar, so a
+      // second slash cannot open the path
+      if (within_path && position == 1) {
+        return false;
+      }
+
+      continue;
+    }
+
+    if (character == URI_QUESTION) {
+      if (within_path) {
+        within_path = false;
+        within_query = true;
+        continue;
+      }
+
+      // A further question mark is content within a query or a fragment
+      continue;
+    }
+
+    if (character == URI_HASH) {
+      // RFC 3986 Section 3.5: the number sign is outside the fragment
+      // character set, so only the first one delimits
+      if (!within_path && !within_query) {
+        return false;
+      }
+
+      within_path = false;
+      within_query = false;
+      continue;
+    }
+
+    // RFC 3986 Section 2.1: pct-encoded = "%" HEXDIG HEXDIG, which the shared
+    // character predicate admits the percent sign for without checking
+    if (character == URI_PERCENT) {
+      if (position + 2 >= input.size() || !is_hex_digit(input[position + 1]) ||
+          !is_hex_digit(input[position + 2])) {
+        return false;
+      }
+
+      position += 2;
+      continue;
+    }
+
+    if (!uri_is_pchar(character)) {
+      return false;
+    }
+  }
+
+  return true;
+}
+
 auto URI::is_iri(const std::string_view input) noexcept -> bool {
   try {
-    std::optional<std::string> scheme, userinfo, host, path, query, fragment;
+    std::optional<std::string> scheme;
+    std::optional<std::string> userinfo;
+    std::optional<std::string> host;
+    std::optional<std::string> path;
+    std::optional<std::string> query;
+    std::optional<std::string> fragment;
     std::optional<std::uint32_t> port;
     bool ip_literal{false};
     return do_parse<true, true>(input, scheme, userinfo, host, port, path,
@@ -698,7 +784,12 @@ auto URI::is_iri(const std::string_view input) noexcept -> bool {
 
 auto URI::is_iri_reference(const std::string_view input) noexcept -> bool {
   try {
-    std::optional<std::string> scheme, userinfo, host, path, query, fragment;
+    std::optional<std::string> scheme;
+    std::optional<std::string> userinfo;
+    std::optional<std::string> host;
+    std::optional<std::string> path;
+    std::optional<std::string> query;
+    std::optional<std::string> fragment;
     std::optional<std::uint32_t> port;
     bool ip_literal{false};
     do_parse<true, true>(input, scheme, userinfo, host, port, path, query,

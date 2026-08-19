@@ -183,7 +183,7 @@ inline auto edwards_point_encode(const EdwardsPoint &point, const Bignum &prime,
   std::string encoding{big_endian.rbegin(), big_endian.rend()};
   if (bignum_get_bit(x, 0)) {
     encoding.back() =
-        static_cast<char>(static_cast<std::uint8_t>(encoding.back()) | 0x80u);
+        static_cast<char>(static_cast<std::uint8_t>(encoding.back()) | 0x80U);
   }
 
   return encoding;
@@ -215,9 +215,9 @@ inline auto edwards25519_decode_point(const std::string_view encoding,
   // The final bit holds the sign of x, the remaining bits the little-endian y
   std::string bytes{encoding};
   const auto sign_bit{
-      static_cast<unsigned>(static_cast<std::uint8_t>(bytes.back()) >> 7) & 1u};
+      static_cast<unsigned>(static_cast<std::uint8_t>(bytes.back()) >> 7) & 1U};
   bytes.back() =
-      static_cast<char>(static_cast<std::uint8_t>(bytes.back()) & 0x7fu);
+      static_cast<char>(static_cast<std::uint8_t>(bytes.back()) & 0x7fU);
   const auto y{bignum_from_bytes_little_endian(bytes)};
 
   // A y coordinate at or beyond the field prime is not a canonical encoding
@@ -388,9 +388,9 @@ inline auto edwards25519_verify(const std::string_view public_key,
 inline auto edwards25519_prune_scalar(std::string &scalar_bytes) noexcept
     -> void {
   scalar_bytes.front() = static_cast<char>(
-      static_cast<std::uint8_t>(scalar_bytes.front()) & 0xf8u);
+      static_cast<std::uint8_t>(scalar_bytes.front()) & 0xf8U);
   scalar_bytes.back() = static_cast<char>(
-      (static_cast<std::uint8_t>(scalar_bytes.back()) & 0x7fu) | 0x40u);
+      (static_cast<std::uint8_t>(scalar_bytes.back()) & 0x7fU) | 0x40U);
 }
 
 // The Ed25519 public key derived from the 32-byte private seed, the encoded
@@ -501,9 +501,9 @@ inline auto edwards448_decode_point(const std::string_view encoding,
   // The final bit holds the sign of x, the remaining bits the little-endian y
   std::string bytes{encoding};
   const auto sign_bit{
-      static_cast<unsigned>(static_cast<std::uint8_t>(bytes.back()) >> 7) & 1u};
+      static_cast<unsigned>(static_cast<std::uint8_t>(bytes.back()) >> 7) & 1U};
   bytes.back() =
-      static_cast<char>(static_cast<std::uint8_t>(bytes.back()) & 0x7fu);
+      static_cast<char>(static_cast<std::uint8_t>(bytes.back()) & 0x7fU);
   const auto y{bignum_from_bytes_little_endian(bytes)};
 
   // A y coordinate at or beyond the field prime is not a canonical encoding
@@ -651,9 +651,9 @@ inline auto edwards448_verify(const std::string_view public_key,
 inline auto edwards448_prune_scalar(std::string &scalar_bytes) noexcept
     -> void {
   scalar_bytes.front() = static_cast<char>(
-      static_cast<std::uint8_t>(scalar_bytes.front()) & 0xfcu);
+      static_cast<std::uint8_t>(scalar_bytes.front()) & 0xfcU);
   scalar_bytes[55] =
-      static_cast<char>(static_cast<std::uint8_t>(scalar_bytes[55]) | 0x80u);
+      static_cast<char>(static_cast<std::uint8_t>(scalar_bytes[55]) | 0x80U);
   scalar_bytes[56] = '\x00';
 }
 

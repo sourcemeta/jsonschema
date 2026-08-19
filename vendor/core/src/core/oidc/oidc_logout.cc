@@ -41,7 +41,7 @@ auto append_logout_parameter(std::string &sink, const std::string_view endpoint,
   }
 
   if (!query_opened) {
-    if (endpoint.find('?') == std::string_view::npos) {
+    if (!endpoint.contains('?')) {
       sink.push_back('?');
     } else if (sink.back() != '?' && sink.back() != '&') {
       sink.push_back('&');

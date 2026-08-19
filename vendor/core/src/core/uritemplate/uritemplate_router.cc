@@ -16,7 +16,7 @@ namespace {
 using Node = URITemplateRouter::Node;
 using NodeType = URITemplateRouter::NodeType;
 
-constexpr auto node_value =
+constexpr auto NODE_VALUE =
     [](const std::unique_ptr<Node> &child) -> decltype(auto) {
   return child->value;
 };
@@ -24,7 +24,7 @@ constexpr auto node_value =
 auto find_literal_child(const std::vector<std::unique_ptr<Node>> &literals,
                         const std::string_view segment) -> Node * {
   const auto iterator =
-      std::ranges::lower_bound(literals, segment, {}, node_value);
+      std::ranges::lower_bound(literals, segment, {}, NODE_VALUE);
   if (iterator != literals.end() && (*iterator)->value == segment) {
     return iterator->get();
   }
@@ -33,7 +33,7 @@ auto find_literal_child(const std::vector<std::unique_ptr<Node>> &literals,
 
 auto find_or_create_literal_child(std::vector<std::unique_ptr<Node>> &literals,
                                   const std::string_view value) -> Node & {
-  auto iterator = std::ranges::lower_bound(literals, value, {}, node_value);
+  auto iterator = std::ranges::lower_bound(literals, value, {}, NODE_VALUE);
   if (iterator != literals.end() && (*iterator)->value == value) {
     return **iterator;
   }
@@ -81,8 +81,10 @@ auto walk_describe_fragment(const Node *&current, const Node &root,
     const std::string_view segment{
         segment_start, static_cast<std::size_t>(position - segment_start)};
 
-    const auto &literal_children = current ? current->literals : root.literals;
-    const auto &variable_child = current ? current->variable : root.variable;
+    const auto &literal_children =
+        (current != nullptr) ? current->literals : root.literals;
+    const auto &variable_child =
+        (current != nullptr) ? current->variable : root.variable;
 
     const Node *next = find_literal_child(literal_children, segment);
     if (next == nullptr) {
@@ -289,10 +291,10 @@ auto URITemplateRouter::add(const std::string_view uri_template,
                             const std::span<const Argument> arguments) -> void {
   assert(identifier > 0);
 
-  static const Regex operation_id_regex =
+  static const Regex OPERATION_ID_REGEX =
       to_regex("^[a-zA-Z][a-zA-Z0-9_-]{0,63}$").value();
 
-  if (!matches(operation_id_regex, operation_id)) {
+  if (!matches(OPERATION_ID_REGEX, operation_id)) {
     throw URITemplateRouterInvalidOperationIdError{operation_id};
   }
 
@@ -320,7 +322,8 @@ auto URITemplateRouter::add(const std::string_view uri_template,
       const std::string_view segment{
           segment_start,
           static_cast<std::size_t>(base_position - segment_start)};
-      auto &literals = current ? current->literals : this->root_.literals;
+      auto &literals =
+          (current != nullptr) ? current->literals : this->root_.literals;
       current = &find_or_create_literal_child(literals, segment);
       if (base_position >= base_end) {
         break;
@@ -330,7 +333,7 @@ auto URITemplateRouter::add(const std::string_view uri_template,
   }
 
   if (uri_template.empty()) {
-    auto &target = current ? *current : this->root_;
+    auto &target = (current != nullptr) ? *current : this->root_;
     const auto previous_identifier = target.identifier;
     if (previous_identifier == 0) {
       this->entries_.emplace_back(identifier, context, uri_template);
@@ -375,7 +378,8 @@ auto URITemplateRouter::add(const std::string_view uri_template,
 
   while (true) {
     if (position >= end || *position == '/') {
-      auto &literals = current ? current->literals : this->root_.literals;
+      auto &literals =
+          (current != nullptr) ? current->literals : this->root_.literals;
       current = &find_or_create_literal_child(literals, "");
       if (position >= end) {
         break;
@@ -512,7 +516,8 @@ auto URITemplateRouter::add(const std::string_view uri_template,
             "Expansion operator must be the last segment", expression};
       }
 
-      auto &variable = current ? current->variable : this->root_.variable;
+      auto &variable =
+          (current != nullptr) ? current->variable : this->root_.variable;
       auto *result =
           find_or_create_variable_child(variable, varname, type, expression);
       if (result == nullptr) {
@@ -543,7 +548,8 @@ auto URITemplateRouter::add(const std::string_view uri_template,
       if (position + 1 < end && *(position + 1) == '/') {
         const std::string_view segment{
             segment_start, static_cast<std::size_t>(position - segment_start)};
-        auto &literals = current ? current->literals : this->root_.literals;
+        auto &literals =
+            (current != nullptr) ? current->literals : this->root_.literals;
         current = &find_or_create_literal_child(literals, segment);
         continue;
       }
@@ -561,7 +567,8 @@ auto URITemplateRouter::add(const std::string_view uri_template,
     const std::string_view segment{
         segment_start, static_cast<std::size_t>(position - segment_start)};
 
-    auto &literals = current ? current->literals : this->root_.literals;
+    auto &literals =
+        (current != nullptr) ? current->literals : this->root_.literals;
     current = &find_or_create_literal_child(literals, segment);
 
     if (position >= end) {
@@ -720,7 +727,7 @@ auto URITemplateRouter::match(const std::string_view path,
     ++position;
   }
 
-  if (current && current->identifier == 0 && current->variable &&
+  if ((current != nullptr) && current->identifier == 0 && current->variable &&
       current->variable->type == NodeType::OptionalExpansion) {
     assert(variable_index <=
            std::numeric_limits<URITemplateRouter::Index>::max());
@@ -730,10 +737,11 @@ auto URITemplateRouter::match(const std::string_view path,
                           current->variable->context);
   }
 
-  return current ? finalize_match(this->otherwise_, current->identifier,
-                                  current->context)
-                 : finalize_match(this->otherwise_, this->root_.identifier,
-                                  this->root_.context);
+  return (current != nullptr)
+             ? finalize_match(this->otherwise_, current->identifier,
+                              current->context)
+             : finalize_match(this->otherwise_, this->root_.identifier,
+                              this->root_.context);
 }
 
 } // namespace sourcemeta::core

@@ -76,7 +76,8 @@ auto parse_entry(const std::string_view payload) -> PropertyEntry {
   const auto last{range_split.has_value()
                       ? parse_hex_codepoint(range_split->second)
                       : first};
-  return {first, last, property_from_token(value_part)};
+  return {
+      .first = first, .last = last, .value = property_from_token(value_part)};
 }
 
 auto parse_idna_file(const std::filesystem::path &input_path)
@@ -84,7 +85,7 @@ auto parse_idna_file(const std::filesystem::path &input_path)
   auto stream{sourcemeta::core::read_file(input_path)};
   std::vector<PropertyEntry> missing;
   std::vector<PropertyEntry> data;
-  constexpr std::string_view missing_prefix{"@missing:"};
+  constexpr std::string_view MISSING_PREFIX{"@missing:"};
   sourcemeta::core::for_each_line(stream, [&](const std::string_view raw_line) {
     const auto line{sourcemeta::core::trim(raw_line)};
     if (line.empty()) {
@@ -92,12 +93,12 @@ auto parse_idna_file(const std::filesystem::path &input_path)
     }
     if (line.front() == '#') {
       const auto comment_body{sourcemeta::core::trim(line.substr(1))};
-      if (comment_body.size() < missing_prefix.size() ||
-          comment_body.substr(0, missing_prefix.size()) != missing_prefix) {
+      if (comment_body.size() < MISSING_PREFIX.size() ||
+          !comment_body.starts_with(MISSING_PREFIX)) {
         return;
       }
       missing.push_back(
-          parse_entry(comment_body.substr(missing_prefix.size())));
+          parse_entry(comment_body.substr(MISSING_PREFIX.size())));
       return;
     }
     data.push_back(parse_entry(line));
@@ -154,10 +155,10 @@ auto build_pages(const std::vector<PropertyEntry> &entries) -> TwoStageTable {
 
 template <typename T>
 auto emit_row(std::ostream &stream, const std::span<const T> items) -> void {
-  constexpr std::size_t row_width{16};
-  for (std::size_t offset{0}; offset < items.size(); offset += row_width) {
+  constexpr std::size_t ROW_WIDTH{16};
+  for (std::size_t offset{0}; offset < items.size(); offset += ROW_WIDTH) {
     stream << "    ";
-    const auto upper{offset + row_width < items.size() ? offset + row_width
+    const auto upper{offset + ROW_WIDTH < items.size() ? offset + ROW_WIDTH
                                                        : items.size()};
     const auto row{items.subspan(offset, upper - offset)};
     const auto widened{row | std::views::transform([](const T value) {
@@ -256,7 +257,10 @@ auto parse_mapping_line(const std::string_view payload) -> MappingEntry {
     mapping = parse_mapping_sequence(mapping_part);
   }
 
-  return {first, last, status, std::move(mapping)};
+  return {.first = first,
+          .last = last,
+          .status = status,
+          .mapping = std::move(mapping)};
 }
 
 auto parse_mapping_file(const std::filesystem::path &input_path)
@@ -298,16 +302,17 @@ auto build_mapping(const std::vector<MappingEntry> &entries) -> MappingTable {
       status_values[codepoint] = static_cast<std::uint8_t>(entry.status);
       if (entry.status == sourcemeta::core::IDNAMappingStatus::Mapped) {
         table.index.push_back(
-            {codepoint, offset,
-             static_cast<std::uint32_t>(entry.mapping.size())});
+            {.codepoint = codepoint,
+             .offset = offset,
+             .length = static_cast<std::uint32_t>(entry.mapping.size())});
       }
     }
   }
 
-  std::sort(table.index.begin(), table.index.end(),
-            [](const MappingIndexEntry &left, const MappingIndexEntry &right) {
-              return left.codepoint < right.codepoint;
-            });
+  std::ranges::sort(table.index, [](const MappingIndexEntry &left,
+                                    const MappingIndexEntry &right) {
+    return left.codepoint < right.codepoint;
+  });
   table.status = compress_pages(status_values);
   return table;
 }

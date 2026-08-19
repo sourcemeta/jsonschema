@@ -12,7 +12,7 @@ namespace {
 // langtag grammar and must be matched literally. The regular grandfathered
 // tags are intentionally omitted, as they are already accepted by the langtag
 // grammar.
-constexpr std::array<std::string_view, 17> irregular_grandfathered{
+constexpr std::array<std::string_view, 17> IRREGULAR_GRANDFATHERED{
     {"en-GB-oed", "i-ami", "i-bnn", "i-default", "i-enochian", "i-hak",
      "i-klingon", "i-lux", "i-mingo", "i-navajo", "i-pwn", "i-tao", "i-tay",
      "i-tsu", "sgn-BE-FR", "sgn-BE-NL", "sgn-CH-DE"}};
@@ -221,7 +221,7 @@ auto valid_privateuse(const std::string_view value) -> bool {
 }
 
 auto is_irregular_grandfathered(const std::string_view value) -> bool {
-  for (const auto entry : irregular_grandfathered) {
+  for (const auto entry : IRREGULAR_GRANDFATHERED) {
     if (sourcemeta::core::equals_ignore_case(value, entry)) {
       return true;
     }
