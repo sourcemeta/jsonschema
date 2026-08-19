@@ -403,7 +403,7 @@ auto compact_iri(const ActiveContext &active_context,
     const auto scheme{variable.substr(0, colon)};
     const auto iterator{active_context.terms.find(scheme)};
     if (iterator != active_context.terms.cend() && iterator->second.prefix) {
-      throw JSONLDError("IRI confused with prefix", empty_weak_pointer);
+      throw JSONLDError("IRI confused with prefix", EMPTY_WEAK_POINTER);
     }
   }
 

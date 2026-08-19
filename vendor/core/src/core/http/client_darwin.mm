@@ -44,11 +44,11 @@ auto to_nsstring(const std::string_view input) -> NSString * {
     willPerformHTTPRedirection:(NSHTTPURLResponse *)response
                     newRequest:(NSURLRequest *)request
              completionHandler:
-                 (void (^)(NSURLRequest *))completionHandler {
+                 (void (^)(NSURLRequest *))completion_handler {
   // Passing a nil request stops the redirection and delivers the redirect
   // response itself as the final response
   if (!self.followRedirects) {
-    completionHandler(nil);
+    completion_handler(nil);
     return;
   }
 
@@ -56,15 +56,15 @@ auto to_nsstring(const std::string_view input) -> NSString * {
   if (self.redirectCount > self.maximumRedirects) {
     self.failure->assign("The maximum number of redirects was exceeded");
     [task cancel];
-    completionHandler(nil);
+    completion_handler(nil);
     return;
   }
 
-  completionHandler(request);
+  completion_handler(request);
 }
 
 - (void)URLSession:(NSURLSession *)session
-          dataTask:(NSURLSessionDataTask *)dataTask
+          dataTask:(NSURLSessionDataTask *)data_task
     didReceiveData:(NSData *)data {
   auto *body{&self.response->body};
   if (self.hasMaximumResponseSize &&
@@ -72,7 +72,7 @@ auto to_nsstring(const std::string_view input) -> NSString * {
        static_cast<std::size_t>(data.length) >
            self.maximumResponseSize - body->size())) {
     self.failure->assign(HTTP_RESPONSE_TOO_LARGE_MESSAGE);
-    [dataTask cancel];
+    [data_task cancel];
     return;
   }
 

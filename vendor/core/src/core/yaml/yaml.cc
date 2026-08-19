@@ -94,7 +94,8 @@ auto read_yaml_or_json(const std::filesystem::path &path) -> JSON {
   const auto extension{path.extension()};
   if (extension == ".yaml" || extension == ".yml") {
     return read_yaml(path);
-  } else if (extension == ".json") {
+  }
+  if (extension == ".json") {
     return read_json(path);
   }
 
@@ -111,7 +112,8 @@ auto read_yaml_or_json(const std::filesystem::path &path, JSON &output,
   if (extension == ".yaml" || extension == ".yml") {
     read_yaml(path, output, callback);
     return;
-  } else if (extension == ".json") {
+  }
+  if (extension == ".json") {
     read_json(path, output, callback);
     return;
   }

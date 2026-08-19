@@ -26,12 +26,12 @@ struct HttpAuthority {
 // discarding the port, without constructing a URI (RFC 3986 Section 3.2)
 auto split_http_authority(const std::string_view value)
     -> std::optional<HttpAuthority> {
-  static constexpr std::string_view prefix{"http://"};
-  if (!value.starts_with(prefix)) {
+  static constexpr std::string_view PREFIX{"http://"};
+  if (!value.starts_with(PREFIX)) {
     return std::nullopt;
   }
 
-  const auto after{value.substr(prefix.size())};
+  const auto after{value.substr(PREFIX.size())};
   // RFC 3986 Section 3.2: the authority ends at the next "/", "?", or "#", or
   // the end of the URI, so the query and fragment are part of the compared
   // remainder rather than folded into the authority
@@ -46,7 +46,7 @@ auto split_http_authority(const std::string_view value)
   // confusion, since a redirect like "http://127.0.0.1:2@evil/cb" has its real
   // host after the "@" yet its authority begins with the loopback literal, so
   // an authority with userinfo does not qualify for the loopback exception
-  if (authority.find('@') != std::string_view::npos) {
+  if (authority.contains('@')) {
     return std::nullopt;
   }
 
@@ -103,7 +103,7 @@ auto oauth_build_authorization_url(const std::string_view endpoint,
   sink.append(endpoint);
   // '?' opens a query the endpoint lacks, and the parameter appender continues
   // one the endpoint already carries (RFC 6749 Section 3.1)
-  if (endpoint.find('?') == std::string_view::npos) {
+  if (!endpoint.contains('?')) {
     sink.push_back('?');
   }
 
@@ -243,7 +243,7 @@ auto oauth_build_authorization_redirect(
   // RFC 6749 Section 3.1.2: a redirection endpoint "MUST NOT include a fragment
   // component", and appending the query after one would place the parameters
   // inside the fragment rather than the query
-  if (redirect_uri.find('#') != std::string_view::npos) {
+  if (redirect_uri.contains('#')) {
     return false;
   }
 
@@ -258,8 +258,7 @@ auto oauth_build_authorization_redirect(
   // In the fragment response mode the parameters are "encoded in the fragment
   // added to the redirect_uri when redirecting back to the Client" (OAuth 2.0
   // Multiple Response Types Section 2.1), while a query joins any existing one
-  if (mode == OAuthResponseMode::Fragment ||
-      redirect_uri.find('?') == std::string_view::npos) {
+  if (mode == OAuthResponseMode::Fragment || !redirect_uri.contains('?')) {
     sink.push_back(opener);
   }
 
@@ -305,7 +304,7 @@ auto oauth_build_authorization_error_redirect(
   // RFC 6749 Section 3.1.2: a redirection endpoint "MUST NOT include a fragment
   // component", and appending the query after one would place the parameters
   // inside the fragment rather than the query
-  if (redirect_uri.find('#') != std::string_view::npos) {
+  if (redirect_uri.contains('#')) {
     return false;
   }
 
@@ -321,8 +320,7 @@ auto oauth_build_authorization_error_redirect(
   // In the fragment response mode the parameters are "encoded in the fragment
   // added to the redirect_uri when redirecting back to the Client" (OAuth 2.0
   // Multiple Response Types Section 2.1), while a query joins any existing one
-  if (mode == OAuthResponseMode::Fragment ||
-      redirect_uri.find('?') == std::string_view::npos) {
+  if (mode == OAuthResponseMode::Fragment || !redirect_uri.contains('?')) {
     sink.push_back(opener);
   }
 
@@ -430,7 +428,7 @@ auto oauth_build_authorization_form_post(
 
   // RFC 6749 Section 3.1.2: a redirection endpoint "MUST NOT include a
   // fragment component"
-  if (redirect_uri.find('#') != std::string_view::npos) {
+  if (redirect_uri.contains('#')) {
     return false;
   }
 
@@ -471,7 +469,7 @@ auto oauth_build_authorization_error_form_post(
 
   // RFC 6749 Section 3.1.2: a redirection endpoint "MUST NOT include a
   // fragment component"
-  if (redirect_uri.find('#') != std::string_view::npos) {
+  if (redirect_uri.contains('#')) {
     return false;
   }
 

@@ -117,9 +117,9 @@ auto canonical_index(const std::span<const std::string_view> order,
 
 template <typename Callback>
 auto for_each_ucd_entry(std::istream &stream, Callback callback) -> void {
-  static const std::regex line_re{
+  static const std::regex LINE_RE{
       R"(^([0-9A-Fa-f]+)(?:\.\.([0-9A-Fa-f]+))?\s*;\s*(.*)$)"};
-  static const std::regex missing_re{R"(^#\s*@missing:\s*(.+?)\s*$)"};
+  static const std::regex MISSING_RE{R"(^#\s*@missing:\s*(.+?)\s*$)"};
 
   sourcemeta::core::for_each_line(stream, [&](const std::string_view raw_line) {
     const auto trimmed{sourcemeta::core::trim(raw_line)};
@@ -131,7 +131,7 @@ auto for_each_ucd_entry(std::istream &stream, Callback callback) -> void {
     if (trimmed.front() == '#') {
       std::cmatch match;
       if (!std::regex_match(trimmed.data(), trimmed.data() + trimmed.size(),
-                            match, missing_re)) {
+                            match, MISSING_RE)) {
         return;
       }
       content = match[1].str();
@@ -141,7 +141,7 @@ auto for_each_ucd_entry(std::istream &stream, Callback callback) -> void {
           sourcemeta::core::trim(sourcemeta::core::take_until(trimmed, '#'))};
     }
     std::smatch match;
-    if (!std::regex_match(content, match, line_re)) {
+    if (!std::regex_match(content, match, LINE_RE)) {
       throw std::runtime_error{
           std::string{"Unparseable UCD line: "}.append(content)};
     }
@@ -183,7 +183,9 @@ auto parse_property_file(const std::filesystem::path &input_path,
           std::string{"Unknown property value: "}.append(value_token)};
     }
     (entry.is_missing ? missing : data)
-        .push_back({entry.first, entry.last, value_it->second});
+        .push_back({.first = entry.first,
+                    .last = entry.last,
+                    .value = value_it->second});
   });
   std::vector<PropertyEntry> result;
   result.reserve(missing.size() + data.size());
@@ -346,14 +348,15 @@ auto build_canonical_compositions(
         ccc_of(decomposition[0]) != 0 || full_exclusions.contains(composed)) {
       continue;
     }
-    triples.push_back({decomposition[0], decomposition[1], composed});
+    triples.push_back({.starter = decomposition[0],
+                       .combining = decomposition[1],
+                       .composed = composed});
   }
-  std::sort(triples.begin(), triples.end(),
-            [](const CanonicalCompositionTriple &left,
-               const CanonicalCompositionTriple &right) {
-              return std::tie(left.starter, left.combining, left.composed) <
-                     std::tie(right.starter, right.combining, right.composed);
-            });
+  std::ranges::sort(triples, [](const CanonicalCompositionTriple &left,
+                                const CanonicalCompositionTriple &right) {
+    return std::tie(left.starter, left.combining, left.composed) <
+           std::tie(right.starter, right.combining, right.composed);
+  });
   return triples;
 }
 
@@ -404,7 +407,9 @@ auto build_canonical_decomposition_pages(
         (decomposition.size() << DECOMPOSITION_OFFSET_BITS) | offset);
   }
   auto [stage1, stage2] = build_page_table<std::uint16_t>(std::span{packed});
-  return {std::move(blob), std::move(stage1), std::move(stage2)};
+  return {.blob = std::move(blob),
+          .stage1 = std::move(stage1),
+          .stage2 = std::move(stage2)};
 }
 
 auto build_pages(const std::vector<PropertyEntry> &entries) -> TwoStageTable {
@@ -416,7 +421,7 @@ auto build_pages(const std::vector<PropertyEntry> &entries) -> TwoStageTable {
     }
   }
   auto [stage1, stage2] = build_page_table<std::uint8_t>(std::span{values});
-  return {std::move(stage1), std::move(stage2)};
+  return {.stage1 = std::move(stage1), .stage2 = std::move(stage2)};
 }
 
 template <typename T, typename Format>
@@ -436,11 +441,11 @@ auto emit_row(std::ostream &stream, const std::span<const T> items,
   }
 }
 
-constexpr auto emit_decimal{[](std::ostream &stream, const auto value) {
+constexpr auto EMIT_DECIMAL{[](std::ostream &stream, const auto value) {
   stream << static_cast<std::uint64_t>(value);
 }};
 
-constexpr auto emit_hex{[](std::ostream &stream, const auto value) {
+constexpr auto EMIT_HEX{[](std::ostream &stream, const auto value) {
   stream << "0x" << std::hex << std::uppercase
          << static_cast<std::uint64_t>(value) << std::dec;
 }};
@@ -449,11 +454,11 @@ auto emit_property(std::ostream &stream, const std::string_view prefix,
                    const TwoStageTable &table) -> void {
   stream << "constexpr std::uint16_t " << prefix << "_STAGE1["
          << table.stage1.size() << "] = {\n";
-  emit_row<std::uint16_t>(stream, table.stage1, 16, emit_decimal);
+  emit_row<std::uint16_t>(stream, table.stage1, 16, EMIT_DECIMAL);
   stream << "};\n\n";
   stream << "constexpr std::uint8_t " << prefix << "_STAGE2["
          << table.stage2.size() << "] = {\n";
-  emit_row<std::uint8_t>(stream, table.stage2, 16, emit_decimal);
+  emit_row<std::uint8_t>(stream, table.stage2, 16, EMIT_DECIMAL);
   stream << "};\n\n";
 }
 
@@ -461,15 +466,15 @@ auto emit_canonical_decomposition(std::ostream &stream,
                                   const DecompositionTable &table) -> void {
   stream << "constexpr char32_t CANONICAL_DECOMPOSITION_BLOB["
          << table.blob.size() << "] = {\n";
-  emit_row<char32_t>(stream, table.blob, 8, emit_hex);
+  emit_row<char32_t>(stream, table.blob, 8, EMIT_HEX);
   stream << "};\n\n";
   stream << "constexpr std::uint16_t CANONICAL_DECOMPOSITION_STAGE1["
          << table.stage1.size() << "] = {\n";
-  emit_row<std::uint16_t>(stream, table.stage1, 16, emit_decimal);
+  emit_row<std::uint16_t>(stream, table.stage1, 16, EMIT_DECIMAL);
   stream << "};\n\n";
   stream << "constexpr std::uint16_t CANONICAL_DECOMPOSITION_STAGE2["
          << table.stage2.size() << "] = {\n";
-  emit_row<std::uint16_t>(stream, table.stage2, 16, emit_decimal);
+  emit_row<std::uint16_t>(stream, table.stage2, 16, EMIT_DECIMAL);
   stream << "};\n\n";
 }
 
@@ -565,15 +570,30 @@ auto main(const int argc, const char *const argv[]) -> int {
     };
 
     const std::array<PropertySpec, 6> properties{
-        {{"COMBINING_CLASS", positional.at(2), std::nullopt,
-          combining_class_map},
-         {"JOINING_TYPE", positional.at(3), std::nullopt, joining_type_map},
-         {"BIDI_CLASS", positional.at(4), std::nullopt, bidi_class_map},
-         {"UNICODE_SCRIPT", positional.at(5), std::nullopt, script_map},
-         {"IS_COMBINING_MARK", positional.at(6), std::nullopt,
-          combining_mark_map},
-         {"NFC_QUICK_CHECK", normalization_props_path,
-          std::optional<std::string_view>{"NFC_QC"}, nfc_quick_check_map}}};
+        {{.prefix = "COMBINING_CLASS",
+          .input_path = positional.at(2),
+          .property_filter = std::nullopt,
+          .value_map = combining_class_map},
+         {.prefix = "JOINING_TYPE",
+          .input_path = positional.at(3),
+          .property_filter = std::nullopt,
+          .value_map = joining_type_map},
+         {.prefix = "BIDI_CLASS",
+          .input_path = positional.at(4),
+          .property_filter = std::nullopt,
+          .value_map = bidi_class_map},
+         {.prefix = "UNICODE_SCRIPT",
+          .input_path = positional.at(5),
+          .property_filter = std::nullopt,
+          .value_map = script_map},
+         {.prefix = "IS_COMBINING_MARK",
+          .input_path = positional.at(6),
+          .property_filter = std::nullopt,
+          .value_map = combining_mark_map},
+         {.prefix = "NFC_QUICK_CHECK",
+          .input_path = normalization_props_path,
+          .property_filter = std::optional<std::string_view>{"NFC_QC"},
+          .value_map = nfc_quick_check_map}}};
 
     const auto unicode_data{parse_unicode_data(unicode_data_path)};
     const auto full_exclusions{

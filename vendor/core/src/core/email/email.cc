@@ -163,6 +163,15 @@ auto is_idn_email_uts46(const std::string_view value) -> bool {
   return mailbox_separator<true, true>(value).has_value();
 }
 
+auto email_domain(const std::string_view value) -> std::string_view {
+  const auto separator{mailbox_separator<false>(value)};
+  if (!separator.has_value()) {
+    return {};
+  }
+
+  return value.substr(separator.value() + 1);
+}
+
 auto mailto_iri(const std::string_view value) -> std::optional<std::string> {
   const auto separator{mailbox_separator<false>(value)};
   if (!separator.has_value()) {
@@ -170,7 +179,7 @@ auto mailto_iri(const std::string_view value) -> std::optional<std::string> {
   }
 
   std::string result;
-  result.reserve(value.size() * 3 + 7);
+  result.reserve((value.size() * 3) + 7);
   result.append("mailto:");
   for (const auto character : value.substr(0, separator.value())) {
     if (is_mailto_verbatim(character)) {
@@ -222,7 +231,7 @@ auto acct_iri(const std::string_view value) -> std::optional<std::string> {
   }
 
   std::string result;
-  result.reserve(value.size() * 3 + 5);
+  result.reserve((value.size() * 3) + 5);
   result.append("acct:");
   for (const auto character : parts->first) {
     if (is_acct_userpart_verbatim(character)) {

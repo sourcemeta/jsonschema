@@ -215,7 +215,7 @@ compile(const Context &context, const SchemaContext &schema_context,
         const DynamicContext &dynamic_context,
         const sourcemeta::core::WeakPointer &schema_suffix,
         const sourcemeta::core::WeakPointer &instance_suffix =
-            sourcemeta::core::empty_weak_pointer,
+            sourcemeta::core::EMPTY_WEAK_POINTER,
         std::optional<std::string_view> uri = std::nullopt) -> Instructions;
 
 /// @ingroup compiler

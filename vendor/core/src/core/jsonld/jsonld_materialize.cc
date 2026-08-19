@@ -25,8 +25,8 @@ using AnnotationIndex = std::vector<const JSONLDBasicAnnotation<PointerT> *>;
 // A contiguous run of sorted annotations whose positions are all extensions
 // of, or equal to, the position currently being visited
 template <typename PointerT> struct AnnotationRange {
-  typename AnnotationIndex<PointerT>::const_iterator begin;
-  typename AnnotationIndex<PointerT>::const_iterator end;
+  AnnotationIndex<PointerT>::const_iterator begin;
+  AnnotationIndex<PointerT>::const_iterator end;
 };
 
 // The sub-run of annotations that belong to the child position the pointer
@@ -108,7 +108,7 @@ auto types_to_array(const std::vector<JSON::String> &types) -> JSON {
 // The property array of node under the given predicate, creating it as needed.
 auto property_target(JSON &node, const JSON::StringView predicate) -> JSON & {
   const auto hash{node.as_object().hash(predicate)};
-  const auto existing{node.try_at(predicate, hash)};
+  auto *const existing{node.try_at(predicate, hash)};
   if (existing != nullptr) {
     return *existing;
   }
@@ -118,7 +118,7 @@ auto property_target(JSON &node, const JSON::StringView predicate) -> JSON & {
 
 // The property array nested under @reverse and the given predicate.
 auto reverse_target(JSON &node, const JSON::StringView predicate) -> JSON & {
-  const auto existing{node.try_at(KEYWORD_REVERSE, KEYWORD_REVERSE_HASH)};
+  auto *const existing{node.try_at(KEYWORD_REVERSE, KEYWORD_REVERSE_HASH)};
   auto &reverse{existing != nullptr
                     ? *existing
                     : node.assign_assume_new(JSON::String{KEYWORD_REVERSE},

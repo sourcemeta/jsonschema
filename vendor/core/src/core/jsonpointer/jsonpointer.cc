@@ -194,26 +194,23 @@ auto try_get(const JSON &document, const WeakPointer &pointer) -> const JSON * {
 auto get(const JSON &document, const Pointer::Token &token) -> const JSON & {
   if (token.is_property()) {
     return document.at(token.to_property());
-  } else {
-    return document.at(token.to_index());
   }
+  return document.at(token.to_index());
 }
 
 auto get(const JSON &document, const WeakPointer::Token &token)
     -> const JSON & {
   if (token.is_property()) {
     return document.at(token.to_property());
-  } else {
-    return document.at(token.to_index());
   }
+  return document.at(token.to_index());
 }
 
 auto get(JSON &document, const Pointer::Token &token) -> JSON & {
   if (token.is_property()) {
     return document.at(token.to_property());
-  } else {
-    return document.at(token.to_index());
   }
+  return document.at(token.to_index());
 }
 
 auto set(JSON &document, const Pointer &pointer, const JSON &value) -> void {
@@ -290,25 +287,23 @@ auto remove_pointer(JSON &document, const PointerT &pointer) -> bool {
   if (last.is_property()) {
     const auto current_size{current.size()};
     return current.erase(last.to_property()) < current_size;
-  } else {
-    if (current.is_object()) {
-      DigitsBuffer buffer;
-      const auto current_size{current.size()};
-      return current.erase(digits_view(last.to_index(), buffer)) < current_size;
-    } else {
-      const auto index{last.to_index()};
-      const auto &array{current.as_array()};
-
-      if (index >= array.size()) {
-        return false;
-      }
-
-      auto iterator{array.cbegin()};
-      std::advance(iterator, index);
-      current.erase(iterator);
-      return true;
-    }
   }
+  if (current.is_object()) {
+    DigitsBuffer buffer;
+    const auto current_size{current.size()};
+    return current.erase(digits_view(last.to_index(), buffer)) < current_size;
+  }
+  const auto index{last.to_index()};
+  const auto &array{current.as_array()};
+
+  if (index >= array.size()) {
+    return false;
+  }
+
+  auto iterator{array.cbegin()};
+  std::advance(iterator, index);
+  current.erase(iterator);
+  return true;
 }
 
 auto remove(JSON &document, const Pointer &pointer) -> bool {
@@ -366,7 +361,8 @@ auto fragment_to_pointer(const URI &uri) -> std::optional<Pointer> {
 
   if (input.empty()) {
     return Pointer{};
-  } else if (input.front() != '/') {
+  }
+  if (input.front() != '/') {
     return std::nullopt;
   }
 

@@ -45,11 +45,11 @@ struct SOURCEMETA_CORE_URITEMPLATE_EXPORT URITemplateTokenVariable {
   /// The variable specifications to expand
   std::vector<URITemplateVariableSpecification> variables;
   /// The character that separates expanded values
-  static constexpr char separator = ',';
+  static constexpr char SEPARATOR = ',';
   /// Whether the expansion includes variable names
-  static constexpr bool named = false;
+  static constexpr bool NAMED = false;
   /// Whether reserved characters are preserved unencoded
-  static constexpr bool allow_reserved = false;
+  static constexpr bool ALLOW_RESERVED = false;
 };
 
 /// @ingroup uritemplate
@@ -58,13 +58,13 @@ struct SOURCEMETA_CORE_URITEMPLATE_EXPORT URITemplateTokenReservedExpansion {
   /// The variable specifications to expand
   std::vector<URITemplateVariableSpecification> variables;
   /// The operator character that introduces the expression
-  static constexpr char op = '+';
+  static constexpr char OPERATOR = '+';
   /// The character that separates expanded values
-  static constexpr char separator = ',';
+  static constexpr char SEPARATOR = ',';
   /// Whether the expansion includes variable names
-  static constexpr bool named = false;
+  static constexpr bool NAMED = false;
   /// Whether reserved characters are preserved unencoded
-  static constexpr bool allow_reserved = true;
+  static constexpr bool ALLOW_RESERVED = true;
 };
 
 /// @ingroup uritemplate
@@ -73,15 +73,15 @@ struct SOURCEMETA_CORE_URITEMPLATE_EXPORT URITemplateTokenFragmentExpansion {
   /// The variable specifications to expand
   std::vector<URITemplateVariableSpecification> variables;
   /// The operator character that introduces the expression
-  static constexpr char op = '#';
+  static constexpr char OPERATOR = '#';
   /// The character that separates expanded values
-  static constexpr char separator = ',';
+  static constexpr char SEPARATOR = ',';
   /// The character prepended to the expansion output
-  static constexpr char prefix = '#';
+  static constexpr char PREFIX = '#';
   /// Whether the expansion includes variable names
-  static constexpr bool named = false;
+  static constexpr bool NAMED = false;
   /// Whether reserved characters are preserved unencoded
-  static constexpr bool allow_reserved = true;
+  static constexpr bool ALLOW_RESERVED = true;
 };
 
 /// @ingroup uritemplate
@@ -90,15 +90,15 @@ struct SOURCEMETA_CORE_URITEMPLATE_EXPORT URITemplateTokenLabelExpansion {
   /// The variable specifications to expand
   std::vector<URITemplateVariableSpecification> variables;
   /// The operator character that introduces the expression
-  static constexpr char op = '.';
+  static constexpr char OPERATOR = '.';
   /// The character that separates expanded values
-  static constexpr char separator = '.';
+  static constexpr char SEPARATOR = '.';
   /// The character prepended to the expansion output
-  static constexpr char prefix = '.';
+  static constexpr char PREFIX = '.';
   /// Whether the expansion includes variable names
-  static constexpr bool named = false;
+  static constexpr bool NAMED = false;
   /// Whether reserved characters are preserved unencoded
-  static constexpr bool allow_reserved = false;
+  static constexpr bool ALLOW_RESERVED = false;
 };
 
 /// @ingroup uritemplate
@@ -107,15 +107,15 @@ struct SOURCEMETA_CORE_URITEMPLATE_EXPORT URITemplateTokenPathExpansion {
   /// The variable specifications to expand
   std::vector<URITemplateVariableSpecification> variables;
   /// The operator character that introduces the expression
-  static constexpr char op = '/';
+  static constexpr char OPERATOR = '/';
   /// The character that separates expanded values
-  static constexpr char separator = '/';
+  static constexpr char SEPARATOR = '/';
   /// The character prepended to the expansion output
-  static constexpr char prefix = '/';
+  static constexpr char PREFIX = '/';
   /// Whether the expansion includes variable names
-  static constexpr bool named = false;
+  static constexpr bool NAMED = false;
   /// Whether reserved characters are preserved unencoded
-  static constexpr bool allow_reserved = false;
+  static constexpr bool ALLOW_RESERVED = false;
 };
 
 /// @ingroup uritemplate
@@ -125,15 +125,15 @@ struct SOURCEMETA_CORE_URITEMPLATE_EXPORT
   /// The variable specifications to expand
   std::vector<URITemplateVariableSpecification> variables;
   /// The operator character that introduces the expression
-  static constexpr char op = ';';
+  static constexpr char OPERATOR = ';';
   /// The character that separates expanded values
-  static constexpr char separator = ';';
+  static constexpr char SEPARATOR = ';';
   /// The character prepended to the expansion output
-  static constexpr char prefix = ';';
+  static constexpr char PREFIX = ';';
   /// Whether the expansion includes variable names
-  static constexpr bool named = true;
+  static constexpr bool NAMED = true;
   /// Whether reserved characters are preserved unencoded
-  static constexpr bool allow_reserved = false;
+  static constexpr bool ALLOW_RESERVED = false;
 };
 
 /// @ingroup uritemplate
@@ -142,17 +142,17 @@ struct SOURCEMETA_CORE_URITEMPLATE_EXPORT URITemplateTokenQueryExpansion {
   /// The variable specifications to expand
   std::vector<URITemplateVariableSpecification> variables;
   /// The operator character that introduces the expression
-  static constexpr char op = '?';
+  static constexpr char OPERATOR = '?';
   /// The character that separates expanded values
-  static constexpr char separator = '&';
+  static constexpr char SEPARATOR = '&';
   /// The character prepended to the expansion output
-  static constexpr char prefix = '?';
+  static constexpr char PREFIX = '?';
   /// Whether the expansion includes variable names
-  static constexpr bool named = true;
+  static constexpr bool NAMED = true;
   /// Whether reserved characters are preserved unencoded
-  static constexpr bool allow_reserved = false;
+  static constexpr bool ALLOW_RESERVED = false;
   /// The character appended to names with empty values
-  static constexpr char empty_suffix = '=';
+  static constexpr char EMPTY_SUFFIX = '=';
 };
 
 /// @ingroup uritemplate
@@ -162,17 +162,17 @@ struct SOURCEMETA_CORE_URITEMPLATE_EXPORT
   /// The variable specifications to expand
   std::vector<URITemplateVariableSpecification> variables;
   /// The operator character that introduces the expression
-  static constexpr char op = '&';
+  static constexpr char OPERATOR = '&';
   /// The character that separates expanded values
-  static constexpr char separator = '&';
+  static constexpr char SEPARATOR = '&';
   /// The character prepended to the expansion output
-  static constexpr char prefix = '&';
+  static constexpr char PREFIX = '&';
   /// Whether the expansion includes variable names
-  static constexpr bool named = true;
+  static constexpr bool NAMED = true;
   /// Whether reserved characters are preserved unencoded
-  static constexpr bool allow_reserved = false;
+  static constexpr bool ALLOW_RESERVED = false;
   /// The character appended to names with empty values
-  static constexpr char empty_suffix = '=';
+  static constexpr char EMPTY_SUFFIX = '=';
 };
 
 #if defined(_MSC_VER)

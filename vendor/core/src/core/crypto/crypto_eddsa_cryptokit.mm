@@ -1,5 +1,6 @@
 #include "crypto_aes_apple.h"
 #include "crypto_eddsa_apple.h"
+#include "crypto_kdf_apple.h"
 
 #include <cstring> // std::memcpy
 
@@ -114,6 +115,74 @@ extern "C" auto sourcemeta_core_aes_gcm_open_cryptokit(
       std::memcpy(output, result.bytes, result.length);
     }
 
+    return true;
+  }
+}
+
+extern "C" auto sourcemeta_core_hkdf_extract_cryptokit(
+    int hash, const unsigned char *input_key_material,
+    std::size_t input_key_material_size, const unsigned char *salt,
+    std::size_t salt_size, unsigned char *output, std::size_t output_size)
+    -> bool {
+  @autoreleasepool {
+    NSData *const key{[NSData dataWithBytes:input_key_material
+                                     length:input_key_material_size]};
+    NSData *const salt_data{[NSData dataWithBytes:salt length:salt_size]};
+    NSData *const result{[SourcemetaCoreHKDF extractKeyWithHash:hash
+                                              inputKeyMaterial:key
+                                                          salt:salt_data]};
+    if (result == nil || result.length != output_size || output == nullptr) {
+      return false;
+    }
+
+    std::memcpy(output, result.bytes, output_size);
+    return true;
+  }
+}
+
+extern "C" auto sourcemeta_core_hkdf_expand_cryptokit(
+    int hash, const unsigned char *pseudorandom_key,
+    std::size_t pseudorandom_key_size, const unsigned char *info,
+    std::size_t info_size, unsigned char *output, std::size_t length) -> bool {
+  @autoreleasepool {
+    NSData *const key{[NSData dataWithBytes:pseudorandom_key
+                                     length:pseudorandom_key_size]};
+    NSData *const info_data{[NSData dataWithBytes:info length:info_size]};
+    NSData *const result{[SourcemetaCoreHKDF
+        expandKeyWithHash:hash
+          pseudoRandomKey:key
+                     info:info_data
+          outputByteCount:static_cast<NSInteger>(length)]};
+    if (result == nil || result.length != length || output == nullptr) {
+      return false;
+    }
+
+    std::memcpy(output, result.bytes, length);
+    return true;
+  }
+}
+
+extern "C" auto sourcemeta_core_hkdf_derive_cryptokit(
+    int hash, const unsigned char *input_key_material,
+    std::size_t input_key_material_size, const unsigned char *salt,
+    std::size_t salt_size, const unsigned char *info, std::size_t info_size,
+    unsigned char *output, std::size_t length) -> bool {
+  @autoreleasepool {
+    NSData *const key{[NSData dataWithBytes:input_key_material
+                                     length:input_key_material_size]};
+    NSData *const salt_data{[NSData dataWithBytes:salt length:salt_size]};
+    NSData *const info_data{[NSData dataWithBytes:info length:info_size]};
+    NSData *const result{[SourcemetaCoreHKDF
+        deriveKeyWithHash:hash
+         inputKeyMaterial:key
+                     salt:salt_data
+                     info:info_data
+          outputByteCount:static_cast<NSInteger>(length)]};
+    if (result == nil || result.length != length || output == nullptr) {
+      return false;
+    }
+
+    std::memcpy(output, result.bytes, length);
     return true;
   }
 }

@@ -12,6 +12,7 @@
 #include <sourcemeta/core/numeric.h>
 #include <sourcemeta/core/text.h>
 
+#include <algorithm>   // std::max, std::min
 #include <array>       // std::array
 #include <cstddef>     // std::size_t
 #include <cstdint>     // std::uint8_t, std::uint64_t
@@ -25,8 +26,8 @@ using BignumDoubleWord = uint128_t;
 
 struct Bignum {
   // Enough words for an 8192-bit product plus shifting headroom
-  static constexpr std::size_t capacity{130};
-  std::array<std::uint64_t, capacity> words{};
+  static constexpr std::size_t CAPACITY{130};
+  std::array<std::uint64_t, CAPACITY> words{};
   std::size_t size{0};
 };
 
@@ -68,7 +69,7 @@ inline auto bignum_from_bytes(const std::string_view input) noexcept -> Bignum {
   for (std::size_t index = input.size(); index > 0; --index) {
     const auto byte{static_cast<std::uint8_t>(input[index - 1])};
     const auto word_index{bytes_consumed / 8};
-    if (word_index >= Bignum::capacity) {
+    if (word_index >= Bignum::CAPACITY) {
       break;
     }
 
@@ -129,7 +130,7 @@ inline auto bignum_bit_length(const Bignum &value) noexcept -> std::size_t {
   auto top_word{value.words[value.size - 1]};
   std::size_t top_bits{0};
   while (top_word > 0) {
-    top_word >>= 1u;
+    top_word >>= 1U;
     top_bits += 1;
   }
 
@@ -143,7 +144,7 @@ inline auto bignum_get_bit(const Bignum &value, const std::size_t bit) noexcept
     return false;
   }
 
-  return ((value.words[word] >> (bit % 64)) & 1u) != 0;
+  return ((value.words[word] >> (bit % 64)) & 1U) != 0;
 }
 
 // The same read without the size-dependent early return, so the signing ladders
@@ -152,8 +153,8 @@ inline auto bignum_get_bit(const Bignum &value, const std::size_t bit) noexcept
 inline auto bignum_get_bit_fixed(const Bignum &value,
                                  const std::size_t bit) noexcept -> bool {
   const auto word{bit / 64};
-  return word < Bignum::capacity &&
-         ((value.words[word] >> (bit % 64)) & 1u) != 0;
+  return word < Bignum::CAPACITY &&
+         ((value.words[word] >> (bit % 64)) & 1U) != 0;
 }
 
 // Assumes the result fits in the capacity
@@ -163,19 +164,17 @@ inline auto bignum_shift_left(const Bignum &value,
   const auto word_shift{bits / 64};
   const auto bit_shift{bits % 64};
   result.size = value.size + word_shift + 1;
-  if (result.size > Bignum::capacity) {
-    result.size = Bignum::capacity;
-  }
+  result.size = std::min(result.size, Bignum::CAPACITY);
 
   for (std::size_t index = 0; index < value.size; ++index) {
     const auto destination{index + word_shift};
-    if (destination >= Bignum::capacity) {
+    if (destination >= Bignum::CAPACITY) {
       break;
     }
 
     result.words[destination] |= value.words[index] << bit_shift;
-    if (bit_shift > 0 && destination + 1 < Bignum::capacity) {
-      result.words[destination + 1] |= value.words[index] >> (64u - bit_shift);
+    if (bit_shift > 0 && destination + 1 < Bignum::CAPACITY) {
+      result.words[destination + 1] |= value.words[index] >> (64U - bit_shift);
     }
   }
 
@@ -219,7 +218,7 @@ inline auto bignum_reduce(Bignum &value, const Bignum &modulus) noexcept
     const auto divisor{modulus.words[0]};
     BignumDoubleWord remainder{0};
     for (std::size_t index = value.size; index > 0; --index) {
-      remainder = (remainder << 64u) | value.words[index - 1];
+      remainder = (remainder << 64U) | value.words[index - 1];
       remainder %= divisor;
     }
 
@@ -230,14 +229,14 @@ inline auto bignum_reduce(Bignum &value, const Bignum &modulus) noexcept
   // Normalize so the divisor's top word has its high bit set, which bounds the
   // error of each quotient word estimate to at most two
   const auto shift{static_cast<std::size_t>(
-      (64u - (bignum_bit_length(modulus) % 64u)) % 64u)};
+      (64U - (bignum_bit_length(modulus) % 64U)) % 64U)};
   const auto divisor{shift > 0 ? bignum_shift_left(modulus, shift) : modulus};
   auto dividend{shift > 0 ? bignum_shift_left(value, shift) : value};
   const auto dividend_words{dividend.size};
   const auto quotient_words{dividend_words - divisor_words};
   const auto top{divisor.words[divisor_words - 1]};
   const auto next{divisor.words[divisor_words - 2]};
-  const BignumDoubleWord base{static_cast<BignumDoubleWord>(1) << 64u};
+  const BignumDoubleWord base{static_cast<BignumDoubleWord>(1) << 64U};
 
   for (std::size_t step = quotient_words + 1; step > 0; --step) {
     const auto offset{step - 1};
@@ -245,12 +244,12 @@ inline auto bignum_reduce(Bignum &value, const Bignum &modulus) noexcept
     // Estimate the quotient word from the top two words of the running value
     const auto numerator{
         (static_cast<BignumDoubleWord>(dividend.words[offset + divisor_words])
-         << 64u) |
+         << 64U) |
         dividend.words[offset + divisor_words - 1]};
     auto estimate{numerator / top};
     auto estimate_remainder{numerator % top};
     while (estimate >= base ||
-           estimate * next > (estimate_remainder << 64u) +
+           estimate * next > (estimate_remainder << 64U) +
                                  dividend.words[offset + divisor_words - 2]) {
       estimate -= 1;
       estimate_remainder += top;
@@ -264,17 +263,17 @@ inline auto bignum_reduce(Bignum &value, const Bignum &modulus) noexcept
     BignumDoubleWord carry{0};
     std::uint64_t borrow{0};
     for (std::size_t index = 0; index < divisor_words; ++index) {
-      const auto product{static_cast<BignumDoubleWord>(quotient_word) *
-                             divisor.words[index] +
+      const auto product{(static_cast<BignumDoubleWord>(quotient_word) *
+                          divisor.words[index]) +
                          carry};
-      carry = product >> 64u;
+      carry = product >> 64U;
       const auto subtrahend{static_cast<std::uint64_t>(product)};
       const auto current{dividend.words[offset + index]};
       const auto without_subtrahend{current - subtrahend};
-      auto next_borrow{current < subtrahend ? 1u : 0u};
+      auto next_borrow{current < subtrahend ? 1U : 0U};
       const auto result_word{without_subtrahend - borrow};
       if (without_subtrahend < borrow) {
-        next_borrow += 1u;
+        next_borrow += 1U;
       }
 
       dividend.words[offset + index] = result_word;
@@ -284,10 +283,10 @@ inline auto bignum_reduce(Bignum &value, const Bignum &modulus) noexcept
     const auto current{dividend.words[offset + divisor_words]};
     const auto subtrahend{static_cast<std::uint64_t>(carry)};
     const auto without_subtrahend{current - subtrahend};
-    auto next_borrow{current < subtrahend ? 1u : 0u};
+    auto next_borrow{current < subtrahend ? 1U : 0U};
     dividend.words[offset + divisor_words] = without_subtrahend - borrow;
     if (without_subtrahend < borrow) {
-      next_borrow += 1u;
+      next_borrow += 1U;
     }
 
     // The estimate was at most one too large, so add the divisor back when the
@@ -299,7 +298,7 @@ inline auto bignum_reduce(Bignum &value, const Bignum &modulus) noexcept
             static_cast<BignumDoubleWord>(dividend.words[offset + index]) +
             divisor.words[index] + add_carry};
         dividend.words[offset + index] = static_cast<std::uint64_t>(sum);
-        add_carry = sum >> 64u;
+        add_carry = sum >> 64U;
       }
 
       dividend.words[offset + divisor_words] +=
@@ -318,27 +317,26 @@ inline auto bignum_multiply(const Bignum &left, const Bignum &right) noexcept
     -> Bignum {
   Bignum result;
   result.size = left.size + right.size;
-  if (result.size > Bignum::capacity) {
-    result.size = Bignum::capacity;
-  }
+  result.size = std::min(result.size, Bignum::CAPACITY);
 
   for (std::size_t left_index = 0; left_index < left.size; ++left_index) {
     std::uint64_t carry{0};
     for (std::size_t right_index = 0; right_index < right.size; ++right_index) {
       const auto destination{left_index + right_index};
-      if (destination >= Bignum::capacity) {
+      if (destination >= Bignum::CAPACITY) {
         break;
       }
 
-      const auto product{static_cast<BignumDoubleWord>(left.words[left_index]) *
-                             right.words[right_index] +
-                         result.words[destination] + carry};
+      const auto product{
+          (static_cast<BignumDoubleWord>(left.words[left_index]) *
+           right.words[right_index]) +
+          result.words[destination] + carry};
       result.words[destination] = static_cast<std::uint64_t>(product);
-      carry = static_cast<std::uint64_t>(product >> 64u);
+      carry = static_cast<std::uint64_t>(product >> 64U);
     }
 
     const auto carry_destination{left_index + right.size};
-    if (carry_destination < Bignum::capacity) {
+    if (carry_destination < Bignum::CAPACITY) {
       result.words[carry_destination] += carry;
     }
   }
@@ -379,11 +377,11 @@ inline auto bignum_add(const Bignum &left, const Bignum &right) noexcept
     const auto second{index < right.size ? right.words[index] : 0};
     const auto sum{static_cast<BignumDoubleWord>(first) + second + carry};
     result.words[index] = static_cast<std::uint64_t>(sum);
-    carry = static_cast<std::uint64_t>(sum >> 64u);
+    carry = static_cast<std::uint64_t>(sum >> 64U);
   }
 
   result.size = larger;
-  if (carry > 0 && larger < Bignum::capacity) {
+  if (carry > 0 && larger < Bignum::CAPACITY) {
     result.words[larger] = carry;
     result.size = larger + 1;
   }
@@ -405,7 +403,7 @@ inline auto bignum_shift_right(const Bignum &value,
   for (std::size_t index = 0; index < result.size; ++index) {
     auto word{value.words[index + word_shift] >> bit_shift};
     if (bit_shift > 0 && index + word_shift + 1 < value.size) {
-      word |= value.words[index + word_shift + 1] << (64u - bit_shift);
+      word |= value.words[index + word_shift + 1] << (64U - bit_shift);
     }
 
     result.words[index] = word;
@@ -452,7 +450,7 @@ inline auto bignum_mod_multiply(const Bignum &left, const Bignum &right,
 // becomes even by adding the modulus first, so the result stays an integer
 inline auto bignum_mod_halve(const Bignum &value,
                              const Bignum &modulus) noexcept -> Bignum {
-  if ((value.words[0] & 1u) == 0) {
+  if ((value.words[0] & 1U) == 0) {
     return bignum_shift_right(value, 1);
   }
 
@@ -481,12 +479,12 @@ inline auto bignum_mod_inverse(const Bignum &value,
       return {};
     }
 
-    while ((first.words[0] & 1u) == 0) {
+    while ((first.words[0] & 1U) == 0) {
       first = bignum_shift_right(first, 1);
       first_coefficient = bignum_mod_halve(first_coefficient, modulus);
     }
 
-    while ((second.words[0] & 1u) == 0) {
+    while ((second.words[0] & 1U) == 0) {
       second = bignum_shift_right(second, 1);
       second_coefficient = bignum_mod_halve(second_coefficient, modulus);
     }
@@ -515,7 +513,7 @@ inline auto bignum_conditional_select(const bool condition,
   const std::uint64_t mask{std::uint64_t{0} -
                            static_cast<std::uint64_t>(condition)};
   Bignum result;
-  for (std::size_t index = 0; index < Bignum::capacity; ++index) {
+  for (std::size_t index = 0; index < Bignum::CAPACITY; ++index) {
     result.words[index] =
         (when_true.words[index] & mask) | (when_false.words[index] & ~mask);
   }
@@ -538,9 +536,9 @@ inline auto bignum_subtract_fixed(const Bignum &left, const Bignum &right,
     const auto left_word{left.words[index]};
     const auto right_word{right.words[index]};
     const auto without_right{left_word - right_word};
-    const std::uint64_t borrow_from_right{left_word < right_word ? 1u : 0u};
+    const std::uint64_t borrow_from_right{left_word < right_word ? 1U : 0U};
     const auto result_word{without_right - borrow};
-    const std::uint64_t borrow_from_previous{without_right < borrow ? 1u : 0u};
+    const std::uint64_t borrow_from_previous{without_right < borrow ? 1U : 0U};
     out.words[index] = result_word;
     borrow = borrow_from_right | borrow_from_previous;
   }
@@ -561,11 +559,12 @@ inline auto bignum_multiply_fixed(const Bignum &left, const Bignum &right,
     for (std::size_t right_index = 0; right_index < right_words;
          ++right_index) {
       const auto destination{left_index + right_index};
-      const auto product{static_cast<BignumDoubleWord>(left.words[left_index]) *
-                             right.words[right_index] +
-                         result.words[destination] + carry};
+      const auto product{
+          (static_cast<BignumDoubleWord>(left.words[left_index]) *
+           right.words[right_index]) +
+          result.words[destination] + carry};
       result.words[destination] = static_cast<std::uint64_t>(product);
-      carry = static_cast<std::uint64_t>(product >> 64u);
+      carry = static_cast<std::uint64_t>(product >> 64U);
     }
 
     result.words[left_index + right_words] = carry;
@@ -580,7 +579,7 @@ inline auto bignum_multiply_fixed(const Bignum &left, const Bignum &right,
 inline auto bignum_drop_low_words(const Bignum &value,
                                   const std::size_t words) noexcept -> Bignum {
   Bignum result;
-  for (std::size_t index = 0; index + words < Bignum::capacity; ++index) {
+  for (std::size_t index = 0; index + words < Bignum::CAPACITY; ++index) {
     result.words[index] = value.words[index + words];
   }
 
@@ -609,7 +608,7 @@ inline auto bignum_divide(const Bignum &numerator,
   for (std::size_t index = bits; index > 0; --index) {
     remainder = bignum_shift_left(remainder, 1);
     if (bignum_get_bit(numerator, index - 1)) {
-      remainder.words[0] |= 1u;
+      remainder.words[0] |= 1U;
       if (remainder.size == 0) {
         remainder.size = 1;
       }
@@ -619,9 +618,7 @@ inline auto bignum_divide(const Bignum &numerator,
       bignum_subtract_in_place(remainder, denominator);
       quotient.words[(index - 1) / 64] |= std::uint64_t{1}
                                           << ((index - 1) % 64);
-      if (quotient.size < ((index - 1) / 64) + 1) {
-        quotient.size = ((index - 1) / 64) + 1;
-      }
+      quotient.size = std::max(quotient.size, ((index - 1) / 64) + 1);
     }
   }
 
@@ -700,7 +697,7 @@ inline auto field_add_ct(const Bignum &left, const Bignum &right,
     const auto total{static_cast<BignumDoubleWord>(left.words[index]) +
                      right.words[index] + carry};
     sum.words[index] = static_cast<std::uint64_t>(total);
-    carry = static_cast<std::uint64_t>(total >> 64u);
+    carry = static_cast<std::uint64_t>(total >> 64U);
   }
 
   sum.words[width] = carry;
@@ -722,7 +719,7 @@ inline auto field_subtract_ct(const Bignum &left, const Bignum &right,
     const auto total{static_cast<BignumDoubleWord>(difference.words[index]) +
                      context.modulus.words[index] + carry};
     wrapped.words[index] = static_cast<std::uint64_t>(total);
-    carry = static_cast<std::uint64_t>(total >> 64u);
+    carry = static_cast<std::uint64_t>(total >> 64U);
   }
 
   wrapped.size = width;
@@ -787,7 +784,7 @@ inline auto bignum_to_bytes(const Bignum &value, const std::size_t length)
     }
 
     const auto byte{static_cast<std::uint8_t>(
-        (value.words[word_index] >> (8 * (index % 8))) & 0xffu)};
+        (value.words[word_index] >> (8 * (index % 8))) & 0xffU)};
     result[length - 1 - index] = static_cast<char>(byte);
   }
 

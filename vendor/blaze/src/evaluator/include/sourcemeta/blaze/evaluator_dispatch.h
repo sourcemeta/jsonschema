@@ -913,7 +913,7 @@ INSTRUCTION_HANDLER(AssertionStringType) {
       result = is_email(target);
       break;
     case ValueStringType::IDNEmail:
-      result = is_idn_email(target);
+      result = is_idn_email_uts46(target);
       break;
     case ValueStringType::IPv4:
       result = is_ipv4(target);

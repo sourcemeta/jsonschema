@@ -401,7 +401,7 @@ inline constexpr HTTPStatus HTTP_STATUS_NETWORK_AUTHENTICATION_REQUIRED{
 ///        sourcemeta::core::HTTP_STATUS_OK);
 /// assert(sourcemeta::core::http_status_from_code(599).phrase.empty());
 /// ```
-inline constexpr auto http_status_from_code(const std::uint16_t code) noexcept
+constexpr auto http_status_from_code(const std::uint16_t code) noexcept
     -> HTTPStatus {
   switch (code) {
     case 100:

@@ -15,19 +15,19 @@ constexpr auto UINT64_MAX_VALUE = std::numeric_limits<std::uint64_t>::max();
 constexpr auto UINT64_MAX_DIV_10 = UINT64_MAX_VALUE / 10;
 constexpr auto UINT64_MAX_MOD_10 = UINT64_MAX_VALUE % 10;
 
-enum class NumericParseResult : std::uint8_t { success, invalid, overflow };
+enum class NumericParseResult : std::uint8_t { Success, Invalid, Overflow };
 
 auto parse_numeric_identifier(const std::string_view input,
                               std::size_t &position, std::uint64_t &result)
     -> NumericParseResult {
   if (position >= input.size() ||
       !sourcemeta::core::is_digit(input[position])) {
-    return NumericParseResult::invalid;
+    return NumericParseResult::Invalid;
   }
 
   if (input[position] == '0' && position + 1 < input.size() &&
       sourcemeta::core::is_digit(input[position + 1])) {
-    return NumericParseResult::invalid;
+    return NumericParseResult::Invalid;
   }
 
   std::uint64_t value = 0;
@@ -36,15 +36,15 @@ auto parse_numeric_identifier(const std::string_view input,
     const auto digit = static_cast<std::uint64_t>(input[position] - '0');
     if (value > UINT64_MAX_DIV_10 ||
         (value == UINT64_MAX_DIV_10 && digit > UINT64_MAX_MOD_10)) {
-      return NumericParseResult::overflow;
+      return NumericParseResult::Overflow;
     }
 
-    value = value * 10 + digit;
+    value = (value * 10) + digit;
     ++position;
   }
 
   result = value;
-  return NumericParseResult::success;
+  return NumericParseResult::Success;
 }
 
 auto validate_pre_release_identifier(const std::string_view identifier)
@@ -85,7 +85,7 @@ auto validate_build_identifier(const std::string_view identifier) -> bool {
   return true;
 }
 
-template <auto validator>
+template <auto Validator>
 auto validate_dot_separated(const std::string_view input) -> bool {
   if (input.empty()) {
     return false;
@@ -98,7 +98,7 @@ auto validate_dot_separated(const std::string_view input) -> bool {
       dot_position = input.size();
     }
 
-    if (!validator(
+    if (!Validator(
             std::string_view{input.data() + start, dot_position - start})) {
       return false;
     }
@@ -132,7 +132,7 @@ auto classify_identifier(const std::string_view identifier) noexcept
       return {.is_numeric = true, .overflowed = true, .numeric_value = 0};
     }
 
-    value = value * 10 + digit;
+    value = (value * 10) + digit;
   }
 
   return {.is_numeric = true, .overflowed = false, .numeric_value = value};
@@ -229,14 +229,14 @@ auto compare_pre_release(const std::string_view left,
   return 0;
 }
 
-template <bool should_throw, bool loose>
+template <bool ShouldThrow, bool Loose>
 auto parse_semver(const std::string_view input, std::uint64_t &major,
                   std::uint64_t &minor, std::uint64_t &patch,
                   std::string_view &pre_release, std::string_view &build)
     -> bool {
   std::size_t position = 0;
 
-  if constexpr (loose) {
+  if constexpr (Loose) {
     if (position < input.size() &&
         (input[position] == 'v' || input[position] == 'V')) {
       ++position;
@@ -244,16 +244,16 @@ auto parse_semver(const std::string_view input, std::uint64_t &major,
   }
 
   const auto major_result = parse_numeric_identifier(input, position, major);
-  if (major_result == NumericParseResult::overflow) {
-    if constexpr (should_throw) {
+  if (major_result == NumericParseResult::Overflow) {
+    if constexpr (ShouldThrow) {
       throw sourcemeta::core::SemVerOverflowError(position + 1);
     }
 
     return false;
   }
 
-  if (major_result == NumericParseResult::invalid) {
-    if constexpr (should_throw) {
+  if (major_result == NumericParseResult::Invalid) {
+    if constexpr (ShouldThrow) {
       throw sourcemeta::core::SemVerParseError(position + 1);
     }
 
@@ -263,14 +263,14 @@ auto parse_semver(const std::string_view input, std::uint64_t &major,
   auto can_end_core = [&]() -> bool {
     if (position >= input.size() || input[position] == '-' ||
         input[position] == '+') {
-      return loose;
+      return Loose;
     }
 
     return input[position] == '.';
   };
 
   if (!can_end_core()) {
-    if constexpr (should_throw) {
+    if constexpr (ShouldThrow) {
       throw sourcemeta::core::SemVerParseError(position + 1);
     }
 
@@ -281,16 +281,16 @@ auto parse_semver(const std::string_view input, std::uint64_t &major,
     ++position;
 
     const auto minor_result = parse_numeric_identifier(input, position, minor);
-    if (minor_result == NumericParseResult::overflow) {
-      if constexpr (should_throw) {
+    if (minor_result == NumericParseResult::Overflow) {
+      if constexpr (ShouldThrow) {
         throw sourcemeta::core::SemVerOverflowError(position + 1);
       }
 
       return false;
     }
 
-    if (minor_result == NumericParseResult::invalid) {
-      if constexpr (should_throw) {
+    if (minor_result == NumericParseResult::Invalid) {
+      if constexpr (ShouldThrow) {
         throw sourcemeta::core::SemVerParseError(position + 1);
       }
 
@@ -298,7 +298,7 @@ auto parse_semver(const std::string_view input, std::uint64_t &major,
     }
 
     if (!can_end_core()) {
-      if constexpr (should_throw) {
+      if constexpr (ShouldThrow) {
         throw sourcemeta::core::SemVerParseError(position + 1);
       }
 
@@ -310,16 +310,16 @@ auto parse_semver(const std::string_view input, std::uint64_t &major,
 
       const auto patch_result =
           parse_numeric_identifier(input, position, patch);
-      if (patch_result == NumericParseResult::overflow) {
-        if constexpr (should_throw) {
+      if (patch_result == NumericParseResult::Overflow) {
+        if constexpr (ShouldThrow) {
           throw sourcemeta::core::SemVerOverflowError(position + 1);
         }
 
         return false;
       }
 
-      if (patch_result == NumericParseResult::invalid) {
-        if constexpr (should_throw) {
+      if (patch_result == NumericParseResult::Invalid) {
+        if constexpr (ShouldThrow) {
           throw sourcemeta::core::SemVerParseError(position + 1);
         }
 
@@ -339,7 +339,7 @@ auto parse_semver(const std::string_view input, std::uint64_t &major,
     // directly to keep this path non-throwing
     pre_release = std::string_view{input.data() + start, position - start};
     if (!validate_dot_separated<validate_pre_release_identifier>(pre_release)) {
-      if constexpr (should_throw) {
+      if constexpr (ShouldThrow) {
         throw sourcemeta::core::SemVerParseError(start + 1);
       }
 
@@ -354,7 +354,7 @@ auto parse_semver(const std::string_view input, std::uint64_t &major,
 
     build = std::string_view{input.data() + start, position - start};
     if (!validate_dot_separated<validate_build_identifier>(build)) {
-      if constexpr (should_throw) {
+      if constexpr (ShouldThrow) {
         throw sourcemeta::core::SemVerParseError(start + 1);
       }
 
@@ -363,7 +363,7 @@ auto parse_semver(const std::string_view input, std::uint64_t &major,
   }
 
   if (position != input.size()) {
-    if constexpr (should_throw) {
+    if constexpr (ShouldThrow) {
       throw sourcemeta::core::SemVerParseError(position + 1);
     }
 

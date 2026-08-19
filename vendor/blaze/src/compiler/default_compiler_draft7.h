@@ -16,8 +16,8 @@ auto compiler_draft7_applicator_if(const Context &context,
   // `if`
   Instructions children{compile(context, schema_context,
                                 relative_dynamic_context(),
-                                sourcemeta::core::empty_weak_pointer,
-                                sourcemeta::core::empty_weak_pointer)};
+                                sourcemeta::core::EMPTY_WEAK_POINTER,
+                                sourcemeta::core::EMPTY_WEAK_POINTER)};
 
   // `then`
   std::size_t then_cursor{children.size()};
@@ -39,8 +39,8 @@ auto compiler_draft7_applicator_if(const Context &context,
     if (then_cursor == 0 && context.uses_dynamic_scopes) {
       Instructions substeps{
           compile(context, schema_context, relative_dynamic_context(),
-                  sourcemeta::core::empty_weak_pointer,
-                  sourcemeta::core::empty_weak_pointer, destination)};
+                  sourcemeta::core::EMPTY_WEAK_POINTER,
+                  sourcemeta::core::EMPTY_WEAK_POINTER, destination)};
       if (substeps.empty()) {
         return children;
       }
@@ -69,11 +69,11 @@ auto compiler_draft7_applicator_if(const Context &context,
         .base_schema_location = dynamic_context.base_schema_location,
         .base_instance_location = then_cursor == 0
                                       ? dynamic_context.base_instance_location
-                                      : sourcemeta::core::empty_weak_pointer};
+                                      : sourcemeta::core::EMPTY_WEAK_POINTER};
     for (auto &&step :
          compile(context, schema_context, new_dynamic_context,
-                 sourcemeta::core::empty_weak_pointer,
-                 sourcemeta::core::empty_weak_pointer, destination)) {
+                 sourcemeta::core::EMPTY_WEAK_POINTER,
+                 sourcemeta::core::EMPTY_WEAK_POINTER, destination)) {
       children.push_back(std::move(step));
     }
 
@@ -105,11 +105,11 @@ auto compiler_draft7_applicator_if(const Context &context,
     DynamicContext new_dynamic_context{
         .keyword = KEYWORD_ELSE,
         .base_schema_location = dynamic_context.base_schema_location,
-        .base_instance_location = sourcemeta::core::empty_weak_pointer};
+        .base_instance_location = sourcemeta::core::EMPTY_WEAK_POINTER};
     for (auto &&step :
          compile(context, schema_context, new_dynamic_context,
-                 sourcemeta::core::empty_weak_pointer,
-                 sourcemeta::core::empty_weak_pointer, destination)) {
+                 sourcemeta::core::EMPTY_WEAK_POINTER,
+                 sourcemeta::core::EMPTY_WEAK_POINTER, destination)) {
       children.push_back(std::move(step));
     }
   }

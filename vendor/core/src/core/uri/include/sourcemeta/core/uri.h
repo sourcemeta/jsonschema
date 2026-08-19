@@ -871,7 +871,7 @@ public:
   template <typename Output>
   static auto escape(const std::string_view input, Output &output,
                      const bool maybe_encoded = false) -> void {
-    output.reserve(output.size() + input.size() * 3);
+    output.reserve(output.size() + (input.size() * 3));
     for (std::size_t position = 0; position < input.size();) {
       auto byte{static_cast<unsigned char>(input[position])};
       std::size_t advance{1};
@@ -1067,6 +1067,36 @@ public:
   /// ```
   [[nodiscard]] static auto is_uri_reference(std::string_view input) noexcept
       -> bool;
+
+  /// Check if the given string is a valid RFC 3986 Section 4.2 absolute-path
+  /// reference, a relative reference whose relative part is a path-absolute,
+  /// with an optional query and fragment, without constructing a full URI
+  /// object.
+  ///
+  /// Such a reference resolves within the origin of whatever it is resolved
+  /// against, since it begins with a single slash and cannot begin with two,
+  /// which is what a network-path reference would need to name another
+  /// authority. That makes it the shape a redirect target must have for the
+  /// redirect to stay same-origin.
+  ///
+  /// The grammar is applied strictly, so every octet outside `pchar` is
+  /// refused and a percent sign must introduce two hexadecimal digits. Note
+  /// that this is a syntactic check alone. A dot-segment is well formed, so
+  /// this says nothing about where the reference lands within the origin and
+  /// is no defence against path traversal.
+  ///
+  /// For example:
+  ///
+  /// ```cpp
+  /// #include <sourcemeta/core/uri.h>
+  /// #include <cassert>
+  ///
+  /// assert(sourcemeta::core::URI::is_absolute_path_reference("/schemas?page=2"));
+  /// assert(!sourcemeta::core::URI::is_absolute_path_reference("//example.com"));
+  /// assert(!sourcemeta::core::URI::is_absolute_path_reference("https://example.com"));
+  /// ```
+  [[nodiscard]] static auto
+  is_absolute_path_reference(std::string_view input) noexcept -> bool;
 
   /// Check if the given string is a valid absolute IRI (has a scheme) per
   /// RFC 3987 without constructing a full URI object. For example:

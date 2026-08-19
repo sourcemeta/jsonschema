@@ -445,8 +445,8 @@ auto compiler_draft6_applicator_contains(const Context &context,
 
   Instructions children{compile(context, schema_context,
                                 relative_dynamic_context(),
-                                sourcemeta::core::empty_weak_pointer,
-                                sourcemeta::core::empty_weak_pointer)};
+                                sourcemeta::core::EMPTY_WEAK_POINTER,
+                                sourcemeta::core::EMPTY_WEAK_POINTER)};
 
   if (children.empty()) {
     // We still need to check the instance is not empty
@@ -475,8 +475,8 @@ auto compiler_draft6_validation_propertynames(
   nested_schema_context.is_property_name = true;
   Instructions children{compile(context, nested_schema_context,
                                 relative_dynamic_context(),
-                                sourcemeta::core::empty_weak_pointer,
-                                sourcemeta::core::empty_weak_pointer)};
+                                sourcemeta::core::EMPTY_WEAK_POINTER,
+                                sourcemeta::core::EMPTY_WEAK_POINTER)};
 
   if (children.empty()) {
     return {};

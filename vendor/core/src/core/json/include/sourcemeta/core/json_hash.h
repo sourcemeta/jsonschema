@@ -16,7 +16,7 @@ namespace sourcemeta::core {
 template <typename T> struct HashJSON {
   using hash_type = std::uint64_t;
 
-  inline auto operator()(const T &value) const noexcept -> hash_type {
+  auto operator()(const T &value) const noexcept -> hash_type {
     if constexpr (requires { value.get().fast_hash(); }) {
       return value.get().fast_hash();
     } else {
@@ -26,7 +26,8 @@ template <typename T> struct HashJSON {
 
   /// Check whether the given hash is a perfect hash
   [[nodiscard]]
-  inline auto is_perfect(const hash_type) const noexcept -> bool {
+  auto is_perfect([[maybe_unused]] const hash_type hash) const noexcept
+      -> bool {
     return false;
   }
 };
@@ -34,19 +35,23 @@ template <typename T> struct HashJSON {
 /// @ingroup json
 /// A hash function object for JSON object property keys
 template <typename T> struct PropertyHashJSON {
-  struct hash_type {
+  /// The two halves that make up a property key hash
+  struct HashType {
+    /// The unsigned integer type each half is stored as
     using type = sourcemeta::core::uint128_t;
+    /// The first half of the hash
     type a{0};
+    /// The second half of the hash
     type b{0};
 
-    auto operator==(const hash_type &) const noexcept -> bool = default;
+    auto operator==(const HashType &) const noexcept -> bool = default;
   };
 
   /// Compute a perfect hash from raw data
   [[nodiscard]]
   constexpr auto perfect(const char *data,
-                         const std::size_t size) const noexcept -> hash_type {
-    hash_type result;
+                         const std::size_t size) const noexcept -> HashType {
+    HashType result;
     assert(size > 0);
     if consteval {
       // A constant evaluation cannot memcpy through a reinterpret_cast, so pack
@@ -56,7 +61,7 @@ template <typename T> struct PropertyHashJSON {
       // silently diverge
       static_assert(std::endian::native == std::endian::little);
       for (std::size_t index = 0; index < size; index += 1) {
-        const auto byte{static_cast<typename hash_type::type>(
+        const auto byte{static_cast<HashType::type>(
             static_cast<unsigned char>(data[index]))};
         const auto position{index + 1};
         if (position < 16) {
@@ -76,7 +81,7 @@ template <typename T> struct PropertyHashJSON {
   // std::string to std::string_view, so we provide separate overloads with
   // duplicated logic instead of unifying on a single parameter type
 
-  constexpr auto operator()(const T &value) const noexcept -> hash_type {
+  constexpr auto operator()(const T &value) const noexcept -> HashType {
     const auto size{value.size()};
     switch (size) {
       case 0:
@@ -149,8 +154,8 @@ template <typename T> struct PropertyHashJSON {
         // have a lot of entries, so hash collision is not as common
         auto hash = this->perfect(value.data(), 31);
         hash.a |= 1 + (static_cast<std::uint64_t>(size) +
-                       static_cast<typename hash_type::type>(value.front()) +
-                       static_cast<typename hash_type::type>(value.back())) %
+                       static_cast<HashType::type>(value.front()) +
+                       static_cast<HashType::type>(value.back())) %
                           // Make sure the property hash can never exceed 8 bits
                           255;
         return hash;
@@ -158,8 +163,7 @@ template <typename T> struct PropertyHashJSON {
   }
 
   constexpr auto operator()(const char *data,
-                            const std::size_t size) const noexcept
-      -> hash_type {
+                            const std::size_t size) const noexcept -> HashType {
     switch (size) {
       case 0:
         return {};
@@ -231,8 +235,8 @@ template <typename T> struct PropertyHashJSON {
         // have a lot of entries, so hash collision is not as common
         auto hash = this->perfect(data, 31);
         hash.a |= 1 + (static_cast<std::uint64_t>(size) +
-                       static_cast<typename hash_type::type>(data[0]) +
-                       static_cast<typename hash_type::type>(data[size - 1])) %
+                       static_cast<HashType::type>(data[0]) +
+                       static_cast<HashType::type>(data[size - 1])) %
                           // Make sure the property hash can never exceed 8 bits
                           255;
         return hash;
@@ -241,7 +245,7 @@ template <typename T> struct PropertyHashJSON {
 
   /// Check whether the given hash is a perfect hash
   [[nodiscard]]
-  constexpr auto is_perfect(const hash_type &hash) const noexcept -> bool {
+  constexpr auto is_perfect(const HashType &hash) const noexcept -> bool {
     // If there is anything written past the first byte,
     // then it is a perfect hash
     return (hash.a & 255) == 0;
@@ -254,7 +258,7 @@ template <typename T> struct PropertyHashJSON {
 /// See
 /// https://en.cppreference.com/w/cpp/utility/functional/reference_wrapper/operator_cmp.html
 template <typename T> struct EqualJSON {
-  inline auto operator()(const T &left, const T &right) const -> bool {
+  auto operator()(const T &left, const T &right) const -> bool {
     if constexpr (requires { left.get() == right.get(); }) {
       return left.get() == right.get();
     } else {

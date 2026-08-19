@@ -37,7 +37,7 @@ private:
 #pragma warning(disable : 4251)
 #endif
   struct Internal;
-  std::unique_ptr<Internal> internal;
+  std::unique_ptr<Internal> internal_;
 #if defined(_MSC_VER)
 #pragma warning(default : 4251)
 #endif

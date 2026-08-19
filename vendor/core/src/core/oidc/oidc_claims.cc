@@ -139,6 +139,32 @@ auto claim_specification(const JSON &claims, const std::string_view target,
   return target_object->try_at(claim);
 }
 
+// RFC 7643 Section 2.4: an element of a multi-valued attribute is either a
+// primitive or a complex object, where the significant value lives under
+// "value" and every other sub-attribute is descriptive
+auto claim_request_accepts_member(const JSON &request, const JSON &value)
+    -> bool {
+  // RFC 7643 Section 2.5: an unassigned attribute, the null value, and the
+  // empty array "SHALL be considered to be equivalent in state", and the empty
+  // array carries no membership, so neither does the null value
+  if (value.is_null()) {
+    return false;
+  }
+
+  if (value.is_object()) {
+    const auto *significant{value.try_at("value"sv, HASH_VALUE)};
+    return significant != nullptr && !significant->is_null() &&
+           oidc_claim_request_accepts(request, *significant);
+  }
+
+  // A nested array is no member shape the schema defines
+  if (value.is_array()) {
+    return false;
+  }
+
+  return oidc_claim_request_accepts(request, value);
+}
+
 } // namespace
 
 auto oidc_is_standard_claim(const std::string_view name) noexcept -> bool {
@@ -328,6 +354,23 @@ auto oidc_claims_parameter_accepts(const JSON &claims,
   const auto *specification{claim_specification(claims, target, claim)};
   return specification != nullptr &&
          oidc_claim_request_accepts(*specification, value);
+}
+
+auto oidc_claim_request_accepts_multi_valued(const JSON &request,
+                                             const JSON &value) -> bool {
+  // A set the caller belongs to, so belonging by any one of its members is
+  // what the request asks about, and belonging to none is belonging to nothing
+  if (value.is_array()) {
+    for (const auto &member : value.as_array()) {
+      if (claim_request_accepts_member(request, member)) {
+        return true;
+      }
+    }
+
+    return false;
+  }
+
+  return claim_request_accepts_member(request, value);
 }
 
 } // namespace sourcemeta::core

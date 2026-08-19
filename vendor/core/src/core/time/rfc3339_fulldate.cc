@@ -18,8 +18,8 @@ auto is_rfc3339_fulldate(const std::string_view value) -> bool {
     return false;
   }
   const auto year{static_cast<std::uint16_t>(
-      (value[0] - '0') * 1000 + (value[1] - '0') * 100 + (value[2] - '0') * 10 +
-      (value[3] - '0'))};
+      ((value[0] - '0') * 1000) + ((value[1] - '0') * 100) +
+      ((value[2] - '0') * 10) + (value[3] - '0'))};
 
   if (value[4] != '-') {
     return false;
@@ -30,7 +30,7 @@ auto is_rfc3339_fulldate(const std::string_view value) -> bool {
     return false;
   }
   const auto month{
-      static_cast<std::uint8_t>((value[5] - '0') * 10 + (value[6] - '0'))};
+      static_cast<std::uint8_t>(((value[5] - '0') * 10) + (value[6] - '0'))};
   if (month < 1 || month > 12) {
     return false;
   }
@@ -44,7 +44,7 @@ auto is_rfc3339_fulldate(const std::string_view value) -> bool {
     return false;
   }
   const auto day{
-      static_cast<std::uint8_t>((value[8] - '0') * 10 + (value[9] - '0'))};
+      static_cast<std::uint8_t>(((value[8] - '0') * 10) + (value[9] - '0'))};
   if (day < 1 || day > max_day_in_month(month, year)) {
     return false;
   }

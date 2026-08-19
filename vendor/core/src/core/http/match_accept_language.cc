@@ -43,7 +43,7 @@ auto http_match_accept_language(
   }
 
   std::string_view best{};
-  float best_quality{0.0f};
+  float best_quality{0.0F};
   std::size_t best_specificity{0};
   std::size_t best_order{candidates.size()};
 
@@ -53,7 +53,7 @@ auto http_match_accept_language(
     assert(candidate.find_first_of(" \t,;*/") == std::string_view::npos);
     assert(candidate[0] != '-');
     assert(candidate[candidate.size() - 1] != '-');
-    float candidate_quality{0.0f};
+    float candidate_quality{0.0F};
     std::size_t candidate_specificity{0};
     http_for_each_accept_entry(
         accept_language_header,
@@ -73,7 +73,7 @@ auto http_match_accept_language(
             candidate_specificity = specificity;
           }
         });
-    if (candidate_quality > 0.0f &&
+    if (candidate_quality > 0.0F &&
         (candidate_quality > best_quality ||
          (candidate_quality == best_quality &&
           candidate_specificity > best_specificity) ||

@@ -137,36 +137,37 @@ auto generate_node_map(BlankNodeState &state, JSON &node_map,
   }
 
   // A node object.
-  std::optional<JSON::String> id;
+  std::optional<JSON::String> identifier;
   if (working.defines(KEYWORD_ID, KEYWORD_ID_HASH)) {
     const auto &id_value{working.at(KEYWORD_ID, KEYWORD_ID_HASH)};
     if (id_value.is_string()) {
-      id = is_blank_node(id_value.to_string())
-               ? generate_blank_node_identifier(state, id_value.to_string())
-               : id_value.to_string();
+      identifier =
+          is_blank_node(id_value.to_string())
+              ? generate_blank_node_identifier(state, id_value.to_string())
+              : id_value.to_string();
     }
     working.erase(KEYWORD_ID);
   }
-  if (!id.has_value()) {
-    id = generate_blank_node_identifier(state, std::nullopt);
+  if (!identifier.has_value()) {
+    identifier = generate_blank_node_identifier(state, std::nullopt);
   }
 
-  if (!node_map.at(active_graph).defines(id.value())) {
+  if (!node_map.at(active_graph).defines(identifier.value())) {
     auto node{JSON::make_object()};
-    node.assign_assume_new(JSON::String{KEYWORD_ID}, JSON{id.value()},
+    node.assign_assume_new(JSON::String{KEYWORD_ID}, JSON{identifier.value()},
                            KEYWORD_ID_HASH);
     node_map.at(active_graph)
-        .assign_assume_new(JSON::String{id.value()}, std::move(node));
+        .assign_assume_new(JSON::String{identifier.value()}, std::move(node));
   }
 
   if (active_subject != nullptr && active_subject->is_object()) {
     // A reverse relationship wires the referenced subject into this node.
-    add_unique(node_map.at(active_graph).at(id.value()),
+    add_unique(node_map.at(active_graph).at(identifier.value()),
                active_property.value(), *active_subject);
   } else if (active_property.has_value()) {
     auto reference{JSON::make_object()};
-    reference.assign_assume_new(JSON::String{KEYWORD_ID}, JSON{id.value()},
-                                KEYWORD_ID_HASH);
+    reference.assign_assume_new(JSON::String{KEYWORD_ID},
+                                JSON{identifier.value()}, KEYWORD_ID_HASH);
     if (list == nullptr) {
       add_unique(node_map.at(active_graph).at(active_subject->to_string()),
                  active_property.value(), std::move(reference));
@@ -176,7 +177,7 @@ auto generate_node_map(BlankNodeState &state, JSON &node_map,
   }
 
   if (working.defines(KEYWORD_TYPE, KEYWORD_TYPE_HASH)) {
-    auto &node{node_map.at(active_graph).at(id.value())};
+    auto &node{node_map.at(active_graph).at(identifier.value())};
     if (!node.defines(KEYWORD_TYPE, KEYWORD_TYPE_HASH)) {
       node.assign_assume_new(JSON::String{KEYWORD_TYPE}, JSON::make_array(),
                              KEYWORD_TYPE_HASH);
@@ -199,11 +200,11 @@ auto generate_node_map(BlankNodeState &state, JSON &node_map,
   }
 
   if (working.defines(KEYWORD_INDEX, KEYWORD_INDEX_HASH)) {
-    auto &node{node_map.at(active_graph).at(id.value())};
+    auto &node{node_map.at(active_graph).at(identifier.value())};
     const auto &index_value{working.at(KEYWORD_INDEX, KEYWORD_INDEX_HASH)};
     if (node.defines(KEYWORD_INDEX, KEYWORD_INDEX_HASH) &&
         node.at(KEYWORD_INDEX, KEYWORD_INDEX_HASH) != index_value) {
-      throw JSONLDError("Conflicting indexes", empty_weak_pointer);
+      throw JSONLDError("Conflicting indexes", EMPTY_WEAK_POINTER);
     }
     node.assign(JSON::String{KEYWORD_INDEX}, JSON{index_value});
     working.erase(KEYWORD_INDEX);
@@ -211,8 +212,8 @@ auto generate_node_map(BlankNodeState &state, JSON &node_map,
 
   if (working.defines(KEYWORD_REVERSE, KEYWORD_REVERSE_HASH)) {
     auto referenced_node{JSON::make_object()};
-    referenced_node.assign_assume_new(JSON::String{KEYWORD_ID},
-                                      JSON{id.value()}, KEYWORD_ID_HASH);
+    referenced_node.assign_assume_new(
+        JSON::String{KEYWORD_ID}, JSON{identifier.value()}, KEYWORD_ID_HASH);
     for (const auto &entry :
          working.at(KEYWORD_REVERSE, KEYWORD_REVERSE_HASH).as_object()) {
       for (const auto &value : entry.second.as_array()) {
@@ -225,8 +226,8 @@ auto generate_node_map(BlankNodeState &state, JSON &node_map,
 
   if (working.defines(KEYWORD_GRAPH, KEYWORD_GRAPH_HASH)) {
     generate_node_map(state, node_map,
-                      working.at(KEYWORD_GRAPH, KEYWORD_GRAPH_HASH), id.value(),
-                      nullptr, std::nullopt, nullptr);
+                      working.at(KEYWORD_GRAPH, KEYWORD_GRAPH_HASH),
+                      identifier.value(), nullptr, std::nullopt, nullptr);
     working.erase(KEYWORD_GRAPH);
   }
 
@@ -243,12 +244,12 @@ auto generate_node_map(BlankNodeState &state, JSON &node_map,
     properties.push_back(entry.first);
   }
   std::ranges::sort(properties);
-  const JSON subject{id.value()};
+  const JSON subject{identifier.value()};
   for (const auto property : properties) {
     const JSON::String key{is_blank_node(property)
                                ? generate_blank_node_identifier(state, property)
                                : JSON::String{property}};
-    auto &node{node_map.at(active_graph).at(id.value())};
+    auto &node{node_map.at(active_graph).at(identifier.value())};
     if (!node.defines(key)) {
       node.assign_assume_new(JSON::String{key}, JSON::make_array());
     }

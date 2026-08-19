@@ -96,7 +96,7 @@ auto dependencies(const sourcemeta::core::JSON &schema,
                   std::string_view default_dialect = "",
                   std::string_view default_id = "",
                   const SchemaFrame::Paths &paths = {
-                      sourcemeta::core::empty_weak_pointer}) -> void;
+                      sourcemeta::core::EMPTY_WEAK_POINTER}) -> void;
 
 /// @ingroup bundle
 ///
@@ -157,7 +157,7 @@ auto bundle(sourcemeta::core::JSON &schema, const SchemaWalker &walker,
             const std::optional<sourcemeta::core::Pointer> &default_container =
                 std::nullopt,
             const SchemaFrame::Paths &paths = {
-                sourcemeta::core::empty_weak_pointer}) -> void;
+                sourcemeta::core::EMPTY_WEAK_POINTER}) -> void;
 
 /// @ingroup bundle
 ///
@@ -219,7 +219,7 @@ auto bundle(
     std::string_view default_dialect = "", std::string_view default_id = "",
     const std::optional<sourcemeta::core::Pointer> &default_container =
         std::nullopt,
-    const SchemaFrame::Paths &paths = {sourcemeta::core::empty_weak_pointer})
+    const SchemaFrame::Paths &paths = {sourcemeta::core::EMPTY_WEAK_POINTER})
     -> sourcemeta::core::JSON;
 
 } // namespace sourcemeta::blaze

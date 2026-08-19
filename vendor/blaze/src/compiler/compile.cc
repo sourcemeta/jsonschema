@@ -457,8 +457,8 @@ auto compile(const sourcemeta::core::JSON &schema,
 
     compiled_targets[index] =
         compile(context, schema_context, relative_dynamic_context(),
-                sourcemeta::core::empty_weak_pointer,
-                sourcemeta::core::empty_weak_pointer, destination_uri);
+                sourcemeta::core::EMPTY_WEAK_POINTER,
+                sourcemeta::core::EMPTY_WEAK_POINTER, destination_uri);
   }
 
   ///////////////////////////////////////////////////////////////////

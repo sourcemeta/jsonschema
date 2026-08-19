@@ -265,40 +265,41 @@ inline auto http_media_range_specificity(
 // routed here and keeps its 1.0 default at the call site.
 inline auto http_parse_qvalue(const std::string_view value) noexcept -> float {
   if (value.empty()) {
-    return 0.0f;
+    return 0.0F;
   }
   if (value[0] != '0' && value[0] != '1') {
-    return 0.0f;
+    return 0.0F;
   }
   const float integer_part{static_cast<float>(value[0] - '0')};
   if (value.size() == 1) {
     return integer_part;
   }
   if (value[1] != '.' || value.size() > 5) {
-    return 0.0f;
+    return 0.0F;
   }
   std::uint16_t numerator{0};
   std::uint16_t denominator{1};
   for (std::size_t index{2}; index < value.size(); ++index) {
     const char character{value[index]};
     if (character < '0' || character > '9') {
-      return 0.0f;
+      return 0.0F;
     }
-    numerator = static_cast<std::uint16_t>(numerator * 10 + (character - '0'));
+    numerator =
+        static_cast<std::uint16_t>((numerator * 10) + (character - '0'));
     denominator = static_cast<std::uint16_t>(denominator * 10);
   }
   const float fraction{static_cast<float>(numerator) /
                        static_cast<float>(denominator)};
   const float result{integer_part + fraction};
-  if (result > 1.0f) {
-    return 0.0f;
+  if (result > 1.0F) {
+    return 0.0F;
   }
   return result;
 }
 
 inline auto http_extract_quality(const std::string_view parameters) noexcept
     -> float {
-  float quality{1.0f};
+  float quality{1.0F};
   http_for_each_parameter(
       parameters,
       [&quality](const std::string_view name,
@@ -321,7 +322,7 @@ inline auto http_split_media_range(const std::string_view parameters) noexcept
     -> std::pair<std::string_view, float> {
   std::size_t position{0};
   std::size_t media_parameters_end{parameters.size()};
-  float quality{1.0f};
+  float quality{1.0F};
   while (position < parameters.size()) {
     const std::size_t separator{position};
     if (parameters[position] == ';') {

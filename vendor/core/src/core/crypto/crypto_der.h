@@ -36,7 +36,7 @@ inline auto der_read(const std::string_view input)
   if (first < 0x80) {
     length = first;
   } else {
-    const std::size_t count{first & 0x7fu};
+    const std::size_t count{first & 0x7fU};
     if (count == 0 || count > 4 || position + count > input.size()) {
       return std::nullopt;
     }
@@ -49,7 +49,7 @@ inline auto der_read(const std::string_view input)
     }
 
     for (std::size_t index{0}; index < count; ++index) {
-      length = (length << 8u) | static_cast<unsigned char>(input[position]);
+      length = (length << 8U) | static_cast<unsigned char>(input[position]);
       position += 1;
     }
 
@@ -80,11 +80,11 @@ inline auto der_append_length(std::string &output, const std::size_t length)
   }
 
   std::string octets;
-  for (std::size_t remaining{length}; remaining > 0; remaining >>= 8u) {
-    octets.insert(octets.begin(), static_cast<char>(remaining & 0xffu));
+  for (std::size_t remaining{length}; remaining > 0; remaining >>= 8U) {
+    octets.insert(octets.begin(), static_cast<char>(remaining & 0xffU));
   }
 
-  output.push_back(static_cast<char>(0x80u | octets.size()));
+  output.push_back(static_cast<char>(0x80U | octets.size()));
   output.append(octets);
 }
 
@@ -107,7 +107,7 @@ inline auto der_append_unsigned_integer(std::string &output,
   // and represents the value zero when nothing remains
   const auto needs_zero_prefix{
       value.empty() ||
-      (static_cast<unsigned char>(value.front()) & 0x80u) != 0};
+      (static_cast<unsigned char>(value.front()) & 0x80U) != 0};
   output.push_back('\x02');
   der_append_length(output, value.size() + (needs_zero_prefix ? 1 : 0));
   if (needs_zero_prefix) {

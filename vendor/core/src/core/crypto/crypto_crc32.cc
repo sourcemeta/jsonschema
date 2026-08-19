@@ -82,12 +82,12 @@ constexpr std::array<std::array<std::uint32_t, 256>, 8> CRC32_TABLES{
 namespace sourcemeta::core {
 
 auto crc32(const std::string_view input) -> std::uint32_t {
-  return crc32_update(0u, input);
+  return crc32_update(0U, input);
 }
 
 auto crc32_update(const std::uint32_t previous, const std::string_view input)
     -> std::uint32_t {
-  auto checksum{previous ^ 0xFFFFFFFFu};
+  auto checksum{previous ^ 0xFFFFFFFFU};
   const auto *data{reinterpret_cast<const std::uint8_t *>(input.data())};
   auto remaining{input.size()};
 
@@ -104,7 +104,7 @@ auto crc32_update(const std::uint32_t previous, const std::string_view input)
     checksum = crc32_hardware_byte(checksum, *data++);
     --remaining;
   }
-  return checksum ^ 0xFFFFFFFFu;
+  return checksum ^ 0xFFFFFFFFU;
 #else
   // Slice-by-8 software fallback: consume 8 bytes per iteration
   while (remaining >= 8) {

@@ -96,7 +96,7 @@ auto oauth_build_par_authorization_url(const std::string_view endpoint,
   // lacks, nothing when the endpoint already ends its query, and '&' continues
   // one (RFC 6749 Section 3.1)
   char separator{'?'};
-  if (endpoint.find('?') != std::string_view::npos) {
+  if (endpoint.contains('?')) {
     separator =
         (endpoint.empty() || endpoint.back() == '?' || endpoint.back() == '&')
             ? '\0'

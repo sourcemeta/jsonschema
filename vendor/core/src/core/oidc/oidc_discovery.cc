@@ -69,7 +69,7 @@ auto identifier_has_scheme(const std::string_view identifier) -> bool {
 // read as "[ userinfo "@" ] host [ ":" port ]", so this shape carries an "@"
 // and none of the port, path, query, or fragment delimiters
 auto identifier_is_acct_shaped(const std::string_view identifier) -> bool {
-  return identifier.find('@') != std::string_view::npos &&
+  return identifier.contains('@') &&
          identifier.find_first_of(":/?#") == std::string_view::npos;
 }
 

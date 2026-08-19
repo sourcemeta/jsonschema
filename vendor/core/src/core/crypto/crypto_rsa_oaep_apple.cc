@@ -41,12 +41,12 @@ auto rsa_oaep_encrypt(const PublicKey &key, const RSAOAEPHash hash,
     return std::nullopt;
   }
 
-  auto plaintext_data{make_data(plaintext)};
+  const auto *plaintext_data{make_data(plaintext)};
   if (plaintext_data == nullptr) {
     return std::nullopt;
   }
 
-  auto ciphertext{SecKeyCreateEncryptedData(
+  const auto *ciphertext{SecKeyCreateEncryptedData(
       internal->key, to_oaep_algorithm(hash), plaintext_data, nullptr)};
   CFRelease(plaintext_data);
   if (ciphertext == nullptr) {
@@ -77,12 +77,12 @@ auto rsa_oaep_decrypt(const PrivateKey &key, const RSAOAEPHash hash,
     return std::nullopt;
   }
 
-  auto ciphertext_data{make_data(ciphertext)};
+  const auto *ciphertext_data{make_data(ciphertext)};
   if (ciphertext_data == nullptr) {
     return std::nullopt;
   }
 
-  auto plaintext{SecKeyCreateDecryptedData(
+  const auto *plaintext{SecKeyCreateDecryptedData(
       internal->key, to_oaep_algorithm(hash), ciphertext_data, nullptr)};
   CFRelease(ciphertext_data);
   if (plaintext == nullptr) {

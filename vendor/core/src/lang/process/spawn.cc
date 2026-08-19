@@ -372,7 +372,8 @@ auto drain_stream(Descriptor &descriptor, std::string &destination) -> bool {
   if (count > 0) {
     destination.append(buffer.data(), static_cast<std::size_t>(count));
     return true;
-  } else if (count == -1 && is_retryable_error()) {
+  }
+  if (count == -1 && is_retryable_error()) {
     return true;
   }
 
@@ -391,7 +392,8 @@ auto write_stream(Descriptor &descriptor, const std::string_view input,
     }
 
     return;
-  } else if (count == -1 && is_retryable_error()) {
+  }
+  if (count == -1 && is_retryable_error()) {
     return;
   }
 

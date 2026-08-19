@@ -45,18 +45,18 @@ auto encode(const std::string_view input, const std::string_view alphabet,
     const std::uint32_t first{static_cast<std::uint8_t>(input[index])};
     const std::uint32_t second{static_cast<std::uint8_t>(input[index + 1])};
     const std::uint32_t third{static_cast<std::uint8_t>(input[index + 2])};
-    output.push_back(alphabet[first >> 2u]);
-    output.push_back(alphabet[((first & 0x03u) << 4u) | (second >> 4u)]);
-    output.push_back(alphabet[((second & 0x0Fu) << 2u) | (third >> 6u)]);
-    output.push_back(alphabet[third & 0x3Fu]);
+    output.push_back(alphabet[first >> 2U]);
+    output.push_back(alphabet[((first & 0x03U) << 4U) | (second >> 4U)]);
+    output.push_back(alphabet[((second & 0x0FU) << 2U) | (third >> 6U)]);
+    output.push_back(alphabet[third & 0x3FU]);
     index += 3;
   }
 
   const auto remaining{input.size() - index};
   if (remaining == 1) {
     const std::uint32_t first{static_cast<std::uint8_t>(input[index])};
-    output.push_back(alphabet[first >> 2u]);
-    output.push_back(alphabet[(first & 0x03u) << 4u]);
+    output.push_back(alphabet[first >> 2U]);
+    output.push_back(alphabet[(first & 0x03U) << 4U]);
     if (padding) {
       output.push_back('=');
       output.push_back('=');
@@ -64,9 +64,9 @@ auto encode(const std::string_view input, const std::string_view alphabet,
   } else if (remaining == 2) {
     const std::uint32_t first{static_cast<std::uint8_t>(input[index])};
     const std::uint32_t second{static_cast<std::uint8_t>(input[index + 1])};
-    output.push_back(alphabet[first >> 2u]);
-    output.push_back(alphabet[((first & 0x03u) << 4u) | (second >> 4u)]);
-    output.push_back(alphabet[(second & 0x0Fu) << 2u]);
+    output.push_back(alphabet[first >> 2U]);
+    output.push_back(alphabet[((first & 0x03U) << 4U) | (second >> 4U)]);
+    output.push_back(alphabet[(second & 0x0FU) << 2U]);
     if (padding) {
       output.push_back('=');
     }
@@ -121,11 +121,11 @@ auto decode_into(const std::string_view input,
       return false;
     }
 
-    const std::uint32_t group{(first << 18u) | (second << 12u) | (third << 6u) |
+    const std::uint32_t group{(first << 18U) | (second << 12U) | (third << 6U) |
                               fourth};
-    output.push_back(static_cast<char>((group >> 16u) & 0xFFu));
-    output.push_back(static_cast<char>((group >> 8u) & 0xFFu));
-    output.push_back(static_cast<char>(group & 0xFFu));
+    output.push_back(static_cast<char>((group >> 16U) & 0xFFU));
+    output.push_back(static_cast<char>((group >> 8U) & 0xFFU));
+    output.push_back(static_cast<char>(group & 0xFFU));
     index += 4;
   }
 
@@ -138,12 +138,12 @@ auto decode_into(const std::string_view input,
     const std::uint32_t second{
         table[static_cast<std::uint8_t>(data[index + 1])]};
     if (first == INVALID_SEXTET || second == INVALID_SEXTET ||
-        (second & 0x0Fu) != 0) {
+        (second & 0x0FU) != 0) {
       output.resize(base, '\0');
       return false;
     }
 
-    output.push_back(static_cast<char>((first << 2u) | (second >> 4u)));
+    output.push_back(static_cast<char>((first << 2U) | (second >> 4U)));
   } else if (remaining == 3) {
     const std::uint32_t first{table[static_cast<std::uint8_t>(data[index])]};
     const std::uint32_t second{
@@ -151,14 +151,14 @@ auto decode_into(const std::string_view input,
     const std::uint32_t third{
         table[static_cast<std::uint8_t>(data[index + 2])]};
     if (first == INVALID_SEXTET || second == INVALID_SEXTET ||
-        third == INVALID_SEXTET || (third & 0x03u) != 0) {
+        third == INVALID_SEXTET || (third & 0x03U) != 0) {
       output.resize(base, '\0');
       return false;
     }
 
-    output.push_back(static_cast<char>((first << 2u) | (second >> 4u)));
+    output.push_back(static_cast<char>((first << 2U) | (second >> 4U)));
     output.push_back(
-        static_cast<char>(((second & 0x0Fu) << 4u) | (third >> 2u)));
+        static_cast<char>(((second & 0x0FU) << 4U) | (third >> 2U)));
   }
 
   return true;
@@ -183,7 +183,7 @@ auto base64_encode(const std::string_view input, SecureString &output) -> void {
   // The input is copied first so that growing the output cannot invalidate it
   // when the two alias the same storage
   const SecureString input_copy{input};
-  output.reserve(output.size() + ((input_copy.size() + 2) / 3) * 4);
+  output.reserve(output.size() + (((input_copy.size() + 2) / 3) * 4));
   encode(std::string_view{input_copy}, BASE64_ALPHABET, true, output);
 }
 
@@ -233,7 +233,7 @@ auto base64url_encode(const std::string_view input, SecureString &output)
   // The input is copied first so that growing the output cannot invalidate it
   // when the two alias the same storage
   const SecureString input_copy{input};
-  output.reserve(output.size() + ((input_copy.size() + 2) / 3) * 4);
+  output.reserve(output.size() + (((input_copy.size() + 2) / 3) * 4));
   encode(std::string_view{input_copy}, BASE64URL_ALPHABET, false, output);
 }
 

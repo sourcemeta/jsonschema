@@ -37,9 +37,11 @@ static constexpr auto encode_digit(const std::uint32_t digit) -> char {
 static auto decode_digit(const char code_point) -> std::uint32_t {
   if (code_point >= 'a' && code_point <= 'z') {
     return static_cast<std::uint32_t>(code_point - 'a');
-  } else if (code_point >= 'A' && code_point <= 'Z') {
+  }
+  if (code_point >= 'A' && code_point <= 'Z') {
     return static_cast<std::uint32_t>(code_point - 'A');
-  } else if (code_point >= '0' && code_point <= '9') {
+  }
+  if (code_point >= '0' && code_point <= '9') {
     return static_cast<std::uint32_t>(code_point - '0' + 26);
   }
 
@@ -67,7 +69,8 @@ static constexpr auto compute_threshold(const std::uint32_t step,
     -> std::uint32_t {
   if (step <= bias) {
     return TMIN;
-  } else if (step >= bias + TMAX) {
+  }
+  if (step >= bias + TMAX) {
     return TMAX;
   }
 

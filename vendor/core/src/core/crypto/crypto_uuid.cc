@@ -15,9 +15,9 @@ namespace sourcemeta::core {
 // Format: xxxxxxxx-xxxx-4xxx-Nxxx-xxxxxxxxxxxx
 // where 4 is the version and N is the variant (8, 9, a, or b)
 auto uuidv4() -> std::string {
-  static constexpr std::string_view digits = "0123456789abcdef";
-  static constexpr std::string_view variant_digits = "89ab";
-  static constexpr std::array<bool, 16> dash = {
+  static constexpr std::string_view DIGITS = "0123456789abcdef";
+  static constexpr std::string_view VARIANT_DIGITS = "89ab";
+  static constexpr std::array<bool, 16> DASH = {
       {false, false, false, false, true, false, true, false, true, false, true,
        false, false, false, false, false}};
 
@@ -26,25 +26,25 @@ auto uuidv4() -> std::string {
 
   std::string result;
   result.reserve(36);
-  for (std::size_t index = 0; index < dash.size(); ++index) {
-    if (dash[index]) {
+  for (std::size_t index = 0; index < DASH.size(); ++index) {
+    if (DASH[index]) {
       result += '-';
     }
 
-    const auto high_nibble = (bytes[index] >> 4u) & 0x0fu;
-    const auto low_nibble = bytes[index] & 0x0fu;
+    const auto high_nibble = (bytes[index] >> 4U) & 0x0fU;
+    const auto low_nibble = bytes[index] & 0x0fU;
 
     // RFC 9562 Section 5.4: version bits (48-51) must be 0b0100
     if (index == 6) {
       result += '4';
       // RFC 9562 Section 5.4: variant bits (64-65) must be 0b10
     } else if (index == 8) {
-      result += variant_digits[high_nibble & 0x03u];
+      result += VARIANT_DIGITS[high_nibble & 0x03U];
     } else {
-      result += digits[high_nibble];
+      result += DIGITS[high_nibble];
     }
 
-    result += digits[low_nibble];
+    result += DIGITS[low_nibble];
   }
 
   return result;

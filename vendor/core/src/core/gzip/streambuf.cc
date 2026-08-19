@@ -48,7 +48,7 @@ public:
   }
 
   [[nodiscard]] auto low16() const -> std::uint16_t {
-    return static_cast<std::uint16_t>(this->checksum_ & 0xffffu);
+    return static_cast<std::uint16_t>(this->checksum_ & 0xffffU);
   }
 
 private:
@@ -148,76 +148,76 @@ auto try_parse_member_header(BitReader &reader, const std::uint8_t first_byte)
 } // namespace
 
 GZIPStreamBuffer::GZIPStreamBuffer(std::istream &compressed_stream)
-    : internal{new Internal{compressed_stream}} {}
+    : internal_{new Internal{compressed_stream}} {}
 
 GZIPStreamBuffer::~GZIPStreamBuffer() = default;
 
 auto GZIPStreamBuffer::underflow() -> int_type {
-  if (this->gptr() && this->gptr() < this->egptr()) {
+  if ((this->gptr() != nullptr) && this->gptr() < this->egptr()) {
     return traits_type::to_int_type(*this->gptr());
   }
-  if (this->internal->stream_ended) {
+  if (this->internal_->stream_ended) {
     return traits_type::eof();
   }
 
   while (true) {
-    if (!this->internal->member_started) {
+    if (!this->internal_->member_started) {
       std::uint8_t first_byte{0};
-      if (!this->internal->reader.try_read_byte(first_byte)) {
-        if (!this->internal->any_member_completed) {
+      if (!this->internal_->reader.try_read_byte(first_byte)) {
+        if (!this->internal_->any_member_completed) {
           throw GZIPError{"Empty source stream"};
         }
-        this->internal->stream_ended = true;
+        this->internal_->stream_ended = true;
         return traits_type::eof();
       }
-      if (this->internal->any_member_completed) {
+      if (this->internal_->any_member_completed) {
         // gzip(1) silently ignores any trailing data after a complete member
         // rather than treating it as the start of a new member. Bytes that do
         // not form a valid member header end the stream without error,
         // independent of the first byte value
         if (first_byte != 0x1f ||
-            !try_parse_member_header(this->internal->reader, first_byte)) {
-          this->internal->stream_ended = true;
+            !try_parse_member_header(this->internal_->reader, first_byte)) {
+          this->internal_->stream_ended = true;
           return traits_type::eof();
         }
       } else {
         if (first_byte != 0x1f) {
           throw GZIPError{"Invalid gzip magic bytes"};
         }
-        parse_member_header(this->internal->reader, first_byte);
+        parse_member_header(this->internal_->reader, first_byte);
       }
 
-      this->internal->deflate.reset();
-      this->internal->member_started = true;
-      this->internal->member_crc32 = 0;
-      this->internal->member_isize = 0;
+      this->internal_->deflate.reset();
+      this->internal_->member_started = true;
+      this->internal_->member_crc32 = 0;
+      this->internal_->member_isize = 0;
     }
 
-    const auto produced{this->internal->deflate.decompress(
-        this->internal->decompressed_buffer.data(),
-        this->internal->decompressed_buffer.size())};
+    const auto produced{this->internal_->deflate.decompress(
+        this->internal_->decompressed_buffer.data(),
+        this->internal_->decompressed_buffer.size())};
 
     if (produced > 0) {
-      this->internal->member_crc32 = crc32_update(
-          this->internal->member_crc32,
+      this->internal_->member_crc32 = crc32_update(
+          this->internal_->member_crc32,
           std::string_view{reinterpret_cast<const char *>(
-                               this->internal->decompressed_buffer.data()),
+                               this->internal_->decompressed_buffer.data()),
                            produced});
-      this->internal->member_isize += static_cast<std::uint32_t>(produced);
+      this->internal_->member_isize += static_cast<std::uint32_t>(produced);
 
-      auto *buffer_start{
-          reinterpret_cast<char *>(this->internal->decompressed_buffer.data())};
+      auto *buffer_start{reinterpret_cast<char *>(
+          this->internal_->decompressed_buffer.data())};
       this->setg(buffer_start, buffer_start,
                  buffer_start + static_cast<std::ptrdiff_t>(produced));
       return traits_type::to_int_type(*this->gptr());
     }
 
-    if (!this->internal->deflate.stream_ended()) {
+    if (!this->internal_->deflate.stream_ended()) {
       throw GZIPError{"Deflate stream ended unexpectedly"};
     }
 
     std::array<std::uint8_t, 8> trailer{};
-    this->internal->reader.read_bytes(trailer.data(), trailer.size());
+    this->internal_->reader.read_bytes(trailer.data(), trailer.size());
     const auto stored_crc32{static_cast<std::uint32_t>(trailer[0]) |
                             (static_cast<std::uint32_t>(trailer[1]) << 8) |
                             (static_cast<std::uint32_t>(trailer[2]) << 16) |
@@ -226,15 +226,15 @@ auto GZIPStreamBuffer::underflow() -> int_type {
                             (static_cast<std::uint32_t>(trailer[5]) << 8) |
                             (static_cast<std::uint32_t>(trailer[6]) << 16) |
                             (static_cast<std::uint32_t>(trailer[7]) << 24)};
-    if (stored_crc32 != this->internal->member_crc32) {
+    if (stored_crc32 != this->internal_->member_crc32) {
       throw GZIPError{"Gzip member CRC32 mismatch"};
     }
-    if (stored_isize != this->internal->member_isize) {
+    if (stored_isize != this->internal_->member_isize) {
       throw GZIPError{"Gzip member ISIZE mismatch"};
     }
 
-    this->internal->any_member_completed = true;
-    this->internal->member_started = false;
+    this->internal_->any_member_completed = true;
+    this->internal_->member_started = false;
   }
 }
 

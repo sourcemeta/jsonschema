@@ -35,7 +35,7 @@ auto associated_data_length_block(const std::size_t associated_data_size)
   std::string block(8, '\x00');
   const auto bits{static_cast<std::uint64_t>(associated_data_size) * 8};
   for (std::size_t index = 0; index < 8; ++index) {
-    block[7 - index] = static_cast<char>((bits >> (8 * index)) & 0xffu);
+    block[7 - index] = static_cast<char>((bits >> (8 * index)) & 0xffU);
   }
 
   return block;

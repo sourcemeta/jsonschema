@@ -33,13 +33,13 @@ namespace sourcemeta::core {
 class SOURCEMETA_CORE_HTML_EXPORT HTMLWriter {
 public:
   /// Pre-allocate the output buffer
-  SOURCEMETA_FORCEINLINE inline auto reserve(std::size_t bytes) -> void {
+  SOURCEMETA_FORCEINLINE auto reserve(std::size_t bytes) -> void {
     this->buffer_.reserve(bytes);
   }
 
   /// Close the most recently opened element. Closing when no element is open
   /// has no effect.
-  SOURCEMETA_FORCEINLINE inline auto close() -> HTMLWriter & {
+  SOURCEMETA_FORCEINLINE auto close() -> HTMLWriter & {
     this->flush_open_tag();
     assert(!this->tag_stack_.empty());
     if (this->tag_stack_.empty()) [[unlikely]] {
@@ -54,8 +54,8 @@ public:
 
   /// Add an attribute to the currently open tag. Must be called
   /// immediately after an element method and before any content.
-  SOURCEMETA_FORCEINLINE inline auto attribute(std::string_view name,
-                                               std::string_view value)
+  SOURCEMETA_FORCEINLINE auto attribute(std::string_view name,
+                                        std::string_view value)
       -> HTMLWriter & {
     assert(this->tag_open_);
     this->buffer_.append(" ");
@@ -72,8 +72,7 @@ public:
   /// would corrupt it. This writer does not special-case content by element, so
   /// the content of a raw-text element must be written unescaped rather than as
   /// escaped text, and it must not contain that element's closing-tag sequence.
-  SOURCEMETA_FORCEINLINE inline auto text(std::string_view content)
-      -> HTMLWriter & {
+  SOURCEMETA_FORCEINLINE auto text(std::string_view content) -> HTMLWriter & {
     this->flush_open_tag();
     html_escape_append(this->buffer_, content);
     return *this;
@@ -81,16 +80,14 @@ public:
 
   /// Write content without HTML-escaping. This is how the content of a raw-text
   /// element is emitted, since escaped text would corrupt it.
-  SOURCEMETA_FORCEINLINE inline auto raw(std::string_view content)
-      -> HTMLWriter & {
+  SOURCEMETA_FORCEINLINE auto raw(std::string_view content) -> HTMLWriter & {
     this->flush_open_tag();
     this->buffer_.append(content);
     return *this;
   }
 
   /// Get the rendered HTML string
-  [[nodiscard]] SOURCEMETA_FORCEINLINE inline auto str()
-      -> const std::string & {
+  [[nodiscard]] SOURCEMETA_FORCEINLINE auto str() -> const std::string & {
     this->flush_open_tag();
     return this->buffer_.str();
   }
@@ -111,43 +108,46 @@ public:
 // Overloads:
 //   .tag()              open with no attributes
 //   .tag(text)          open, write escaped text, close (shorthand)
+// NOLINTBEGIN(bugprone-macro-parentheses)
 #define HTML_WRITER_CONTAINER(name)                                            \
-  SOURCEMETA_FORCEINLINE inline auto name() -> HTMLWriter & {                  \
+  SOURCEMETA_FORCEINLINE auto name() -> HTMLWriter & {                         \
     this->open_tag(#name);                                                     \
     return *this;                                                              \
   }                                                                            \
-  /* NOLINTNEXTLINE(bugprone-macro-parentheses) */                             \
-  SOURCEMETA_FORCEINLINE inline auto name(std::string_view text_content)       \
+  SOURCEMETA_FORCEINLINE auto name(std::string_view text_content)              \
       -> HTMLWriter & {                                                        \
     this->open_tag(#name);                                                     \
     this->text(text_content);                                                  \
     this->close();                                                             \
     return *this;                                                              \
   }
+// NOLINTEND(bugprone-macro-parentheses)
 
 // Same as above but with a different C++ method name than the HTML tag
+// NOLINTBEGIN(bugprone-macro-parentheses)
 #define HTML_WRITER_CONTAINER_NAMED(name, tag)                                 \
-  SOURCEMETA_FORCEINLINE inline auto name() -> HTMLWriter & {                  \
+  SOURCEMETA_FORCEINLINE auto name() -> HTMLWriter & {                         \
     this->open_tag(#tag);                                                      \
     return *this;                                                              \
   }                                                                            \
-  /* NOLINTNEXTLINE(bugprone-macro-parentheses) */                             \
-  SOURCEMETA_FORCEINLINE inline auto name(std::string_view text_content)       \
+  SOURCEMETA_FORCEINLINE auto name(std::string_view text_content)              \
       -> HTMLWriter & {                                                        \
     this->open_tag(#tag);                                                      \
     this->text(text_content);                                                  \
     this->close();                                                             \
     return *this;                                                              \
   }
+// NOLINTEND(bugprone-macro-parentheses)
 
 // Macro to generate void element methods.
 // Void elements are self-closing: <tag /> or <tag attr="val" />
+// NOLINTBEGIN(bugprone-macro-parentheses)
 #define HTML_WRITER_VOID(name)                                                 \
-  /* NOLINTNEXTLINE(bugprone-macro-parentheses) */                             \
-  SOURCEMETA_FORCEINLINE inline auto name() -> HTMLWriter & {                  \
+  SOURCEMETA_FORCEINLINE auto name() -> HTMLWriter & {                         \
     this->void_tag(#name);                                                     \
     return *this;                                                              \
   }
+// NOLINTEND(bugprone-macro-parentheses)
 #endif
 
   // =========================================================================
@@ -434,6 +434,9 @@ public:
   /// @ingroup html
   HTML_WRITER_CONTAINER(slot)
   /// @ingroup html
+  // The trailing underscore keeps this element name from colliding with the
+  // template keyword
+  // NOLINTNEXTLINE(readability-identifier-naming)
   HTML_WRITER_CONTAINER_NAMED(template_, template)
 
 #ifndef DOXYGEN
@@ -443,7 +446,7 @@ public:
 #endif
 
 private:
-  SOURCEMETA_FORCEINLINE inline auto open_tag(std::string_view tag) -> void {
+  SOURCEMETA_FORCEINLINE auto open_tag(std::string_view tag) -> void {
     this->flush_open_tag();
     this->buffer_.append("<");
     this->buffer_.append(tag);
@@ -452,7 +455,7 @@ private:
     this->tag_open_is_void_ = false;
   }
 
-  SOURCEMETA_FORCEINLINE inline auto void_tag(std::string_view tag) -> void {
+  SOURCEMETA_FORCEINLINE auto void_tag(std::string_view tag) -> void {
     this->flush_open_tag();
     this->buffer_.append("<");
     this->buffer_.append(tag);

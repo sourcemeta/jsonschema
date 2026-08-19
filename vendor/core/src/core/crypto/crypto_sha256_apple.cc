@@ -17,9 +17,9 @@ auto sha256_update(CC_SHA256_CTX &context, const std::string_view input)
   // inputs must be fed in chunks
   const auto *remaining_data{input.data()};
   auto remaining_size{input.size()};
-  constexpr std::size_t maximum_chunk{std::numeric_limits<CC_LONG>::max()};
+  constexpr std::size_t MAXIMUM_CHUNK{std::numeric_limits<CC_LONG>::max()};
   while (remaining_size > 0) {
-    const auto chunk_size{remaining_size > maximum_chunk ? maximum_chunk
+    const auto chunk_size{remaining_size > MAXIMUM_CHUNK ? MAXIMUM_CHUNK
                                                          : remaining_size};
     CC_SHA256_Update(&context, remaining_data,
                      static_cast<CC_LONG>(chunk_size));

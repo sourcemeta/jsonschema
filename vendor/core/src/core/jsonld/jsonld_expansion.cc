@@ -67,7 +67,7 @@ auto expand_type(ExpansionState &state, const ActiveContext &type_context,
                  const JSON &item) -> JSON {
   auto context{type_context};
   const auto type{expand_iri(state, context, item.to_string(), true, true,
-                             nullptr, nullptr, empty_weak_pointer)};
+                             nullptr, nullptr, EMPTY_WEAK_POINTER)};
   return type.has_value() ? JSON{type.value()} : JSON{nullptr};
 }
 
@@ -95,7 +95,7 @@ auto expand_object(ExpansionState &state, ActiveContext active_context,
   std::vector<JSON::StringView> type_values;
   for (const auto &entry : element.as_object()) {
     const auto expanded{expand_iri(state, active_context, entry.first, false,
-                                   true, nullptr, nullptr, empty_weak_pointer)};
+                                   true, nullptr, nullptr, EMPTY_WEAK_POINTER)};
     if (!expanded.has_value() || expanded.value() != KEYWORD_TYPE) {
       continue;
     }
@@ -164,7 +164,7 @@ auto expand_object(ExpansionState &state, ActiveContext active_context,
       throw JSONLDError("Invalid language-tagged value", pointer);
     }
     if (has_type && (type_string == nullptr || type_string->starts_with("_:") ||
-                     type_string->find(' ') != JSON::String::npos)) {
+                     type_string->contains(' '))) {
       throw JSONLDError("Invalid typed value", pointer);
     }
     if (!is_json && !content.is_string() && !content.is_number() &&
@@ -247,7 +247,7 @@ auto expand_entries(ExpansionState &state, ActiveContext &active_context,
 
     const auto expanded_property{expand_iri(state, active_context, property,
                                             false, true, nullptr, nullptr,
-                                            empty_weak_pointer)};
+                                            EMPTY_WEAK_POINTER)};
 
     if (expanded_property.has_value() &&
         expanded_property.value() == KEYWORD_NEST) {
@@ -272,7 +272,7 @@ auto expand_entries(ExpansionState &state, ActiveContext &active_context,
     }
 
     const auto &name{expanded_property.value()};
-    if (name.find(':') == JSON::String::npos && !is_keyword(name)) {
+    if (!name.contains(':') && !is_keyword(name)) {
       continue;
     }
 
@@ -295,7 +295,7 @@ auto expand_entries(ExpansionState &state, ActiveContext &active_context,
       }
       const auto identifier{expand_iri(state, active_context,
                                        entry.second.to_string(), true, false,
-                                       nullptr, nullptr, empty_weak_pointer)};
+                                       nullptr, nullptr, EMPTY_WEAK_POINTER)};
       if (identifier.has_value()) {
         result.assign_assume_new(JSON::String{KEYWORD_ID},
                                  JSON{identifier.value()}, KEYWORD_ID_HASH);
@@ -463,7 +463,7 @@ auto expand_entries(ExpansionState &state, ActiveContext &active_context,
         for (const auto &reverse_entry : reversed.as_object()) {
           const auto &reverse_property{reverse_entry.first};
           if (reverse_entry.key_equals(KEYWORD_REVERSE, KEYWORD_REVERSE_HASH)) {
-            for (auto &forward : reverse_entry.second.as_object()) {
+            for (const auto &forward : reverse_entry.second.as_object()) {
               merge(result, JSON::StringView{forward.first},
                     into_array(JSON{forward.second}));
             }
@@ -542,7 +542,7 @@ auto expand_entries(ExpansionState &state, ActiveContext &active_context,
       if (property_valued) {
         index_property =
             expand_iri(state, value_context, definition->index.value(), false,
-                       true, nullptr, nullptr, empty_weak_pointer);
+                       true, nullptr, nullptr, EMPTY_WEAK_POINTER);
       }
       expanded_value = JSON::make_array();
       for (const auto &[graph_key, graph_value] :
@@ -552,7 +552,7 @@ auto expand_entries(ExpansionState &state, ActiveContext &active_context,
                                     ? std::optional<JSON::String>{KEYWORD_NONE}
                                     : expand_iri(state, value_context, index,
                                                  true, false, nullptr, nullptr,
-                                                 empty_weak_pointer)};
+                                                 EMPTY_WEAK_POINTER)};
         const bool none_key{expanded_key.has_value() &&
                             expanded_key.value() == KEYWORD_NONE};
         auto graph_items{
@@ -603,7 +603,7 @@ auto expand_entries(ExpansionState &state, ActiveContext &active_context,
         const JSON::String &language{*language_key};
         const auto expanded_language{expand_iri(state, value_context, language,
                                                 false, true, nullptr, nullptr,
-                                                empty_weak_pointer)};
+                                                EMPTY_WEAK_POINTER)};
         const bool is_none{language == KEYWORD_NONE ||
                            (expanded_language.has_value() &&
                             expanded_language.value() == KEYWORD_NONE)};
@@ -642,7 +642,7 @@ auto expand_entries(ExpansionState &state, ActiveContext &active_context,
       if (property_valued) {
         index_property =
             expand_iri(state, value_context, definition->index.value(), false,
-                       true, nullptr, nullptr, empty_weak_pointer);
+                       true, nullptr, nullptr, EMPTY_WEAK_POINTER);
       }
       expanded_value = JSON::make_array();
       for (const auto &[index_key, index_value] :
@@ -688,7 +688,7 @@ auto expand_entries(ExpansionState &state, ActiveContext &active_context,
         if (index != KEYWORD_NONE) {
           expanded_index =
               expand_iri(state, value_context, index, by_id, !by_id, nullptr,
-                         nullptr, empty_weak_pointer);
+                         nullptr, EMPTY_WEAK_POINTER);
         }
         // The key may be an alias of @none, which carries no identifier.
         if (expanded_index.has_value() &&
@@ -730,7 +730,7 @@ auto expand_entries(ExpansionState &state, ActiveContext &active_context,
             const auto &raw_string{raw.to_string()};
             const auto referenced{expand_iri(state, value_context, raw_string,
                                              true, reference_vocab, nullptr,
-                                             nullptr, empty_weak_pointer)};
+                                             nullptr, EMPTY_WEAK_POINTER)};
             reference.assign_assume_new(JSON::String{KEYWORD_ID},
                                         JSON{referenced.value_or(raw_string)},
                                         KEYWORD_ID_HASH);
@@ -872,7 +872,7 @@ auto expand(ExpansionState &state, ActiveContext &active_context,
             const std::optional<JSON::String> &active_property,
             const JSON &element, const WeakPointer &pointer) -> JSON {
   const NestingDepthScope scope{state.depth};
-  if (state.depth > ExpansionState::maximum_depth) {
+  if (state.depth > ExpansionState::MAXIMUM_DEPTH) {
     throw JSONLDError("Maximum nesting depth exceeded", pointer);
   }
 
@@ -940,7 +940,7 @@ auto expand(ExpansionState &state, ActiveContext &active_context,
     for (const auto &entry : element.as_object()) {
       const auto expanded{expand_iri(state, active_context, entry.first, false,
                                      true, nullptr, nullptr,
-                                     empty_weak_pointer)};
+                                     EMPTY_WEAK_POINTER)};
       if (expanded.has_value() &&
           (expanded.value() == KEYWORD_VALUE ||
            (single && expanded.value() == KEYWORD_ID))) {

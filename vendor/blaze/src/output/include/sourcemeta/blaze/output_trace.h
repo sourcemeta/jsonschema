@@ -83,7 +83,7 @@ public:
   TraceOutput(
       sourcemeta::blaze::SchemaWalker walker,
       sourcemeta::blaze::SchemaResolver resolver, Callback callback,
-      sourcemeta::core::WeakPointer base = sourcemeta::core::empty_weak_pointer,
+      sourcemeta::core::WeakPointer base = sourcemeta::core::EMPTY_WEAK_POINTER,
       const std::optional<
           std::reference_wrapper<const sourcemeta::blaze::SchemaFrame>> &frame =
           std::nullopt);

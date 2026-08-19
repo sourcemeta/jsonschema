@@ -84,16 +84,16 @@ auto URI::is_localhost() const -> bool {
     host.remove_suffix(1);
   }
 
-  constexpr std::string_view name{"localhost"};
-  if (host.size() < name.size()) {
+  constexpr std::string_view NAME{"localhost"};
+  if (host.size() < NAME.size()) {
     return false;
   }
 
-  if (host.size() > name.size() && host[host.size() - name.size() - 1] != '.') {
+  if (host.size() > NAME.size() && host[host.size() - NAME.size() - 1] != '.') {
     return false;
   }
 
-  return equals_ignore_case(host.substr(host.size() - name.size()), name);
+  return equals_ignore_case(host.substr(host.size() - NAME.size()), NAME);
 }
 
 auto URI::is_fragment_only() const -> bool {

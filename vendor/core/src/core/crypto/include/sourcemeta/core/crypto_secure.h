@@ -114,7 +114,8 @@ template <typename T> struct SecureAllocator {
 
   /// Construct from an allocator for another type, as the containers require.
   template <typename Other>
-  constexpr SecureAllocator(const SecureAllocator<Other> &) noexcept {}
+  constexpr SecureAllocator(
+      [[maybe_unused]] const SecureAllocator<Other> &other) noexcept {}
 
   /// Allocate storage for the given number of objects.
   [[nodiscard]] auto allocate(const std::size_t count) -> T * {
@@ -134,13 +135,15 @@ template <typename T> struct SecureAllocator {
 
   /// Every instance is interchangeable, since the allocator holds no state.
   template <typename Other>
-  auto operator==(const SecureAllocator<Other> &) const noexcept -> bool {
+  auto operator==([[maybe_unused]] const SecureAllocator<Other> &other)
+      const noexcept -> bool {
     return true;
   }
 
   /// Every instance is interchangeable, since the allocator holds no state.
   template <typename Other>
-  auto operator!=(const SecureAllocator<Other> &) const noexcept -> bool {
+  auto operator!=([[maybe_unused]] const SecureAllocator<Other> &other)
+      const noexcept -> bool {
     return false;
   }
 };

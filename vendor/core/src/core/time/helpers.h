@@ -36,11 +36,11 @@ inline auto broken_down_time_to_time_point(const std::tm &parts)
   using TimePoint = std::chrono::system_clock::time_point;
   // The bounds round inwards so the value cast back to the finer duration stays
   // within range
-  constexpr auto minimum{std::chrono::ceil<std::chrono::seconds>(
+  constexpr auto MINIMUM{std::chrono::ceil<std::chrono::seconds>(
       TimePoint::min().time_since_epoch())};
-  constexpr auto maximum{std::chrono::floor<std::chrono::seconds>(
+  constexpr auto MAXIMUM{std::chrono::floor<std::chrono::seconds>(
       TimePoint::max().time_since_epoch())};
-  if (since_epoch < minimum || since_epoch > maximum) {
+  if (since_epoch < MINIMUM || since_epoch > MAXIMUM) {
     return std::nullopt;
   }
 
@@ -92,19 +92,19 @@ inline auto format_four_digit_year(const int year) -> std::string {
 // implementations, so the exact spelling is verified against the parsed index
 inline auto is_case_sensitive_day_abbreviation(const std::string_view name,
                                                const int weekday) -> bool {
-  static constexpr std::array<std::string_view, 7> names{
+  static constexpr std::array<std::string_view, 7> NAMES{
       {"Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"}};
   return weekday >= 0 && weekday < 7 &&
-         name == names[static_cast<std::size_t>(weekday)];
+         name == NAMES[static_cast<std::size_t>(weekday)];
 }
 
 inline auto is_case_sensitive_month_abbreviation(const std::string_view name,
                                                  const int month) -> bool {
-  static constexpr std::array<std::string_view, 12> names{
+  static constexpr std::array<std::string_view, 12> NAMES{
       {"Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct",
        "Nov", "Dec"}};
   return month >= 0 && month < 12 &&
-         name == names[static_cast<std::size_t>(month)];
+         name == NAMES[static_cast<std::size_t>(month)];
 }
 
 // Validate the calendar fields of a broken-down time, since the conversion to

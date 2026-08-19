@@ -29,7 +29,7 @@ auto http_accept_includes_all(
     assert(slash > 0);
     assert(slash < media_type_bare.size() - 1);
     assert(media_type_bare.find_first_of(" \t,;*") == std::string_view::npos);
-    float best_quality{0.0f};
+    float best_quality{0.0F};
     std::uint8_t best_specificity{0};
     http_for_each_media_range(
         accept_header,
@@ -46,7 +46,7 @@ auto http_accept_includes_all(
             best_specificity = specificity;
           }
         });
-    if (best_specificity == 0 || best_quality == 0.0f) {
+    if (best_specificity == 0 || best_quality == 0.0F) {
       return false;
     }
   }

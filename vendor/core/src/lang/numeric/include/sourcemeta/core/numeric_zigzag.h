@@ -26,9 +26,9 @@ template <typename T> auto zigzag_encode(const T &value) {
       return static_cast<std::uint64_t>(signed_value) * 2;
     }
     // Negate in unsigned to avoid UB for INT64_MIN
-    return (static_cast<std::uint64_t>(0) -
-            static_cast<std::uint64_t>(signed_value)) *
-               2 -
+    return ((static_cast<std::uint64_t>(0) -
+             static_cast<std::uint64_t>(signed_value)) *
+            2) -
            1;
   }
 }

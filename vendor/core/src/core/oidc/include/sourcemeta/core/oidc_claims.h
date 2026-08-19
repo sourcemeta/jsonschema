@@ -206,6 +206,48 @@ auto oidc_claims_parameter_accepts(const JSON &claims,
 SOURCEMETA_CORE_OIDC_EXPORT
 auto oidc_claim_request_accepts(const JSON &request, const JSON &value) -> bool;
 
+/// @ingroup oidc
+/// Whether an individual claim request permits a claim carrying a set rather
+/// than a single value, which is the shape the claims that govern access
+/// actually arrive in. RFC 9068 Section 2.2.3.1 has an authorization server
+/// encode `groups`, `roles` and `entitlements` as the `User` resource
+/// attributes of RFC 7643 Section 4.1.2.
+///
+/// An array is a set the caller belongs to, so any one member satisfying the
+/// request satisfies it. A member is either a primitive or a complex object
+/// (RFC 7643 Section 2.4), so one list may carry both, and anything else, a
+/// nested array among them, is no member shape that section defines and
+/// satisfies nothing. A complex member is compared on its `value`
+/// sub-attribute alone, which that section defines as "the attribute's
+/// significant value", never on `display`, which is "a human-readable name,
+/// primarily used for display purposes" and so would let whoever can rename a
+/// group grant access. A member carrying no `value` satisfies nothing.
+///
+/// RFC 7643 Section 2.5 holds an unassigned attribute, the null value, and the
+/// empty array to be equivalent in state, so none of them carries membership.
+/// An empty array, a null claim, a null member, and a complex member whose
+/// `value` is null all satisfy nothing, even where the request constrains
+/// nothing and would otherwise permit any value.
+///
+/// Any other value is compared as `oidc_claim_request_accepts` compares it.
+/// For example:
+///
+/// ```cpp
+/// #include <sourcemeta/core/oidc.h>
+/// #include <sourcemeta/core/json.h>
+/// #include <cassert>
+///
+/// const auto request{sourcemeta::core::parse_json(
+///     R"JSON({ "value": "e9e30dba" })JSON")};
+/// const auto groups{sourcemeta::core::parse_json(
+///     R"JSON([ { "value": "e9e30dba", "display": "Tour Guides" } ])JSON")};
+/// assert(sourcemeta::core::oidc_claim_request_accepts_multi_valued(
+///     request, groups));
+/// ```
+SOURCEMETA_CORE_OIDC_EXPORT
+auto oidc_claim_request_accepts_multi_valued(const JSON &request,
+                                             const JSON &value) -> bool;
+
 } // namespace sourcemeta::core
 
 #endif

@@ -14,22 +14,22 @@ constexpr std::uint64_t OFFSET_BASIS_LOW{0x62b821756295c58dULL};
 // The 128-bit FNV prime is 2^88 + 2^8 + 0x3b (draft-eastlake-fnv Section 4),
 // so multiplying by it reduces to (value << 88) + (value << 8) + value * 0x3b
 // modulo 2^128, computed here over two 64-bit limbs
-inline constexpr auto multiply_by_prime(std::uint64_t &high,
-                                        std::uint64_t &low) noexcept -> void {
+constexpr auto multiply_by_prime(std::uint64_t &high,
+                                 std::uint64_t &low) noexcept -> void {
   // value << 88, whose low limb is always zero
-  const auto shift_88_high = low << 24u;
+  const auto shift_88_high = low << 24U;
 
   // value << 8
-  const auto shift_8_high = (high << 8u) | (low >> 56u);
-  const auto shift_8_low = low << 8u;
+  const auto shift_8_high = (high << 8U) | (low >> 56U);
+  const auto shift_8_low = low << 8U;
 
   // value * 0x3b, multiplying the low limb in 32-bit halves to portably
   // capture the carry into the high limb
   const auto low_half_product = (low & 0xffffffffULL) * 0x3bULL;
-  const auto high_half_product = (low >> 32u) * 0x3bULL;
-  const auto small_low = low_half_product + (high_half_product << 32u);
+  const auto high_half_product = (low >> 32U) * 0x3bULL;
+  const auto small_low = low_half_product + (high_half_product << 32U);
   const auto small_carry =
-      (high_half_product + (low_half_product >> 32u)) >> 32u;
+      (high_half_product + (low_half_product >> 32U)) >> 32U;
   const auto small_high = (high * 0x3bULL) + small_carry;
 
   const auto result_low = shift_8_low + small_low;
@@ -54,10 +54,10 @@ auto fnv128_digest(const std::string_view input)
   }
 
   std::array<std::uint8_t, 16> result{};
-  for (std::uint64_t index = 0u; index < 8u; ++index) {
-    const auto shift = 8u * (7u - index);
-    result[index] = static_cast<std::uint8_t>((high >> shift) & 0xffu);
-    result[8u + index] = static_cast<std::uint8_t>((low >> shift) & 0xffu);
+  for (std::uint64_t index = 0U; index < 8U; ++index) {
+    const auto shift = 8U * (7U - index);
+    result[index] = static_cast<std::uint8_t>((high >> shift) & 0xffU);
+    result[8U + index] = static_cast<std::uint8_t>((low >> shift) & 0xffU);
   }
 
   return result;

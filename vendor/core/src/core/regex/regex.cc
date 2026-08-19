@@ -121,24 +121,25 @@ auto to_regex(const std::string_view pattern, const RegexDialect dialect,
       // Note that the JSON Schema specification does not impose the use of any
       // regular expression flag. Given popular adoption, we assume `.` matches
       // new line characters (as in the `DOTALL`) option
-    } else if (pattern == ".+" || pattern == "^.+$" || pattern == "^(.+)$" ||
-               pattern == ".") {
+    }
+    if (pattern == ".+" || pattern == "^.+$" || pattern == "^(.+)$" ||
+        pattern == ".") {
       return RegexTypeNonEmpty{};
     }
 
     const char *const pattern_data{pattern.empty() ? "" : pattern.data()};
 
-    const std::regex PREFIX_REGEX{R"(^\^([a-zA-Z0-9-_/@]+)(\.\*)?)"};
+    const std::regex prefix_regex{R"(^\^([a-zA-Z0-9-_/@]+)(\.\*)?)"};
     std::cmatch matches_prefix;
     if (std::regex_match(pattern_data, pattern_data + pattern.size(),
-                         matches_prefix, PREFIX_REGEX)) {
+                         matches_prefix, prefix_regex)) {
       return RegexTypePrefix{matches_prefix[1].str()};
     }
 
-    const std::regex RANGE_REGEX{R"(^\^\.\{(\d+),(\d+)\}\$$)"};
+    const std::regex range_regex{R"(^\^\.\{(\d+),(\d+)\}\$$)"};
     std::cmatch matches_range;
     if (std::regex_match(pattern_data, pattern_data + pattern.size(),
-                         matches_range, RANGE_REGEX)) {
+                         matches_range, range_regex)) {
       const auto minimum_string = matches_range[1].str();
       const auto maximum_string = matches_range[2].str();
       std::size_t minimum{};
@@ -220,7 +221,7 @@ auto replace_all(const Regex &regex, const std::string_view subject,
   const RegexTypePCRE2 *pcre2_regex{std::get_if<RegexTypePCRE2>(&regex)};
   auto *pcre2_code_ptr{static_cast<pcre2_code *>(pcre2_regex->code.get())};
 
-  constexpr std::uint32_t options{
+  constexpr std::uint32_t OPTIONS{
       PCRE2_SUBSTITUTE_GLOBAL | PCRE2_SUBSTITUTE_LITERAL |
       PCRE2_SUBSTITUTE_OVERFLOW_LENGTH | PCRE2_NO_UTF_CHECK};
 
@@ -230,7 +231,7 @@ auto replace_all(const Regex &regex, const std::string_view subject,
   PCRE2_SIZE result_size{result.size()};
   int substitute_result{pcre2_substitute(
       pcre2_code_ptr, reinterpret_cast<PCRE2_SPTR>(subject.data()),
-      subject.size(), 0, options, nullptr, nullptr,
+      subject.size(), 0, OPTIONS, nullptr, nullptr,
       reinterpret_cast<PCRE2_SPTR>(replacement.data()), replacement.size(),
       reinterpret_cast<PCRE2_UCHAR *>(result.data()), &result_size)};
 
@@ -242,7 +243,7 @@ auto replace_all(const Regex &regex, const std::string_view subject,
     result_size = result.size();
     substitute_result = pcre2_substitute(
         pcre2_code_ptr, reinterpret_cast<PCRE2_SPTR>(subject.data()),
-        subject.size(), 0, options, nullptr, nullptr,
+        subject.size(), 0, OPTIONS, nullptr, nullptr,
         reinterpret_cast<PCRE2_SPTR>(replacement.data()), replacement.size(),
         reinterpret_cast<PCRE2_UCHAR *>(result.data()), &result_size);
   }

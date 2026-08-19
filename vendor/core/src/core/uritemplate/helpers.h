@@ -4,6 +4,7 @@
 #include <sourcemeta/core/text.h>
 #include <sourcemeta/core/uritemplate.h>
 
+#include <algorithm>   // std::min
 #include <array>       // std::array
 #include <cstddef>     // std::size_t
 #include <cstdint>     // std::uint16_t
@@ -14,18 +15,18 @@
 namespace sourcemeta::core {
 
 // Type traits to detect optional static members
-template <typename T, typename = void> struct has_op : std::false_type {};
+template <typename T, typename = void> struct HasOp : std::false_type {};
 template <typename T>
-struct has_op<T, std::void_t<decltype(T::op)>> : std::true_type {};
+struct HasOp<T, std::void_t<decltype(T::OPERATOR)>> : std::true_type {};
 
-template <typename T, typename = void> struct has_prefix : std::false_type {};
+template <typename T, typename = void> struct HasPrefix : std::false_type {};
 template <typename T>
-struct has_prefix<T, std::void_t<decltype(T::prefix)>> : std::true_type {};
+struct HasPrefix<T, std::void_t<decltype(T::PREFIX)>> : std::true_type {};
 
 template <typename T, typename = void>
-struct has_empty_suffix : std::false_type {};
+struct HasEmptySuffix : std::false_type {};
 template <typename T>
-struct has_empty_suffix<T, std::void_t<decltype(T::empty_suffix)>>
+struct HasEmptySuffix<T, std::void_t<decltype(T::EMPTY_SUFFIX)>>
     : std::true_type {};
 
 inline auto is_unreserved(const char character) -> bool {
@@ -74,9 +75,7 @@ inline auto prefix_by_characters(const std::string_view input,
     taken++;
   }
 
-  if (position > input.size()) {
-    position = input.size();
-  }
+  position = std::min(position, input.size());
 
   return input.substr(0, position);
 }
@@ -106,7 +105,7 @@ inline auto passes_through_unencoded(const char character,
 
 inline auto percent_encode(std::string &output, const std::string_view input,
                            const URITemplateExpansionMode mode) -> void {
-  output.reserve(output.size() + input.size() * 3);
+  output.reserve(output.size() + (input.size() * 3));
   for (const char character : input) {
     if (is_unreserved(character) || passes_through_unencoded(character, mode)) {
       output += character;
@@ -120,7 +119,7 @@ inline auto percent_encode_reserved(std::string &output,
                                     const std::string_view input,
                                     const URITemplateExpansionMode mode)
     -> void {
-  output.reserve(output.size() + input.size() * 3);
+  output.reserve(output.size() + (input.size() * 3));
   for (std::size_t index = 0; index < input.size(); ++index) {
     const char character = input[index];
     if (is_unreserved(character) || is_reserved(character) ||
@@ -137,7 +136,7 @@ inline auto percent_encode_reserved(std::string &output,
 template <typename T>
 inline auto encode(std::string &output, const std::string_view input,
                    const URITemplateExpansionMode mode) -> void {
-  if constexpr (T::allow_reserved) {
+  if constexpr (T::ALLOW_RESERVED) {
     percent_encode_reserved(output, input, mode);
   } else {
     percent_encode(output, input, mode);
@@ -147,11 +146,11 @@ inline auto encode(std::string &output, const std::string_view input,
 template <typename T>
 inline auto append_name(std::string &result, const std::string_view name,
                         const bool value_empty, const bool has_more) -> void {
-  if constexpr (T::named) {
+  if constexpr (T::NAMED) {
     result += name;
     if (value_empty && !has_more) {
-      if constexpr (has_empty_suffix<T>::value) {
-        result += T::empty_suffix;
+      if constexpr (HasEmptySuffix<T>::value) {
+        result += T::EMPTY_SUFFIX;
       }
     } else {
       result += '=';
@@ -294,7 +293,7 @@ parse_variable_list(const std::string_view input, std::size_t position,
       std::uint16_t value = 0;
       for (const char character : prefix_str) {
         value = static_cast<std::uint16_t>(
-            value * 10 + static_cast<std::uint16_t>(character - '0'));
+            (value * 10) + static_cast<std::uint16_t>(character - '0'));
       }
 
       if (value > 9999 || value == 0) {
@@ -384,8 +383,8 @@ auto parse_expression(const std::string_view input)
     }
 
     std::size_t var_start;
-    if constexpr (has_op<T>::value) {
-      if (input.size() < 3 || input[1] != T::op) {
+    if constexpr (HasOp<T>::value) {
+      if (input.size() < 3 || input[1] != T::OPERATOR) {
         return std::nullopt;
       }
       var_start = 2;
@@ -446,29 +445,29 @@ auto expand_expression(
 
       if (variable.explode) {
         if (first_var && first_value) {
-          if constexpr (has_prefix<T>::value) {
-            result += T::prefix;
+          if constexpr (HasPrefix<T>::value) {
+            result += T::PREFIX;
           }
           first_var = false;
         } else {
-          result += T::separator;
+          result += T::SEPARATOR;
         }
 
         if (object_key.has_value()) {
           encode<T>(result, object_key.value(), mode);
           if (actual_value.empty()) {
-            if constexpr (has_empty_suffix<T>::value) {
-              result += T::empty_suffix;
+            if constexpr (HasEmptySuffix<T>::value) {
+              result += T::EMPTY_SUFFIX;
             }
           } else {
             result += '=';
             encode<T>(result, actual_value, mode);
           }
-        } else if constexpr (T::named) {
+        } else if constexpr (T::NAMED) {
           result += variable.name;
           if (actual_value.empty()) {
-            if constexpr (has_empty_suffix<T>::value) {
-              result += T::empty_suffix;
+            if constexpr (HasEmptySuffix<T>::value) {
+              result += T::EMPTY_SUFFIX;
             }
           } else {
             result += '=';
@@ -482,13 +481,13 @@ auto expand_expression(
         // empty even when the pair value is the empty string
         const bool value_empty{!object_key.has_value() && actual_value.empty()};
         if (first_var && first_value) {
-          if constexpr (has_prefix<T>::value) {
-            result += T::prefix;
+          if constexpr (HasPrefix<T>::value) {
+            result += T::PREFIX;
           }
           first_var = false;
           append_name<T>(result, variable.name, value_empty, has_more);
         } else if (first_value) {
-          result += T::separator;
+          result += T::SEPARATOR;
           append_name<T>(result, variable.name, value_empty, has_more);
         } else {
           result += ',';

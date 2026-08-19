@@ -74,7 +74,7 @@ public:
     }
 
     if (token->type == TokenType::DocumentStart) {
-      if (this->roundtrip_) {
+      if (this->roundtrip_ != nullptr) {
         this->roundtrip_->leading_comments =
             this->lexer_->take_preceding_comments();
         this->roundtrip_->explicit_document_start = true;
@@ -82,7 +82,7 @@ public:
       this->document_start_line_ = token->line;
       const auto pos_before_next{this->lexer_->position()};
       token = this->lexer_->next();
-      if (this->roundtrip_) {
+      if (this->roundtrip_ != nullptr) {
         this->roundtrip_->document_start_comment =
             this->lexer_->take_inline_comment();
       }
@@ -112,7 +112,7 @@ public:
       return JSON{nullptr};
     }
 
-    if (this->roundtrip_) {
+    if (this->roundtrip_ != nullptr) {
       auto comments{this->lexer_->take_preceding_comments()};
       this->lexer_->take_inline_comment();
       if (this->roundtrip_->explicit_document_start) {
@@ -123,11 +123,11 @@ public:
     }
 
     auto result{this->parse_value(token.value(), JSON::ParseContext::Root, 0,
-                                  empty_property_)};
+                                  EMPTY_PROPERTY)};
 
     auto pos_before_token{this->lexer_->position()};
     token = this->next_token();
-    if (this->roundtrip_) {
+    if (this->roundtrip_ != nullptr) {
       auto root_inline{this->lexer_->take_inline_comment()};
       if (root_inline.has_value()) {
         this->roundtrip_->styles[this->pointer_stack_].comment_inline =
@@ -136,20 +136,20 @@ public:
     }
     while (token.has_value() && token->type == TokenType::DocumentEnd) {
       this->document_ended_ = true;
-      if (this->roundtrip_) {
+      if (this->roundtrip_ != nullptr) {
         this->roundtrip_->pre_end_comments =
             this->lexer_->take_preceding_comments();
         this->roundtrip_->explicit_document_end = true;
       }
       pos_before_token = this->lexer_->position();
       token = this->next_token();
-      if (this->roundtrip_) {
+      if (this->roundtrip_ != nullptr) {
         this->roundtrip_->document_end_comment =
             this->lexer_->take_inline_comment();
       }
     }
 
-    if (this->roundtrip_) {
+    if (this->roundtrip_ != nullptr) {
       auto trailing{this->lexer_->take_preceding_comments()};
       if (!trailing.empty()) {
         this->roundtrip_->trailing_comments = std::move(trailing);
@@ -221,7 +221,7 @@ public:
                              "Unexpected content after document"};
       }
       this->parse_value(token.value(), JSON::ParseContext::Root, 0,
-                        empty_property_);
+                        EMPTY_PROPERTY);
       saw_document_end = false;
       token = this->next_token();
       while (token.has_value() && token->type == TokenType::DocumentEnd) {
@@ -235,13 +235,13 @@ public:
   }
 
 private:
-  static constexpr std::size_t maximum_expanded_nodes{10000000};
+  static constexpr std::size_t MAXIMUM_EXPANDED_NODES{10000000};
 
   // Cap the recursion depth of the value parser so that a deeply nested
   // document cannot overflow the stack on attacker-controlled input. The bound
   // is conservative so that it holds on platforms with a small default stack
   // such as Windows, and is still far above any realistic nesting
-  static constexpr std::size_t maximum_depth{100};
+  static constexpr std::size_t MAXIMUM_DEPTH{100};
   std::size_t depth_{0};
 
   struct DepthScope {
@@ -282,7 +282,7 @@ private:
         }
         seen_yaml_directive = true;
         const auto content{token.value};
-        auto cursor{5uz};
+        auto cursor{5UZ};
         while (cursor < content.size() &&
                (content[cursor] == ' ' || content[cursor] == '\t')) {
           cursor++;
@@ -323,7 +323,7 @@ private:
         }
       } else if (token.type == TokenType::DirectiveTag) {
         const auto content{token.value};
-        auto cursor{4uz};
+        auto cursor{4UZ};
         while (cursor < content.size() &&
                (content[cursor] == ' ' || content[cursor] == '\t')) {
           cursor++;
@@ -405,7 +405,7 @@ private:
                        const JSON::ParseContext context,
                        const std::size_t index, const std::string &property)
       -> void {
-    if (this->callback_ && *this->callback_) {
+    if ((this->callback_ != nullptr) && *this->callback_) {
       (*this->callback_)(phase, type, line, column, context, index, property);
     }
 
@@ -468,7 +468,7 @@ private:
                            const std::optional<std::string> &tag = std::nullopt)
       -> JSON {
     // Round-trip mode preserves the original key text, so it is not resolved
-    if (this->roundtrip_) {
+    if (this->roundtrip_ != nullptr) {
       return JSON{std::string{token.value}};
     }
 
@@ -491,12 +491,12 @@ private:
                    const std::uint64_t key_line = 0,
                    const std::uint64_t key_column = 0) -> JSON {
     const DepthScope scope{this->depth_};
-    if (this->depth_ > maximum_depth) {
+    if (this->depth_ > MAXIMUM_DEPTH) {
       throw YAMLParseError{token.line, token.column,
                            "Maximum nesting depth exceeded"};
     }
 
-    if (this->roundtrip_) {
+    if (this->roundtrip_ != nullptr) {
       if (context == JSON::ParseContext::Property) {
         this->pointer_stack_.push_back(std::string{property});
       } else if (context == JSON::ParseContext::Index) {
@@ -521,7 +521,7 @@ private:
         const auto value_indent{
             current_token.column > 0
                 ? static_cast<std::size_t>(current_token.column - 1)
-                : 0uz};
+                : 0UZ};
         const auto parent_indent{this->lexer_->block_indent()};
         if (parent_indent != SIZE_MAX && value_indent <= parent_indent)
             [[unlikely]] {
@@ -538,7 +538,7 @@ private:
       }
 
       auto next{this->lexer_->next()};
-      if (this->roundtrip_ && anchor_name.has_value()) {
+      if ((this->roundtrip_ != nullptr) && anchor_name.has_value()) {
         anchor_inline_comment = this->lexer_->take_inline_comment();
       }
       if (!next.has_value() || next->type == TokenType::StreamEnd ||
@@ -553,14 +553,15 @@ private:
         if (next.has_value()) {
           this->pending_tokens_.push_back(next.value());
         }
-        if (this->roundtrip_ && anchor_name.has_value()) {
+        if ((this->roundtrip_ != nullptr) && anchor_name.has_value()) {
           auto &style{this->roundtrip_->styles[this->pointer_stack_]};
           style.anchor = std::string{anchor_name.value()};
           if (anchor_inline_comment.has_value()) {
             style.comment_inline = std::move(anchor_inline_comment);
           }
         }
-        if (this->roundtrip_ && context != JSON::ParseContext::Root) {
+        if ((this->roundtrip_ != nullptr) &&
+            context != JSON::ParseContext::Root) {
           this->pointer_stack_.pop_back();
         }
         return empty_value;
@@ -578,7 +579,8 @@ private:
                                          index, property,
                                          anchor_inline_comment);
           }
-          if (this->roundtrip_ && context != JSON::ParseContext::Root) {
+          if ((this->roundtrip_ != nullptr) &&
+              context != JSON::ParseContext::Root) {
             this->pointer_stack_.pop_back();
           }
           return JSON{nullptr};
@@ -594,12 +596,13 @@ private:
         const auto entry_indent{
             current_token.column > 0
                 ? static_cast<std::size_t>(current_token.column - 1)
-                : 0uz};
+                : 0UZ};
         if (block_indent != SIZE_MAX && entry_indent <= block_indent) {
           this->pending_tokens_.push_back(current_token);
           this->register_anchored_null(anchor_name.value(), token, context,
                                        index, property, anchor_inline_comment);
-          if (this->roundtrip_ && context != JSON::ParseContext::Root) {
+          if ((this->roundtrip_ != nullptr) &&
+              context != JSON::ParseContext::Root) {
             this->pointer_stack_.pop_back();
           }
           return JSON{nullptr};
@@ -615,7 +618,8 @@ private:
         empty_value = JSON{std::string{}};
       }
       this->pending_tokens_.push_back(current_token);
-      if (this->roundtrip_ && context != JSON::ParseContext::Root) {
+      if ((this->roundtrip_ != nullptr) &&
+          context != JSON::ParseContext::Root) {
         this->pointer_stack_.pop_back();
       }
       return empty_value;
@@ -743,7 +747,7 @@ private:
           }
           result = this->resolve_alias(current_token, context, index, property,
                                        key_line, key_column);
-          if (this->roundtrip_) {
+          if (this->roundtrip_ != nullptr) {
             this->roundtrip_->aliases[this->pointer_stack_] =
                 std::string{current_token.value};
           }
@@ -767,7 +771,7 @@ private:
                             std::move(this->current_anchor_callbacks_)});
       this->current_anchor_callbacks_.clear();
 
-      if (this->roundtrip_) {
+      if (this->roundtrip_ != nullptr) {
         auto &style{this->roundtrip_->styles[this->pointer_stack_]};
         style.anchor = std::string{anchor_name.value()};
         if (anchor_inline_comment.has_value()) {
@@ -776,7 +780,7 @@ private:
       }
     }
 
-    if (this->roundtrip_ && context != JSON::ParseContext::Root) {
+    if ((this->roundtrip_ != nullptr) && context != JSON::ParseContext::Root) {
       this->pointer_stack_.pop_back();
     }
 
@@ -807,7 +811,7 @@ private:
 
     this->invoke_callback(JSON::ParsePhase::Post, result.type(), token.line,
                           end_column, JSON::ParseContext::Root, 0,
-                          empty_property_);
+                          EMPTY_PROPERTY);
 
     return result;
   }
@@ -844,7 +848,7 @@ private:
         // explicitly floated infinity or not-a-number has no JSON
         // representation. Round-trip mode preserves the original text instead
         if (is_special_float(value)) [[unlikely]] {
-          if (!this->roundtrip_) {
+          if (this->roundtrip_ == nullptr) {
             throw YAMLParseError{this->lexer_->line(), this->lexer_->column(),
                                  "Infinity and NaN are not permitted"};
           }
@@ -880,7 +884,7 @@ private:
       // JSON grammar, such as Infinity and NaN, are not permitted, so a YAML
       // infinity or not-a-number float has no JSON representation. Round-trip
       // mode preserves the original text instead, so it keeps the string
-      if (!this->roundtrip_) [[unlikely]] {
+      if (this->roundtrip_ == nullptr) [[unlikely]] {
         throw YAMLParseError{this->lexer_->line(), this->lexer_->column(),
                              "Infinity and NaN are not permitted"};
       }
@@ -954,7 +958,7 @@ private:
   }
 
   auto parse_number(const std::string_view value) -> JSON {
-    const std::size_t prefix{(value[0] == '-' || value[0] == '+') ? 1u : 0u};
+    const std::size_t prefix{(value[0] == '-' || value[0] == '+') ? 1U : 0U};
     // YAML 1.2.2 Section 10.3.2: the hexadecimal and octal integer forms carry
     // no sign and use a lowercase indicator
     if (prefix == 0 && value.size() > 1 && value[0] == '0') {
@@ -1022,8 +1026,8 @@ private:
       }
     }
 
-    constexpr std::size_t double_precision_limit{15};
-    if (significant_digits > double_precision_limit) {
+    constexpr std::size_t DOUBLE_PRECISION_LIMIT{15};
+    if (significant_digits > DOUBLE_PRECISION_LIMIT) {
       return JSON{Decimal{value}};
     }
 
@@ -1163,9 +1167,9 @@ private:
                                             : this->lexer_->column()};
     this->invoke_callback(JSON::ParsePhase::Post, JSON::Type::Object, end_line,
                           end_column, JSON::ParseContext::Root, 0,
-                          empty_property_);
+                          EMPTY_PROPERTY);
 
-    if (this->roundtrip_ && found_compact_separator) {
+    if ((this->roundtrip_ != nullptr) && found_compact_separator) {
       this->roundtrip_->styles[this->pointer_stack_].compact_flow = true;
     }
 
@@ -1194,7 +1198,7 @@ private:
       if (parent_block_indent != SIZE_MAX && token->line != start_token.line) {
         const auto token_indent{
             token->column > 0 ? static_cast<std::size_t>(token->column - 1)
-                              : 0uz};
+                              : 0UZ};
         if (token_indent <= parent_block_indent) [[unlikely]] {
           throw YAMLParseError{
               token->line, token->column,
@@ -1235,7 +1239,7 @@ private:
           const auto explicit_key_column{token->column};
           auto key_value{this->parse_value(token.value(),
                                            JSON::ParseContext::Index,
-                                           element_index, empty_property_)};
+                                           element_index, EMPTY_PROPERTY)};
           key_string = this->json_to_key_string(key_value, explicit_key_line,
                                                 explicit_key_column);
           token = this->next_token();
@@ -1261,7 +1265,7 @@ private:
       }
 
       auto value{this->parse_value(token.value(), JSON::ParseContext::Index,
-                                   element_index, empty_property_)};
+                                   element_index, EMPTY_PROPERTY)};
       result.push_back(std::move(value));
       element_index++;
 
@@ -1282,9 +1286,9 @@ private:
                                             : this->lexer_->column()};
     this->invoke_callback(JSON::ParsePhase::Post, JSON::Type::Array, end_line,
                           end_column, JSON::ParseContext::Root, 0,
-                          empty_property_);
+                          EMPTY_PROPERTY);
 
-    if (this->roundtrip_ && found_compact_separator) {
+    if ((this->roundtrip_ != nullptr) && found_compact_separator) {
       this->roundtrip_->styles[this->pointer_stack_].compact_flow = true;
     }
 
@@ -1307,7 +1311,7 @@ private:
     std::size_t element_index{0};
     const auto base_column{start_token.column};
     const auto sequence_indent{
-        base_column > 0 ? static_cast<std::size_t>(base_column - 1) : 0uz};
+        base_column > 0 ? static_cast<std::size_t>(base_column - 1) : 0UZ};
     this->detect_indent_width(key_column, base_column);
     this->lexer_->set_block_indent(sequence_indent);
     this->record_preceding_comments_for_index(0);
@@ -1322,7 +1326,7 @@ private:
         token->type != TokenType::DocumentEnd &&
         token->type != TokenType::DocumentStart) {
       auto value{this->parse_value(token.value(), JSON::ParseContext::Index,
-                                   element_index, empty_property_)};
+                                   element_index, EMPTY_PROPERTY)};
       result.push_back(std::move(value));
       element_index++;
       token = this->next_token();
@@ -1352,7 +1356,7 @@ private:
                                "Wrong indentation for sequence entry"};
         }
         auto value{this->parse_value(token.value(), JSON::ParseContext::Index,
-                                     element_index, empty_property_)};
+                                     element_index, EMPTY_PROPERTY)};
         result.push_back(std::move(value));
         element_index++;
         token = this->next_token();
@@ -1374,7 +1378,7 @@ private:
         result.push_back(JSON{nullptr});
       } else {
         auto value{this->parse_value(token.value(), JSON::ParseContext::Index,
-                                     element_index, empty_property_)};
+                                     element_index, EMPTY_PROPERTY)};
         result.push_back(std::move(value));
         token = this->next_token();
       }
@@ -1397,7 +1401,7 @@ private:
 
     this->invoke_callback(JSON::ParsePhase::Post, JSON::Type::Array, end_line,
                           end_column, JSON::ParseContext::Root, 0,
-                          empty_property_);
+                          EMPTY_PROPERTY);
 
     return result;
   }
@@ -1420,7 +1424,7 @@ private:
     const auto mapping_indent{
         start_token.column > 0
             ? static_cast<std::size_t>(start_token.column - 1)
-            : 0uz};
+            : 0UZ};
 
     while (true) {
       this->lexer_->set_block_indent(mapping_indent);
@@ -1552,7 +1556,8 @@ private:
         // as ~ stays non-empty and the historical empty-string sentinel still
         // marks the absence of a key. In conversion mode a null-like key
         // resolves to an empty string, so a dedicated flag marks its presence
-        const bool key_absent{this->roundtrip_ ? key.empty() : !key_present};
+        const bool key_absent{(this->roundtrip_ != nullptr) ? key.empty()
+                                                            : !key_present};
         if (next->type == TokenType::BlockMappingValue ||
             next->type == TokenType::BlockMappingKey) {
           if (key_absent && next->type == TokenType::BlockMappingKey) {
@@ -1592,7 +1597,7 @@ private:
 
     this->invoke_callback(JSON::ParsePhase::Post, JSON::Type::Object,
                           this->lexer_->line(), this->lexer_->column(),
-                          JSON::ParseContext::Root, 0, empty_property_);
+                          JSON::ParseContext::Root, 0, EMPTY_PROPERTY);
 
     return result;
   }
@@ -1651,7 +1656,7 @@ private:
     }
 
     this->expanded_nodes_ += this->count_expanded_nodes(anchored.value);
-    if (this->expanded_nodes_ > maximum_expanded_nodes) [[unlikely]] {
+    if (this->expanded_nodes_ > MAXIMUM_EXPANDED_NODES) [[unlikely]] {
       throw YAMLParseError{token.line, token.column,
                            "Maximum YAML alias expansion exceeded"};
     }
@@ -1731,7 +1736,7 @@ private:
                                     static_cast<std::uint64_t>(key.size())};
         this->invoke_callback(JSON::ParsePhase::Post, JSON::Type::Null,
                               key_line, null_post_column,
-                              JSON::ParseContext::Root, 0, empty_property_);
+                              JSON::ParseContext::Root, 0, EMPTY_PROPERTY);
         result.assign(key, JSON{nullptr});
       }
     } else if (next->type == TokenType::MappingStart ||
@@ -2005,13 +2010,13 @@ private:
 
     this->invoke_callback(JSON::ParsePhase::Post, JSON::Type::Object,
                           this->lexer_->line(), this->lexer_->column(),
-                          JSON::ParseContext::Root, 0, empty_property_);
+                          JSON::ParseContext::Root, 0, EMPTY_PROPERTY);
 
     return result;
   }
 
   auto record_preceding_comments_for_key(const std::string &key) -> void {
-    if (!this->roundtrip_) {
+    if (this->roundtrip_ == nullptr) {
       return;
     }
     auto comments{this->lexer_->take_preceding_comments()};
@@ -2026,7 +2031,7 @@ private:
 
   auto record_inline_comment_for_key(const std::string &key,
                                      const bool on_indicator = false) -> void {
-    if (!this->roundtrip_) {
+    if (this->roundtrip_ == nullptr) {
       return;
     }
     auto comment{this->lexer_->take_inline_comment()};
@@ -2045,7 +2050,7 @@ private:
   }
 
   auto record_preceding_comments_for_index(const std::size_t index) -> void {
-    if (!this->roundtrip_) {
+    if (this->roundtrip_ == nullptr) {
       return;
     }
     auto comments{this->lexer_->take_preceding_comments()};
@@ -2059,7 +2064,7 @@ private:
   }
 
   auto record_inline_comment_for_index(const std::size_t index) -> void {
-    if (!this->roundtrip_) {
+    if (this->roundtrip_ == nullptr) {
       return;
     }
     auto comment{this->lexer_->take_inline_comment()};
@@ -2073,7 +2078,7 @@ private:
   }
 
   auto record_indicator_comment_for_index(const std::size_t index) -> void {
-    if (!this->roundtrip_) {
+    if (this->roundtrip_ == nullptr) {
       return;
     }
     this->pointer_stack_.push_back(index);
@@ -2095,14 +2100,14 @@ private:
                           token.column, context, index, property);
     this->invoke_callback(JSON::ParsePhase::Post, JSON::Type::Null, token.line,
                           token.column, JSON::ParseContext::Root, 0,
-                          empty_property_);
+                          EMPTY_PROPERTY);
     this->recording_anchor_ = false;
     this->anchors_.insert_or_assign(
         std::string{anchor_name},
         AnchoredValue{.value = null_value,
                       .callbacks = std::move(this->current_anchor_callbacks_)});
     this->current_anchor_callbacks_.clear();
-    if (this->roundtrip_) {
+    if (this->roundtrip_ != nullptr) {
       auto &style{this->roundtrip_->styles[this->pointer_stack_]};
       style.anchor = std::string{anchor_name};
       if (inline_comment.has_value()) {
@@ -2113,7 +2118,7 @@ private:
 
   auto record_collection_style(const YAMLRoundTrip::CollectionStyle style)
       -> void {
-    if (!this->roundtrip_) {
+    if (this->roundtrip_ == nullptr) {
       return;
     }
 
@@ -2121,7 +2126,7 @@ private:
   }
 
   auto record_scalar_style(const Token &token, const JSON &value) -> void {
-    if (!this->roundtrip_) {
+    if (this->roundtrip_ == nullptr) {
       return;
     }
 
@@ -2191,7 +2196,7 @@ private:
   auto record_key_scalar_style(const std::string &key, const ScalarStyle style,
                                const std::string_view quoted_original = {})
       -> void {
-    if (!this->roundtrip_) {
+    if (this->roundtrip_ == nullptr) {
       return;
     }
     this->pointer_stack_.push_back(key);
@@ -2220,7 +2225,7 @@ private:
 
   auto detect_indent_width(const std::uint64_t parent_column,
                            const std::uint64_t child_column) -> void {
-    if (!this->roundtrip_ || this->indent_width_detected_) {
+    if ((this->roundtrip_ == nullptr) || this->indent_width_detected_) {
       return;
     }
     if (parent_column > 0 && child_column > parent_column) {
@@ -2230,7 +2235,7 @@ private:
     }
   }
 
-  inline static const std::string empty_property_{};
+  inline static const std::string EMPTY_PROPERTY{};
   Lexer *lexer_;
   const JSON::ParseCallback *callback_;
   YAMLRoundTrip *roundtrip_{nullptr};

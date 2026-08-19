@@ -147,7 +147,7 @@ auto process_entry(
   sourcemeta::blaze::TraceOutput trace_output{
       sourcemeta::blaze::schema_walker, custom_resolver,
       sourcemeta::jsonschema::trace_callback(entry.positions, std::cout),
-      sourcemeta::core::empty_weak_pointer, frame};
+      sourcemeta::core::EMPTY_WEAK_POINTER, frame};
   bool subresult{true};
   if (benchmark) {
     subresult = run_loop(evaluator, schema_template, entry.second, entry.first,
@@ -426,7 +426,7 @@ auto sourcemeta::jsonschema::validate(const sourcemeta::core::Options &options)
         sourcemeta::blaze::TraceOutput trace_output{
             sourcemeta::blaze::schema_walker, custom_resolver,
             trace_callback(tracker, std::cout),
-            sourcemeta::core::empty_weak_pointer, frame};
+            sourcemeta::core::EMPTY_WEAK_POINTER, frame};
         bool subresult{true};
         if (benchmark) {
           subresult = run_loop(evaluator, schema_template, instance,

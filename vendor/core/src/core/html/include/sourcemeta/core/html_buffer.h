@@ -25,15 +25,16 @@ public:
   auto operator=(HTMLBuffer &&) -> HTMLBuffer & = delete;
 
   /// Reserve a number of bytes of capacity up front
-  SOURCEMETA_FORCEINLINE inline auto reserve(const std::size_t bytes) -> void {
+  SOURCEMETA_FORCEINLINE auto reserve(const std::size_t bytes) -> void {
     this->buffer_.resize(bytes);
     this->cursor_ = this->buffer_.data();
     this->end_ = this->cursor_ + bytes;
   }
 
   /// Append a single character to the buffer
-  SOURCEMETA_FORCEINLINE inline auto append(const char character) -> void {
-    if (!this->cursor_ || this->cursor_ >= this->end_) [[unlikely]] {
+  SOURCEMETA_FORCEINLINE auto append(const char character) -> void {
+    if ((this->cursor_ == nullptr) || this->cursor_ >= this->end_)
+        [[unlikely]] {
       this->grow(1);
     }
 
@@ -42,16 +43,16 @@ public:
   }
 
   /// Append a sequence of characters to the buffer
-  SOURCEMETA_FORCEINLINE inline auto append(const std::string_view data)
-      -> void {
+  SOURCEMETA_FORCEINLINE auto append(const std::string_view data) -> void {
     const auto length{data.size()};
     if (length == 0) {
       return;
     }
 
     const auto remaining{
-        this->cursor_ ? static_cast<std::size_t>(this->end_ - this->cursor_)
-                      : 0uz};
+        (this->cursor_ != nullptr)
+            ? static_cast<std::size_t>(this->end_ - this->cursor_)
+            : 0UZ};
     if (remaining < length) [[unlikely]] {
       this->grow(length);
     }
@@ -61,9 +62,8 @@ public:
   }
 
   /// Get the accumulated contents of the buffer
-  [[nodiscard]] SOURCEMETA_FORCEINLINE inline auto str()
-      -> const std::string & {
-    if (this->cursor_) {
+  [[nodiscard]] SOURCEMETA_FORCEINLINE auto str() -> const std::string & {
+    if (this->cursor_ != nullptr) {
       this->buffer_.resize(
           static_cast<std::size_t>(this->cursor_ - this->buffer_.data()));
       this->cursor_ = nullptr;

@@ -23,7 +23,7 @@ static auto describe(const std::string_view script, const std::size_t line,
   if (!context.empty()) {
     // A difference or a listing spans lines of its own, and reads better under
     // the message than trailing off the end of it
-    stream << (context.find('\n') == std::string_view::npos ? ": " : ":\n")
+    stream << (!context.contains('\n') ? ": " : ":\n")
            << (context.ends_with('\n') ? context.substr(0, context.size() - 1)
                                        : context);
   }
@@ -178,7 +178,8 @@ auto main(int argc, char *argv[]) -> int {
       std::cout << "TAP version 14\n"
                    "Bail out! a binding needs a name before its value\n";
       return EXIT_FAILURE;
-    } else if (separator == std::string_view::npos) {
+    }
+    if (separator == std::string_view::npos) {
       bindings.insert_or_assign(std::string{entry}, "");
     } else {
       bindings.insert_or_assign(std::string{entry.substr(0, separator)},

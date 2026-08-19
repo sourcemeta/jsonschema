@@ -67,7 +67,7 @@ public:
   /// ```
   ///
   /// If parsing fails, sourcemeta::core::JSONParseError will be thrown.
-  JSONL(std::basic_istream<JSON::Char, JSON::CharTraits> &stream,
+  JSONL(std::basic_istream<JSON::Char, JSON::CharTraits> &input,
         Mode mode = Mode::Raw);
   ~JSONL();
 
@@ -89,9 +89,9 @@ private:
 #if defined(_MSC_VER)
 #pragma warning(disable : 4251)
 #endif
-  std::basic_istream<JSON::Char, JSON::CharTraits> *stream;
+  std::basic_istream<JSON::Char, JSON::CharTraits> *stream_;
   struct Internal;
-  std::unique_ptr<Internal> internal;
+  std::unique_ptr<Internal> internal_;
 #if defined(_MSC_VER)
 #pragma warning(default : 4251)
 #endif

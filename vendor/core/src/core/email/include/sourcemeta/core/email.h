@@ -105,6 +105,30 @@ SOURCEMETA_CORE_EMAIL_EXPORT
 auto is_idn_email_uts46(const std::string_view value) -> bool;
 
 /// @ingroup email
+/// Produce the domain half of a valid RFC 5321 `Mailbox`, returning an empty
+/// view when the input is not one, which no valid mailbox can otherwise yield
+/// since a domain is never empty. The separator is located by parsing the
+/// address, since neither the first nor the last at sign reliably marks it:
+/// RFC 5321 Section 4.1.2 admits one inside a quoted local part, and Section
+/// 4.1.3 admits one inside the content of a General-address-literal. The
+/// result borrows from the input and keeps its spelling, so a caller comparing
+/// domains applies the RFC 5321 Section 2.4 case insensitivity itself. Only
+/// the ASCII grammar is accepted, so an internationalized address per RFC 6531
+/// yields nothing. For example:
+///
+/// ```cpp
+/// #include <sourcemeta/core/email.h>
+///
+/// #include <cassert>
+///
+/// assert(sourcemeta::core::email_domain("\"not@me\"@example.org") ==
+///        "example.org");
+/// assert(sourcemeta::core::email_domain("plain").empty());
+/// ```
+SOURCEMETA_CORE_EMAIL_EXPORT
+auto email_domain(const std::string_view value) -> std::string_view;
+
+/// @ingroup email
 /// Produce the canonical RFC 6068 `mailto` IRI that identifies the given
 /// RFC 5321 `Mailbox`, with no result when the input is not one. The domain
 /// name is lowercased, the RFC 3986 Section 6.2.3 scheme-based case

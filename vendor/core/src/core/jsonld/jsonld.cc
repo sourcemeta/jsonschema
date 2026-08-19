@@ -16,7 +16,7 @@ namespace sourcemeta::core {
 auto run_expansion(ExpansionState &state, ActiveContext &active_context,
                    const JSON &input) -> JSON {
   auto expanded{
-      expand(state, active_context, std::nullopt, input, empty_weak_pointer)};
+      expand(state, active_context, std::nullopt, input, EMPTY_WEAK_POINTER)};
 
   // A top-level map containing only @graph is replaced by its value.
   if (expanded.is_object() && expanded.object_size() == 1 &&
@@ -83,7 +83,7 @@ auto jsonld_expand(const JSON &input, const JSON &expand_context,
           : expand_context};
   // The external expansion context is not part of the input document, so its
   // errors carry an empty pointer.
-  process_context(state, active_context, context, empty_weak_pointer);
+  process_context(state, active_context, context, EMPTY_WEAK_POINTER);
   return run_expansion(state, active_context, input);
 }
 
@@ -105,7 +105,7 @@ auto jsonld_compact(const JSON &input, const JSON &context,
               context.defines(KEYWORD_CONTEXT, KEYWORD_CONTEXT_HASH)
           ? context.at(KEYWORD_CONTEXT, KEYWORD_CONTEXT_HASH)
           : context};
-  process_context(state, active_context, local_context, empty_weak_pointer);
+  process_context(state, active_context, local_context, EMPTY_WEAK_POINTER);
 
   const auto inverse_context{create_inverse_context(active_context)};
   auto result{compact(state, active_context, inverse_context, std::nullopt,

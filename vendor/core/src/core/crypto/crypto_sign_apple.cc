@@ -76,7 +76,7 @@ auto make_data(const std::string_view value) -> CFDataRef {
 
 auto native_private_key(const void *type, const std::string_view key)
     -> SecKeyRef {
-  auto key_data{make_data(key)};
+  const auto *key_data{make_data(key)};
   if (key_data == nullptr) {
     return nullptr;
   }
@@ -84,7 +84,7 @@ auto native_private_key(const void *type, const std::string_view key)
   std::array<const void *, 2> attribute_keys{
       {kSecAttrKeyType, kSecAttrKeyClass}};
   std::array<const void *, 2> attribute_values{{type, kSecAttrKeyClassPrivate}};
-  auto attributes{CFDictionaryCreate(
+  const auto *attributes{CFDictionaryCreate(
       kCFAllocatorDefault, attribute_keys.data(), attribute_values.data(),
       static_cast<CFIndex>(attribute_keys.size()),
       &kCFTypeDictionaryKeyCallBacks, &kCFTypeDictionaryValueCallBacks)};
@@ -93,7 +93,7 @@ auto native_private_key(const void *type, const std::string_view key)
     return nullptr;
   }
 
-  auto key_reference{SecKeyCreateWithData(key_data, attributes, nullptr)};
+  auto *key_reference{SecKeyCreateWithData(key_data, attributes, nullptr)};
   CFRelease(attributes);
   CFRelease(key_data);
   return key_reference;
@@ -179,12 +179,13 @@ auto native_ec_private_key_components(const std::size_t field_bytes,
 auto sign_with_algorithm(SecKeyRef key, const SecKeyAlgorithm algorithm,
                          const std::string_view message)
     -> std::optional<std::string> {
-  auto message_data{make_data(message)};
+  const auto *message_data{make_data(message)};
   if (message_data == nullptr) {
     return std::nullopt;
   }
 
-  auto signature{SecKeyCreateSignature(key, algorithm, message_data, nullptr)};
+  const auto *signature{
+      SecKeyCreateSignature(key, algorithm, message_data, nullptr)};
   CFRelease(message_data);
   if (signature == nullptr) {
     return std::nullopt;
@@ -360,7 +361,8 @@ auto make_ec_private_key(const EllipticCurve curve,
 auto generate_ec_private_key(const EllipticCurve curve)
     -> std::optional<PrivateKey> {
   const int bits{static_cast<int>(curve_bit_length(curve))};
-  auto size{CFNumberCreate(kCFAllocatorDefault, kCFNumberIntType, &bits)};
+  const auto *size{
+      CFNumberCreate(kCFAllocatorDefault, kCFNumberIntType, &bits)};
   if (size == nullptr) {
     return std::nullopt;
   }
@@ -369,7 +371,7 @@ auto generate_ec_private_key(const EllipticCurve curve)
       {kSecAttrKeyType, kSecAttrKeySizeInBits}};
   std::array<const void *, 2> attribute_values{
       {kSecAttrKeyTypeECSECPrimeRandom, size}};
-  auto attributes{CFDictionaryCreate(
+  const auto *attributes{CFDictionaryCreate(
       kCFAllocatorDefault, attribute_keys.data(), attribute_values.data(),
       static_cast<CFIndex>(attribute_keys.size()),
       &kCFTypeDictionaryKeyCallBacks, &kCFTypeDictionaryValueCallBacks)};

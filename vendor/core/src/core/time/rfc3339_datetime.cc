@@ -33,22 +33,22 @@ auto is_rfc3339_datetime(const std::string_view value) -> bool {
   // time-of-day after offset is 23:59. We additionally need to confirm that
   // the UTC date (after any day-rollback from the offset) is June 30 or
   // December 31. If second != 60, no further check is needed
-  const auto second{static_cast<unsigned int>(value[17] - '0') * 10 +
+  const auto second{(static_cast<unsigned int>(value[17] - '0') * 10) +
                     static_cast<unsigned int>(value[18] - '0')};
   if (second != 60) {
     return true;
   }
 
   const auto year{static_cast<std::uint16_t>(
-      (value[0] - '0') * 1000 + (value[1] - '0') * 100 + (value[2] - '0') * 10 +
-      (value[3] - '0'))};
+      ((value[0] - '0') * 1000) + ((value[1] - '0') * 100) +
+      ((value[2] - '0') * 10) + (value[3] - '0'))};
   const auto month{
-      static_cast<std::uint8_t>((value[5] - '0') * 10 + (value[6] - '0'))};
+      static_cast<std::uint8_t>(((value[5] - '0') * 10) + (value[6] - '0'))};
   const auto day{
-      static_cast<std::uint8_t>((value[8] - '0') * 10 + (value[9] - '0'))};
-  const auto hour{static_cast<unsigned int>(value[11] - '0') * 10 +
+      static_cast<std::uint8_t>(((value[8] - '0') * 10) + (value[9] - '0'))};
+  const auto hour{(static_cast<unsigned int>(value[11] - '0') * 10) +
                   static_cast<unsigned int>(value[12] - '0')};
-  const auto minute{static_cast<unsigned int>(value[14] - '0') * 10 +
+  const auto minute{(static_cast<unsigned int>(value[14] - '0') * 10) +
                     static_cast<unsigned int>(value[15] - '0')};
 
   // Locate the offset. After is_rfc3339_fulltime validation, the input ends
@@ -61,10 +61,10 @@ auto is_rfc3339_datetime(const std::string_view value) -> bool {
     const auto offset_start{size - 6};
     offset_sign = value[offset_start];
     offset_hour =
-        static_cast<unsigned int>(value[offset_start + 1] - '0') * 10 +
+        (static_cast<unsigned int>(value[offset_start + 1] - '0') * 10) +
         static_cast<unsigned int>(value[offset_start + 2] - '0');
     offset_minute =
-        static_cast<unsigned int>(value[offset_start + 4] - '0') * 10 +
+        (static_cast<unsigned int>(value[offset_start + 4] - '0') * 10) +
         static_cast<unsigned int>(value[offset_start + 5] - '0');
   }
 
@@ -72,8 +72,8 @@ auto is_rfc3339_datetime(const std::string_view value) -> bool {
   // Only a "+" offset can shift the UTC date backward; a "-" offset cannot
   // shift it forward while UTC time stays at 23:59, since
   // max(local) + max(offset) = 1439 + 1439 = 2878 < 1440 + 1439
-  const auto local_minute_of_day{hour * 60 + minute};
-  const auto offset_total_minutes{offset_hour * 60 + offset_minute};
+  const auto local_minute_of_day{(hour * 60) + minute};
+  const auto offset_total_minutes{(offset_hour * 60) + offset_minute};
   const bool previous_utc_day{offset_sign == '+' &&
                               local_minute_of_day < offset_total_minutes};
 

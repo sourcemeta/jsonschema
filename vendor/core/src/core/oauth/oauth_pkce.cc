@@ -32,11 +32,11 @@ auto to_oauth_pkce_method(const std::string_view value) noexcept
     -> std::optional<OAuthPKCEMethod> {
   if (value == "S256") {
     return OAuthPKCEMethod::S256;
-  } else if (value == "plain") {
-    return OAuthPKCEMethod::Plain;
-  } else {
-    return std::nullopt;
   }
+  if (value == "plain") {
+    return OAuthPKCEMethod::Plain;
+  }
+  return std::nullopt;
 }
 
 auto oauth_pkce_verifier() -> std::array<char, 43> {

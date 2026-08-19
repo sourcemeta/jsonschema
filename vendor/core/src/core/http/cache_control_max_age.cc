@@ -2,6 +2,7 @@
 
 #include "helpers.h"
 
+#include <algorithm>   // std::min
 #include <chrono>      // std::chrono::seconds
 #include <cstddef>     // std::size_t
 #include <optional>    // std::optional, std::nullopt
@@ -13,7 +14,7 @@ auto http_cache_control_max_age(const std::string_view cache_control) noexcept
     -> std::optional<std::chrono::seconds> {
   // RFC 9111 §1.2.2: a delta-seconds value larger than the cache can represent
   // is treated as 2^31
-  constexpr std::chrono::seconds::rep overflow_seconds{2147483648};
+  constexpr std::chrono::seconds::rep OVERFLOW_SECONDS{2147483648};
   std::optional<std::chrono::seconds> result;
   bool found{false};
   http_for_each_list_entry(
@@ -65,17 +66,15 @@ auto http_cache_control_max_age(const std::string_view cache_control) noexcept
 
           // Clamp before multiplying so the running total cannot itself
           // overflow on a hostile number of digits
-          if (seconds > overflow_seconds / 10) {
-            seconds = overflow_seconds;
+          if (seconds > OVERFLOW_SECONDS / 10) {
+            seconds = OVERFLOW_SECONDS;
             continue;
           }
 
           seconds = (seconds * 10) + (character - '0');
         }
 
-        if (seconds > overflow_seconds) {
-          seconds = overflow_seconds;
-        }
+        seconds = std::min(seconds, OVERFLOW_SECONDS);
 
         result = std::chrono::seconds{seconds};
       });

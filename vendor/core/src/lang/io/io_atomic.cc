@@ -32,10 +32,10 @@ auto unique_staging_path(const std::filesystem::path &destination)
   std::uniform_int_distribution<std::uint64_t> distribution;
   std::string suffix{".tmp."};
   suffix.reserve(suffix.size() + 16);
-  static constexpr std::string_view digits{"0123456789abcdef"};
+  static constexpr std::string_view DIGITS{"0123456789abcdef"};
   auto value{distribution(generator)};
   for (std::size_t index{0}; index < 16; index++) {
-    suffix.push_back(digits[value & 0xF]);
+    suffix.push_back(DIGITS[value & 0xF]);
     value >>= 4;
   }
 

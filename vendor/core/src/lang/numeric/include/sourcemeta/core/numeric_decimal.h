@@ -131,17 +131,17 @@ public:
   /// `false` for values constructed from floating-point primitives, from
   /// strings with a fractional or exponent part, or as the result of
   /// arithmetic operations.
-  [[nodiscard]] SOURCEMETA_FORCEINLINE inline auto is_integer() const -> bool {
+  [[nodiscard]] SOURCEMETA_FORCEINLINE auto is_integer() const -> bool {
     return (this->flags_ & FLAG_INTEGER_LITERAL) != 0;
   }
 
   /// Check if the decimal number is finite
-  [[nodiscard]] SOURCEMETA_FORCEINLINE inline auto is_finite() const -> bool {
-    return !(this->flags_ & (FLAG_NAN | FLAG_SNAN | FLAG_INFINITE));
+  [[nodiscard]] SOURCEMETA_FORCEINLINE auto is_finite() const -> bool {
+    return (this->flags_ & (FLAG_NAN | FLAG_SNAN | FLAG_INFINITE)) == 0;
   }
 
   /// Check if the decimal number is a real number (finite and not NaN)
-  [[nodiscard]] SOURCEMETA_FORCEINLINE inline auto is_real() const -> bool {
+  [[nodiscard]] SOURCEMETA_FORCEINLINE auto is_real() const -> bool {
     return this->is_finite() && !this->is_integral();
   }
 
@@ -167,34 +167,34 @@ public:
 
   /// Check if the decimal number is NaN (Not a Number), either quiet or
   /// signaling
-  [[nodiscard]] SOURCEMETA_FORCEINLINE inline auto is_nan() const -> bool {
+  [[nodiscard]] SOURCEMETA_FORCEINLINE auto is_nan() const -> bool {
     return (this->flags_ & FLAG_NAN) != 0;
   }
 
   /// Check if the decimal number is a signaling NaN
-  [[nodiscard]] SOURCEMETA_FORCEINLINE inline auto is_snan() const -> bool {
+  [[nodiscard]] SOURCEMETA_FORCEINLINE auto is_snan() const -> bool {
     return (this->flags_ & FLAG_SNAN) != 0;
   }
 
   /// Check if the decimal number is a quiet NaN
-  [[nodiscard]] SOURCEMETA_FORCEINLINE inline auto is_qnan() const -> bool {
-    return (this->flags_ & FLAG_NAN) != 0 && !(this->flags_ & FLAG_SNAN);
+  [[nodiscard]] SOURCEMETA_FORCEINLINE auto is_qnan() const -> bool {
+    return (this->flags_ & FLAG_NAN) != 0 && ((this->flags_ & FLAG_SNAN) == 0);
   }
 
   /// Get the payload of a NaN value (0 if no payload)
-  [[nodiscard]] SOURCEMETA_FORCEINLINE inline auto nan_payload() const
+  [[nodiscard]] SOURCEMETA_FORCEINLINE auto nan_payload() const
       -> std::uint64_t {
     assert(this->is_nan());
     return static_cast<std::uint64_t>(this->coefficient_);
   }
 
   /// Check if the decimal number is infinite
-  [[nodiscard]] SOURCEMETA_FORCEINLINE inline auto is_infinite() const -> bool {
+  [[nodiscard]] SOURCEMETA_FORCEINLINE auto is_infinite() const -> bool {
     return (this->flags_ & FLAG_INFINITE) != 0;
   }
 
   /// Check if the decimal number is signed (negative, including -0)
-  [[nodiscard]] SOURCEMETA_FORCEINLINE inline auto is_signed() const -> bool {
+  [[nodiscard]] SOURCEMETA_FORCEINLINE auto is_signed() const -> bool {
     return (this->flags_ & FLAG_SIGN) != 0;
   }
 

@@ -15,13 +15,12 @@ auto emplace_back_unique(T &container, V &&element) -> const auto & {
 
 template <typename T>
 auto find_canonical_name(const T &aliases, const typename T::key_type &alias)
-    -> const typename T::mapped_type & {
+    -> const T::mapped_type & {
   const auto iterator{aliases.find(alias)};
   if (iterator == aliases.cend()) {
     throw sourcemeta::core::OptionsUnknownOptionError(alias);
-  } else {
-    return iterator->second;
   }
+  return iterator->second;
 }
 
 } // namespace
@@ -33,12 +32,12 @@ const std::vector<std::string_view> Options::EMPTY = {};
 auto Options::option(std::string &&name,
                      std::initializer_list<std::string> aliases) -> void {
   assert(!name.empty());
-  const std::string_view view{emplace_back_unique(this->storage, name)};
+  const std::string_view view{emplace_back_unique(this->storage_, name)};
   this->aliases_.try_emplace(view, view);
   for (const auto &alias : aliases) {
     assert(!alias.empty());
     const std::string_view alias_view{
-        emplace_back_unique(this->storage, alias)};
+        emplace_back_unique(this->storage_, alias)};
     this->aliases_.try_emplace(alias_view, view);
   }
 }
@@ -46,16 +45,16 @@ auto Options::option(std::string &&name,
 auto Options::flag(std::string &&name,
                    std::initializer_list<std::string> aliases) -> void {
   assert(!name.empty());
-  const std::string_view view{emplace_back_unique(this->storage, name)};
+  const std::string_view view{emplace_back_unique(this->storage_, name)};
   this->aliases_.try_emplace(view, view);
   for (const auto &alias : aliases) {
     assert(!alias.empty());
     const std::string_view alias_view{
-        emplace_back_unique(this->storage, alias)};
+        emplace_back_unique(this->storage_, alias)};
     this->aliases_.try_emplace(alias_view, view);
   }
 
-  this->flags.emplace(view);
+  this->flags_.emplace(view);
 }
 
 auto Options::at(const std::string_view name) const
@@ -87,7 +86,8 @@ auto Options::parse(const int argc,
     if (end_of_options) {
       this->options_[POSITIONAL_ARGUMENT_NAME].emplace_back(token);
       continue;
-    } else if (token == "--") {
+    }
+    if (token == "--") {
       end_of_options = true;
       continue;
     }
@@ -97,21 +97,22 @@ auto Options::parse(const int argc,
 
     // Parse long options
     if (token.size() >= 3 && token[0] == '-' && token[1] == '-') {
-      const auto eq{token.find('=')};
-      const auto name{(eq == std::string_view::npos) ? token.substr(2)
-                                                     : token.substr(2, eq - 2)};
+      const auto separator{token.find('=')};
+      const auto name{(separator == std::string_view::npos)
+                          ? token.substr(2)
+                          : token.substr(2, separator - 2)};
       const auto &canonical{find_canonical_name(this->aliases_, name)};
-      const auto is_flag{this->flags.contains(canonical)};
+      const auto is_flag{this->flags_.contains(canonical)};
 
       if (is_flag) {
-        if (eq == std::string_view::npos) {
+        if (separator == std::string_view::npos) {
           this->options_[canonical].push_back(token.substr(2));
         } else {
           throw OptionsUnexpectedValueFlagError(name);
         }
-      } else if (eq != std::string_view::npos) {
-        this->options_[canonical].push_back(token.substr(eq + 1));
-      } else if (next) {
+      } else if (separator != std::string_view::npos) {
+        this->options_[canonical].push_back(token.substr(separator + 1));
+      } else if (next != nullptr) {
         this->options_[canonical].emplace_back(next);
         index += 1;
       } else {
@@ -123,14 +124,14 @@ auto Options::parse(const int argc,
       for (std::size_t flag = 1; flag < token.size(); flag++) {
         const auto name{token.substr(flag, 1)};
         const auto &canonical{find_canonical_name(this->aliases_, name)};
-        const auto is_flag{this->flags.contains(canonical)};
+        const auto is_flag{this->flags_.contains(canonical)};
 
         if (is_flag) {
           this->options_[canonical].emplace_back();
         } else if (flag + 1 < token.size()) {
           this->options_[canonical].push_back(token.substr(flag + 1));
           break;
-        } else if (next) {
+        } else if (next != nullptr) {
           this->options_[canonical].emplace_back(next);
           index += 1;
           break;

@@ -24,8 +24,8 @@ namespace sourcemeta::core {
 namespace internal {
 
 inline auto unescape_string(const char *data, const std::uint32_t length,
-                            const bool has_escape) -> typename JSON::String {
-  typename JSON::String result;
+                            const bool has_escape) -> JSON::String {
+  JSON::String result;
   const char *cursor{data};
   const char *string_end{data + length};
 
@@ -113,7 +113,7 @@ inline auto unescape_string(const char *data, const std::uint32_t length,
 inline auto construct_number(const char *data, const std::uint32_t length,
                              const std::uint8_t flags,
                              const std::uint32_t significant_digits) -> JSON {
-  if (flags & TAPE_FLAG_NUMBER_EXPONENT) {
+  if ((flags & TAPE_FLAG_NUMBER_EXPONENT) != 0) {
     try {
       return JSON{Decimal{std::string_view{data, length}}};
     } catch (const DecimalParseError &) {
@@ -123,7 +123,7 @@ inline auto construct_number(const char *data, const std::uint32_t length,
     }
   }
 
-  if (flags & TAPE_FLAG_NUMBER_DOT) {
+  if ((flags & TAPE_FLAG_NUMBER_DOT) != 0) {
     constexpr std::uint32_t MAX_SAFE_SIGNIFICANT_DIGITS{15};
     if (significant_digits > MAX_SAFE_SIGNIFICANT_DIGITS) {
       try {
@@ -222,8 +222,8 @@ inline auto construct_json(const char *buffer,
   std::vector<std::reference_wrapper<Result>> frames;
   levels.reserve(32);
   frames.reserve(32);
-  typename Result::String key;
-  typename Result::Object::hash_type key_hash;
+  Result::String key;
+  Result::Object::hash_type key_hash;
   std::uint64_t key_line{0};
   std::uint64_t key_column{0};
   std::size_t tape_index{0};
@@ -473,7 +473,7 @@ do_construct_object_key: {
   assert(key_entry.type == TapeType::Key);
   const char *key_data{buffer + key_entry.offset};
   const auto key_length{key_entry.length};
-  if (key_entry.flags & TAPE_FLAG_STRING_ESCAPE) {
+  if ((key_entry.flags & TAPE_FLAG_STRING_ESCAPE) != 0) {
     key = internal::unescape_string(key_data, key_length, true);
     key_hash = Result::Object::hash(key);
   } else {

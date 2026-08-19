@@ -47,11 +47,11 @@ using WeakPointer = GenericPointer<
 
 /// @ingroup jsonpointer
 /// A global constant instance of the empty JSON Pointer.
-const Pointer empty_pointer;
+const Pointer EMPTY_POINTER;
 
 /// @ingroup jsonpointer
 /// A global constant instance of the empty JSON WeakPointer.
-const WeakPointer empty_weak_pointer;
+const WeakPointer EMPTY_WEAK_POINTER;
 
 /// @ingroup jsonpointer
 /// Get a value from a JSON document using a JSON Pointer (`const` overload).

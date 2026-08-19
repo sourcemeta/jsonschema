@@ -166,9 +166,9 @@ auto jsonrpc_make_error(const sourcemeta::core::JSON *identifier,
 }
 
 auto jsonrpc_make_error_parse() -> const sourcemeta::core::JSON & {
-  static const auto envelope{
+  static const auto ENVELOPE{
       jsonrpc_make_error(nullptr, JSONRPC_CODE_PARSE, "Parse error")};
-  return envelope;
+  return ENVELOPE;
 }
 
 auto jsonrpc_make_error_invalid_request(

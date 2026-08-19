@@ -15,15 +15,15 @@ auto from_unix_timestamp(const std::chrono::duration<double> seconds) noexcept
   // Reject timestamps outside the clock's representable window, leaving a one
   // second guard so that the conversion to the clock's native tick cannot
   // overflow at the boundary
-  constexpr auto maximum{
+  constexpr auto MAXIMUM{
       std::chrono::duration_cast<std::chrono::duration<double>>(
           std::chrono::system_clock::duration::max()) -
       std::chrono::duration<double>{1}};
-  constexpr auto minimum{
+  constexpr auto MINIMUM{
       std::chrono::duration_cast<std::chrono::duration<double>>(
           std::chrono::system_clock::duration::min()) +
       std::chrono::duration<double>{1}};
-  if (seconds < minimum || seconds > maximum) {
+  if (seconds < MINIMUM || seconds > MAXIMUM) {
     return std::nullopt;
   }
 

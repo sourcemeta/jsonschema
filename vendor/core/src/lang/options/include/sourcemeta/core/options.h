@@ -113,10 +113,10 @@ private:
   static constexpr std::string_view POSITIONAL_ARGUMENT_NAME{""};
   static const std::vector<std::string_view> EMPTY;
 
-  std::vector<std::unique_ptr<std::string>> storage;
+  std::vector<std::unique_ptr<std::string>> storage_;
   std::unordered_map<std::string_view, std::string_view> aliases_;
   std::unordered_map<std::string_view, std::vector<std::string_view>> options_;
-  std::unordered_set<std::string_view> flags;
+  std::unordered_set<std::string_view> flags_;
 #if defined(_MSC_VER)
 #pragma warning(default : 4251 4275)
 #endif

@@ -25,7 +25,7 @@ public:
   // Primary lookup table covering all codes of length <= LUT_BITS. Misses
   // fall back to the canonical-puff traversal for codes of length 10..15
   static constexpr unsigned int LUT_BITS{9};
-  static constexpr std::size_t LUT_SIZE{1u << LUT_BITS};
+  static constexpr std::size_t LUT_SIZE{1U << LUT_BITS};
 
   HuffmanDecoder() = default;
 
@@ -88,7 +88,7 @@ public:
     std::array<std::uint32_t, MAX_HUFFMAN_BITS + 1> next_code{};
     next_code[1] = 0;
     for (unsigned int bits = 2; bits <= MAX_HUFFMAN_BITS; ++bits) {
-      next_code[bits] = (next_code[bits - 1] + this->count_[bits - 1]) << 1u;
+      next_code[bits] = (next_code[bits - 1] + this->count_[bits - 1]) << 1U;
     }
 
     std::size_t symbol_index{0};
@@ -101,8 +101,8 @@ public:
           const auto lsb_key{reverse_bits(code, code_length)};
           const auto entry{static_cast<std::uint16_t>(
               static_cast<std::uint16_t>(code_length) |
-              static_cast<std::uint16_t>(symbol << 4u))};
-          const std::uint32_t stride{1u << code_length};
+              static_cast<std::uint16_t>(symbol << 4U))};
+          const std::uint32_t stride{1U << code_length};
           for (std::uint32_t slot = lsb_key; slot < LUT_SIZE; slot += stride) {
             this->lut_[slot] = entry;
           }
@@ -117,9 +117,9 @@ public:
     const auto key{reader.peek_bits(LUT_BITS)};
     const auto entry{this->lut_[key]};
     if (entry != 0) {
-      const unsigned int length{entry & 0xfu};
+      const unsigned int length{entry & 0xfU};
       reader.consume_bits(length);
-      return static_cast<std::uint16_t>(entry >> 4u);
+      return static_cast<std::uint16_t>(entry >> 4U);
     }
     return this->decode_long(reader);
   }
@@ -131,8 +131,8 @@ private:
     int first{0};
     int index{0};
     for (unsigned int length = 1; length <= MAX_HUFFMAN_BITS; ++length) {
-      code |= static_cast<int>(bits & 1u);
-      bits >>= 1u;
+      code |= static_cast<int>(bits & 1U);
+      bits >>= 1U;
       const auto entries{static_cast<int>(this->count_[length])};
       if (code - entries < first) {
         const auto position{static_cast<std::size_t>(index) +
@@ -151,8 +151,8 @@ private:
       -> std::uint32_t {
     std::uint32_t result{0};
     for (unsigned int index = 0; index < length; ++index) {
-      if ((value & (1u << (length - 1 - index))) != 0u) {
-        result |= (1u << index);
+      if ((value & (1U << (length - 1 - index))) != 0U) {
+        result |= (1U << index);
       }
     }
     return result;

@@ -69,7 +69,7 @@ class SOURCEMETA_BLAZE_OUTPUT_EXPORT SimpleOutput {
 public:
   SimpleOutput(const sourcemeta::core::JSON &instance,
                sourcemeta::core::WeakPointer base =
-                   sourcemeta::core::empty_weak_pointer);
+                   sourcemeta::core::EMPTY_WEAK_POINTER);
 
   // Prevent accidental copies
   SimpleOutput(const SimpleOutput &) = delete;

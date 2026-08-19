@@ -19,7 +19,7 @@ auto is_rfc3339_fulltime(const std::string_view value) -> bool {
   if (!is_digit(value[0]) || !is_digit(value[1])) {
     return false;
   }
-  const auto hour{static_cast<unsigned int>(value[0] - '0') * 10 +
+  const auto hour{(static_cast<unsigned int>(value[0] - '0') * 10) +
                   static_cast<unsigned int>(value[1] - '0')};
   if (hour > 23) {
     return false;
@@ -36,7 +36,7 @@ auto is_rfc3339_fulltime(const std::string_view value) -> bool {
   if (!is_digit(value[position]) || !is_digit(value[position + 1])) {
     return false;
   }
-  const auto minute{static_cast<unsigned int>(value[position] - '0') * 10 +
+  const auto minute{(static_cast<unsigned int>(value[position] - '0') * 10) +
                     static_cast<unsigned int>(value[position + 1] - '0')};
   if (minute > 59) {
     return false;
@@ -53,7 +53,7 @@ auto is_rfc3339_fulltime(const std::string_view value) -> bool {
   if (!is_digit(value[position]) || !is_digit(value[position + 1])) {
     return false;
   }
-  const auto second{static_cast<unsigned int>(value[position] - '0') * 10 +
+  const auto second{(static_cast<unsigned int>(value[position] - '0') * 10) +
                     static_cast<unsigned int>(value[position + 1] - '0')};
   if (second > 60) {
     return false;
@@ -96,7 +96,7 @@ auto is_rfc3339_fulltime(const std::string_view value) -> bool {
     if (!is_digit(value[position]) || !is_digit(value[position + 1])) {
       return false;
     }
-    offset_hour = static_cast<unsigned int>(value[position] - '0') * 10 +
+    offset_hour = (static_cast<unsigned int>(value[position] - '0') * 10) +
                   static_cast<unsigned int>(value[position + 1] - '0');
     if (offset_hour > 23) {
       return false;
@@ -113,7 +113,7 @@ auto is_rfc3339_fulltime(const std::string_view value) -> bool {
     if (!is_digit(value[position]) || !is_digit(value[position + 1])) {
       return false;
     }
-    offset_minute = static_cast<unsigned int>(value[position] - '0') * 10 +
+    offset_minute = (static_cast<unsigned int>(value[position] - '0') * 10) +
                     static_cast<unsigned int>(value[position + 1] - '0');
     if (offset_minute > 59) {
       return false;
@@ -135,8 +135,8 @@ auto is_rfc3339_fulltime(const std::string_view value) -> bool {
   // offset, the UTC time-of-day is exactly 23:59 — the only moment a leap
   // second may legally appear
   if (second == 60) {
-    const auto local_minute_of_day{hour * 60 + minute};
-    const auto offset_total_minutes{offset_hour * 60 + offset_minute};
+    const auto local_minute_of_day{(hour * 60) + minute};
+    const auto offset_total_minutes{(offset_hour * 60) + offset_minute};
 
     unsigned int utc_minute_of_day{0};
     if (offset_sign == '+') {
@@ -149,7 +149,7 @@ auto is_rfc3339_fulltime(const std::string_view value) -> bool {
       utc_minute_of_day = (local_minute_of_day + offset_total_minutes) % 1440;
     }
 
-    if (utc_minute_of_day != 23 * 60 + 59) {
+    if (utc_minute_of_day != (23 * 60) + 59) {
       return false;
     }
   }

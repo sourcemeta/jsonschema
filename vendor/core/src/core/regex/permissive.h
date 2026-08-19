@@ -16,7 +16,7 @@ namespace sourcemeta::core {
 namespace {
 
 constexpr std::array<std::pair<std::string_view, std::string_view>, 42>
-    unicode_property_map{{{"digit", "Nd"},
+    UNICODE_PROPERTY_MAP{{{"digit", "Nd"},
                           {"Decimal_Number", "Nd"},
                           {"space", "White_Space"},
                           {"White_Space", "White_Space"},
@@ -59,10 +59,10 @@ constexpr std::array<std::pair<std::string_view, std::string_view>, 42>
                           {"Unassigned", "Cn"},
                           {"Private_Use", "Co"}}};
 
-constexpr std::string_view shorthand_chars{"dDwWsS"};
-constexpr std::string_view simple_escapes{"btnrfv0"};
-constexpr std::string_view simple_escape_values{"\b\t\n\r\f\v"};
-constexpr std::string_view v_flag_syntax{"-][(){}/'|!#%&*+,.:;<=>?@`~^$"};
+constexpr std::string_view SHORTHAND_CHARS{"dDwWsS"};
+constexpr std::string_view SIMPLE_ESCAPES{"btnrfv0"};
+constexpr std::string_view SIMPLE_ESCAPE_VALUES{"\b\t\n\r\f\v"};
+constexpr std::string_view V_FLAG_SYNTAX{"-][(){}/'|!#%&*+,.:;<=>?@`~^$"};
 
 inline auto all_hex(const std::string &content, std::size_t start,
                     std::size_t count) -> bool {
@@ -135,33 +135,33 @@ constexpr auto negate_class(const std::bitset<128> &base) -> std::bitset<128> {
   return result;
 }
 
-constexpr auto digit_class = make_digit_class();
-constexpr auto word_class = make_word_class();
-constexpr auto space_class = make_space_class();
-constexpr auto non_digit_class = negate_class(digit_class);
-constexpr auto non_word_class = negate_class(word_class);
-constexpr auto non_space_class = negate_class(space_class);
+constexpr auto DIGIT_CLASS = make_digit_class();
+constexpr auto WORD_CLASS = make_word_class();
+constexpr auto SPACE_CLASS = make_space_class();
+constexpr auto NON_DIGIT_CLASS = negate_class(DIGIT_CLASS);
+constexpr auto NON_WORD_CLASS = negate_class(WORD_CLASS);
+constexpr auto NON_SPACE_CLASS = negate_class(SPACE_CLASS);
 
 inline auto set_shorthand_class(std::bitset<128> &characters,
                                 const char shorthand) -> void {
   switch (shorthand) {
     case 'd':
-      characters |= digit_class;
+      characters |= DIGIT_CLASS;
       return;
     case 'D':
-      characters |= non_digit_class;
+      characters |= NON_DIGIT_CLASS;
       return;
     case 'w':
-      characters |= word_class;
+      characters |= WORD_CLASS;
       return;
     case 'W':
-      characters |= non_word_class;
+      characters |= NON_WORD_CLASS;
       return;
     case 's':
-      characters |= space_class;
+      characters |= SPACE_CLASS;
       return;
     case 'S':
-      characters |= non_space_class;
+      characters |= NON_SPACE_CLASS;
       return;
     default:
       return;
@@ -245,12 +245,12 @@ inline auto parse_escape(const std::string &content, std::size_t position,
   }
 
   end = position + 2;
-  const auto escape_index = simple_escapes.find(next);
+  const auto escape_index = SIMPLE_ESCAPES.find(next);
   if (escape_index < 6) {
-    code_point = static_cast<unsigned char>(simple_escape_values[escape_index]);
+    code_point = static_cast<unsigned char>(SIMPLE_ESCAPE_VALUES[escape_index]);
   } else if (next == '0') {
     code_point = 0;
-  } else if (shorthand_chars.contains(next)) {
+  } else if (SHORTHAND_CHARS.contains(next)) {
     code_point = -1;
   } else {
     code_point = static_cast<unsigned char>(next);
@@ -317,7 +317,7 @@ inline auto parse_class_to_bitset(const std::string &content, std::size_t start,
 
   while (position < content.size() && content[position] != ']') {
     if (content[position] == '\\' && position + 1 < content.size() &&
-        shorthand_chars.contains(content[position + 1])) {
+        SHORTHAND_CHARS.contains(content[position + 1])) {
       set_shorthand_class(characters, content[position + 1]);
       position += 2;
       continue;
@@ -379,14 +379,13 @@ inline auto parse_class_to_bitset(const std::string &content, std::size_t start,
 }
 
 inline auto append_char(std::string &result, std::size_t value) -> void {
-  constexpr std::string_view hex{"0123456789abcdef"};
+  constexpr std::string_view HEX{"0123456789abcdef"};
   if (value < 32 || value == 127) {
     result += "\\x";
-    result += hex[(value >> 4) & 0xF];
-    result += hex[value & 0xF];
+    result += HEX[(value >> 4) & 0xF];
+    result += HEX[value & 0xF];
   } else {
-    if (std::string_view{"-]\\^"}.find(static_cast<char>(value)) !=
-        std::string_view::npos) {
+    if (std::string_view{"-]\\^"}.contains(static_cast<char>(value))) {
       result += '\\';
     }
 
@@ -429,8 +428,7 @@ inline auto is_valid_escape(const std::string &content, std::size_t position)
   }
 
   const char next = content[position + 1];
-  if (std::string_view{"dDwWsSnrtfvb0\\"}.find(next) !=
-      std::string_view::npos) {
+  if (std::string_view{"dDwWsSnrtfvb0\\"}.contains(next)) {
     return true;
   }
 
@@ -443,7 +441,8 @@ inline auto is_valid_escape(const std::string &content, std::size_t position)
       for (auto end = position + 3; end < content.size(); ++end) {
         if (content[end] == '}') {
           return true;
-        } else if (hex_digit_value(content[end]) < 0) {
+        }
+        if (hex_digit_value(content[end]) < 0) {
           return false;
         }
       }
@@ -459,7 +458,7 @@ inline auto is_valid_escape(const std::string &content, std::size_t position)
     return (ctrl >= 'A' && ctrl <= 'Z') || (ctrl >= 'a' && ctrl <= 'z');
   }
 
-  return v_flag_syntax.contains(next);
+  return V_FLAG_SYNTAX.contains(next);
 }
 
 inline auto is_valid_operand(const std::string &operand) -> bool {
@@ -489,7 +488,7 @@ inline auto is_valid_operand(const std::string &operand) -> bool {
   }
 
   if (operand.size() == 2 && operand[0] == '\\' &&
-      shorthand_chars.contains(operand[1])) {
+      SHORTHAND_CHARS.contains(operand[1])) {
     return true;
   }
 
@@ -580,7 +579,7 @@ inline auto expand_char_class(const std::string &content)
 
 inline auto translate_property(const std::string_view name, const bool negated)
     -> std::optional<std::string> {
-  for (const auto &[prop_name, pcre_name] : unicode_property_map) {
+  for (const auto &[prop_name, pcre_name] : UNICODE_PROPERTY_MAP) {
     if (name == prop_name) {
       return std::string("\\") + (negated ? 'P' : 'p') + '{' +
              std::string(pcre_name) + '}';
@@ -631,7 +630,7 @@ struct ShorthandExpansion {
 };
 
 // clang-format off
-constexpr std::array<ShorthandExpansion, 8> shorthand_expansions{{
+constexpr std::array<ShorthandExpansion, 8> SHORTHAND_EXPANSIONS{{
     {.escape = 'd', .inside_class = "0-9", .outside_class = "[0-9]"},
     {.escape = 'D', .inside_class = "", .outside_class = "[^0-9]"},
     {.escape = 'w', .inside_class = "a-zA-Z0-9_", .outside_class = "[a-zA-Z0-9_]"},
@@ -645,7 +644,7 @@ constexpr std::array<ShorthandExpansion, 8> shorthand_expansions{{
 // clang-format on
 
 inline auto find_shorthand(char escape) -> const ShorthandExpansion * {
-  for (const auto &expansion : shorthand_expansions) {
+  for (const auto &expansion : SHORTHAND_EXPANSIONS) {
     if (expansion.escape == escape) {
       return &expansion;
     }
@@ -890,9 +889,9 @@ inline auto translate_permissive(const std::string &pattern)
       ++position;
     } else {
       // Escape sequences that are not valid in ECMA-262 strict mode
-      constexpr std::string_view ecma_remaining_escapes{"tnrfvcx0"};
-      const bool is_ecma_escape{ecma_remaining_escapes.contains(next) ||
-                                v_flag_syntax.contains(next) ||
+      constexpr std::string_view ECMA_REMAINING_ESCAPES{"tnrfvcx0"};
+      const bool is_ecma_escape{ECMA_REMAINING_ESCAPES.contains(next) ||
+                                V_FLAG_SYNTAX.contains(next) ||
                                 (next >= '1' && next <= '9')};
       if (!is_ecma_escape) {
         ecma_valid = false;

@@ -54,8 +54,8 @@ inline auto make_weak_pointer(const std::string &property1,
 
 inline auto relative_dynamic_context() -> DynamicContext {
   return {.keyword = KEYWORD_EMPTY,
-          .base_schema_location = sourcemeta::core::empty_weak_pointer,
-          .base_instance_location = sourcemeta::core::empty_weak_pointer};
+          .base_schema_location = sourcemeta::core::EMPTY_WEAK_POINTER,
+          .base_instance_location = sourcemeta::core::EMPTY_WEAK_POINTER};
 }
 
 inline auto schema_resource_id(const std::vector<std::string> &resources,
@@ -135,7 +135,7 @@ inline auto make(const InstructionIndex type, const Context &context,
 
 inline auto unroll(const Context &context, const Instruction &step,
                    const sourcemeta::core::WeakPointer &base_instance_location =
-                       sourcemeta::core::empty_weak_pointer) -> Instruction {
+                       sourcemeta::core::EMPTY_WEAK_POINTER) -> Instruction {
   auto source_extra{context.extra[step.extra_index]};
   const auto extra_index{context.extra.size()};
   context.extra.push_back(std::move(source_extra));

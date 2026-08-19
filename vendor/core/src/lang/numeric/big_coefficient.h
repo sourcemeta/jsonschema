@@ -54,7 +54,7 @@ constexpr std::int64_t COMPACT_MAX =
 
 class BigCoefficient {
   static constexpr std::uint32_t INLINE_CAPACITY = 4;
-  std::array<std::uint64_t, INLINE_CAPACITY> inline_words;
+  std::array<std::uint64_t, INLINE_CAPACITY> inline_words_;
 
   [[nodiscard]] auto is_inline() const -> bool {
     return this->capacity <= INLINE_CAPACITY;
@@ -67,9 +67,9 @@ public:
 
   explicit BigCoefficient(std::uint32_t requested_capacity) {
     if (requested_capacity <= INLINE_CAPACITY) {
-      this->words = this->inline_words.data();
+      this->words = this->inline_words_.data();
       this->capacity = INLINE_CAPACITY;
-      this->inline_words.fill(0);
+      this->inline_words_.fill(0);
     } else {
       this->words = new std::uint64_t[requested_capacity]();
       this->capacity = requested_capacity;
@@ -85,13 +85,13 @@ public:
   BigCoefficient(BigCoefficient &&other) noexcept
       : length{other.length}, capacity{other.capacity} {
     if (other.is_inline()) {
-      std::copy(other.inline_words.data(),
-                other.inline_words.data() + other.length,
-                this->inline_words.data());
-      this->words = this->inline_words.data();
+      std::copy(other.inline_words_.data(),
+                other.inline_words_.data() + other.length,
+                this->inline_words_.data());
+      this->words = this->inline_words_.data();
     } else {
       this->words = other.words;
-      other.words = other.inline_words.data();
+      other.words = other.inline_words_.data();
     }
 
     other.length = 0;
@@ -107,13 +107,13 @@ public:
       this->length = other.length;
       this->capacity = other.capacity;
       if (other.is_inline()) {
-        std::copy(other.inline_words.data(),
-                  other.inline_words.data() + other.length,
-                  this->inline_words.data());
-        this->words = this->inline_words.data();
+        std::copy(other.inline_words_.data(),
+                  other.inline_words_.data() + other.length,
+                  this->inline_words_.data());
+        this->words = this->inline_words_.data();
       } else {
         this->words = other.words;
-        other.words = other.inline_words.data();
+        other.words = other.inline_words_.data();
       }
 
       other.length = 0;
@@ -155,7 +155,7 @@ public:
       top_digits++;
     }
     return top_digits +
-           static_cast<std::uint64_t>(this->length - 1) * BASE_DIGITS;
+           (static_cast<std::uint64_t>(this->length - 1) * BASE_DIGITS);
   }
 
   [[nodiscard]] auto to_string() const -> std::string {
@@ -203,7 +203,7 @@ public:
         std::uint64_t borrow = 0;
         for (auto index = this->length; index > 0; index--) {
           const auto word = this->words[index - 1];
-          this->words[index - 1] = word / 10 + borrow * (BASE / 10);
+          this->words[index - 1] = (word / 10) + (borrow * (BASE / 10));
           borrow = word % 10;
         }
 
@@ -301,8 +301,8 @@ public:
            index_right++) {
         auto position = index_left + index_right;
         auto product =
-            static_cast<sourcemeta::core::uint128_t>(this->words[index_left]) *
-                other.words[index_right] +
+            (static_cast<sourcemeta::core::uint128_t>(this->words[index_left]) *
+             other.words[index_right]) +
             result.words[position] + carry;
         result.words[position] = static_cast<std::uint64_t>(product % BASE);
         carry = product / BASE;
@@ -334,12 +334,12 @@ public:
     result.length = this->length + full_words;
 
     if (residual > 0) {
-      auto multiplier = POWERS_OF_10[static_cast<std::uint32_t>(residual)];
+      auto multiplier = POWERS_OF_10[residual];
       sourcemeta::core::uint128_t carry = 0;
       for (std::uint32_t index = full_words; index < result.length; index++) {
         auto product =
-            static_cast<sourcemeta::core::uint128_t>(result.words[index]) *
-                multiplier +
+            (static_cast<sourcemeta::core::uint128_t>(result.words[index]) *
+             multiplier) +
             carry;
         result.words[index] = static_cast<std::uint64_t>(product % BASE);
         carry = product / BASE;
@@ -380,7 +380,7 @@ public:
       quotient.length = this->length;
       sourcemeta::core::uint128_t remainder = 0;
       for (auto index = this->length; index > 0; index--) {
-        auto current = remainder * BASE + this->words[index - 1];
+        auto current = (remainder * BASE) + this->words[index - 1];
         quotient.words[index - 1] =
             static_cast<std::uint64_t>(current / divisor.words[0]);
         remainder = current % divisor.words[0];
@@ -406,8 +406,8 @@ public:
     sourcemeta::core::uint128_t normalize_carry = 0;
     for (std::uint32_t index = 0; index < divisor.length; index++) {
       auto product =
-          static_cast<sourcemeta::core::uint128_t>(divisor.words[index]) *
-              normalizer +
+          (static_cast<sourcemeta::core::uint128_t>(divisor.words[index]) *
+           normalizer) +
           normalize_carry;
       normalized_divisor.words[index] =
           static_cast<std::uint64_t>(product % BASE);
@@ -419,8 +419,8 @@ public:
     normalize_carry = 0;
     for (std::uint32_t index = 0; index < this->length; index++) {
       auto product =
-          static_cast<sourcemeta::core::uint128_t>(this->words[index]) *
-              normalizer +
+          (static_cast<sourcemeta::core::uint128_t>(this->words[index]) *
+           normalizer) +
           normalize_carry;
       normalized_dividend.words[index] =
           static_cast<std::uint64_t>(product % BASE);
@@ -440,15 +440,15 @@ public:
     for (auto position = quotient_length; position > 0;) {
       position--;
       auto numerator =
-          static_cast<sourcemeta::core::uint128_t>(
-              normalized_dividend.words[position + divisor.length]) *
-              BASE +
+          (static_cast<sourcemeta::core::uint128_t>(
+               normalized_dividend.words[position + divisor.length]) *
+           BASE) +
           normalized_dividend.words[position + divisor.length - 1];
       auto trial_word = numerator / top_divisor_word;
       auto trial_remainder = numerator % top_divisor_word;
       while (trial_word >= BASE ||
              trial_word * next_divisor_word >
-                 trial_remainder * BASE +
+                 (trial_remainder * BASE) +
                      normalized_dividend.words[position + divisor.length - 2]) {
         trial_word -= 1;
         trial_remainder += top_divisor_word;
@@ -459,7 +459,8 @@ public:
 
       std::uint64_t borrow = 0;
       for (std::uint32_t index = 0; index < divisor.length; index++) {
-        auto subtrahend = trial_word * normalized_divisor.words[index] + borrow;
+        auto subtrahend =
+            (trial_word * normalized_divisor.words[index]) + borrow;
         auto subtrahend_low = static_cast<std::uint64_t>(subtrahend % BASE);
         borrow = static_cast<std::uint64_t>(subtrahend / BASE);
         auto &word = normalized_dividend.words[position + index];
@@ -502,7 +503,7 @@ public:
     sourcemeta::core::uint128_t denormalize_carry = 0;
     for (auto index = divisor.length; index > 0; index--) {
       auto current =
-          denormalize_carry * BASE + normalized_dividend.words[index - 1];
+          (denormalize_carry * BASE) + normalized_dividend.words[index - 1];
       remainder.words[index - 1] =
           static_cast<std::uint64_t>(current / normalizer);
       denormalize_carry = current % normalizer;
@@ -535,7 +536,7 @@ public:
 
     auto remaining = power;
     while (remaining > 0) {
-      if (remaining & 1) {
+      if ((remaining & 1) != 0u) {
         result = result.multiply_modulo(base, modulus);
       }
 
@@ -598,14 +599,14 @@ public:
 
     for (std::uint32_t word_index = 0; word_index < word_count; word_index++) {
       std::uint64_t word = 0;
-      auto end_position = count - word_index * BASE_DIGITS;
+      auto end_position = count - (word_index * BASE_DIGITS);
       auto start_position =
           end_position > static_cast<std::uint32_t>(BASE_DIGITS)
               ? end_position - static_cast<std::uint32_t>(BASE_DIGITS)
               : 0U;
       for (auto position = start_position; position < end_position;
            position++) {
-        word = word * 10 + static_cast<std::uint64_t>(digits[position] - '0');
+        word = (word * 10) + static_cast<std::uint64_t>(digits[position] - '0');
       }
       result.words[word_index] = word;
     }
@@ -618,7 +619,7 @@ public:
       -> sourcemeta::core::uint128_t {
     sourcemeta::core::uint128_t value = 0;
     for (auto index = this->length; index > 0; index--) {
-      value = value * BASE + this->words[index - 1];
+      value = (value * BASE) + this->words[index - 1];
     }
 
     // Zero admits arbitrarily extreme exponents, which would otherwise make
@@ -729,11 +730,11 @@ auto load_big_pointer(std::int64_t coefficient) -> BigCoefficient * {
 auto coefficient_to_digit_string(std::int64_t coefficient,
                                  std::uint64_t coefficient_high,
                                  std::uint8_t flags) -> std::string {
-  if (flags & FLAG_HEAP) {
+  if ((flags & FLAG_HEAP) != 0) {
     return load_big_pointer(coefficient)->to_string();
   }
 
-  if (flags & FLAG_BIG) {
+  if ((flags & FLAG_BIG) != 0) {
     auto high_string = std::to_string(coefficient_high);
     auto low_string = std::to_string(static_cast<std::uint64_t>(coefficient));
     std::string result = high_string;
@@ -764,7 +765,7 @@ auto modular_pow10(std::uint32_t exponent, std::uint64_t modulus)
   std::uint64_t base = 10 % modulus;
   auto remaining = exponent;
   while (remaining > 0) {
-    if (remaining & 1) {
+    if ((remaining & 1) != 0u) {
       result = static_cast<std::uint64_t>(
           static_cast<sourcemeta::core::uint128_t>(result) * base % modulus);
     }
@@ -783,11 +784,11 @@ constexpr std::int32_t WORKING_PRECISION = 16;
 auto round_to_precision(std::int64_t &coefficient,
                         std::uint64_t &coefficient_high, std::int32_t &exponent,
                         std::uint8_t &flags) -> void {
-  if (flags & (FLAG_NAN | FLAG_SNAN | FLAG_INFINITE)) {
+  if ((flags & (FLAG_NAN | FLAG_SNAN | FLAG_INFINITE)) != 0) {
     return;
   }
 
-  if (flags & FLAG_BIG) {
+  if ((flags & FLAG_BIG) != 0) {
     auto digit_string =
         coefficient_to_digit_string(coefficient, coefficient_high, flags);
     auto total_digits = static_cast<std::int32_t>(digit_string.size());
@@ -823,13 +824,13 @@ auto round_to_precision(std::int64_t &coefficient,
       }
     }
 
-    if (flags & FLAG_HEAP) {
+    if ((flags & FLAG_HEAP) != 0) {
       delete load_big_pointer(coefficient);
     }
 
     std::int64_t new_coefficient = 0;
     for (auto character : kept) {
-      new_coefficient = new_coefficient * 10 + (character - '0');
+      new_coefficient = (new_coefficient * 10) + (character - '0');
     }
     if (round_up) {
       new_coefficient++;
@@ -867,7 +868,7 @@ auto round_to_precision(std::int64_t &coefficient,
 }
 
 void free_big_coefficient(std::int64_t coefficient, std::uint8_t flags) {
-  if (flags & FLAG_HEAP) {
+  if ((flags & FLAG_HEAP) != 0) {
     delete load_big_pointer(coefficient);
   }
 }
@@ -875,11 +876,11 @@ void free_big_coefficient(std::int64_t coefficient, std::uint8_t flags) {
 auto coefficient_as_big(std::int64_t coefficient,
                         std::uint64_t coefficient_high, std::uint8_t flags)
     -> BigCoefficient {
-  if (flags & FLAG_HEAP) {
+  if ((flags & FLAG_HEAP) != 0) {
     return load_big_pointer(coefficient)->clone();
   }
 
-  if (flags & FLAG_BIG) {
+  if ((flags & FLAG_BIG) != 0) {
     BigCoefficient result{2};
     result.words[0] = static_cast<std::uint64_t>(coefficient);
     result.words[1] = coefficient_high;

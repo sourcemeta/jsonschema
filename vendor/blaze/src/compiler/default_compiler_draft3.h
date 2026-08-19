@@ -218,8 +218,8 @@ auto compile_required_assertions(const Context &context,
             .is_property_name = schema_context.is_property_name};
         const DynamicContext new_dynamic_context{
             .keyword = KEYWORD_PROPERTIES,
-            .base_schema_location = sourcemeta::core::empty_weak_pointer,
-            .base_instance_location = sourcemeta::core::empty_weak_pointer};
+            .base_schema_location = sourcemeta::core::EMPTY_WEAK_POINTER,
+            .base_instance_location = sourcemeta::core::EMPTY_WEAK_POINTER};
         auto properties{compile_properties(context, new_schema_context,
                                            new_dynamic_context, current)};
         if (std::ranges::all_of(properties, [](const auto &property) -> auto {
@@ -1181,8 +1181,8 @@ properties_enforce_closed_object(const Context &context,
       .is_property_name = schema_context.is_property_name};
   const DynamicContext new_dynamic_context{
       .keyword = KEYWORD_PROPERTIES,
-      .base_schema_location = sourcemeta::core::empty_weak_pointer,
-      .base_instance_location = sourcemeta::core::empty_weak_pointer};
+      .base_schema_location = sourcemeta::core::EMPTY_WEAK_POINTER,
+      .base_instance_location = sourcemeta::core::EMPTY_WEAK_POINTER};
   const auto properties{
       compile_properties(context, new_schema_context, new_dynamic_context, {})};
   if (!std::ranges::all_of(properties, [](const auto &property) -> auto {
@@ -1213,8 +1213,8 @@ auto compiler_draft3_applicator_additionalproperties_with_options(
 
   Instructions children{compile(context, schema_context,
                                 relative_dynamic_context(),
-                                sourcemeta::core::empty_weak_pointer,
-                                sourcemeta::core::empty_weak_pointer)};
+                                sourcemeta::core::EMPTY_WEAK_POINTER,
+                                sourcemeta::core::EMPTY_WEAK_POINTER)};
 
   if (annotate && annotations_enabled(context, dynamic_context.keyword)) {
     children.push_back(
@@ -1537,8 +1537,8 @@ auto compiler_draft3_applicator_items_with_options(
     if (emit_annotation || track_evaluation) {
       Instructions subchildren{compile(context, schema_context,
                                        relative_dynamic_context(),
-                                       sourcemeta::core::empty_weak_pointer,
-                                       sourcemeta::core::empty_weak_pointer)};
+                                       sourcemeta::core::EMPTY_WEAK_POINTER,
+                                       sourcemeta::core::EMPTY_WEAK_POINTER)};
 
       Instructions children;
 
@@ -1576,8 +1576,8 @@ auto compiler_draft3_applicator_items_with_options(
 
     Instructions children{compile(context, schema_context,
                                   relative_dynamic_context(),
-                                  sourcemeta::core::empty_weak_pointer,
-                                  sourcemeta::core::empty_weak_pointer)};
+                                  sourcemeta::core::EMPTY_WEAK_POINTER,
+                                  sourcemeta::core::EMPTY_WEAK_POINTER)};
     if (track_evaluation) {
       children.push_back(
           make(sourcemeta::blaze::InstructionIndex::ControlEvaluate, context,
@@ -1667,8 +1667,8 @@ auto compiler_draft3_applicator_additionalitems_from_cursor(
 
   Instructions subchildren{compile(context, schema_context,
                                    relative_dynamic_context(),
-                                   sourcemeta::core::empty_weak_pointer,
-                                   sourcemeta::core::empty_weak_pointer)};
+                                   sourcemeta::core::EMPTY_WEAK_POINTER,
+                                   sourcemeta::core::EMPTY_WEAK_POINTER)};
 
   Instructions children;
 
@@ -2454,8 +2454,8 @@ auto compiler_draft3_validation_disallow(const Context &context,
 
         auto inner_instructions{
             compile(context, schema_context, relative_dynamic_context(),
-                    sourcemeta::core::empty_weak_pointer,
-                    sourcemeta::core::empty_weak_pointer, element_uri)};
+                    sourcemeta::core::EMPTY_WEAK_POINTER,
+                    sourcemeta::core::EMPTY_WEAK_POINTER, element_uri)};
 
         const auto element_relative_pointer{
             schema_context.relative_pointer.concat(index_suffix)};
@@ -2504,13 +2504,13 @@ auto compiler_draft3_applicator_extends(const Context &context,
     // TODO: Make this work with `$dynamicRef`
     if (context.mode == Mode::FastValidation && !context.uses_dynamic_scopes) {
       return compile(context, schema_context, dynamic_context,
-                     sourcemeta::core::empty_weak_pointer,
-                     sourcemeta::core::empty_weak_pointer);
+                     sourcemeta::core::EMPTY_WEAK_POINTER,
+                     sourcemeta::core::EMPTY_WEAK_POINTER);
     }
 
     auto inner{compile(context, schema_context, relative_dynamic_context(),
-                       sourcemeta::core::empty_weak_pointer,
-                       sourcemeta::core::empty_weak_pointer)};
+                       sourcemeta::core::EMPTY_WEAK_POINTER,
+                       sourcemeta::core::EMPTY_WEAK_POINTER)};
     if (inner.empty()) {
       return {};
     }

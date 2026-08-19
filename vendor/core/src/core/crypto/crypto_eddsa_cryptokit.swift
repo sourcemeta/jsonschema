@@ -66,3 +66,104 @@ public final class SourcemetaCoreAESGCM: NSObject {
         box, using: SymmetricKey(data: key), authenticating: associatedData)
   }
 }
+
+// HMAC-based key derivation (RFC 5869), which the Apple Security framework
+// does not expose through its C API and CommonCrypto does not implement at
+// all. CryptoKit provides it since macOS 11, so every entry point reports an
+// absent result on an older system and the caller composes the derivation from
+// HMAC instead
+@objc(SourcemetaCoreHKDF)
+public final class SourcemetaCoreHKDF: NSObject {
+  @available(macOS 11.0, *)
+  private static func derive<H: HashFunction>(
+      _ hash: H.Type, inputKeyMaterial: Data, salt: Data, info: Data,
+      outputByteCount: Int) -> Data {
+    let key = HKDF<H>.deriveKey(
+        inputKeyMaterial: SymmetricKey(data: inputKeyMaterial), salt: salt,
+        info: info, outputByteCount: outputByteCount)
+    return key.withUnsafeBytes { Data($0) }
+  }
+
+  @available(macOS 11.0, *)
+  private static func extract<H: HashFunction>(
+      _ hash: H.Type, inputKeyMaterial: Data, salt: Data) -> Data {
+    let code = HKDF<H>.extract(
+        inputKeyMaterial: SymmetricKey(data: inputKeyMaterial), salt: salt)
+    return code.withUnsafeBytes { Data($0) }
+  }
+
+  @available(macOS 11.0, *)
+  private static func expand<H: HashFunction>(
+      _ hash: H.Type, pseudoRandomKey: Data, info: Data,
+      outputByteCount: Int) -> Data {
+    let key = HKDF<H>.expand(
+        pseudoRandomKey: pseudoRandomKey, info: info,
+        outputByteCount: outputByteCount)
+    return key.withUnsafeBytes { Data($0) }
+  }
+
+  @objc public static func deriveKey(hash: Int, inputKeyMaterial: Data,
+                                     salt: Data, info: Data,
+                                     outputByteCount: Int) -> Data? {
+    guard #available(macOS 11.0, *) else {
+      return nil
+    }
+
+    switch hash {
+    case 0:
+      return derive(SHA256.self, inputKeyMaterial: inputKeyMaterial,
+                    salt: salt, info: info, outputByteCount: outputByteCount)
+    case 1:
+      return derive(SHA384.self, inputKeyMaterial: inputKeyMaterial,
+                    salt: salt, info: info, outputByteCount: outputByteCount)
+    case 2:
+      return derive(SHA512.self, inputKeyMaterial: inputKeyMaterial,
+                    salt: salt, info: info, outputByteCount: outputByteCount)
+    default:
+      return nil
+    }
+  }
+
+  @objc public static func extractKey(hash: Int, inputKeyMaterial: Data,
+                                      salt: Data) -> Data? {
+    guard #available(macOS 11.0, *) else {
+      return nil
+    }
+
+    switch hash {
+    case 0:
+      return extract(SHA256.self, inputKeyMaterial: inputKeyMaterial,
+                     salt: salt)
+    case 1:
+      return extract(SHA384.self, inputKeyMaterial: inputKeyMaterial,
+                     salt: salt)
+    case 2:
+      return extract(SHA512.self, inputKeyMaterial: inputKeyMaterial,
+                     salt: salt)
+    default:
+      return nil
+    }
+  }
+
+  @objc public static func expandKey(hash: Int, pseudoRandomKey: Data,
+                                     info: Data,
+                                     outputByteCount: Int) -> Data? {
+    guard #available(macOS 11.0, *) else {
+      return nil
+    }
+
+    switch hash {
+    case 0:
+      return expand(SHA256.self, pseudoRandomKey: pseudoRandomKey, info: info,
+                    outputByteCount: outputByteCount)
+    case 1:
+      return expand(SHA384.self, pseudoRandomKey: pseudoRandomKey, info: info,
+                    outputByteCount: outputByteCount)
+    case 2:
+      return expand(SHA512.self, pseudoRandomKey: pseudoRandomKey, info: info,
+                    outputByteCount: outputByteCount)
+    default:
+      return nil
+    }
+  }
+}

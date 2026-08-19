@@ -43,7 +43,7 @@ struct PrivateKey::Internal {
 inline auto copy_external_representation(SecKeyRef key)
     -> std::optional<std::string> {
   CFErrorRef error{nullptr};
-  auto data{SecKeyCopyExternalRepresentation(key, &error)};
+  const auto *data{SecKeyCopyExternalRepresentation(key, &error)};
   if (data == nullptr) {
     if (error != nullptr) {
       CFRelease(error);
