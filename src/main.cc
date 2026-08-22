@@ -167,6 +167,7 @@ auto jsonschema_main(const std::string &program, const std::string &command,
     sourcemeta::jsonschema::fmt(app);
     return EXIT_SUCCESS;
   } else if (command == "inspect") {
+    app.flag("keywords", {"k"});
     app.parse(argc, argv, {.skip = 1});
     sourcemeta::jsonschema::inspect(app);
     return EXIT_SUCCESS;
