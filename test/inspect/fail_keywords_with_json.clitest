@@ -1,0 +1,16 @@
+WRITE schema.json UNTIL EOF
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object"
+}
+EOF
+
+RUN inspect schema.json --keywords --json STDIN /dev/null IN . INTO result.txt EXPECTING 5
+
+WRITE expected.txt UNTIL EOF
+1> {
+1>   "error": "The --keywords option cannot be used with --json"
+1> }
+EOF
+
+COMPARE result.txt AGAINST expected.txt

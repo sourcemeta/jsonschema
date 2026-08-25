@@ -613,6 +613,8 @@ add_jsonschema_test(inspect/pass_stdin_no_id)
 add_jsonschema_test(inspect/fail_stdin_not_schema)
 add_jsonschema_test(inspect/fail_stdin_invalid_json)
 add_jsonschema_test(inspect/pass_bundled_metaschema)
+add_jsonschema_test(inspect/pass_keywords)
+add_jsonschema_test(inspect/fail_keywords_with_json)
 
 # Compile
 add_jsonschema_test(compile/pass)
