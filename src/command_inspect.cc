@@ -3,9 +3,12 @@
 #include <sourcemeta/core/json.h>
 #include <sourcemeta/core/yaml.h>
 
-#include <iostream> // std::cout
-#include <ostream>  // std::ostream
-#include <utility>  // std::unreachable
+#include <algorithm> // std::sort
+#include <iomanip>   // std::setw
+#include <iostream>  // std::cout
+#include <map>       // std::map
+#include <ostream>   // std::ostream
+#include <utility>   // std::pair, std::unreachable
 
 #include "command.h"
 #include "configuration.h"
@@ -152,11 +155,57 @@ auto print_frame(std::ostream &stream,
   }
 }
 
+auto print_keywords(std::ostream &stream, const sourcemeta::core::JSON &schema,
+                    const sourcemeta::blaze::SchemaResolver &resolver,
+                    const std::string &dialect) -> void {
+  using Summary = std::map<std::pair<std::string, std::string>, std::uint64_t>;
+  Summary summary;
+
+  for (const auto &entry : sourcemeta::blaze::SchemaIterator{
+           schema, sourcemeta::blaze::schema_walker, resolver, dialect}) {
+    if (!entry.subschema.get().is_object()) {
+      continue;
+    }
+
+    for (const auto &property : entry.subschema.get().as_object()) {
+      const auto &walker_result{
+          sourcemeta::blaze::schema_walker(property.first, entry.vocabularies)};
+
+      const std::string vocabulary{
+          walker_result.vocabulary.has_value()
+              ? std::string{sourcemeta::blaze::to_string(
+                    *walker_result.vocabulary)}
+              : "none"};
+
+      const std::pair<std::string, std::string> key{vocabulary, property.first};
+      summary[key] += 1;
+    }
+  }
+
+  std::vector<std::pair<std::pair<std::string, std::string>, std::uint64_t>>
+      entries(summary.cbegin(), summary.cend());
+  std::sort(entries.begin(), entries.end(),
+            [](const auto &left, const auto &right) {
+              return left.second > right.second ||
+                     (left.second == right.second && left.first < right.first);
+            });
+
+  for (const auto &entry : entries) {
+    stream << std::setw(5) << entry.second << " - " << entry.first.second
+           << " (" << entry.first.first << ")\n";
+  }
+}
+
 auto sourcemeta::jsonschema::inspect(const sourcemeta::core::Options &options)
     -> void {
   if (options.positional().size() < 1) {
     throw PositionalArgumentError{"This command expects a path to a schema",
                                   "jsonschema inspect path/to/schema.json"};
+  }
+
+  if (options.contains("keywords") && options.contains("json")) {
+    throw OptionConflictError{
+        "The --keywords option cannot be used with --json"};
   }
 
   validate_http_headers(options);
@@ -204,6 +253,12 @@ auto sourcemeta::jsonschema::inspect(const sourcemeta::core::Options &options)
   try {
     const auto &custom_resolver{
         resolver(options, options.contains("http"), dialect, configuration)};
+
+    if (options.contains("keywords")) {
+      print_keywords(std::cout, schema, custom_resolver, dialect);
+      return;
+    }
+
     const auto identifier{
         sourcemeta::blaze::identify(schema, custom_resolver, dialect)};
 

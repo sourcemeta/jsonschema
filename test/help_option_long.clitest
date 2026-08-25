@@ -110,10 +110,11 @@ WRITE expected.txt UNTIL EOF
 1>        Perform JSON Schema Bundling on a schema to inline remote references,
 1>        printing the result to standard output.
 1>
-1>    inspect <schema.json|.yaml>
+1>    inspect <schema.json|.yaml> [--keywords/-k]
 1>
 1>        Statically inspect a schema to display schema locations and
-1>        references in a human-readable manner.
+1>        references in a human-readable manner. Use --keywords/-k to count
+1>        keyword occurrences by vocabulary instead of printing locations.
 1>
 1>    codegen <schema.json|.yaml> --target/-t <target> [--name/-n <name>]
 1>

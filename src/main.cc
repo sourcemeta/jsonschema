@@ -117,10 +117,11 @@ Commands:
        Perform JSON Schema Bundling on a schema to inline remote references,
        printing the result to standard output.
 
-   inspect <schema.json|.yaml>
+   inspect <schema.json|.yaml> [--keywords/-k]
 
        Statically inspect a schema to display schema locations and
-       references in a human-readable manner.
+       references in a human-readable manner. Use --keywords/-k to count
+       keyword occurrences by vocabulary instead of printing locations.
 
    codegen <schema.json|.yaml> --target/-t <target> [--name/-n <name>]
 
@@ -171,6 +172,7 @@ auto jsonschema_main(const std::string &program, const std::string &command,
     sourcemeta::jsonschema::fmt(app);
     return EXIT_SUCCESS;
   } else if (command == "inspect") {
+    app.flag("keywords", {"k"});
     app.parse(argc, argv, {.skip = 1});
     sourcemeta::jsonschema::inspect(app);
     return EXIT_SUCCESS;

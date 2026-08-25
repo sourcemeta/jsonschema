@@ -2,8 +2,8 @@ Inspect
 =======
 
 ```sh
-jsonschema inspect <schema.json|.yaml> [--json/-j] [--verbose/-v] [--debug/-g]
-  [--default-dialect/-d <uri>]
+jsonschema inspect <schema.json|.yaml> [--json/-j] [--keywords/-k] [--verbose/-v]
+  [--debug/-g] [--default-dialect/-d <uri>]
 ```
 
 To evaluate a schema, an implementation will first scan it to determine the
@@ -68,4 +68,10 @@ jsonschema inspect path/to/my/schema.json
 
 ```sh
 jsonschema inspect path/to/my/schema.json --json
+```
+
+### Inspect a JSON Schema and count keyword occurrences
+
+```sh
+jsonschema inspect path/to/my/schema.json --keywords
 ```
