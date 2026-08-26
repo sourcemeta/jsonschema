@@ -61,6 +61,7 @@ namespace sourcemeta::blaze {
 /// ```
 class SOURCEMETA_BLAZE_OUTPUT_EXPORT TraceOutput {
 public:
+  /// The kind of entry being reported. Annotations are always valid
   enum class EntryType : std::uint8_t { Push, Pass, Fail, Annotation };
 
   // NOLINTNEXTLINE(bugprone-exception-escape)
@@ -68,6 +69,8 @@ public:
     // NOLINTBEGIN(cppcoreguidelines-avoid-const-or-ref-data-members)
     const EntryType type;
     const std::string_view name;
+    /// The instruction that produced this entry
+    const Instruction &step;
     const sourcemeta::core::WeakPointer &instance_location;
     const sourcemeta::core::WeakPointer &evaluate_path;
     const std::string_view keyword_location;
@@ -80,6 +83,10 @@ public:
   // TODO(C++23): Use std::move_only_function when available in libc++
   using Callback = std::function<void(const Entry &)>;
 
+  /// Given a schema identifier, answer with its previously exported locations
+  using FrameResolverJSON = std::function<std::optional<
+      std::reference_wrapper<const sourcemeta::core::JSON>>(std::string_view)>;
+
   TraceOutput(
       sourcemeta::blaze::SchemaWalker walker,
       sourcemeta::blaze::SchemaResolver resolver, Callback callback,
@@ -87,6 +94,11 @@ public:
       const std::optional<
           std::reference_wrapper<const sourcemeta::blaze::SchemaFrame>> &frame =
           std::nullopt);
+
+  /// Report vocabularies out of previously exported frames
+  TraceOutput(sourcemeta::blaze::SchemaWalker walker,
+              sourcemeta::blaze::SchemaResolver resolver, Callback callback,
+              sourcemeta::core::WeakPointer base, FrameResolverJSON frames);
 
   // Prevent accidental copies
   TraceOutput(const TraceOutput &) = delete;
@@ -112,6 +124,7 @@ private:
   const std::optional<
       std::reference_wrapper<const sourcemeta::blaze::SchemaFrame>>
       frame_;
+  const FrameResolverJSON frames_;
   Callback callback_;
   std::vector<
       std::pair<bool, std::optional<sourcemeta::blaze::Vocabularies::URI>>>

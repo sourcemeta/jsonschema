@@ -233,36 +233,6 @@ auto metaschema_try_embedded(const sourcemeta::core::JSON &schema,
 
 /// @ingroup foundation
 ///
-/// Get the metaschema document that describes the given schema. For example:
-///
-/// ```cpp
-/// #include <sourcemeta/core/json.h>
-/// #include <sourcemeta/blaze/foundation.h>
-/// #include <iostream>
-///
-/// const sourcemeta::core::JSON document =
-///   sourcemeta::core::parse_json(R"JSON({
-///   "$schema": "https://json-schema.org/draft/2020-12/schema",
-///   "type": "object"
-/// })JSON");
-///
-/// const sourcemeta::core::JSON metaschema{
-///   sourcemeta::blaze::metaschema(
-///     document, sourcemeta::blaze::schema_resolver)};
-///
-/// sourcemeta::core::prettify(metaschema, std::cout);
-/// std::cout << std::endl;
-/// ```
-///
-/// This function will throw if the metaschema cannot be determined or resolved.
-SOURCEMETA_BLAZE_FOUNDATION_EXPORT
-auto metaschema(const sourcemeta::core::JSON &schema,
-                const SchemaResolver &resolver,
-                std::string_view default_dialect = "")
-    -> sourcemeta::core::JSON;
-
-/// @ingroup foundation
-///
 /// Get the base dialect that applies to the given schema. If you set
 /// a default dialect URI, this will be used if the given schema does not
 /// declare the `$schema` keyword. For example:
@@ -292,46 +262,6 @@ auto base_dialect(const sourcemeta::core::JSON &schema,
                   std::string_view default_dialect = "",
                   bool allow_dialect_override = true)
     -> std::optional<SchemaBaseDialect>;
-
-/// @ingroup foundation
-///
-/// Parse the `$vocabulary` keyword from a given schema, if set. For example:
-///
-/// ```cpp
-/// #include <sourcemeta/core/json.h>
-/// #include <sourcemeta/blaze/foundation.h>
-/// #include <cassert>
-///
-/// const sourcemeta::core::JSON document =
-///   sourcemeta::core::parse_json(R"JSON({
-///   "$schema": "https://json-schema.org/draft/2020-12/schema",
-///   "$vocabulary": {
-///     "https://json-schema.org/draft/2020-12/vocab/core": true,
-///     "https://json-schema.org/draft/2020-12/vocab/applicator": true
-///   }
-/// })JSON");
-///
-/// const auto result{
-///   sourcemeta::blaze::parse_vocabularies(
-///     document, sourcemeta::blaze::schema_resolver)};
-///
-/// assert(result.has_value());
-/// assert(result->size() == 2);
-/// ```
-SOURCEMETA_BLAZE_FOUNDATION_EXPORT
-auto parse_vocabularies(const sourcemeta::core::JSON &schema,
-                        const SchemaResolver &resolver,
-                        std::string_view default_dialect = "")
-    -> std::optional<Vocabularies>;
-
-/// @ingroup foundation
-///
-/// A shortcut to sourcemeta::blaze::parse_vocabularies when the base dialect
-/// is already known.
-SOURCEMETA_BLAZE_FOUNDATION_EXPORT
-auto parse_vocabularies(const sourcemeta::core::JSON &schema,
-                        const SchemaBaseDialect base_dialect)
-    -> std::optional<Vocabularies>;
 
 /// @ingroup foundation
 ///
