@@ -105,6 +105,13 @@ if(NOT LibDeflate_FOUND)
   target_include_directories(libdeflate PRIVATE
     "${LIBDEFLATE_LIB_DIR}")
 
+  # The processor feature detection this library performs on Linux reaches for
+  # interfaces that the C library only declares outside the strict ISO mode
+  # this project otherwise compiles C in
+  if(SOURCEMETA_OS_LINUX)
+    target_compile_definitions(libdeflate PRIVATE _GNU_SOURCE)
+  endif()
+
   if(SOURCEMETA_COMPILER_LLVM OR SOURCEMETA_COMPILER_GCC)
     target_compile_options(libdeflate PRIVATE -Wno-conversion)
     target_compile_options(libdeflate PRIVATE -Wno-sign-conversion)

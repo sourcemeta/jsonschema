@@ -680,7 +680,7 @@ auto default_compiler(const sourcemeta::core::JSON &schema,
                       const sourcemeta::blaze::SchemaResolver &resolver,
                       const sourcemeta::core::JSON &subschema)
     -> CodegenIREntity {
-  const auto vocabularies{frame.vocabularies(location, resolver)};
+  const auto &vocabularies{frame.vocabularies(location, resolver)};
   assert(!vocabularies.empty());
 
   // Be strict with vocabulary support

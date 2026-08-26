@@ -31,6 +31,7 @@ namespace sourcemeta::core {
 // safe.
 // https://learn.microsoft.com/en-us/cpp/error-messages/compiler-warnings/compiler-warning-level-2-c4275?view=msvc-170&redirectedfrom=MSDN
 #if defined(_MSC_VER)
+#pragma warning(push)
 #pragma warning(disable : 4251 4275)
 #endif
 
@@ -241,6 +242,10 @@ auto test_expect_comparison(std::string_view file, int line,
         test_describe_mismatch(expression, operands.left, operands.right));
   }
 }
+
+#if defined(_MSC_VER)
+#pragma warning(pop)
+#endif
 
 } // namespace sourcemeta::core
 

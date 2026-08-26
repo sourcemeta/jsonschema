@@ -18,6 +18,7 @@ namespace sourcemeta::core {
 // safe.
 // https://learn.microsoft.com/en-us/cpp/error-messages/compiler-warnings/compiler-warning-level-2-c4275?view=msvc-170&redirectedfrom=MSDN
 #if defined(_MSC_VER)
+#pragma warning(push)
 #pragma warning(disable : 4251 4275)
 #endif
 
@@ -93,7 +94,7 @@ private:
 };
 
 #if defined(_MSC_VER)
-#pragma warning(default : 4251 4275)
+#pragma warning(pop)
 #endif
 
 } // namespace sourcemeta::core

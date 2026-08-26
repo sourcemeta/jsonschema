@@ -89,7 +89,7 @@ private:
       if (!walk_entry.has_value()) {
         break;
       }
-      const auto walk_vocabularies{
+      const auto &walk_vocabularies{
           frame.vocabularies(walk_entry.value().get(), resolver)};
       const auto walk_keyword_type{
           walker(walk_relative.at(0).to_property(), walk_vocabularies).type};

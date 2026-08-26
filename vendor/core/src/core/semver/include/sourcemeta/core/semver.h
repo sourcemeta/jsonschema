@@ -128,12 +128,13 @@ private:
   std::uint64_t minor_{0};
   std::uint64_t patch_{0};
 #if defined(_MSC_VER)
+#pragma warning(push)
 #pragma warning(disable : 4251)
 #endif
   std::string_view pre_release_;
   std::string_view build_;
 #if defined(_MSC_VER)
-#pragma warning(default : 4251)
+#pragma warning(pop)
 #endif
 };
 

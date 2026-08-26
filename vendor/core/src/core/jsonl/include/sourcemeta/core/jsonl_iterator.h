@@ -17,9 +17,7 @@ namespace sourcemeta::core {
 
 /// @ingroup jsonl
 /// A forward iterator to parse JSON documents out of a JSON Lines stream. Blank
-/// and whitespace-only lines are skipped rather than treated as errors, as JSON
-/// Lines is a convention rather than a formal specification and tolerating
-/// stray blank lines is friendlier to real-world input.
+/// and whitespace-only lines are skipped rather than treated as errors.
 class SOURCEMETA_CORE_JSONL_EXPORT ConstJSONLIterator {
 public:
   /// Construct an iterator over the JSON documents in a stream.
@@ -49,6 +47,7 @@ private:
 // safe.
 // https://learn.microsoft.com/en-us/cpp/error-messages/compiler-warnings/compiler-warning-level-2-c4275?view=msvc-170&redirectedfrom=MSDN
 #if defined(_MSC_VER)
+#pragma warning(push)
 #pragma warning(disable : 4251)
 #endif
   // Use PIMPL idiom to hide internal details, mainly
@@ -56,7 +55,7 @@ private:
   struct Internal;
   std::unique_ptr<Internal> internal_{};
 #if defined(_MSC_VER)
-#pragma warning(default : 4251)
+#pragma warning(pop)
 #endif
 };
 

@@ -1,6 +1,7 @@
 #include <sourcemeta/core/idna.h>
 
 #include <sourcemeta/core/punycode.h>
+#include <sourcemeta/core/text.h>
 #include <sourcemeta/core/unicode.h>
 
 #include <algorithm>   // std::ranges::lower_bound
@@ -27,8 +28,21 @@ auto validate_a_label_body(const std::string_view encoded,
     return false;
   }
 
+  // RFC 5891 §5.3: "first ensuring that the A-label is entirely in lowercase
+  // (converting it to lowercase if necessary)", which RFC 5891 §4.2.1 also
+  // requires ahead of the canonical form check below. Discarding case loses
+  // nothing, as RFC 3492 §5 assigns A-Z and a-z the same digit values and
+  // RFC 5890 §2.3.2.4 rules out mixed-case annotation
+  std::string lowercased;
+  std::string_view body{encoded};
+  if (!is_lowercase(encoded)) {
+    lowercased.assign(encoded);
+    to_lowercase(lowercased);
+    body = lowercased;
+  }
+
   try {
-    decoded = punycode_to_utf32(encoded);
+    decoded = punycode_to_utf32(body);
   } catch (const PunycodeError &) {
     return false;
   }
@@ -50,10 +64,11 @@ auto validate_a_label_body(const std::string_view encoded,
     return false;
   }
 
-  // RFC 5891 §4.2: A-labels must be in canonical Punycode form, so
-  // re-encoding the decoded U-label must yield the original bytes.
+  // RFC 5891 §4.2.1: "verify that the A-label produced by the step in
+  // Section 4.4 matches the one provided as input", so re-encoding the decoded
+  // U-label must yield the lowercased bytes we decoded from
   try {
-    return utf32_to_punycode(decoded) == encoded;
+    return utf32_to_punycode(decoded) == body;
   } catch (const PunycodeError &) {
     return false;
   }
@@ -93,11 +108,6 @@ auto idna_classify_label(const std::u32string_view label,
       for (const auto codepoint : label) {
         ascii.push_back(static_cast<char>(codepoint));
       }
-      // Normalise the prefix to canonical lowercase before validating, so
-      // the round-trip equality does not reject input that only differs in
-      // the case of the prefix
-      ascii[0] = 'x';
-      ascii[1] = 'n';
       if (!validate_a_label_body(
               std::string_view{ascii.data() + 4, ascii.size() - 4}, decoded)) {
         return std::nullopt;
@@ -418,8 +428,10 @@ auto idna_passes_bidi_rule(const std::u32string_view label) noexcept -> bool {
 }
 
 auto idna_is_valid_a_label(const std::string_view label) -> bool {
+  // RFC 5891 §5.3: a label is treated as an A-label when it starts in
+  // "xn--", interpreted case-insensitively
   constexpr std::string_view PREFIX{"xn--"};
-  if (!label.starts_with(PREFIX)) {
+  if (!starts_with_ignore_case(label, PREFIX)) {
     return false;
   }
 

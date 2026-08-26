@@ -39,3 +39,4 @@ endif()
 
 target_link_libraries(sourcemeta_core_idna PRIVATE sourcemeta::core::unicode)
 target_link_libraries(sourcemeta_core_idna PRIVATE sourcemeta::core::punycode)
+target_link_libraries(sourcemeta_core_idna PRIVATE sourcemeta::core::text)

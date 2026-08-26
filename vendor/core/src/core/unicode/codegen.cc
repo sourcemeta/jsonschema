@@ -507,14 +507,15 @@ auto main(const int argc, const char *const argv[]) -> int {
     sourcemeta::core::Options app;
     app.parse(argc, argv);
     const auto &positional{app.positional()};
-    if (positional.size() != 10) {
+    if (positional.size() != 11) {
       std::cerr
           << "Usage: " << (argc > 0 ? argv[0] : "codegen")
           << " <output.h> <PropertyValueAliases.txt>"
              " <DerivedCombiningClass.txt> <DerivedJoiningType.txt>"
              " <DerivedBidiClass.txt> <Scripts.txt>"
              " <DerivedGeneralCategory.txt> <DerivedNormalizationProps.txt>"
-             " <UnicodeData.txt> <CompositionExclusions.txt>\n";
+             " <UnicodeData.txt> <CompositionExclusions.txt>"
+             " <DerivedCoreProperties.txt>\n";
       return EXIT_FAILURE;
     }
 
@@ -523,6 +524,7 @@ auto main(const int argc, const char *const argv[]) -> int {
     const std::filesystem::path normalization_props_path{positional.at(7)};
     const std::filesystem::path unicode_data_path{positional.at(8)};
     const std::filesystem::path composition_exclusions_path{positional.at(9)};
+    const std::filesystem::path core_properties_path{positional.at(10)};
 
     const auto canonical_value{
         [](const std::span<const std::string_view> order) {
@@ -561,6 +563,9 @@ auto main(const int argc, const char *const argv[]) -> int {
                         })};
     const auto nfc_quick_check_map{build_alias_map(
         aliases_path, "NFC_QC", canonical_value(NFC_QUICK_CHECK_ORDER))};
+    // A file of derived core properties names the property but carries no
+    // value of its own, so every listed range simply belongs to it
+    const ValueMap membership_map{{"", std::uint8_t{1}}};
 
     struct PropertySpec {
       std::string_view prefix;
@@ -569,7 +574,7 @@ auto main(const int argc, const char *const argv[]) -> int {
       const ValueMap &value_map;
     };
 
-    const std::array<PropertySpec, 6> properties{
+    const std::array<PropertySpec, 8> properties{
         {{.prefix = "COMBINING_CLASS",
           .input_path = positional.at(2),
           .property_filter = std::nullopt,
@@ -593,7 +598,15 @@ auto main(const int argc, const char *const argv[]) -> int {
          {.prefix = "NFC_QUICK_CHECK",
           .input_path = normalization_props_path,
           .property_filter = std::optional<std::string_view>{"NFC_QC"},
-          .value_map = nfc_quick_check_map}}};
+          .value_map = nfc_quick_check_map},
+         {.prefix = "IS_ID_START",
+          .input_path = core_properties_path,
+          .property_filter = std::optional<std::string_view>{"ID_Start"},
+          .value_map = membership_map},
+         {.prefix = "IS_ID_CONTINUE",
+          .input_path = core_properties_path,
+          .property_filter = std::optional<std::string_view>{"ID_Continue"},
+          .value_map = membership_map}}};
 
     const auto unicode_data{parse_unicode_data(unicode_data_path)};
     const auto full_exclusions{

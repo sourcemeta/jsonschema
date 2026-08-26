@@ -82,11 +82,12 @@ private:
   static auto parse(const JSON &value, JWKS &result) -> bool;
 
 #if defined(_MSC_VER)
+#pragma warning(push)
 #pragma warning(disable : 4251)
 #endif
   std::vector<JWK> keys_;
 #if defined(_MSC_VER)
-#pragma warning(default : 4251)
+#pragma warning(pop)
 #endif
 };
 

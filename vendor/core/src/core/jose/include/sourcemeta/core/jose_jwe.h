@@ -100,6 +100,7 @@ private:
   static auto parse(const std::string_view input, JWE &result) -> bool;
 
 #if defined(_MSC_VER)
+#pragma warning(push)
 #pragma warning(disable : 4251)
 #endif
   std::string protected_header_;
@@ -111,7 +112,7 @@ private:
   std::optional<JWEAlgorithm> algorithm_;
   std::optional<JWEEncryption> encryption_;
 #if defined(_MSC_VER)
-#pragma warning(default : 4251)
+#pragma warning(pop)
 #endif
 };
 

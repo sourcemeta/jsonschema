@@ -281,6 +281,7 @@ auto oauth_bearer_error_status(const OAuthBearerError error) noexcept
     -> HTTPStatus;
 
 #if defined(_MSC_VER)
+#pragma warning(push)
 #pragma warning(disable : 4251 4275)
 #endif
 
@@ -307,7 +308,7 @@ public:
 };
 
 #if defined(_MSC_VER)
-#pragma warning(default : 4251 4275)
+#pragma warning(pop)
 #endif
 
 } // namespace sourcemeta::core

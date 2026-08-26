@@ -1,6 +1,6 @@
 sourcemeta_library(NAMESPACE sourcemeta PROJECT blaze NAME editor
   FOLDER "Blaze/Editor"
-  SOURCES editor.cc)
+  SOURCES editor.cc helpers.h)
 
 if(BLAZE_INSTALL)
   sourcemeta_library_install(NAMESPACE sourcemeta PROJECT blaze NAME editor)

@@ -3,6 +3,7 @@
 #include <sourcemeta/core/io.h>
 #include <sourcemeta/core/json.h>
 #include <sourcemeta/core/jsonpointer.h>
+#include <sourcemeta/core/uri.h>
 
 #include <sourcemeta/blaze/compiler.h>
 #include <sourcemeta/blaze/evaluator.h>
@@ -12,6 +13,7 @@
 #include <iostream> // std::cout, std::cerr
 #include <map>      // std::map
 #include <string>   // std::string
+#include <utility>  // std::move
 
 #include "command.h"
 #include "configuration.h"
@@ -20,6 +22,36 @@
 #include "logger.h"
 #include "resolver.h"
 #include "utils.h"
+
+namespace {
+
+auto resolve_metaschema(const sourcemeta::core::JSON &schema,
+                        const std::string_view dialect,
+                        const sourcemeta::blaze::SchemaResolver &resolver)
+    -> sourcemeta::core::JSON {
+  // A meta-schema that is embedded in the schema itself takes precedence
+  // over what the resolver knows about, as the schema pins the exact
+  // meta-schema it is described by
+  const auto *embedded{
+      sourcemeta::blaze::metaschema_try_embedded(schema, dialect, resolver)};
+  if (embedded) {
+    return *embedded;
+  }
+
+  auto result{resolver(dialect)};
+  if (result.has_value()) {
+    return std::move(result.value());
+  }
+
+  if (sourcemeta::core::URI{dialect}.is_relative()) {
+    throw sourcemeta::blaze::SchemaRelativeMetaschemaResolutionError{dialect};
+  }
+
+  throw sourcemeta::blaze::SchemaResolutionError{
+      dialect, "Could not resolve the metaschema of the schema"};
+}
+
+} // namespace
 
 auto sourcemeta::jsonschema::metaschema(
     const sourcemeta::core::Options &options) -> void {
@@ -56,8 +88,8 @@ auto sourcemeta::jsonschema::metaschema(
             entry.resolution_base);
       }
 
-      const auto metaschema{sourcemeta::blaze::metaschema(
-          entry.second, custom_resolver, default_dialect_option)};
+      const auto metaschema{
+          resolve_metaschema(entry.second, dialect, custom_resolver)};
       const sourcemeta::core::JSON bundled{sourcemeta::blaze::bundle(
           metaschema, sourcemeta::blaze::schema_walker, custom_resolver,
           sourcemeta::blaze::BundleMode::References, default_dialect_option)};

@@ -40,7 +40,9 @@ auto dependencies_internal(
     std::unordered_set<std::string> &visited) -> void {
   sourcemeta::blaze::SchemaFrame frame{
       sourcemeta::blaze::SchemaFrame::Mode::References};
-  frame.analyse(schema, walker, resolver, default_dialect, default_id, paths);
+  frame.analyse(schema, walker, resolver, default_dialect, default_id,
+                sourcemeta::blaze::SchemaFrame::IdentifierMode::Additional,
+                paths);
   const auto origin{sourcemeta::blaze::identify(schema, resolver,
                                                 default_dialect, default_id)};
 
@@ -289,6 +291,7 @@ auto bundle_schema(sourcemeta::core::JSON &root,
   if (depth == 0) {
     frame.analyse(
         subschema, walker, resolver, default_dialect, default_id,
+        sourcemeta::blaze::SchemaFrame::IdentifierMode::Additional,
         // We only want to frame in "wrapper" mode for the top level object
         paths);
   } else {
@@ -465,8 +468,9 @@ auto bundle(sourcemeta::core::JSON &schema, const SchemaWalker &walker,
                      sourcemeta::core::JSON::String>
       bundled;
   SchemaFrame initial_frame{SchemaFrame::Mode::Locations};
-  initial_frame.analyse(schema, walker, resolver, default_dialect, default_id,
-                        paths);
+  initial_frame.analyse(
+      schema, walker, resolver, default_dialect, default_id,
+      sourcemeta::blaze::SchemaFrame::IdentifierMode::Additional, paths);
   initial_frame.for_each_resource_uri([&bundled](const auto &uri) -> void {
     bundled.emplace(sourcemeta::core::JSON::String{uri},
                     sourcemeta::core::JSON::String{uri});

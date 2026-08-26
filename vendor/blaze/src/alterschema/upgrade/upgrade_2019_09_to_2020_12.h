@@ -310,7 +310,7 @@ private:
       if (!subschema.is_object() || !subschema.defines("unevaluatedItems")) {
         continue;
       }
-      const auto location_vocabularies{
+      const auto &location_vocabularies{
           frame.vocabularies(entry.second, resolver)};
       const auto &keyword_metadata{
           walker("unevaluatedItems", location_vocabularies)};

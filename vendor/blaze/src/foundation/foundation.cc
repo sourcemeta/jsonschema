@@ -192,14 +192,6 @@ auto sourcemeta::blaze::identify(const sourcemeta::core::JSON &schema,
   return identifier.to_string();
 }
 
-auto sourcemeta::blaze::anonymize(sourcemeta::core::JSON &schema,
-                                  const SchemaBaseDialect base_dialect)
-    -> void {
-  if (schema.is_object()) {
-    schema.erase(sourcemeta::blaze::id_keyword(base_dialect));
-  }
-}
-
 auto sourcemeta::blaze::reidentify(sourcemeta::core::JSON &schema,
                                    std::string_view new_identifier,
                                    const SchemaResolver &resolver,

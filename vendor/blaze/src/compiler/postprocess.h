@@ -4,13 +4,18 @@
 #include <sourcemeta/blaze/compiler.h>
 #include <sourcemeta/blaze/evaluator.h>
 
+#include <sourcemeta/core/uri.h>
+
 #include <algorithm>
 #include <cstddef>
-#include <string> // std::string
-#include <tuple>  // std::tuple
+#include <optional> // std::optional
+#include <string>   // std::string
+#include <tuple>    // std::tuple
 #include <unordered_map>
 #include <unordered_set> // std::unordered_set
 #include <vector>
+
+#include "compile_helpers.h"
 
 // TODO: Move all `FastValidation` conditional optimisations from the default
 // compilers here. Only the structural ones from Draft 4 seem to be missing
@@ -177,6 +182,122 @@ inline auto collect_statistics(const Instructions &instructions,
 
     collect_statistics(instruction.children, statistics);
   }
+}
+
+inline auto
+instruction_parent_location(const Instruction &instruction,
+                            const std::vector<InstructionExtra> &extra)
+    -> std::optional<std::pair<sourcemeta::core::Pointer, std::string>> {
+  const auto &metadata{extra[instruction.extra_index]};
+  if (metadata.relative_schema_location.empty()) {
+    return std::nullopt;
+  }
+
+  auto keyword_location{sourcemeta::core::URI{metadata.keyword_location}};
+  auto keyword_pointer{sourcemeta::core::fragment_to_pointer(keyword_location)};
+  if (!keyword_pointer.has_value() || keyword_pointer->empty()) {
+    return std::nullopt;
+  }
+
+  auto parent_pointer{keyword_pointer->initial()};
+  keyword_location.fragment(sourcemeta::core::to_string(parent_pointer));
+  return std::pair{metadata.relative_schema_location.initial(),
+                   keyword_location.recompose()};
+}
+
+inline auto fuse_numeric_bounds(Instructions &instructions,
+                                std::vector<InstructionExtra> &extra) -> bool {
+  for (std::size_t type_index = 0; type_index < instructions.size();
+       ++type_index) {
+    const auto &type_instruction{instructions[type_index]};
+    if (!is_numeric_integer_type_check(type_instruction)) {
+      continue;
+    }
+
+    const auto parent{instruction_parent_location(type_instruction, extra)};
+    if (!parent.has_value()) {
+      continue;
+    }
+
+    const auto &type_metadata{extra[type_instruction.extra_index]};
+    std::vector<std::size_t> bound_indices;
+    std::optional<std::int64_t> minimum;
+    std::optional<std::int64_t> maximum;
+
+    for (std::size_t index = 0; index < instructions.size(); ++index) {
+      const auto &candidate{instructions[index]};
+      if (!is_numeric_bound_check(candidate) ||
+          candidate.relative_instance_location !=
+              type_instruction.relative_instance_location ||
+          extra[candidate.extra_index].schema_resource !=
+              type_metadata.schema_resource ||
+          instruction_parent_location(candidate, extra) != parent) {
+        continue;
+      }
+
+      if (!merge_integer_bound(candidate, minimum, maximum)) {
+        continue;
+      }
+
+      bound_indices.push_back(index);
+    }
+
+    if (bound_indices.empty() ||
+        (!minimum.has_value() && !maximum.has_value())) {
+      continue;
+    }
+
+    const auto is_strict{type_instruction.type ==
+                         InstructionIndex::AssertionTypeStrict};
+    InstructionIndex fused_type;
+    Value fused_value;
+
+    if (minimum.has_value() && maximum.has_value()) {
+      fused_type = is_strict
+                       ? InstructionIndex::AssertionTypeIntegerBoundedStrict
+                       : InstructionIndex::AssertionTypeIntegerBounded;
+      fused_value = ValueIntegerBounds{minimum.value(), maximum.value()};
+    } else if (minimum.has_value()) {
+      fused_type = is_strict
+                       ? InstructionIndex::AssertionTypeIntegerLowerBoundStrict
+                       : InstructionIndex::AssertionTypeIntegerLowerBound;
+      fused_value = ValueIntegerBounds{minimum.value(), 0};
+    } else {
+      continue;
+    }
+
+    const auto first_index{
+        std::min(type_index, *std::ranges::min_element(bound_indices))};
+    const auto extra_index{extra.size()};
+    extra.push_back({.relative_schema_location = parent->first,
+                     .keyword_location = parent->second,
+                     .schema_resource = type_metadata.schema_resource});
+
+    Instructions result;
+    result.reserve(instructions.size() - bound_indices.size());
+    for (std::size_t index = 0; index < instructions.size(); ++index) {
+      if (index == first_index) {
+        result.push_back({.type = fused_type,
+                          .relative_instance_location =
+                              type_instruction.relative_instance_location,
+                          .value = fused_value,
+                          .children = {},
+                          .extra_index = extra_index});
+      }
+
+      if (index == type_index ||
+          std::ranges::find(bound_indices, index) != bound_indices.cend()) {
+        continue;
+      }
+
+      result.push_back(std::move(instructions[index]));
+    }
+
+    instructions = std::move(result);
+    return true;
+  }
+
+  return false;
 }
 
 inline auto
@@ -467,6 +588,10 @@ inline auto postprocess(std::vector<Instructions> &targets,
                            (owner->type == InstructionIndex::LogicalCondition ||
                             owner->type == InstructionIndex::LogicalOr ||
                             owner->type == InstructionIndex::LogicalXor))};
+
+        if (!disjoint && fuse_numeric_bounds(*current, extra)) {
+          changed = true;
+        }
 
         // A fused simple-properties instruction only enforces that a property
         // is present for the entries it marks as required, so only those may

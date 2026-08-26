@@ -11,7 +11,6 @@
 // NOLINTBEGIN(misc-include-cleaner)
 #include <sourcemeta/blaze/foundation_error.h>
 #include <sourcemeta/blaze/foundation_types.h>
-#include <sourcemeta/blaze/foundation_walker.h>
 // NOLINTEND(misc-include-cleaner)
 
 #include <optional>    // std::optional, std::nullopt
@@ -131,35 +130,6 @@ SOURCEMETA_BLAZE_FOUNDATION_EXPORT
 auto identify(const sourcemeta::core::JSON &schema,
               const SchemaBaseDialect base_dialect,
               std::string_view default_id = "") -> std::string_view;
-
-/// @ingroup foundation
-///
-/// This function removes the top-level URI identifier of the given schema, if
-/// any, given you know its base dialect. It is the caller responsibility to
-/// ensure the schema doesn't perform relative references that might have
-/// depended on such top-level identifier. For example:
-///
-/// ```cpp
-/// #include <sourcemeta/core/json.h>
-/// #include <sourcemeta/blaze/foundation.h>
-/// #include <cassert>
-///
-/// sourcemeta::core::JSON document =
-///     sourcemeta::core::parse_json(R"JSON({
-///   "$schema": "https://json-schema.org/draft/2020-12/schema",
-///   "$id": "https://sourcemeta.com/example-schema"
-/// })JSON");
-///
-/// sourcemeta::blaze::anonymize(document,
-///   sourcemeta::blaze::SchemaBaseDialect::JSON_Schema_2020_12);
-///
-/// const auto id{sourcemeta::blaze::identify(
-///   document, sourcemeta::blaze::schema_resolver)};
-/// assert(id.empty());
-/// ```
-SOURCEMETA_BLAZE_FOUNDATION_EXPORT
-auto anonymize(sourcemeta::core::JSON &schema,
-               const SchemaBaseDialect base_dialect) -> void;
 
 /// @ingroup foundation
 ///
