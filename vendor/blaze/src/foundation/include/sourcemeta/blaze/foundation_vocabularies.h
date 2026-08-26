@@ -135,9 +135,6 @@ public:
   auto throw_if_any_unsupported(const std::unordered_set<URI> &supported,
                                 const char *message) const -> void;
 
-  /// Throw if any unknown vocabulary is required
-  auto throw_if_any_unknown_required(const char *message) const -> void;
-
 private:
   // Invariant: required_known and optional_known must be mutually exclusive
   // A vocabulary can be either required (true) OR optional (false), never both

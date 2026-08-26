@@ -174,6 +174,12 @@ public:
 
   /// Analyse a schema or set of schemas from a given root. Passing
   /// multiple paths that have any overlap is undefined behaviour
+  ///
+  /// The resulting locations point into the schema rather than copying from
+  /// it, so the schema must outlive the frame. The same goes for
+  /// `default_dialect`, as a location that has no dialect of its own reports
+  /// the default back as a view into what the caller passed. In contrast,
+  /// `default_id` is copied, so it does not need to outlive this call
   auto analyse(const sourcemeta::core::JSON &root, const SchemaWalker &walker,
                const SchemaResolver &resolver,
                std::string_view default_dialect = "",

@@ -319,14 +319,3 @@ auto sourcemeta::blaze::Vocabularies::throw_if_any_unsupported(
     }
   }
 }
-
-auto sourcemeta::blaze::Vocabularies::throw_if_any_unknown_required(
-    const char *message) const -> void {
-  if (this->unknown.has_value()) {
-    for (const auto &[uri, required] : this->unknown.value()) {
-      if (required) {
-        throw SchemaVocabularyError(uri, message);
-      }
-    }
-  }
-}

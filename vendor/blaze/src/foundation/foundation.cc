@@ -347,42 +347,6 @@ auto sourcemeta::blaze::metaschema_try_embedded(
   return candidate.first;
 }
 
-auto sourcemeta::blaze::metaschema(
-    const sourcemeta::core::JSON &schema,
-    const sourcemeta::blaze::SchemaResolver &resolver,
-    std::string_view default_dialect) -> sourcemeta::core::JSON {
-  const auto effective_dialect{
-      sourcemeta::blaze::dialect(schema, default_dialect)};
-  if (effective_dialect.empty()) {
-    throw sourcemeta::blaze::SchemaUnknownDialectError();
-  }
-
-  // A meta-schema that is embedded in the schema itself takes precedence
-  // over what the resolver knows about, as the schema pins the exact
-  // meta-schema it is described by
-  const auto *embedded{sourcemeta::blaze::metaschema_try_embedded(
-      schema, effective_dialect, resolver)};
-  if (embedded) {
-    return *embedded;
-  }
-
-  const auto maybe_metaschema{resolver(effective_dialect)};
-  if (!maybe_metaschema.has_value()) {
-    // Relative meta-schema references are invalid according to the
-    // JSON Schema specifications. They must be absolute ones
-    const sourcemeta::core::URI effective_dialect_uri{effective_dialect};
-    if (effective_dialect_uri.is_relative()) {
-      throw sourcemeta::blaze::SchemaRelativeMetaschemaResolutionError(
-          effective_dialect);
-    } else {
-      throw sourcemeta::blaze::SchemaResolutionError(
-          effective_dialect, "Could not resolve the metaschema of the schema");
-    }
-  }
-
-  return maybe_metaschema.value();
-}
-
 static auto
 base_dialect_with_visited(const sourcemeta::core::JSON &schema,
                           const sourcemeta::blaze::SchemaResolver &resolver,
@@ -594,11 +558,9 @@ auto is_pre_vocabulary_base_dialect(
       return false;
   }
 }
-} // namespace
 
-auto sourcemeta::blaze::parse_vocabularies(
-    const sourcemeta::core::JSON &schema,
-    const sourcemeta::blaze::SchemaBaseDialect base_dialect)
+auto parse_vocabularies(const sourcemeta::core::JSON &schema,
+                        const sourcemeta::blaze::SchemaBaseDialect base_dialect)
     -> std::optional<sourcemeta::blaze::Vocabularies> {
   if (base_dialect !=
           sourcemeta::blaze::SchemaBaseDialect::JSON_Schema_2020_12 &&
@@ -635,21 +597,7 @@ auto sourcemeta::blaze::parse_vocabularies(
 
   return result;
 }
-
-auto sourcemeta::blaze::parse_vocabularies(
-    const sourcemeta::core::JSON &schema,
-    const sourcemeta::blaze::SchemaResolver &resolver,
-    std::string_view default_dialect)
-    -> std::optional<sourcemeta::blaze::Vocabularies> {
-  const auto schema_base_dialect{
-      sourcemeta::blaze::base_dialect(schema, resolver, default_dialect)};
-  if (schema_base_dialect.has_value()) {
-    return sourcemeta::blaze::parse_vocabularies(schema,
-                                                 schema_base_dialect.value());
-  } else {
-    return std::nullopt;
-  }
-}
+} // namespace
 
 auto sourcemeta::blaze::vocabularies(
     const sourcemeta::core::JSON &schema,
