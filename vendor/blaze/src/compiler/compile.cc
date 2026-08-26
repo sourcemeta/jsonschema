@@ -16,6 +16,7 @@
 #include <vector>        // std::vector
 
 #include "compile_helpers.h"
+#include "keyword_iterator.h"
 #include "postprocess.h"
 
 namespace {
@@ -56,7 +57,7 @@ auto compile_subschema(const sourcemeta::blaze::Context &context,
              {.relative_pointer = schema_context.relative_pointer.concat(
                   make_weak_pointer(keyword)),
               .schema = schema_context.schema,
-              .vocabularies = entry.vocabularies,
+              .vocabularies = schema_context.vocabularies,
               .base = schema_context.base,
               .is_property_name = schema_context.is_property_name},
              {.keyword = keyword,

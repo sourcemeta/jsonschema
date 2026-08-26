@@ -34,7 +34,7 @@ auto ConstJSONLIterator::parse_next() -> JSON {
       row.pop_back();
     }
 
-    // Skip whitespace-only lines
+    // NDJSON 3.2 states that "The parser MAY silently ignore empty lines"
     bool has_content{false};
     for (const auto character : row) {
       if (character != internal::TOKEN_JSONL_WHITESPACE_SPACE<JSON::Char> &&

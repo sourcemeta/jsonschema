@@ -7,6 +7,7 @@
 
 // NOLINTBEGIN(misc-include-cleaner)
 #include <sourcemeta/core/process_error.h>
+#include <sourcemeta/core/process_usage.h>
 // NOLINTEND(misc-include-cleaner)
 
 #include <filesystem>       // std::filesystem

@@ -108,6 +108,7 @@ private:
 // safe.
 // https://learn.microsoft.com/en-us/cpp/error-messages/compiler-warnings/compiler-warning-level-2-c4275?view=msvc-170&redirectedfrom=MSDN
 #if defined(_MSC_VER)
+#pragma warning(push)
 #pragma warning(disable : 4251 4275)
 #endif
   static constexpr std::string_view POSITIONAL_ARGUMENT_NAME{""};
@@ -118,7 +119,7 @@ private:
   std::unordered_map<std::string_view, std::vector<std::string_view>> options_;
   std::unordered_set<std::string_view> flags_;
 #if defined(_MSC_VER)
-#pragma warning(default : 4251 4275)
+#pragma warning(pop)
 #endif
 };
 

@@ -35,7 +35,7 @@ auto is_validation_subschema(
     return false;
   }
 
-  const auto vocabularies{
+  const auto &vocabularies{
       frame.vocabularies(parent_location.value().get(), resolver)};
   const auto &walker_result{walker(keyword_token.to_property(), vocabularies)};
   using Type = sourcemeta::blaze::SchemaKeywordType;

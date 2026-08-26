@@ -25,6 +25,7 @@
 
 #include <concepts>      // std::invocable
 #include <cstdint>       // std::uint8_t
+#include <deque>         // std::deque
 #include <functional>    // std::reference_wrapper
 #include <map>           // std::map
 #include <optional>      // std::optional
@@ -70,8 +71,19 @@ namespace sourcemeta::blaze {
 class SOURCEMETA_BLAZE_FRAME_EXPORT SchemaFrame {
 public:
   /// The mode of framing. More extensive analysis can be compute and memory
-  /// intensive
-  enum class Mode : std::uint8_t { Locations, References };
+  /// intensive. Each mode is a superset of the previous one. Note that
+  /// sourcemeta::blaze::SchemaFrame::Mode::Root reports on a single schema,
+  /// so analysing a wrapper that holds more than one yields an empty frame
+  enum class Mode : std::uint8_t { Root, Locations, References };
+
+  /// How a caller-provided default identifier relates to the one that the
+  /// schema declares, if any
+  enum class IdentifierMode : std::uint8_t {
+    /// Register the default identifier in addition to the schema's own
+    Additional,
+    /// Register the default identifier only if the schema declares none
+    Fallback
+  };
 
   SchemaFrame(const Mode mode) : mode_{mode} {}
 
@@ -166,6 +178,7 @@ public:
                const SchemaResolver &resolver,
                std::string_view default_dialect = "",
                std::string_view default_id = "",
+               IdentifierMode identifier_mode = IdentifierMode::Additional,
                const Paths &paths = {sourcemeta::core::EMPTY_WEAK_POINTER})
       -> void;
 
@@ -188,10 +201,19 @@ public:
   [[nodiscard]] auto root() const noexcept
       -> const sourcemeta::core::JSON::String &;
 
-  /// Get the vocabularies associated with a location entry
+  /// Get the location entry of the schema that was analysed. Unlike
+  /// sourcemeta::blaze::SchemaFrame::root, this works for anonymous schemas
+  [[nodiscard]] auto root_location() const
+      -> std::optional<std::reference_wrapper<const Location>>;
+
+  /// Get the vocabularies associated with a location entry. The frame owns
+  /// the result, computing it at most once per dialect that it came across.
+  /// Note that as with the meta-schemas that `analyse` found embedded in the
+  /// document, what the first resolver reported for a given dialect is what
+  /// every later call reports, whichever resolver they pass
   [[nodiscard]] auto vocabularies(const Location &location,
                                   const SchemaResolver &resolver) const
-      -> Vocabularies;
+      -> const Vocabularies &;
 
   /// Get the URI associated with a location entry
   [[nodiscard]] auto
@@ -304,6 +326,15 @@ private:
   std::unordered_map<sourcemeta::core::JSON::String,
                      const sourcemeta::core::JSON *>
       probed_metaschemas_;
+  // Vocabularies are a function of the base dialect and dialect alone, and a
+  // schema only tends to make use of a handful of those. We own the dialect
+  // that we key on, as the view that the location holds may point into a
+  // default dialect that the caller of `analyse` only kept around for the
+  // duration of that call. A deque, as handing out references to the
+  // vocabularies means they must survive later insertions
+  mutable std::deque<std::tuple<SchemaBaseDialect,
+                                sourcemeta::core::JSON::String, Vocabularies>>
+      vocabularies_;
   mutable std::unordered_map<
       std::reference_wrapper<const sourcemeta::core::WeakPointer>,
       std::vector<const Location *>, sourcemeta::core::WeakPointer::Hasher,

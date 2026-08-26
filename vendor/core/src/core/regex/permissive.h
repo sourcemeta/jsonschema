@@ -15,7 +15,7 @@ namespace sourcemeta::core {
 
 namespace {
 
-constexpr std::array<std::pair<std::string_view, std::string_view>, 42>
+constexpr std::array<std::pair<std::string_view, std::string_view>, 47>
     UNICODE_PROPERTY_MAP{{{"digit", "Nd"},
                           {"Decimal_Number", "Nd"},
                           {"space", "White_Space"},
@@ -24,18 +24,21 @@ constexpr std::array<std::pair<std::string_view, std::string_view>, 42>
                           {"Hex_Digit", "Hex_Digit"},
                           {"Alphabetic", "Alphabetic"},
                           {"Letter", "L"},
+                          {"Cased_Letter", "LC"},
                           {"Uppercase_Letter", "Lu"},
                           {"Lowercase_Letter", "Ll"},
                           {"Titlecase_Letter", "Lt"},
                           {"Modifier_Letter", "Lm"},
                           {"Other_Letter", "Lo"},
                           {"Mark", "M"},
+                          {"Combining_Mark", "M"},
                           {"Nonspacing_Mark", "Mn"},
                           {"Spacing_Mark", "Mc"},
                           {"Enclosing_Mark", "Me"},
                           {"Number", "N"},
                           {"Letter_Number", "Nl"},
                           {"Other_Number", "No"},
+                          {"punct", "P"},
                           {"Punctuation", "P"},
                           {"Connector_Punctuation", "Pc"},
                           {"Dash_Punctuation", "Pd"},
@@ -54,10 +57,15 @@ constexpr std::array<std::pair<std::string_view, std::string_view>, 42>
                           {"Line_Separator", "Zl"},
                           {"Paragraph_Separator", "Zp"},
                           {"Other", "C"},
+                          {"cntrl", "Cc"},
                           {"Control", "Cc"},
                           {"Format", "Cf"},
                           {"Unassigned", "Cn"},
-                          {"Private_Use", "Co"}}};
+                          {"Private_Use", "Co"},
+                          {"Surrogate", "Cs"}}};
+
+constexpr std::array<std::string_view, 2> GENERAL_CATEGORY_PREFIXES{
+    {"General_Category=", "gc="}};
 
 constexpr std::string_view SHORTHAND_CHARS{"dDwWsS"};
 constexpr std::string_view SIMPLE_ESCAPES{"btnrfv0"};
@@ -577,13 +585,35 @@ inline auto expand_char_class(const std::string &content)
   return result.none() ? "(?!)" : bitset_to_class(result);
 }
 
+inline auto property_class(const std::string_view name, const bool negated)
+    -> std::string {
+  return std::string("\\") + (negated ? 'P' : 'p') + '{' + std::string{name} +
+         '}';
+}
+
 inline auto translate_property(const std::string_view name, const bool negated)
     -> std::optional<std::string> {
-  for (const auto &[prop_name, pcre_name] : UNICODE_PROPERTY_MAP) {
-    if (name == prop_name) {
-      return std::string("\\") + (negated ? 'P' : 'p') + '{' +
-             std::string(pcre_name) + '}';
+  // ECMA-262 resolves a lone property value against the general category
+  // before anything else, so naming that property outright means the same as
+  // giving the value on its own
+  auto value{name};
+  bool general_category{false};
+  for (const auto prefix : GENERAL_CATEGORY_PREFIXES) {
+    if (value.starts_with(prefix)) {
+      value.remove_prefix(prefix.size());
+      general_category = true;
+      break;
     }
+  }
+
+  for (const auto &[prop_name, pcre_name] : UNICODE_PROPERTY_MAP) {
+    if (value == prop_name) {
+      return property_class(pcre_name, negated);
+    }
+  }
+
+  if (general_category) {
+    return property_class(value, negated);
   }
 
   return std::nullopt;

@@ -18,11 +18,21 @@
 /// @defgroup jsonl JSONL
 /// @brief A JSON Lines (https://jsonlines.org) implementation with iterator
 /// support. Every non-empty line in a JSONL stream is a complete, valid JSON
-/// value, and lines are separated by newline characters (U+000A). Multi-line
-/// JSON values are not supported, as per the JSONL specification. Blank and
-/// whitespace-only lines are skipped rather than treated as errors. JSON Lines
-/// is a convention rather than a formal specification, so tolerating stray
-/// blank lines is friendlier to real-world input.
+/// value of any type, and lines are separated by newline characters (U+000A),
+/// optionally preceded by a carriage return (U+000D). Multi-line JSON values
+/// are not supported, as per the JSONL specification.
+///
+/// JSON Lines and NDJSON (https://github.com/ndjson/ndjson-spec) describe the
+/// same format with minor differences, and this implementation accepts a
+/// superset of both:
+///
+/// - Blank and whitespace-only lines are skipped rather than treated as
+///   errors. JSON Lines considers them invalid, while NDJSON 3.2 permits
+///   ignoring them as long as the behavior is documented
+/// - A newline after the last value is optional. JSON Lines makes it a
+///   recommendation, while NDJSON 3.1 requires it when serializing
+/// - Whitespace is tolerated anywhere around a value, including carriage
+///   returns that NDJSON 3.1 only allows right before a newline
 ///
 /// This functionality is included as follows:
 ///
@@ -87,13 +97,14 @@ private:
 // safe.
 // https://learn.microsoft.com/en-us/cpp/error-messages/compiler-warnings/compiler-warning-level-2-c4275?view=msvc-170&redirectedfrom=MSDN
 #if defined(_MSC_VER)
+#pragma warning(push)
 #pragma warning(disable : 4251)
 #endif
   std::basic_istream<JSON::Char, JSON::CharTraits> *stream_;
   struct Internal;
   std::unique_ptr<Internal> internal_;
 #if defined(_MSC_VER)
-#pragma warning(default : 4251)
+#pragma warning(pop)
 #endif
 };
 

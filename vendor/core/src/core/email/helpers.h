@@ -47,28 +47,6 @@ constexpr auto is_qtext_smtp(const unsigned char character) -> bool {
          (character >= 93 && character <= 126);
 }
 
-// RFC 5321 §4.1.3: dcontent = %d33-90 / %d94-126
-constexpr auto is_dcontent(const unsigned char character) -> bool {
-  return (character >= 33 && character <= 90) ||
-         (character >= 94 && character <= 126);
-}
-
-// RFC 5321 §4.1.2: Ldh-str = *( ALPHA / DIGIT / "-" ) Let-dig
-// RFC 5321 §4.1.3: Standardized-tag = Ldh-str
-constexpr auto is_ldh_str(const std::string_view value) -> bool {
-  if (value.empty() || !sourcemeta::core::is_alphanum(value.back())) {
-    return false;
-  }
-  for (std::string_view::size_type position{0}; position + 1 < value.size();
-       position += 1) {
-    const auto character{value[position]};
-    if (!sourcemeta::core::is_alphanum(character) && character != '-') {
-      return false;
-    }
-  }
-  return true;
-}
-
 // RFC 5321 §4.1.3: Snum = 1*3DIGIT ; representing a decimal integer
 // value in the range 0 through 255. Leading zeros are permitted, unlike
 // the RFC 3986 dec-octet that backs is_ipv4
@@ -122,30 +100,8 @@ constexpr auto matches_ipv6_tag(const std::string_view value) -> bool {
          value[4] == ':';
 }
 
-// RFC 5321 §4.1.3: General-address-literal = Standardized-tag ":" 1*dcontent
-constexpr auto is_general_address_literal(const std::string_view value)
-    -> bool {
-  const auto colon_position{value.find(':')};
-  if (colon_position == std::string_view::npos) {
-    return false;
-  }
-  if (!is_ldh_str(value.substr(0, colon_position))) {
-    return false;
-  }
-  const auto content{value.substr(colon_position + 1)};
-  if (content.empty()) {
-    return false;
-  }
-  for (const auto character : content) {
-    if (!is_dcontent(static_cast<unsigned char>(character))) {
-      return false;
-    }
-  }
-  return true;
-}
-
 // RFC 5321 §4.1.3: validate the address-literal payload (between "[" and "]")
-// as IPv6, IPv4, or General-address-literal. Always ASCII; no IDNA applies
+// as IPv6 or IPv4. Always ASCII; no IDNA applies
 inline auto is_address_literal(const std::string_view domain) -> bool {
   if (domain.back() != ']') {
     return false;
@@ -155,18 +111,18 @@ inline auto is_address_literal(const std::string_view domain) -> bool {
     return false;
   }
   const auto inner{domain.substr(1, domain.size() - 2)};
-  // RFC 5321 §4.1.3: IPv6-address-literal = "IPv6:" IPv6-addr
-  if (matches_ipv6_tag(inner) && sourcemeta::core::is_ipv6(inner.substr(5))) {
-    return true;
+  // RFC 5321 §4.1.3: IPv6-address-literal = "IPv6:" IPv6-addr. The tag names
+  // the syntax that the rest of the literal follows, so a payload that is not
+  // an address is turned down rather than read as general content, which
+  // would otherwise leave the IPv6 form unable to ever fail
+  if (matches_ipv6_tag(inner)) {
+    return sourcemeta::core::is_ipv6(inner.substr(5));
   }
-  // RFC 5234 §3.2: ABNF alternatives are unordered. A failed IPv6 match
-  // falls through to IPv4 or General-address-literal.
-  // RFC 5321 §4.1.3: IPv4-address-literal has no ":";
-  // General-address-literal requires ":"
-  if (!inner.contains(':')) {
-    return is_ipv4_address_literal(inner);
-  }
-  return is_general_address_literal(inner);
+  // RFC 5321 §4.1.3: a Standardized-tag must be registered with IANA before
+  // being used, and the registry carries the IPv6 tag alone, so the general
+  // form admits nothing that the branch above does not already cover. What
+  // remains is the IPv4 form, which has no colon to begin with
+  return !inner.contains(':') && is_ipv4_address_literal(inner);
 }
 
 // RFC 3986 §2.1: "For consistency, URI producers and normalizers should use

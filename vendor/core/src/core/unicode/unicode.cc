@@ -374,6 +374,22 @@ auto is_combining_mark(const char32_t codepoint) noexcept -> bool {
   return IS_COMBINING_MARK_STAGE2[(page << 10U) | (codepoint & 0x3FFU)] != 0;
 }
 
+auto is_id_start(const char32_t codepoint) noexcept -> bool {
+  if (codepoint > 0x10FFFF) {
+    return false;
+  }
+  const std::size_t page{IS_ID_START_STAGE1[codepoint >> 10U]};
+  return IS_ID_START_STAGE2[(page << 10U) | (codepoint & 0x3FFU)] != 0;
+}
+
+auto is_id_continue(const char32_t codepoint) noexcept -> bool {
+  if (codepoint > 0x10FFFF) {
+    return false;
+  }
+  const std::size_t page{IS_ID_CONTINUE_STAGE1[codepoint >> 10U]};
+  return IS_ID_CONTINUE_STAGE2[(page << 10U) | (codepoint & 0x3FFU)] != 0;
+}
+
 auto nfc_quick_check(const char32_t codepoint) noexcept -> NFCQuickCheck {
   if (codepoint > 0x10FFFF) {
     return NFCQuickCheck::Yes;

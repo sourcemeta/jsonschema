@@ -39,8 +39,9 @@ enum class IDNALabelKind : std::uint8_t {
 /// @ingroup idna
 /// Classify `label` as an Ascii / A-label / U-label per RFC 5890 §2.3.2,
 /// validate the A-label and U-label cases per RFC 5891 §4, and write the
-/// U-label codepoint form to `decoded`. Detection of the ACE prefix "xn--"
-/// is case-insensitive per RFC 5890 §2.3.2.1. For example:
+/// U-label codepoint form to `decoded`. Per RFC 5891 §4.2.1 an A-label is
+/// lowercased before it is decoded, so the ACE prefix "xn--" and the Punycode
+/// body are both matched case-insensitively. For example:
 ///
 /// ```cpp
 /// #include <sourcemeta/core/idna.h>
@@ -161,13 +162,12 @@ auto idna_is_valid_u_label(const std::u32string_view label) -> bool;
 /// @ingroup idna
 /// Return whether the given label is a valid A-label per RFC 5891 §4. See
 /// https://www.rfc-editor.org/rfc/rfc5891#section-4 for the criteria.
-/// A valid A-label starts with the lowercase ACE prefix "xn--", is pure
-/// ASCII, is at most 63 octets, has a non-empty Punycode body that decodes to
-/// a U-label containing at least one non-ASCII codepoint, and round-trips
-/// through Punycode in its canonical form. Both the prefix and the Punycode
-/// body are matched case-sensitively, so an uppercase prefix or a mixed-case
-/// body is rejected. This is intended for registration-side validation rather
-/// than case-folding lookup. For example:
+/// A valid A-label starts with the ACE prefix "xn--", is pure ASCII, is at
+/// most 63 octets, has a non-empty Punycode body that decodes to a U-label
+/// containing at least one non-ASCII codepoint, and round-trips through
+/// Punycode in its canonical form. Per RFC 5891 §4.2.1 the label is lowercased
+/// before it is decoded, so the prefix and the Punycode body are both matched
+/// case-insensitively. For example:
 ///
 /// ```cpp
 /// #include <sourcemeta/core/idna.h>
@@ -175,6 +175,8 @@ auto idna_is_valid_u_label(const std::u32string_view label) -> bool;
 ///
 /// // xn--mnchen-3ya decodes to "München"
 /// assert(sourcemeta::core::idna_is_valid_a_label("xn--mnchen-3ya"));
+/// // The same label, lowercased before it is decoded
+/// assert(sourcemeta::core::idna_is_valid_a_label("XN--MNCHEN-3YA"));
 /// // Missing "xn--" prefix
 /// assert(!sourcemeta::core::idna_is_valid_a_label("abc"));
 /// // Decodes to "abc" (no non-ASCII codepoint)

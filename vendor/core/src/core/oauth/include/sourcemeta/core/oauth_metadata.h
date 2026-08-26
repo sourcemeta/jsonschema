@@ -118,6 +118,7 @@ SOURCEMETA_CORE_OAUTH_EXPORT
 auto oauth_is_issuer_identifier(const std::string_view value) -> bool;
 
 #if defined(_MSC_VER)
+#pragma warning(push)
 #pragma warning(disable : 4251)
 #endif
 
@@ -352,7 +353,7 @@ private:
 };
 
 #if defined(_MSC_VER)
-#pragma warning(default : 4251)
+#pragma warning(pop)
 #endif
 
 /// @ingroup oauth

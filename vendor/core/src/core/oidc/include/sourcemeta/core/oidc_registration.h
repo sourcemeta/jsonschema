@@ -16,6 +16,7 @@
 namespace sourcemeta::core {
 
 #if defined(_MSC_VER)
+#pragma warning(push)
 #pragma warning(disable : 4251)
 #endif
 
@@ -114,7 +115,7 @@ private:
 };
 
 #if defined(_MSC_VER)
-#pragma warning(default : 4251)
+#pragma warning(pop)
 #endif
 
 /// @ingroup oidc

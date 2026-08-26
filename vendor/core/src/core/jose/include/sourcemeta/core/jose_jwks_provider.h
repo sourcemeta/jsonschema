@@ -156,6 +156,7 @@ private:
       -> std::shared_ptr<const JWKS>;
 
 #if defined(_MSC_VER)
+#pragma warning(push)
 #pragma warning(disable : 4251)
 #endif
   const std::string jwks_uri_;
@@ -167,7 +168,7 @@ private:
   std::chrono::system_clock::time_point next_refresh_{};
   std::chrono::system_clock::time_point unknown_kid_cooldown_until_{};
 #if defined(_MSC_VER)
-#pragma warning(default : 4251)
+#pragma warning(pop)
 #endif
 };
 

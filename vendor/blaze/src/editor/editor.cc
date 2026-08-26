@@ -1,5 +1,8 @@
 #include <sourcemeta/blaze/editor.h>
+
 #include <sourcemeta/blaze/frame.h>
+
+#include "helpers.h"
 
 #include <cassert> // assert
 #include <map>     // std::map
@@ -182,7 +185,7 @@ auto for_editor(sourcemeta::core::JSON &schema,
 
       const bool add_schema =
           entry.second.pointer.empty() && !subschema.defines("$schema");
-      const auto vocabularies{frame.vocabularies(entry.second, resolver)};
+      const auto &vocabularies{frame.vocabularies(entry.second, resolver)};
 
       subschema_changes.push_back(
           {.pointer = sourcemeta::core::to_pointer(entry.second.pointer),

@@ -39,9 +39,11 @@ namespace sourcemeta::core {
 /// prose specifies the IPv6 syntax as that of RFC 4291, while the `IPv6-addr`
 /// ABNF in the same section is stricter and conflicts with it, so the prose is
 /// followed. A bracketed `[IPv6:...]` whose body is not a valid address is
-/// still accepted, because Section 4.1.3 also permits any
-/// General-address-literal (a registered tag, a colon, and content) and ABNF
-/// alternatives are unordered.
+/// turned down rather than read as a General-address-literal, since the tag
+/// names the syntax that has to follow it. That general form is not accepted
+/// under any other tag either, as Section 4.1.3 requires a Standardized-tag to
+/// be registered with IANA before being used and that registry carries the
+/// IPv6 tag alone.
 ///
 /// For example:
 ///
@@ -108,9 +110,8 @@ auto is_idn_email_uts46(const std::string_view value) -> bool;
 /// Produce the domain half of a valid RFC 5321 `Mailbox`, returning an empty
 /// view when the input is not one, which no valid mailbox can otherwise yield
 /// since a domain is never empty. The separator is located by parsing the
-/// address, since neither the first nor the last at sign reliably marks it:
-/// RFC 5321 Section 4.1.2 admits one inside a quoted local part, and Section
-/// 4.1.3 admits one inside the content of a General-address-literal. The
+/// address, since the first at sign does not reliably mark it: RFC 5321
+/// Section 4.1.2 admits one inside a quoted local part. The
 /// result borrows from the input and keeps its spelling, so a caller comparing
 /// domains applies the RFC 5321 Section 2.4 case insensitivity itself. Only
 /// the ASCII grammar is accepted, so an internationalized address per RFC 6531

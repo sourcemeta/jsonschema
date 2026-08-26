@@ -189,6 +189,9 @@
 namespace sourcemeta::blaze::dispatch {
 using namespace sourcemeta::core;
 
+// The recursion depth past which evaluation is assumed to be non-terminating
+constexpr auto DEPTH_LIMIT{300};
+
 inline auto resolve_target(const JSON::String *property_target,
                            const JSON &instance) noexcept -> const JSON & {
   if (property_target) [[unlikely]] {
@@ -595,19 +598,23 @@ INSTRUCTION_HANDLER(AssertionTypeStringUpper) {
   EVALUATE_END(AssertionTypeStringUpper);
 }
 
+INSTRUCTION_DIRECT(AssertionTypeArrayBounded, ValueRange) {
+  const auto &[minimum, maximum, exhaustive] = value;
+  // Require early breaking
+  assert(!exhaustive);
+  SOURCEMETA_ASSUME(!exhaustive);
+  return target.type() == JSON::Type::Array && target.array_size() >= minimum &&
+         (!maximum.has_value() || target.array_size() <= maximum.value());
+}
+
 INSTRUCTION_HANDLER(AssertionTypeArrayBounded) {
   EVALUATE_BEGIN_NO_PRECONDITION(AssertionTypeArrayBounded);
   const auto &target{
       resolve_instance(instance, instruction.relative_instance_location)};
   const auto &value{assume_value<ValueRange>(instruction.value)};
-  const auto &[minimum, maximum, exhaustive] = value;
-  assert(!maximum.has_value() || maximum.value() >= minimum);
-  // Require early breaking
-  assert(!exhaustive);
-  SOURCEMETA_ASSUME(!exhaustive);
-  result = target.type() == JSON::Type::Array &&
-           target.array_size() >= minimum &&
-           (!maximum.has_value() || target.array_size() <= maximum.value());
+  assert(!std::get<1>(value).has_value() ||
+         std::get<1>(value).value() >= std::get<0>(value));
+  result = DIRECT(AssertionTypeArrayBounded, target, value);
   EVALUATE_END(AssertionTypeArrayBounded);
 }
 
@@ -2269,9 +2276,32 @@ INSTRUCTION_HANDLER(LoopItems) {
 
   // To avoid index lookups and unnecessary conditionals
   if constexpr (!Track && !HasCallback) {
+    // Dynamic pushes and pops a resource per instruction that the direct path
+    // would skip, and children are evaluated at `depth + 1`, which the direct
+    // path does not route through the depth check. Both conditions hold for
+    // every child, so decide once rather than per element
+    const auto direct_children{!Dynamic && depth < DEPTH_LIMIT};
     for (const auto &new_instance : target.as_array()) {
       for (const auto &child : instruction.children) {
-        if (!EVALUATE_RECURSE(child, new_instance)) [[unlikely]] {
+        bool child_ok;
+        if (direct_children) [[likely]] {
+          switch (child.type) {
+            case InstructionIndex::AssertionTypeArrayBounded:
+              child_ok =
+                  DIRECT(AssertionTypeArrayBounded,
+                         resolve_instance(new_instance,
+                                          child.relative_instance_location),
+                         assume_value<ValueRange>(child.value));
+              break;
+            default:
+              child_ok = EVALUATE_RECURSE(child, new_instance);
+              break;
+          }
+        } else {
+          child_ok = EVALUATE_RECURSE(child, new_instance);
+        }
+
+        if (!child_ok) [[unlikely]] {
           result = false;
           EVALUATE_END(LoopItems);
         }
@@ -2895,7 +2925,6 @@ evaluate_instruction(const sourcemeta::blaze::Instruction &instruction,
                      const std::uint64_t depth,
                      DispatchContext<Track, Dynamic, HasCallback> &context)
     -> bool {
-  constexpr auto DEPTH_LIMIT{300};
   if (depth > DEPTH_LIMIT) [[unlikely]] {
     throw EvaluationError("The evaluation path depth limit was reached "
                           "likely due to infinite recursion");
@@ -2910,7 +2939,6 @@ inline auto evaluate_instruction_without_callback(
     const sourcemeta::blaze::Instruction &instruction,
     const sourcemeta::core::JSON &instance, const std::uint64_t depth,
     DispatchContext<Track, Dynamic, HasCallback> &context) -> bool {
-  constexpr auto DEPTH_LIMIT{300};
   if (depth > DEPTH_LIMIT) [[unlikely]] {
     throw EvaluationError("The evaluation path depth limit was reached "
                           "likely due to infinite recursion");

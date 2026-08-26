@@ -142,6 +142,7 @@ private:
   static auto parse(const JSON &value, JWK &result) -> bool;
 
 #if defined(_MSC_VER)
+#pragma warning(push)
 #pragma warning(disable : 4251)
 #endif
   Type type_{Type::RSA};
@@ -156,7 +157,7 @@ private:
   std::string coordinate_y_;
   std::string public_point_;
 #if defined(_MSC_VER)
-#pragma warning(default : 4251)
+#pragma warning(pop)
 #endif
 };
 

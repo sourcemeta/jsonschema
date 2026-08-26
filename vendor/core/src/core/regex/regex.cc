@@ -3,6 +3,7 @@
 
 #include <pcre2.h>
 
+#include "ecma262.h"
 #include "iregexp.h"
 #include "permissive.h"
 
@@ -35,60 +36,6 @@ auto compile_pcre2(const std::string &pattern, const std::uint32_t options)
   std::shared_ptr<pcre2_code> pcre2_regex{pcre2_regex_raw, pcre2_code_free};
   pcre2_jit_compile(pcre2_regex.get(), PCRE2_JIT_COMPLETE);
   return RegexTypePCRE2{std::shared_ptr<void>(pcre2_regex)};
-}
-
-auto compiles_with_ecma_options(const std::string &pattern) -> bool {
-  int pcre2_error_code{0};
-  PCRE2_SIZE pcre2_error_offset{0};
-  pcre2_code *pcre2_regex_raw{pcre2_compile(
-      reinterpret_cast<PCRE2_SPTR>(pattern.c_str()), pattern.size(),
-      // Capturing groups are kept enabled so that ECMA-262 numbered
-      // backreferences like (a)\1 compile and match, at a small tracking cost
-      PCRE2_UTF | PCRE2_UCP | PCRE2_DOTALL | PCRE2_DOLLAR_ENDONLY |
-          PCRE2_NEVER_BACKSLASH_C | PCRE2_MATCH_INVALID_UTF |
-          PCRE2_ALLOW_EMPTY_CLASS,
-      &pcre2_error_code, &pcre2_error_offset, nullptr)};
-
-  if (pcre2_regex_raw == nullptr) {
-    return false;
-  }
-
-  pcre2_code_free(pcre2_regex_raw);
-  return true;
-}
-
-auto lookbehinds_as_lookaheads(const std::string &pattern) -> std::string {
-  std::string result;
-  result.reserve(pattern.size());
-  bool in_class{false};
-  for (std::size_t position = 0; position < pattern.size(); ++position) {
-    const char current{pattern[position]};
-    if (current == '\\' && position + 1 < pattern.size()) {
-      result += current;
-      result += pattern[position + 1];
-      position += 1;
-      continue;
-    }
-
-    if (current == '[') {
-      in_class = true;
-    } else if (current == ']') {
-      in_class = false;
-    }
-
-    if (!in_class && current == '(' && position + 3 < pattern.size() &&
-        pattern[position + 1] == '?' && pattern[position + 2] == '<' &&
-        (pattern[position + 3] == '=' || pattern[position + 3] == '!')) {
-      result += "(?";
-      result += pattern[position + 3];
-      position += 3;
-      continue;
-    }
-
-    result += current;
-  }
-
-  return result;
 }
 
 } // namespace
@@ -266,23 +213,7 @@ auto matches_if_valid(const std::string_view pattern,
 }
 
 auto is_regex_ecma(const std::string_view pattern) -> bool {
-  const auto translated{translate_permissive(std::string{pattern})};
-  if (!translated.ecma_valid || !translated.transformed.has_value()) {
-    return false;
-  }
-
-  if (compiles_with_ecma_options(translated.transformed.value())) {
-    return true;
-  }
-
-  // ECMA-262 places no width restriction on lookbehind assertions, while
-  // PCRE2 only accepts lookbehinds whose maximum width is bounded. As
-  // lookbehind and lookahead bodies follow the same grammar, the syntax
-  // check is retried with every lookbehind turned into a lookahead
-  const auto rewritten{
-      lookbehinds_as_lookaheads(translated.transformed.value())};
-  return rewritten != translated.transformed.value() &&
-         compiles_with_ecma_options(rewritten);
+  return is_ecma262_pattern(pattern);
 }
 
 } // namespace sourcemeta::core

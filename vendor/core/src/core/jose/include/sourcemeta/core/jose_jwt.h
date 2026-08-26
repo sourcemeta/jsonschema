@@ -120,6 +120,7 @@ private:
   static auto parse(const std::string_view input, JWT &result) -> bool;
 
 #if defined(_MSC_VER)
+#pragma warning(push)
 #pragma warning(disable : 4251)
 #endif
   std::string_view signing_input_;
@@ -128,7 +129,7 @@ private:
   JSON payload_{nullptr};
   std::optional<JWSAlgorithm> algorithm_;
 #if defined(_MSC_VER)
-#pragma warning(default : 4251)
+#pragma warning(pop)
 #endif
 };
 

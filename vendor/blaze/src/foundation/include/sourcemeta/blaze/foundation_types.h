@@ -216,20 +216,6 @@ struct SchemaWalkerResult {
 using SchemaWalker = std::function<const SchemaWalkerResult &(
     std::string_view, const Vocabularies &)>;
 
-/// @ingroup foundation
-/// An entry of a schema iterator.
-struct SchemaIteratorEntry {
-  std::optional<sourcemeta::core::WeakPointer> parent;
-  sourcemeta::core::WeakPointer pointer;
-  // TODO: Use "known" enum classes + strings for dialects
-  std::string_view dialect;
-  Vocabularies vocabularies;
-  std::optional<SchemaBaseDialect> base_dialect;
-  std::reference_wrapper<const sourcemeta::core::JSON> subschema;
-  bool orphan;
-  bool property_name;
-};
-
 } // namespace sourcemeta::blaze
 
 #endif

@@ -160,6 +160,53 @@ inline auto rephrase(const Context &context, const InstructionIndex type,
           .extra_index = extra_index};
 }
 
+inline auto is_numeric_integer_type_check(const Instruction &instruction)
+    -> bool {
+  return (instruction.type == InstructionIndex::AssertionType ||
+          instruction.type == InstructionIndex::AssertionTypeStrict) &&
+         std::get<ValueType>(instruction.value) ==
+             sourcemeta::core::JSON::Type::Integer;
+}
+
+inline auto is_numeric_bound_check(const Instruction &instruction) -> bool {
+  return instruction.type == InstructionIndex::AssertionGreaterEqual ||
+         instruction.type == InstructionIndex::AssertionGreater ||
+         instruction.type == InstructionIndex::AssertionLessEqual ||
+         instruction.type == InstructionIndex::AssertionLess;
+}
+
+inline auto merge_integer_bound(const Instruction &instruction,
+                                std::optional<std::int64_t> &minimum,
+                                std::optional<std::int64_t> &maximum) -> bool {
+  if (!is_numeric_bound_check(instruction)) {
+    return false;
+  }
+
+  const auto &bound{std::get<ValueJSON>(instruction.value)};
+  if (!bound.is_integer()) {
+    return false;
+  }
+
+  const auto value{bound.to_integer()};
+  if (instruction.type == InstructionIndex::AssertionGreaterEqual) {
+    minimum = minimum.has_value() ? std::max(minimum.value(), value) : value;
+  } else if (instruction.type == InstructionIndex::AssertionGreater) {
+    const auto adjusted{value + 1};
+    minimum =
+        minimum.has_value() ? std::max(minimum.value(), adjusted) : adjusted;
+  } else if (instruction.type == InstructionIndex::AssertionLessEqual) {
+    maximum = maximum.has_value() ? std::min(maximum.value(), value) : value;
+  } else if (instruction.type == InstructionIndex::AssertionLess) {
+    const auto adjusted{value - 1};
+    maximum =
+        maximum.has_value() ? std::min(maximum.value(), adjusted) : adjusted;
+  } else {
+    return false;
+  }
+
+  return true;
+}
+
 // Note that the size keywords that let the type level fuse their bound accept
 // any integral number, including reals with no fractional part like `2.0`, so
 // this must recognise those too or the fused bound would be silently dropped

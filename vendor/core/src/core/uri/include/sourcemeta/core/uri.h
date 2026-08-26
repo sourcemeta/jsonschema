@@ -520,13 +520,14 @@ public:
 
     private:
 #if defined(_MSC_VER)
+#pragma warning(push)
 #pragma warning(disable : 4251)
 #endif
       std::string_view raw_{};
       std::size_t pair_start_{std::string_view::npos};
       value_type current_{};
 #if defined(_MSC_VER)
-#pragma warning(default : 4251)
+#pragma warning(pop)
 #endif
     };
 
@@ -538,11 +539,12 @@ public:
 
   private:
 #if defined(_MSC_VER)
+#pragma warning(push)
 #pragma warning(disable : 4251)
 #endif
     std::string_view raw_;
 #if defined(_MSC_VER)
-#pragma warning(default : 4251)
+#pragma warning(pop)
 #endif
   };
 
@@ -1163,6 +1165,7 @@ private:
 // safe.
 // https://learn.microsoft.com/en-us/cpp/error-messages/compiler-warnings/compiler-warning-level-2-c4275?view=msvc-170&redirectedfrom=MSDN
 #if defined(_MSC_VER)
+#pragma warning(push)
 #pragma warning(disable : 4251)
 #endif
   std::optional<std::string> path_{};
@@ -1177,7 +1180,7 @@ private:
   // (RFC 3986)
   bool iri_{false};
 #if defined(_MSC_VER)
-#pragma warning(default : 4251)
+#pragma warning(pop)
 #endif
 };
 

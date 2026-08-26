@@ -172,17 +172,45 @@ auto replace_all(const Regex &regex, const std::string_view subject,
 
 /// @ingroup regex
 ///
-/// Check whether the given string is a valid ECMA-262 regular expression. For
-/// example:
+/// Check whether the given string is a valid ECMA-262 regular expression.
+///
+/// The pattern is read against the grammar of ECMA-262, including its early
+/// errors, rather than handed to the underlying engine, so the answer follows
+/// the standard instead of whatever a particular engine happens to accept. A
+/// pattern is accepted when it parses under either of the two Unicode-aware
+/// readings of the standard, meaning the one that JavaScript selects with the
+/// `u` flag or the one it selects with the `v` flag. The latter is what makes
+/// set notation, such as nested classes, set operations and string
+/// disjunctions, come out valid.
+///
+/// The legacy reading of Annex B, which JavaScript selects when no flag is
+/// given, is deliberately not accepted. That reading treats a great deal of
+/// otherwise malformed input as literal text, so a pattern written for another
+/// flavour would pass without meaning what its author intended. The official
+/// JSON Schema test suite agrees, as it requires an alarm escape to be
+/// rejected even though the legacy reading accepts it as a literal.
+///
+/// In practice this means that a syntax character standing on its own, such as
+/// an unescaped brace or closing bracket, makes a pattern invalid, and that
+/// property escapes only resolve against the property names and values that
+/// the standard permits. For example:
 ///
 /// ```cpp
 /// #include <sourcemeta/core/regex.h>
 /// #include <cassert>
 ///
 /// assert(sourcemeta::core::is_regex_ecma("([abc])+\\s+$"));
+/// assert(sourcemeta::core::is_regex_ecma("\\p{gc=Lu}"));
+/// assert(sourcemeta::core::is_regex_ecma("[[a-z]--[aeiou]]"));
 /// assert(!sourcemeta::core::is_regex_ecma("^(abc]"));
 /// assert(!sourcemeta::core::is_regex_ecma("\\a"));
+/// assert(!sourcemeta::core::is_regex_ecma("^{.*}$"));
 /// ```
+///
+/// Note that a pattern being valid does not mean this project can compile it,
+/// as the standard places no bound on how much a quantifier may repeat while
+/// the underlying engine does. Use `to_regex` to find out whether a pattern
+/// can also be matched with.
 SOURCEMETA_CORE_REGEX_EXPORT
 auto is_regex_ecma(const std::string_view pattern) -> bool;
 

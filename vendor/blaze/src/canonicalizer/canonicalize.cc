@@ -43,19 +43,6 @@ template <std::derived_from<SchemaTransformRule> T>
 }
 
 /// Re-analyse the frame, honouring any identifier already present in the schema
-auto analyse_frame(sourcemeta::blaze::SchemaFrame &target,
-                   sourcemeta::core::JSON &schema,
-                   const sourcemeta::blaze::SchemaWalker &walker,
-                   const sourcemeta::blaze::SchemaResolver &resolver,
-                   const std::string_view default_dialect,
-                   const std::string_view default_id) -> void {
-  if (!blaze::identify(schema, resolver, default_dialect).empty()) {
-    target.analyse(schema, walker, resolver, default_dialect);
-  } else {
-    target.analyse(schema, walker, resolver, default_dialect, default_id);
-  }
-}
-
 /// Apply the given rules top-down to every subschema until none of them applies
 auto apply(const std::vector<Rule> &rules, sourcemeta::core::JSON &schema,
            const sourcemeta::blaze::SchemaWalker &walker,
@@ -97,8 +84,8 @@ auto apply(const std::vector<Rule> &rules, sourcemeta::core::JSON &schema,
         break;
       }
 
-      analyse_frame(frame, schema, walker, resolver, default_dialect,
-                    default_id);
+      frame.analyse(schema, walker, resolver, default_dialect, default_id,
+                    sourcemeta::blaze::SchemaFrame::IdentifierMode::Fallback);
     }
 
     std::unordered_set<core::Pointer, core::Pointer::Hasher> visited;
@@ -154,8 +141,9 @@ auto apply(const std::vector<Rule> &rules, sourcemeta::core::JSON &schema,
         applied = true;
 
         if (reframe_after_transform) {
-          analyse_frame(frame, schema, walker, resolver, default_dialect,
-                        default_id);
+          frame.analyse(
+              schema, walker, resolver, default_dialect, default_id,
+              sourcemeta::blaze::SchemaFrame::IdentifierMode::Fallback);
         } else if (current.is_boolean()) {
           std::tuple<core::Pointer, std::string_view, core::JSON> mark{
               entry_pointer, rule->name(), current};

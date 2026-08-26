@@ -605,6 +605,38 @@ SOURCEMETA_CORE_UNICODE_EXPORT
 auto is_combining_mark(const char32_t codepoint) noexcept -> bool;
 
 /// @ingroup unicode
+/// Determine whether a Unicode codepoint may open an identifier per UAX #31.
+/// See https://www.unicode.org/reports/tr31/ for the property's definition.
+/// For example:
+///
+/// ```cpp
+/// #include <sourcemeta/core/unicode.h>
+/// #include <cassert>
+///
+/// assert(sourcemeta::core::is_id_start(U'A'));
+/// assert(sourcemeta::core::is_id_start(U'\u00E9'));
+/// assert(!sourcemeta::core::is_id_start(U'1'));
+/// ```
+SOURCEMETA_CORE_UNICODE_EXPORT
+auto is_id_start(const char32_t codepoint) noexcept -> bool;
+
+/// @ingroup unicode
+/// Determine whether a Unicode codepoint may continue an identifier per
+/// UAX #31. See https://www.unicode.org/reports/tr31/ for the property's
+/// definition. For example:
+///
+/// ```cpp
+/// #include <sourcemeta/core/unicode.h>
+/// #include <cassert>
+///
+/// assert(sourcemeta::core::is_id_continue(U'A'));
+/// assert(sourcemeta::core::is_id_continue(U'1'));
+/// assert(!sourcemeta::core::is_id_continue(U'-'));
+/// ```
+SOURCEMETA_CORE_UNICODE_EXPORT
+auto is_id_continue(const char32_t codepoint) noexcept -> bool;
+
+/// @ingroup unicode
 /// Return the NFC quick-check property of a Unicode codepoint per UAX #15.
 /// See https://www.unicode.org/reports/tr15/ for the property's definition.
 /// For example:

@@ -3,6 +3,7 @@
 #include <sourcemeta/blaze/foundation.h>
 
 #include "helpers.h"
+#include "iterator.h"
 
 #include <algorithm> // std::ranges::all_of, std::ranges::contains, std::ranges::sort
 #include <cassert>       // assert
@@ -424,7 +425,7 @@ auto store(sourcemeta::blaze::SchemaFrame::Locations &frame,
 // Check misunderstood struct to be a function
 // NOLINTNEXTLINE(bugprone-exception-escape)
 struct InternalEntry {
-  sourcemeta::blaze::SchemaIteratorEntry common;
+  sourcemeta::blaze::SubschemaEntry common;
   std::optional<sourcemeta::core::JSON::String> id;
 };
 
@@ -571,8 +572,14 @@ auto SchemaFrame::analyse(const sourcemeta::core::JSON &root,
                           const SchemaResolver &resolver,
                           std::string_view default_dialect,
                           std::string_view default_id,
+                          const SchemaFrame::IdentifierMode identifier_mode,
                           const SchemaFrame::Paths &paths) -> void {
   this->reset();
+  // This mode reports on a single schema. Framing a wrapper that holds more
+  // than one has no single schema to report on, so there is nothing to analyse
+  if (this->mode_ == SchemaFrame::Mode::Root && paths.size() != 1) {
+    return;
+  }
   assert((std::unordered_set<sourcemeta::core::WeakPointer,
                              sourcemeta::core::WeakPointer::Hasher>(
               paths.cbegin(), paths.cend())
@@ -628,8 +635,10 @@ auto SchemaFrame::analyse(const sourcemeta::core::JSON &root,
 
     // If we are dealing with nested schemas, then by definition
     // the root has no identifier
+    // This mode analyses a single schema, which the caller may have pointed
+    // at through a container, so its identifier is the one we report
     std::optional<sourcemeta::core::JSON::String> root_id{std::nullopt};
-    if (path.empty()) {
+    if (path.empty() || this->mode_ == SchemaFrame::Mode::Root) {
       const auto maybe_id{sourcemeta::blaze::identify(
           schema, root_base_dialect.value(), default_id)};
       if (!maybe_id.empty()) {
@@ -652,19 +661,55 @@ auto SchemaFrame::analyse(const sourcemeta::core::JSON &root,
     // If the top-level schema has a specific identifier but the user
     // passes a different default identifier, then the schema is by
     // definition known by two names, and we should handle that accordingly
-    const bool has_explicit_different_id{root_id.has_value() &&
-                                         !default_id.empty() &&
-                                         root_id.value() != default_id};
+    const bool has_explicit_different_id{
+        identifier_mode == SchemaFrame::IdentifierMode::Additional &&
+        root_id.has_value() && !default_id.empty() &&
+        root_id.value() != default_id};
+    sourcemeta::core::JSON::String default_id_canonical;
     if (has_explicit_different_id) {
-      const auto default_id_canonical{
-          sourcemeta::core::URI::canonicalize(default_id)};
-      // Use this->root_ as base - it contains root_id.value() and persists
+      default_id_canonical = sourcemeta::core::URI::canonicalize(default_id);
+      // Borrow `this->root_` as the base for now, as the location that owns
+      // that URI does not exist yet. We re-point this entry at that location
+      // key once the traversal below is done
       store(this->locations_, SchemaReferenceType::Static,
             SchemaFrame::LocationType::Resource, default_id_canonical,
             this->root_, path, path.size(), root_dialect,
             root_base_dialect.value(), std::nullopt, false, false);
 
       base_uris.insert({path, {root_id.value(), default_id_canonical}});
+    }
+
+    if (this->mode_ == SchemaFrame::Mode::Root) {
+      // The schema may pin a custom meta-schema inside its own containers.
+      // Cache it, as the vocabulary lookups that this mode exists to serve
+      // consult that cache
+      if (!sourcemeta::blaze::to_base_dialect(root_dialect).has_value()) {
+        const sourcemeta::core::JSON::String dialect_key{root_dialect};
+        const auto *embedded{sourcemeta::blaze::metaschema_try_embedded(
+            schema, root_dialect, resolver)};
+        if (embedded) {
+          this->probed_metaschemas_.emplace(dialect_key, embedded);
+        }
+      }
+
+      if (root_id.has_value()) {
+        const sourcemeta::core::URI identifier{root_id.value()};
+        const auto fragment{identifier.fragment()};
+        if (fragment.has_value() && !fragment.value().empty()) {
+          throw SchemaFrameError(
+              root_id.value(),
+              "Identifiers must not contain non-empty fragments");
+        }
+      }
+
+      const auto location_uri{
+          root_id.value_or(sourcemeta::core::JSON::String{})};
+      store(this->locations_, SchemaReferenceType::Static,
+            root_id.has_value() ? SchemaFrame::LocationType::Resource
+                                : SchemaFrame::LocationType::Subschema,
+            location_uri, location_uri, path, path.size(), root_dialect,
+            root_base_dialect.value(), std::nullopt, false, false, false, true);
+      continue;
     }
 
     std::vector<std::size_t> current_subschema_entries;
@@ -823,7 +868,7 @@ auto SchemaFrame::analyse(const sourcemeta::core::JSON &root,
         }
       }
 
-      if (this->mode_ != SchemaFrame::Mode::Locations) {
+      if (this->mode_ == SchemaFrame::Mode::References) {
         // Handle metaschema references
         const auto maybe_metaschema{sourcemeta::blaze::dialect(
             entry.common.subschema.get(), {}, false)};
@@ -1074,9 +1119,23 @@ auto SchemaFrame::analyse(const sourcemeta::core::JSON &root,
         }
       }
     }
+
+    // The entry above borrowed `this->root_` as its base. Re-point it at the
+    // location that owns that URI, so that no location ends up with a view
+    // into a member of this class
+    if (has_explicit_different_id) {
+      const auto alias{this->locations_.find(
+          {SchemaReferenceType::Static, default_id_canonical})};
+      const auto canonical{
+          this->locations_.find({SchemaReferenceType::Static, this->root_})};
+      if (alias != this->locations_.cend() &&
+          canonical != this->locations_.cend()) {
+        alias->second.base = canonical->first.second;
+      }
+    }
   }
 
-  if (this->mode_ == SchemaFrame::Mode::Locations) {
+  if (this->mode_ != SchemaFrame::Mode::References) {
     return;
   }
 
@@ -1306,6 +1365,11 @@ auto SchemaFrame::analyse(const sourcemeta::core::JSON &root,
   }
 }
 
+auto SchemaFrame::root_location() const
+    -> std::optional<std::reference_wrapper<const Location>> {
+  return this->traverse(this->root_);
+}
+
 auto SchemaFrame::locations() const noexcept -> const Locations & {
   return this->locations_;
 }
@@ -1336,26 +1400,37 @@ auto SchemaFrame::root() const noexcept
 
 auto SchemaFrame::vocabularies(const Location &location,
                                const SchemaResolver &resolver) const
-    -> Vocabularies {
+    -> const Vocabularies & {
+  for (const auto &entry : this->vocabularies_) {
+    if (std::get<0>(entry) == location.base_dialect &&
+        std::get<1>(entry) == location.dialect) {
+      return std::get<2>(entry);
+    }
+  }
+
   if (this->probed_metaschemas_.empty()) {
-    return sourcemeta::blaze::vocabularies(resolver, location.base_dialect,
-                                           location.dialect);
+    return std::get<2>(this->vocabularies_.emplace_back(
+        location.base_dialect, location.dialect,
+        sourcemeta::blaze::vocabularies(resolver, location.base_dialect,
+                                        location.dialect)));
   }
 
   // Meta-schemas embedded in the analysed document take precedence
   // over what the caller's resolver knows about
-  return sourcemeta::blaze::vocabularies(
-      [this, &resolver](const std::string_view identifier)
-          -> std::optional<sourcemeta::core::JSON> {
-        const auto hit{this->probed_metaschemas_.find(
-            sourcemeta::core::JSON::String{identifier})};
-        if (hit != this->probed_metaschemas_.cend()) {
-          return *(hit->second);
-        }
+  return std::get<2>(this->vocabularies_.emplace_back(
+      location.base_dialect, location.dialect,
+      sourcemeta::blaze::vocabularies(
+          [this, &resolver](const std::string_view identifier)
+              -> std::optional<sourcemeta::core::JSON> {
+            const auto hit{this->probed_metaschemas_.find(
+                sourcemeta::core::JSON::String{identifier})};
+            if (hit != this->probed_metaschemas_.cend()) {
+              return *(hit->second);
+            }
 
-        return resolver(identifier);
-      },
-      location.base_dialect, location.dialect);
+            return resolver(identifier);
+          },
+          location.base_dialect, location.dialect)));
 }
 
 auto SchemaFrame::uri(
@@ -1607,6 +1682,7 @@ auto SchemaFrame::reset() -> void {
   this->locations_.clear();
   this->references_.clear();
   this->probed_metaschemas_.clear();
+  this->vocabularies_.clear();
   this->standalone_ = false;
 }
 
