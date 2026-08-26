@@ -188,7 +188,7 @@ auto sourcemeta::jsonschema::inspect(const sourcemeta::core::Options &options)
     return document;
   }()};
 
-  if (!sourcemeta::blaze::is_schema(schema)) {
+  if (!schema.is_object() && !schema.is_boolean()) {
     throw NotSchemaError{schema_from_stdin ? stdin_path()
                                            : schema_resolution_base};
   }

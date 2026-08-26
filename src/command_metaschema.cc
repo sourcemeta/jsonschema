@@ -9,11 +9,13 @@
 #include <sourcemeta/blaze/evaluator.h>
 #include <sourcemeta/blaze/output.h>
 
-#include <cassert>  // assert
-#include <iostream> // std::cout, std::cerr
-#include <map>      // std::map
-#include <string>   // std::string
-#include <utility>  // std::move
+#include <cassert>     // assert
+#include <iostream>    // std::cout, std::cerr
+#include <map>         // std::map
+#include <sstream>     // std::ostringstream
+#include <string>      // std::string
+#include <string_view> // std::string_view
+#include <utility>     // std::move
 
 #include "command.h"
 #include "configuration.h"
@@ -24,6 +26,28 @@
 #include "utils.h"
 
 namespace {
+
+auto effective_dialect(const sourcemeta::core::JSON &schema,
+                       const std::string_view default_dialect)
+    -> std::string_view {
+  if (!schema.is_object()) {
+    return default_dialect;
+  }
+
+  const auto *dialect{schema.try_at("$schema")};
+  if (!dialect) {
+    return default_dialect;
+  }
+
+  if (!dialect->is_string()) {
+    std::ostringstream value;
+    sourcemeta::core::stringify(*dialect, value);
+    throw sourcemeta::blaze::SchemaKeywordError{"$schema", value.str(),
+                                                "The dialect value is invalid"};
+  }
+
+  return dialect->to_string();
+}
 
 auto resolve_metaschema(const sourcemeta::core::JSON &schema,
                         const std::string_view dialect,
@@ -65,7 +89,7 @@ auto sourcemeta::jsonschema::metaschema(
   std::map<std::string, sourcemeta::blaze::Template> cache;
 
   for (const auto &entry : for_each_json(options)) {
-    if (!sourcemeta::blaze::is_schema(entry.second)) {
+    if (!entry.second.is_object() && !entry.second.is_boolean()) {
       throw NotSchemaError{entry.from_stdin ? stdin_path()
                                             : entry.resolution_base};
     }
@@ -81,7 +105,7 @@ auto sourcemeta::jsonschema::metaschema(
 
     try {
       const auto dialect{
-          sourcemeta::blaze::dialect(entry.second, default_dialect_option)};
+          effective_dialect(entry.second, default_dialect_option)};
       if (dialect.empty()) {
         throw sourcemeta::core::FileError<
             sourcemeta::blaze::SchemaUnknownBaseDialectError>(
@@ -142,6 +166,9 @@ auto sourcemeta::jsonschema::metaschema(
           result = false;
         }
       }
+    } catch (const sourcemeta::blaze::SchemaKeywordError &error) {
+      throw sourcemeta::core::FileError<sourcemeta::blaze::SchemaKeywordError>(
+          entry.resolution_base, error);
     } catch (const sourcemeta::blaze::CompilerInvalidRegexError &error) {
       throw sourcemeta::core::FileError<
           sourcemeta::blaze::CompilerInvalidRegexError>(entry.resolution_base,

@@ -78,7 +78,8 @@ auto sourcemeta::jsonschema::upgrade(const sourcemeta::core::Options &options)
   auto parsed_schema{schema_from_stdin ? read_from_stdin()
                                        : read_file(schema_path)};
 
-  if (!sourcemeta::blaze::is_schema(parsed_schema.document)) {
+  if (!parsed_schema.document.is_object() &&
+      !parsed_schema.document.is_boolean()) {
     throw NotSchemaError{schema_display_path};
   }
 
