@@ -36,7 +36,8 @@ auto sourcemeta::jsonschema::compile(const sourcemeta::core::Options &options)
 
   auto parsed_schema{read_file(schema_path)};
 
-  if (!sourcemeta::blaze::is_schema(parsed_schema.document)) {
+  if (!parsed_schema.document.is_object() &&
+      !parsed_schema.document.is_boolean()) {
     throw NotSchemaError{schema_path};
   }
 

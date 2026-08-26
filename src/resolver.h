@@ -241,22 +241,30 @@ static inline auto fetch_schema(const sourcemeta::core::Options &options,
 static inline auto
 ensure_identifier(sourcemeta::core::JSON &schema, const std::string_view target,
                   const sourcemeta::blaze::SchemaResolver &resolver) -> void {
-  if (!sourcemeta::blaze::is_schema(schema) || !schema.is_object()) {
+  if (!schema.is_object()) {
     return;
   }
 
-  const auto resolved_base_dialect{
-      sourcemeta::blaze::base_dialect(schema, resolver, "")};
-  if (!resolved_base_dialect.has_value()) {
+  sourcemeta::blaze::SchemaFrame frame{
+      sourcemeta::blaze::SchemaFrame::Mode::Root};
+
+  try {
+    frame.analyse(schema, sourcemeta::blaze::schema_walker, resolver);
+  } catch (const sourcemeta::blaze::SchemaUnknownBaseDialectError &) {
     return;
   }
 
-  if (!sourcemeta::blaze::identify(schema, resolved_base_dialect.value())
-           .empty()) {
+  if (!frame.root().empty()) {
     return;
   }
 
-  sourcemeta::blaze::reidentify(schema, target, resolved_base_dialect.value());
+  const auto location{frame.root_location()};
+  if (!location.has_value()) {
+    return;
+  }
+
+  sourcemeta::blaze::reidentify(schema, target,
+                                location.value().get().base_dialect);
 }
 
 class CustomResolver {
@@ -271,7 +279,7 @@ public:
         LOG_DEBUG(options) << "Detecting schema resources from file: "
                            << entry.first << "\n";
 
-        if (!sourcemeta::blaze::is_schema(entry.second)) {
+        if (!entry.second.is_object() && !entry.second.is_boolean()) {
           throw sourcemeta::core::FileError<sourcemeta::blaze::SchemaError>(
               entry.resolution_base,
               "The file you provided does not represent a valid JSON Schema");
@@ -350,7 +358,7 @@ public:
         }
 
         auto schema{sourcemeta::core::read_json(dependency_path)};
-        if (!sourcemeta::blaze::is_schema(schema)) {
+        if (!schema.is_object() && !schema.is_boolean()) {
           continue;
         }
 
@@ -370,7 +378,7 @@ public:
            const std::string_view default_id = "",
            const std::function<void(const sourcemeta::core::JSON::String &)>
                &callback = nullptr) -> bool {
-    assert(sourcemeta::blaze::is_schema(schema));
+    assert(schema.is_object() || schema.is_boolean());
 
     // Registering the top-level schema is not enough. We need to check
     // and register every embedded schema resource too
