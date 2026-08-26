@@ -204,18 +204,11 @@ auto sourcemeta::jsonschema::inspect(const sourcemeta::core::Options &options)
   try {
     const auto &custom_resolver{
         resolver(options, options.contains("http"), dialect, configuration)};
-    const auto identifier{
-        sourcemeta::blaze::identify(schema, custom_resolver, dialect)};
-
-    frame.analyse(
-        schema, sourcemeta::blaze::schema_walker, custom_resolver, dialect,
-
-        // Only use the file-based URI if the schema has no
-        // identifier, as otherwise we make the output unnecessarily
-        // hard when it comes to debugging schemas
-        !identifier.empty() ? ""
-                            : sourcemeta::jsonschema::default_id(
-                                  schema_resolution_base, schema_from_stdin));
+    frame.analyse(schema, sourcemeta::blaze::schema_walker, custom_resolver,
+                  dialect,
+                  sourcemeta::jsonschema::default_id(schema_resolution_base,
+                                                     schema_from_stdin),
+                  sourcemeta::blaze::SchemaFrame::IdentifierMode::Fallback);
   } catch (const sourcemeta::blaze::SchemaKeywordError &error) {
     throw sourcemeta::core::FileError<sourcemeta::blaze::SchemaKeywordError>(
         schema_resolution_base, error);
