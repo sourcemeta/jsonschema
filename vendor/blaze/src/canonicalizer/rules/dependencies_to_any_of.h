@@ -6,23 +6,24 @@ public:
   [[nodiscard]] auto
   condition(const sourcemeta::core::JSON &schema,
             const sourcemeta::core::JSON &,
-            const sourcemeta::blaze::Vocabularies &vocabularies,
+            const sourcemeta::blaze::SchemaVocabularies &vocabularies,
             const sourcemeta::blaze::SchemaFrame &,
             const sourcemeta::blaze::SchemaFrame::Location &,
             const sourcemeta::blaze::SchemaWalker &,
             const sourcemeta::blaze::SchemaResolver &) const -> bool override {
-    ONLY_CONTINUE_IF(
-        vocabularies.contains_any({Vocabularies::Known::JSON_Schema_Draft_4,
-                                   Vocabularies::Known::JSON_Schema_Draft_6,
-                                   Vocabularies::Known::JSON_Schema_Draft_7}) &&
-        schema.is_object());
+    ONLY_CONTINUE_IF(vocabularies.contains_any(
+                         {SchemaVocabularies::Known::JSON_Schema_Draft_4,
+                          SchemaVocabularies::Known::JSON_Schema_Draft_6,
+                          SchemaVocabularies::Known::JSON_Schema_Draft_7}) &&
+                     schema.is_object());
 
     const auto *dependencies{schema.try_at("dependencies")};
     ONLY_CONTINUE_IF(dependencies && dependencies->is_object());
 
     ONLY_CONTINUE_IF(std::ranges::any_of(
         dependencies->as_object(), [](const auto &entry) -> auto {
-          return is_schema(entry.second) || entry.second.is_array();
+          return (entry.second.is_object() || entry.second.is_boolean()) ||
+                 entry.second.is_array();
         }));
     return true;
   }
@@ -32,7 +33,7 @@ public:
 
     std::vector<sourcemeta::core::JSON::String> processed;
     for (const auto &entry : schema.at("dependencies").as_object()) {
-      if (is_schema(entry.second)) {
+      if ((entry.second.is_object() || entry.second.is_boolean())) {
         auto not_required{sourcemeta::core::JSON::make_object()};
         not_required.assign("type", sourcemeta::core::JSON{"object"});
         not_required.assign("required", sourcemeta::core::JSON::make_array());

@@ -12,13 +12,14 @@ public:
                             "with the parent schema can be elevated"} {};
 
   [[nodiscard]] auto
-  condition(const JSON &schema, const JSON &, const Vocabularies &vocabularies,
-            const SchemaFrame &frame, const SchemaFrame::Location &location,
-            const SchemaWalker &walker, const SchemaResolver &,
-            const bool) const -> SchemaTransformRule::Result override {
+  condition(const JSON &schema, const JSON &,
+            const SchemaVocabularies &vocabularies, const SchemaFrame &frame,
+            const SchemaFrame::Location &location, const SchemaWalker &walker,
+            const SchemaResolver &, const bool) const
+      -> SchemaTransformRule::Result override {
     ONLY_CONTINUE_IF(vocabularies.contains_any(
-        {Vocabularies::Known::JSON_Schema_Draft_3,
-         Vocabularies::Known::JSON_Schema_Draft_3_Hyper}));
+        {SchemaVocabularies::Known::JSON_Schema_Draft_3,
+         SchemaVocabularies::Known::JSON_Schema_Draft_3_Hyper}));
     ONLY_CONTINUE_IF(schema.is_object());
 
     const auto *extends_value{schema.try_at(KEYWORD)};

@@ -1,7 +1,7 @@
 #include <sourcemeta/blaze/bundle.h>
 #include <sourcemeta/blaze/canonicalizer.h>
 #include <sourcemeta/blaze/codegen.h>
-#include <sourcemeta/blaze/frame.h>
+#include <sourcemeta/blaze/foundation.h>
 
 #include <algorithm>     // std::ranges::sort
 #include <cassert>       // assert

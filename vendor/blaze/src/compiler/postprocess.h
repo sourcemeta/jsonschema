@@ -271,7 +271,8 @@ inline auto fuse_numeric_bounds(Instructions &instructions,
     const auto extra_index{extra.size()};
     extra.push_back({.relative_schema_location = parent->first,
                      .keyword_location = parent->second,
-                     .schema_resource = type_metadata.schema_resource});
+                     .schema_resource = type_metadata.schema_resource,
+                     .vocabulary = type_metadata.vocabulary});
 
     Instructions result;
     result.reserve(instructions.size() - bound_indices.size());
@@ -369,7 +370,8 @@ transform_instruction(Instruction &instruction, Instructions &output,
                instruction_meta.relative_schema_location.concat(
                    child_meta.relative_schema_location),
            .keyword_location = std::move(child_meta.keyword_location),
-           .schema_resource = child_meta.schema_resource});
+           .schema_resource = child_meta.schema_resource,
+           .vocabulary = child_meta.vocabulary});
       output.push_back(
           Instruction{.type = InstructionIndex::LoopPropertiesTypeStrict,
                       .relative_instance_location =
@@ -389,7 +391,8 @@ transform_instruction(Instruction &instruction, Instructions &output,
                instruction_meta.relative_schema_location.concat(
                    child_meta.relative_schema_location),
            .keyword_location = std::move(child_meta.keyword_location),
-           .schema_resource = child_meta.schema_resource});
+           .schema_resource = child_meta.schema_resource,
+           .vocabulary = child_meta.vocabulary});
       output.push_back(Instruction{.type = InstructionIndex::LoopPropertiesType,
                                    .relative_instance_location = std::move(
                                        instruction.relative_instance_location),
@@ -408,7 +411,8 @@ transform_instruction(Instruction &instruction, Instructions &output,
                instruction_meta.relative_schema_location.concat(
                    child_meta.relative_schema_location),
            .keyword_location = std::move(child_meta.keyword_location),
-           .schema_resource = child_meta.schema_resource});
+           .schema_resource = child_meta.schema_resource,
+           .vocabulary = child_meta.vocabulary});
       output.push_back(
           Instruction{.type = InstructionIndex::LoopPropertiesTypeStrictAny,
                       .relative_instance_location =
@@ -432,7 +436,8 @@ transform_instruction(Instruction &instruction, Instructions &output,
                instruction_meta.relative_schema_location.concat(
                    child_meta.relative_schema_location),
            .keyword_location = std::move(child_meta.keyword_location),
-           .schema_resource = child_meta.schema_resource});
+           .schema_resource = child_meta.schema_resource,
+           .vocabulary = child_meta.vocabulary});
       output.push_back(Instruction{
           .type = InstructionIndex::LoopPropertiesTypeStrictEvaluate,
           .relative_instance_location =
@@ -452,7 +457,8 @@ transform_instruction(Instruction &instruction, Instructions &output,
                instruction_meta.relative_schema_location.concat(
                    child_meta.relative_schema_location),
            .keyword_location = std::move(child_meta.keyword_location),
-           .schema_resource = child_meta.schema_resource});
+           .schema_resource = child_meta.schema_resource,
+           .vocabulary = child_meta.vocabulary});
       output.push_back(
           Instruction{.type = InstructionIndex::LoopPropertiesTypeEvaluate,
                       .relative_instance_location =
@@ -472,7 +478,8 @@ transform_instruction(Instruction &instruction, Instructions &output,
                instruction_meta.relative_schema_location.concat(
                    child_meta.relative_schema_location),
            .keyword_location = std::move(child_meta.keyword_location),
-           .schema_resource = child_meta.schema_resource});
+           .schema_resource = child_meta.schema_resource,
+           .vocabulary = child_meta.vocabulary});
       output.push_back(Instruction{
           .type = InstructionIndex::LoopPropertiesTypeStrictAnyEvaluate,
           .relative_instance_location =

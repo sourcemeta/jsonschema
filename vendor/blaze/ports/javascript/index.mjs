@@ -6,7 +6,7 @@ import {
   CONTROL_JUMP, CONTROL_DYNAMIC_ANCHOR_JUMP
 } from './opcodes.mjs';
 
-const JSON_VERSION = 5;
+const JSON_VERSION = 6;
 const DEPTH_LIMIT = 300;
 const URI_REGEX = /^[a-zA-Z][a-zA-Z0-9+\-.]*:[^\s]*$/;
 
@@ -64,22 +64,22 @@ function resolveInstance(instance, relativeInstanceLocation) {
 }
 
 function prepareInstruction(instruction) {
-  const wrapper = instruction[5];
+  const wrapper = instruction[6];
   if (wrapper === undefined || wrapper === null) {
-    instruction[5] = null;
+    instruction[6] = null;
   } else {
     const typeIndex = wrapper[0];
     if (typeIndex === 0 || wrapper.length === 1) {
-      instruction[5] = null;
+      instruction[6] = null;
     } else {
       const payload = wrapper[1];
       switch (typeIndex) {
         case 4:
-          instruction[5] = payload[0];
+          instruction[6] = payload[0];
           break;
         case 9:
-          try { instruction[5] = new RegExp(payload, 'u'); }
-          catch { instruction[5] = new RegExp(payload); }
+          try { instruction[6] = new RegExp(payload, 'u'); }
+          catch { instruction[6] = new RegExp(payload); }
           break;
         case 13: {
           if (Array.isArray(payload)) {
@@ -87,9 +87,9 @@ function prepareInstruction(instruction) {
             for (let index = 0; index < payload.length; index++) {
               object[payload[index][0]] = payload[index][1];
             }
-            instruction[5] = object;
+            instruction[6] = object;
           } else {
-            instruction[5] = payload;
+            instruction[6] = payload;
           }
           break;
         }
@@ -99,9 +99,9 @@ function prepareInstruction(instruction) {
             for (let index = 0; index < payload.length; index++) {
               object[payload[index][0]] = payload[index][1];
             }
-            instruction[5] = object;
+            instruction[6] = object;
           } else {
-            instruction[5] = payload;
+            instruction[6] = payload;
           }
           break;
         }
@@ -112,19 +112,19 @@ function prepareInstruction(instruction) {
             try { regexes[index] = new RegExp(regexes[index], 'u'); }
             catch { regexes[index] = new RegExp(regexes[index]); }
           }
-          instruction[5] = payload;
+          instruction[6] = payload;
           break;
         }
         default:
-          instruction[5] = payload;
+          instruction[6] = payload;
           break;
       }
     }
   }
 
   const opcode = instruction[0];
-  if (opcode === ASSERTION_EQUALS_ANY && Array.isArray(instruction[5])) {
-    const values = instruction[5];
+  if (opcode === ASSERTION_EQUALS_ANY && Array.isArray(instruction[6])) {
+    const values = instruction[6];
     let allPrimitive = true;
     for (let index = 0; index < values.length; index++) {
       const element = values[index];
@@ -134,17 +134,17 @@ function prepareInstruction(instruction) {
       }
     }
     if (allPrimitive) {
-      instruction[5] = { set: new Set(values), values, primitive: true };
+      instruction[6] = { set: new Set(values), values, primitive: true };
     }
   }
 
-  if (instruction.length < 7) {
+  if (instruction.length < 8) {
     instruction.push(undefined);
   }
 
   instruction.push(handlers[opcode] || null);
 
-  const children = instruction[6];
+  const children = instruction[7];
   if (children) {
     for (let index = 0; index < children.length; index++) {
       prepareInstruction(children[index]);
@@ -156,12 +156,12 @@ function resolveJumpTargets(instructions, targets) {
   for (let index = 0; index < instructions.length; index++) {
     const instruction = instructions[index];
     if (instruction[0] === CONTROL_JUMP) {
-      const targetIndex = instruction[5];
+      const targetIndex = instruction[6];
       if (targetIndex < targets.length) {
-        instruction[5] = targets[targetIndex];
+        instruction[6] = targets[targetIndex];
       }
     }
-    const children = instruction[6];
+    const children = instruction[7];
     if (children) {
       resolveJumpTargets(children, targets);
     }
@@ -190,11 +190,11 @@ function collectAnchorNames(targets, result) {
 function collectAnchorNamesFromInstructions(instructions, result) {
   for (let index = 0; index < instructions.length; index++) {
     const instruction = instructions[index];
-    if (instruction[0] === CONTROL_DYNAMIC_ANCHOR_JUMP && typeof instruction[5] === 'string') {
-      result.add(instruction[5]);
+    if (instruction[0] === CONTROL_DYNAMIC_ANCHOR_JUMP && typeof instruction[6] === 'string') {
+      result.add(instruction[6]);
     }
-    if (instruction[6]) {
-      collectAnchorNamesFromInstructions(instruction[6], result);
+    if (instruction[7]) {
+      collectAnchorNamesFromInstructions(instruction[7], result);
     }
   }
 }
@@ -236,7 +236,7 @@ function compile(template) {
   }
 
   template[4] = labels;
-  template[5] = anchors;
+  template[6] = anchors;
   return template;
 }
 
@@ -248,10 +248,10 @@ function emitResolve(varName, instanceExpr, relInstance) {
 
 function compileInstructionToCode(instruction, captures, visited, budget) {
   if (budget[0] <= 0) { var ci = captures.length; captures.push(instruction); return 'return _fh['+instruction[0]+'](_c['+ci+'],i,d,_t,_v);'; }
-  var opcode = instruction[0], ri = instruction[2], value = instruction[5], children = instruction[6];
+  var opcode = instruction[0], ri = instruction[2], value = instruction[6], children = instruction[7];
   function R(v) { return emitResolve(v, 'i', ri); }
   function inlineCondition(child, tv) {
-    var op = child[0], cr = child[2], cv = child[5];
+    var op = child[0], cr = child[2], cv = child[6];
     if (cr.length !== 0) return null;
     switch (op) {
       case 11: return '{if(_es(' + tv + ')!==' + cv + ')return false;}';
@@ -317,8 +317,8 @@ function compileInstructionToCode(instruction, captures, visited, budget) {
     case 61: { var r=R('t'); if(!r)return null; var c=r+TO+'return true;if(!Object.hasOwn(t,'+JSON.stringify(value)+'))return true;'; if(children&&children.length>0)c+=seq(children,'t'); return c+'return true;'; }
     case 62: { var r=R('t'); if(!r)return null; var c=r+'if(!Array.isArray(t)||t.length<='+value+')return true;'; if(children&&children.length>0)c+=seq(children,'t'); return c+'return true;'; }
     case 63: return fb(63); case 64: return fb(64);
-    case 65: { var r=R('t'); if(!r)return null; if(!children||children.length===0)return r+'return true;'; var mi=captures.length; captures.push(value); var gf=''; for(var gi=0;gi<children.length;gi++){var gc=children[gi][6]; if(gc&&gc.length>0){gf+='function(i,d,_t,_v){'+lb(gc,'i')+'return true;},';}else{gf+='null,';}} return r+TO+'return true;var __cg=['+gf+'];for(var k in t){var __mi=_c['+mi+'][k];if(__mi!==void 0){var __cf=__cg[__mi];if(__cf&&!__cf(t,d,_t,_v))return false;}}return true;'; }
-    case 66: { var r=R('t'); if(!r)return null; if(!children||children.length===0)return r+'return true;'; var mi=captures.length; captures.push(value); var gf=''; for(var gi=0;gi<children.length;gi++){var gc=children[gi][6]; if(gc&&gc.length>0){gf+='function(i,d,_t,_v){'+lb(gc,'i')+'return true;},';}else{gf+='null,';}} return r+TO+'return true;var __cg=['+gf+'];for(var k in t){var __mi=_c['+mi+'][k];if(__mi===void 0)return false;var __cf=__cg[__mi];if(__cf&&!__cf(t,d,_t,_v))return false;}return true;'; }
+    case 65: { var r=R('t'); if(!r)return null; if(!children||children.length===0)return r+'return true;'; var mi=captures.length; captures.push(value); var gf=''; for(var gi=0;gi<children.length;gi++){var gc=children[gi][7]; if(gc&&gc.length>0){gf+='function(i,d,_t,_v){'+lb(gc,'i')+'return true;},';}else{gf+='null,';}} return r+TO+'return true;var __cg=['+gf+'];for(var k in t){var __mi=_c['+mi+'][k];if(__mi!==void 0){var __cf=__cg[__mi];if(__cf&&!__cf(t,d,_t,_v))return false;}}return true;'; }
+    case 66: { var r=R('t'); if(!r)return null; if(!children||children.length===0)return r+'return true;'; var mi=captures.length; captures.push(value); var gf=''; for(var gi=0;gi<children.length;gi++){var gc=children[gi][7]; if(gc&&gc.length>0){gf+='function(i,d,_t,_v){'+lb(gc,'i')+'return true;},';}else{gf+='null,';}} return r+TO+'return true;var __cg=['+gf+'];for(var k in t){var __mi=_c['+mi+'][k];if(__mi===void 0)return false;var __cf=__cg[__mi];if(__cf&&!__cf(t,d,_t,_v))return false;}return true;'; }
     case 67: { var r=R('t'); if(!r)return null; if(!children||children.length===0)return r+'return true;'; return r+TO+'return true;for(var k in t){'+lb(children,'t[k]')+'}return true;'; }
     case 68: return fb(68); case 69: return fb(69); case 70: return fb(70); case 71: return fb(71); case 72: return fb(72);
     case 73: return fb(73); case 74: return fb(74); case 75: return fb(75); case 76: return fb(76);
@@ -534,7 +534,7 @@ class Blaze {
     this.callback("post", result, instruction,
       buildJsonPointer(this.evaluatePathTokens, this.evaluatePathLength),
       buildJsonPointer(this.instanceLocationTokens, this.instanceLocationLength),
-      isAnnotation ? instruction[5] : null);
+      isAnnotation ? instruction[6] : null);
     if (!this.trackMode) {
       this.popPath(instruction[1].length);
     }
@@ -561,7 +561,7 @@ class Blaze {
       const parentLength = this.instanceLocationLength > 0 ? this.instanceLocationLength - 1 : 0;
       instanceLocation = buildJsonPointer(this.instanceLocationTokens, parentLength);
     }
-    let annotationValue = instruction[5];
+    let annotationValue = instruction[6];
     if (opcode === ANNOTATION_BASENAME_TO_PARENT && this.instanceLocationLength > 0) {
       annotationValue = this.instanceLocationTokens[this.instanceLocationLength - 1];
     }
@@ -896,7 +896,7 @@ function AssertionDefines(instruction, instance, depth, template, evaluator) {
   const target = resolveInstance(instance, instruction[2]);
   if (!isObject(target)) return true;
   if (evaluator.callbackMode) evaluator.callbackPush(instruction);
-  const __result = Object.hasOwn(target, instruction[5]);
+  const __result = Object.hasOwn(target, instruction[6]);
   if (evaluator.callbackMode) evaluator.callbackPop(instruction, __result);
   return __result;
 };
@@ -908,7 +908,7 @@ function AssertionDefinesStrict(instruction, instance, depth, template, evaluato
     if (evaluator.callbackMode) evaluator.callbackPop(instruction, false);
     return false;
   }
-  const __result = Object.hasOwn(target, instruction[5]);
+  const __result = Object.hasOwn(target, instruction[6]);
   if (evaluator.callbackMode) evaluator.callbackPop(instruction, __result);
   return __result;
 };
@@ -917,7 +917,7 @@ function AssertionDefinesAll(instruction, instance, depth, template, evaluator) 
   const target = resolveInstance(instance, instruction[2]);
   if (!isObject(target)) return true;
   if (evaluator.callbackMode) evaluator.callbackPush(instruction);
-  const strings = instruction[5];
+  const strings = instruction[6];
   for (let index = 0; index < strings.length; index++) {
     if (!Object.hasOwn(target, strings[index])) {
       if (evaluator.callbackMode) evaluator.callbackPop(instruction, false);
@@ -935,7 +935,7 @@ function AssertionDefinesAllStrict(instruction, instance, depth, template, evalu
     if (evaluator.callbackMode) evaluator.callbackPop(instruction, false);
     return false;
   }
-  const strings = instruction[5];
+  const strings = instruction[6];
   for (let index = 0; index < strings.length; index++) {
     if (!Object.hasOwn(target, strings[index])) {
       if (evaluator.callbackMode) evaluator.callbackPop(instruction, false);
@@ -952,7 +952,7 @@ function AssertionDefinesExactly(instruction, instance, depth, template, evaluat
   if (evaluator.callbackMode) evaluator.callbackPush(instruction);
   let targetSize = 0;
   for (const key in target) targetSize++;
-  const strings = instruction[5];
+  const strings = instruction[6];
   if (targetSize !== strings.length) {
     if (evaluator.callbackMode) evaluator.callbackPop(instruction, false);
     return false;
@@ -976,7 +976,7 @@ function AssertionDefinesExactlyStrict(instruction, instance, depth, template, e
   }
   let targetSize = 0;
   for (const key in target) targetSize++;
-  const strings = instruction[5];
+  const strings = instruction[6];
   if (targetSize !== strings.length) {
     if (evaluator.callbackMode) evaluator.callbackPop(instruction, false);
     return false;
@@ -998,7 +998,7 @@ function AssertionDefinesExactlyStrictHash3(instruction, instance, depth, templa
     if (evaluator.callbackMode) evaluator.callbackPop(instruction, false);
     return false;
   }
-  const entries = instruction[5][0];
+  const entries = instruction[6][0];
   let count = 0;
   for (const key in target) count++;
   if (count !== 3) {
@@ -1016,7 +1016,7 @@ function AssertionPropertyDependencies(instruction, instance, depth, template, e
   const target = resolveInstance(instance, instruction[2]);
   if (!isObject(target)) return true;
   if (evaluator.callbackMode) evaluator.callbackPush(instruction);
-  const value = instruction[5];
+  const value = instruction[6];
   for (const property in value) {
     if (!Object.hasOwn(target, property)) continue;
     const dependencies = value[property];
@@ -1034,7 +1034,7 @@ function AssertionPropertyDependencies(instruction, instance, depth, template, e
 function AssertionType(instruction, instance, depth, template, evaluator) {
   if (evaluator.callbackMode) evaluator.callbackPush(instruction);
   const target = resolveInstance(instance, instruction[2]);
-  const expected = instruction[5];
+  const expected = instruction[6];
   const actual = jsonTypeOf(target);
   if (actual === expected) {
     if (evaluator.callbackMode) evaluator.callbackPop(instruction, true);
@@ -1051,7 +1051,7 @@ function AssertionType(instruction, instance, depth, template, evaluator) {
 function AssertionTypeAny(instruction, instance, depth, template, evaluator) {
   if (evaluator.callbackMode) evaluator.callbackPush(instruction);
   const target = resolveInstance(instance, instruction[2]);
-  const bitmask = instruction[5];
+  const bitmask = instruction[6];
   const typeIndex = jsonTypeOf(target);
   if (typeSetTest(bitmask, typeIndex)) {
     if (evaluator.callbackMode) evaluator.callbackPop(instruction, true);
@@ -1068,7 +1068,7 @@ function AssertionTypeAny(instruction, instance, depth, template, evaluator) {
 function AssertionTypeStrict(instruction, instance, depth, template, evaluator) {
   if (evaluator.callbackMode) evaluator.callbackPush(instruction);
   const target = resolveInstance(instance, instruction[2]);
-  const __result = effectiveTypeStrictReal(target) === instruction[5];
+  const __result = effectiveTypeStrictReal(target) === instruction[6];
   if (evaluator.callbackMode) evaluator.callbackPop(instruction, __result);
   return __result;
 };
@@ -1076,7 +1076,7 @@ function AssertionTypeStrict(instruction, instance, depth, template, evaluator) 
 function AssertionTypeStrictAny(instruction, instance, depth, template, evaluator) {
   if (evaluator.callbackMode) evaluator.callbackPush(instruction);
   const target = resolveInstance(instance, instruction[2]);
-  const __result = typeSetTest(instruction[5], effectiveTypeStrictReal(target));
+  const __result = typeSetTest(instruction[6], effectiveTypeStrictReal(target));
   if (evaluator.callbackMode) evaluator.callbackPop(instruction, __result);
   return __result;
 };
@@ -1084,7 +1084,7 @@ function AssertionTypeStrictAny(instruction, instance, depth, template, evaluato
 function AssertionNotTypeStrictAny(instruction, instance, depth, template, evaluator) {
   if (evaluator.callbackMode) evaluator.callbackPush(instruction);
   const target = resolveInstance(instance, instruction[2]);
-  const __result = !typeSetTest(instruction[5], effectiveTypeStrictReal(target));
+  const __result = !typeSetTest(instruction[6], effectiveTypeStrictReal(target));
   if (evaluator.callbackMode) evaluator.callbackPop(instruction, __result);
   return __result;
 };
@@ -1096,7 +1096,7 @@ function AssertionTypeStringBounded(instruction, instance, depth, template, eval
     if (evaluator.callbackMode) evaluator.callbackPop(instruction, false);
     return false;
   }
-  const range = instruction[5];
+  const range = instruction[6];
   const length = unicodeLength(target);
   if (length < range[0]) {
     if (evaluator.callbackMode) evaluator.callbackPop(instruction, false);
@@ -1113,7 +1113,7 @@ function AssertionTypeStringBounded(instruction, instance, depth, template, eval
 function AssertionTypeStringUpper(instruction, instance, depth, template, evaluator) {
   if (evaluator.callbackMode) evaluator.callbackPush(instruction);
   const target = resolveInstance(instance, instruction[2]);
-  const __result = typeof target === 'string' && unicodeLength(target) <= instruction[5];
+  const __result = typeof target === 'string' && unicodeLength(target) <= instruction[6];
   if (evaluator.callbackMode) evaluator.callbackPop(instruction, __result);
   return __result;
 };
@@ -1125,7 +1125,7 @@ function AssertionTypeArrayBounded(instruction, instance, depth, template, evalu
     if (evaluator.callbackMode) evaluator.callbackPop(instruction, false);
     return false;
   }
-  const range = instruction[5];
+  const range = instruction[6];
   if (target.length < range[0]) {
     if (evaluator.callbackMode) evaluator.callbackPop(instruction, false);
     return false;
@@ -1141,7 +1141,7 @@ function AssertionTypeArrayBounded(instruction, instance, depth, template, evalu
 function AssertionTypeArrayUpper(instruction, instance, depth, template, evaluator) {
   if (evaluator.callbackMode) evaluator.callbackPush(instruction);
   const target = resolveInstance(instance, instruction[2]);
-  const __result = Array.isArray(target) && target.length <= instruction[5];
+  const __result = Array.isArray(target) && target.length <= instruction[6];
   if (evaluator.callbackMode) evaluator.callbackPop(instruction, __result);
   return __result;
 };
@@ -1153,7 +1153,7 @@ function AssertionTypeObjectBounded(instruction, instance, depth, template, eval
     if (evaluator.callbackMode) evaluator.callbackPop(instruction, false);
     return false;
   }
-  const range = instruction[5];
+  const range = instruction[6];
   const size = objectSize(target);
   if (size < range[0]) {
     if (evaluator.callbackMode) evaluator.callbackPop(instruction, false);
@@ -1174,7 +1174,7 @@ function AssertionTypeObjectUpper(instruction, instance, depth, template, evalua
     if (evaluator.callbackMode) evaluator.callbackPop(instruction, false);
     return false;
   }
-  const __result = objectSize(target) <= instruction[5];
+  const __result = objectSize(target) <= instruction[6];
   if (evaluator.callbackMode) evaluator.callbackPop(instruction, __result);
   return __result;
 };
@@ -1184,7 +1184,7 @@ function AssertionRegex(instruction, instance, depth, template, evaluator) {
     ? evaluator.propertyTarget : resolveInstance(instance, instruction[2]);
   if (typeof target !== 'string') return true;
   if (evaluator.callbackMode) evaluator.callbackPush(instruction);
-  const __result = instruction[5].test(target);
+  const __result = instruction[6].test(target);
   if (evaluator.callbackMode) evaluator.callbackPop(instruction, __result);
   return __result;
 };
@@ -1194,7 +1194,7 @@ function AssertionStringSizeLess(instruction, instance, depth, template, evaluat
     ? evaluator.propertyTarget : resolveInstance(instance, instruction[2]);
   if (typeof target !== 'string') return true;
   if (evaluator.callbackMode) evaluator.callbackPush(instruction);
-  const __result = unicodeLength(target) < instruction[5];
+  const __result = unicodeLength(target) < instruction[6];
   if (evaluator.callbackMode) evaluator.callbackPop(instruction, __result);
   return __result;
 };
@@ -1204,7 +1204,7 @@ function AssertionStringSizeGreater(instruction, instance, depth, template, eval
     ? evaluator.propertyTarget : resolveInstance(instance, instruction[2]);
   if (typeof target !== 'string') return true;
   if (evaluator.callbackMode) evaluator.callbackPush(instruction);
-  const __result = unicodeLength(target) > instruction[5];
+  const __result = unicodeLength(target) > instruction[6];
   if (evaluator.callbackMode) evaluator.callbackPop(instruction, __result);
   return __result;
 };
@@ -1213,7 +1213,7 @@ function AssertionArraySizeLess(instruction, instance, depth, template, evaluato
   const target = resolveInstance(instance, instruction[2]);
   if (!Array.isArray(target)) return true;
   if (evaluator.callbackMode) evaluator.callbackPush(instruction);
-  const __result = target.length < instruction[5];
+  const __result = target.length < instruction[6];
   if (evaluator.callbackMode) evaluator.callbackPop(instruction, __result);
   return __result;
 };
@@ -1222,7 +1222,7 @@ function AssertionArraySizeGreater(instruction, instance, depth, template, evalu
   const target = resolveInstance(instance, instruction[2]);
   if (!Array.isArray(target)) return true;
   if (evaluator.callbackMode) evaluator.callbackPush(instruction);
-  const __result = target.length > instruction[5];
+  const __result = target.length > instruction[6];
   if (evaluator.callbackMode) evaluator.callbackPop(instruction, __result);
   return __result;
 };
@@ -1231,7 +1231,7 @@ function AssertionObjectSizeLess(instruction, instance, depth, template, evaluat
   const target = resolveInstance(instance, instruction[2]);
   if (!isObject(target)) return true;
   if (evaluator.callbackMode) evaluator.callbackPush(instruction);
-  const __result = objectSize(target) < instruction[5];
+  const __result = objectSize(target) < instruction[6];
   if (evaluator.callbackMode) evaluator.callbackPop(instruction, __result);
   return __result;
 };
@@ -1240,7 +1240,7 @@ function AssertionObjectSizeGreater(instruction, instance, depth, template, eval
   const target = resolveInstance(instance, instruction[2]);
   if (!isObject(target)) return true;
   if (evaluator.callbackMode) evaluator.callbackPush(instruction);
-  const __result = objectSize(target) > instruction[5];
+  const __result = objectSize(target) > instruction[6];
   if (evaluator.callbackMode) evaluator.callbackPop(instruction, __result);
   return __result;
 };
@@ -1249,10 +1249,10 @@ function AssertionEqual(instruction, instance, depth, template, evaluator) {
   if (evaluator.callbackMode) evaluator.callbackPush(instruction);
   let __result;
   if (evaluator.propertyTarget !== undefined) {
-    const value = instruction[5];
+    const value = instruction[6];
     __result = typeof value === 'string' && value === evaluator.propertyTarget;
   } else {
-    __result = jsonEqual(resolveInstance(instance, instruction[2]), instruction[5]);
+    __result = jsonEqual(resolveInstance(instance, instruction[2]), instruction[6]);
   }
   if (evaluator.callbackMode) evaluator.callbackPop(instruction, __result);
   return __result;
@@ -1260,7 +1260,7 @@ function AssertionEqual(instruction, instance, depth, template, evaluator) {
 
 function AssertionEqualsAny(instruction, instance, depth, template, evaluator) {
   if (evaluator.callbackMode) evaluator.callbackPush(instruction);
-  const value = instruction[5];
+  const value = instruction[6];
   const target = evaluator.propertyTarget !== undefined
     ? evaluator.propertyTarget : resolveInstance(instance, instruction[2]);
   if (value.primitive) {
@@ -1289,7 +1289,7 @@ function AssertionEqualsAnyStringHash(instruction, instance, depth, template, ev
     return false;
   }
 
-  const value = instruction[5];
+  const value = instruction[6];
   const entries = value[0];
   const tableOfContents = value[1];
 
@@ -1319,7 +1319,7 @@ function AssertionGreaterEqual(instruction, instance, depth, template, evaluator
   const targetType = typeof target;
   if (targetType !== 'number' && targetType !== 'bigint') return true;
   if (evaluator.callbackMode) evaluator.callbackPush(instruction);
-  const __result = target >= instruction[5];
+  const __result = target >= instruction[6];
   if (evaluator.callbackMode) evaluator.callbackPop(instruction, __result);
   return __result;
 };
@@ -1329,7 +1329,7 @@ function AssertionLessEqual(instruction, instance, depth, template, evaluator) {
   const targetType = typeof target;
   if (targetType !== 'number' && targetType !== 'bigint') return true;
   if (evaluator.callbackMode) evaluator.callbackPush(instruction);
-  const __result = target <= instruction[5];
+  const __result = target <= instruction[6];
   if (evaluator.callbackMode) evaluator.callbackPop(instruction, __result);
   return __result;
 };
@@ -1339,7 +1339,7 @@ function AssertionGreater(instruction, instance, depth, template, evaluator) {
   const targetType = typeof target;
   if (targetType !== 'number' && targetType !== 'bigint') return true;
   if (evaluator.callbackMode) evaluator.callbackPush(instruction);
-  const __result = target > instruction[5];
+  const __result = target > instruction[6];
   if (evaluator.callbackMode) evaluator.callbackPop(instruction, __result);
   return __result;
 };
@@ -1349,7 +1349,7 @@ function AssertionLess(instruction, instance, depth, template, evaluator) {
   const targetType = typeof target;
   if (targetType !== 'number' && targetType !== 'bigint') return true;
   if (evaluator.callbackMode) evaluator.callbackPush(instruction);
-  const __result = target < instruction[5];
+  const __result = target < instruction[6];
   if (evaluator.callbackMode) evaluator.callbackPop(instruction, __result);
   return __result;
 };
@@ -1368,7 +1368,7 @@ function AssertionDivisible(instruction, instance, depth, template, evaluator) {
   const targetType = typeof target;
   if (targetType !== 'number' && targetType !== 'bigint') return true;
   if (evaluator.callbackMode) evaluator.callbackPush(instruction);
-  const __result = isDivisibleBy(target, instruction[5]);
+  const __result = isDivisibleBy(target, instruction[6]);
   if (evaluator.callbackMode) evaluator.callbackPop(instruction, __result);
   return __result;
 };
@@ -1376,7 +1376,7 @@ function AssertionDivisible(instruction, instance, depth, template, evaluator) {
 function AssertionTypeIntegerBounded(instruction, instance, depth, template, evaluator) {
   const target = resolveInstance(instance, instruction[2]);
   if (evaluator.callbackMode) evaluator.callbackPush(instruction);
-  const range = instruction[5];
+  const range = instruction[6];
   const __result = (typeof target === 'bigint' || Number.isInteger(target)) && target >= range[0] && target <= range[1];
   if (evaluator.callbackMode) evaluator.callbackPop(instruction, __result);
   return __result;
@@ -1385,7 +1385,7 @@ function AssertionTypeIntegerBounded(instruction, instance, depth, template, eva
 function AssertionTypeIntegerBoundedStrict(instruction, instance, depth, template, evaluator) {
   const target = resolveInstance(instance, instruction[2]);
   if (evaluator.callbackMode) evaluator.callbackPush(instruction);
-  const range = instruction[5];
+  const range = instruction[6];
   const __result = (typeof target === 'bigint' || Number.isInteger(target)) && target >= range[0] && target <= range[1];
   if (evaluator.callbackMode) evaluator.callbackPop(instruction, __result);
   return __result;
@@ -1394,7 +1394,7 @@ function AssertionTypeIntegerBoundedStrict(instruction, instance, depth, templat
 function AssertionTypeIntegerLowerBound(instruction, instance, depth, template, evaluator) {
   const target = resolveInstance(instance, instruction[2]);
   if (evaluator.callbackMode) evaluator.callbackPush(instruction);
-  const range = instruction[5];
+  const range = instruction[6];
   const __result = (typeof target === 'bigint' || Number.isInteger(target)) && target >= range[0];
   if (evaluator.callbackMode) evaluator.callbackPop(instruction, __result);
   return __result;
@@ -1403,7 +1403,7 @@ function AssertionTypeIntegerLowerBound(instruction, instance, depth, template, 
 function AssertionTypeIntegerLowerBoundStrict(instruction, instance, depth, template, evaluator) {
   const target = resolveInstance(instance, instruction[2]);
   if (evaluator.callbackMode) evaluator.callbackPush(instruction);
-  const range = instruction[5];
+  const range = instruction[6];
   const __result = (typeof target === 'bigint' || Number.isInteger(target)) && target >= range[0];
   if (evaluator.callbackMode) evaluator.callbackPop(instruction, __result);
   return __result;
@@ -1424,7 +1424,7 @@ function AssertionPropertyType(instruction, instance, depth, template, evaluator
   const target = resolveInstance(instance, instruction[2]);
   if (target === undefined) return true;
   if (evaluator.callbackMode) evaluator.callbackPush(instruction);
-  const expected = instruction[5];
+  const expected = instruction[6];
   const actual = jsonTypeOf(target);
   const __result = actual === expected || (expected === Type.Integer && isIntegral(target));
   if (evaluator.callbackMode) evaluator.callbackPop(instruction, __result);
@@ -1436,7 +1436,7 @@ function AssertionPropertyTypeEvaluate(instruction, instance, depth, template, e
   const target = resolveInstance(instance, instruction[2]);
   if (target === undefined) return true;
   if (evaluator.callbackMode) evaluator.callbackPush(instruction);
-  const expected = instruction[5];
+  const expected = instruction[6];
   const actual = jsonTypeOf(target);
   const result = actual === expected || (expected === Type.Integer && isIntegral(target));
   if (result && evaluator.trackMode) {
@@ -1452,7 +1452,7 @@ function AssertionPropertyTypeStrict(instruction, instance, depth, template, eva
   const target = resolveInstance(instance, instruction[2]);
   if (target === undefined) return true;
   if (evaluator.callbackMode) evaluator.callbackPush(instruction);
-  const __result = effectiveTypeStrictReal(target) === instruction[5];
+  const __result = effectiveTypeStrictReal(target) === instruction[6];
   if (evaluator.callbackMode) evaluator.callbackPop(instruction, __result);
   return __result;
 };
@@ -1462,7 +1462,7 @@ function AssertionPropertyTypeStrictEvaluate(instruction, instance, depth, templ
   const target = resolveInstance(instance, instruction[2]);
   if (target === undefined) return true;
   if (evaluator.callbackMode) evaluator.callbackPush(instruction);
-  const result = effectiveTypeStrictReal(target) === instruction[5];
+  const result = effectiveTypeStrictReal(target) === instruction[6];
   if (result && evaluator.trackMode) {
     const location = instruction[2];
     evaluator.markEvaluated(target, instance, location.length > 0 ? location[location.length - 1] : undefined);
@@ -1476,7 +1476,7 @@ function AssertionPropertyTypeStrictAny(instruction, instance, depth, template, 
   const target = resolveInstance(instance, instruction[2]);
   if (target === undefined) return true;
   if (evaluator.callbackMode) evaluator.callbackPush(instruction);
-  const __result = typeSetTest(instruction[5], effectiveTypeStrictReal(target));
+  const __result = typeSetTest(instruction[6], effectiveTypeStrictReal(target));
   if (evaluator.callbackMode) evaluator.callbackPop(instruction, __result);
   return __result;
 };
@@ -1486,7 +1486,7 @@ function AssertionPropertyTypeStrictAnyEvaluate(instruction, instance, depth, te
   const target = resolveInstance(instance, instruction[2]);
   if (target === undefined) return true;
   if (evaluator.callbackMode) evaluator.callbackPush(instruction);
-  const result = typeSetTest(instruction[5], effectiveTypeStrictReal(target));
+  const result = typeSetTest(instruction[6], effectiveTypeStrictReal(target));
   if (result && evaluator.trackMode) {
     const location = instruction[2];
     evaluator.markEvaluated(target, instance, location.length > 0 ? location[location.length - 1] : undefined);
@@ -1503,11 +1503,11 @@ function AssertionArrayPrefix(instruction, instance, depth, template, evaluator)
     if (evaluator.callbackMode) evaluator.callbackPop(instruction, true);
     return true;
   }
-  const children = instruction[6];
+  const children = instruction[7];
   const prefixes = children.length - 1;
   const pointer = target.length === prefixes ? prefixes : Math.min(target.length, prefixes) - 1;
   const entry = children[pointer];
-  const entryChildren = entry[6];
+  const entryChildren = entry[7];
   if (entryChildren) {
     for (let index = 0; index < entryChildren.length; index++) {
       if (!evaluateInstruction(entryChildren[index], target, depth + 1, template, evaluator)) {
@@ -1528,11 +1528,11 @@ function AssertionArrayPrefixEvaluate(instruction, instance, depth, template, ev
     if (evaluator.callbackMode) evaluator.callbackPop(instruction, true);
     return true;
   }
-  const children = instruction[6];
+  const children = instruction[7];
   const prefixes = children.length - 1;
   const pointer = target.length === prefixes ? prefixes : Math.min(target.length, prefixes) - 1;
   const entry = children[pointer];
-  const entryChildren = entry[6];
+  const entryChildren = entry[7];
   if (entryChildren) {
     for (let index = 0; index < entryChildren.length; index++) {
       if (!evaluateInstruction(entryChildren[index], target, depth + 1, template, evaluator)) {
@@ -1561,8 +1561,8 @@ function AssertionObjectPropertiesSimple(instruction, instance, depth, template,
     if (evaluator.callbackMode) evaluator.callbackPop(instruction, false);
     return false;
   }
-  const value = instruction[5];
-  const children = instruction[6];
+  const value = instruction[6];
+  const children = instruction[7];
   for (let index = 0; index < value.length; index++) {
     const entry = value[index];
     const name = entry[0];
@@ -1611,7 +1611,7 @@ function Evaluate(instruction, instance, depth, template, evaluator) {
 function LogicalNot(instruction, instance, depth, template, evaluator) {
   if (evaluator.callbackMode) evaluator.callbackPush(instruction);
   const target = resolveInstance(instance, instruction[2]);
-  const children = instruction[6];
+  const children = instruction[7];
   if (children) {
     for (let index = 0; index < children.length; index++) {
       if (!evaluateInstruction(children[index], target, depth + 1, template, evaluator)) {
@@ -1627,7 +1627,7 @@ function LogicalNot(instruction, instance, depth, template, evaluator) {
 function LogicalNotEvaluate(instruction, instance, depth, template, evaluator) {
   if (evaluator.callbackMode) evaluator.callbackPush(instruction);
   const target = resolveInstance(instance, instruction[2]);
-  const children = instruction[6];
+  const children = instruction[7];
   let result = false;
   if (children) {
     for (let index = 0; index < children.length; index++) {
@@ -1644,13 +1644,13 @@ function LogicalNotEvaluate(instruction, instance, depth, template, evaluator) {
 
 function LogicalOr(instruction, instance, depth, template, evaluator) {
   if (evaluator.callbackMode) evaluator.callbackPush(instruction);
-  const children = instruction[6];
+  const children = instruction[7];
   if (!children || children.length === 0) {
     if (evaluator.callbackMode) evaluator.callbackPop(instruction, true);
     return true;
   }
   const target = resolveInstance(instance, instruction[2]);
-  const exhaustive = instruction[5];
+  const exhaustive = instruction[6];
   let result = false;
   if (exhaustive) {
     for (let index = 0; index < children.length; index++) {
@@ -1678,7 +1678,7 @@ function LogicalOr(instruction, instance, depth, template, evaluator) {
 function LogicalAnd(instruction, instance, depth, template, evaluator) {
   if (evaluator.callbackMode) evaluator.callbackPush(instruction);
   const target = resolveInstance(instance, instruction[2]);
-  const children = instruction[6];
+  const children = instruction[7];
   if (children) {
     for (let index = 0; index < children.length; index++) {
       if (!evaluateInstruction(children[index], target, depth + 1, template, evaluator)) {
@@ -1694,8 +1694,8 @@ function LogicalAnd(instruction, instance, depth, template, evaluator) {
 function LogicalXor(instruction, instance, depth, template, evaluator) {
   if (evaluator.callbackMode) evaluator.callbackPush(instruction);
   const target = resolveInstance(instance, instruction[2]);
-  const exhaustive = instruction[5];
-  const children = instruction[6];
+  const exhaustive = instruction[6];
+  const children = instruction[7];
   let result = true;
   let hasMatched = false;
   if (children) {
@@ -1720,10 +1720,10 @@ function LogicalXor(instruction, instance, depth, template, evaluator) {
 
 function LogicalCondition(instruction, instance, depth, template, evaluator) {
   if (evaluator.callbackMode) evaluator.callbackPush(instruction);
-  const value = instruction[5];
+  const value = instruction[6];
   const thenStart = value[0];
   const elseStart = value[1];
-  const children = instruction[6];
+  const children = instruction[7];
   const childrenSize = children ? children.length : 0;
 
   const target = resolveInstance(instance, instruction[2]);
@@ -1774,9 +1774,9 @@ function LogicalCondition(instruction, instance, depth, template, evaluator) {
 
 function LogicalWhenType(instruction, instance, depth, template, evaluator) {
   const target = resolveInstance(instance, instruction[2]);
-  if (jsonTypeOf(target) !== instruction[5]) return true;
+  if (jsonTypeOf(target) !== instruction[6]) return true;
   if (evaluator.callbackMode) evaluator.callbackPush(instruction);
-  const children = instruction[6];
+  const children = instruction[7];
   if (children) {
     for (let index = 0; index < children.length; index++) {
       if (!evaluateInstruction(children[index], target, depth + 1, template, evaluator)) {
@@ -1792,9 +1792,9 @@ function LogicalWhenType(instruction, instance, depth, template, evaluator) {
 function LogicalWhenDefines(instruction, instance, depth, template, evaluator) {
   const target = resolveInstance(instance, instruction[2]);
   if (!isObject(target)) return true;
-  if (!Object.hasOwn(target, instruction[5])) return true;
+  if (!Object.hasOwn(target, instruction[6])) return true;
   if (evaluator.callbackMode) evaluator.callbackPush(instruction);
-  const children = instruction[6];
+  const children = instruction[7];
   if (children) {
     for (let index = 0; index < children.length; index++) {
       if (!evaluateInstruction(children[index], target, depth + 1, template, evaluator)) {
@@ -1809,9 +1809,9 @@ function LogicalWhenDefines(instruction, instance, depth, template, evaluator) {
 
 function LogicalWhenArraySizeGreater(instruction, instance, depth, template, evaluator) {
   const target = resolveInstance(instance, instruction[2]);
-  if (!Array.isArray(target) || target.length <= instruction[5]) return true;
+  if (!Array.isArray(target) || target.length <= instruction[6]) return true;
   if (evaluator.callbackMode) evaluator.callbackPush(instruction);
-  const children = instruction[6];
+  const children = instruction[7];
   if (children) {
     for (let index = 0; index < children.length; index++) {
       if (!evaluateInstruction(children[index], target, depth + 1, template, evaluator)) {
@@ -1832,7 +1832,7 @@ function LoopPropertiesUnevaluated(instruction, instance, depth, template, evalu
     if (evaluator.callbackMode) evaluator.callbackPop(instruction, true);
     return true;
   }
-  const children = instruction[6];
+  const children = instruction[7];
   for (const key in target) {
     if (evaluator.trackMode && evaluator.isEvaluated(target[key], target, key)) continue;
     if (evaluator.callbackMode) evaluator.pushInstanceToken(key);
@@ -1860,11 +1860,11 @@ function LoopPropertiesUnevaluatedExcept(instruction, instance, depth, template,
     if (evaluator.callbackMode) evaluator.callbackPop(instruction, true);
     return true;
   }
-  const filter = instruction[5];
+  const filter = instruction[6];
   const filterStrings = filter[0];
   const filterPrefixes = filter[1];
   const filterRegexes = filter[2];
-  const children = instruction[6];
+  const children = instruction[7];
   for (const key in target) {
     if (filterStrings.has(key)) continue;
     let matched = false;
@@ -1899,12 +1899,12 @@ function LoopPropertiesMatch(instruction, instance, depth, template, evaluator) 
   const target = resolveInstance(instance, instruction[2]);
   if (!isObject(target)) return true;
   if (evaluator.callbackMode) evaluator.callbackPush(instruction);
-  const children = instruction[6];
+  const children = instruction[7];
   for (const key in target) {
-    const index = instruction[5][key];
+    const index = instruction[6][key];
     if (index === undefined) continue;
     const subinstruction = children[index];
-    const subchildren = subinstruction[6];
+    const subchildren = subinstruction[7];
     if (subchildren) {
       for (let childIndex = 0; childIndex < subchildren.length; childIndex++) {
         if (!evaluateInstruction(subchildren[childIndex], target, depth + 1, template, evaluator)) {
@@ -1922,15 +1922,15 @@ function LoopPropertiesMatchClosed(instruction, instance, depth, template, evalu
   const target = resolveInstance(instance, instruction[2]);
   if (!isObject(target)) return true;
   if (evaluator.callbackMode) evaluator.callbackPush(instruction);
-  const children = instruction[6];
+  const children = instruction[7];
   for (const key in target) {
-    const index = instruction[5][key];
+    const index = instruction[6][key];
     if (index === undefined) {
       if (evaluator.callbackMode) evaluator.callbackPop(instruction, false);
       return false;
     }
     const subinstruction = children[index];
-    const subchildren = subinstruction[6];
+    const subchildren = subinstruction[7];
     if (subchildren) {
       for (let childIndex = 0; childIndex < subchildren.length; childIndex++) {
         if (!evaluateInstruction(subchildren[childIndex], target, depth + 1, template, evaluator)) {
@@ -1948,7 +1948,7 @@ function LoopProperties(instruction, instance, depth, template, evaluator) {
   const target = resolveInstance(instance, instruction[2]);
   if (!isObject(target)) return true;
   if (evaluator.callbackMode) evaluator.callbackPush(instruction);
-  const children = instruction[6];
+  const children = instruction[7];
   for (const key in target) {
     evaluator.propertyParent = target;
     evaluator.propertyKey = key;
@@ -1974,7 +1974,7 @@ function LoopPropertiesEvaluate(instruction, instance, depth, template, evaluato
   const target = resolveInstance(instance, instruction[2]);
   if (!isObject(target)) return true;
   if (evaluator.callbackMode) evaluator.callbackPush(instruction);
-  const children = instruction[6];
+  const children = instruction[7];
   for (const key in target) {
     evaluator.propertyParent = target;
     evaluator.propertyKey = key;
@@ -2001,8 +2001,8 @@ function LoopPropertiesRegex(instruction, instance, depth, template, evaluator) 
   const target = resolveInstance(instance, instruction[2]);
   if (!isObject(target)) return true;
   if (evaluator.callbackMode) evaluator.callbackPush(instruction);
-  const regex = instruction[5];
-  const children = instruction[6];
+  const regex = instruction[6];
+  const children = instruction[7];
   for (const key in target) {
     regex.lastIndex = 0;
     if (!regex.test(key)) continue;
@@ -2030,8 +2030,8 @@ function LoopPropertiesRegexClosed(instruction, instance, depth, template, evalu
   const target = resolveInstance(instance, instruction[2]);
   if (!isObject(target)) return true;
   if (evaluator.callbackMode) evaluator.callbackPush(instruction);
-  const regex = instruction[5];
-  const children = instruction[6];
+  const regex = instruction[6];
+  const children = instruction[7];
   for (const key in target) {
     regex.lastIndex = 0;
     if (!regex.test(key)) {
@@ -2062,8 +2062,8 @@ function LoopPropertiesStartsWith(instruction, instance, depth, template, evalua
   const target = resolveInstance(instance, instruction[2]);
   if (!isObject(target)) return true;
   if (evaluator.callbackMode) evaluator.callbackPush(instruction);
-  const prefix = instruction[5];
-  const children = instruction[6];
+  const prefix = instruction[6];
+  const children = instruction[7];
   for (const key in target) {
     if (!key.startsWith(prefix)) continue;
     evaluator.propertyParent = target;
@@ -2090,11 +2090,11 @@ function LoopPropertiesExcept(instruction, instance, depth, template, evaluator)
   const target = resolveInstance(instance, instruction[2]);
   if (!isObject(target)) return true;
   if (evaluator.callbackMode) evaluator.callbackPush(instruction);
-  const filter = instruction[5];
+  const filter = instruction[6];
   const filterStrings = filter[0];
   const filterPrefixes = filter[1];
   const filterRegexes = filter[2];
-  const children = instruction[6];
+  const children = instruction[7];
   for (const key in target) {
     if (filterStrings.has(key)) continue;
     let matched = false;
@@ -2131,7 +2131,7 @@ function LoopPropertiesType(instruction, instance, depth, template, evaluator) {
   const target = resolveInstance(instance, instruction[2]);
   if (!isObject(target)) return true;
   if (evaluator.callbackMode) evaluator.callbackPush(instruction);
-  const expected = instruction[5];
+  const expected = instruction[6];
   for (const key in target) {
     const actual = jsonTypeOf(target[key]);
     if (actual !== expected && !(expected === Type.Integer && isIntegral(target[key]))) {
@@ -2147,7 +2147,7 @@ function LoopPropertiesTypeEvaluate(instruction, instance, depth, template, eval
   const target = resolveInstance(instance, instruction[2]);
   if (!isObject(target)) return true;
   if (evaluator.callbackMode) evaluator.callbackPush(instruction);
-  const expected = instruction[5];
+  const expected = instruction[6];
   for (const key in target) {
     const actual = jsonTypeOf(target[key]);
     if (actual !== expected && !(expected === Type.Integer && isIntegral(target[key]))) {
@@ -2167,7 +2167,7 @@ function LoopPropertiesExactlyTypeStrict(instruction, instance, depth, template,
     if (evaluator.callbackMode) evaluator.callbackPop(instruction, false);
     return false;
   }
-  const value = instruction[5];
+  const value = instruction[6];
   const names = new Set(value[1]);
   let count = 0;
   for (const key in target) {
@@ -2189,7 +2189,7 @@ function LoopPropertiesExactlyTypeStrictHash(instruction, instance, depth, templ
     if (evaluator.callbackMode) evaluator.callbackPop(instruction, false);
     return false;
   }
-  const value = instruction[5];
+  const value = instruction[6];
   const entries = value[1][0];
   const expectedCount = entries.length;
   let count = 0;
@@ -2218,7 +2218,7 @@ function LoopPropertiesTypeStrict(instruction, instance, depth, template, evalua
   const target = resolveInstance(instance, instruction[2]);
   if (!isObject(target)) return true;
   if (evaluator.callbackMode) evaluator.callbackPush(instruction);
-  const expected = instruction[5];
+  const expected = instruction[6];
   for (const key in target) {
     if (effectiveTypeStrictReal(target[key]) !== expected) {
       if (evaluator.callbackMode) evaluator.callbackPop(instruction, false);
@@ -2233,7 +2233,7 @@ function LoopPropertiesTypeStrictEvaluate(instruction, instance, depth, template
   const target = resolveInstance(instance, instruction[2]);
   if (!isObject(target)) return true;
   if (evaluator.callbackMode) evaluator.callbackPush(instruction);
-  const expected = instruction[5];
+  const expected = instruction[6];
   for (const key in target) {
     if (effectiveTypeStrictReal(target[key]) !== expected) {
       if (evaluator.callbackMode) evaluator.callbackPop(instruction, false);
@@ -2249,7 +2249,7 @@ function LoopPropertiesTypeStrictAny(instruction, instance, depth, template, eva
   const target = resolveInstance(instance, instruction[2]);
   if (!isObject(target)) return true;
   if (evaluator.callbackMode) evaluator.callbackPush(instruction);
-  const bitmask = instruction[5];
+  const bitmask = instruction[6];
   for (const key in target) {
     if (!typeSetTest(bitmask, effectiveTypeStrictReal(target[key]))) {
       if (evaluator.callbackMode) evaluator.callbackPop(instruction, false);
@@ -2264,7 +2264,7 @@ function LoopPropertiesTypeStrictAnyEvaluate(instruction, instance, depth, templ
   const target = resolveInstance(instance, instruction[2]);
   if (!isObject(target)) return true;
   if (evaluator.callbackMode) evaluator.callbackPush(instruction);
-  const bitmask = instruction[5];
+  const bitmask = instruction[6];
   for (const key in target) {
     if (!typeSetTest(bitmask, effectiveTypeStrictReal(target[key]))) {
       if (evaluator.callbackMode) evaluator.callbackPop(instruction, false);
@@ -2280,7 +2280,7 @@ function LoopKeys(instruction, instance, depth, template, evaluator) {
   const target = resolveInstance(instance, instruction[2]);
   if (!isObject(target)) return true;
   if (evaluator.callbackMode) evaluator.callbackPush(instruction);
-  const children = instruction[6];
+  const children = instruction[7];
   for (const key in target) {
     if (evaluator.callbackMode) evaluator.pushInstanceToken(key);
     const previousPropertyTarget = evaluator.propertyTarget;
@@ -2306,7 +2306,7 @@ function LoopItems(instruction, instance, depth, template, evaluator) {
   const target = resolveInstance(instance, instruction[2]);
   if (!Array.isArray(target)) return true;
   if (evaluator.callbackMode) evaluator.callbackPush(instruction);
-  const children = instruction[6];
+  const children = instruction[7];
   for (let index = 0; index < target.length; index++) {
     if (evaluator.callbackMode) evaluator.pushInstanceToken(index);
     if (children) {
@@ -2326,10 +2326,10 @@ function LoopItems(instruction, instance, depth, template, evaluator) {
 
 function LoopItemsFrom(instruction, instance, depth, template, evaluator) {
   const target = resolveInstance(instance, instruction[2]);
-  const startIndex = instruction[5];
+  const startIndex = instruction[6];
   if (!Array.isArray(target) || startIndex >= target.length) return true;
   if (evaluator.callbackMode) evaluator.callbackPush(instruction);
-  const children = instruction[6];
+  const children = instruction[7];
   for (let index = startIndex; index < target.length; index++) {
     if (evaluator.callbackMode) evaluator.pushInstanceToken(index);
     if (children) {
@@ -2355,7 +2355,7 @@ function LoopItemsUnevaluated(instruction, instance, depth, template, evaluator)
     if (evaluator.callbackMode) evaluator.callbackPop(instruction, true);
     return true;
   }
-  const children = instruction[6];
+  const children = instruction[7];
   for (let index = 0; index < target.length; index++) {
     if (evaluator.trackMode && evaluator.isEvaluated(target[index], target, index)) continue;
     if (evaluator.callbackMode) evaluator.pushInstanceToken(index);
@@ -2379,7 +2379,7 @@ function LoopItemsType(instruction, instance, depth, template, evaluator) {
   const target = resolveInstance(instance, instruction[2]);
   if (!Array.isArray(target)) return true;
   if (evaluator.callbackMode) evaluator.callbackPush(instruction);
-  const expected = instruction[5];
+  const expected = instruction[6];
   for (let index = 0; index < target.length; index++) {
     const actual = jsonTypeOf(target[index]);
     if (actual !== expected && !(expected === Type.Integer && isIntegral(target[index]))) {
@@ -2395,7 +2395,7 @@ function LoopItemsTypeStrict(instruction, instance, depth, template, evaluator) 
   const target = resolveInstance(instance, instruction[2]);
   if (!Array.isArray(target)) return true;
   if (evaluator.callbackMode) evaluator.callbackPush(instruction);
-  const expected = instruction[5];
+  const expected = instruction[6];
   for (let index = 0; index < target.length; index++) {
     if (effectiveTypeStrictReal(target[index]) !== expected) {
       if (evaluator.callbackMode) evaluator.callbackPop(instruction, false);
@@ -2410,7 +2410,7 @@ function LoopItemsTypeStrictAny(instruction, instance, depth, template, evaluato
   const target = resolveInstance(instance, instruction[2]);
   if (!Array.isArray(target)) return true;
   if (evaluator.callbackMode) evaluator.callbackPush(instruction);
-  const bitmask = instruction[5];
+  const bitmask = instruction[6];
   for (let index = 0; index < target.length; index++) {
     if (!typeSetTest(bitmask, effectiveTypeStrictReal(target[index]))) {
       if (evaluator.callbackMode) evaluator.callbackPop(instruction, false);
@@ -2428,8 +2428,8 @@ function LoopItemsPropertiesExactlyTypeStrictHash(instruction, instance, depth, 
     if (evaluator.callbackMode) evaluator.callbackPop(instruction, false);
     return false;
   }
-  const expectedType = instruction[5][0];
-  const entries = instruction[5][1][0];
+  const expectedType = instruction[6][0];
+  const entries = instruction[6][1][0];
   const expectedCount = entries.length;
   for (let index = 0; index < target.length; index++) {
     const item = target[index];
@@ -2464,8 +2464,8 @@ function LoopItemsIntegerBounded(instruction, instance, depth, template, evaluat
   const target = resolveInstance(instance, instruction[2]);
   if (!Array.isArray(target) || target.length === 0) return true;
   if (evaluator.callbackMode) evaluator.callbackPush(instruction);
-  const minimum = instruction[5][0];
-  const maximum = instruction[5][1];
+  const minimum = instruction[6][0];
+  const maximum = instruction[6][1];
   for (let index = 0; index < target.length; index++) {
     const element = target[index];
     const elementType = typeof element;
@@ -2483,7 +2483,7 @@ function LoopItemsIntegerBounded(instruction, instance, depth, template, evaluat
 };
 
 function LoopItemsIntegerBoundedSized(instruction, instance, depth, template, evaluator) {
-  const value = instruction[5];
+  const value = instruction[6];
   const minimum = value[0][0];
   const maximum = value[0][1];
   const minimumSize = value[1][0];
@@ -2514,13 +2514,13 @@ function LoopItemsIntegerBoundedSized(instruction, instance, depth, template, ev
 function LoopContains(instruction, instance, depth, template, evaluator) {
   const target = resolveInstance(instance, instruction[2]);
   if (!Array.isArray(target)) return true;
-  const range = instruction[5];
+  const range = instruction[6];
   const minimum = range[0];
   const maximum = range[1];
   const isExhaustive = range[2];
   if (evaluator.callbackMode) evaluator.callbackPush(instruction);
 
-  const children = instruction[6];
+  const children = instruction[7];
   let result = minimum === 0;
   let matchCount = 0;
   for (let index = 0; index < target.length; index++) {
@@ -2553,7 +2553,7 @@ function LoopContains(instruction, instance, depth, template, evaluator) {
 };
 
 function ControlGroup(instruction, instance, depth, template, evaluator) {
-  const children = instruction[6];
+  const children = instruction[7];
   if (children) {
     for (let index = 0; index < children.length; index++) {
       if (!evaluateInstruction(children[index], instance, depth + 1, template, evaluator)) return false;
@@ -2565,8 +2565,8 @@ function ControlGroup(instruction, instance, depth, template, evaluator) {
 function ControlGroupWhenDefines(instruction, instance, depth, template, evaluator) {
   const target = resolveInstance(instance, instruction[2]);
   if (!isObject(target)) return true;
-  if (!Object.hasOwn(target, instruction[5])) return true;
-  const children = instruction[6];
+  if (!Object.hasOwn(target, instruction[6])) return true;
+  const children = instruction[7];
   if (children) {
     for (let index = 0; index < children.length; index++) {
       if (!evaluateInstruction(children[index], instance, depth + 1, template, evaluator)) return false;
@@ -2577,8 +2577,8 @@ function ControlGroupWhenDefines(instruction, instance, depth, template, evaluat
 
 function ControlGroupWhenDefinesDirect(instruction, instance, depth, template, evaluator) {
   if (!isObject(instance)) return true;
-  if (!Object.hasOwn(instance, instruction[5])) return true;
-  const children = instruction[6];
+  if (!Object.hasOwn(instance, instruction[6])) return true;
+  const children = instruction[7];
   if (children) {
     for (let index = 0; index < children.length; index++) {
       if (!evaluateInstruction(children[index], instance, depth + 1, template, evaluator)) return false;
@@ -2588,8 +2588,8 @@ function ControlGroupWhenDefinesDirect(instruction, instance, depth, template, e
 };
 
 function ControlGroupWhenType(instruction, instance, depth, template, evaluator) {
-  if (jsonTypeOf(instance) !== instruction[5]) return true;
-  const children = instruction[6];
+  if (jsonTypeOf(instance) !== instruction[6]) return true;
+  const children = instruction[7];
   if (children) {
     for (let index = 0; index < children.length; index++) {
       if (!evaluateInstruction(children[index], instance, depth + 1, template, evaluator)) return false;
@@ -2600,7 +2600,7 @@ function ControlGroupWhenType(instruction, instance, depth, template, evaluator)
 
 function ControlEvaluate(instruction, instance, depth, template, evaluator) {
   if (evaluator.trackMode) {
-    const target = resolveInstance(instance, instruction[5]);
+    const target = resolveInstance(instance, instruction[6]);
     evaluator.markEvaluated(target, evaluator.propertyParent, evaluator.propertyKey);
   }
   return true;
@@ -2609,14 +2609,14 @@ function ControlEvaluate(instruction, instance, depth, template, evaluator) {
 function ControlDynamicAnchorJump(instruction, instance, depth, template, evaluator) {
   if (evaluator.callbackMode) evaluator.callbackPush(instruction);
   const resolved = resolveInstance(instance, instruction[2]);
-  const anchor = instruction[5];
+  const anchor = instruction[6];
 
   if (!evaluator.resources) {
     if (evaluator.callbackMode) evaluator.callbackPop(instruction, false);
     return false;
   }
 
-  const anchors = template[5];
+  const anchors = template[6];
   for (let index = 0; index < evaluator.resources.length; index++) {
     const jumpTarget = anchors.get(evaluator.resources[index] + ':' + anchor);
     if (jumpTarget !== undefined) {
@@ -2637,7 +2637,7 @@ function ControlDynamicAnchorJump(instruction, instance, depth, template, evalua
 
 function ControlJump(instruction, instance, depth, template, evaluator) {
   if (evaluator.callbackMode) evaluator.callbackPush(instruction);
-  const jumpTarget = instruction[5];
+  const jumpTarget = instruction[6];
   if (!jumpTarget) {
     if (evaluator.callbackMode) evaluator.callbackPop(instruction, true);
     return true;
@@ -2760,7 +2760,7 @@ function AssertionTypeArrayBounded_fast(instruction, instance, depth, template, 
   const relInstance = instruction[2];
   const target = relInstance.length === 0 ? instance : resolveInstance(instance, relInstance);
   if (!Array.isArray(target)) return false;
-  const range = instruction[5];
+  const range = instruction[6];
   if (target.length < range[0]) return false;
   if (range[1] !== null && target.length > range[1]) return false;
   return true;
@@ -2770,7 +2770,7 @@ function LoopItemsTypeStrictAny_fast(instruction, instance, depth, template, eva
   const relInstance = instruction[2];
   const target = relInstance.length === 0 ? instance : resolveInstance(instance, relInstance);
   if (!Array.isArray(target)) return true;
-  const bitmask = instruction[5];
+  const bitmask = instruction[6];
   for (let index = 0; index < target.length; index++) {
     if (!typeSetTest(bitmask, effectiveTypeStrictReal(target[index]))) return false;
   }
@@ -2781,19 +2781,19 @@ function AssertionPropertyTypeStrict_fast(instruction, instance, depth, template
   if (!isObject(instance)) return true;
   const target = resolveInstance(instance, instruction[2]);
   if (target === undefined) return true;
-  return effectiveTypeStrictReal(target) === instruction[5];
+  return effectiveTypeStrictReal(target) === instruction[6];
 }
 
 function AssertionTypeStrict_fast(instruction, instance, depth, template, evaluator) {
   const relInstance = instruction[2];
   const target = relInstance.length === 0 ? instance : resolveInstance(instance, relInstance);
-  return effectiveTypeStrictReal(target) === instruction[5];
+  return effectiveTypeStrictReal(target) === instruction[6];
 }
 
 function AssertionDefinesAllStrict_fast(instruction, instance, depth, template, evaluator) {
   const target = resolveInstance(instance, instruction[2]);
   if (!isObject(target)) return false;
-  const strings = instruction[5];
+  const strings = instruction[6];
   for (let index = 0; index < strings.length; index++) {
     if (!Object.hasOwn(target, strings[index])) return false;
   }
@@ -2802,22 +2802,22 @@ function AssertionDefinesAllStrict_fast(instruction, instance, depth, template, 
 
 function AssertionEqual_fast(instruction, instance, depth, template, evaluator) {
   if (evaluator.propertyTarget !== undefined) {
-    const value = instruction[5];
+    const value = instruction[6];
     return typeof value === 'string' && value === evaluator.propertyTarget;
   }
-  return jsonEqual(resolveInstance(instance, instruction[2]), instruction[5]);
+  return jsonEqual(resolveInstance(instance, instruction[2]), instruction[6]);
 }
 
 function LoopPropertiesMatch_fast(instruction, instance, depth, template, evaluator) {
   const relInstance = instruction[2];
   const target = relInstance.length === 0 ? instance : resolveInstance(instance, relInstance);
   if (!isObject(target)) return true;
-  const children = instruction[6];
+  const children = instruction[7];
   for (const key in target) {
-    const index = instruction[5][key];
+    const index = instruction[6][key];
     if (index === undefined) continue;
     const subinstruction = children[index];
-    const subchildren = subinstruction[6];
+    const subchildren = subinstruction[7];
     if (subchildren) {
       for (let childIndex = 0; childIndex < subchildren.length; childIndex++) {
         if (!evaluateInstruction(subchildren[childIndex], target, depth + 1, template, evaluator)) return false;
@@ -2828,11 +2828,11 @@ function LoopPropertiesMatch_fast(instruction, instance, depth, template, evalua
 }
 
 function LogicalOr_fast(instruction, instance, depth, template, evaluator) {
-  const children = instruction[6];
+  const children = instruction[7];
   if (!children || children.length === 0) return true;
   const relInstance = instruction[2];
   const target = relInstance.length === 0 ? instance : resolveInstance(instance, relInstance);
-  const exhaustive = instruction[5];
+  const exhaustive = instruction[6];
   let result = false;
   if (exhaustive) {
     for (let index = 0; index < children.length; index++) {
@@ -2851,7 +2851,7 @@ function LogicalOr_fast(instruction, instance, depth, template, evaluator) {
 }
 
 function ControlJump_fast(instruction, instance, depth, template, evaluator) {
-  const jumpTarget = instruction[5];
+  const jumpTarget = instruction[6];
   if (!jumpTarget) return true;
   const relInstance = instruction[2];
   const resolved = relInstance.length === 0 ? instance : resolveInstance(instance, relInstance);
@@ -2866,7 +2866,7 @@ function AssertionEqualsAnyStringHash_fast(instruction, instance, depth, templat
     ? evaluator.propertyTarget
     : resolveInstance(instance, instruction[2]);
   if (typeof target !== 'string') return false;
-  const value = instruction[5];
+  const value = instruction[6];
   const entries = value[0];
   const tableOfContents = value[1];
   const stringSize = target.length;
@@ -2883,8 +2883,8 @@ function AssertionEqualsAnyStringHash_fast(instruction, instance, depth, templat
 function LogicalXor_fast(instruction, instance, depth, template, evaluator) {
   const relInstance = instruction[2];
   const target = relInstance.length === 0 ? instance : resolveInstance(instance, relInstance);
-  const exhaustive = instruction[5];
-  const children = instruction[6];
+  const exhaustive = instruction[6];
+  const children = instruction[7];
   let result = true;
   let hasMatched = false;
   if (children) {
@@ -2907,14 +2907,14 @@ function LogicalXor_fast(instruction, instance, depth, template, evaluator) {
 
 function AssertionDefinesStrict_fast(instruction, instance, depth, template, evaluator) {
   const target = resolveInstance(instance, instruction[2]);
-  return isObject(target) && Object.hasOwn(target, instruction[5]);
+  return isObject(target) && Object.hasOwn(target, instruction[6]);
 }
 
 function LoopItems_fast(instruction, instance, depth, template, evaluator) {
   const relInstance = instruction[2];
   const target = relInstance.length === 0 ? instance : resolveInstance(instance, relInstance);
   if (!Array.isArray(target)) return true;
-  const children = instruction[6];
+  const children = instruction[7];
   for (let index = 0; index < target.length; index++) {
     if (children) {
       for (let childIndex = 0; childIndex < children.length; childIndex++) {
@@ -2929,12 +2929,12 @@ function LoopPropertiesMatchClosed_fast(instruction, instance, depth, template, 
   const relInstance = instruction[2];
   const target = relInstance.length === 0 ? instance : resolveInstance(instance, relInstance);
   if (!isObject(target)) return true;
-  const children = instruction[6];
+  const children = instruction[7];
   for (const key in target) {
-    const index = instruction[5][key];
+    const index = instruction[6][key];
     if (index === undefined) return false;
     const subinstruction = children[index];
-    const subchildren = subinstruction[6];
+    const subchildren = subinstruction[7];
     if (subchildren) {
       for (let childIndex = 0; childIndex < subchildren.length; childIndex++) {
         if (!evaluateInstruction(subchildren[childIndex], target, depth + 1, template, evaluator)) return false;
@@ -2947,7 +2947,7 @@ function LoopPropertiesMatchClosed_fast(instruction, instance, depth, template, 
 function LogicalAnd_fast(instruction, instance, depth, template, evaluator) {
   const relInstance = instruction[2];
   const target = relInstance.length === 0 ? instance : resolveInstance(instance, relInstance);
-  const children = instruction[6];
+  const children = instruction[7];
   if (children) {
     for (let index = 0; index < children.length; index++) {
       if (!evaluateInstruction(children[index], target, depth + 1, template, evaluator)) return false;
@@ -2960,7 +2960,7 @@ function AssertionTypeStringBounded_fast(instruction, instance, depth, template,
   const relInstance = instruction[2];
   const target = relInstance.length === 0 ? instance : resolveInstance(instance, relInstance);
   if (typeof target !== 'string') return false;
-  const range = instruction[5];
+  const range = instruction[6];
   const length = unicodeLength(target);
   if (length < range[0]) return false;
   return range[1] === null || length <= range[1];
@@ -2969,7 +2969,7 @@ function AssertionTypeStringBounded_fast(instruction, instance, depth, template,
 function AssertionPropertyDependencies_fast(instruction, instance, depth, template, evaluator) {
   const target = resolveInstance(instance, instruction[2]);
   if (!isObject(target)) return true;
-  const value = instruction[5];
+  const value = instruction[6];
   for (const property in value) {
     if (!Object.hasOwn(target, property)) continue;
     const dependencies = value[property];
@@ -2983,17 +2983,17 @@ function AssertionPropertyDependencies_fast(instruction, instance, depth, templa
 function AssertionTypeAny_fast(instruction, instance, depth, template, evaluator) {
   const relInstance = instruction[2];
   const target = relInstance.length === 0 ? instance : resolveInstance(instance, relInstance);
-  const bitmask = instruction[5];
+  const bitmask = instruction[6];
   const typeIndex = jsonTypeOf(target);
   if (typeSetTest(bitmask, typeIndex)) return true;
   return typeSetTest(bitmask, Type.Integer) && isIntegral(target);
 }
 
 function LogicalCondition_fast(instruction, instance, depth, template, evaluator) {
-  const value = instruction[5];
+  const value = instruction[6];
   const thenStart = value[0];
   const elseStart = value[1];
-  const children = instruction[6];
+  const children = instruction[7];
   const childrenSize = children ? children.length : 0;
   const relInstance = instruction[2];
   const target = relInstance.length === 0 ? instance : resolveInstance(instance, relInstance);
@@ -3038,11 +3038,11 @@ function LoopPropertiesExcept_fast(instruction, instance, depth, template, evalu
   const relInstance = instruction[2];
   const target = relInstance.length === 0 ? instance : resolveInstance(instance, relInstance);
   if (!isObject(target)) return true;
-  const filter = instruction[5];
+  const filter = instruction[6];
   const filterStrings = filter[0];
   const filterPrefixes = filter[1];
   const filterRegexes = filter[2];
-  const children = instruction[6];
+  const children = instruction[7];
   for (const key in target) {
     if (filterStrings.has(key)) continue;
     let matched = false;
@@ -3076,14 +3076,14 @@ function AssertionRegex_fast(instruction, instance, depth, template, evaluator) 
   const target = evaluator.propertyTarget !== undefined
     ? evaluator.propertyTarget : resolveInstance(instance, instruction[2]);
   if (typeof target !== 'string') return true;
-  return instruction[5].test(target);
+  return instruction[6].test(target);
 }
 
 function LoopProperties_fast(instruction, instance, depth, template, evaluator) {
   const relInstance = instruction[2];
   const target = relInstance.length === 0 ? instance : resolveInstance(instance, relInstance);
   if (!isObject(target)) return true;
-  const children = instruction[6];
+  const children = instruction[7];
   for (const key in target) {
     evaluator.propertyParent = target;
     evaluator.propertyKey = key;
@@ -3105,14 +3105,14 @@ function LoopProperties_fast(instruction, instance, depth, template, evaluator) 
 function AssertionDefines_fast(instruction, instance, depth, template, evaluator) {
   const target = resolveInstance(instance, instruction[2]);
   if (!isObject(target)) return true;
-  return Object.hasOwn(target, instruction[5]);
+  return Object.hasOwn(target, instruction[6]);
 }
 
 function LogicalWhenType_fast(instruction, instance, depth, template, evaluator) {
   const relInstance = instruction[2];
   const target = relInstance.length === 0 ? instance : resolveInstance(instance, relInstance);
-  if (jsonTypeOf(target) !== instruction[5]) return true;
-  const children = instruction[6];
+  if (jsonTypeOf(target) !== instruction[6]) return true;
+  const children = instruction[7];
   if (children) {
     for (let index = 0; index < children.length; index++) {
       if (!evaluateInstruction(children[index], target, depth + 1, template, evaluator)) return false;
@@ -3124,8 +3124,8 @@ function LogicalWhenType_fast(instruction, instance, depth, template, evaluator)
 function LogicalWhenDefines_fast(instruction, instance, depth, template, evaluator) {
   const target = resolveInstance(instance, instruction[2]);
   if (!isObject(target)) return true;
-  if (!Object.hasOwn(target, instruction[5])) return true;
-  const children = instruction[6];
+  if (!Object.hasOwn(target, instruction[6])) return true;
+  const children = instruction[7];
   if (children) {
     for (let index = 0; index < children.length; index++) {
       if (!evaluateInstruction(children[index], target, depth + 1, template, evaluator)) return false;
@@ -3140,12 +3140,12 @@ function LoopContains_fast(instruction, instance, depth, template, evaluator) {
   const relInstance = instruction[2];
   const target = relInstance.length === 0 ? instance : resolveInstance(instance, relInstance);
   if (!Array.isArray(target)) return true;
-  const range = instruction[5];
+  const range = instruction[6];
   const minimum = range[0];
   const maximum = range[1];
   const isExhaustive = range[2];
   if (minimum === 0 && target.length === 0) return true;
-  const children = instruction[6];
+  const children = instruction[7];
   let matchCount = 0;
   for (let index = 0; index < target.length; index++) {
     let subresult = true;
@@ -3169,7 +3169,7 @@ function LoopContains_fast(instruction, instance, depth, template, evaluator) {
 function LogicalNot_fast(instruction, instance, depth, template, evaluator) {
   const relInstance = instruction[2];
   const target = relInstance.length === 0 ? instance : resolveInstance(instance, relInstance);
-  const children = instruction[6];
+  const children = instruction[7];
   if (children) {
     for (let index = 0; index < children.length; index++) {
       if (!evaluateInstruction(children[index], target, depth + 1, template, evaluator)) return true;
@@ -3182,7 +3182,7 @@ function LoopItemsType_fast(instruction, instance, depth, template, evaluator) {
   const relInstance = instruction[2];
   const target = relInstance.length === 0 ? instance : resolveInstance(instance, relInstance);
   if (!Array.isArray(target)) return true;
-  const expected = instruction[5];
+  const expected = instruction[6];
   for (let index = 0; index < target.length; index++) {
     const actual = jsonTypeOf(target[index]);
     if (actual !== expected && !(expected === Type.Integer && isIntegral(target[index]))) return false;
@@ -3194,7 +3194,7 @@ function LoopItemsTypeStrict_fast(instruction, instance, depth, template, evalua
   const relInstance = instruction[2];
   const target = relInstance.length === 0 ? instance : resolveInstance(instance, relInstance);
   if (!Array.isArray(target)) return true;
-  const expected = instruction[5];
+  const expected = instruction[6];
   for (let index = 0; index < target.length; index++) {
     if (effectiveTypeStrictReal(target[index]) !== expected) return false;
   }
@@ -3202,7 +3202,7 @@ function LoopItemsTypeStrict_fast(instruction, instance, depth, template, evalua
 }
 
 function AssertionEqualsAny_fast(instruction, instance, depth, template, evaluator) {
-  const value = instruction[5];
+  const value = instruction[6];
   const target = evaluator.propertyTarget !== undefined
     ? evaluator.propertyTarget : resolveInstance(instance, instruction[2]);
   if (value.primitive) return value.set.has(target);
@@ -3216,7 +3216,7 @@ function AssertionEqualsAny_fast(instruction, instance, depth, template, evaluat
 function AssertionDefinesAll_fast(instruction, instance, depth, template, evaluator) {
   const target = resolveInstance(instance, instruction[2]);
   if (!isObject(target)) return true;
-  const strings = instruction[5];
+  const strings = instruction[6];
   for (let index = 0; index < strings.length; index++) {
     if (!Object.hasOwn(target, strings[index])) return false;
   }
@@ -3228,7 +3228,7 @@ function AssertionDefinesExactly_fast(instruction, instance, depth, template, ev
   if (!isObject(target)) return true;
   let targetSize = 0;
   for (const key in target) targetSize++;
-  const strings = instruction[5];
+  const strings = instruction[6];
   if (targetSize !== strings.length) return false;
   for (let index = 0; index < strings.length; index++) {
     if (!Object.hasOwn(target, strings[index])) return false;
@@ -3241,7 +3241,7 @@ function AssertionDefinesExactlyStrict_fast(instruction, instance, depth, templa
   if (!isObject(target)) return false;
   let targetSize = 0;
   for (const key in target) targetSize++;
-  const strings = instruction[5];
+  const strings = instruction[6];
   if (targetSize !== strings.length) return false;
   for (let index = 0; index < strings.length; index++) {
     if (!Object.hasOwn(target, strings[index])) return false;
@@ -3252,7 +3252,7 @@ function AssertionDefinesExactlyStrict_fast(instruction, instance, depth, templa
 function AssertionDefinesExactlyStrictHash3_fast(instruction, instance, depth, template, evaluator) {
   const target = resolveInstance(instance, instruction[2]);
   if (!isObject(target)) return false;
-  const entries = instruction[5][0];
+  const entries = instruction[6][0];
   let count = 0;
   for (const key in target) count++;
   if (count !== 3) return false;
@@ -3263,7 +3263,7 @@ function AssertionDefinesExactlyStrictHash3_fast(instruction, instance, depth, t
 
 function AssertionType_fast(instruction, instance, depth, template, evaluator) {
   const target = resolveInstance(instance, instruction[2]);
-  const expected = instruction[5];
+  const expected = instruction[6];
   const actual = jsonTypeOf(target);
   if (actual === expected) return true;
   return expected === Type.Integer && isIntegral(target);
@@ -3272,32 +3272,32 @@ function AssertionType_fast(instruction, instance, depth, template, evaluator) {
 function AssertionTypeStrictAny_fast(instruction, instance, depth, template, evaluator) {
   const relInstance = instruction[2];
   const target = relInstance.length === 0 ? instance : resolveInstance(instance, relInstance);
-  return typeSetTest(instruction[5], effectiveTypeStrictReal(target));
+  return typeSetTest(instruction[6], effectiveTypeStrictReal(target));
 }
 
 function AssertionNotTypeStrictAny_fast(instruction, instance, depth, template, evaluator) {
   const relInstance = instruction[2];
   const target = relInstance.length === 0 ? instance : resolveInstance(instance, relInstance);
-  return !typeSetTest(instruction[5], effectiveTypeStrictReal(target));
+  return !typeSetTest(instruction[6], effectiveTypeStrictReal(target));
 }
 
 function AssertionTypeStringUpper_fast(instruction, instance, depth, template, evaluator) {
   const relInstance = instruction[2];
   const target = relInstance.length === 0 ? instance : resolveInstance(instance, relInstance);
-  return typeof target === 'string' && unicodeLength(target) <= instruction[5];
+  return typeof target === 'string' && unicodeLength(target) <= instruction[6];
 }
 
 function AssertionTypeArrayUpper_fast(instruction, instance, depth, template, evaluator) {
   const relInstance = instruction[2];
   const target = relInstance.length === 0 ? instance : resolveInstance(instance, relInstance);
-  return Array.isArray(target) && target.length <= instruction[5];
+  return Array.isArray(target) && target.length <= instruction[6];
 }
 
 function AssertionTypeObjectBounded_fast(instruction, instance, depth, template, evaluator) {
   const relInstance = instruction[2];
   const target = relInstance.length === 0 ? instance : resolveInstance(instance, relInstance);
   if (!isObject(target)) return false;
-  const range = instruction[5];
+  const range = instruction[6];
   const size = objectSize(target);
   if (size < range[0]) return false;
   return range[1] === null || size <= range[1];
@@ -3307,73 +3307,73 @@ function AssertionTypeObjectUpper_fast(instruction, instance, depth, template, e
   const relInstance = instruction[2];
   const target = relInstance.length === 0 ? instance : resolveInstance(instance, relInstance);
   if (!isObject(target)) return false;
-  return objectSize(target) <= instruction[5];
+  return objectSize(target) <= instruction[6];
 }
 
 function AssertionStringSizeLess_fast(instruction, instance, depth, template, evaluator) {
   const target = evaluator.propertyTarget !== undefined
     ? evaluator.propertyTarget : resolveInstance(instance, instruction[2]);
   if (typeof target !== 'string') return true;
-  return unicodeLength(target) < instruction[5];
+  return unicodeLength(target) < instruction[6];
 }
 
 function AssertionStringSizeGreater_fast(instruction, instance, depth, template, evaluator) {
   const target = evaluator.propertyTarget !== undefined
     ? evaluator.propertyTarget : resolveInstance(instance, instruction[2]);
   if (typeof target !== 'string') return true;
-  return unicodeLength(target) > instruction[5];
+  return unicodeLength(target) > instruction[6];
 }
 
 function AssertionArraySizeLess_fast(instruction, instance, depth, template, evaluator) {
   const target = resolveInstance(instance, instruction[2]);
   if (!Array.isArray(target)) return true;
-  return target.length < instruction[5];
+  return target.length < instruction[6];
 }
 
 function AssertionArraySizeGreater_fast(instruction, instance, depth, template, evaluator) {
   const target = resolveInstance(instance, instruction[2]);
   if (!Array.isArray(target)) return true;
-  return target.length > instruction[5];
+  return target.length > instruction[6];
 }
 
 function AssertionObjectSizeLess_fast(instruction, instance, depth, template, evaluator) {
   const target = resolveInstance(instance, instruction[2]);
   if (!isObject(target)) return true;
-  return objectSize(target) < instruction[5];
+  return objectSize(target) < instruction[6];
 }
 
 function AssertionObjectSizeGreater_fast(instruction, instance, depth, template, evaluator) {
   const target = resolveInstance(instance, instruction[2]);
   if (!isObject(target)) return true;
-  return objectSize(target) > instruction[5];
+  return objectSize(target) > instruction[6];
 }
 
 function AssertionGreaterEqual_fast(instruction, instance, depth, template, evaluator) {
   const target = resolveInstance(instance, instruction[2]);
   const targetType = typeof target;
   if (targetType !== 'number' && targetType !== 'bigint') return true;
-  return target >= instruction[5];
+  return target >= instruction[6];
 }
 
 function AssertionLessEqual_fast(instruction, instance, depth, template, evaluator) {
   const target = resolveInstance(instance, instruction[2]);
   const targetType = typeof target;
   if (targetType !== 'number' && targetType !== 'bigint') return true;
-  return target <= instruction[5];
+  return target <= instruction[6];
 }
 
 function AssertionGreater_fast(instruction, instance, depth, template, evaluator) {
   const target = resolveInstance(instance, instruction[2]);
   const targetType = typeof target;
   if (targetType !== 'number' && targetType !== 'bigint') return true;
-  return target > instruction[5];
+  return target > instruction[6];
 }
 
 function AssertionLess_fast(instruction, instance, depth, template, evaluator) {
   const target = resolveInstance(instance, instruction[2]);
   const targetType = typeof target;
   if (targetType !== 'number' && targetType !== 'bigint') return true;
-  return target < instruction[5];
+  return target < instruction[6];
 }
 
 function AssertionUnique_fast(instruction, instance, depth, template, evaluator) {
@@ -3386,7 +3386,7 @@ function AssertionDivisible_fast(instruction, instance, depth, template, evaluat
   const target = resolveInstance(instance, instruction[2]);
   const targetType = typeof target;
   if (targetType !== 'number' && targetType !== 'bigint') return true;
-  return isDivisibleBy(target, instruction[5]);
+  return isDivisibleBy(target, instruction[6]);
 }
 
 function AssertionStringType_fast(instruction, instance, depth, template, evaluator) {
@@ -3400,7 +3400,7 @@ function AssertionPropertyType_fast(instruction, instance, depth, template, eval
   if (!isObject(instance)) return true;
   const target = resolveInstance(instance, instruction[2]);
   if (target === undefined) return true;
-  const expected = instruction[5];
+  const expected = instruction[6];
   const actual = jsonTypeOf(target);
   return actual === expected || (expected === Type.Integer && isIntegral(target));
 }
@@ -3409,7 +3409,7 @@ function AssertionPropertyTypeEvaluate_fast(instruction, instance, depth, templa
   if (!isObject(instance)) return true;
   const target = resolveInstance(instance, instruction[2]);
   if (target === undefined) return true;
-  const expected = instruction[5];
+  const expected = instruction[6];
   const actual = jsonTypeOf(target);
   const result = actual === expected || (expected === Type.Integer && isIntegral(target));
   if (result && evaluator.trackMode) {
@@ -3423,7 +3423,7 @@ function AssertionPropertyTypeStrictEvaluate_fast(instruction, instance, depth, 
   if (!isObject(instance)) return true;
   const target = resolveInstance(instance, instruction[2]);
   if (target === undefined) return true;
-  const result = effectiveTypeStrictReal(target) === instruction[5];
+  const result = effectiveTypeStrictReal(target) === instruction[6];
   if (result && evaluator.trackMode) {
     const location = instruction[2];
     evaluator.markEvaluated(target, instance, location.length > 0 ? location[location.length - 1] : undefined);
@@ -3435,14 +3435,14 @@ function AssertionPropertyTypeStrictAny_fast(instruction, instance, depth, templ
   if (!isObject(instance)) return true;
   const target = resolveInstance(instance, instruction[2]);
   if (target === undefined) return true;
-  return typeSetTest(instruction[5], effectiveTypeStrictReal(target));
+  return typeSetTest(instruction[6], effectiveTypeStrictReal(target));
 }
 
 function AssertionPropertyTypeStrictAnyEvaluate_fast(instruction, instance, depth, template, evaluator) {
   if (!isObject(instance)) return true;
   const target = resolveInstance(instance, instruction[2]);
   if (target === undefined) return true;
-  const result = typeSetTest(instruction[5], effectiveTypeStrictReal(target));
+  const result = typeSetTest(instruction[6], effectiveTypeStrictReal(target));
   if (result && evaluator.trackMode) {
     const location = instruction[2];
     evaluator.markEvaluated(target, instance, location.length > 0 ? location[location.length - 1] : undefined);
@@ -3454,11 +3454,11 @@ function AssertionArrayPrefix_fast(instruction, instance, depth, template, evalu
   const target = resolveInstance(instance, instruction[2]);
   if (!Array.isArray(target)) return true;
   if (target.length === 0) return true;
-  const children = instruction[6];
+  const children = instruction[7];
   const prefixes = children.length - 1;
   const pointer = target.length === prefixes ? prefixes : Math.min(target.length, prefixes) - 1;
   const entry = children[pointer];
-  const entryChildren = entry[6];
+  const entryChildren = entry[7];
   if (entryChildren) {
     for (let index = 0; index < entryChildren.length; index++) {
       if (!evaluateInstruction(entryChildren[index], target, depth + 1, template, evaluator)) return false;
@@ -3471,11 +3471,11 @@ function AssertionArrayPrefixEvaluate_fast(instruction, instance, depth, templat
   const target = resolveInstance(instance, instruction[2]);
   if (!Array.isArray(target)) return true;
   if (target.length === 0) return true;
-  const children = instruction[6];
+  const children = instruction[7];
   const prefixes = children.length - 1;
   const pointer = target.length === prefixes ? prefixes : Math.min(target.length, prefixes) - 1;
   const entry = children[pointer];
-  const entryChildren = entry[6];
+  const entryChildren = entry[7];
   if (entryChildren) {
     for (let index = 0; index < entryChildren.length; index++) {
       if (!evaluateInstruction(entryChildren[index], target, depth + 1, template, evaluator)) return false;
@@ -3496,8 +3496,8 @@ function AssertionArrayPrefixEvaluate_fast(instruction, instance, depth, templat
 function AssertionObjectPropertiesSimple_fast(instruction, instance, depth, template, evaluator) {
   const target = resolveInstance(instance, instruction[2]);
   if (!isObject(target)) return false;
-  const value = instruction[5];
-  const children = instruction[6];
+  const value = instruction[6];
+  const children = instruction[7];
   for (let index = 0; index < value.length; index++) {
     const entry = value[index];
     const name = entry[0];
@@ -3531,7 +3531,7 @@ function Evaluate_fast(instruction, instance, depth, template, evaluator) {
 function LogicalNotEvaluate_fast(instruction, instance, depth, template, evaluator) {
   const relInstance = instruction[2];
   const target = relInstance.length === 0 ? instance : resolveInstance(instance, relInstance);
-  const children = instruction[6];
+  const children = instruction[7];
   let result = false;
   if (children) {
     for (let index = 0; index < children.length; index++) {
@@ -3547,8 +3547,8 @@ function LogicalNotEvaluate_fast(instruction, instance, depth, template, evaluat
 
 function LogicalWhenArraySizeGreater_fast(instruction, instance, depth, template, evaluator) {
   const target = resolveInstance(instance, instruction[2]);
-  if (!Array.isArray(target) || target.length <= instruction[5]) return true;
-  const children = instruction[6];
+  if (!Array.isArray(target) || target.length <= instruction[6]) return true;
+  const children = instruction[7];
   if (children) {
     for (let index = 0; index < children.length; index++) {
       if (!evaluateInstruction(children[index], target, depth + 1, template, evaluator)) return false;
@@ -3561,7 +3561,7 @@ function LoopPropertiesUnevaluated_fast(instruction, instance, depth, template, 
   const target = resolveInstance(instance, instruction[2]);
   if (!isObject(target)) return true;
   if (evaluator.trackMode && evaluator.isEvaluated(target)) return true;
-  const children = instruction[6];
+  const children = instruction[7];
   for (const key in target) {
     if (evaluator.trackMode && evaluator.isEvaluated(target[key], target, key)) continue;
     if (children) {
@@ -3578,11 +3578,11 @@ function LoopPropertiesUnevaluatedExcept_fast(instruction, instance, depth, temp
   const target = resolveInstance(instance, instruction[2]);
   if (!isObject(target)) return true;
   if (evaluator.trackMode && evaluator.isEvaluated(target)) return true;
-  const filter = instruction[5];
+  const filter = instruction[6];
   const filterStrings = filter[0];
   const filterPrefixes = filter[1];
   const filterRegexes = filter[2];
-  const children = instruction[6];
+  const children = instruction[7];
   for (const key in target) {
     if (filterStrings.has(key)) continue;
     let matched = false;
@@ -3610,7 +3610,7 @@ function LoopPropertiesEvaluate_fast(instruction, instance, depth, template, eva
   const relInstance = instruction[2];
   const target = relInstance.length === 0 ? instance : resolveInstance(instance, relInstance);
   if (!isObject(target)) return true;
-  const children = instruction[6];
+  const children = instruction[7];
   for (const key in target) {
     evaluator.propertyParent = target;
     evaluator.propertyKey = key;
@@ -3634,8 +3634,8 @@ function LoopPropertiesRegex_fast(instruction, instance, depth, template, evalua
   const relInstance = instruction[2];
   const target = relInstance.length === 0 ? instance : resolveInstance(instance, relInstance);
   if (!isObject(target)) return true;
-  const regex = instruction[5];
-  const children = instruction[6];
+  const regex = instruction[6];
+  const children = instruction[7];
   for (const key in target) {
     regex.lastIndex = 0;
     if (!regex.test(key)) continue;
@@ -3660,8 +3660,8 @@ function LoopPropertiesRegexClosed_fast(instruction, instance, depth, template, 
   const relInstance = instruction[2];
   const target = relInstance.length === 0 ? instance : resolveInstance(instance, relInstance);
   if (!isObject(target)) return true;
-  const regex = instruction[5];
-  const children = instruction[6];
+  const regex = instruction[6];
+  const children = instruction[7];
   for (const key in target) {
     regex.lastIndex = 0;
     if (!regex.test(key)) return false;
@@ -3686,8 +3686,8 @@ function LoopPropertiesStartsWith_fast(instruction, instance, depth, template, e
   const relInstance = instruction[2];
   const target = relInstance.length === 0 ? instance : resolveInstance(instance, relInstance);
   if (!isObject(target)) return true;
-  const prefix = instruction[5];
-  const children = instruction[6];
+  const prefix = instruction[6];
+  const children = instruction[7];
   for (const key in target) {
     if (!key.startsWith(prefix)) continue;
     evaluator.propertyParent = target;
@@ -3711,7 +3711,7 @@ function LoopPropertiesType_fast(instruction, instance, depth, template, evaluat
   const relInstance = instruction[2];
   const target = relInstance.length === 0 ? instance : resolveInstance(instance, relInstance);
   if (!isObject(target)) return true;
-  const expected = instruction[5];
+  const expected = instruction[6];
   for (const key in target) {
     const actual = jsonTypeOf(target[key]);
     if (actual !== expected && !(expected === Type.Integer && isIntegral(target[key]))) return false;
@@ -3723,7 +3723,7 @@ function LoopPropertiesTypeEvaluate_fast(instruction, instance, depth, template,
   const relInstance = instruction[2];
   const target = relInstance.length === 0 ? instance : resolveInstance(instance, relInstance);
   if (!isObject(target)) return true;
-  const expected = instruction[5];
+  const expected = instruction[6];
   for (const key in target) {
     const actual = jsonTypeOf(target[key]);
     if (actual !== expected && !(expected === Type.Integer && isIntegral(target[key]))) return false;
@@ -3735,7 +3735,7 @@ function LoopPropertiesTypeEvaluate_fast(instruction, instance, depth, template,
 function LoopPropertiesExactlyTypeStrict_fast(instruction, instance, depth, template, evaluator) {
   const target = resolveInstance(instance, instruction[2]);
   if (!isObject(target)) return false;
-  const value = instruction[5];
+  const value = instruction[6];
   const names = new Set(value[1]);
   let count = 0;
   for (const key in target) {
@@ -3748,7 +3748,7 @@ function LoopPropertiesExactlyTypeStrict_fast(instruction, instance, depth, temp
 function LoopPropertiesExactlyTypeStrictHash_fast(instruction, instance, depth, template, evaluator) {
   const target = resolveInstance(instance, instruction[2]);
   if (!isObject(target)) return false;
-  const value = instruction[5];
+  const value = instruction[6];
   const entries = value[1][0];
   const expectedCount = entries.length;
   let count = 0;
@@ -3767,7 +3767,7 @@ function LoopPropertiesTypeStrict_fast(instruction, instance, depth, template, e
   const relInstance = instruction[2];
   const target = relInstance.length === 0 ? instance : resolveInstance(instance, relInstance);
   if (!isObject(target)) return true;
-  const expected = instruction[5];
+  const expected = instruction[6];
   for (const key in target) {
     if (effectiveTypeStrictReal(target[key]) !== expected) return false;
   }
@@ -3778,7 +3778,7 @@ function LoopPropertiesTypeStrictEvaluate_fast(instruction, instance, depth, tem
   const relInstance = instruction[2];
   const target = relInstance.length === 0 ? instance : resolveInstance(instance, relInstance);
   if (!isObject(target)) return true;
-  const expected = instruction[5];
+  const expected = instruction[6];
   for (const key in target) {
     if (effectiveTypeStrictReal(target[key]) !== expected) return false;
   }
@@ -3790,7 +3790,7 @@ function LoopPropertiesTypeStrictAny_fast(instruction, instance, depth, template
   const relInstance = instruction[2];
   const target = relInstance.length === 0 ? instance : resolveInstance(instance, relInstance);
   if (!isObject(target)) return true;
-  const bitmask = instruction[5];
+  const bitmask = instruction[6];
   for (const key in target) {
     if (!typeSetTest(bitmask, effectiveTypeStrictReal(target[key]))) return false;
   }
@@ -3801,7 +3801,7 @@ function LoopPropertiesTypeStrictAnyEvaluate_fast(instruction, instance, depth, 
   const relInstance = instruction[2];
   const target = relInstance.length === 0 ? instance : resolveInstance(instance, relInstance);
   if (!isObject(target)) return true;
-  const bitmask = instruction[5];
+  const bitmask = instruction[6];
   for (const key in target) {
     if (!typeSetTest(bitmask, effectiveTypeStrictReal(target[key]))) return false;
   }
@@ -3812,7 +3812,7 @@ function LoopPropertiesTypeStrictAnyEvaluate_fast(instruction, instance, depth, 
 function LoopKeys_fast(instruction, instance, depth, template, evaluator) {
   const target = resolveInstance(instance, instruction[2]);
   if (!isObject(target)) return true;
-  const children = instruction[6];
+  const children = instruction[7];
   for (const key in target) {
     const previousPropertyTarget = evaluator.propertyTarget;
     evaluator.propertyTarget = key;
@@ -3831,9 +3831,9 @@ function LoopKeys_fast(instruction, instance, depth, template, evaluator) {
 
 function LoopItemsFrom_fast(instruction, instance, depth, template, evaluator) {
   const target = resolveInstance(instance, instruction[2]);
-  const startIndex = instruction[5];
+  const startIndex = instruction[6];
   if (!Array.isArray(target) || startIndex >= target.length) return true;
-  const children = instruction[6];
+  const children = instruction[7];
   for (let index = startIndex; index < target.length; index++) {
     if (children) {
       for (let childIndex = 0; childIndex < children.length; childIndex++) {
@@ -3848,7 +3848,7 @@ function LoopItemsUnevaluated_fast(instruction, instance, depth, template, evalu
   const target = resolveInstance(instance, instruction[2]);
   if (!Array.isArray(target)) return true;
   if (evaluator.trackMode && evaluator.isEvaluated(target)) return true;
-  const children = instruction[6];
+  const children = instruction[7];
   for (let index = 0; index < target.length; index++) {
     if (evaluator.trackMode && evaluator.isEvaluated(target[index], target, index)) continue;
     if (children) {
@@ -3864,8 +3864,8 @@ function LoopItemsUnevaluated_fast(instruction, instance, depth, template, evalu
 function LoopItemsPropertiesExactlyTypeStrictHash_fast(instruction, instance, depth, template, evaluator) {
   const target = resolveInstance(instance, instruction[2]);
   if (!Array.isArray(target)) return false;
-  const expectedType = instruction[5][0];
-  const entries = instruction[5][1][0];
+  const expectedType = instruction[6][0];
+  const entries = instruction[6][1][0];
   const expectedCount = entries.length;
   for (let index = 0; index < target.length; index++) {
     const item = target[index];
@@ -3885,9 +3885,9 @@ function LoopItemsPropertiesExactlyTypeStrictHash_fast(instruction, instance, de
 
 function ControlDynamicAnchorJump_fast(instruction, instance, depth, template, evaluator) {
   const resolved = resolveInstance(instance, instruction[2]);
-  const anchor = instruction[5];
+  const anchor = instruction[6];
   if (!evaluator.resources) return false;
-  const anchors = template[5];
+  const anchors = template[6];
   for (let index = 0; index < evaluator.resources.length; index++) {
     const jumpTarget = anchors.get(evaluator.resources[index] + ':' + anchor);
     if (jumpTarget !== undefined) {
@@ -3903,8 +3903,8 @@ function ControlDynamicAnchorJump_fast(instruction, instance, depth, template, e
 function LoopItemsIntegerBounded_fast(instruction, instance, depth, template, evaluator) {
   const target = resolveInstance(instance, instruction[2]);
   if (!Array.isArray(target) || target.length === 0) return true;
-  const minimum = instruction[5][0];
-  const maximum = instruction[5][1];
+  const minimum = instruction[6][0];
+  const maximum = instruction[6][1];
   for (let index = 0; index < target.length; index++) {
     const element = target[index];
     const elementType = typeof element;
@@ -3914,7 +3914,7 @@ function LoopItemsIntegerBounded_fast(instruction, instance, depth, template, ev
 }
 
 function LoopItemsIntegerBoundedSized_fast(instruction, instance, depth, template, evaluator) {
-  const value = instruction[5];
+  const value = instruction[6];
   const minimum = value[0][0];
   const maximum = value[0][1];
   const minimumSize = value[1][0];
@@ -3932,25 +3932,25 @@ function LoopItemsIntegerBoundedSized_fast(instruction, instance, depth, templat
 
 function AssertionTypeIntegerBounded_fast(instruction, instance, depth, template, evaluator) {
   const target = resolveInstance(instance, instruction[2]);
-  const range = instruction[5];
+  const range = instruction[6];
   return (typeof target === 'bigint' || Number.isInteger(target)) && target >= range[0] && target <= range[1];
 }
 
 function AssertionTypeIntegerBoundedStrict_fast(instruction, instance, depth, template, evaluator) {
   const target = resolveInstance(instance, instruction[2]);
-  const range = instruction[5];
+  const range = instruction[6];
   return (typeof target === 'bigint' || Number.isInteger(target)) && target >= range[0] && target <= range[1];
 }
 
 function AssertionTypeIntegerLowerBound_fast(instruction, instance, depth, template, evaluator) {
   const target = resolveInstance(instance, instruction[2]);
-  const range = instruction[5];
+  const range = instruction[6];
   return (typeof target === 'bigint' || Number.isInteger(target)) && target >= range[0];
 }
 
 function AssertionTypeIntegerLowerBoundStrict_fast(instruction, instance, depth, template, evaluator) {
   const target = resolveInstance(instance, instruction[2]);
-  const range = instruction[5];
+  const range = instruction[6];
   return (typeof target === 'bigint' || Number.isInteger(target)) && target >= range[0];
 }
 

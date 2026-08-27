@@ -11,18 +11,19 @@ public:
   [[nodiscard]] auto
   condition(const sourcemeta::core::JSON &schema,
             const sourcemeta::core::JSON &,
-            const sourcemeta::blaze::Vocabularies &vocabularies,
+            const sourcemeta::blaze::SchemaVocabularies &vocabularies,
             const sourcemeta::blaze::SchemaFrame &,
             const sourcemeta::blaze::SchemaFrame::Location &,
             const sourcemeta::blaze::SchemaWalker &,
             const sourcemeta::blaze::SchemaResolver &, const bool) const
       -> SchemaTransformRule::Result override {
-    ONLY_CONTINUE_IF(vocabularies.contains_any(
-                         {Vocabularies::Known::JSON_Schema_2020_12_Validation,
-                          Vocabularies::Known::JSON_Schema_2019_09_Validation,
-                          Vocabularies::Known::JSON_Schema_Draft_7,
-                          Vocabularies::Known::JSON_Schema_Draft_6}) &&
-                     schema.is_object());
+    ONLY_CONTINUE_IF(
+        vocabularies.contains_any(
+            {SchemaVocabularies::Known::JSON_Schema_2020_12_Validation,
+             SchemaVocabularies::Known::JSON_Schema_2019_09_Validation,
+             SchemaVocabularies::Known::JSON_Schema_Draft_7,
+             SchemaVocabularies::Known::JSON_Schema_Draft_6}) &&
+        schema.is_object());
 
     const auto *const_value{schema.try_at("const")};
     ONLY_CONTINUE_IF(const_value);

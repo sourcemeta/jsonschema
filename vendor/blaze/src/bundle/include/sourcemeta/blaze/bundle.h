@@ -18,7 +18,6 @@
 #include <sourcemeta/core/jsonpointer.h>
 
 #include <sourcemeta/blaze/foundation.h>
-#include <sourcemeta/blaze/frame.h>
 
 #include <cstdint>     // std::uint8_t
 #include <functional>  // std::function

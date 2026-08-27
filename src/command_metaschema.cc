@@ -3,7 +3,6 @@
 #include <sourcemeta/core/io.h>
 #include <sourcemeta/core/json.h>
 #include <sourcemeta/core/jsonpointer.h>
-#include <sourcemeta/core/uri.h>
 
 #include <sourcemeta/blaze/compiler.h>
 #include <sourcemeta/blaze/evaluator.h>
@@ -15,7 +14,6 @@
 #include <sstream>     // std::ostringstream
 #include <string>      // std::string
 #include <string_view> // std::string_view
-#include <utility>     // std::move
 
 #include "command.h"
 #include "configuration.h"
@@ -47,32 +45,6 @@ auto effective_dialect(const sourcemeta::core::JSON &schema,
   }
 
   return dialect->to_string();
-}
-
-auto resolve_metaschema(const sourcemeta::core::JSON &schema,
-                        const std::string_view dialect,
-                        const sourcemeta::blaze::SchemaResolver &resolver)
-    -> sourcemeta::core::JSON {
-  // A meta-schema that is embedded in the schema itself takes precedence
-  // over what the resolver knows about, as the schema pins the exact
-  // meta-schema it is described by
-  const auto *embedded{
-      sourcemeta::blaze::metaschema_try_embedded(schema, dialect, resolver)};
-  if (embedded) {
-    return *embedded;
-  }
-
-  auto result{resolver(dialect)};
-  if (result.has_value()) {
-    return std::move(result.value());
-  }
-
-  if (sourcemeta::core::URI{dialect}.is_relative()) {
-    throw sourcemeta::blaze::SchemaRelativeMetaschemaResolutionError{dialect};
-  }
-
-  throw sourcemeta::blaze::SchemaResolutionError{
-      dialect, "Could not resolve the metaschema of the schema"};
 }
 
 } // namespace
@@ -112,10 +84,13 @@ auto sourcemeta::jsonschema::metaschema(
             entry.resolution_base);
       }
 
-      const auto metaschema{
-          resolve_metaschema(entry.second, dialect, custom_resolver)};
+      sourcemeta::blaze::SchemaFrame schema_frame{
+          sourcemeta::blaze::SchemaFrame::Mode::Root};
+      schema_frame.analyse(entry.second, sourcemeta::blaze::schema_walker,
+                           custom_resolver, default_dialect_option);
       const sourcemeta::core::JSON bundled{sourcemeta::blaze::bundle(
-          metaschema, sourcemeta::blaze::schema_walker, custom_resolver,
+          schema_frame.metaschema(custom_resolver),
+          sourcemeta::blaze::schema_walker, custom_resolver,
           sourcemeta::blaze::BundleMode::References, default_dialect_option)};
       sourcemeta::blaze::SchemaFrame frame{
           sourcemeta::blaze::SchemaFrame::Mode::References};
@@ -133,9 +108,8 @@ auto sourcemeta::jsonschema::metaschema(
 
       if (trace) {
         sourcemeta::blaze::TraceOutput output{
-            sourcemeta::blaze::schema_walker, custom_resolver,
-            trace_callback(entry.positions, std::cout),
-            sourcemeta::core::EMPTY_WEAK_POINTER, frame};
+            cache.at(std::string{dialect}),
+            trace_callback(entry.positions, std::cout)};
         result = evaluator.validate(cache.at(std::string{dialect}),
                                     entry.second, std::ref(output));
       } else if (json_output) {
@@ -169,6 +143,9 @@ auto sourcemeta::jsonschema::metaschema(
     } catch (const sourcemeta::blaze::SchemaKeywordError &error) {
       throw sourcemeta::core::FileError<sourcemeta::blaze::SchemaKeywordError>(
           entry.resolution_base, error);
+    } catch (const sourcemeta::blaze::SchemaFrameError &error) {
+      throw sourcemeta::core::FileError<sourcemeta::blaze::SchemaFrameError>(
+          entry.resolution_base, error);
     } catch (const sourcemeta::blaze::CompilerInvalidRegexError &error) {
       throw sourcemeta::core::FileError<
           sourcemeta::blaze::CompilerInvalidRegexError>(entry.resolution_base,
@@ -191,6 +168,10 @@ auto sourcemeta::jsonschema::metaschema(
       throw sourcemeta::core::FileError<
           sourcemeta::blaze::SchemaVocabularyError>(entry.resolution_base,
                                                     error.uri(), error.what());
+    } catch (const sourcemeta::blaze::SchemaUnknownBaseDialectError &) {
+      throw sourcemeta::core::FileError<
+          sourcemeta::blaze::SchemaUnknownBaseDialectError>(
+          entry.resolution_base);
     } catch (const sourcemeta::blaze::SchemaUnknownDialectError &) {
       throw sourcemeta::core::FileError<
           sourcemeta::blaze::SchemaUnknownDialectError>(entry.resolution_base);

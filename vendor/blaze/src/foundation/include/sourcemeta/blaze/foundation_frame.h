@@ -1,24 +1,14 @@
-#ifndef SOURCEMETA_BLAZE_FRAME_H_
-#define SOURCEMETA_BLAZE_FRAME_H_
+#ifndef SOURCEMETA_BLAZE_FOUNDATION_FRAME_H_
+#define SOURCEMETA_BLAZE_FOUNDATION_FRAME_H_
 
-/// @defgroup frame Frame
-/// @brief A static analysis pass that maps URIs and pointers to subschemas.
-///
-/// This functionality is included as follows:
-///
-/// ```cpp
-/// #include <sourcemeta/blaze/frame.h>
-/// ```
-
-#ifndef SOURCEMETA_BLAZE_FRAME_EXPORT
-#include <sourcemeta/blaze/frame_export.h>
+#ifndef SOURCEMETA_BLAZE_FOUNDATION_EXPORT
+#include <sourcemeta/blaze/foundation_export.h>
 #endif
 
 // NOLINTBEGIN(misc-include-cleaner)
-#include <sourcemeta/blaze/frame_error.h>
+#include <sourcemeta/blaze/foundation_error.h>
+#include <sourcemeta/blaze/foundation_types.h>
 // NOLINTEND(misc-include-cleaner)
-
-#include <sourcemeta/blaze/foundation.h>
 
 #include <sourcemeta/core/json.h>
 #include <sourcemeta/core/jsonpointer.h>
@@ -38,7 +28,7 @@
 
 namespace sourcemeta::blaze {
 
-/// @ingroup frame
+/// @ingroup foundation
 ///
 /// This class performs a static analysis pass on the input schema, computing
 /// things such as the static identifiers and references of a schema.
@@ -68,7 +58,7 @@ namespace sourcemeta::blaze {
 ///   sourcemeta::blaze::schema_walker,
 ///   sourcemeta::blaze::schema_resolver);
 /// ```
-class SOURCEMETA_BLAZE_FRAME_EXPORT SchemaFrame {
+class SOURCEMETA_BLAZE_FOUNDATION_EXPORT SchemaFrame {
 public:
   /// The mode of framing. More extensive analysis can be compute and memory
   /// intensive. Each mode is a superset of the previous one. Note that
@@ -124,7 +114,7 @@ public:
 // definition), can shadow an alias defined even on a different namespace.
 #pragma GCC diagnostic ignored "-Wshadow"
 #endif
-  /// @ingroup frame
+  /// @ingroup foundation
   /// The type of a location frame
   enum class LocationType : std::uint8_t {
     Resource,
@@ -217,9 +207,14 @@ public:
   /// Note that as with the meta-schemas that `analyse` found embedded in the
   /// document, what the first resolver reported for a given dialect is what
   /// every later call reports, whichever resolver they pass
+  /// Get the meta-schema of the analysed schema, preferring one embedded in
+  /// the document itself over what the resolver knows about
+  [[nodiscard]] auto metaschema(const SchemaResolver &resolver) const
+      -> const sourcemeta::core::JSON &;
+
   [[nodiscard]] auto vocabularies(const Location &location,
                                   const SchemaResolver &resolver) const
-      -> const Vocabularies &;
+      -> const SchemaVocabularies &;
 
   /// Get the URI associated with a location entry
   [[nodiscard]] auto
@@ -332,14 +327,19 @@ private:
   std::unordered_map<sourcemeta::core::JSON::String,
                      const sourcemeta::core::JSON *>
       probed_metaschemas_;
-  // Vocabularies are a function of the base dialect and dialect alone, and a
-  // schema only tends to make use of a handful of those. We own the dialect
-  // that we key on, as the view that the location holds may point into a
-  // default dialect that the caller of `analyse` only kept around for the
+  // Meta-schemas that the resolver produced, which we must own to hand out
+  // references to. A map, as handing out those references means they have to
+  // survive later insertions
+  mutable std::map<sourcemeta::core::JSON::String, sourcemeta::core::JSON>
+      metaschemas_;
+  // SchemaVocabularies are a function of the base dialect and dialect alone,
+  // and a schema only tends to make use of a handful of those. We own the
+  // dialect that we key on, as the view that the location holds may point into
+  // a default dialect that the caller of `analyse` only kept around for the
   // duration of that call. A deque, as handing out references to the
   // vocabularies means they must survive later insertions
-  mutable std::deque<std::tuple<SchemaBaseDialect,
-                                sourcemeta::core::JSON::String, Vocabularies>>
+  mutable std::deque<std::tuple<
+      SchemaBaseDialect, sourcemeta::core::JSON::String, SchemaVocabularies>>
       vocabularies_;
   mutable std::unordered_map<
       std::reference_wrapper<const sourcemeta::core::WeakPointer>,

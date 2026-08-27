@@ -3,6 +3,8 @@
 
 #include <sourcemeta/blaze/foundation.h>
 
+#include <sourcemeta/core/json.h>
+
 #include <cassert>     // assert
 #include <string_view> // std::string_view
 
@@ -82,6 +84,22 @@ ref_overrides_adjacent_keywords(const SchemaBaseDialect base_dialect) -> bool {
     default:
       return false;
   }
+}
+
+// The dialect a schema declares, falling back to the given default. Unlike
+// the equivalent helper in alterschema, this one knows nothing about the
+// dialect override marker, as only the upgrade rules ever write one and
+// bundling can never observe a document while those are live
+inline auto declared_dialect(const sourcemeta::core::JSON &schema,
+                             const std::string_view default_dialect)
+    -> std::string_view {
+  if (!schema.is_object()) {
+    return default_dialect;
+  }
+
+  const auto *dialect{schema.try_at("$schema")};
+  return (dialect != nullptr && dialect->is_string()) ? dialect->to_string()
+                                                      : default_dialect;
 }
 
 } // namespace sourcemeta::blaze

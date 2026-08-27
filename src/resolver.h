@@ -3,7 +3,6 @@
 
 #include <sourcemeta/blaze/configuration.h>
 #include <sourcemeta/blaze/foundation.h>
-#include <sourcemeta/blaze/frame.h>
 #include <sourcemeta/core/http.h>
 #include <sourcemeta/core/io.h>
 #include <sourcemeta/core/json.h>
@@ -263,8 +262,8 @@ ensure_identifier(sourcemeta::core::JSON &schema, const std::string_view target,
     return;
   }
 
-  sourcemeta::blaze::reidentify(schema, target,
-                                location.value().get().base_dialect);
+  sourcemeta::blaze::schema_reidentify(schema, target,
+                                       location.value().get().base_dialect);
 }
 
 class CustomResolver {
@@ -401,7 +400,8 @@ public:
       // resolve their dialect and identifiers, otherwise the
       // consumer might have no idea what to do with them
       subschema.assign("$schema", sourcemeta::core::JSON{entry.dialect});
-      sourcemeta::blaze::reidentify(subschema, key.second, entry.base_dialect);
+      sourcemeta::blaze::schema_reidentify(subschema, key.second,
+                                           entry.base_dialect);
 
       const auto result{this->schemas.emplace(key.second, subschema)};
       if (!result.second && result.first->second != subschema) {

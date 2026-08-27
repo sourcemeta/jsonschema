@@ -85,8 +85,7 @@ auto print_frame(std::ostream &stream,
     }
 
     stream << "    Dialect           : " << location.second.dialect << "\n";
-    stream << "    Base Dialect      : "
-           << sourcemeta::blaze::to_string(location.second.base_dialect)
+    stream << "    Base Dialect      : " << location.second.base_dialect
            << "\n";
 
     if (location.second.parent.has_value()) {

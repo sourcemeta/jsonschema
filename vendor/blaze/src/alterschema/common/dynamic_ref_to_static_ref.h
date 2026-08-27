@@ -17,7 +17,7 @@ public:
   [[nodiscard]] auto
   condition(const sourcemeta::core::JSON &schema,
             const sourcemeta::core::JSON &root,
-            const sourcemeta::blaze::Vocabularies &vocabularies,
+            const sourcemeta::blaze::SchemaVocabularies &vocabularies,
             const sourcemeta::blaze::SchemaFrame &frame,
             const sourcemeta::blaze::SchemaFrame::Location &location,
             const sourcemeta::blaze::SchemaWalker &,
@@ -25,7 +25,8 @@ public:
       -> SchemaTransformRule::Result override {
     ONLY_CONTINUE_IF(schema.is_object() && !schema.defines("$ref"));
 
-    if (vocabularies.contains(Vocabularies::Known::JSON_Schema_2020_12_Core) &&
+    if (vocabularies.contains(
+            SchemaVocabularies::Known::JSON_Schema_2020_12_Core) &&
         schema.defines("$dynamicRef")) {
       auto reference_pointer{location.pointer};
       reference_pointer.push_back(std::cref(KEYWORD_DYNAMIC_REF));
@@ -72,7 +73,8 @@ public:
       return APPLIES_TO_KEYWORDS("$dynamicRef");
     }
 
-    if (vocabularies.contains(Vocabularies::Known::JSON_Schema_2019_09_Core) &&
+    if (vocabularies.contains(
+            SchemaVocabularies::Known::JSON_Schema_2019_09_Core) &&
         schema.defines("$recursiveRef")) {
       auto reference_pointer{location.pointer};
       reference_pointer.push_back(std::cref(KEYWORD_RECURSIVE_REF));

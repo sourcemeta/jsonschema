@@ -7,7 +7,7 @@ public:
   [[nodiscard]] auto
   condition(const sourcemeta::core::JSON &schema,
             const sourcemeta::core::JSON &,
-            const sourcemeta::blaze::Vocabularies &vocabularies,
+            const sourcemeta::blaze::SchemaVocabularies &vocabularies,
             const sourcemeta::blaze::SchemaFrame &frame,
             const sourcemeta::blaze::SchemaFrame::Location &location,
             const sourcemeta::blaze::SchemaWalker &,
@@ -15,10 +15,10 @@ public:
     static const sourcemeta::core::JSON::String KEYWORD{"anyOf"};
     ONLY_CONTINUE_IF(
         vocabularies.contains_any(
-            {Vocabularies::Known::JSON_Schema_2020_12_Applicator,
-             Vocabularies::Known::JSON_Schema_2019_09_Applicator,
-             Vocabularies::Known::JSON_Schema_Draft_7,
-             Vocabularies::Known::JSON_Schema_Draft_6}) &&
+            {SchemaVocabularies::Known::JSON_Schema_2020_12_Applicator,
+             SchemaVocabularies::Known::JSON_Schema_2019_09_Applicator,
+             SchemaVocabularies::Known::JSON_Schema_Draft_7,
+             SchemaVocabularies::Known::JSON_Schema_Draft_6}) &&
         schema.is_object() && schema.defines(KEYWORD) &&
         schema.at(KEYWORD).is_array() &&
         schema.at(KEYWORD).contains(sourcemeta::core::JSON{false}));

@@ -2,7 +2,7 @@
 #define SOURCEMETA_BLAZE_COMPILER_COMPILE_HELPERS_H_
 
 #include <sourcemeta/blaze/compiler.h>
-#include <sourcemeta/blaze/frame.h>
+#include <sourcemeta/blaze/foundation.h>
 #include <sourcemeta/core/uri.h>
 
 #include <algorithm>  // std::ranges::find, std::ranges::any_of
@@ -71,6 +71,72 @@ inline auto schema_resource_id(const std::vector<std::string> &resources,
          static_cast<std::size_t>(std::distance(resources.cbegin(), iterator));
 }
 
+// Intern the vocabulary that owns a keyword, as an index into
+// Template::vocabularies where zero means the keyword has none
+inline auto
+vocabulary_intern(std::vector<SchemaVocabularies::URI> &vocabularies,
+                  const sourcemeta::blaze::SchemaWalker &walker,
+                  const std::string_view keyword,
+                  const sourcemeta::blaze::SchemaVocabularies &active)
+    -> std::size_t {
+  const auto &result{walker(keyword, active)};
+  if (!result.vocabulary.has_value()) {
+    return 0;
+  }
+
+  // Intern on the vocabulary itself rather than on its string form, as the
+  // known ones are a single byte and comparing them allocates nothing
+  const auto iterator{
+      std::ranges::find(vocabularies, result.vocabulary.value())};
+  if (iterator == vocabularies.end()) {
+    vocabularies.push_back(result.vocabulary.value());
+    return vocabularies.size();
+  }
+
+  return 1 + static_cast<std::size_t>(
+                 std::distance(vocabularies.begin(), iterator));
+}
+
+inline auto vocabulary_id(std::vector<SchemaVocabularies::URI> &vocabularies,
+                          const sourcemeta::blaze::SchemaFrame &frame,
+                          const sourcemeta::blaze::SchemaWalker &walker,
+                          const std::string_view keyword,
+                          const sourcemeta::core::WeakPointer &relative_pointer,
+                          const sourcemeta::core::URI &base,
+                          const sourcemeta::blaze::SchemaVocabularies &active)
+    -> std::size_t {
+  if (!keyword.empty()) {
+    return vocabulary_intern(vocabularies, walker, keyword, active);
+  }
+
+  // Instructions that a keyword emits on its own behalf, such as annotation
+  // emitters, carry no keyword of their own. They sit at the location of the
+  // keyword that produced them, so its last token names that keyword
+  if (relative_pointer.empty() || !relative_pointer.back().is_property()) {
+    return 0;
+  }
+
+  // Except that a keyword compiler may build a context pointing at a
+  // subschema rather than at a keyword, in which case the last token is a
+  // property name that may well collide with a keyword. The token names a
+  // keyword exactly when what contains it is itself a schema, so ask the
+  // frame about the parent rather than guessing. Note we cannot ask about
+  // the token itself, as an applicator that takes a schema, such as
+  // `additionalProperties`, sits at a subschema location of its own
+  const auto parent{
+      frame.traverse(to_uri(relative_pointer.initial(), base).recompose())};
+  if (!parent.has_value() ||
+      (parent.value().get().type !=
+           sourcemeta::blaze::SchemaFrame::LocationType::Subschema &&
+       parent.value().get().type !=
+           sourcemeta::blaze::SchemaFrame::LocationType::Resource)) {
+    return 0;
+  }
+
+  return vocabulary_intern(vocabularies, walker,
+                           relative_pointer.back().to_property(), active);
+}
+
 // Instantiate a value-oriented step with a custom resource
 inline auto make_with_resource(const InstructionIndex type,
                                const Context &context,
@@ -89,7 +155,11 @@ inline auto make_with_resource(const InstructionIndex type,
        .keyword_location =
            to_uri(schema_context.relative_pointer, schema_context.base)
                .recompose(),
-       .schema_resource = schema_resource_id(context.resources, resource)});
+       .schema_resource = schema_resource_id(context.resources, resource),
+       .vocabulary = vocabulary_id(
+           context.vocabularies, context.frame, context.walker,
+           dynamic_context.keyword, schema_context.relative_pointer,
+           schema_context.base, schema_context.vocabularies)});
   return {.type = type,
           .relative_instance_location =
               to_pointer(dynamic_context.base_instance_location),
@@ -124,7 +194,11 @@ inline auto make(const InstructionIndex type, const Context &context,
            to_uri(schema_context.relative_pointer, schema_context.base)
                .recompose(),
        .schema_resource = schema_resource_id(context.resources,
-                                             schema_context.base.recompose())});
+                                             schema_context.base.recompose()),
+       .vocabulary = vocabulary_id(
+           context.vocabularies, context.frame, context.walker,
+           dynamic_context.keyword, schema_context.relative_pointer,
+           schema_context.base, schema_context.vocabularies)});
   return {.type = type,
           .relative_instance_location =
               to_pointer(dynamic_context.base_instance_location),
@@ -445,7 +519,7 @@ is_circular(const sourcemeta::blaze::SchemaFrame &frame,
 // level
 inline auto required_properties(const SchemaContext &schema_context)
     -> ValueStringSet {
-  using Known = sourcemeta::blaze::Vocabularies::Known;
+  using Known = sourcemeta::blaze::SchemaVocabularies::Known;
   const auto imports_validation_vocabulary{
       schema_context.vocabularies.contains(Known::JSON_Schema_Draft_4) ||
       schema_context.vocabularies.contains(Known::JSON_Schema_Draft_6) ||

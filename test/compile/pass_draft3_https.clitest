@@ -14,7 +14,7 @@ RUN compile schema.json STDIN /dev/null IN . INTO result.txt EXPECTING 0
 
 WRITE expected.txt UNTIL EOF
 1> [
-1>   5,
+1>   6,
 1>   false,
 1>   true,
 1>   [
@@ -25,6 +25,7 @@ WRITE expected.txt UNTIL EOF
 1>         [],
 1>         "https://example.com#/additionalProperties",
 1>         2,
+1>         1,
 1>         [ 0 ],
 1>         [
 1>           [
@@ -33,13 +34,15 @@ WRITE expected.txt UNTIL EOF
 1>             [],
 1>             "https://example.com#/additionalProperties/type",
 1>             2,
+1>             1,
 1>             [ 8, 4 ]
 1>           ]
 1>         ]
 1>       ]
 1>     ]
 1>   ],
-1>   []
+1>   [],
+1>   [ "http://json-schema.org/draft-03/schema#" ]
 1> ]
 EOF
 

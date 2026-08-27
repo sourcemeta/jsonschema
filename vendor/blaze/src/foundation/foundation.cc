@@ -8,20 +8,9 @@
 #include <unordered_set> // std::unordered_set
 #include <utility>       // std::move, std::to_underlying
 
-auto sourcemeta::blaze::is_schema(const sourcemeta::core::JSON &schema)
-    -> bool {
-  return schema.is_object() || schema.is_boolean();
-}
-
 // TODO: Make this function detect schemas only using identifier/comment
 // keywords, etc
-auto sourcemeta::blaze::is_empty_schema(const sourcemeta::core::JSON &schema)
-    -> bool {
-  return (schema.is_boolean() && schema.to_boolean()) ||
-         (schema.is_object() && schema.empty());
-}
-
-auto sourcemeta::blaze::to_string(const SchemaBaseDialect base_dialect)
+auto sourcemeta::blaze::base_dialect_uri(const SchemaBaseDialect base_dialect)
     -> std::string_view {
   switch (base_dialect) {
     case SchemaBaseDialect::JSON_Schema_2020_12:
@@ -58,6 +47,12 @@ auto sourcemeta::blaze::to_string(const SchemaBaseDialect base_dialect)
 
   assert(false);
   return {};
+}
+
+auto sourcemeta::blaze::operator<<(std::ostream &stream,
+                                   const SchemaBaseDialect base_dialect)
+    -> std::ostream & {
+  return stream << base_dialect_uri(base_dialect);
 }
 
 auto sourcemeta::blaze::to_base_dialect(const std::string_view base_dialect)
@@ -192,29 +187,30 @@ auto sourcemeta::blaze::identify(const sourcemeta::core::JSON &schema,
   return identifier.to_string();
 }
 
-auto sourcemeta::blaze::reidentify(sourcemeta::core::JSON &schema,
-                                   std::string_view new_identifier,
-                                   const SchemaResolver &resolver,
-                                   std::string_view default_dialect) -> void {
+auto sourcemeta::blaze::schema_reidentify(sourcemeta::core::JSON &schema,
+                                          std::string_view new_identifier,
+                                          const SchemaResolver &resolver,
+                                          std::string_view default_dialect)
+    -> void {
   const auto resolved_base_dialect{
       sourcemeta::blaze::base_dialect(schema, resolver, default_dialect)};
   if (!resolved_base_dialect.has_value()) {
     throw sourcemeta::blaze::SchemaUnknownBaseDialectError();
   }
 
-  reidentify(schema, new_identifier, resolved_base_dialect.value());
+  schema_reidentify(schema, new_identifier, resolved_base_dialect.value());
 }
 
-auto sourcemeta::blaze::reidentify(sourcemeta::core::JSON &schema,
-                                   std::string_view new_identifier,
-                                   const SchemaBaseDialect base_dialect)
+auto sourcemeta::blaze::schema_reidentify(sourcemeta::core::JSON &schema,
+                                          std::string_view new_identifier,
+                                          const SchemaBaseDialect base_dialect)
     -> void {
-  assert(is_schema(schema));
+  assert((schema.is_object() || schema.is_boolean()));
   assert(schema.is_object());
   schema.assign(sourcemeta::blaze::id_keyword(base_dialect),
                 sourcemeta::core::JSON{new_identifier});
 
-  // If we reidentify, and the identifier is still not retrievable, then
+  // If we schema_reidentify, and the identifier is still not retrievable, then
   // we are facing the Draft 7 `$ref` sibling edge case, and we cannot
   // really continue
   if (schema.defines("$ref") && identify(schema, base_dialect).empty()) {
@@ -226,7 +222,7 @@ auto sourcemeta::blaze::dialect(const sourcemeta::core::JSON &schema,
                                 std::string_view default_dialect,
                                 const bool allow_dialect_override)
     -> std::string_view {
-  assert(sourcemeta::blaze::is_schema(schema));
+  assert((schema.is_object() || schema.is_boolean()));
 
   if (allow_dialect_override && schema.is_object()) {
     const auto *override_value{
@@ -355,7 +351,7 @@ base_dialect_with_visited(const sourcemeta::core::JSON &schema,
                           const bool allow_dialect_override,
                           const sourcemeta::core::JSON &document)
     -> std::optional<sourcemeta::blaze::SchemaBaseDialect> {
-  assert(sourcemeta::blaze::is_schema(schema));
+  assert((schema.is_object() || schema.is_boolean()));
   const std::string_view effective_dialect{sourcemeta::blaze::dialect(
       schema, default_dialect, allow_dialect_override)};
 
@@ -441,100 +437,100 @@ auto sourcemeta::blaze::base_dialect(
 namespace {
 auto core_vocabulary_known(
     const sourcemeta::blaze::SchemaBaseDialect base_dialect)
-    -> sourcemeta::blaze::Vocabularies::Known {
+    -> sourcemeta::blaze::SchemaVocabularies::Known {
   using sourcemeta::blaze::SchemaBaseDialect;
-  using sourcemeta::blaze::Vocabularies;
+  using sourcemeta::blaze::SchemaVocabularies;
   switch (base_dialect) {
     case SchemaBaseDialect::JSON_Schema_2020_12:
     case SchemaBaseDialect::JSON_Schema_2020_12_Hyper:
-      return Vocabularies::Known::JSON_Schema_2020_12_Core;
+      return SchemaVocabularies::Known::JSON_Schema_2020_12_Core;
     case SchemaBaseDialect::JSON_Schema_2019_09:
     case SchemaBaseDialect::JSON_Schema_2019_09_Hyper:
-      return Vocabularies::Known::JSON_Schema_2019_09_Core;
+      return SchemaVocabularies::Known::JSON_Schema_2019_09_Core;
     default:
       assert(false);
-      return Vocabularies::Known::JSON_Schema_2020_12_Core;
+      return SchemaVocabularies::Known::JSON_Schema_2020_12_Core;
   }
 }
 
 auto dialect_to_known(const std::string_view dialect)
-    -> std::optional<sourcemeta::blaze::Vocabularies::Known> {
-  using sourcemeta::blaze::Vocabularies;
+    -> std::optional<sourcemeta::blaze::SchemaVocabularies::Known> {
+  using sourcemeta::blaze::SchemaVocabularies;
   if (dialect == "http://json-schema.org/draft-07/schema#") {
-    return Vocabularies::Known::JSON_Schema_Draft_7;
+    return SchemaVocabularies::Known::JSON_Schema_Draft_7;
   }
   if (dialect == "http://json-schema.org/draft-07/hyper-schema#") {
-    return Vocabularies::Known::JSON_Schema_Draft_7_Hyper;
+    return SchemaVocabularies::Known::JSON_Schema_Draft_7_Hyper;
   }
   if (dialect == "http://json-schema.org/draft-06/schema#") {
-    return Vocabularies::Known::JSON_Schema_Draft_6;
+    return SchemaVocabularies::Known::JSON_Schema_Draft_6;
   }
   if (dialect == "http://json-schema.org/draft-06/hyper-schema#") {
-    return Vocabularies::Known::JSON_Schema_Draft_6_Hyper;
+    return SchemaVocabularies::Known::JSON_Schema_Draft_6_Hyper;
   }
   if (dialect == "http://json-schema.org/draft-04/schema#") {
-    return Vocabularies::Known::JSON_Schema_Draft_4;
+    return SchemaVocabularies::Known::JSON_Schema_Draft_4;
   }
   if (dialect == "http://json-schema.org/draft-04/hyper-schema#") {
-    return Vocabularies::Known::JSON_Schema_Draft_4_Hyper;
+    return SchemaVocabularies::Known::JSON_Schema_Draft_4_Hyper;
   }
   if (dialect == "http://json-schema.org/draft-03/schema#") {
-    return Vocabularies::Known::JSON_Schema_Draft_3;
+    return SchemaVocabularies::Known::JSON_Schema_Draft_3;
   }
   if (dialect == "http://json-schema.org/draft-03/hyper-schema#") {
-    return Vocabularies::Known::JSON_Schema_Draft_3_Hyper;
+    return SchemaVocabularies::Known::JSON_Schema_Draft_3_Hyper;
   }
   if (dialect == "http://json-schema.org/draft-02/schema#") {
-    return Vocabularies::Known::JSON_Schema_Draft_2;
+    return SchemaVocabularies::Known::JSON_Schema_Draft_2;
   }
   if (dialect == "http://json-schema.org/draft-02/hyper-schema#") {
-    return Vocabularies::Known::JSON_Schema_Draft_2_Hyper;
+    return SchemaVocabularies::Known::JSON_Schema_Draft_2_Hyper;
   }
   if (dialect == "http://json-schema.org/draft-01/schema#") {
-    return Vocabularies::Known::JSON_Schema_Draft_1;
+    return SchemaVocabularies::Known::JSON_Schema_Draft_1;
   }
   if (dialect == "http://json-schema.org/draft-01/hyper-schema#") {
-    return Vocabularies::Known::JSON_Schema_Draft_1_Hyper;
+    return SchemaVocabularies::Known::JSON_Schema_Draft_1_Hyper;
   }
   if (dialect == "http://json-schema.org/draft-00/schema#") {
-    return Vocabularies::Known::JSON_Schema_Draft_0;
+    return SchemaVocabularies::Known::JSON_Schema_Draft_0;
   }
   if (dialect == "http://json-schema.org/draft-00/hyper-schema#") {
-    return Vocabularies::Known::JSON_Schema_Draft_0_Hyper;
+    return SchemaVocabularies::Known::JSON_Schema_Draft_0_Hyper;
   }
   return std::nullopt;
 }
 
 auto base_dialect_to_known(const sourcemeta::blaze::SchemaBaseDialect dialect)
-    -> sourcemeta::blaze::Vocabularies::Known {
+    -> sourcemeta::blaze::SchemaVocabularies::Known {
   using sourcemeta::blaze::SchemaBaseDialect;
-  using sourcemeta::blaze::Vocabularies;
+  using sourcemeta::blaze::SchemaVocabularies;
   switch (dialect) {
     case SchemaBaseDialect::JSON_Schema_Draft_7:
-      return Vocabularies::Known::JSON_Schema_Draft_7;
+      return SchemaVocabularies::Known::JSON_Schema_Draft_7;
     case SchemaBaseDialect::JSON_Schema_Draft_7_Hyper:
-      return Vocabularies::Known::JSON_Schema_Draft_7_Hyper;
+      return SchemaVocabularies::Known::JSON_Schema_Draft_7_Hyper;
     case SchemaBaseDialect::JSON_Schema_Draft_6:
-      return Vocabularies::Known::JSON_Schema_Draft_6;
+      return SchemaVocabularies::Known::JSON_Schema_Draft_6;
     case SchemaBaseDialect::JSON_Schema_Draft_6_Hyper:
-      return Vocabularies::Known::JSON_Schema_Draft_6_Hyper;
+      return SchemaVocabularies::Known::JSON_Schema_Draft_6_Hyper;
     case SchemaBaseDialect::JSON_Schema_Draft_4:
-      return Vocabularies::Known::JSON_Schema_Draft_4;
+      return SchemaVocabularies::Known::JSON_Schema_Draft_4;
     case SchemaBaseDialect::JSON_Schema_Draft_4_Hyper:
-      return Vocabularies::Known::JSON_Schema_Draft_4_Hyper;
+      return SchemaVocabularies::Known::JSON_Schema_Draft_4_Hyper;
     case SchemaBaseDialect::JSON_Schema_Draft_3:
-      return Vocabularies::Known::JSON_Schema_Draft_3;
+      return SchemaVocabularies::Known::JSON_Schema_Draft_3;
     case SchemaBaseDialect::JSON_Schema_Draft_3_Hyper:
-      return Vocabularies::Known::JSON_Schema_Draft_3_Hyper;
+      return SchemaVocabularies::Known::JSON_Schema_Draft_3_Hyper;
     case SchemaBaseDialect::JSON_Schema_Draft_2_Hyper:
-      return Vocabularies::Known::JSON_Schema_Draft_2_Hyper;
+      return SchemaVocabularies::Known::JSON_Schema_Draft_2_Hyper;
     case SchemaBaseDialect::JSON_Schema_Draft_1_Hyper:
-      return Vocabularies::Known::JSON_Schema_Draft_1_Hyper;
+      return SchemaVocabularies::Known::JSON_Schema_Draft_1_Hyper;
     case SchemaBaseDialect::JSON_Schema_Draft_0_Hyper:
-      return Vocabularies::Known::JSON_Schema_Draft_0_Hyper;
+      return SchemaVocabularies::Known::JSON_Schema_Draft_0_Hyper;
     default:
       assert(false);
-      return Vocabularies::Known::JSON_Schema_Draft_7;
+      return SchemaVocabularies::Known::JSON_Schema_Draft_7;
   }
 }
 
@@ -561,7 +557,7 @@ auto is_pre_vocabulary_base_dialect(
 
 auto parse_vocabularies(const sourcemeta::core::JSON &schema,
                         const sourcemeta::blaze::SchemaBaseDialect base_dialect)
-    -> std::optional<sourcemeta::blaze::Vocabularies> {
+    -> std::optional<sourcemeta::blaze::SchemaVocabularies> {
   if (base_dialect !=
           sourcemeta::blaze::SchemaBaseDialect::JSON_Schema_2020_12 &&
       base_dialect !=
@@ -586,7 +582,7 @@ auto parse_vocabularies(const sourcemeta::core::JSON &schema,
     return std::nullopt;
   }
 
-  sourcemeta::blaze::Vocabularies result;
+  sourcemeta::blaze::SchemaVocabularies result;
   for (const auto &entry : vocabulary_entry->as_object()) {
     if (!entry.second.is_boolean()) {
       return std::nullopt;
@@ -602,7 +598,7 @@ auto parse_vocabularies(const sourcemeta::core::JSON &schema,
 auto sourcemeta::blaze::vocabularies(
     const sourcemeta::core::JSON &schema,
     const sourcemeta::blaze::SchemaResolver &resolver,
-    std::string_view default_dialect) -> sourcemeta::blaze::Vocabularies {
+    std::string_view default_dialect) -> sourcemeta::blaze::SchemaVocabularies {
   const auto resolved_base_dialect{
       sourcemeta::blaze::base_dialect(schema, resolver, default_dialect)};
   if (!resolved_base_dialect.has_value()) {
@@ -638,28 +634,29 @@ auto sourcemeta::blaze::vocabularies(
 auto sourcemeta::blaze::vocabularies(const SchemaResolver &resolver,
                                      const SchemaBaseDialect base_dialect,
                                      std::string_view dialect)
-    -> sourcemeta::blaze::Vocabularies {
-  const auto base_dialect_string{to_string(base_dialect)};
+    -> sourcemeta::blaze::SchemaVocabularies {
+  const auto base_dialect_string{base_dialect_uri(base_dialect)};
   // As a performance optimization shortcut
   if (base_dialect_string == dialect ||
       to_base_dialect(dialect) == base_dialect) {
     if (base_dialect == SchemaBaseDialect::JSON_Schema_2020_12) {
-      return Vocabularies{
-          {Vocabularies::Known::JSON_Schema_2020_12_Core, true},
-          {Vocabularies::Known::JSON_Schema_2020_12_Applicator, true},
-          {Vocabularies::Known::JSON_Schema_2020_12_Unevaluated, true},
-          {Vocabularies::Known::JSON_Schema_2020_12_Validation, true},
-          {Vocabularies::Known::JSON_Schema_2020_12_Meta_Data, true},
-          {Vocabularies::Known::JSON_Schema_2020_12_Format_Annotation, true},
-          {Vocabularies::Known::JSON_Schema_2020_12_Content, true}};
+      return SchemaVocabularies{
+          {SchemaVocabularies::Known::JSON_Schema_2020_12_Core, true},
+          {SchemaVocabularies::Known::JSON_Schema_2020_12_Applicator, true},
+          {SchemaVocabularies::Known::JSON_Schema_2020_12_Unevaluated, true},
+          {SchemaVocabularies::Known::JSON_Schema_2020_12_Validation, true},
+          {SchemaVocabularies::Known::JSON_Schema_2020_12_Meta_Data, true},
+          {SchemaVocabularies::Known::JSON_Schema_2020_12_Format_Annotation,
+           true},
+          {SchemaVocabularies::Known::JSON_Schema_2020_12_Content, true}};
     } else if (base_dialect == SchemaBaseDialect::JSON_Schema_2019_09) {
-      return Vocabularies{
-          {Vocabularies::Known::JSON_Schema_2019_09_Core, true},
-          {Vocabularies::Known::JSON_Schema_2019_09_Applicator, true},
-          {Vocabularies::Known::JSON_Schema_2019_09_Validation, true},
-          {Vocabularies::Known::JSON_Schema_2019_09_Meta_Data, true},
-          {Vocabularies::Known::JSON_Schema_2019_09_Format, false},
-          {Vocabularies::Known::JSON_Schema_2019_09_Content, true}};
+      return SchemaVocabularies{
+          {SchemaVocabularies::Known::JSON_Schema_2019_09_Core, true},
+          {SchemaVocabularies::Known::JSON_Schema_2019_09_Applicator, true},
+          {SchemaVocabularies::Known::JSON_Schema_2019_09_Validation, true},
+          {SchemaVocabularies::Known::JSON_Schema_2019_09_Meta_Data, true},
+          {SchemaVocabularies::Known::JSON_Schema_2019_09_Format, false},
+          {SchemaVocabularies::Known::JSON_Schema_2019_09_Content, true}};
     }
   }
 
@@ -679,9 +676,9 @@ auto sourcemeta::blaze::vocabularies(const SchemaResolver &resolver,
       dialect == "http://json-schema.org/draft-00/schema#") {
     const auto known = dialect_to_known(dialect);
     if (known.has_value()) {
-      return Vocabularies{{known.value(), true}};
+      return SchemaVocabularies{{known.value(), true}};
     }
-    return Vocabularies{{std::string{dialect}, true}};
+    return SchemaVocabularies{{std::string{dialect}, true}};
   }
 
   /*
@@ -690,7 +687,7 @@ auto sourcemeta::blaze::vocabularies(const SchemaResolver &resolver,
    */
 
   if (is_pre_vocabulary_base_dialect(base_dialect)) {
-    return Vocabularies{{base_dialect_to_known(base_dialect), true}};
+    return SchemaVocabularies{{base_dialect_to_known(base_dialect), true}};
   }
 
   /*
@@ -716,7 +713,7 @@ auto sourcemeta::blaze::vocabularies(const SchemaResolver &resolver,
 
   const auto core{core_vocabulary_known(base_dialect)};
   auto result{parse_vocabularies(schema_dialect, base_dialect)
-                  .value_or(Vocabularies{})};
+                  .value_or(SchemaVocabularies{})};
   if (result.empty()) {
     result.insert(core, true);
   }
@@ -730,43 +727,6 @@ auto sourcemeta::blaze::vocabularies(const SchemaResolver &resolver,
     if (core_status.has_value() && !core_status.value()) {
       throw sourcemeta::blaze::SchemaError(
           "The core vocabulary must always be required");
-    }
-  }
-
-  return result;
-}
-
-static auto parse_schema_type_string(const sourcemeta::core::JSON::String &type,
-                                     sourcemeta::core::JSON::TypeSet &result)
-    -> void {
-  if (type == "null") {
-    result.set(std::to_underlying(sourcemeta::core::JSON::Type::Null));
-  } else if (type == "boolean") {
-    result.set(std::to_underlying(sourcemeta::core::JSON::Type::Boolean));
-  } else if (type == "object") {
-    result.set(std::to_underlying(sourcemeta::core::JSON::Type::Object));
-  } else if (type == "array") {
-    result.set(std::to_underlying(sourcemeta::core::JSON::Type::Array));
-  } else if (type == "number") {
-    result.set(std::to_underlying(sourcemeta::core::JSON::Type::Integer));
-    result.set(std::to_underlying(sourcemeta::core::JSON::Type::Real));
-  } else if (type == "integer") {
-    result.set(std::to_underlying(sourcemeta::core::JSON::Type::Integer));
-  } else if (type == "string") {
-    result.set(std::to_underlying(sourcemeta::core::JSON::Type::String));
-  }
-}
-
-auto sourcemeta::blaze::parse_schema_type(const sourcemeta::core::JSON &type)
-    -> sourcemeta::core::JSON::TypeSet {
-  sourcemeta::core::JSON::TypeSet result;
-  if (type.is_string()) {
-    parse_schema_type_string(type.to_string(), result);
-  } else if (type.is_array()) {
-    for (const auto &item : type.as_array()) {
-      if (item.is_string()) {
-        parse_schema_type_string(item.to_string(), result);
-      }
     }
   }
 

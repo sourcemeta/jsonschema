@@ -3,12 +3,13 @@ public:
   using reframe_after_transform = std::true_type;
   UnknownKeywordsPrefix() : SchemaTransformRule{"unknown_keywords_prefix"} {};
 
-  [[nodiscard]] auto
-  condition(const sourcemeta::core::JSON &schema,
-            const sourcemeta::core::JSON &, const Vocabularies &vocabularies,
-            const SchemaFrame &, const SchemaFrame::Location &,
-            const SchemaWalker &walker, const SchemaResolver &) const
-      -> bool override {
+  [[nodiscard]] auto condition(const sourcemeta::core::JSON &schema,
+                               const sourcemeta::core::JSON &,
+                               const SchemaVocabularies &vocabularies,
+                               const SchemaFrame &,
+                               const SchemaFrame::Location &,
+                               const SchemaWalker &walker,
+                               const SchemaResolver &) const -> bool override {
     ONLY_CONTINUE_IF(schema.is_object());
     std::vector<sourcemeta::core::Pointer> locations;
     for (const auto &entry : schema.as_object()) {

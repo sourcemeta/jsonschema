@@ -1,5 +1,7 @@
 #include <sourcemeta/blaze/foundation_vocabularies.h>
 
+#include "helpers.h"
+
 #include <sourcemeta/blaze/foundation_error.h>
 
 #include <cassert>  // assert
@@ -74,13 +76,13 @@
 
 namespace {
 auto uri_to_known_vocabulary(const std::string_view uri)
-    -> std::optional<sourcemeta::blaze::Vocabularies::Known> {
-  using sourcemeta::blaze::Vocabularies;
+    -> std::optional<sourcemeta::blaze::SchemaVocabularies::Known> {
+  using sourcemeta::blaze::SchemaVocabularies;
 
 // NOLINTNEXTLINE(bugprone-macro-parentheses)
 #define X_URI_TO_ENUM(enumerator, uri_string)                                  \
   if (uri == (uri_string)) {                                                   \
-    return Vocabularies::Known::enumerator;                                    \
+    return SchemaVocabularies::Known::enumerator;                              \
   }
 
   SOURCEMETA_VOCABULARIES_X(X_URI_TO_ENUM)
@@ -91,7 +93,7 @@ auto uri_to_known_vocabulary(const std::string_view uri)
 }
 } // anonymous namespace
 
-sourcemeta::blaze::Vocabularies::Vocabularies(
+sourcemeta::blaze::SchemaVocabularies::SchemaVocabularies(
     std::initializer_list<std::pair<sourcemeta::core::JSON::String, bool>>
         init) {
   for (const auto &entry : init) {
@@ -99,7 +101,7 @@ sourcemeta::blaze::Vocabularies::Vocabularies(
   }
 }
 
-sourcemeta::blaze::Vocabularies::Vocabularies(
+sourcemeta::blaze::SchemaVocabularies::SchemaVocabularies(
     std::initializer_list<std::pair<Known, bool>> init) {
   for (const auto &entry : init) {
     this->insert(entry.first, entry.second);
@@ -107,7 +109,7 @@ sourcemeta::blaze::Vocabularies::Vocabularies(
 }
 
 // NOLINTNEXTLINE(bugprone-exception-escape)
-auto sourcemeta::blaze::Vocabularies::contains(
+auto sourcemeta::blaze::SchemaVocabularies::contains(
     const sourcemeta::core::JSON::String &uri) const noexcept -> bool {
   if (this->unknown.has_value()) {
     if (this->unknown->contains(uri)) {
@@ -127,14 +129,14 @@ auto sourcemeta::blaze::Vocabularies::contains(
   return false;
 }
 
-auto sourcemeta::blaze::Vocabularies::contains(Known vocabulary) const noexcept
-    -> bool {
+auto sourcemeta::blaze::SchemaVocabularies::contains(
+    Known vocabulary) const noexcept -> bool {
   const auto index = std::to_underlying(vocabulary);
   // Use [] operator instead of test() to avoid exceptions in noexcept function
   return this->required_known[index] || this->optional_known[index];
 }
 
-auto sourcemeta::blaze::Vocabularies::contains_any(
+auto sourcemeta::blaze::SchemaVocabularies::contains_any(
     std::initializer_list<Known> vocabularies) const noexcept -> bool {
   for (const auto &vocabulary : vocabularies) {
     if (this->contains(vocabulary)) {
@@ -146,7 +148,7 @@ auto sourcemeta::blaze::Vocabularies::contains_any(
 }
 
 // NOLINTNEXTLINE(bugprone-exception-escape)
-auto sourcemeta::blaze::Vocabularies::insert(
+auto sourcemeta::blaze::SchemaVocabularies::insert(
     const sourcemeta::core::JSON::String &uri, bool required) noexcept -> void {
   // We NEED to allow official vocabulary string URIs here, as that's how
   // we construct the optimised version!
@@ -161,8 +163,9 @@ auto sourcemeta::blaze::Vocabularies::insert(
   }
 }
 
-auto sourcemeta::blaze::Vocabularies::insert(Known vocabulary,
-                                             bool required) noexcept -> void {
+auto sourcemeta::blaze::SchemaVocabularies::insert(Known vocabulary,
+                                                   bool required) noexcept
+    -> void {
   const auto index = std::to_underlying(vocabulary);
   if (required) {
     this->required_known[index] = true;
@@ -176,7 +179,7 @@ auto sourcemeta::blaze::Vocabularies::insert(Known vocabulary,
 }
 
 // NOLINTNEXTLINE(bugprone-exception-escape)
-auto sourcemeta::blaze::Vocabularies::get(
+auto sourcemeta::blaze::SchemaVocabularies::get(
     const sourcemeta::core::JSON::String &uri) const noexcept
     -> std::optional<bool> {
   if (this->unknown.has_value()) {
@@ -198,7 +201,7 @@ auto sourcemeta::blaze::Vocabularies::get(
   return std::nullopt;
 }
 
-auto sourcemeta::blaze::Vocabularies::get(Known vocabulary) const noexcept
+auto sourcemeta::blaze::SchemaVocabularies::get(Known vocabulary) const noexcept
     -> std::optional<bool> {
   const auto index = std::to_underlying(vocabulary);
   // Use [] operator instead of test() to avoid exceptions in noexcept function
@@ -212,44 +215,34 @@ auto sourcemeta::blaze::Vocabularies::get(Known vocabulary) const noexcept
   return std::nullopt;
 }
 
-auto sourcemeta::blaze::Vocabularies::size() const noexcept -> std::size_t {
+auto sourcemeta::blaze::SchemaVocabularies::size() const noexcept
+    -> std::size_t {
   return (this->required_known | this->optional_known).count() +
          (this->unknown.has_value() ? this->unknown->size() : 0);
 }
 
-auto sourcemeta::blaze::Vocabularies::empty() const noexcept -> bool {
+auto sourcemeta::blaze::SchemaVocabularies::empty() const noexcept -> bool {
   return this->required_known.none() && this->optional_known.none() &&
          !this->has_unknown();
 }
 
-auto sourcemeta::blaze::Vocabularies::has_unknown() const noexcept -> bool {
+auto sourcemeta::blaze::SchemaVocabularies::has_unknown() const noexcept
+    -> bool {
   return this->unknown.has_value() && !this->unknown->empty();
 }
 
 auto sourcemeta::blaze::operator<<(std::ostream &stream,
-                                   Vocabularies::Known vocabulary)
+                                   SchemaVocabularies::Known vocabulary)
     -> std::ostream & {
-  switch (vocabulary) {
-// NOLINTNEXTLINE(bugprone-macro-parentheses)
-#define X_ENUM_TO_URI(enumerator, uri_string)                                  \
-  case Vocabularies::Known::enumerator:                                        \
-    return stream << (uri_string);
-
-    SOURCEMETA_VOCABULARIES_X(X_ENUM_TO_URI)
-
-#undef X_ENUM_TO_URI
-  }
-
-  assert(false);
-  return stream;
+  return stream << vocabulary_uri(vocabulary);
 }
 
-auto sourcemeta::blaze::to_string(Vocabularies::Known vocabulary)
+auto sourcemeta::blaze::vocabulary_uri(SchemaVocabularies::Known vocabulary)
     -> std::string_view {
   switch (vocabulary) {
 // NOLINTNEXTLINE(bugprone-macro-parentheses)
 #define X_ENUM_TO_URI(enumerator, uri_string)                                  \
-  case Vocabularies::Known::enumerator:                                        \
+  case SchemaVocabularies::Known::enumerator:                                  \
     return (uri_string);
 
     SOURCEMETA_VOCABULARIES_X(X_ENUM_TO_URI)
@@ -261,23 +254,23 @@ auto sourcemeta::blaze::to_string(Vocabularies::Known vocabulary)
   return {};
 }
 
-auto sourcemeta::blaze::to_string(const Vocabularies::URI &vocabulary)
-    -> std::string_view {
-  const auto *known{std::get_if<Vocabularies::Known>(&vocabulary)};
+auto sourcemeta::blaze::vocabulary_uri(
+    const SchemaVocabularies::URI &vocabulary) -> std::string_view {
+  const auto *known{std::get_if<SchemaVocabularies::Known>(&vocabulary)};
   if (known) {
-    return to_string(*known);
+    return vocabulary_uri(*known);
   } else {
     return *std::get_if<sourcemeta::core::JSON::String>(&vocabulary);
   }
 }
 
 auto sourcemeta::blaze::operator<<(std::ostream &stream,
-                                   const Vocabularies::URI &vocabulary)
+                                   const SchemaVocabularies::URI &vocabulary)
     -> std::ostream & {
-  return stream << to_string(vocabulary);
+  return stream << vocabulary_uri(vocabulary);
 }
 
-auto sourcemeta::blaze::Vocabularies::throw_if_any_unsupported(
+auto sourcemeta::blaze::SchemaVocabularies::throw_if_any_unsupported(
     const std::unordered_set<URI> &supported, const char *message) const
     -> void {
   for (std::size_t index = 0; index < KNOWN_VOCABULARY_COUNT; ++index) {

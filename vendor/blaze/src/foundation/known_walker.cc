@@ -6,9 +6,9 @@ namespace sourcemeta::blaze {
 
 namespace {
 
-using Known = Vocabularies::Known;
+using Known = SchemaVocabularies::Known;
 using KeywordHandler =
-    const SchemaWalkerResult &(*)(const Vocabularies &vocabularies);
+    const SchemaWalkerResult &(*)(const SchemaVocabularies &vocabularies);
 
 // NOLINTNEXTLINE(bugprone-throwing-static-initialization)
 static const SchemaWalkerResult UNKNOWN_RESULT{
@@ -18,7 +18,7 @@ static const SchemaWalkerResult UNKNOWN_RESULT{
 static const SchemaWalkerResult UNKNOWN_WITH_REF_RESULT{
     SchemaKeywordType::Unknown, std::nullopt, {"$ref"}, {}, {}};
 
-auto has_draft3_to_7(const Vocabularies &vocabularies) -> bool {
+auto has_draft3_to_7(const SchemaVocabularies &vocabularies) -> bool {
   return vocabularies.contains(Known::JSON_Schema_Draft_7) ||
          vocabularies.contains(Known::JSON_Schema_Draft_7_Hyper) ||
          vocabularies.contains(Known::JSON_Schema_Draft_6) ||
@@ -68,7 +68,7 @@ auto has_draft3_to_7(const Vocabularies &vocabularies) -> bool {
     RETURN(_vocabulary, _types, _strategy)                                     \
   }
 
-auto handle_dollar_id(const Vocabularies &vocabularies)
+auto handle_dollar_id(const SchemaVocabularies &vocabularies)
     -> const SchemaWalkerResult & {
   CHECK_VOCABULARY(Known::JSON_Schema_2020_12_Core, {}, Other)
   CHECK_VOCABULARY(Known::JSON_Schema_2019_09_Core, {}, Other)
@@ -83,7 +83,7 @@ auto handle_dollar_id(const Vocabularies &vocabularies)
   return UNKNOWN_RESULT;
 }
 
-auto handle_dollar_schema(const Vocabularies &vocabularies)
+auto handle_dollar_schema(const SchemaVocabularies &vocabularies)
     -> const SchemaWalkerResult & {
   CHECK_VOCABULARY(Known::JSON_Schema_2020_12_Core, {}, Other)
   CHECK_VOCABULARY(Known::JSON_Schema_2019_09_Core, {}, Other)
@@ -112,7 +112,7 @@ auto handle_dollar_schema(const Vocabularies &vocabularies)
   return UNKNOWN_RESULT;
 }
 
-auto handle_dollar_ref(const Vocabularies &vocabularies)
+auto handle_dollar_ref(const SchemaVocabularies &vocabularies)
     -> const SchemaWalkerResult & {
   CHECK_VOCABULARY(Known::JSON_Schema_2020_12_Core, {}, Reference)
   CHECK_VOCABULARY(Known::JSON_Schema_2019_09_Core, {}, Reference)
@@ -133,14 +133,14 @@ auto handle_dollar_ref(const Vocabularies &vocabularies)
   return UNKNOWN_RESULT;
 }
 
-auto handle_dollar_defs(const Vocabularies &vocabularies)
+auto handle_dollar_defs(const SchemaVocabularies &vocabularies)
     -> const SchemaWalkerResult & {
   CHECK_VOCABULARY(Known::JSON_Schema_2020_12_Core, {}, LocationMembers)
   CHECK_VOCABULARY(Known::JSON_Schema_2019_09_Core, {}, LocationMembers)
   return UNKNOWN_RESULT;
 }
 
-auto handle_definitions(const Vocabularies &vocabularies)
+auto handle_definitions(const SchemaVocabularies &vocabularies)
     -> const SchemaWalkerResult & {
   CHECK_VOCABULARY(Known::JSON_Schema_2020_12_Core, {}, LocationMembers)
   CHECK_VOCABULARY(Known::JSON_Schema_2019_09_Core, {}, LocationMembers)
@@ -163,7 +163,7 @@ auto handle_definitions(const Vocabularies &vocabularies)
   return UNKNOWN_RESULT;
 }
 
-auto handle_dollar_comment(const Vocabularies &vocabularies)
+auto handle_dollar_comment(const SchemaVocabularies &vocabularies)
     -> const SchemaWalkerResult & {
   CHECK_VOCABULARY(Known::JSON_Schema_2020_12_Core, {}, Comment)
   CHECK_VOCABULARY(Known::JSON_Schema_2019_09_Core, {}, Comment)
@@ -178,45 +178,46 @@ auto handle_dollar_comment(const Vocabularies &vocabularies)
   return UNKNOWN_RESULT;
 }
 
-auto handle_dollar_anchor(const Vocabularies &vocabularies)
+auto handle_dollar_anchor(const SchemaVocabularies &vocabularies)
     -> const SchemaWalkerResult & {
   CHECK_VOCABULARY(Known::JSON_Schema_2020_12_Core, {}, Other)
   CHECK_VOCABULARY(Known::JSON_Schema_2019_09_Core, {}, Other)
   return UNKNOWN_RESULT;
 }
 
-auto handle_dollar_vocabulary(const Vocabularies &vocabularies)
+auto handle_dollar_vocabulary(const SchemaVocabularies &vocabularies)
     -> const SchemaWalkerResult & {
   CHECK_VOCABULARY(Known::JSON_Schema_2020_12_Core, {}, Other)
   CHECK_VOCABULARY(Known::JSON_Schema_2019_09_Core, {}, Other)
   return UNKNOWN_RESULT;
 }
 
-auto handle_dollar_dynamicRef(const Vocabularies &vocabularies)
+auto handle_dollar_dynamicRef(const SchemaVocabularies &vocabularies)
     -> const SchemaWalkerResult & {
   CHECK_VOCABULARY(Known::JSON_Schema_2020_12_Core, {}, Reference)
   return UNKNOWN_RESULT;
 }
 
-auto handle_dollar_dynamicAnchor(const Vocabularies &vocabularies)
+auto handle_dollar_dynamicAnchor(const SchemaVocabularies &vocabularies)
     -> const SchemaWalkerResult & {
   CHECK_VOCABULARY(Known::JSON_Schema_2020_12_Core, {}, Other)
   return UNKNOWN_RESULT;
 }
 
-auto handle_dollar_recursiveRef(const Vocabularies &vocabularies)
+auto handle_dollar_recursiveRef(const SchemaVocabularies &vocabularies)
     -> const SchemaWalkerResult & {
   CHECK_VOCABULARY(Known::JSON_Schema_2019_09_Core, {}, Reference)
   return UNKNOWN_RESULT;
 }
 
-auto handle_dollar_recursiveAnchor(const Vocabularies &vocabularies)
+auto handle_dollar_recursiveAnchor(const SchemaVocabularies &vocabularies)
     -> const SchemaWalkerResult & {
   CHECK_VOCABULARY(Known::JSON_Schema_2019_09_Core, {}, Other)
   return UNKNOWN_RESULT;
 }
 
-auto handle_id(const Vocabularies &vocabularies) -> const SchemaWalkerResult & {
+auto handle_id(const SchemaVocabularies &vocabularies)
+    -> const SchemaWalkerResult & {
   CHECK_VOCABULARY_WITH_DEPENDENCIES(Known::JSON_Schema_Draft_4, {}, Other,
                                      ("$ref"))
   CHECK_VOCABULARY_WITH_DEPENDENCIES(Known::JSON_Schema_Draft_4_Hyper, {},
@@ -234,7 +235,7 @@ auto handle_id(const Vocabularies &vocabularies) -> const SchemaWalkerResult & {
   return UNKNOWN_RESULT;
 }
 
-auto handle_oneOf(const Vocabularies &vocabularies)
+auto handle_oneOf(const SchemaVocabularies &vocabularies)
     -> const SchemaWalkerResult & {
   CHECK_VOCABULARY(Known::JSON_Schema_2020_12_Applicator, {},
                    ApplicatorElementsInPlaceSome)
@@ -255,7 +256,7 @@ auto handle_oneOf(const Vocabularies &vocabularies)
   return UNKNOWN_RESULT;
 }
 
-auto handle_anyOf(const Vocabularies &vocabularies)
+auto handle_anyOf(const SchemaVocabularies &vocabularies)
     -> const SchemaWalkerResult & {
   CHECK_VOCABULARY(Known::JSON_Schema_2020_12_Applicator, {},
                    ApplicatorElementsInPlaceSome)
@@ -276,7 +277,7 @@ auto handle_anyOf(const Vocabularies &vocabularies)
   return UNKNOWN_RESULT;
 }
 
-auto handle_allOf(const Vocabularies &vocabularies)
+auto handle_allOf(const SchemaVocabularies &vocabularies)
     -> const SchemaWalkerResult & {
   CHECK_VOCABULARY(Known::JSON_Schema_2020_12_Applicator, {},
                    ApplicatorElementsInPlace)
@@ -297,7 +298,8 @@ auto handle_allOf(const Vocabularies &vocabularies)
   return UNKNOWN_RESULT;
 }
 
-auto handle_if(const Vocabularies &vocabularies) -> const SchemaWalkerResult & {
+auto handle_if(const SchemaVocabularies &vocabularies)
+    -> const SchemaWalkerResult & {
   CHECK_VOCABULARY(Known::JSON_Schema_2020_12_Applicator, {},
                    ApplicatorValueInPlaceMaybe)
   CHECK_VOCABULARY(Known::JSON_Schema_2019_09_Applicator, {},
@@ -309,7 +311,7 @@ auto handle_if(const Vocabularies &vocabularies) -> const SchemaWalkerResult & {
   return UNKNOWN_RESULT;
 }
 
-auto handle_then(const Vocabularies &vocabularies)
+auto handle_then(const SchemaVocabularies &vocabularies)
     -> const SchemaWalkerResult & {
   CHECK_VOCABULARY_WITH_DEPENDENCIES(Known::JSON_Schema_2020_12_Applicator, {},
                                      ApplicatorValueInPlaceMaybe, "if")
@@ -322,7 +324,7 @@ auto handle_then(const Vocabularies &vocabularies)
   return UNKNOWN_RESULT;
 }
 
-auto handle_else(const Vocabularies &vocabularies)
+auto handle_else(const SchemaVocabularies &vocabularies)
     -> const SchemaWalkerResult & {
   CHECK_VOCABULARY_WITH_DEPENDENCIES(Known::JSON_Schema_2020_12_Applicator, {},
                                      ApplicatorValueInPlaceMaybe, "if")
@@ -335,7 +337,7 @@ auto handle_else(const Vocabularies &vocabularies)
   return UNKNOWN_RESULT;
 }
 
-auto handle_not(const Vocabularies &vocabularies)
+auto handle_not(const SchemaVocabularies &vocabularies)
     -> const SchemaWalkerResult & {
   CHECK_VOCABULARY(Known::JSON_Schema_2020_12_Applicator, {},
                    ApplicatorValueInPlaceNegate)
@@ -356,7 +358,7 @@ auto handle_not(const Vocabularies &vocabularies)
   return UNKNOWN_RESULT;
 }
 
-auto handle_properties(const Vocabularies &vocabularies)
+auto handle_properties(const SchemaVocabularies &vocabularies)
     -> const SchemaWalkerResult & {
   if (vocabularies.contains(Known::JSON_Schema_2020_12_Applicator)) {
     if (vocabularies.contains(Known::JSON_Schema_2020_12_Validation)) {
@@ -469,7 +471,7 @@ auto handle_properties(const Vocabularies &vocabularies)
   return UNKNOWN_RESULT;
 }
 
-auto handle_additionalProperties(const Vocabularies &vocabularies)
+auto handle_additionalProperties(const SchemaVocabularies &vocabularies)
     -> const SchemaWalkerResult & {
   CHECK_VOCABULARY_WITH_DEPENDENCIES(
       Known::JSON_Schema_2020_12_Applicator,
@@ -538,7 +540,7 @@ auto handle_additionalProperties(const Vocabularies &vocabularies)
   return UNKNOWN_RESULT;
 }
 
-auto handle_patternProperties(const Vocabularies &vocabularies)
+auto handle_patternProperties(const SchemaVocabularies &vocabularies)
     -> const SchemaWalkerResult & {
   CHECK_VOCABULARY(
       Known::JSON_Schema_2020_12_Applicator,
@@ -583,7 +585,7 @@ auto handle_patternProperties(const Vocabularies &vocabularies)
   return UNKNOWN_RESULT;
 }
 
-auto handle_propertyNames(const Vocabularies &vocabularies)
+auto handle_propertyNames(const SchemaVocabularies &vocabularies)
     -> const SchemaWalkerResult & {
   CHECK_VOCABULARY(
       Known::JSON_Schema_2020_12_Applicator,
@@ -612,7 +614,7 @@ auto handle_propertyNames(const Vocabularies &vocabularies)
   return UNKNOWN_RESULT;
 }
 
-auto handle_dependentSchemas(const Vocabularies &vocabularies)
+auto handle_dependentSchemas(const SchemaVocabularies &vocabularies)
     -> const SchemaWalkerResult & {
   CHECK_VOCABULARY(
       Known::JSON_Schema_2020_12_Applicator,
@@ -625,7 +627,7 @@ auto handle_dependentSchemas(const Vocabularies &vocabularies)
   return UNKNOWN_RESULT;
 }
 
-auto handle_dependencies(const Vocabularies &vocabularies)
+auto handle_dependencies(const SchemaVocabularies &vocabularies)
     -> const SchemaWalkerResult & {
   CHECK_VOCABULARY_WITH_DEPENDENCIES(
       Known::JSON_Schema_Draft_7,
@@ -662,7 +664,7 @@ auto handle_dependencies(const Vocabularies &vocabularies)
   return UNKNOWN_RESULT;
 }
 
-auto handle_contains(const Vocabularies &vocabularies)
+auto handle_contains(const SchemaVocabularies &vocabularies)
     -> const SchemaWalkerResult & {
   if (vocabularies.contains(Known::JSON_Schema_2020_12_Applicator)) {
     if (vocabularies.contains(Known::JSON_Schema_2020_12_Validation)) {
@@ -705,7 +707,7 @@ auto handle_contains(const Vocabularies &vocabularies)
   return UNKNOWN_RESULT;
 }
 
-auto handle_items(const Vocabularies &vocabularies)
+auto handle_items(const SchemaVocabularies &vocabularies)
     -> const SchemaWalkerResult & {
   CHECK_VOCABULARY_WITH_DEPENDENCIES(
       Known::JSON_Schema_2020_12_Applicator,
@@ -774,7 +776,7 @@ auto handle_items(const Vocabularies &vocabularies)
   return UNKNOWN_RESULT;
 }
 
-auto handle_prefixItems(const Vocabularies &vocabularies)
+auto handle_prefixItems(const SchemaVocabularies &vocabularies)
     -> const SchemaWalkerResult & {
   CHECK_VOCABULARY(
       Known::JSON_Schema_2020_12_Applicator,
@@ -783,7 +785,7 @@ auto handle_prefixItems(const Vocabularies &vocabularies)
   return UNKNOWN_RESULT;
 }
 
-auto handle_additionalItems(const Vocabularies &vocabularies)
+auto handle_additionalItems(const SchemaVocabularies &vocabularies)
     -> const SchemaWalkerResult & {
   CHECK_VOCABULARY_WITH_DEPENDENCIES(
       Known::JSON_Schema_2019_09_Applicator,
@@ -824,7 +826,7 @@ auto handle_additionalItems(const Vocabularies &vocabularies)
   return UNKNOWN_RESULT;
 }
 
-auto handle_unevaluatedProperties(const Vocabularies &vocabularies)
+auto handle_unevaluatedProperties(const SchemaVocabularies &vocabularies)
     -> const SchemaWalkerResult & {
   if (vocabularies.contains(Known::JSON_Schema_2020_12_Unevaluated)) {
     if (vocabularies.contains(Known::JSON_Schema_2020_12_Applicator)) {
@@ -848,7 +850,7 @@ auto handle_unevaluatedProperties(const Vocabularies &vocabularies)
   return UNKNOWN_RESULT;
 }
 
-auto handle_unevaluatedItems(const Vocabularies &vocabularies)
+auto handle_unevaluatedItems(const SchemaVocabularies &vocabularies)
     -> const SchemaWalkerResult & {
   if (vocabularies.contains(Known::JSON_Schema_2020_12_Unevaluated)) {
     if (vocabularies.contains(Known::JSON_Schema_2020_12_Applicator)) {
@@ -870,7 +872,7 @@ auto handle_unevaluatedItems(const Vocabularies &vocabularies)
   return UNKNOWN_RESULT;
 }
 
-auto handle_type(const Vocabularies &vocabularies)
+auto handle_type(const SchemaVocabularies &vocabularies)
     -> const SchemaWalkerResult & {
   if (vocabularies.contains(Known::JSON_Schema_2020_12_Validation)) {
     if (vocabularies.contains(Known::JSON_Schema_2020_12_Applicator)) {
@@ -917,7 +919,7 @@ auto handle_type(const Vocabularies &vocabularies)
   return UNKNOWN_RESULT;
 }
 
-auto handle_enum(const Vocabularies &vocabularies)
+auto handle_enum(const SchemaVocabularies &vocabularies)
     -> const SchemaWalkerResult & {
   CHECK_VOCABULARY(Known::JSON_Schema_2020_12_Validation, {}, Assertion)
   CHECK_VOCABULARY(Known::JSON_Schema_2019_09_Validation, {}, Assertion)
@@ -946,7 +948,7 @@ auto handle_enum(const Vocabularies &vocabularies)
   return UNKNOWN_RESULT;
 }
 
-auto handle_const(const Vocabularies &vocabularies)
+auto handle_const(const SchemaVocabularies &vocabularies)
     -> const SchemaWalkerResult & {
   CHECK_VOCABULARY(Known::JSON_Schema_2020_12_Validation, {}, Assertion)
   CHECK_VOCABULARY(Known::JSON_Schema_2019_09_Validation, {}, Assertion)
@@ -961,7 +963,7 @@ auto handle_const(const Vocabularies &vocabularies)
   return UNKNOWN_RESULT;
 }
 
-auto handle_multipleOf(const Vocabularies &vocabularies)
+auto handle_multipleOf(const SchemaVocabularies &vocabularies)
     -> const SchemaWalkerResult & {
   CHECK_VOCABULARY(
       Known::JSON_Schema_2020_12_Validation,
@@ -1006,7 +1008,7 @@ auto handle_multipleOf(const Vocabularies &vocabularies)
   return UNKNOWN_RESULT;
 }
 
-auto handle_maximum(const Vocabularies &vocabularies)
+auto handle_maximum(const SchemaVocabularies &vocabularies)
     -> const SchemaWalkerResult & {
   CHECK_VOCABULARY_WITH_ORDER_DEPENDENCIES(
       Known::JSON_Schema_2020_12_Validation,
@@ -1091,7 +1093,7 @@ auto handle_maximum(const Vocabularies &vocabularies)
   return UNKNOWN_RESULT;
 }
 
-auto handle_minimum(const Vocabularies &vocabularies)
+auto handle_minimum(const SchemaVocabularies &vocabularies)
     -> const SchemaWalkerResult & {
   CHECK_VOCABULARY_WITH_ORDER_DEPENDENCIES(
       Known::JSON_Schema_2020_12_Validation,
@@ -1176,7 +1178,7 @@ auto handle_minimum(const Vocabularies &vocabularies)
   return UNKNOWN_RESULT;
 }
 
-auto handle_exclusiveMaximum(const Vocabularies &vocabularies)
+auto handle_exclusiveMaximum(const SchemaVocabularies &vocabularies)
     -> const SchemaWalkerResult & {
   CHECK_VOCABULARY(
       Known::JSON_Schema_2020_12_Validation,
@@ -1231,7 +1233,7 @@ auto handle_exclusiveMaximum(const Vocabularies &vocabularies)
   return UNKNOWN_RESULT;
 }
 
-auto handle_exclusiveMinimum(const Vocabularies &vocabularies)
+auto handle_exclusiveMinimum(const SchemaVocabularies &vocabularies)
     -> const SchemaWalkerResult & {
   CHECK_VOCABULARY(
       Known::JSON_Schema_2020_12_Validation,
@@ -1286,76 +1288,7 @@ auto handle_exclusiveMinimum(const Vocabularies &vocabularies)
   return UNKNOWN_RESULT;
 }
 
-auto handle_maxLength(const Vocabularies &vocabularies)
-    -> const SchemaWalkerResult & {
-  CHECK_VOCABULARY(
-      Known::JSON_Schema_2020_12_Validation,
-      sourcemeta::core::make_set({sourcemeta::core::JSON::Type::String}),
-      Assertion)
-  CHECK_VOCABULARY(
-      Known::JSON_Schema_2019_09_Validation,
-      sourcemeta::core::make_set({sourcemeta::core::JSON::Type::String}),
-      Assertion)
-  CHECK_VOCABULARY_WITH_DEPENDENCIES(
-      Known::JSON_Schema_Draft_7,
-      sourcemeta::core::make_set({sourcemeta::core::JSON::Type::String}),
-      Assertion, ("$ref"))
-  CHECK_VOCABULARY_WITH_DEPENDENCIES(
-      Known::JSON_Schema_Draft_7_Hyper,
-      sourcemeta::core::make_set({sourcemeta::core::JSON::Type::String}),
-      Assertion, "$ref")
-  CHECK_VOCABULARY_WITH_DEPENDENCIES(
-      Known::JSON_Schema_Draft_6,
-      sourcemeta::core::make_set({sourcemeta::core::JSON::Type::String}),
-      Assertion, ("$ref"))
-  CHECK_VOCABULARY_WITH_DEPENDENCIES(
-      Known::JSON_Schema_Draft_6_Hyper,
-      sourcemeta::core::make_set({sourcemeta::core::JSON::Type::String}),
-      Assertion, "$ref")
-  CHECK_VOCABULARY_WITH_DEPENDENCIES(
-      Known::JSON_Schema_Draft_4,
-      sourcemeta::core::make_set({sourcemeta::core::JSON::Type::String}),
-      Assertion, ("$ref"))
-  CHECK_VOCABULARY_WITH_DEPENDENCIES(
-      Known::JSON_Schema_Draft_4_Hyper,
-      sourcemeta::core::make_set({sourcemeta::core::JSON::Type::String}),
-      Assertion, "$ref")
-  CHECK_VOCABULARY_WITH_DEPENDENCIES(
-      Known::JSON_Schema_Draft_3,
-      sourcemeta::core::make_set({sourcemeta::core::JSON::Type::String}),
-      Assertion, ("$ref"))
-  CHECK_VOCABULARY_WITH_DEPENDENCIES(
-      Known::JSON_Schema_Draft_3_Hyper,
-      sourcemeta::core::make_set({sourcemeta::core::JSON::Type::String}),
-      Assertion, "$ref")
-  CHECK_VOCABULARY(
-      Known::JSON_Schema_Draft_2,
-      sourcemeta::core::make_set({sourcemeta::core::JSON::Type::String}),
-      Assertion)
-  CHECK_VOCABULARY(
-      Known::JSON_Schema_Draft_2_Hyper,
-      sourcemeta::core::make_set({sourcemeta::core::JSON::Type::String}),
-      Assertion)
-  CHECK_VOCABULARY(
-      Known::JSON_Schema_Draft_1,
-      sourcemeta::core::make_set({sourcemeta::core::JSON::Type::String}),
-      Assertion)
-  CHECK_VOCABULARY(
-      Known::JSON_Schema_Draft_1_Hyper,
-      sourcemeta::core::make_set({sourcemeta::core::JSON::Type::String}),
-      Assertion)
-  CHECK_VOCABULARY(
-      Known::JSON_Schema_Draft_0,
-      sourcemeta::core::make_set({sourcemeta::core::JSON::Type::String}),
-      Assertion)
-  CHECK_VOCABULARY(
-      Known::JSON_Schema_Draft_0_Hyper,
-      sourcemeta::core::make_set({sourcemeta::core::JSON::Type::String}),
-      Assertion)
-  return UNKNOWN_RESULT;
-}
-
-auto handle_minLength(const Vocabularies &vocabularies)
+auto handle_maxLength(const SchemaVocabularies &vocabularies)
     -> const SchemaWalkerResult & {
   CHECK_VOCABULARY(
       Known::JSON_Schema_2020_12_Validation,
@@ -1424,7 +1357,7 @@ auto handle_minLength(const Vocabularies &vocabularies)
   return UNKNOWN_RESULT;
 }
 
-auto handle_pattern(const Vocabularies &vocabularies)
+auto handle_minLength(const SchemaVocabularies &vocabularies)
     -> const SchemaWalkerResult & {
   CHECK_VOCABULARY(
       Known::JSON_Schema_2020_12_Validation,
@@ -1493,7 +1426,76 @@ auto handle_pattern(const Vocabularies &vocabularies)
   return UNKNOWN_RESULT;
 }
 
-auto handle_maxItems(const Vocabularies &vocabularies)
+auto handle_pattern(const SchemaVocabularies &vocabularies)
+    -> const SchemaWalkerResult & {
+  CHECK_VOCABULARY(
+      Known::JSON_Schema_2020_12_Validation,
+      sourcemeta::core::make_set({sourcemeta::core::JSON::Type::String}),
+      Assertion)
+  CHECK_VOCABULARY(
+      Known::JSON_Schema_2019_09_Validation,
+      sourcemeta::core::make_set({sourcemeta::core::JSON::Type::String}),
+      Assertion)
+  CHECK_VOCABULARY_WITH_DEPENDENCIES(
+      Known::JSON_Schema_Draft_7,
+      sourcemeta::core::make_set({sourcemeta::core::JSON::Type::String}),
+      Assertion, ("$ref"))
+  CHECK_VOCABULARY_WITH_DEPENDENCIES(
+      Known::JSON_Schema_Draft_7_Hyper,
+      sourcemeta::core::make_set({sourcemeta::core::JSON::Type::String}),
+      Assertion, "$ref")
+  CHECK_VOCABULARY_WITH_DEPENDENCIES(
+      Known::JSON_Schema_Draft_6,
+      sourcemeta::core::make_set({sourcemeta::core::JSON::Type::String}),
+      Assertion, ("$ref"))
+  CHECK_VOCABULARY_WITH_DEPENDENCIES(
+      Known::JSON_Schema_Draft_6_Hyper,
+      sourcemeta::core::make_set({sourcemeta::core::JSON::Type::String}),
+      Assertion, "$ref")
+  CHECK_VOCABULARY_WITH_DEPENDENCIES(
+      Known::JSON_Schema_Draft_4,
+      sourcemeta::core::make_set({sourcemeta::core::JSON::Type::String}),
+      Assertion, ("$ref"))
+  CHECK_VOCABULARY_WITH_DEPENDENCIES(
+      Known::JSON_Schema_Draft_4_Hyper,
+      sourcemeta::core::make_set({sourcemeta::core::JSON::Type::String}),
+      Assertion, "$ref")
+  CHECK_VOCABULARY_WITH_DEPENDENCIES(
+      Known::JSON_Schema_Draft_3,
+      sourcemeta::core::make_set({sourcemeta::core::JSON::Type::String}),
+      Assertion, ("$ref"))
+  CHECK_VOCABULARY_WITH_DEPENDENCIES(
+      Known::JSON_Schema_Draft_3_Hyper,
+      sourcemeta::core::make_set({sourcemeta::core::JSON::Type::String}),
+      Assertion, "$ref")
+  CHECK_VOCABULARY(
+      Known::JSON_Schema_Draft_2,
+      sourcemeta::core::make_set({sourcemeta::core::JSON::Type::String}),
+      Assertion)
+  CHECK_VOCABULARY(
+      Known::JSON_Schema_Draft_2_Hyper,
+      sourcemeta::core::make_set({sourcemeta::core::JSON::Type::String}),
+      Assertion)
+  CHECK_VOCABULARY(
+      Known::JSON_Schema_Draft_1,
+      sourcemeta::core::make_set({sourcemeta::core::JSON::Type::String}),
+      Assertion)
+  CHECK_VOCABULARY(
+      Known::JSON_Schema_Draft_1_Hyper,
+      sourcemeta::core::make_set({sourcemeta::core::JSON::Type::String}),
+      Assertion)
+  CHECK_VOCABULARY(
+      Known::JSON_Schema_Draft_0,
+      sourcemeta::core::make_set({sourcemeta::core::JSON::Type::String}),
+      Assertion)
+  CHECK_VOCABULARY(
+      Known::JSON_Schema_Draft_0_Hyper,
+      sourcemeta::core::make_set({sourcemeta::core::JSON::Type::String}),
+      Assertion)
+  return UNKNOWN_RESULT;
+}
+
+auto handle_maxItems(const SchemaVocabularies &vocabularies)
     -> const SchemaWalkerResult & {
   CHECK_VOCABULARY(
       Known::JSON_Schema_2020_12_Validation,
@@ -1562,7 +1564,7 @@ auto handle_maxItems(const Vocabularies &vocabularies)
   return UNKNOWN_RESULT;
 }
 
-auto handle_minItems(const Vocabularies &vocabularies)
+auto handle_minItems(const SchemaVocabularies &vocabularies)
     -> const SchemaWalkerResult & {
   CHECK_VOCABULARY(
       Known::JSON_Schema_2020_12_Validation,
@@ -1631,7 +1633,7 @@ auto handle_minItems(const Vocabularies &vocabularies)
   return UNKNOWN_RESULT;
 }
 
-auto handle_uniqueItems(const Vocabularies &vocabularies)
+auto handle_uniqueItems(const SchemaVocabularies &vocabularies)
     -> const SchemaWalkerResult & {
   CHECK_VOCABULARY(
       Known::JSON_Schema_2020_12_Validation,
@@ -1684,7 +1686,7 @@ auto handle_uniqueItems(const Vocabularies &vocabularies)
   return UNKNOWN_RESULT;
 }
 
-auto handle_maxProperties(const Vocabularies &vocabularies)
+auto handle_maxProperties(const SchemaVocabularies &vocabularies)
     -> const SchemaWalkerResult & {
   CHECK_VOCABULARY(
       Known::JSON_Schema_2020_12_Validation,
@@ -1721,7 +1723,7 @@ auto handle_maxProperties(const Vocabularies &vocabularies)
   return UNKNOWN_RESULT;
 }
 
-auto handle_minProperties(const Vocabularies &vocabularies)
+auto handle_minProperties(const SchemaVocabularies &vocabularies)
     -> const SchemaWalkerResult & {
   CHECK_VOCABULARY(
       Known::JSON_Schema_2020_12_Validation,
@@ -1758,7 +1760,7 @@ auto handle_minProperties(const Vocabularies &vocabularies)
   return UNKNOWN_RESULT;
 }
 
-auto handle_required(const Vocabularies &vocabularies)
+auto handle_required(const SchemaVocabularies &vocabularies)
     -> const SchemaWalkerResult & {
   CHECK_VOCABULARY(
       Known::JSON_Schema_2020_12_Validation,
@@ -1803,7 +1805,7 @@ auto handle_required(const Vocabularies &vocabularies)
   return UNKNOWN_RESULT;
 }
 
-auto handle_dependentRequired(const Vocabularies &vocabularies)
+auto handle_dependentRequired(const SchemaVocabularies &vocabularies)
     -> const SchemaWalkerResult & {
   CHECK_VOCABULARY(
       Known::JSON_Schema_2020_12_Validation,
@@ -1816,7 +1818,7 @@ auto handle_dependentRequired(const Vocabularies &vocabularies)
   return UNKNOWN_RESULT;
 }
 
-auto handle_minContains(const Vocabularies &vocabularies)
+auto handle_minContains(const SchemaVocabularies &vocabularies)
     -> const SchemaWalkerResult & {
   CHECK_VOCABULARY(
       Known::JSON_Schema_2020_12_Validation,
@@ -1829,7 +1831,7 @@ auto handle_minContains(const Vocabularies &vocabularies)
   return UNKNOWN_RESULT;
 }
 
-auto handle_maxContains(const Vocabularies &vocabularies)
+auto handle_maxContains(const SchemaVocabularies &vocabularies)
     -> const SchemaWalkerResult & {
   CHECK_VOCABULARY(
       Known::JSON_Schema_2020_12_Validation,
@@ -1842,7 +1844,7 @@ auto handle_maxContains(const Vocabularies &vocabularies)
   return UNKNOWN_RESULT;
 }
 
-auto handle_title(const Vocabularies &vocabularies)
+auto handle_title(const SchemaVocabularies &vocabularies)
     -> const SchemaWalkerResult & {
   CHECK_VOCABULARY(Known::JSON_Schema_2020_12_Meta_Data, {}, Annotation)
   CHECK_VOCABULARY(Known::JSON_Schema_2019_09_Meta_Data, {}, Annotation)
@@ -1871,7 +1873,7 @@ auto handle_title(const Vocabularies &vocabularies)
   return UNKNOWN_RESULT;
 }
 
-auto handle_description(const Vocabularies &vocabularies)
+auto handle_description(const SchemaVocabularies &vocabularies)
     -> const SchemaWalkerResult & {
   CHECK_VOCABULARY(Known::JSON_Schema_2020_12_Meta_Data, {}, Annotation)
   CHECK_VOCABULARY(Known::JSON_Schema_2019_09_Meta_Data, {}, Annotation)
@@ -1900,7 +1902,7 @@ auto handle_description(const Vocabularies &vocabularies)
   return UNKNOWN_RESULT;
 }
 
-auto handle_default(const Vocabularies &vocabularies)
+auto handle_default(const SchemaVocabularies &vocabularies)
     -> const SchemaWalkerResult & {
   CHECK_VOCABULARY(Known::JSON_Schema_2020_12_Meta_Data, {}, Annotation)
   CHECK_VOCABULARY(Known::JSON_Schema_2019_09_Meta_Data, {}, Annotation)
@@ -1929,14 +1931,14 @@ auto handle_default(const Vocabularies &vocabularies)
   return UNKNOWN_RESULT;
 }
 
-auto handle_deprecated(const Vocabularies &vocabularies)
+auto handle_deprecated(const SchemaVocabularies &vocabularies)
     -> const SchemaWalkerResult & {
   CHECK_VOCABULARY(Known::JSON_Schema_2020_12_Meta_Data, {}, Annotation)
   CHECK_VOCABULARY(Known::JSON_Schema_2019_09_Meta_Data, {}, Annotation)
   return UNKNOWN_RESULT;
 }
 
-auto handle_readOnly(const Vocabularies &vocabularies)
+auto handle_readOnly(const SchemaVocabularies &vocabularies)
     -> const SchemaWalkerResult & {
   CHECK_VOCABULARY(Known::JSON_Schema_2020_12_Meta_Data, {}, Annotation)
   CHECK_VOCABULARY(Known::JSON_Schema_2019_09_Meta_Data, {}, Annotation)
@@ -1954,7 +1956,7 @@ auto handle_readOnly(const Vocabularies &vocabularies)
   return UNKNOWN_RESULT;
 }
 
-auto handle_writeOnly(const Vocabularies &vocabularies)
+auto handle_writeOnly(const SchemaVocabularies &vocabularies)
     -> const SchemaWalkerResult & {
   CHECK_VOCABULARY(Known::JSON_Schema_2020_12_Meta_Data, {}, Annotation)
   CHECK_VOCABULARY(Known::JSON_Schema_2019_09_Meta_Data, {}, Annotation)
@@ -1969,7 +1971,7 @@ auto handle_writeOnly(const Vocabularies &vocabularies)
   return UNKNOWN_RESULT;
 }
 
-auto handle_examples(const Vocabularies &vocabularies)
+auto handle_examples(const SchemaVocabularies &vocabularies)
     -> const SchemaWalkerResult & {
   CHECK_VOCABULARY(Known::JSON_Schema_2020_12_Meta_Data, {}, Annotation)
   CHECK_VOCABULARY(Known::JSON_Schema_2019_09_Meta_Data, {}, Annotation)
@@ -1984,7 +1986,7 @@ auto handle_examples(const Vocabularies &vocabularies)
   return UNKNOWN_RESULT;
 }
 
-auto handle_format(const Vocabularies &vocabularies)
+auto handle_format(const SchemaVocabularies &vocabularies)
     -> const SchemaWalkerResult & {
   CHECK_VOCABULARY(
       Known::JSON_Schema_2020_12_Format_Assertion,
@@ -2051,7 +2053,7 @@ auto handle_format(const Vocabularies &vocabularies)
   return UNKNOWN_RESULT;
 }
 
-auto handle_contentSchema(const Vocabularies &vocabularies)
+auto handle_contentSchema(const SchemaVocabularies &vocabularies)
     -> const SchemaWalkerResult & {
   CHECK_VOCABULARY(
       Known::JSON_Schema_2020_12_Content,
@@ -2064,7 +2066,7 @@ auto handle_contentSchema(const Vocabularies &vocabularies)
   return UNKNOWN_RESULT;
 }
 
-auto handle_contentMediaType(const Vocabularies &vocabularies)
+auto handle_contentMediaType(const SchemaVocabularies &vocabularies)
     -> const SchemaWalkerResult & {
   CHECK_VOCABULARY(
       Known::JSON_Schema_2020_12_Content,
@@ -2093,7 +2095,7 @@ auto handle_contentMediaType(const Vocabularies &vocabularies)
   return UNKNOWN_RESULT;
 }
 
-auto handle_contentEncoding(const Vocabularies &vocabularies)
+auto handle_contentEncoding(const SchemaVocabularies &vocabularies)
     -> const SchemaWalkerResult & {
   CHECK_VOCABULARY(
       Known::JSON_Schema_2020_12_Content,
@@ -2152,7 +2154,7 @@ auto handle_contentEncoding(const Vocabularies &vocabularies)
   return UNKNOWN_RESULT;
 }
 
-auto handle_extends(const Vocabularies &vocabularies)
+auto handle_extends(const SchemaVocabularies &vocabularies)
     -> const SchemaWalkerResult & {
   CHECK_VOCABULARY_WITH_DEPENDENCIES(Known::JSON_Schema_Draft_3, {},
                                      ApplicatorValueOrElementsInPlace, "$ref")
@@ -2173,7 +2175,7 @@ auto handle_extends(const Vocabularies &vocabularies)
   return UNKNOWN_RESULT;
 }
 
-auto handle_disallow(const Vocabularies &vocabularies)
+auto handle_disallow(const SchemaVocabularies &vocabularies)
     -> const SchemaWalkerResult & {
   CHECK_VOCABULARY_WITH_DEPENDENCIES(Known::JSON_Schema_Draft_3, {},
                                      ApplicatorElementsInPlaceSomeNegate,
@@ -2190,7 +2192,7 @@ auto handle_disallow(const Vocabularies &vocabularies)
   return UNKNOWN_RESULT;
 }
 
-auto handle_divisibleBy(const Vocabularies &vocabularies)
+auto handle_divisibleBy(const SchemaVocabularies &vocabularies)
     -> const SchemaWalkerResult & {
   CHECK_VOCABULARY_WITH_DEPENDENCIES(
       Known::JSON_Schema_Draft_3,
@@ -2215,7 +2217,7 @@ auto handle_divisibleBy(const Vocabularies &vocabularies)
   return UNKNOWN_RESULT;
 }
 
-auto handle_maximumCanEqual(const Vocabularies &vocabularies)
+auto handle_maximumCanEqual(const SchemaVocabularies &vocabularies)
     -> const SchemaWalkerResult & {
   CHECK_VOCABULARY(
       Known::JSON_Schema_Draft_2,
@@ -2250,7 +2252,7 @@ auto handle_maximumCanEqual(const Vocabularies &vocabularies)
   return UNKNOWN_RESULT;
 }
 
-auto handle_minimumCanEqual(const Vocabularies &vocabularies)
+auto handle_minimumCanEqual(const SchemaVocabularies &vocabularies)
     -> const SchemaWalkerResult & {
   CHECK_VOCABULARY(
       Known::JSON_Schema_Draft_2,
@@ -2285,7 +2287,7 @@ auto handle_minimumCanEqual(const Vocabularies &vocabularies)
   return UNKNOWN_RESULT;
 }
 
-auto handle_requires(const Vocabularies &vocabularies)
+auto handle_requires(const SchemaVocabularies &vocabularies)
     -> const SchemaWalkerResult & {
   CHECK_VOCABULARY(
       Known::JSON_Schema_Draft_2,
@@ -2314,7 +2316,7 @@ auto handle_requires(const Vocabularies &vocabularies)
   return UNKNOWN_RESULT;
 }
 
-auto handle_optional(const Vocabularies &vocabularies)
+auto handle_optional(const SchemaVocabularies &vocabularies)
     -> const SchemaWalkerResult & {
   CHECK_VOCABULARY(
       Known::JSON_Schema_Draft_2,
@@ -2343,7 +2345,7 @@ auto handle_optional(const Vocabularies &vocabularies)
   return UNKNOWN_RESULT;
 }
 
-auto handle_maxDecimal(const Vocabularies &vocabularies)
+auto handle_maxDecimal(const SchemaVocabularies &vocabularies)
     -> const SchemaWalkerResult & {
   CHECK_VOCABULARY(
       Known::JSON_Schema_Draft_1,
@@ -2364,7 +2366,7 @@ auto handle_maxDecimal(const Vocabularies &vocabularies)
   return UNKNOWN_RESULT;
 }
 
-auto handle_links(const Vocabularies &vocabularies)
+auto handle_links(const SchemaVocabularies &vocabularies)
     -> const SchemaWalkerResult & {
   CHECK_VOCABULARY(Known::JSON_Schema_2019_09_Hyper_Schema, {},
                    ApplicatorElementsInPlace)
@@ -2388,7 +2390,7 @@ auto handle_links(const Vocabularies &vocabularies)
   return UNKNOWN_RESULT;
 }
 
-auto handle_base(const Vocabularies &vocabularies)
+auto handle_base(const SchemaVocabularies &vocabularies)
     -> const SchemaWalkerResult & {
   CHECK_VOCABULARY(Known::JSON_Schema_2019_09_Hyper_Schema, {}, Other)
   CHECK_VOCABULARY_WITH_DEPENDENCIES(Known::JSON_Schema_Draft_7_Hyper, {},
@@ -2401,7 +2403,7 @@ auto handle_base(const Vocabularies &vocabularies)
   return UNKNOWN_RESULT;
 }
 
-auto handle_anchor(const Vocabularies &vocabularies)
+auto handle_anchor(const SchemaVocabularies &vocabularies)
     -> const SchemaWalkerResult & {
   CHECK_VOCABULARY(Known::JSON_Schema_2019_09_Hyper_Schema, {}, Other)
   CHECK_VOCABULARY(Known::JSON_Schema_Draft_7_Hyper, {}, Other)
@@ -2411,7 +2413,7 @@ auto handle_anchor(const Vocabularies &vocabularies)
   return UNKNOWN_RESULT;
 }
 
-auto handle_anchorPointer(const Vocabularies &vocabularies)
+auto handle_anchorPointer(const SchemaVocabularies &vocabularies)
     -> const SchemaWalkerResult & {
   CHECK_VOCABULARY(Known::JSON_Schema_2019_09_Hyper_Schema, {}, Other)
   CHECK_VOCABULARY(Known::JSON_Schema_Draft_7_Hyper, {}, Other)
@@ -2421,23 +2423,7 @@ auto handle_anchorPointer(const Vocabularies &vocabularies)
   return UNKNOWN_RESULT;
 }
 
-auto handle_rel(const Vocabularies &vocabularies)
-    -> const SchemaWalkerResult & {
-  CHECK_VOCABULARY(Known::JSON_Schema_2019_09_Hyper_Schema, {}, Other)
-  CHECK_VOCABULARY(Known::JSON_Schema_Draft_7_Hyper, {}, Other)
-  CHECK_VOCABULARY(Known::JSON_Schema_Draft_6_Hyper, {}, Other)
-  CHECK_VOCABULARY(Known::JSON_Schema_Draft_4_Hyper, {}, Other)
-  CHECK_VOCABULARY(Known::JSON_Schema_Draft_3_Hyper, {}, Other)
-  CHECK_VOCABULARY(Known::JSON_Schema_Draft_2_Hyper, {}, Other)
-  CHECK_VOCABULARY(Known::JSON_Schema_Draft_1_Hyper, {}, Other)
-  CHECK_VOCABULARY(Known::JSON_Schema_Draft_0_Hyper, {}, Other)
-  if (has_draft3_to_7(vocabularies)) {
-    return UNKNOWN_WITH_REF_RESULT;
-  }
-  return UNKNOWN_RESULT;
-}
-
-auto handle_href(const Vocabularies &vocabularies)
+auto handle_rel(const SchemaVocabularies &vocabularies)
     -> const SchemaWalkerResult & {
   CHECK_VOCABULARY(Known::JSON_Schema_2019_09_Hyper_Schema, {}, Other)
   CHECK_VOCABULARY(Known::JSON_Schema_Draft_7_Hyper, {}, Other)
@@ -2453,7 +2439,23 @@ auto handle_href(const Vocabularies &vocabularies)
   return UNKNOWN_RESULT;
 }
 
-auto handle_templatePointers(const Vocabularies &vocabularies)
+auto handle_href(const SchemaVocabularies &vocabularies)
+    -> const SchemaWalkerResult & {
+  CHECK_VOCABULARY(Known::JSON_Schema_2019_09_Hyper_Schema, {}, Other)
+  CHECK_VOCABULARY(Known::JSON_Schema_Draft_7_Hyper, {}, Other)
+  CHECK_VOCABULARY(Known::JSON_Schema_Draft_6_Hyper, {}, Other)
+  CHECK_VOCABULARY(Known::JSON_Schema_Draft_4_Hyper, {}, Other)
+  CHECK_VOCABULARY(Known::JSON_Schema_Draft_3_Hyper, {}, Other)
+  CHECK_VOCABULARY(Known::JSON_Schema_Draft_2_Hyper, {}, Other)
+  CHECK_VOCABULARY(Known::JSON_Schema_Draft_1_Hyper, {}, Other)
+  CHECK_VOCABULARY(Known::JSON_Schema_Draft_0_Hyper, {}, Other)
+  if (has_draft3_to_7(vocabularies)) {
+    return UNKNOWN_WITH_REF_RESULT;
+  }
+  return UNKNOWN_RESULT;
+}
+
+auto handle_templatePointers(const SchemaVocabularies &vocabularies)
     -> const SchemaWalkerResult & {
   CHECK_VOCABULARY(Known::JSON_Schema_2019_09_Hyper_Schema, {}, Other)
   CHECK_VOCABULARY(Known::JSON_Schema_Draft_7_Hyper, {}, Other)
@@ -2463,7 +2465,7 @@ auto handle_templatePointers(const Vocabularies &vocabularies)
   return UNKNOWN_RESULT;
 }
 
-auto handle_templateRequired(const Vocabularies &vocabularies)
+auto handle_templateRequired(const SchemaVocabularies &vocabularies)
     -> const SchemaWalkerResult & {
   CHECK_VOCABULARY(Known::JSON_Schema_2019_09_Hyper_Schema, {}, Other)
   CHECK_VOCABULARY(Known::JSON_Schema_Draft_7_Hyper, {}, Other)
@@ -2473,7 +2475,7 @@ auto handle_templateRequired(const Vocabularies &vocabularies)
   return UNKNOWN_RESULT;
 }
 
-auto handle_targetMediaType(const Vocabularies &vocabularies)
+auto handle_targetMediaType(const SchemaVocabularies &vocabularies)
     -> const SchemaWalkerResult & {
   CHECK_VOCABULARY(Known::JSON_Schema_2019_09_Hyper_Schema, {}, Other)
   CHECK_VOCABULARY(Known::JSON_Schema_Draft_7_Hyper, {}, Other)
@@ -2483,7 +2485,7 @@ auto handle_targetMediaType(const Vocabularies &vocabularies)
   return UNKNOWN_RESULT;
 }
 
-auto handle_targetHints(const Vocabularies &vocabularies)
+auto handle_targetHints(const SchemaVocabularies &vocabularies)
     -> const SchemaWalkerResult & {
   CHECK_VOCABULARY(Known::JSON_Schema_2019_09_Hyper_Schema, {}, Other)
   CHECK_VOCABULARY(Known::JSON_Schema_Draft_7_Hyper, {}, Other)
@@ -2493,7 +2495,7 @@ auto handle_targetHints(const Vocabularies &vocabularies)
   return UNKNOWN_RESULT;
 }
 
-auto handle_submissionMediaType(const Vocabularies &vocabularies)
+auto handle_submissionMediaType(const SchemaVocabularies &vocabularies)
     -> const SchemaWalkerResult & {
   CHECK_VOCABULARY(Known::JSON_Schema_2019_09_Hyper_Schema, {}, Other)
   CHECK_VOCABULARY(Known::JSON_Schema_Draft_7_Hyper, {}, Other)
@@ -2503,7 +2505,7 @@ auto handle_submissionMediaType(const Vocabularies &vocabularies)
   return UNKNOWN_RESULT;
 }
 
-auto handle_hrefSchema(const Vocabularies &vocabularies)
+auto handle_hrefSchema(const SchemaVocabularies &vocabularies)
     -> const SchemaWalkerResult & {
   CHECK_VOCABULARY(Known::JSON_Schema_2019_09_Hyper_Schema, {},
                    ApplicatorValueInPlaceOther)
@@ -2517,7 +2519,7 @@ auto handle_hrefSchema(const Vocabularies &vocabularies)
   return UNKNOWN_RESULT;
 }
 
-auto handle_targetSchema(const Vocabularies &vocabularies)
+auto handle_targetSchema(const SchemaVocabularies &vocabularies)
     -> const SchemaWalkerResult & {
   CHECK_VOCABULARY(Known::JSON_Schema_2019_09_Hyper_Schema, {},
                    ApplicatorValueInPlaceOther)
@@ -2537,7 +2539,7 @@ auto handle_targetSchema(const Vocabularies &vocabularies)
   return UNKNOWN_RESULT;
 }
 
-auto handle_headerSchema(const Vocabularies &vocabularies)
+auto handle_headerSchema(const SchemaVocabularies &vocabularies)
     -> const SchemaWalkerResult & {
   CHECK_VOCABULARY(Known::JSON_Schema_2019_09_Hyper_Schema, {},
                    ApplicatorValueInPlaceOther)
@@ -2549,7 +2551,7 @@ auto handle_headerSchema(const Vocabularies &vocabularies)
   return UNKNOWN_RESULT;
 }
 
-auto handle_submissionSchema(const Vocabularies &vocabularies)
+auto handle_submissionSchema(const SchemaVocabularies &vocabularies)
     -> const SchemaWalkerResult & {
   CHECK_VOCABULARY(Known::JSON_Schema_2019_09_Hyper_Schema, {},
                    ApplicatorValueInPlaceOther)
@@ -2563,7 +2565,7 @@ auto handle_submissionSchema(const Vocabularies &vocabularies)
   return UNKNOWN_RESULT;
 }
 
-auto handle_media(const Vocabularies &vocabularies)
+auto handle_media(const SchemaVocabularies &vocabularies)
     -> const SchemaWalkerResult & {
   CHECK_VOCABULARY_WITH_DEPENDENCIES(Known::JSON_Schema_Draft_6_Hyper, {},
                                      Other, "$ref")
@@ -2575,7 +2577,7 @@ auto handle_media(const Vocabularies &vocabularies)
   return UNKNOWN_RESULT;
 }
 
-auto handle_fragmentResolution(const Vocabularies &vocabularies)
+auto handle_fragmentResolution(const SchemaVocabularies &vocabularies)
     -> const SchemaWalkerResult & {
   CHECK_VOCABULARY_WITH_DEPENDENCIES(Known::JSON_Schema_Draft_4_Hyper, {},
                                      Other, "$ref")
@@ -2590,7 +2592,7 @@ auto handle_fragmentResolution(const Vocabularies &vocabularies)
   return UNKNOWN_RESULT;
 }
 
-auto handle_root(const Vocabularies &vocabularies)
+auto handle_root(const SchemaVocabularies &vocabularies)
     -> const SchemaWalkerResult & {
   CHECK_VOCABULARY_WITH_DEPENDENCIES(Known::JSON_Schema_Draft_3_Hyper, {},
                                      Other, "$ref")
@@ -2603,7 +2605,7 @@ auto handle_root(const Vocabularies &vocabularies)
   return UNKNOWN_RESULT;
 }
 
-auto handle_readonly(const Vocabularies &vocabularies)
+auto handle_readonly(const SchemaVocabularies &vocabularies)
     -> const SchemaWalkerResult & {
   CHECK_VOCABULARY_WITH_DEPENDENCIES(Known::JSON_Schema_Draft_3_Hyper, {},
                                      Other, "$ref")
@@ -2616,7 +2618,7 @@ auto handle_readonly(const Vocabularies &vocabularies)
   return UNKNOWN_RESULT;
 }
 
-auto handle_pathStart(const Vocabularies &vocabularies)
+auto handle_pathStart(const SchemaVocabularies &vocabularies)
     -> const SchemaWalkerResult & {
   CHECK_VOCABULARY_WITH_DEPENDENCIES(Known::JSON_Schema_Draft_4_Hyper, {},
                                      Other, "$ref")
@@ -2631,7 +2633,7 @@ auto handle_pathStart(const Vocabularies &vocabularies)
   return UNKNOWN_RESULT;
 }
 
-auto handle_mediaType(const Vocabularies &vocabularies)
+auto handle_mediaType(const SchemaVocabularies &vocabularies)
     -> const SchemaWalkerResult & {
   CHECK_VOCABULARY(Known::JSON_Schema_Draft_6_Hyper, {}, Other)
   CHECK_VOCABULARY(Known::JSON_Schema_Draft_4_Hyper, {}, Other)
@@ -2646,7 +2648,7 @@ auto handle_mediaType(const Vocabularies &vocabularies)
   return UNKNOWN_RESULT;
 }
 
-auto handle_alternate(const Vocabularies &vocabularies)
+auto handle_alternate(const SchemaVocabularies &vocabularies)
     -> const SchemaWalkerResult & {
   CHECK_VOCABULARY(Known::JSON_Schema_Draft_2_Hyper, {},
                    ApplicatorElementsInPlace)
@@ -2657,7 +2659,7 @@ auto handle_alternate(const Vocabularies &vocabularies)
   return UNKNOWN_RESULT;
 }
 
-auto handle_method(const Vocabularies &vocabularies)
+auto handle_method(const SchemaVocabularies &vocabularies)
     -> const SchemaWalkerResult & {
   CHECK_VOCABULARY(Known::JSON_Schema_Draft_4_Hyper, {}, Other)
   CHECK_VOCABULARY(Known::JSON_Schema_Draft_3_Hyper, {}, Other)
@@ -2670,7 +2672,7 @@ auto handle_method(const Vocabularies &vocabularies)
   return UNKNOWN_RESULT;
 }
 
-auto handle_enctype(const Vocabularies &vocabularies)
+auto handle_enctype(const SchemaVocabularies &vocabularies)
     -> const SchemaWalkerResult & {
   CHECK_VOCABULARY(Known::JSON_Schema_Draft_3_Hyper, {}, Other)
   CHECK_VOCABULARY(Known::JSON_Schema_Draft_2_Hyper, {}, Other)
@@ -2682,7 +2684,7 @@ auto handle_enctype(const Vocabularies &vocabularies)
   return UNKNOWN_RESULT;
 }
 
-auto handle_encType(const Vocabularies &vocabularies)
+auto handle_encType(const SchemaVocabularies &vocabularies)
     -> const SchemaWalkerResult & {
   CHECK_VOCABULARY(Known::JSON_Schema_Draft_4_Hyper, {}, Other)
   if (has_draft3_to_7(vocabularies)) {
@@ -2691,7 +2693,7 @@ auto handle_encType(const Vocabularies &vocabularies)
   return UNKNOWN_RESULT;
 }
 
-auto handle_submissionEncType(const Vocabularies &vocabularies)
+auto handle_submissionEncType(const SchemaVocabularies &vocabularies)
     -> const SchemaWalkerResult & {
   CHECK_VOCABULARY(Known::JSON_Schema_Draft_6_Hyper, {}, Other)
   if (has_draft3_to_7(vocabularies)) {
@@ -2700,7 +2702,7 @@ auto handle_submissionEncType(const Vocabularies &vocabularies)
   return UNKNOWN_RESULT;
 }
 
-auto handle_schema_hyper(const Vocabularies &vocabularies)
+auto handle_schema_hyper(const SchemaVocabularies &vocabularies)
     -> const SchemaWalkerResult & {
   CHECK_VOCABULARY(Known::JSON_Schema_Draft_4_Hyper, {},
                    ApplicatorValueInPlaceOther)
@@ -2714,28 +2716,28 @@ auto handle_schema_hyper(const Vocabularies &vocabularies)
 // https://spec.openapis.org/oas/v3.1.0.html#fixed-fields-19
 // https://spec.openapis.org/oas/v3.2.0.html#fixed-fields-20
 
-auto handle_discriminator(const Vocabularies &vocabularies)
+auto handle_discriminator(const SchemaVocabularies &vocabularies)
     -> const SchemaWalkerResult & {
   CHECK_VOCABULARY(Known::OpenAPI_3_2_Base, {}, Other)
   CHECK_VOCABULARY(Known::OpenAPI_3_1_Base, {}, Other)
   return UNKNOWN_RESULT;
 }
 
-auto handle_xml(const Vocabularies &vocabularies)
+auto handle_xml(const SchemaVocabularies &vocabularies)
     -> const SchemaWalkerResult & {
   CHECK_VOCABULARY(Known::OpenAPI_3_2_Base, {}, Other)
   CHECK_VOCABULARY(Known::OpenAPI_3_1_Base, {}, Other)
   return UNKNOWN_RESULT;
 }
 
-auto handle_externalDocs(const Vocabularies &vocabularies)
+auto handle_externalDocs(const SchemaVocabularies &vocabularies)
     -> const SchemaWalkerResult & {
   CHECK_VOCABULARY(Known::OpenAPI_3_2_Base, {}, Other)
   CHECK_VOCABULARY(Known::OpenAPI_3_1_Base, {}, Other)
   return UNKNOWN_RESULT;
 }
 
-auto handle_example(const Vocabularies &vocabularies)
+auto handle_example(const SchemaVocabularies &vocabularies)
     -> const SchemaWalkerResult & {
   CHECK_VOCABULARY(Known::OpenAPI_3_2_Base, {}, Other)
   CHECK_VOCABULARY(Known::OpenAPI_3_1_Base, {}, Other)
@@ -2750,7 +2752,7 @@ auto handle_example(const Vocabularies &vocabularies)
 } // anonymous namespace
 
 auto schema_walker(const std::string_view keyword,
-                   const Vocabularies &vocabularies)
+                   const SchemaVocabularies &vocabularies)
     -> const SchemaWalkerResult & {
   // TODO: Make use of JSON key's perfect hashes, as we mostly run the walker by
   // checking JSON property names

@@ -173,7 +173,7 @@ auto sourcemeta::jsonschema::upgrade(const sourcemeta::core::Options &options)
   }
 
   for (const auto &entry : frame.locations()) {
-    if (sourcemeta::blaze::is_known_schema(entry.second.dialect)) {
+    if (sourcemeta::blaze::schema_is_known(entry.second.dialect)) {
       continue;
     }
 

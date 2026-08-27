@@ -41,10 +41,12 @@ struct Template {
   std::vector<Instructions> targets;
   std::vector<std::pair<std::size_t, std::size_t>> labels;
   std::vector<InstructionExtra> extra;
+  /// The vocabulary URIs that instructions refer to, without duplicates
+  std::vector<std::string> vocabularies;
 };
 
 /// @ingroup evaluator
-constexpr std::size_t JSON_VERSION{5};
+constexpr std::size_t JSON_VERSION{6};
 
 /// @ingroup evaluator
 /// Parse a template from JSON

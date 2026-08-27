@@ -10,17 +10,18 @@ public:
   [[nodiscard]] auto
   condition(const sourcemeta::core::JSON &schema,
             const sourcemeta::core::JSON &,
-            const sourcemeta::blaze::Vocabularies &vocabularies,
+            const sourcemeta::blaze::SchemaVocabularies &vocabularies,
             const sourcemeta::blaze::SchemaFrame &frame,
             const sourcemeta::blaze::SchemaFrame::Location &location,
             const sourcemeta::blaze::SchemaWalker &,
             const sourcemeta::blaze::SchemaResolver &, const bool) const
       -> SchemaTransformRule::Result override {
     static const JSON::String KEYWORD{"extends"};
-    ONLY_CONTINUE_IF(vocabularies.contains_any(
-                         {Vocabularies::Known::JSON_Schema_Draft_3,
-                          Vocabularies::Known::JSON_Schema_Draft_3_Hyper}) &&
-                     schema.is_object());
+    ONLY_CONTINUE_IF(
+        vocabularies.contains_any(
+            {SchemaVocabularies::Known::JSON_Schema_Draft_3,
+             SchemaVocabularies::Known::JSON_Schema_Draft_3_Hyper}) &&
+        schema.is_object());
 
     const auto *extends{schema.try_at(KEYWORD)};
     ONLY_CONTINUE_IF(extends);
@@ -29,14 +30,14 @@ public:
     keyword_pointer.push_back(std::cref(KEYWORD));
     ONLY_CONTINUE_IF(!frame.has_references_through(keyword_pointer));
 
-    if (sourcemeta::blaze::is_empty_schema(*extends)) {
+    if (is_empty_schema(*extends)) {
       return APPLIES_TO_POINTERS({Pointer{KEYWORD}});
     }
 
     if (extends->is_array() && !extends->empty()) {
       std::vector<Pointer> locations;
       for (std::size_t index = 0; index < extends->size(); ++index) {
-        if (sourcemeta::blaze::is_empty_schema(extends->at(index))) {
+        if (is_empty_schema(extends->at(index))) {
           locations.push_back(Pointer{KEYWORD, index});
         }
       }
@@ -55,7 +56,7 @@ public:
 
     auto new_extends{JSON::make_array()};
     for (const auto &entry : schema.at("extends").as_array()) {
-      if (!sourcemeta::blaze::is_empty_schema(entry)) {
+      if (!is_empty_schema(entry)) {
         new_extends.push_back(entry);
       }
     }

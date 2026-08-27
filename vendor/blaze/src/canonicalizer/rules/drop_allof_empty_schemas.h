@@ -3,18 +3,19 @@ public:
   using reframe_after_transform = std::true_type;
   DropAllOfEmptySchemas() : SchemaTransformRule{"drop_allof_empty_schemas"} {};
 
-  [[nodiscard]] auto
-  condition(const sourcemeta::core::JSON &schema,
-            const sourcemeta::core::JSON &, const Vocabularies &vocabularies,
-            const SchemaFrame &, const SchemaFrame::Location &,
-            const SchemaWalker &, const SchemaResolver &) const
-      -> bool override {
+  [[nodiscard]] auto condition(const sourcemeta::core::JSON &schema,
+                               const sourcemeta::core::JSON &,
+                               const SchemaVocabularies &vocabularies,
+                               const SchemaFrame &,
+                               const SchemaFrame::Location &,
+                               const SchemaWalker &,
+                               const SchemaResolver &) const -> bool override {
     ONLY_CONTINUE_IF(vocabularies.contains_any(
-        {Vocabularies::Known::JSON_Schema_2020_12_Applicator,
-         Vocabularies::Known::JSON_Schema_2019_09_Applicator,
-         Vocabularies::Known::JSON_Schema_Draft_7,
-         Vocabularies::Known::JSON_Schema_Draft_6,
-         Vocabularies::Known::JSON_Schema_Draft_4}));
+        {SchemaVocabularies::Known::JSON_Schema_2020_12_Applicator,
+         SchemaVocabularies::Known::JSON_Schema_2019_09_Applicator,
+         SchemaVocabularies::Known::JSON_Schema_Draft_7,
+         SchemaVocabularies::Known::JSON_Schema_Draft_6,
+         SchemaVocabularies::Known::JSON_Schema_Draft_4}));
     ONLY_CONTINUE_IF(schema.is_object());
     const auto *all_of{schema.try_at("allOf")};
     ONLY_CONTINUE_IF(all_of && all_of->is_array() && !all_of->empty());

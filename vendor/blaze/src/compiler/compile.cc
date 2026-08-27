@@ -2,10 +2,10 @@
 #include <sourcemeta/blaze/compiler.h>
 #include <sourcemeta/blaze/evaluator.h>
 #include <sourcemeta/blaze/foundation.h>
-#include <sourcemeta/blaze/frame.h>
 
 #include <algorithm> // std::move, std::sort, std::unique
 #include <cassert>   // assert
+#include <format>    // std::format
 // TODO(C++23): Consider std::flat_map/std::flat_set when available in libc++
 #include <map>           // std::map
 #include <set>           // std::set
@@ -26,7 +26,8 @@ auto compile_subschema(const sourcemeta::blaze::Context &context,
                        const sourcemeta::blaze::DynamicContext &dynamic_context)
     -> sourcemeta::blaze::Instructions {
   using namespace sourcemeta::blaze;
-  assert(is_schema(schema_context.schema));
+  assert((schema_context.schema.is_object() ||
+          schema_context.schema.is_boolean()));
 
   // Handle boolean schemas earlier on, as nobody should be able to
   // override what these mean.
@@ -207,7 +208,7 @@ auto compile(const sourcemeta::core::JSON &schema,
              const sourcemeta::blaze::SchemaFrame &frame,
              const std::string_view entrypoint, const Mode mode,
              const std::optional<Tweaks> &tweaks) -> Template {
-  assert(is_schema(schema));
+  assert((schema.is_object() || schema.is_boolean()));
   const auto effective_tweaks{tweaks.value_or(Tweaks{})};
 
   const auto maybe_entrypoint_location{frame.traverse(entrypoint)};
@@ -356,6 +357,7 @@ auto compile(const sourcemeta::core::JSON &schema,
       sourcemeta::blaze::unevaluated(schema, frame, walker, resolver)};
 
   std::vector<InstructionExtra> instruction_extra;
+  std::vector<SchemaVocabularies::URI> instruction_vocabularies;
   const Context context{.root = schema,
                         .frame = frame,
                         .resources = std::move(resources),
@@ -368,7 +370,8 @@ auto compile(const sourcemeta::core::JSON &schema,
                         .unevaluated = std::move(unevaluated),
                         .tweaks = effective_tweaks,
                         .targets = std::move(targets_map),
-                        .extra = instruction_extra};
+                        .extra = instruction_extra,
+                        .vocabularies = instruction_vocabularies};
 
   ///////////////////////////////////////////////////////////////////
   // (5) Build labels map for dynamic anchors
@@ -475,6 +478,14 @@ auto compile(const sourcemeta::core::JSON &schema,
   // (8) Return final template
   ///////////////////////////////////////////////////////////////////
 
+  // The template stores vocabularies as plain strings, as the evaluator does
+  // not otherwise depend on the schema machinery
+  std::vector<std::string> template_vocabularies;
+  template_vocabularies.reserve(instruction_vocabularies.size());
+  for (const auto &vocabulary : instruction_vocabularies) {
+    template_vocabularies.push_back(std::format("{}", vocabulary));
+  }
+
   const bool track{
       context.mode != Mode::FastValidation ||
       requires_evaluation(context, entrypoint_location.pointer) ||
@@ -488,7 +499,8 @@ auto compile(const sourcemeta::core::JSON &schema,
           .track = track,
           .targets = std::move(compiled_targets),
           .labels = std::move(labels_map),
-          .extra = std::move(instruction_extra)};
+          .extra = std::move(instruction_extra),
+          .vocabularies = std::move(template_vocabularies)};
 }
 
 auto compile(const sourcemeta::core::JSON &schema,
@@ -499,7 +511,7 @@ auto compile(const sourcemeta::core::JSON &schema,
              const std::string_view default_id,
              const std::string_view entrypoint,
              const std::optional<Tweaks> &tweaks) -> Template {
-  assert(is_schema(schema));
+  assert((schema.is_object() || schema.is_boolean()));
 
   // Make sure the input schema is bundled, otherwise we won't be able to
   // resolve remote references here. Meta-schemas are not needed, as we
@@ -541,7 +553,7 @@ auto compile(const Context &context, const SchemaContext &schema_context,
   const auto &entry{context.frame.locations().at(
       {sourcemeta::blaze::SchemaReferenceType::Static, destination})};
   const auto &new_schema{get(context.root, entry.pointer)};
-  assert(is_schema(new_schema));
+  assert((new_schema.is_object() || new_schema.is_boolean()));
 
   const sourcemeta::core::WeakPointer destination_pointer{
       dynamic_context.keyword.empty()

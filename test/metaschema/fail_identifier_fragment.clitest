@@ -1,0 +1,34 @@
+WRITE schema.json UNTIL EOF
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "#fragment"
+}
+EOF
+
+// Schema input error
+RUN metaschema schema.json STDIN /dev/null IN . INTO result.txt EXPECTING 4
+
+REPLACE $CWD WITH '[CWD]' IN result.txt
+
+WRITE expected.txt UNTIL EOF
+2> error: Identifiers must not contain non-empty fragments
+2>   at identifier #fragment
+2>   at file path [CWD]/schema.json
+EOF
+
+COMPARE result.txt AGAINST expected.txt
+
+// Schema input error
+RUN metaschema schema.json --json STDIN /dev/null IN . INTO result_json.txt EXPECTING 4
+
+REPLACE $CWD WITH '[CWD]' IN result_json.txt
+
+WRITE expected_json.txt UNTIL EOF
+1> {
+1>   "error": "Identifiers must not contain non-empty fragments",
+1>   "identifier": "#fragment",
+1>   "filePath": "[CWD]/schema.json"
+1> }
+EOF
+
+COMPARE result_json.txt AGAINST expected_json.txt

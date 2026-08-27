@@ -16,7 +16,7 @@ RUN compile schema.json --entrypoint '#/$$defs/Name' STDIN /dev/null IN . INTO r
 
 WRITE expected.txt UNTIL EOF
 1> [
-1>   5,
+1>   6,
 1>   false,
 1>   true,
 1>   [
@@ -27,6 +27,7 @@ WRITE expected.txt UNTIL EOF
 1>         [],
 1>         "https://example.com/schema#/$defs/Name/minLength",
 1>         2,
+1>         1,
 1>         [ 10, 0 ]
 1>       ],
 1>       [
@@ -35,11 +36,13 @@ WRITE expected.txt UNTIL EOF
 1>         [],
 1>         "https://example.com/schema#/$defs/Name/type",
 1>         2,
+1>         1,
 1>         [ 8, 4 ]
 1>       ]
 1>     ]
 1>   ],
-1>   []
+1>   [],
+1>   [ "https://json-schema.org/draft/2020-12/vocab/validation" ]
 1> ]
 EOF
 

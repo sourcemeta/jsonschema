@@ -13,7 +13,7 @@ public:
   [[nodiscard]] auto
   condition(const sourcemeta::core::JSON &schema,
             const sourcemeta::core::JSON &,
-            const sourcemeta::blaze::Vocabularies &vocabularies,
+            const sourcemeta::blaze::SchemaVocabularies &vocabularies,
             const sourcemeta::blaze::SchemaFrame &,
             const sourcemeta::blaze::SchemaFrame::Location &,
             const sourcemeta::blaze::SchemaWalker &,
@@ -45,10 +45,10 @@ public:
   }
 
 private:
-  static auto
-  recognized_formats_for(const sourcemeta::blaze::Vocabularies &vocabularies)
+  static auto recognized_formats_for(
+      const sourcemeta::blaze::SchemaVocabularies &vocabularies)
       -> const std::unordered_set<std::string_view> * {
-    using Known = sourcemeta::blaze::Vocabularies::Known;
+    using Known = sourcemeta::blaze::SchemaVocabularies::Known;
     if (vocabularies.contains_any(
             {Known::JSON_Schema_Draft_3, Known::JSON_Schema_Draft_3_Hyper})) {
       return &DRAFT_3_FORMATS;

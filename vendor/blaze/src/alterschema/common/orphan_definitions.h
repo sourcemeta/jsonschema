@@ -11,7 +11,7 @@ public:
   [[nodiscard]] auto
   condition(const sourcemeta::core::JSON &schema,
             const sourcemeta::core::JSON &,
-            const sourcemeta::blaze::Vocabularies &vocabularies,
+            const sourcemeta::blaze::SchemaVocabularies &vocabularies,
             const sourcemeta::blaze::SchemaFrame &frame,
             const sourcemeta::blaze::SchemaFrame::Location &location,
             const sourcemeta::blaze::SchemaWalker &walker,
@@ -19,12 +19,14 @@ public:
       -> SchemaTransformRule::Result override {
     ONLY_CONTINUE_IF(schema.is_object());
     const bool has_modern_core{
-        vocabularies.contains(Vocabularies::Known::JSON_Schema_2020_12_Core) ||
-        vocabularies.contains(Vocabularies::Known::JSON_Schema_2019_09_Core)};
+        vocabularies.contains(
+            SchemaVocabularies::Known::JSON_Schema_2020_12_Core) ||
+        vocabularies.contains(
+            SchemaVocabularies::Known::JSON_Schema_2019_09_Core)};
     const bool has_draft_definitions{
-        vocabularies.contains(Vocabularies::Known::JSON_Schema_Draft_7) ||
-        vocabularies.contains(Vocabularies::Known::JSON_Schema_Draft_6) ||
-        vocabularies.contains(Vocabularies::Known::JSON_Schema_Draft_4)};
+        vocabularies.contains(SchemaVocabularies::Known::JSON_Schema_Draft_7) ||
+        vocabularies.contains(SchemaVocabularies::Known::JSON_Schema_Draft_6) ||
+        vocabularies.contains(SchemaVocabularies::Known::JSON_Schema_Draft_4)};
     const bool has_defs{has_modern_core && schema.defines("$defs")};
     const bool has_definitions{(has_modern_core || has_draft_definitions) &&
                                schema.defines("definitions")};

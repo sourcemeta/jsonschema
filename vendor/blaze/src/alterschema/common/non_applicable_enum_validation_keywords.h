@@ -11,24 +11,25 @@ public:
   [[nodiscard]] auto
   condition(const sourcemeta::core::JSON &schema,
             const sourcemeta::core::JSON &,
-            const sourcemeta::blaze::Vocabularies &vocabularies,
+            const sourcemeta::blaze::SchemaVocabularies &vocabularies,
             const sourcemeta::blaze::SchemaFrame &,
             const sourcemeta::blaze::SchemaFrame::Location &,
             const sourcemeta::blaze::SchemaWalker &walker,
             const sourcemeta::blaze::SchemaResolver &, const bool) const
       -> SchemaTransformRule::Result override {
-    ONLY_CONTINUE_IF(vocabularies.contains_any(
-                         {Vocabularies::Known::JSON_Schema_2020_12_Validation,
-                          Vocabularies::Known::JSON_Schema_2019_09_Validation,
-                          Vocabularies::Known::JSON_Schema_Draft_7,
-                          Vocabularies::Known::JSON_Schema_Draft_6,
-                          Vocabularies::Known::JSON_Schema_Draft_4,
-                          Vocabularies::Known::JSON_Schema_Draft_3,
-                          Vocabularies::Known::JSON_Schema_Draft_2,
-                          Vocabularies::Known::JSON_Schema_Draft_2_Hyper,
-                          Vocabularies::Known::JSON_Schema_Draft_1,
-                          Vocabularies::Known::JSON_Schema_Draft_1_Hyper}) &&
-                     schema.is_object() && !schema.defines("type"));
+    ONLY_CONTINUE_IF(
+        vocabularies.contains_any(
+            {SchemaVocabularies::Known::JSON_Schema_2020_12_Validation,
+             SchemaVocabularies::Known::JSON_Schema_2019_09_Validation,
+             SchemaVocabularies::Known::JSON_Schema_Draft_7,
+             SchemaVocabularies::Known::JSON_Schema_Draft_6,
+             SchemaVocabularies::Known::JSON_Schema_Draft_4,
+             SchemaVocabularies::Known::JSON_Schema_Draft_3,
+             SchemaVocabularies::Known::JSON_Schema_Draft_2,
+             SchemaVocabularies::Known::JSON_Schema_Draft_2_Hyper,
+             SchemaVocabularies::Known::JSON_Schema_Draft_1,
+             SchemaVocabularies::Known::JSON_Schema_Draft_1_Hyper}) &&
+        schema.is_object() && !schema.defines("type"));
 
     const auto *enum_value{schema.try_at("enum")};
     ONLY_CONTINUE_IF(enum_value && enum_value->is_array());
@@ -41,8 +42,8 @@ public:
     ONLY_CONTINUE_IF(enum_types.any());
 
     const bool is_draft3{vocabularies.contains_any(
-        {Vocabularies::Known::JSON_Schema_Draft_3,
-         Vocabularies::Known::JSON_Schema_Draft_3_Hyper})};
+        {SchemaVocabularies::Known::JSON_Schema_Draft_3,
+         SchemaVocabularies::Known::JSON_Schema_Draft_3_Hyper})};
 
     std::vector<Pointer> positions;
     for (const auto &entry : schema.as_object()) {

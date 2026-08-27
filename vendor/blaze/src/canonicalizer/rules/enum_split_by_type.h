@@ -6,28 +6,29 @@ public:
   [[nodiscard]] auto
   condition(const sourcemeta::core::JSON &schema,
             const sourcemeta::core::JSON &,
-            const sourcemeta::blaze::Vocabularies &vocabularies,
+            const sourcemeta::blaze::SchemaVocabularies &vocabularies,
             const sourcemeta::blaze::SchemaFrame &,
             const sourcemeta::blaze::SchemaFrame::Location &,
             const sourcemeta::blaze::SchemaWalker &walker,
             const sourcemeta::blaze::SchemaResolver &) const -> bool override {
     const bool any_of_dialect{
-        vocabularies.contains_any({Vocabularies::Known::JSON_Schema_Draft_4,
-                                   Vocabularies::Known::JSON_Schema_Draft_6,
-                                   Vocabularies::Known::JSON_Schema_Draft_7}) ||
+        vocabularies.contains_any(
+            {SchemaVocabularies::Known::JSON_Schema_Draft_4,
+             SchemaVocabularies::Known::JSON_Schema_Draft_6,
+             SchemaVocabularies::Known::JSON_Schema_Draft_7}) ||
         (vocabularies.contains(
-             Vocabularies::Known::JSON_Schema_2019_09_Validation) &&
+             SchemaVocabularies::Known::JSON_Schema_2019_09_Validation) &&
          vocabularies.contains(
-             Vocabularies::Known::JSON_Schema_2019_09_Applicator)) ||
+             SchemaVocabularies::Known::JSON_Schema_2019_09_Applicator)) ||
         (vocabularies.contains(
-             Vocabularies::Known::JSON_Schema_2020_12_Validation) &&
+             SchemaVocabularies::Known::JSON_Schema_2020_12_Validation) &&
          vocabularies.contains(
-             Vocabularies::Known::JSON_Schema_2020_12_Applicator))};
-    const bool type_union_dialect{
-        vocabularies.contains_any({Vocabularies::Known::JSON_Schema_Draft_0,
-                                   Vocabularies::Known::JSON_Schema_Draft_1,
-                                   Vocabularies::Known::JSON_Schema_Draft_2,
-                                   Vocabularies::Known::JSON_Schema_Draft_3})};
+             SchemaVocabularies::Known::JSON_Schema_2020_12_Applicator))};
+    const bool type_union_dialect{vocabularies.contains_any(
+        {SchemaVocabularies::Known::JSON_Schema_Draft_0,
+         SchemaVocabularies::Known::JSON_Schema_Draft_1,
+         SchemaVocabularies::Known::JSON_Schema_Draft_2,
+         SchemaVocabularies::Known::JSON_Schema_Draft_3})};
     ONLY_CONTINUE_IF((any_of_dialect || type_union_dialect) &&
                      schema.is_object());
 
@@ -93,7 +94,7 @@ private:
   static auto wraps_single_constraint(
       const sourcemeta::core::JSON &schema, const std::string_view keyword,
       const sourcemeta::blaze::SchemaWalker &walker,
-      const sourcemeta::blaze::Vocabularies &vocabularies) -> bool {
+      const sourcemeta::blaze::SchemaVocabularies &vocabularies) -> bool {
     for (const auto &entry : schema.as_object()) {
       if (entry.first == keyword) {
         continue;

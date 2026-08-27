@@ -11,7 +11,6 @@
 #include <sourcemeta/blaze/evaluator.h>
 
 #include <sourcemeta/blaze/foundation.h>
-#include <sourcemeta/blaze/frame.h>
 #include <sourcemeta/core/json.h>
 #include <sourcemeta/core/jsonpointer.h>
 #include <sourcemeta/core/uri.h>
@@ -44,7 +43,7 @@ struct SchemaContext {
   /// The current subschema
   const sourcemeta::core::JSON &schema;
   /// The schema vocabularies in use
-  const sourcemeta::blaze::Vocabularies &vocabularies;
+  const sourcemeta::blaze::SchemaVocabularies &vocabularies;
   /// The schema base URI
   const sourcemeta::core::URI &base;
   // NOLINTEND(cppcoreguidelines-avoid-const-or-ref-data-members)
@@ -141,6 +140,8 @@ struct Context {
       targets;
   /// Accumulator for instruction extra data during compilation
   std::vector<InstructionExtra> &extra;
+  /// Accumulator for the vocabularies that instructions refer to
+  std::vector<SchemaVocabularies::URI> &vocabularies;
   // NOLINTEND(cppcoreguidelines-avoid-const-or-ref-data-members)
 };
 

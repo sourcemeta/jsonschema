@@ -60,7 +60,7 @@ auto instructions_from_json(
   sourcemeta::blaze::Instructions result;
   result.reserve(instructions.size());
   for (const auto &instruction : instructions.as_array()) {
-    if (!instruction.is_array() || instruction.array_size() < 6) {
+    if (!instruction.is_array() || instruction.array_size() < 7) {
       return std::nullopt;
     }
 
@@ -69,7 +69,8 @@ auto instructions_from_json(
     const auto &relative_instance_location{instruction.at(2)};
     const auto &keyword_location{instruction.at(3)};
     const auto &schema_resource{instruction.at(4)};
-    const auto &value{instruction.at(5)};
+    const auto &vocabulary{instruction.at(5)};
+    const auto &value{instruction.at(6)};
 
     auto type_result{
         sourcemeta::core::from_json<sourcemeta::blaze::InstructionIndex>(type)};
@@ -83,20 +84,22 @@ auto instructions_from_json(
         sourcemeta::core::from_json<std::string>(keyword_location)};
     auto schema_resource_result{
         sourcemeta::core::from_json<std::size_t>(schema_resource)};
+    auto vocabulary_result{
+        sourcemeta::core::from_json<std::size_t>(vocabulary)};
     auto value_result{value_from_json(value)};
 
     // Parse children if there
     std::optional<sourcemeta::blaze::Instructions> children_result{
-        instruction.array_size() == 7
-            ? instructions_from_json(instruction.at(6), extra)
+        instruction.array_size() == 8
+            ? instructions_from_json(instruction.at(7), extra)
             : sourcemeta::blaze::Instructions{}};
 
     if (!type_result.has_value() ||
         !relative_schema_location_result.has_value() ||
         !relative_instance_location_result.has_value() ||
         !keyword_location_result.has_value() ||
-        !schema_resource_result.has_value() || !value_result.has_value() ||
-        !children_result.has_value()) {
+        !schema_resource_result.has_value() || !vocabulary_result.has_value() ||
+        !value_result.has_value() || !children_result.has_value()) {
       return std::nullopt;
     }
 
@@ -105,7 +108,8 @@ auto instructions_from_json(
         {.relative_schema_location =
              std::move(relative_schema_location_result).value(),
          .keyword_location = std::move(keyword_location_result).value(),
-         .schema_resource = std::move(schema_resource_result).value()});
+         .schema_resource = std::move(schema_resource_result).value(),
+         .vocabulary = std::move(vocabulary_result).value()});
 
     // TODO: Maybe we should emplace here?
     result.push_back({.type = std::move(type_result).value(),
@@ -124,7 +128,7 @@ auto instructions_from_json(
 namespace sourcemeta::blaze {
 
 auto from_json(const sourcemeta::core::JSON &json) -> std::optional<Template> {
-  if (!json.is_array() || json.array_size() != 5) {
+  if (!json.is_array() || json.array_size() != 6) {
     return std::nullopt;
   }
 
@@ -174,11 +178,26 @@ auto from_json(const sourcemeta::core::JSON &json) -> std::optional<Template> {
         static_cast<std::size_t>(label.at(1).to_integer()));
   }
 
+  const auto &vocabularies{json.at(5)};
+  if (!vocabularies.is_array()) {
+    return std::nullopt;
+  }
+
+  std::vector<std::string> vocabularies_result;
+  vocabularies_result.reserve(vocabularies.size());
+  for (const auto &vocabulary : vocabularies.as_array()) {
+    if (!vocabulary.is_string()) {
+      return std::nullopt;
+    }
+    vocabularies_result.push_back(vocabulary.to_string());
+  }
+
   return Template{.dynamic = dynamic.to_boolean(),
                   .track = track.to_boolean(),
                   .targets = std::move(targets_result),
                   .labels = std::move(labels_result),
-                  .extra = std::move(template_extra)};
+                  .extra = std::move(template_extra),
+                  .vocabularies = std::move(vocabularies_result)};
 }
 
 } // namespace sourcemeta::blaze

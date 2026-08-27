@@ -8,15 +8,15 @@ public:
   [[nodiscard]] auto
   condition(const sourcemeta::core::JSON &schema,
             const sourcemeta::core::JSON &,
-            const sourcemeta::blaze::Vocabularies &vocabularies,
+            const sourcemeta::blaze::SchemaVocabularies &vocabularies,
             const sourcemeta::blaze::SchemaFrame &,
             const sourcemeta::blaze::SchemaFrame::Location &,
             const sourcemeta::blaze::SchemaWalker &,
             const sourcemeta::blaze::SchemaResolver &, const bool) const
       -> SchemaTransformRule::Result override {
-    ONLY_CONTINUE_IF(
-        vocabularies.contains(Vocabularies::Known::JSON_Schema_2019_09_Core) &&
-        schema.is_object());
+    ONLY_CONTINUE_IF(vocabularies.contains(
+                         SchemaVocabularies::Known::JSON_Schema_2019_09_Core) &&
+                     schema.is_object());
 
     return schema.defines_any({"prefixItems", "$dynamicAnchor", "$dynamicRef"});
   }

@@ -328,7 +328,7 @@ auto properties_as_loop(const Context &context,
     return false;
   }
 
-  using Known = sourcemeta::blaze::Vocabularies::Known;
+  using Known = sourcemeta::blaze::SchemaVocabularies::Known;
   const auto size{properties.size()};
   const auto imports_validation_vocabulary =
       schema_context.vocabularies.contains(Known::JSON_Schema_Draft_4) ||
@@ -1031,7 +1031,7 @@ auto compiler_draft3_applicator_properties(
   auto property_instructions{compiler_draft3_applicator_properties_with_options(
       context, schema_context, dynamic_context, current, false, false)};
 
-  using Known = sourcemeta::blaze::Vocabularies::Known;
+  using Known = sourcemeta::blaze::SchemaVocabularies::Known;
   const auto is_draft3{
       schema_context.vocabularies.contains(Known::JSON_Schema_Draft_3) ||
       schema_context.vocabularies.contains(Known::JSON_Schema_Draft_3_Hyper)};
@@ -1533,7 +1533,8 @@ auto compiler_draft3_applicator_items_with_options(
   const bool emit_annotation{
       annotate && annotations_enabled(context, dynamic_context.keyword)};
 
-  if (is_schema(schema_context.schema.at(dynamic_context.keyword))) {
+  if (schema_context.schema.at(dynamic_context.keyword).is_object() ||
+      schema_context.schema.at(dynamic_context.keyword).is_boolean()) {
     if (emit_annotation || track_evaluation) {
       Instructions subchildren{compile(context, schema_context,
                                        relative_dynamic_context(),
@@ -2042,7 +2043,7 @@ auto compiler_draft3_validation_type(const Context &context,
                                      const Instructions &) -> Instructions {
   const auto &value{schema_context.schema.at(dynamic_context.keyword)};
 
-  using Known = sourcemeta::blaze::Vocabularies::Known;
+  using Known = sourcemeta::blaze::SchemaVocabularies::Known;
   const auto is_draft3{
       schema_context.vocabularies.contains(Known::JSON_Schema_Draft_3) ||
       schema_context.vocabularies.contains(Known::JSON_Schema_Draft_3_Hyper)};
@@ -2578,7 +2579,7 @@ auto compiler_draft3_applicator_dependencies(
     return {};
   }
 
-  using Known = sourcemeta::blaze::Vocabularies::Known;
+  using Known = sourcemeta::blaze::SchemaVocabularies::Known;
   const auto is_draft3{
       schema_context.vocabularies.contains(Known::JSON_Schema_Draft_3) ||
       schema_context.vocabularies.contains(Known::JSON_Schema_Draft_3_Hyper)};
@@ -2588,7 +2589,7 @@ auto compiler_draft3_applicator_dependencies(
 
   for (const auto &entry :
        schema_context.schema.at(dynamic_context.keyword).as_object()) {
-    if (is_schema(entry.second)) {
+    if ((entry.second.is_object() || entry.second.is_boolean())) {
       if (!entry.second.is_boolean() || !entry.second.to_boolean()) {
         children.push_back(make(
             sourcemeta::blaze::InstructionIndex::LogicalWhenDefines, context,
@@ -2649,7 +2650,7 @@ auto compiler_draft3_validation_format(const Context &context,
                                        const SchemaContext &schema_context,
                                        const DynamicContext &dynamic_context,
                                        const Instructions &) -> Instructions {
-  using Known = sourcemeta::blaze::Vocabularies::Known;
+  using Known = sourcemeta::blaze::SchemaVocabularies::Known;
   static constexpr auto unsupported_dialect_message{
       "The format assertion tweak not supported in this dialect"};
 

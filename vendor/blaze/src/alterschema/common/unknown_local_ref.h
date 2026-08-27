@@ -13,22 +13,23 @@ public:
             "will result in evaluation failures"} {};
 
   [[nodiscard]] auto
-  condition(const JSON &schema, const JSON &, const Vocabularies &vocabularies,
-            const SchemaFrame &frame, const SchemaFrame::Location &location,
-            const SchemaWalker &, const SchemaResolver &, const bool) const
+  condition(const JSON &schema, const JSON &,
+            const SchemaVocabularies &vocabularies, const SchemaFrame &frame,
+            const SchemaFrame::Location &location, const SchemaWalker &,
+            const SchemaResolver &, const bool) const
       -> SchemaTransformRule::Result override {
     ONLY_CONTINUE_IF(vocabularies.contains_any(
-        {Vocabularies::Known::JSON_Schema_2020_12_Core,
-         Vocabularies::Known::JSON_Schema_2019_09_Core,
+        {SchemaVocabularies::Known::JSON_Schema_2020_12_Core,
+         SchemaVocabularies::Known::JSON_Schema_2019_09_Core,
          // In JSON Schema Draft 7 and older, `$ref` overrides siblings.
          // However, we do not need to worry about this case here, as if the
          // `$ref` points to an unknown local location, the entire schema is
          // invalid anyway. We just help at least making the schema valid
-         Vocabularies::Known::JSON_Schema_Draft_7,
-         Vocabularies::Known::JSON_Schema_Draft_6,
-         Vocabularies::Known::JSON_Schema_Draft_4,
-         Vocabularies::Known::JSON_Schema_Draft_3,
-         Vocabularies::Known::JSON_Schema_Draft_3_Hyper}));
+         SchemaVocabularies::Known::JSON_Schema_Draft_7,
+         SchemaVocabularies::Known::JSON_Schema_Draft_6,
+         SchemaVocabularies::Known::JSON_Schema_Draft_4,
+         SchemaVocabularies::Known::JSON_Schema_Draft_3,
+         SchemaVocabularies::Known::JSON_Schema_Draft_3_Hyper}));
     ONLY_CONTINUE_IF(schema.is_object() && schema.defines(KEYWORD) &&
                      schema.at(KEYWORD).is_string());
 

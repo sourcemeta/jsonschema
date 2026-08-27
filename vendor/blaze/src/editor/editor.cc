@@ -1,10 +1,11 @@
 #include <sourcemeta/blaze/editor.h>
 
-#include <sourcemeta/blaze/frame.h>
+#include <sourcemeta/blaze/foundation.h>
 
 #include "helpers.h"
 
 #include <cassert> // assert
+#include <format>  // std::format
 #include <map>     // std::map
 
 namespace {
@@ -140,8 +141,7 @@ auto for_editor(sourcemeta::core::JSON &schema,
           reference_changes.push_back(
               {.pointer = sourcemeta::core::to_pointer(key.second),
                .new_value =
-                   sourcemeta::core::JSON::String{sourcemeta::blaze::to_string(
-                       origin.value().get().base_dialect)},
+                   std::format("{}", origin.value().get().base_dialect),
                .keyword = keyword,
                .rename_to_ref = false});
           continue;
@@ -192,11 +192,11 @@ auto for_editor(sourcemeta::core::JSON &schema,
            .base_dialect = entry.second.base_dialect,
            .add_schema_declaration = add_schema,
            .erase_2020_12_keywords =
-               vocabularies.contains(sourcemeta::blaze::Vocabularies::Known::
-                                         JSON_Schema_2020_12_Core),
+               vocabularies.contains(sourcemeta::blaze::SchemaVocabularies::
+                                         Known::JSON_Schema_2020_12_Core),
            .erase_2019_09_keywords =
-               vocabularies.contains(sourcemeta::blaze::Vocabularies::Known::
-                                         JSON_Schema_2019_09_Core)});
+               vocabularies.contains(sourcemeta::blaze::SchemaVocabularies::
+                                         Known::JSON_Schema_2019_09_Core)});
     }
   }
 
@@ -217,9 +217,8 @@ auto for_editor(sourcemeta::core::JSON &schema,
     auto &subschema{sourcemeta::core::get(schema, change.pointer)};
 
     if (change.add_schema_declaration) {
-      subschema.assign_assume_new(
-          "$schema", sourcemeta::core::JSON{sourcemeta::core::JSON::String{
-                         sourcemeta::blaze::to_string(change.base_dialect)}});
+      subschema.assign_assume_new("$schema", sourcemeta::core::JSON{std::format(
+                                                 "{}", change.base_dialect)});
     }
 
     sourcemeta::blaze::anonymize(subschema, change.base_dialect);

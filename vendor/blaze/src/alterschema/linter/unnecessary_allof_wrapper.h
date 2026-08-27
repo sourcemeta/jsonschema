@@ -12,16 +12,17 @@ public:
                             "the parent schema can be elevated"} {};
 
   [[nodiscard]] auto
-  condition(const JSON &schema, const JSON &, const Vocabularies &vocabularies,
-            const SchemaFrame &frame, const SchemaFrame::Location &location,
-            const SchemaWalker &walker, const SchemaResolver &,
-            const bool) const -> SchemaTransformRule::Result override {
+  condition(const JSON &schema, const JSON &,
+            const SchemaVocabularies &vocabularies, const SchemaFrame &frame,
+            const SchemaFrame::Location &location, const SchemaWalker &walker,
+            const SchemaResolver &, const bool) const
+      -> SchemaTransformRule::Result override {
     ONLY_CONTINUE_IF(vocabularies.contains_any(
-        {Vocabularies::Known::JSON_Schema_2020_12_Applicator,
-         Vocabularies::Known::JSON_Schema_2019_09_Applicator,
-         Vocabularies::Known::JSON_Schema_Draft_7,
-         Vocabularies::Known::JSON_Schema_Draft_6,
-         Vocabularies::Known::JSON_Schema_Draft_4}));
+        {SchemaVocabularies::Known::JSON_Schema_2020_12_Applicator,
+         SchemaVocabularies::Known::JSON_Schema_2019_09_Applicator,
+         SchemaVocabularies::Known::JSON_Schema_Draft_7,
+         SchemaVocabularies::Known::JSON_Schema_Draft_6,
+         SchemaVocabularies::Known::JSON_Schema_Draft_4}));
     ONLY_CONTINUE_IF(schema.is_object());
 
     const auto *all_of_value{schema.try_at(KEYWORD)};
@@ -48,8 +49,8 @@ public:
       if ((entry.first == "unevaluatedProperties" ||
            entry.first == "unevaluatedItems") &&
           vocabularies.contains_any(
-              {Vocabularies::Known::JSON_Schema_2020_12_Unevaluated,
-               Vocabularies::Known::JSON_Schema_2019_09_Applicator})) {
+              {SchemaVocabularies::Known::JSON_Schema_2020_12_Unevaluated,
+               SchemaVocabularies::Known::JSON_Schema_2019_09_Applicator})) {
         continue;
       }
 
@@ -63,11 +64,11 @@ public:
     const JSON::TypeSet parent_types{
         parent_type_value &&
                 vocabularies.contains_any(
-                    {Vocabularies::Known::JSON_Schema_2020_12_Validation,
-                     Vocabularies::Known::JSON_Schema_2019_09_Validation,
-                     Vocabularies::Known::JSON_Schema_Draft_7,
-                     Vocabularies::Known::JSON_Schema_Draft_6,
-                     Vocabularies::Known::JSON_Schema_Draft_4})
+                    {SchemaVocabularies::Known::JSON_Schema_2020_12_Validation,
+                     SchemaVocabularies::Known::JSON_Schema_2019_09_Validation,
+                     SchemaVocabularies::Known::JSON_Schema_Draft_7,
+                     SchemaVocabularies::Known::JSON_Schema_Draft_6,
+                     SchemaVocabularies::Known::JSON_Schema_Draft_4})
             ? parse_schema_type(*parent_type_value)
             : JSON::TypeSet{}};
 
@@ -98,8 +99,8 @@ public:
       }
 
       if (vocabularies.contains_any(
-              {Vocabularies::Known::JSON_Schema_2020_12_Unevaluated,
-               Vocabularies::Known::JSON_Schema_2019_09_Applicator}) &&
+              {SchemaVocabularies::Known::JSON_Schema_2020_12_Unevaluated,
+               SchemaVocabularies::Known::JSON_Schema_2019_09_Applicator}) &&
           (entry.defines("unevaluatedProperties") ||
            entry.defines("unevaluatedItems"))) {
         continue;
@@ -141,8 +142,9 @@ public:
         elevated.emplace(keyword);
 
         if (!(vocabularies.contains_any(
-                  {Vocabularies::Known::JSON_Schema_2020_12_Unevaluated,
-                   Vocabularies::Known::JSON_Schema_2019_09_Applicator}) &&
+                  {SchemaVocabularies::Known::JSON_Schema_2020_12_Unevaluated,
+                   SchemaVocabularies::Known::
+                       JSON_Schema_2019_09_Applicator}) &&
               (keyword == "unevaluatedProperties" ||
                keyword == "unevaluatedItems"))) {
           for (const auto &dependency : metadata.dependencies) {
@@ -213,23 +215,23 @@ public:
 private:
   // TODO: Ideally we this information from the frame out of the box
   [[nodiscard]] auto is_anonymous(const JSON &entry,
-                                  const Vocabularies &vocabularies) const
+                                  const SchemaVocabularies &vocabularies) const
       -> bool {
     if (vocabularies.contains_any(
-            {Vocabularies::Known::JSON_Schema_2020_12_Core,
-             Vocabularies::Known::JSON_Schema_2019_09_Core})) {
+            {SchemaVocabularies::Known::JSON_Schema_2020_12_Core,
+             SchemaVocabularies::Known::JSON_Schema_2019_09_Core})) {
       if (entry.defines("$id") || entry.defines("$anchor")) {
         return false;
       }
 
       if (vocabularies.contains(
-              Vocabularies::Known::JSON_Schema_2020_12_Core) &&
+              SchemaVocabularies::Known::JSON_Schema_2020_12_Core) &&
           entry.defines("$dynamicAnchor")) {
         return false;
       }
 
       if (vocabularies.contains(
-              Vocabularies::Known::JSON_Schema_2019_09_Core) &&
+              SchemaVocabularies::Known::JSON_Schema_2019_09_Core) &&
           entry.defines("$recursiveAnchor") &&
           entry.at("$recursiveAnchor").is_boolean() &&
           entry.at("$recursiveAnchor").to_boolean()) {
@@ -239,12 +241,13 @@ private:
       return true;
     }
 
-    if (vocabularies.contains_any({Vocabularies::Known::JSON_Schema_Draft_7,
-                                   Vocabularies::Known::JSON_Schema_Draft_6})) {
+    if (vocabularies.contains_any(
+            {SchemaVocabularies::Known::JSON_Schema_Draft_7,
+             SchemaVocabularies::Known::JSON_Schema_Draft_6})) {
       return !entry.defines("$id");
     }
 
-    if (vocabularies.contains(Vocabularies::Known::JSON_Schema_Draft_4)) {
+    if (vocabularies.contains(SchemaVocabularies::Known::JSON_Schema_Draft_4)) {
       return !entry.defines("id");
     }
 

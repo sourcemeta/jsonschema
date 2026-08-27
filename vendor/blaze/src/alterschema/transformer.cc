@@ -1,6 +1,5 @@
 #include <sourcemeta/blaze/alterschema.h>
 #include <sourcemeta/blaze/foundation.h>
-#include <sourcemeta/blaze/frame.h>
 #include <sourcemeta/core/uri.h>
 
 #include <algorithm>     // std::erase_if
@@ -139,12 +138,15 @@ auto SchemaTransformRule::rereference(const std::string_view reference,
                                    "The reference broke after transformation");
 }
 
-auto SchemaTransformRule::check(
-    const core::JSON &schema, const core::JSON &root,
-    const blaze::Vocabularies &vocabularies, const blaze::SchemaWalker &walker,
-    const blaze::SchemaResolver &resolver, const blaze::SchemaFrame &frame,
-    const blaze::SchemaFrame::Location &location,
-    const core::JSON::String &exclude_keyword, const bool is_metaschema) const
+auto SchemaTransformRule::check(const core::JSON &schema,
+                                const core::JSON &root,
+                                const blaze::SchemaVocabularies &vocabularies,
+                                const blaze::SchemaWalker &walker,
+                                const blaze::SchemaResolver &resolver,
+                                const blaze::SchemaFrame &frame,
+                                const blaze::SchemaFrame::Location &location,
+                                const core::JSON::String &exclude_keyword,
+                                const bool is_metaschema) const
     -> SchemaTransformRule::Result {
   auto result{this->condition(schema, root, vocabularies, frame, location,
                               walker, resolver, is_metaschema)};

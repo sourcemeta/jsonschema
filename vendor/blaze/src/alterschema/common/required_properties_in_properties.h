@@ -11,7 +11,7 @@ public:
   [[nodiscard]] auto
   condition(const sourcemeta::core::JSON &schema,
             const sourcemeta::core::JSON &root,
-            const sourcemeta::blaze::Vocabularies &vocabularies,
+            const sourcemeta::blaze::SchemaVocabularies &vocabularies,
             const sourcemeta::blaze::SchemaFrame &frame,
             const sourcemeta::blaze::SchemaFrame::Location &location,
             const sourcemeta::blaze::SchemaWalker &walker,
@@ -19,17 +19,17 @@ public:
       -> SchemaTransformRule::Result override {
     ONLY_CONTINUE_IF(
         ((vocabularies.contains(
-              Vocabularies::Known::JSON_Schema_2020_12_Validation) &&
+              SchemaVocabularies::Known::JSON_Schema_2020_12_Validation) &&
           vocabularies.contains(
-              Vocabularies::Known::JSON_Schema_2020_12_Applicator)) ||
+              SchemaVocabularies::Known::JSON_Schema_2020_12_Applicator)) ||
          (vocabularies.contains(
-              Vocabularies::Known::JSON_Schema_2019_09_Validation) &&
+              SchemaVocabularies::Known::JSON_Schema_2019_09_Validation) &&
           vocabularies.contains(
-              Vocabularies::Known::JSON_Schema_2019_09_Applicator)) ||
+              SchemaVocabularies::Known::JSON_Schema_2019_09_Applicator)) ||
          vocabularies.contains_any(
-             {Vocabularies::Known::JSON_Schema_Draft_7,
-              Vocabularies::Known::JSON_Schema_Draft_6,
-              Vocabularies::Known::JSON_Schema_Draft_4})) &&
+             {SchemaVocabularies::Known::JSON_Schema_Draft_7,
+              SchemaVocabularies::Known::JSON_Schema_Draft_6,
+              SchemaVocabularies::Known::JSON_Schema_Draft_4})) &&
         schema.is_object());
 
     const auto *required{schema.try_at("required")};
@@ -47,7 +47,7 @@ public:
           !this->defined_in_properties_sibling(schema, property.to_string()) &&
           !WALK_UP_IN_PLACE_APPLICATORS(
                root, frame, location, walker, resolver,
-               [&](const JSON &ancestor, const Vocabularies &) -> bool {
+               [&](const JSON &ancestor, const SchemaVocabularies &) -> bool {
                  return this->defined_in_properties_sibling(
                      ancestor, property.to_string());
                })

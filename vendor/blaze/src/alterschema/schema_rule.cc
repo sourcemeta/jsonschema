@@ -2,7 +2,7 @@
 #include <sourcemeta/blaze/alterschema_error.h>
 #include <sourcemeta/blaze/compiler.h>
 #include <sourcemeta/blaze/evaluator.h>
-#include <sourcemeta/blaze/frame.h>
+#include <sourcemeta/blaze/foundation.h>
 #include <sourcemeta/blaze/output.h>
 
 #include <sourcemeta/core/regex.h>
@@ -76,7 +76,7 @@ SchemaRule::SchemaRule(const sourcemeta::core::JSON &schema,
 
 auto SchemaRule::condition(
     const sourcemeta::core::JSON &schema, const sourcemeta::core::JSON &,
-    const sourcemeta::blaze::Vocabularies &,
+    const sourcemeta::blaze::SchemaVocabularies &,
     const sourcemeta::blaze::SchemaFrame &,
     const sourcemeta::blaze::SchemaFrame::Location &location,
     const sourcemeta::blaze::SchemaWalker &,

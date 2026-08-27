@@ -1,13 +1,14 @@
 #ifndef SOURCEMETA_CORE_NUMERIC_BIG_COEFFICIENT_H_
 #define SOURCEMETA_CORE_NUMERIC_BIG_COEFFICIENT_H_
 
-#include <algorithm> // std::max, std::copy, std::fill
-#include <array>     // std::array
-#include <cstdint>   // std::int32_t, std::int64_t, std::uint32_t,
-                     // std::uint64_t, std::uintptr_t, std::uint8_t
-#include <cstring>   // std::memcpy
-#include <string>    // std::string, std::to_string
-#include <utility>   // std::pair, std::move
+#include <algorithm>   // std::max, std::copy, std::fill
+#include <array>       // std::array
+#include <cstdint>     // std::int32_t, std::int64_t, std::uint32_t,
+                       // std::uint64_t, std::uintptr_t, std::uint8_t
+#include <cstring>     // std::memcpy
+#include <string>      // std::string, std::to_string
+#include <string_view> // std::string_view
+#include <utility>     // std::pair, std::move
 
 #include <sourcemeta/core/numeric_uint128.h>
 
@@ -781,6 +782,25 @@ auto modular_pow10(std::uint32_t exponent, std::uint64_t modulus)
 // Round-half-even (banker's rounding) to WORKING_PRECISION significant digits
 constexpr std::int32_t WORKING_PRECISION = 16;
 
+auto rounds_up_half_even(const std::string_view kept,
+                         const std::string_view dropped) -> bool {
+  if (dropped.empty() || dropped.front() < '5') {
+    return false;
+  }
+
+  if (dropped.front() > '5') {
+    return true;
+  }
+
+  for (std::size_t index = 1; index < dropped.size(); index++) {
+    if (dropped[index] != '0') {
+      return true;
+    }
+  }
+
+  return !kept.empty() && (kept.back() - '0') % 2 != 0;
+}
+
 auto round_to_precision(std::int64_t &coefficient,
                         std::uint64_t &coefficient_high, std::int32_t &exponent,
                         std::uint8_t &flags) -> void {
@@ -803,26 +823,7 @@ auto round_to_precision(std::int64_t &coefficient,
     auto dropped =
         digit_string.substr(static_cast<std::size_t>(WORKING_PRECISION));
 
-    bool round_up = false;
-    if (!dropped.empty()) {
-      if (dropped[0] > '5') {
-        round_up = true;
-      } else if (dropped[0] == '5') {
-        bool has_trailing = false;
-        for (std::size_t index = 1; index < dropped.size(); index++) {
-          if (dropped[index] != '0') {
-            has_trailing = true;
-            break;
-          }
-        }
-
-        if (has_trailing) {
-          round_up = true;
-        } else {
-          round_up = (kept.back() - '0') % 2 != 0;
-        }
-      }
-    }
+    const auto round_up = rounds_up_half_even(kept, dropped);
 
     if ((flags & FLAG_HEAP) != 0) {
       delete load_big_pointer(coefficient);

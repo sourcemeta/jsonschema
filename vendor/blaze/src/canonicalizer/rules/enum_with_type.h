@@ -6,21 +6,21 @@ public:
   [[nodiscard]] auto
   condition(const sourcemeta::core::JSON &schema,
             const sourcemeta::core::JSON &,
-            const sourcemeta::blaze::Vocabularies &vocabularies,
+            const sourcemeta::blaze::SchemaVocabularies &vocabularies,
             const sourcemeta::blaze::SchemaFrame &,
             const sourcemeta::blaze::SchemaFrame::Location &,
             const sourcemeta::blaze::SchemaWalker &,
             const sourcemeta::blaze::SchemaResolver &) const -> bool override {
     ONLY_CONTINUE_IF(vocabularies.contains_any(
-        {Vocabularies::Known::JSON_Schema_2020_12_Validation,
-         Vocabularies::Known::JSON_Schema_2019_09_Validation,
-         Vocabularies::Known::JSON_Schema_Draft_7,
-         Vocabularies::Known::JSON_Schema_Draft_6,
-         Vocabularies::Known::JSON_Schema_Draft_4,
-         Vocabularies::Known::JSON_Schema_Draft_3,
-         Vocabularies::Known::JSON_Schema_Draft_3_Hyper,
-         Vocabularies::Known::JSON_Schema_Draft_2,
-         Vocabularies::Known::JSON_Schema_Draft_1}));
+        {SchemaVocabularies::Known::JSON_Schema_2020_12_Validation,
+         SchemaVocabularies::Known::JSON_Schema_2019_09_Validation,
+         SchemaVocabularies::Known::JSON_Schema_Draft_7,
+         SchemaVocabularies::Known::JSON_Schema_Draft_6,
+         SchemaVocabularies::Known::JSON_Schema_Draft_4,
+         SchemaVocabularies::Known::JSON_Schema_Draft_3,
+         SchemaVocabularies::Known::JSON_Schema_Draft_3_Hyper,
+         SchemaVocabularies::Known::JSON_Schema_Draft_2,
+         SchemaVocabularies::Known::JSON_Schema_Draft_1}));
     ONLY_CONTINUE_IF(schema.is_object());
     const auto *type{schema.try_at("type")};
     ONLY_CONTINUE_IF(type);
@@ -28,8 +28,8 @@ public:
     ONLY_CONTINUE_IF(enum_value && enum_value->is_array());
 
     if (vocabularies.contains_any(
-            {Vocabularies::Known::JSON_Schema_Draft_3,
-             Vocabularies::Known::JSON_Schema_Draft_3_Hyper})) {
+            {SchemaVocabularies::Known::JSON_Schema_Draft_3,
+             SchemaVocabularies::Known::JSON_Schema_Draft_3_Hyper})) {
       if (type->is_string() && type->to_string() == "any") {
         return true;
       }
@@ -64,8 +64,9 @@ public:
     const auto current_types{parse_schema_type(*type)};
     ONLY_CONTINUE_IF(current_types.any());
     const bool integer_matches_integral{
-        vocabularies.contains_any({Vocabularies::Known::JSON_Schema_Draft_6,
-                                   Vocabularies::Known::JSON_Schema_Draft_7}) &&
+        vocabularies.contains_any(
+            {SchemaVocabularies::Known::JSON_Schema_Draft_6,
+             SchemaVocabularies::Known::JSON_Schema_Draft_7}) &&
         current_types.test(
             std::to_underlying(sourcemeta::core::JSON::Type::Integer))};
     ONLY_CONTINUE_IF(std::ranges::all_of(

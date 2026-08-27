@@ -28,7 +28,7 @@ public:
 
   [[nodiscard]] virtual auto condition(
       const sourcemeta::core::JSON &schema, const sourcemeta::core::JSON &root,
-      const sourcemeta::blaze::Vocabularies &vocabularies,
+      const sourcemeta::blaze::SchemaVocabularies &vocabularies,
       const sourcemeta::blaze::SchemaFrame &frame,
       const sourcemeta::blaze::SchemaFrame::Location &location,
       const sourcemeta::blaze::SchemaWalker &walker,

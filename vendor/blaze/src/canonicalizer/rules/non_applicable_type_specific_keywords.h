@@ -7,7 +7,7 @@ public:
   [[nodiscard]] auto
   condition(const sourcemeta::core::JSON &schema,
             const sourcemeta::core::JSON &,
-            const sourcemeta::blaze::Vocabularies &vocabularies,
+            const sourcemeta::blaze::SchemaVocabularies &vocabularies,
             const sourcemeta::blaze::SchemaFrame &frame,
             const sourcemeta::blaze::SchemaFrame::Location &location,
             const sourcemeta::blaze::SchemaWalker &walker,
@@ -15,33 +15,33 @@ public:
     ONLY_CONTINUE_IF(schema.is_object());
 
     const auto *type_value{schema.try_at("type")};
-    auto current_types{vocabularies.contains_any(
-                           {Vocabularies::Known::JSON_Schema_2020_12_Validation,
-                            Vocabularies::Known::JSON_Schema_2019_09_Validation,
-                            Vocabularies::Known::JSON_Schema_Draft_7,
-                            Vocabularies::Known::JSON_Schema_Draft_6,
-                            Vocabularies::Known::JSON_Schema_Draft_4,
-                            Vocabularies::Known::JSON_Schema_Draft_3,
-                            Vocabularies::Known::JSON_Schema_Draft_2,
-                            Vocabularies::Known::JSON_Schema_Draft_2_Hyper,
-                            Vocabularies::Known::JSON_Schema_Draft_1,
-                            Vocabularies::Known::JSON_Schema_Draft_1_Hyper,
-                            Vocabularies::Known::JSON_Schema_Draft_0,
-                            Vocabularies::Known::JSON_Schema_Draft_0_Hyper}) &&
-                               type_value &&
-                               IS_KNOWN_TYPE_FORM(*type_value, vocabularies)
-                           ? parse_schema_type(*type_value)
-                           : sourcemeta::core::JSON::TypeSet{}};
+    auto current_types{
+        vocabularies.contains_any(
+            {SchemaVocabularies::Known::JSON_Schema_2020_12_Validation,
+             SchemaVocabularies::Known::JSON_Schema_2019_09_Validation,
+             SchemaVocabularies::Known::JSON_Schema_Draft_7,
+             SchemaVocabularies::Known::JSON_Schema_Draft_6,
+             SchemaVocabularies::Known::JSON_Schema_Draft_4,
+             SchemaVocabularies::Known::JSON_Schema_Draft_3,
+             SchemaVocabularies::Known::JSON_Schema_Draft_2,
+             SchemaVocabularies::Known::JSON_Schema_Draft_2_Hyper,
+             SchemaVocabularies::Known::JSON_Schema_Draft_1,
+             SchemaVocabularies::Known::JSON_Schema_Draft_1_Hyper,
+             SchemaVocabularies::Known::JSON_Schema_Draft_0,
+             SchemaVocabularies::Known::JSON_Schema_Draft_0_Hyper}) &&
+                type_value && IS_KNOWN_TYPE_FORM(*type_value, vocabularies)
+            ? parse_schema_type(*type_value)
+            : sourcemeta::core::JSON::TypeSet{}};
 
     if (vocabularies.contains_any(
-            {Vocabularies::Known::JSON_Schema_2020_12_Validation,
-             Vocabularies::Known::JSON_Schema_2019_09_Validation,
-             Vocabularies::Known::JSON_Schema_Draft_7,
-             Vocabularies::Known::JSON_Schema_Draft_6,
-             Vocabularies::Known::JSON_Schema_Draft_4,
-             Vocabularies::Known::JSON_Schema_Draft_3,
-             Vocabularies::Known::JSON_Schema_Draft_2,
-             Vocabularies::Known::JSON_Schema_Draft_1})) {
+            {SchemaVocabularies::Known::JSON_Schema_2020_12_Validation,
+             SchemaVocabularies::Known::JSON_Schema_2019_09_Validation,
+             SchemaVocabularies::Known::JSON_Schema_Draft_7,
+             SchemaVocabularies::Known::JSON_Schema_Draft_6,
+             SchemaVocabularies::Known::JSON_Schema_Draft_4,
+             SchemaVocabularies::Known::JSON_Schema_Draft_3,
+             SchemaVocabularies::Known::JSON_Schema_Draft_2,
+             SchemaVocabularies::Known::JSON_Schema_Draft_1})) {
       const auto *enum_value{schema.try_at("enum")};
       if (enum_value && enum_value->is_array()) {
         for (const auto &entry : enum_value->as_array()) {
@@ -51,10 +51,10 @@ public:
     }
 
     if (vocabularies.contains_any(
-            {Vocabularies::Known::JSON_Schema_2020_12_Validation,
-             Vocabularies::Known::JSON_Schema_2019_09_Validation,
-             Vocabularies::Known::JSON_Schema_Draft_7,
-             Vocabularies::Known::JSON_Schema_Draft_6})) {
+            {SchemaVocabularies::Known::JSON_Schema_2020_12_Validation,
+             SchemaVocabularies::Known::JSON_Schema_2019_09_Validation,
+             SchemaVocabularies::Known::JSON_Schema_Draft_7,
+             SchemaVocabularies::Known::JSON_Schema_Draft_6})) {
       const auto *const_value{schema.try_at("const")};
       if (const_value) {
         current_types.set(std::to_underlying(const_value->type()));
@@ -76,28 +76,28 @@ public:
 
       if (entry.first == "required" &&
           vocabularies.contains_any(
-              {Vocabularies::Known::JSON_Schema_Draft_3,
-               Vocabularies::Known::JSON_Schema_Draft_3_Hyper})) {
+              {SchemaVocabularies::Known::JSON_Schema_Draft_3,
+               SchemaVocabularies::Known::JSON_Schema_Draft_3_Hyper})) {
         continue;
       }
 
       if (entry.first == "maxDecimal" &&
           vocabularies.contains_any(
-              {Vocabularies::Known::JSON_Schema_Draft_0,
-               Vocabularies::Known::JSON_Schema_Draft_0_Hyper,
-               Vocabularies::Known::JSON_Schema_Draft_1,
-               Vocabularies::Known::JSON_Schema_Draft_1_Hyper})) {
+              {SchemaVocabularies::Known::JSON_Schema_Draft_0,
+               SchemaVocabularies::Known::JSON_Schema_Draft_0_Hyper,
+               SchemaVocabularies::Known::JSON_Schema_Draft_1,
+               SchemaVocabularies::Known::JSON_Schema_Draft_1_Hyper})) {
         continue;
       }
 
       if (entry.first == "optional" &&
           vocabularies.contains_any(
-              {Vocabularies::Known::JSON_Schema_Draft_0,
-               Vocabularies::Known::JSON_Schema_Draft_0_Hyper,
-               Vocabularies::Known::JSON_Schema_Draft_1,
-               Vocabularies::Known::JSON_Schema_Draft_1_Hyper,
-               Vocabularies::Known::JSON_Schema_Draft_2,
-               Vocabularies::Known::JSON_Schema_Draft_2_Hyper})) {
+              {SchemaVocabularies::Known::JSON_Schema_Draft_0,
+               SchemaVocabularies::Known::JSON_Schema_Draft_0_Hyper,
+               SchemaVocabularies::Known::JSON_Schema_Draft_1,
+               SchemaVocabularies::Known::JSON_Schema_Draft_1_Hyper,
+               SchemaVocabularies::Known::JSON_Schema_Draft_2,
+               SchemaVocabularies::Known::JSON_Schema_Draft_2_Hyper})) {
         continue;
       }
 

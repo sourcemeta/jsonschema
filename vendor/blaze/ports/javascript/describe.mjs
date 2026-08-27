@@ -422,8 +422,8 @@ function formatList(items, conjunction) {
 export function describe(valid, instruction, evaluatePath,
                          instanceLocation, instance, annotation) {
   const opcode = instruction[0];
-  const value = instruction[5];
-  const children = instruction[6];
+  const value = instruction[6];
+  const children = instruction[7];
   const keyword = extractKeyword(evaluatePath);
   const target = resolveTarget(instance, instanceLocation);
   const targetType = jsonTypeOf(target);
@@ -1482,13 +1482,13 @@ export function describe(valid, instruction, evaluatePath,
       for (let index = 0; index < childCount; index++) {
         const child = children[index];
         if (child[0] === LOGICAL_WHEN_DEFINES) {
-          const property = child[5];
+          const property = child[6];
           allDependencies.add(property);
           if (!Object.hasOwn(target, property)) continue;
           present.add(property);
           presentWithSchemas.add(property);
         } else if (child[0] === ASSERTION_PROPERTY_DEPENDENCIES) {
-          const entries = child[5];
+          const entries = child[6];
           for (const property in entries) {
             allDependencies.add(property);
             if (Object.hasOwn(target, property)) {
@@ -1564,7 +1564,7 @@ export function describe(valid, instruction, evaluatePath,
 
       for (let index = 0; index < childCount; index++) {
         const child = children[index];
-        const property = child[5];
+        const property = child[6];
         allDependencies.add(property);
         if (Object.hasOwn(target, property)) {
           present.add(property);

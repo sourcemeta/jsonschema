@@ -24,16 +24,16 @@ inline auto IS_IN_PLACE_APPLICATOR(const SchemaKeywordType type) -> bool {
 // under-approximation that cannot be trusted. Later dialects do not give
 // such forms any meaning, so the parsed set stands
 inline auto IS_KNOWN_TYPE_FORM(const sourcemeta::core::JSON &type,
-                               const Vocabularies &vocabularies) -> bool {
+                               const SchemaVocabularies &vocabularies) -> bool {
   if (!vocabularies.contains_any(
-          {Vocabularies::Known::JSON_Schema_Draft_0,
-           Vocabularies::Known::JSON_Schema_Draft_0_Hyper,
-           Vocabularies::Known::JSON_Schema_Draft_1,
-           Vocabularies::Known::JSON_Schema_Draft_1_Hyper,
-           Vocabularies::Known::JSON_Schema_Draft_2,
-           Vocabularies::Known::JSON_Schema_Draft_2_Hyper,
-           Vocabularies::Known::JSON_Schema_Draft_3,
-           Vocabularies::Known::JSON_Schema_Draft_3_Hyper})) {
+          {SchemaVocabularies::Known::JSON_Schema_Draft_0,
+           SchemaVocabularies::Known::JSON_Schema_Draft_0_Hyper,
+           SchemaVocabularies::Known::JSON_Schema_Draft_1,
+           SchemaVocabularies::Known::JSON_Schema_Draft_1_Hyper,
+           SchemaVocabularies::Known::JSON_Schema_Draft_2,
+           SchemaVocabularies::Known::JSON_Schema_Draft_2_Hyper,
+           SchemaVocabularies::Known::JSON_Schema_Draft_3,
+           SchemaVocabularies::Known::JSON_Schema_Draft_3_Hyper})) {
     return true;
   }
   if (type.is_string()) {

@@ -3,7 +3,6 @@
 
 #include <sourcemeta/blaze/configuration.h>
 #include <sourcemeta/blaze/foundation.h>
-#include <sourcemeta/blaze/frame.h>
 #include <sourcemeta/core/io.h>
 #include <sourcemeta/core/json.h>
 #include <sourcemeta/core/jsonpointer.h>
@@ -29,7 +28,6 @@
 #include <string_view> // std::string_view
 #include <thread>      // std::thread
 #include <utility>     // std::unreachable
-#include <variant>     // std::visit
 
 namespace sourcemeta::jsonschema {
 
@@ -525,15 +523,8 @@ trace_callback(const sourcemeta::core::PointerPositionTracker &tracker,
     stream << "\n";
     stream << "   at keyword location \"" << entry.keyword_location << "\"\n";
 
-    if (entry.vocabulary.first) {
-      stream << "   at vocabulary \"";
-      if (entry.vocabulary.second.has_value()) {
-        std::visit([&stream](const auto &vocabulary) { stream << vocabulary; },
-                   entry.vocabulary.second.value());
-      } else {
-        stream << "<unknown>";
-      }
-      stream << "\"\n";
+    if (entry.vocabulary.has_value()) {
+      stream << "   at vocabulary \"" << entry.vocabulary.value() << "\"\n";
     }
   };
 }
