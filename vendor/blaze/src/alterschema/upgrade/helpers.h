@@ -9,17 +9,7 @@ static auto mark_dialect_override(sourcemeta::core::JSON &schema,
 
 static auto current_dialect_or_override(const sourcemeta::core::JSON &schema)
     -> std::string_view {
-  if (!schema.is_object()) {
-    return {};
-  }
-  const auto *override_value{schema.try_at(DIALECT_OVERRIDE_KEYWORD)};
-  if (override_value != nullptr && override_value->is_string()) {
-    return override_value->to_string();
-  }
-  if (schema.defines("$schema") && schema.at("$schema").is_string()) {
-    return schema.at("$schema").to_string();
-  }
-  return {};
+  return declared_dialect(schema);
 }
 
 static auto

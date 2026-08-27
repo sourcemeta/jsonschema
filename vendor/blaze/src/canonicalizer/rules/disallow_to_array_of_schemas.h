@@ -7,20 +7,20 @@ public:
   [[nodiscard]] auto
   condition(const sourcemeta::core::JSON &schema,
             const sourcemeta::core::JSON &,
-            const sourcemeta::blaze::Vocabularies &vocabularies,
+            const sourcemeta::blaze::SchemaVocabularies &vocabularies,
             const sourcemeta::blaze::SchemaFrame &,
             const sourcemeta::blaze::SchemaFrame::Location &,
             const sourcemeta::blaze::SchemaWalker &,
             const sourcemeta::blaze::SchemaResolver &) const -> bool override {
-    ONLY_CONTINUE_IF(
-        vocabularies.contains_any({Vocabularies::Known::JSON_Schema_Draft_0,
-                                   Vocabularies::Known::JSON_Schema_Draft_1,
-                                   Vocabularies::Known::JSON_Schema_Draft_2,
-                                   Vocabularies::Known::JSON_Schema_Draft_3}) &&
-        schema.is_object() && schema.defines("disallow"));
+    ONLY_CONTINUE_IF(vocabularies.contains_any(
+                         {SchemaVocabularies::Known::JSON_Schema_Draft_0,
+                          SchemaVocabularies::Known::JSON_Schema_Draft_1,
+                          SchemaVocabularies::Known::JSON_Schema_Draft_2,
+                          SchemaVocabularies::Known::JSON_Schema_Draft_3}) &&
+                     schema.is_object() && schema.defines("disallow"));
 
     this->convert_to_schemas_ =
-        vocabularies.contains(Vocabularies::Known::JSON_Schema_Draft_3);
+        vocabularies.contains(SchemaVocabularies::Known::JSON_Schema_Draft_3);
 
     const auto &disallow{schema.at("disallow")};
     if (disallow.is_string()) {

@@ -134,20 +134,18 @@ auto run_loop(sourcemeta::blaze::Evaluator &evaluator,
 }
 
 // Returns false if iteration should stop
-auto process_entry(
-    const sourcemeta::jsonschema::InputJSON &entry,
-    sourcemeta::blaze::Evaluator &evaluator,
-    const sourcemeta::blaze::Template &schema_template,
-    const sourcemeta::jsonschema::CustomResolver &custom_resolver,
-    const sourcemeta::blaze::SchemaFrame &frame, bool benchmark,
-    std::uint64_t benchmark_loop, bool trace, bool fast_mode, bool json_output,
-    bool continue_on_error, const std::filesystem::path &schema_resolution_base,
-    const sourcemeta::core::Options &options, bool &result) -> bool {
+auto process_entry(const sourcemeta::jsonschema::InputJSON &entry,
+                   sourcemeta::blaze::Evaluator &evaluator,
+                   const sourcemeta::blaze::Template &schema_template,
+                   bool benchmark, std::uint64_t benchmark_loop, bool trace,
+                   bool fast_mode, bool json_output, bool continue_on_error,
+                   const std::filesystem::path &schema_resolution_base,
+                   const sourcemeta::core::Options &options, bool &result)
+    -> bool {
   sourcemeta::blaze::SimpleOutput output{entry.second};
   sourcemeta::blaze::TraceOutput trace_output{
-      sourcemeta::blaze::schema_walker, custom_resolver,
-      sourcemeta::jsonschema::trace_callback(entry.positions, std::cout),
-      sourcemeta::core::EMPTY_WEAK_POINTER, frame};
+      schema_template,
+      sourcemeta::jsonschema::trace_callback(entry.positions, std::cout)};
   bool subresult{true};
   if (benchmark) {
     subresult = run_loop(evaluator, schema_template, entry.second, entry.first,
@@ -367,10 +365,10 @@ auto sourcemeta::jsonschema::validate(const sourcemeta::core::Options &options)
     }
 
     for (const auto &entry : for_each_json({}, options)) {
-      if (!process_entry(entry, evaluator, schema_template, custom_resolver,
-                         frame, benchmark, benchmark_loop, trace, fast_mode,
-                         json_output, continue_on_error, schema_resolution_base,
-                         options, result)) {
+      if (!process_entry(entry, evaluator, schema_template, benchmark,
+                         benchmark_loop, trace, fast_mode, json_output,
+                         continue_on_error, schema_resolution_base, options,
+                         result)) {
         break;
       }
     }
@@ -402,10 +400,10 @@ auto sourcemeta::jsonschema::validate(const sourcemeta::core::Options &options)
           instance_path.extension() == ".yaml" ||
           instance_path.extension() == ".yml") {
         for (const auto &entry : for_each_json({instance_path_view}, options)) {
-          if (!process_entry(entry, evaluator, schema_template, custom_resolver,
-                             frame, benchmark, benchmark_loop, trace, fast_mode,
-                             json_output, continue_on_error,
-                             schema_resolution_base, options, result)) {
+          if (!process_entry(entry, evaluator, schema_template, benchmark,
+                             benchmark_loop, trace, fast_mode, json_output,
+                             continue_on_error, schema_resolution_base, options,
+                             result)) {
             break;
           }
         }
@@ -425,9 +423,7 @@ auto sourcemeta::jsonschema::validate(const sourcemeta::core::Options &options)
         }()};
         sourcemeta::blaze::SimpleOutput output{instance};
         sourcemeta::blaze::TraceOutput trace_output{
-            sourcemeta::blaze::schema_walker, custom_resolver,
-            trace_callback(tracker, std::cout),
-            sourcemeta::core::EMPTY_WEAK_POINTER, frame};
+            schema_template, trace_callback(tracker, std::cout)};
         bool subresult{true};
         if (benchmark) {
           subresult = run_loop(evaluator, schema_template, instance,

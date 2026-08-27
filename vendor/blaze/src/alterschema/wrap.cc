@@ -1,7 +1,6 @@
 #include <sourcemeta/blaze/alterschema.h>
 
 #include <sourcemeta/blaze/foundation.h>
-#include <sourcemeta/blaze/frame.h>
 
 #include <sourcemeta/core/json.h>
 #include <sourcemeta/core/jsonpointer.h>
@@ -16,8 +15,9 @@
 namespace sourcemeta::blaze {
 
 auto wrap(const sourcemeta::core::JSON &schema, const SchemaFrame &frame,
-          const SchemaFrame::Location &location, const SchemaResolver &resolver,
-          sourcemeta::core::WeakPointer &base) -> sourcemeta::core::JSON {
+          const SchemaFrame::Location &location, const SchemaWalker &walker,
+          const SchemaResolver &resolver, sourcemeta::core::WeakPointer &base)
+    -> sourcemeta::core::JSON {
   assert(frame.mode() == SchemaFrame::Mode::References);
   assert(location.type != SchemaFrame::LocationType::Pointer);
 
@@ -65,13 +65,17 @@ auto wrap(const sourcemeta::core::JSON &schema, const SchemaFrame &frame,
   // other schemas whose top-level identifiers are relative URIs don't
   // get affected. Otherwise, we would cause unintended base resolution.
   constexpr std::string_view WRAPPER_IDENTIFIER{"__sourcemeta-core-wrap__"};
-  const auto maybe_id{identify(copy, resolver, location.dialect)};
+  // Deliberately framed without a default identifier, so that the root comes
+  // back empty exactly when the schema declares none of its own
+  SchemaFrame declared_frame{SchemaFrame::Mode::Root};
+  declared_frame.analyse(copy, walker, resolver, location.dialect);
+  const std::string_view maybe_id{declared_frame.root()};
   const auto id{maybe_id.empty() ? WRAPPER_IDENTIFIER : maybe_id};
 
   sourcemeta::core::URI uri{id};
 
   try {
-    reidentify(copy, id, resolver, location.dialect);
+    schema_reidentify(copy, id, resolver, location.dialect);
 
     // Otherwise we will get an error with the `WRAPPER_IDENTIFIER`, which will
     // be confusing to end users

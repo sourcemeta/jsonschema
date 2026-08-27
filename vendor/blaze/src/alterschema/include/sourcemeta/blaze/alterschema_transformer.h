@@ -6,7 +6,6 @@
 #endif
 
 #include <sourcemeta/blaze/foundation.h>
-#include <sourcemeta/blaze/frame.h>
 #include <sourcemeta/core/json.h>
 #include <sourcemeta/core/jsonpointer.h>
 
@@ -91,7 +90,7 @@ public:
   [[nodiscard]] auto
   check(const sourcemeta::core::JSON &schema,
         const sourcemeta::core::JSON &root,
-        const sourcemeta::blaze::Vocabularies &vocabularies,
+        const sourcemeta::blaze::SchemaVocabularies &vocabularies,
         const sourcemeta::blaze::SchemaWalker &walker,
         const sourcemeta::blaze::SchemaResolver &resolver,
         const sourcemeta::blaze::SchemaFrame &frame,
@@ -112,7 +111,7 @@ public:
   [[nodiscard]] virtual auto
   condition(const sourcemeta::core::JSON &schema,
             const sourcemeta::core::JSON &root,
-            const sourcemeta::blaze::Vocabularies &vocabularies,
+            const sourcemeta::blaze::SchemaVocabularies &vocabularies,
             const sourcemeta::blaze::SchemaFrame &frame,
             const sourcemeta::blaze::SchemaFrame::Location &location,
             const sourcemeta::blaze::SchemaWalker &walker,

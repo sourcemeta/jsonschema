@@ -25,8 +25,6 @@ target_link_libraries(sourcemeta_blaze_output PRIVATE
   sourcemeta::core::text)
 target_link_libraries(sourcemeta_blaze_output PUBLIC
   sourcemeta::blaze::foundation)
-target_link_libraries(sourcemeta_blaze_output PUBLIC
-  sourcemeta::blaze::frame)
 
 target_link_libraries(sourcemeta_blaze_output PUBLIC
   sourcemeta::blaze::evaluator)

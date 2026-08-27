@@ -4,7 +4,6 @@
 #include <sourcemeta/blaze/codegen.h>
 
 #include <sourcemeta/blaze/foundation.h>
-#include <sourcemeta/blaze/frame.h>
 #include <sourcemeta/core/regex.h>
 #include <sourcemeta/core/uri.h>
 
@@ -32,7 +31,7 @@ namespace sourcemeta::blaze {
 auto handle_impossible(const sourcemeta::core::JSON &,
                        const sourcemeta::blaze::SchemaFrame &frame,
                        const sourcemeta::blaze::SchemaFrame::Location &location,
-                       const sourcemeta::blaze::Vocabularies &,
+                       const sourcemeta::blaze::SchemaVocabularies &,
                        const sourcemeta::blaze::SchemaResolver &,
                        const sourcemeta::core::JSON &) -> CodegenIRImpossible {
   return CodegenIRImpossible{
@@ -43,7 +42,7 @@ auto handle_impossible(const sourcemeta::core::JSON &,
 auto handle_any(const sourcemeta::core::JSON &,
                 const sourcemeta::blaze::SchemaFrame &frame,
                 const sourcemeta::blaze::SchemaFrame::Location &location,
-                const sourcemeta::blaze::Vocabularies &,
+                const sourcemeta::blaze::SchemaVocabularies &,
                 const sourcemeta::blaze::SchemaResolver &,
                 const sourcemeta::core::JSON &) -> CodegenIRAny {
   return CodegenIRAny{
@@ -54,7 +53,7 @@ auto handle_any(const sourcemeta::core::JSON &,
 auto handle_string(const sourcemeta::core::JSON &schema,
                    const sourcemeta::blaze::SchemaFrame &frame,
                    const sourcemeta::blaze::SchemaFrame::Location &location,
-                   const sourcemeta::blaze::Vocabularies &,
+                   const sourcemeta::blaze::SchemaVocabularies &,
                    const sourcemeta::blaze::SchemaResolver &,
                    const sourcemeta::core::JSON &subschema) -> CodegenIRScalar {
   ONLY_WHITELIST_KEYWORDS(schema, subschema, location.pointer,
@@ -88,7 +87,7 @@ auto handle_string(const sourcemeta::core::JSON &schema,
 auto handle_object(const sourcemeta::core::JSON &schema,
                    const sourcemeta::blaze::SchemaFrame &frame,
                    const sourcemeta::blaze::SchemaFrame::Location &location,
-                   const sourcemeta::blaze::Vocabularies &,
+                   const sourcemeta::blaze::SchemaVocabularies &,
                    const sourcemeta::blaze::SchemaResolver &,
                    const sourcemeta::core::JSON &subschema) -> CodegenIRObject {
   ONLY_WHITELIST_KEYWORDS(
@@ -196,7 +195,7 @@ auto handle_object(const sourcemeta::core::JSON &schema,
 auto handle_integer(const sourcemeta::core::JSON &schema,
                     const sourcemeta::blaze::SchemaFrame &frame,
                     const sourcemeta::blaze::SchemaFrame::Location &location,
-                    const sourcemeta::blaze::Vocabularies &,
+                    const sourcemeta::blaze::SchemaVocabularies &,
                     const sourcemeta::blaze::SchemaResolver &,
                     const sourcemeta::core::JSON &subschema)
     -> CodegenIRScalar {
@@ -215,7 +214,7 @@ auto handle_integer(const sourcemeta::core::JSON &schema,
 auto handle_number(const sourcemeta::core::JSON &schema,
                    const sourcemeta::blaze::SchemaFrame &frame,
                    const sourcemeta::blaze::SchemaFrame::Location &location,
-                   const sourcemeta::blaze::Vocabularies &,
+                   const sourcemeta::blaze::SchemaVocabularies &,
                    const sourcemeta::blaze::SchemaResolver &,
                    const sourcemeta::core::JSON &subschema) -> CodegenIRScalar {
   ONLY_WHITELIST_KEYWORDS(schema, subschema, location.pointer,
@@ -233,7 +232,7 @@ auto handle_number(const sourcemeta::core::JSON &schema,
 auto handle_array(const sourcemeta::core::JSON &schema,
                   const sourcemeta::blaze::SchemaFrame &frame,
                   const sourcemeta::blaze::SchemaFrame::Location &location,
-                  const sourcemeta::blaze::Vocabularies &vocabularies,
+                  const sourcemeta::blaze::SchemaVocabularies &vocabularies,
                   const sourcemeta::blaze::SchemaResolver &,
                   const sourcemeta::core::JSON &subschema) -> CodegenIREntity {
   ONLY_WHITELIST_KEYWORDS(schema, subschema, location.pointer,
@@ -247,7 +246,7 @@ auto handle_array(const sourcemeta::core::JSON &schema,
                            "writeOnly",      "examples"});
 
   if (vocabularies.contains(
-          Vocabularies::Known::JSON_Schema_2020_12_Applicator) &&
+          SchemaVocabularies::Known::JSON_Schema_2020_12_Applicator) &&
       subschema.defines("prefixItems")) {
     const auto &prefix_items{subschema.at("prefixItems")};
     assert(prefix_items.is_array());
@@ -289,11 +288,11 @@ auto handle_array(const sourcemeta::core::JSON &schema,
   }
 
   if (vocabularies.contains_any(
-          {Vocabularies::Known::JSON_Schema_2019_09_Applicator,
-           Vocabularies::Known::JSON_Schema_Draft_7,
-           Vocabularies::Known::JSON_Schema_Draft_6,
-           Vocabularies::Known::JSON_Schema_Draft_4,
-           Vocabularies::Known::JSON_Schema_Draft_3}) &&
+          {SchemaVocabularies::Known::JSON_Schema_2019_09_Applicator,
+           SchemaVocabularies::Known::JSON_Schema_Draft_7,
+           SchemaVocabularies::Known::JSON_Schema_Draft_6,
+           SchemaVocabularies::Known::JSON_Schema_Draft_4,
+           SchemaVocabularies::Known::JSON_Schema_Draft_3}) &&
       subschema.defines("items") && subschema.at("items").is_array()) {
     const auto &items_array{subschema.at("items")};
 
@@ -356,7 +355,7 @@ auto handle_array(const sourcemeta::core::JSON &schema,
 auto handle_enum(const sourcemeta::core::JSON &schema,
                  const sourcemeta::blaze::SchemaFrame &frame,
                  const sourcemeta::blaze::SchemaFrame::Location &location,
-                 const sourcemeta::blaze::Vocabularies &,
+                 const sourcemeta::blaze::SchemaVocabularies &,
                  const sourcemeta::blaze::SchemaResolver &,
                  const sourcemeta::core::JSON &subschema) -> CodegenIREntity {
   ONLY_WHITELIST_KEYWORDS(schema, subschema, location.pointer,
@@ -395,7 +394,7 @@ auto handle_enum(const sourcemeta::core::JSON &schema,
 auto handle_anyof(const sourcemeta::core::JSON &schema,
                   const sourcemeta::blaze::SchemaFrame &frame,
                   const sourcemeta::blaze::SchemaFrame::Location &location,
-                  const sourcemeta::blaze::Vocabularies &,
+                  const sourcemeta::blaze::SchemaVocabularies &,
                   const sourcemeta::blaze::SchemaResolver &,
                   const sourcemeta::core::JSON &subschema) -> CodegenIREntity {
   ONLY_WHITELIST_KEYWORDS(
@@ -432,7 +431,7 @@ auto handle_anyof(const sourcemeta::core::JSON &schema,
 auto handle_oneof(const sourcemeta::core::JSON &schema,
                   const sourcemeta::blaze::SchemaFrame &frame,
                   const sourcemeta::blaze::SchemaFrame::Location &location,
-                  const sourcemeta::blaze::Vocabularies &,
+                  const sourcemeta::blaze::SchemaVocabularies &,
                   const sourcemeta::blaze::SchemaResolver &,
                   const sourcemeta::core::JSON &subschema) -> CodegenIREntity {
   ONLY_WHITELIST_KEYWORDS(
@@ -469,7 +468,7 @@ auto handle_oneof(const sourcemeta::core::JSON &schema,
 auto handle_ref(const sourcemeta::core::JSON &schema,
                 const sourcemeta::blaze::SchemaFrame &frame,
                 const sourcemeta::blaze::SchemaFrame::Location &location,
-                const sourcemeta::blaze::Vocabularies &,
+                const sourcemeta::blaze::SchemaVocabularies &,
                 const sourcemeta::blaze::SchemaResolver &,
                 const sourcemeta::core::JSON &subschema) -> CodegenIREntity {
   ONLY_WHITELIST_KEYWORDS(schema, subschema, location.pointer,
@@ -507,7 +506,7 @@ auto handle_dynamic_ref(
     const sourcemeta::core::JSON &schema,
     const sourcemeta::blaze::SchemaFrame &frame,
     const sourcemeta::blaze::SchemaFrame::Location &location,
-    const sourcemeta::blaze::Vocabularies &,
+    const sourcemeta::blaze::SchemaVocabularies &,
     const sourcemeta::blaze::SchemaResolver &,
     const sourcemeta::core::JSON &subschema) -> CodegenIREntity {
   ONLY_WHITELIST_KEYWORDS(schema, subschema, location.pointer,
@@ -578,7 +577,7 @@ auto handle_dynamic_ref(
 auto handle_allof(const sourcemeta::core::JSON &schema,
                   const sourcemeta::blaze::SchemaFrame &frame,
                   const sourcemeta::blaze::SchemaFrame::Location &location,
-                  const sourcemeta::blaze::Vocabularies &,
+                  const sourcemeta::blaze::SchemaVocabularies &,
                   const sourcemeta::blaze::SchemaResolver &,
                   const sourcemeta::core::JSON &subschema) -> CodegenIREntity {
   ONLY_WHITELIST_KEYWORDS(
@@ -631,7 +630,7 @@ auto handle_if_then_else(
     const sourcemeta::core::JSON &schema,
     const sourcemeta::blaze::SchemaFrame &frame,
     const sourcemeta::blaze::SchemaFrame::Location &location,
-    const sourcemeta::blaze::Vocabularies &,
+    const sourcemeta::blaze::SchemaVocabularies &,
     const sourcemeta::blaze::SchemaResolver &,
     const sourcemeta::core::JSON &subschema) -> CodegenIREntity {
   ONLY_WHITELIST_KEYWORDS(schema, subschema, location.pointer,
@@ -684,24 +683,24 @@ auto default_compiler(const sourcemeta::core::JSON &schema,
   assert(!vocabularies.empty());
 
   // Be strict with vocabulary support
-  static const std::unordered_set<Vocabularies::URI> supported{
-      Vocabularies::Known::JSON_Schema_2020_12_Core,
-      Vocabularies::Known::JSON_Schema_2020_12_Applicator,
-      Vocabularies::Known::JSON_Schema_2020_12_Validation,
-      Vocabularies::Known::JSON_Schema_2020_12_Unevaluated,
-      Vocabularies::Known::JSON_Schema_2020_12_Content,
-      Vocabularies::Known::JSON_Schema_2020_12_Meta_Data,
-      Vocabularies::Known::JSON_Schema_2020_12_Format_Annotation,
-      Vocabularies::Known::JSON_Schema_2020_12_Format_Assertion,
-      Vocabularies::Known::JSON_Schema_2019_09_Core,
-      Vocabularies::Known::JSON_Schema_2019_09_Applicator,
-      Vocabularies::Known::JSON_Schema_2019_09_Validation,
-      Vocabularies::Known::JSON_Schema_2019_09_Content,
-      Vocabularies::Known::JSON_Schema_2019_09_Meta_Data,
-      Vocabularies::Known::JSON_Schema_2019_09_Format,
-      Vocabularies::Known::JSON_Schema_Draft_7,
-      Vocabularies::Known::JSON_Schema_Draft_6,
-      Vocabularies::Known::JSON_Schema_Draft_4};
+  static const std::unordered_set<SchemaVocabularies::URI> supported{
+      SchemaVocabularies::Known::JSON_Schema_2020_12_Core,
+      SchemaVocabularies::Known::JSON_Schema_2020_12_Applicator,
+      SchemaVocabularies::Known::JSON_Schema_2020_12_Validation,
+      SchemaVocabularies::Known::JSON_Schema_2020_12_Unevaluated,
+      SchemaVocabularies::Known::JSON_Schema_2020_12_Content,
+      SchemaVocabularies::Known::JSON_Schema_2020_12_Meta_Data,
+      SchemaVocabularies::Known::JSON_Schema_2020_12_Format_Annotation,
+      SchemaVocabularies::Known::JSON_Schema_2020_12_Format_Assertion,
+      SchemaVocabularies::Known::JSON_Schema_2019_09_Core,
+      SchemaVocabularies::Known::JSON_Schema_2019_09_Applicator,
+      SchemaVocabularies::Known::JSON_Schema_2019_09_Validation,
+      SchemaVocabularies::Known::JSON_Schema_2019_09_Content,
+      SchemaVocabularies::Known::JSON_Schema_2019_09_Meta_Data,
+      SchemaVocabularies::Known::JSON_Schema_2019_09_Format,
+      SchemaVocabularies::Known::JSON_Schema_Draft_7,
+      SchemaVocabularies::Known::JSON_Schema_Draft_6,
+      SchemaVocabularies::Known::JSON_Schema_Draft_4};
   vocabularies.throw_if_any_unsupported(supported,
                                         "Unsupported required vocabulary");
 

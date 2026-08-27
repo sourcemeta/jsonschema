@@ -1,7 +1,7 @@
 WRITE schema.json UNTIL EOF
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "has spaces in it",
+  "$dynamicRef": "has spaces in it",
   "type": "string"
 }
 EOF
@@ -15,11 +15,11 @@ WRITE expected.txt UNTIL EOF
 2> fail: [CWD]/schema.json
 2> error: Schema validation failure
 2>   The string value "has spaces in it" was expected to represent a valid URI reference
-2>     at instance location "/$id" (line 3, column 3)
-2>     at evaluate path "/allOf/0/$ref/properties/$id/$ref/format"
+2>     at instance location "/$dynamicRef" (line 3, column 3)
+2>     at evaluate path "/allOf/0/$ref/properties/$dynamicRef/$ref/format"
 2>   The string value was expected to validate against the referenced schema
-2>     at instance location "/$id" (line 3, column 3)
-2>     at evaluate path "/allOf/0/$ref/properties/$id/$ref"
+2>     at instance location "/$dynamicRef" (line 3, column 3)
+2>     at evaluate path "/allOf/0/$ref/properties/$dynamicRef/$ref"
 2>   The object value was expected to validate against the 9 defined properties subschemas
 2>     at instance location "" (line 1, column 1)
 2>     at evaluate path "/allOf/0/$ref/properties"

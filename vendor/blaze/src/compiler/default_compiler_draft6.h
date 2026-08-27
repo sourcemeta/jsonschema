@@ -8,6 +8,8 @@
 
 #include "compile_helpers.h"
 
+#include "schema_helpers.h"
+
 namespace internal {
 using namespace sourcemeta::blaze;
 
@@ -24,8 +26,8 @@ auto compiler_draft6_validation_type(const Context &context,
   // children of the loop over the keys, so an object with no properties
   // still passes
   if (schema_context.is_property_name) {
-    const auto types{sourcemeta::blaze::parse_schema_type(
-        schema_context.schema.at(dynamic_context.keyword))};
+    const auto types{
+        parse_schema_type(schema_context.schema.at(dynamic_context.keyword))};
     if (types.test(std::to_underlying(sourcemeta::core::JSON::Type::String))) {
       return {};
     }

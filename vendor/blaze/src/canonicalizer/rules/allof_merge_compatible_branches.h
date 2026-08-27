@@ -7,19 +7,20 @@ public:
   [[nodiscard]] auto
   condition(const sourcemeta::core::JSON &schema,
             const sourcemeta::core::JSON &,
-            const sourcemeta::blaze::Vocabularies &vocabularies,
+            const sourcemeta::blaze::SchemaVocabularies &vocabularies,
             const sourcemeta::blaze::SchemaFrame &frame,
             const sourcemeta::blaze::SchemaFrame::Location &location,
             const sourcemeta::blaze::SchemaWalker &walker,
             const sourcemeta::blaze::SchemaResolver &) const -> bool override {
     static const sourcemeta::core::JSON::String KEYWORD{"allOf"};
-    ONLY_CONTINUE_IF(vocabularies.contains_any(
-                         {Vocabularies::Known::JSON_Schema_2020_12_Applicator,
-                          Vocabularies::Known::JSON_Schema_2019_09_Applicator,
-                          Vocabularies::Known::JSON_Schema_Draft_7,
-                          Vocabularies::Known::JSON_Schema_Draft_6,
-                          Vocabularies::Known::JSON_Schema_Draft_4}) &&
-                     schema.is_object());
+    ONLY_CONTINUE_IF(
+        vocabularies.contains_any(
+            {SchemaVocabularies::Known::JSON_Schema_2020_12_Applicator,
+             SchemaVocabularies::Known::JSON_Schema_2019_09_Applicator,
+             SchemaVocabularies::Known::JSON_Schema_Draft_7,
+             SchemaVocabularies::Known::JSON_Schema_Draft_6,
+             SchemaVocabularies::Known::JSON_Schema_Draft_4}) &&
+        schema.is_object());
 
     const auto *all_of{schema.try_at(KEYWORD)};
     ONLY_CONTINUE_IF(all_of && all_of->is_array() && all_of->size() >= 2);
@@ -149,12 +150,11 @@ private:
     return false;
   }
 
-  static auto
-  has_cross_dependencies(const sourcemeta::core::JSON &branch_a,
-                         const sourcemeta::core::JSON &branch_b,
-                         const sourcemeta::blaze::SchemaWalker &walker,
-                         const sourcemeta::blaze::Vocabularies &vocabularies)
-      -> bool {
+  static auto has_cross_dependencies(
+      const sourcemeta::core::JSON &branch_a,
+      const sourcemeta::core::JSON &branch_b,
+      const sourcemeta::blaze::SchemaWalker &walker,
+      const sourcemeta::blaze::SchemaVocabularies &vocabularies) -> bool {
     for (const auto &entry_a : branch_a.as_object()) {
       const auto &metadata{walker(entry_a.first, vocabularies)};
       for (const auto &dependency : metadata.dependencies) {

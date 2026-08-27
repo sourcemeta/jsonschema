@@ -27,7 +27,7 @@ namespace sourcemeta::blaze {
 /// @ingroup foundation
 /// Optimized vocabulary set using bitflags for known vocabularies
 /// and a fallback `std::unordered_map` for custom vocabularies.
-struct SOURCEMETA_BLAZE_FOUNDATION_EXPORT Vocabularies {
+struct SOURCEMETA_BLAZE_FOUNDATION_EXPORT SchemaVocabularies {
   enum class Known : std::uint8_t {
     // Pre-vocabulary dialects (treated as vocabularies)
     JSON_Schema_Draft_0 = 0,
@@ -78,20 +78,21 @@ struct SOURCEMETA_BLAZE_FOUNDATION_EXPORT Vocabularies {
   using URI = std::variant<Known, sourcemeta::core::JSON::String>;
 
 public:
-  Vocabularies() = default;
-  Vocabularies(const Vocabularies &) = default;
-  Vocabularies(Vocabularies &&) noexcept = default;
-  auto operator=(const Vocabularies &) -> Vocabularies & = default;
-  auto operator=(Vocabularies &&) noexcept -> Vocabularies & = default;
-  ~Vocabularies() = default;
+  SchemaVocabularies() = default;
+  SchemaVocabularies(const SchemaVocabularies &) = default;
+  SchemaVocabularies(SchemaVocabularies &&) noexcept = default;
+  auto operator=(const SchemaVocabularies &) -> SchemaVocabularies & = default;
+  auto operator=(SchemaVocabularies &&) noexcept
+      -> SchemaVocabularies & = default;
+  ~SchemaVocabularies() = default;
 
   /// Construct from initializer list
-  Vocabularies(
+  SchemaVocabularies(
       std::initializer_list<std::pair<sourcemeta::core::JSON::String, bool>>
           init);
 
   /// Construct from initializer list using known vocabulary enums
-  Vocabularies(std::initializer_list<std::pair<Known, bool>> init);
+  SchemaVocabularies(std::initializer_list<std::pair<Known, bool>> init);
 
   /// Check if a vocabulary is enabled
   [[nodiscard]] auto
@@ -154,31 +155,24 @@ private:
 
 /// Convert a known vocabulary enum to its URI string
 SOURCEMETA_BLAZE_FOUNDATION_EXPORT auto
-operator<<(std::ostream &stream, Vocabularies::Known vocabulary)
+operator<<(std::ostream &stream, SchemaVocabularies::Known vocabulary)
     -> std::ostream &;
 
 /// Convert a vocabulary URI to its string representation
 SOURCEMETA_BLAZE_FOUNDATION_EXPORT auto
-operator<<(std::ostream &stream, const Vocabularies::URI &vocabulary)
+operator<<(std::ostream &stream, const SchemaVocabularies::URI &vocabulary)
     -> std::ostream &;
-
-/// Stringify a known vocabulary to a string
-SOURCEMETA_BLAZE_FOUNDATION_EXPORT auto
-to_string(Vocabularies::Known vocabulary) -> std::string_view;
-
-/// Stringify a vocabulary URI to a string
-SOURCEMETA_BLAZE_FOUNDATION_EXPORT auto
-to_string(const Vocabularies::URI &vocabulary) -> std::string_view;
 
 } // namespace sourcemeta::blaze
 
-template <> struct std::formatter<sourcemeta::blaze::Vocabularies::Known> {
+template <>
+struct std::formatter<sourcemeta::blaze::SchemaVocabularies::Known> {
   constexpr auto parse(std::format_parse_context &context)
       -> decltype(context.begin()) {
     return context.begin();
   }
 
-  auto format(const sourcemeta::blaze::Vocabularies::Known value,
+  auto format(const sourcemeta::blaze::SchemaVocabularies::Known value,
               std::format_context &context) const -> decltype(context.out()) {
     std::ostringstream stream;
     stream << value;
@@ -186,13 +180,13 @@ template <> struct std::formatter<sourcemeta::blaze::Vocabularies::Known> {
   }
 };
 
-template <> struct std::formatter<sourcemeta::blaze::Vocabularies::URI> {
+template <> struct std::formatter<sourcemeta::blaze::SchemaVocabularies::URI> {
   constexpr auto parse(std::format_parse_context &context)
       -> decltype(context.begin()) {
     return context.begin();
   }
 
-  auto format(const sourcemeta::blaze::Vocabularies::URI &value,
+  auto format(const sourcemeta::blaze::SchemaVocabularies::URI &value,
               std::format_context &context) const -> decltype(context.out()) {
     std::ostringstream stream;
     stream << value;

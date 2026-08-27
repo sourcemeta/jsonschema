@@ -13,32 +13,32 @@ public:
   [[nodiscard]] auto
   condition(const sourcemeta::core::JSON &schema,
             const sourcemeta::core::JSON &root,
-            const sourcemeta::blaze::Vocabularies &vocabularies,
+            const sourcemeta::blaze::SchemaVocabularies &vocabularies,
             const sourcemeta::blaze::SchemaFrame &frame,
             const sourcemeta::blaze::SchemaFrame::Location &location,
             const sourcemeta::blaze::SchemaWalker &,
             const sourcemeta::blaze::SchemaResolver &, const bool) const
       -> SchemaTransformRule::Result override {
     ONLY_CONTINUE_IF(vocabularies.contains_any(
-        {Vocabularies::Known::JSON_Schema_2020_12_Applicator,
-         Vocabularies::Known::JSON_Schema_2019_09_Applicator,
-         Vocabularies::Known::JSON_Schema_Draft_7,
-         Vocabularies::Known::JSON_Schema_Draft_6,
-         Vocabularies::Known::JSON_Schema_Draft_4,
-         Vocabularies::Known::JSON_Schema_Draft_3,
-         Vocabularies::Known::JSON_Schema_Draft_3_Hyper,
-         Vocabularies::Known::JSON_Schema_Draft_2,
-         Vocabularies::Known::JSON_Schema_Draft_2_Hyper,
-         Vocabularies::Known::JSON_Schema_Draft_1,
-         Vocabularies::Known::JSON_Schema_Draft_1_Hyper}));
+        {SchemaVocabularies::Known::JSON_Schema_2020_12_Applicator,
+         SchemaVocabularies::Known::JSON_Schema_2019_09_Applicator,
+         SchemaVocabularies::Known::JSON_Schema_Draft_7,
+         SchemaVocabularies::Known::JSON_Schema_Draft_6,
+         SchemaVocabularies::Known::JSON_Schema_Draft_4,
+         SchemaVocabularies::Known::JSON_Schema_Draft_3,
+         SchemaVocabularies::Known::JSON_Schema_Draft_3_Hyper,
+         SchemaVocabularies::Known::JSON_Schema_Draft_2,
+         SchemaVocabularies::Known::JSON_Schema_Draft_2_Hyper,
+         SchemaVocabularies::Known::JSON_Schema_Draft_1,
+         SchemaVocabularies::Known::JSON_Schema_Draft_1_Hyper}));
     ONLY_CONTINUE_IF(schema.is_object());
     const auto *properties{schema.try_at("properties")};
     ONLY_CONTINUE_IF(properties && properties->is_object() &&
                      !properties->empty());
 
     if (vocabularies.contains_any(
-            {Vocabularies::Known::JSON_Schema_2020_12_Core,
-             Vocabularies::Known::JSON_Schema_2019_09_Core})) {
+            {SchemaVocabularies::Known::JSON_Schema_2020_12_Core,
+             SchemaVocabularies::Known::JSON_Schema_2019_09_Core})) {
       // Skip meta-schemas with `$vocabulary` (2019-09+)
       // We check the current schema resource (not root) to handle bundled
       // schemas

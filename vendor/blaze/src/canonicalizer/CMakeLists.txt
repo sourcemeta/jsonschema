@@ -138,7 +138,5 @@ endif()
 
 target_link_libraries(sourcemeta_blaze_canonicalizer PUBLIC
   sourcemeta::blaze::foundation)
-target_link_libraries(sourcemeta_blaze_canonicalizer PUBLIC
-  sourcemeta::blaze::frame)
 target_link_libraries(sourcemeta_blaze_canonicalizer PRIVATE
   sourcemeta::core::uri)

@@ -1,12 +1,12 @@
 #include <sourcemeta/blaze/compiler.h>
-#include <sourcemeta/blaze/frame.h>
+#include <sourcemeta/blaze/foundation.h>
 
 #include "compile_helpers.h"
 
 namespace {
 using namespace sourcemeta::core;
 using namespace sourcemeta::blaze;
-using Known = Vocabularies::Known;
+using Known = SchemaVocabularies::Known;
 
 // NOLINTBEGIN(bugprone-throwing-static-initialization)
 static const std::string UNEVALUATED_PROPERTIES{"unevaluatedProperties"};
@@ -116,7 +116,7 @@ auto find_adjacent_dependencies(
       case SchemaKeywordType::ApplicatorValueTraverseParent:
         [[fallthrough]];
       case SchemaKeywordType::ApplicatorValueInPlaceMaybe:
-        if (is_schema(property.second)) {
+        if ((property.second.is_object() || property.second.is_boolean())) {
           find_adjacent_dependencies(
               current, schema, frame, walker, resolver, keywords, root,
               frame.traverse(entry, make_weak_pointer(property.first)), false,
@@ -132,7 +132,8 @@ auto find_adjacent_dependencies(
                 frame.traverse(entry, make_weak_pointer(property.first, index)),
                 false, result);
           }
-        } else if (is_schema(property.second)) {
+        } else if ((property.second.is_object() ||
+                    property.second.is_boolean())) {
           find_adjacent_dependencies(
               current, schema, frame, walker, resolver, keywords, root,
               frame.traverse(entry, make_weak_pointer(property.first)), false,
@@ -203,7 +204,7 @@ auto unevaluated(const JSON &schema, const SchemaFrame &frame,
     }
 
     const auto &subschema{get(schema, entry.second.pointer)};
-    assert(is_schema(subschema));
+    assert((subschema.is_object() || subschema.is_boolean()));
     if (!subschema.is_object()) {
       continue;
     }

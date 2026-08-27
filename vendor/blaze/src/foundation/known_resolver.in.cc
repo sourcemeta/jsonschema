@@ -532,12 +532,12 @@ auto sourcemeta::blaze::schema_resolver(const std::string_view identifier)
   return std::nullopt;
 }
 
-auto sourcemeta::blaze::is_known_schema(
+auto sourcemeta::blaze::schema_is_known(
     const std::string_view identifier) noexcept -> bool {
   return parse_identifier(identifier) != KnownSchema::UNKNOWN;
 }
 
-auto sourcemeta::blaze::is_official_schema(
+auto sourcemeta::blaze::schema_is_official(
     const std::string_view identifier) noexcept -> bool {
   switch (parse_identifier(identifier)) {
     case KnownSchema::JSONSCHEMA_2020_12:

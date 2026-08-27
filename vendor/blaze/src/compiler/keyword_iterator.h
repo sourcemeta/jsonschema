@@ -22,7 +22,7 @@ struct KeywordEntry {
 };
 
 inline auto schema_keyword_priority(const std::string_view keyword,
-                                    const Vocabularies &vocabularies,
+                                    const SchemaVocabularies &vocabularies,
                                     const SchemaWalker &walker)
     -> std::uint64_t {
   const auto &result{walker(keyword, vocabularies)};
@@ -54,7 +54,7 @@ public:
   using const_iterator = typename internal::const_iterator;
   SchemaKeywordIterator(const sourcemeta::core::JSON &schema,
                         const SchemaWalker &walker,
-                        const Vocabularies &vocabularies);
+                        const SchemaVocabularies &vocabularies);
   [[nodiscard]] auto begin() const -> const_iterator;
   [[nodiscard]] auto end() const -> const_iterator;
   [[nodiscard]] auto cbegin() const -> const_iterator;
@@ -69,8 +69,8 @@ private:
 
 inline SchemaKeywordIterator::SchemaKeywordIterator(
     const sourcemeta::core::JSON &schema, const SchemaWalker &walker,
-    const Vocabularies &vocabularies) {
-  assert(is_schema(schema));
+    const SchemaVocabularies &vocabularies) {
+  assert((schema.is_object() || schema.is_boolean()));
   if (schema.is_boolean()) {
     return;
   }

@@ -11,16 +11,17 @@ public:
   [[nodiscard]] auto
   condition(const sourcemeta::core::JSON &schema,
             const sourcemeta::core::JSON &,
-            const sourcemeta::blaze::Vocabularies &vocabularies,
+            const sourcemeta::blaze::SchemaVocabularies &vocabularies,
             const sourcemeta::blaze::SchemaFrame &frame,
             const sourcemeta::blaze::SchemaFrame::Location &location,
             const sourcemeta::blaze::SchemaWalker &,
             const sourcemeta::blaze::SchemaResolver &) const -> bool override {
-    ONLY_CONTINUE_IF(vocabularies.contains_any(
-                         {Vocabularies::Known::JSON_Schema_2020_12_Content,
-                          Vocabularies::Known::JSON_Schema_2019_09_Content}) &&
-                     schema.is_object() && schema.defines(KEYWORD) &&
-                     !schema.defines("contentMediaType"));
+    ONLY_CONTINUE_IF(
+        vocabularies.contains_any(
+            {SchemaVocabularies::Known::JSON_Schema_2020_12_Content,
+             SchemaVocabularies::Known::JSON_Schema_2019_09_Content}) &&
+        schema.is_object() && schema.defines(KEYWORD) &&
+        !schema.defines("contentMediaType"));
     ONLY_CONTINUE_IF(!frame.has_references_through(
         location.pointer,
         sourcemeta::core::WeakPointer::Token{std::cref(KEYWORD)}));

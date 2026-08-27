@@ -7,7 +7,7 @@ public:
 
   [[nodiscard]] auto condition(const sourcemeta::core::JSON &schema,
                                const sourcemeta::core::JSON &,
-                               const sourcemeta::blaze::Vocabularies &,
+                               const sourcemeta::blaze::SchemaVocabularies &,
                                const sourcemeta::blaze::SchemaFrame &,
                                const sourcemeta::blaze::SchemaFrame::Location &,
                                const sourcemeta::blaze::SchemaWalker &,

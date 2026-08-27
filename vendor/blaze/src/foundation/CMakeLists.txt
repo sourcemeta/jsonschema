@@ -4,9 +4,9 @@ include(./known_resolver.cmake)
 
 sourcemeta_library(NAMESPACE sourcemeta PROJECT blaze NAME foundation
   FOLDER "Blaze/Foundation"
-  PRIVATE_HEADERS error.h types.h vocabularies.h
-  SOURCES foundation.cc vocabularies.cc known_walker.cc
-          helpers.h
+  PRIVATE_HEADERS error.h types.h vocabularies.h frame.h
+  SOURCES foundation.cc vocabularies.cc known_walker.cc frame.cc
+          helpers.h iterator.h
     "${CMAKE_CURRENT_BINARY_DIR}/known_resolver.cc")
 
 if(BLAZE_INSTALL)

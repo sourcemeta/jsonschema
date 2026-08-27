@@ -36,7 +36,7 @@ auto compiler_2019_09_applicator_dependentschemas(
   for (const auto &dependent : dependents) {
     const auto &dependency{
         schema_context.schema.at(dynamic_context.keyword).at(dependent)};
-    if (!is_schema(dependency)) {
+    if (!(dependency.is_object() || dependency.is_boolean())) {
       continue;
     }
 
@@ -271,7 +271,8 @@ auto compiler_2019_09_applicator_unevaluateditems(
     const auto &keyword{dependency.back().to_property()};
     const auto &subschema{sourcemeta::core::get(context.root, dependency)};
     // NOLINTBEGIN(bugprone-branch-clone)
-    if (keyword == "items" && sourcemeta::blaze::is_schema(subschema)) {
+    if (keyword == "items" &&
+        (subschema.is_object() || subschema.is_boolean())) {
       return {};
     } else if (keyword == "additionalItems" || keyword == "unevaluatedItems") {
       return {};

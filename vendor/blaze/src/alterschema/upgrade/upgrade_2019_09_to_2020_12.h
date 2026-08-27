@@ -8,15 +8,15 @@ public:
   [[nodiscard]] auto
   condition(const sourcemeta::core::JSON &schema,
             const sourcemeta::core::JSON &root,
-            const sourcemeta::blaze::Vocabularies &vocabularies,
+            const sourcemeta::blaze::SchemaVocabularies &vocabularies,
             const sourcemeta::blaze::SchemaFrame &frame,
             const sourcemeta::blaze::SchemaFrame::Location &location,
             const sourcemeta::blaze::SchemaWalker &walker,
             const sourcemeta::blaze::SchemaResolver &resolver, const bool) const
       -> SchemaTransformRule::Result override {
-    ONLY_CONTINUE_IF(
-        vocabularies.contains(Vocabularies::Known::JSON_Schema_2019_09_Core) &&
-        schema.is_object());
+    ONLY_CONTINUE_IF(vocabularies.contains(
+                         SchemaVocabularies::Known::JSON_Schema_2019_09_Core) &&
+                     schema.is_object());
 
     const bool is_resource_scope{
         location.type ==

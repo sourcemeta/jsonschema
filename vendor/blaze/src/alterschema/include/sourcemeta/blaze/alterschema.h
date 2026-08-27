@@ -19,7 +19,6 @@
 
 #include <sourcemeta/blaze/compiler.h>
 #include <sourcemeta/blaze/foundation.h>
-#include <sourcemeta/blaze/frame.h>
 
 #include <cstdint>     // std::uint8_t
 #include <optional>    // std::optional, std::nullopt
@@ -119,7 +118,7 @@ public:
              const Scope scope = Scope::All);
   [[nodiscard]] auto
   condition(const sourcemeta::core::JSON &, const sourcemeta::core::JSON &,
-            const sourcemeta::blaze::Vocabularies &,
+            const sourcemeta::blaze::SchemaVocabularies &,
             const sourcemeta::blaze::SchemaFrame &,
             const sourcemeta::blaze::SchemaFrame::Location &,
             const sourcemeta::blaze::SchemaWalker &,
@@ -165,15 +164,17 @@ private:
 /// sourcemeta::core::WeakPointer base;
 /// const sourcemeta::core::JSON result =
 ///   sourcemeta::blaze::wrap(document, frame, location.value().get(),
-///     sourcemeta::blaze::schema_resolver, base);
+///     sourcemeta::blaze::schema_walker, sourcemeta::blaze::schema_resolver,
+///     base);
 ///
 /// sourcemeta::core::prettify(result, std::cerr);
 /// std::cerr << "\n";
 /// ```
 SOURCEMETA_BLAZE_ALTERSCHEMA_EXPORT
 auto wrap(const sourcemeta::core::JSON &schema, const SchemaFrame &frame,
-          const SchemaFrame::Location &location, const SchemaResolver &resolver,
-          sourcemeta::core::WeakPointer &base) -> sourcemeta::core::JSON;
+          const SchemaFrame::Location &location, const SchemaWalker &walker,
+          const SchemaResolver &resolver, sourcemeta::core::WeakPointer &base)
+    -> sourcemeta::core::JSON;
 
 } // namespace sourcemeta::blaze
 

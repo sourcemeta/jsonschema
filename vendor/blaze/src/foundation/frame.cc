@@ -1,5 +1,3 @@
-#include <sourcemeta/blaze/frame.h>
-
 #include <sourcemeta/blaze/foundation.h>
 
 #include "helpers.h"
@@ -76,14 +74,14 @@ auto is_valid_anchor(const std::string_view name) -> bool {
 }
 
 auto find_anchors(const sourcemeta::core::JSON &schema,
-                  const sourcemeta::blaze::Vocabularies &vocabularies)
+                  const sourcemeta::blaze::SchemaVocabularies &vocabularies)
     -> std::vector<std::pair<std::string_view, AnchorType>> {
   std::vector<std::pair<std::string_view, AnchorType>> result;
 
   // 2020-12
   if (schema.is_object() &&
-      vocabularies.contains(
-          sourcemeta::blaze::Vocabularies::Known::JSON_Schema_2020_12_Core)) {
+      vocabularies.contains(sourcemeta::blaze::SchemaVocabularies::Known::
+                                JSON_Schema_2020_12_Core)) {
     const auto *dynamic_anchor{schema.try_at("$dynamicAnchor")};
     if (dynamic_anchor && dynamic_anchor->is_string()) {
       const std::string_view dynamic_anchor_view{dynamic_anchor->to_string()};
@@ -120,8 +118,8 @@ auto find_anchors(const sourcemeta::core::JSON &schema,
 
   // 2019-09
   if (schema.is_object() &&
-      vocabularies.contains(
-          sourcemeta::blaze::Vocabularies::Known::JSON_Schema_2019_09_Core)) {
+      vocabularies.contains(sourcemeta::blaze::SchemaVocabularies::Known::
+                                JSON_Schema_2019_09_Core)) {
     const auto *recursive_anchor{schema.try_at("$recursiveAnchor")};
     if (recursive_anchor) {
       if (recursive_anchor->is_boolean()) {
@@ -163,9 +161,9 @@ auto find_anchors(const sourcemeta::core::JSON &schema,
   // Old `$id` anchor form
   if (schema.is_object() &&
       (vocabularies.contains(
-           sourcemeta::blaze::Vocabularies::Known::JSON_Schema_Draft_7) ||
-       vocabularies.contains(
-           sourcemeta::blaze::Vocabularies::Known::JSON_Schema_Draft_6))) {
+           sourcemeta::blaze::SchemaVocabularies::Known::JSON_Schema_Draft_7) ||
+       vocabularies.contains(sourcemeta::blaze::SchemaVocabularies::Known::
+                                 JSON_Schema_Draft_6))) {
     const auto *id_value{schema.try_at("$id")};
     if (id_value) {
       assert(id_value->is_string());
@@ -191,12 +189,12 @@ auto find_anchors(const sourcemeta::core::JSON &schema,
   // Old `id` anchor form
   if (schema.is_object() &&
       (vocabularies.contains(
-           sourcemeta::blaze::Vocabularies::Known::JSON_Schema_Draft_4) ||
+           sourcemeta::blaze::SchemaVocabularies::Known::JSON_Schema_Draft_4) ||
+       vocabularies.contains(sourcemeta::blaze::SchemaVocabularies::Known::
+                                 JSON_Schema_Draft_4_Hyper) ||
        vocabularies.contains(
-           sourcemeta::blaze::Vocabularies::Known::JSON_Schema_Draft_4_Hyper) ||
-       vocabularies.contains(
-           sourcemeta::blaze::Vocabularies::Known::JSON_Schema_Draft_3) ||
-       vocabularies.contains(sourcemeta::blaze::Vocabularies::Known::
+           sourcemeta::blaze::SchemaVocabularies::Known::JSON_Schema_Draft_3) ||
+       vocabularies.contains(sourcemeta::blaze::SchemaVocabularies::Known::
                                  JSON_Schema_Draft_3_Hyper))) {
     const auto *id_value{schema.try_at("id")};
     if (id_value) {
@@ -508,7 +506,7 @@ auto SchemaFrame::to_json(
                        location.second.dialect}});
     entry.assign_assume_new(
         "baseDialect", sourcemeta::core::JSON{sourcemeta::core::JSON::String{
-                           to_string(location.second.base_dialect)}});
+                           base_dialect_uri(location.second.base_dialect)}});
     entry.assign_assume_new(
         "propertyName", sourcemeta::core::JSON{location.second.property_name});
     entry.assign_assume_new("orphan",
@@ -937,7 +935,7 @@ auto SchemaFrame::analyse(const sourcemeta::core::JSON &root,
 
             // Register a dynamic anchor as a static anchor if possible too
             if (entry.common.vocabularies.contains(
-                    Vocabularies::Known::JSON_Schema_2020_12_Core)) {
+                    SchemaVocabularies::Known::JSON_Schema_2020_12_Core)) {
               store(this->locations_, SchemaReferenceType::Static,
                     SchemaFrame::LocationType::Anchor, relative_anchor_uri, "",
                     common_pointer_weak, bases.second.size(),
@@ -987,7 +985,7 @@ auto SchemaFrame::analyse(const sourcemeta::core::JSON &root,
                     entry.common.orphan);
 
               if (entry.common.vocabularies.contains(
-                      Vocabularies::Known::JSON_Schema_2020_12_Core)) {
+                      SchemaVocabularies::Known::JSON_Schema_2020_12_Core)) {
                 store(this->locations_,
                       sourcemeta::blaze::SchemaReferenceType::Static,
                       SchemaFrame::LocationType::Anchor, anchor_uri, base_view,
@@ -1185,7 +1183,7 @@ auto SchemaFrame::analyse(const sourcemeta::core::JSON &root,
 
       const auto *recursive_ref_value{
           entry.common.vocabularies.contains(
-              Vocabularies::Known::JSON_Schema_2019_09_Core)
+              SchemaVocabularies::Known::JSON_Schema_2019_09_Core)
               ? entry.common.subschema.get().try_at("$recursiveRef")
               : nullptr};
       if (recursive_ref_value) {
@@ -1231,7 +1229,7 @@ auto SchemaFrame::analyse(const sourcemeta::core::JSON &root,
 
       const auto *dynamic_ref_value{
           entry.common.vocabularies.contains(
-              Vocabularies::Known::JSON_Schema_2020_12_Core)
+              SchemaVocabularies::Known::JSON_Schema_2020_12_Core)
               ? entry.common.subschema.get().try_at("$dynamicRef")
               : nullptr};
       if (dynamic_ref_value) {
@@ -1370,6 +1368,42 @@ auto SchemaFrame::root_location() const
   return this->traverse(this->root_);
 }
 
+auto SchemaFrame::metaschema(const SchemaResolver &resolver) const
+    -> const sourcemeta::core::JSON & {
+  const auto location{this->root_location()};
+  if (!location.has_value()) {
+    throw SchemaFrameError(this->root_, "The schema has no root location");
+  }
+
+  const auto &dialect{location.value().get().dialect};
+  if (dialect.empty()) {
+    throw SchemaUnknownDialectError();
+  }
+
+  const auto embedded{
+      this->probed_metaschemas_.find(sourcemeta::core::JSON::String{dialect})};
+  if (embedded != this->probed_metaschemas_.cend()) {
+    return *(embedded->second);
+  }
+
+  const auto result{resolver(dialect)};
+  if (!result.has_value()) {
+    if (sourcemeta::core::URI{sourcemeta::core::JSON::String{dialect}}
+            .is_relative()) {
+      throw SchemaRelativeMetaschemaResolutionError{dialect};
+    }
+
+    throw SchemaResolutionError(dialect,
+                                "Could not resolve the metaschema of the "
+                                "schema");
+  }
+
+  return this->metaschemas_
+      .emplace(sourcemeta::core::JSON::String{dialect},
+               std::move(result).value())
+      .first->second;
+}
+
 auto SchemaFrame::locations() const noexcept -> const Locations & {
   return this->locations_;
 }
@@ -1400,7 +1434,7 @@ auto SchemaFrame::root() const noexcept
 
 auto SchemaFrame::vocabularies(const Location &location,
                                const SchemaResolver &resolver) const
-    -> const Vocabularies & {
+    -> const SchemaVocabularies & {
   for (const auto &entry : this->vocabularies_) {
     if (std::get<0>(entry) == location.base_dialect &&
         std::get<1>(entry) == location.dialect) {

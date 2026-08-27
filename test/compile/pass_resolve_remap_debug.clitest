@@ -33,7 +33,7 @@ REPLACE $CWD WITH '[CWD]' IN result.txt
 
 WRITE expected.txt UNTIL EOF
 1> [
-1>   5,
+1>   6,
 1>   false,
 1>   true,
 1>   [
@@ -44,6 +44,7 @@ WRITE expected.txt UNTIL EOF
 1>         [],
 1>         "https://example.com#/$ref",
 1>         2,
+1>         1,
 1>         [ 10, 1 ]
 1>       ],
 1>       [
@@ -52,6 +53,7 @@ WRITE expected.txt UNTIL EOF
 1>         [],
 1>         "https://example.com#/description",
 1>         2,
+1>         2,
 1>         [ 1, "Test schema" ]
 1>       ],
 1>       [
@@ -59,6 +61,7 @@ WRITE expected.txt UNTIL EOF
 1>         [ "title" ],
 1>         [],
 1>         "https://example.com#/title",
+1>         2,
 1>         2,
 1>         [ 1, "Test" ]
 1>       ]
@@ -70,6 +73,7 @@ WRITE expected.txt UNTIL EOF
 1>         [],
 1>         "https://example.com/nested#/description",
 1>         3,
+1>         2,
 1>         [ 1, "Test schema" ]
 1>       ],
 1>       [
@@ -78,6 +82,7 @@ WRITE expected.txt UNTIL EOF
 1>         [],
 1>         "https://example.com/nested#/title",
 1>         3,
+1>         2,
 1>         [ 1, "Test" ]
 1>       ],
 1>       [
@@ -86,11 +91,17 @@ WRITE expected.txt UNTIL EOF
 1>         [],
 1>         "https://example.com/nested#/type",
 1>         3,
+1>         3,
 1>         [ 8, 4 ]
 1>       ]
 1>     ]
 1>   ],
-1>   []
+1>   [],
+1>   [
+1>     "https://json-schema.org/draft/2020-12/vocab/core",
+1>     "https://json-schema.org/draft/2020-12/vocab/meta-data",
+1>     "https://json-schema.org/draft/2020-12/vocab/validation"
+1>   ]
 1> ]
 2> debug: Using configuration file: [CWD]/jsonschema.json
 2> Using extension: .json

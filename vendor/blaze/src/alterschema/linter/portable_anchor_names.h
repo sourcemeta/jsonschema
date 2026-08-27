@@ -11,38 +11,40 @@ public:
   [[nodiscard]] auto
   condition(const sourcemeta::core::JSON &schema,
             const sourcemeta::core::JSON &,
-            const sourcemeta::blaze::Vocabularies &vocabularies,
+            const sourcemeta::blaze::SchemaVocabularies &vocabularies,
             const sourcemeta::blaze::SchemaFrame &,
             const sourcemeta::blaze::SchemaFrame::Location &,
             const sourcemeta::blaze::SchemaWalker &,
             const sourcemeta::blaze::SchemaResolver &, const bool) const
       -> SchemaTransformRule::Result override {
     ONLY_CONTINUE_IF(vocabularies.contains_any(
-        {Vocabularies::Known::JSON_Schema_2020_12_Core,
-         Vocabularies::Known::JSON_Schema_2019_09_Core,
-         Vocabularies::Known::JSON_Schema_Draft_7,
-         Vocabularies::Known::JSON_Schema_Draft_6,
-         Vocabularies::Known::JSON_Schema_Draft_4}));
+        {SchemaVocabularies::Known::JSON_Schema_2020_12_Core,
+         SchemaVocabularies::Known::JSON_Schema_2019_09_Core,
+         SchemaVocabularies::Known::JSON_Schema_Draft_7,
+         SchemaVocabularies::Known::JSON_Schema_Draft_6,
+         SchemaVocabularies::Known::JSON_Schema_Draft_4}));
     ONLY_CONTINUE_IF(schema.is_object());
 
     std::vector<Pointer> offenders;
 
     if (vocabularies.contains_any(
-            {Vocabularies::Known::JSON_Schema_2020_12_Core,
-             Vocabularies::Known::JSON_Schema_2019_09_Core})) {
+            {SchemaVocabularies::Known::JSON_Schema_2020_12_Core,
+             SchemaVocabularies::Known::JSON_Schema_2019_09_Core})) {
       this->check_anchor_keyword(schema, ANCHOR, offenders);
     }
 
     if (vocabularies.contains_any(
-            {Vocabularies::Known::JSON_Schema_2020_12_Core})) {
+            {SchemaVocabularies::Known::JSON_Schema_2020_12_Core})) {
       this->check_anchor_keyword(schema, DYNAMIC_ANCHOR, offenders);
     }
 
-    if (vocabularies.contains_any({Vocabularies::Known::JSON_Schema_Draft_7,
-                                   Vocabularies::Known::JSON_Schema_Draft_6,
-                                   Vocabularies::Known::JSON_Schema_Draft_4})) {
+    if (vocabularies.contains_any(
+            {SchemaVocabularies::Known::JSON_Schema_Draft_7,
+             SchemaVocabularies::Known::JSON_Schema_Draft_6,
+             SchemaVocabularies::Known::JSON_Schema_Draft_4})) {
       const auto &id_keyword{
-          vocabularies.contains_any({Vocabularies::Known::JSON_Schema_Draft_4})
+          vocabularies.contains_any(
+              {SchemaVocabularies::Known::JSON_Schema_Draft_4})
               ? ID_DRAFT_4
               : ID_MODERN};
       this->check_id_fragment(schema, id_keyword, offenders);

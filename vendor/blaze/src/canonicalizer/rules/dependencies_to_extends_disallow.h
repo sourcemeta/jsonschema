@@ -7,13 +7,13 @@ public:
   [[nodiscard]] auto
   condition(const sourcemeta::core::JSON &schema,
             const sourcemeta::core::JSON &,
-            const sourcemeta::blaze::Vocabularies &vocabularies,
+            const sourcemeta::blaze::SchemaVocabularies &vocabularies,
             const sourcemeta::blaze::SchemaFrame &,
             const sourcemeta::blaze::SchemaFrame::Location &,
             const sourcemeta::blaze::SchemaWalker &,
             const sourcemeta::blaze::SchemaResolver &) const -> bool override {
     ONLY_CONTINUE_IF(
-        vocabularies.contains(Vocabularies::Known::JSON_Schema_Draft_3) &&
+        vocabularies.contains(SchemaVocabularies::Known::JSON_Schema_Draft_3) &&
         schema.is_object());
 
     const auto *dependencies{schema.try_at("dependencies")};
@@ -21,8 +21,8 @@ public:
 
     ONLY_CONTINUE_IF(std::ranges::any_of(
         dependencies->as_object(), [](const auto &entry) -> auto {
-          return is_schema(entry.second) || entry.second.is_array() ||
-                 entry.second.is_string();
+          return (entry.second.is_object() || entry.second.is_boolean()) ||
+                 entry.second.is_array() || entry.second.is_string();
         }));
     return true;
   }
@@ -49,7 +49,7 @@ public:
       disallow_array.push_back(required_property);
       not_required.assign("disallow", std::move(disallow_array));
 
-      if (is_schema(entry.second)) {
+      if ((entry.second.is_object() || entry.second.is_boolean())) {
         auto extends_array{sourcemeta::core::JSON::make_array()};
         auto required_copy{sourcemeta::core::JSON::make_object()};
         required_copy.assign("type", sourcemeta::core::JSON{"object"});

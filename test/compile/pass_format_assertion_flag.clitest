@@ -13,7 +13,7 @@ REPLACE $CWD WITH '[CWD]' IN result.txt
 
 WRITE expected.txt UNTIL EOF
 1> [
-1>   5,
+1>   6,
 1>   false,
 1>   true,
 1>   [
@@ -24,6 +24,7 @@ WRITE expected.txt UNTIL EOF
 1>         [],
 1>         "[CWD_URI]/schema.json#/format",
 1>         1,
+1>         1,
 1>         [ 14, 5 ]
 1>       ],
 1>       [
@@ -32,6 +33,7 @@ WRITE expected.txt UNTIL EOF
 1>         [],
 1>         "[CWD_URI]/schema.json#/format",
 1>         1,
+1>         1,
 1>         [ 8, 4 ],
 1>         [
 1>           [
@@ -39,6 +41,7 @@ WRITE expected.txt UNTIL EOF
 1>             [ "format" ],
 1>             [],
 1>             "[CWD_URI]/schema.json#/format",
+1>             1,
 1>             1,
 1>             [ 1, "email" ]
 1>           ]
@@ -50,11 +53,16 @@ WRITE expected.txt UNTIL EOF
 1>         [],
 1>         "[CWD_URI]/schema.json#/type",
 1>         1,
+1>         2,
 1>         [ 8, 4 ]
 1>       ]
 1>     ]
 1>   ],
-1>   []
+1>   [],
+1>   [
+1>     "https://json-schema.org/draft/2020-12/vocab/format-annotation",
+1>     "https://json-schema.org/draft/2020-12/vocab/validation"
+1>   ]
 1> ]
 EOF
 

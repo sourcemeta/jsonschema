@@ -1,10 +1,12 @@
 #include <sourcemeta/blaze/alterschema.h>
 #include <sourcemeta/blaze/compiler.h>
 #include <sourcemeta/blaze/evaluator.h>
-#include <sourcemeta/blaze/frame.h>
+#include <sourcemeta/blaze/foundation.h>
 #include <sourcemeta/blaze/output.h>
 #include <sourcemeta/core/regex.h>
 #include <sourcemeta/core/uri.h>
+
+#include "schema_helpers.h"
 
 // For built-in rules
 #include <algorithm>     // std::sort, std::unique, std::ranges::none_of
@@ -58,16 +60,16 @@ inline auto IS_IN_PLACE_APPLICATOR(const SchemaKeywordType type) -> bool {
 // under-approximation that cannot be trusted. Later dialects do not give
 // such forms any meaning, so the parsed set stands
 inline auto IS_KNOWN_TYPE_FORM(const JSON &type,
-                               const Vocabularies &vocabularies) -> bool {
+                               const SchemaVocabularies &vocabularies) -> bool {
   if (!vocabularies.contains_any(
-          {Vocabularies::Known::JSON_Schema_Draft_0,
-           Vocabularies::Known::JSON_Schema_Draft_0_Hyper,
-           Vocabularies::Known::JSON_Schema_Draft_1,
-           Vocabularies::Known::JSON_Schema_Draft_1_Hyper,
-           Vocabularies::Known::JSON_Schema_Draft_2,
-           Vocabularies::Known::JSON_Schema_Draft_2_Hyper,
-           Vocabularies::Known::JSON_Schema_Draft_3,
-           Vocabularies::Known::JSON_Schema_Draft_3_Hyper})) {
+          {SchemaVocabularies::Known::JSON_Schema_Draft_0,
+           SchemaVocabularies::Known::JSON_Schema_Draft_0_Hyper,
+           SchemaVocabularies::Known::JSON_Schema_Draft_1,
+           SchemaVocabularies::Known::JSON_Schema_Draft_1_Hyper,
+           SchemaVocabularies::Known::JSON_Schema_Draft_2,
+           SchemaVocabularies::Known::JSON_Schema_Draft_2_Hyper,
+           SchemaVocabularies::Known::JSON_Schema_Draft_3,
+           SchemaVocabularies::Known::JSON_Schema_Draft_3_Hyper})) {
     return true;
   }
   if (type.is_string()) {

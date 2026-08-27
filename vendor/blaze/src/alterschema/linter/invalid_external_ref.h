@@ -9,19 +9,20 @@ public:
             "resolved"} {};
 
   [[nodiscard]] auto
-  condition(const JSON &schema, const JSON &, const Vocabularies &vocabularies,
-            const SchemaFrame &frame, const SchemaFrame::Location &location,
-            const SchemaWalker &walker, const SchemaResolver &resolver,
-            const bool) const -> SchemaTransformRule::Result override {
+  condition(const JSON &schema, const JSON &,
+            const SchemaVocabularies &vocabularies, const SchemaFrame &frame,
+            const SchemaFrame::Location &location, const SchemaWalker &walker,
+            const SchemaResolver &resolver, const bool) const
+      -> SchemaTransformRule::Result override {
     ONLY_CONTINUE_IF(!frame.standalone());
     ONLY_CONTINUE_IF(vocabularies.contains_any(
-        {Vocabularies::Known::JSON_Schema_2020_12_Core,
-         Vocabularies::Known::JSON_Schema_2019_09_Core,
-         Vocabularies::Known::JSON_Schema_Draft_7,
-         Vocabularies::Known::JSON_Schema_Draft_6,
-         Vocabularies::Known::JSON_Schema_Draft_4,
-         Vocabularies::Known::JSON_Schema_Draft_3,
-         Vocabularies::Known::JSON_Schema_Draft_3_Hyper}));
+        {SchemaVocabularies::Known::JSON_Schema_2020_12_Core,
+         SchemaVocabularies::Known::JSON_Schema_2019_09_Core,
+         SchemaVocabularies::Known::JSON_Schema_Draft_7,
+         SchemaVocabularies::Known::JSON_Schema_Draft_6,
+         SchemaVocabularies::Known::JSON_Schema_Draft_4,
+         SchemaVocabularies::Known::JSON_Schema_Draft_3,
+         SchemaVocabularies::Known::JSON_Schema_Draft_3_Hyper}));
     ONLY_CONTINUE_IF(schema.is_object() && schema.defines(KEYWORD) &&
                      schema.at(KEYWORD).is_string());
 
@@ -41,7 +42,7 @@ public:
     ONLY_CONTINUE_IF(!reference_base.empty());
 
     // Known official metaschemas are always resolvable
-    ONLY_CONTINUE_IF(!is_known_schema(reference_base));
+    ONLY_CONTINUE_IF(!schema_is_known(reference_base));
 
     // If the base exists in the frame, the reference is internal (e.g. an
     // embedded $id). A bad fragment on an internal base is handled by the

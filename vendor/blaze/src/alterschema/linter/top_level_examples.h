@@ -11,7 +11,7 @@ public:
   [[nodiscard]] auto
   condition(const sourcemeta::core::JSON &schema,
             const sourcemeta::core::JSON &,
-            const sourcemeta::blaze::Vocabularies &vocabularies,
+            const sourcemeta::blaze::SchemaVocabularies &vocabularies,
             const sourcemeta::blaze::SchemaFrame &,
             const sourcemeta::blaze::SchemaFrame::Location &location,
             const sourcemeta::blaze::SchemaWalker &,
@@ -19,10 +19,10 @@ public:
       -> SchemaTransformRule::Result override {
     ONLY_CONTINUE_IF(location.pointer.empty());
     ONLY_CONTINUE_IF(vocabularies.contains_any(
-        {Vocabularies::Known::JSON_Schema_2020_12_Meta_Data,
-         Vocabularies::Known::JSON_Schema_2019_09_Meta_Data,
-         Vocabularies::Known::JSON_Schema_Draft_7,
-         Vocabularies::Known::JSON_Schema_Draft_6}));
+        {SchemaVocabularies::Known::JSON_Schema_2020_12_Meta_Data,
+         SchemaVocabularies::Known::JSON_Schema_2019_09_Meta_Data,
+         SchemaVocabularies::Known::JSON_Schema_Draft_7,
+         SchemaVocabularies::Known::JSON_Schema_Draft_6}));
     ONLY_CONTINUE_IF(schema.is_object());
     const auto *examples{schema.try_at("examples")};
     if (examples && examples->is_array() && examples->empty()) {

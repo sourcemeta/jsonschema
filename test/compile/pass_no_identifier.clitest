@@ -16,7 +16,7 @@ REPLACE $CWD WITH '[CWD]' IN result.txt
 
 WRITE expected.txt UNTIL EOF
 1> [
-1>   5,
+1>   6,
 1>   false,
 1>   true,
 1>   [
@@ -27,6 +27,7 @@ WRITE expected.txt UNTIL EOF
 1>         [],
 1>         "[CWD_URI]/foo/bar/baz/qux/very/long/path/foo/bar/baz/qux/schema.json#/description",
 1>         1,
+1>         1,
 1>         [ 1, "Test schema" ]
 1>       ],
 1>       [
@@ -34,6 +35,7 @@ WRITE expected.txt UNTIL EOF
 1>         [ "title" ],
 1>         [],
 1>         "[CWD_URI]/foo/bar/baz/qux/very/long/path/foo/bar/baz/qux/schema.json#/title",
+1>         1,
 1>         1,
 1>         [ 1, "Test" ]
 1>       ],
@@ -43,6 +45,7 @@ WRITE expected.txt UNTIL EOF
 1>         [],
 1>         "[CWD_URI]/foo/bar/baz/qux/very/long/path/foo/bar/baz/qux/schema.json#/additionalProperties",
 1>         1,
+1>         3,
 1>         [ 0 ],
 1>         [
 1>           [
@@ -51,6 +54,7 @@ WRITE expected.txt UNTIL EOF
 1>             [],
 1>             "[CWD_URI]/foo/bar/baz/qux/very/long/path/foo/bar/baz/qux/schema.json#/additionalProperties/type",
 1>             1,
+1>             2,
 1>             [ 8, 4 ]
 1>           ],
 1>           [
@@ -59,13 +63,19 @@ WRITE expected.txt UNTIL EOF
 1>             [],
 1>             "[CWD_URI]/foo/bar/baz/qux/very/long/path/foo/bar/baz/qux/schema.json#/additionalProperties",
 1>             1,
+1>             3,
 1>             [ 0 ]
 1>           ]
 1>         ]
 1>       ]
 1>     ]
 1>   ],
-1>   []
+1>   [],
+1>   [
+1>     "https://json-schema.org/draft/2020-12/vocab/meta-data",
+1>     "https://json-schema.org/draft/2020-12/vocab/validation",
+1>     "https://json-schema.org/draft/2020-12/vocab/applicator"
+1>   ]
 1> ]
 EOF
 

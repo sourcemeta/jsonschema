@@ -7,19 +7,20 @@ public:
   [[nodiscard]] auto
   condition(const sourcemeta::core::JSON &schema,
             const sourcemeta::core::JSON &,
-            const sourcemeta::blaze::Vocabularies &vocabularies,
+            const sourcemeta::blaze::SchemaVocabularies &vocabularies,
             const sourcemeta::blaze::SchemaFrame &frame,
             const sourcemeta::blaze::SchemaFrame::Location &location,
             const sourcemeta::blaze::SchemaWalker &,
             const sourcemeta::blaze::SchemaResolver &) const -> bool override {
     static const sourcemeta::core::JSON::String KEYWORD{"not"};
-    ONLY_CONTINUE_IF(vocabularies.contains_any(
-                         {Vocabularies::Known::JSON_Schema_2020_12_Applicator,
-                          Vocabularies::Known::JSON_Schema_2019_09_Applicator,
-                          Vocabularies::Known::JSON_Schema_Draft_7,
-                          Vocabularies::Known::JSON_Schema_Draft_6,
-                          Vocabularies::Known::JSON_Schema_Draft_4}) &&
-                     schema.is_object());
+    ONLY_CONTINUE_IF(
+        vocabularies.contains_any(
+            {SchemaVocabularies::Known::JSON_Schema_2020_12_Applicator,
+             SchemaVocabularies::Known::JSON_Schema_2019_09_Applicator,
+             SchemaVocabularies::Known::JSON_Schema_Draft_7,
+             SchemaVocabularies::Known::JSON_Schema_Draft_6,
+             SchemaVocabularies::Known::JSON_Schema_Draft_4}) &&
+        schema.is_object());
 
     const auto *outer_not{schema.try_at(KEYWORD)};
     ONLY_CONTINUE_IF(outer_not && outer_not->is_object() &&
@@ -29,8 +30,8 @@ public:
                      !(inner_not->is_boolean() && !inner_not->to_boolean()));
     ONLY_CONTINUE_IF(
         !(vocabularies.contains_any(
-              {Vocabularies::Known::JSON_Schema_2020_12_Unevaluated,
-               Vocabularies::Known::JSON_Schema_2019_09_Applicator}) &&
+              {SchemaVocabularies::Known::JSON_Schema_2020_12_Unevaluated,
+               SchemaVocabularies::Known::JSON_Schema_2019_09_Applicator}) &&
           (schema.defines("unevaluatedProperties") ||
            schema.defines("unevaluatedItems"))));
     ONLY_CONTINUE_IF(!frame.has_references_through(

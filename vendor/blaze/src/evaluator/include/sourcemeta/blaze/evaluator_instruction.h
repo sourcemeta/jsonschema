@@ -257,6 +257,7 @@ struct InstructionExtra {
   sourcemeta::core::Pointer relative_schema_location;
   std::string keyword_location;
   std::size_t schema_resource;
+  std::size_t vocabulary;
 };
 
 /// @ingroup evaluator

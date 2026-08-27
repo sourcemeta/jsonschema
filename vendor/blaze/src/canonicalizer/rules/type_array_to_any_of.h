@@ -6,7 +6,7 @@ public:
   [[nodiscard]] auto
   condition(const sourcemeta::core::JSON &schema,
             const sourcemeta::core::JSON &,
-            const sourcemeta::blaze::Vocabularies &vocabularies,
+            const sourcemeta::blaze::SchemaVocabularies &vocabularies,
             const sourcemeta::blaze::SchemaFrame &,
             const sourcemeta::blaze::SchemaFrame::Location &,
             const sourcemeta::blaze::SchemaWalker &walker,
@@ -14,17 +14,17 @@ public:
 
     ONLY_CONTINUE_IF(
         ((vocabularies.contains(
-              Vocabularies::Known::JSON_Schema_2020_12_Validation) &&
+              SchemaVocabularies::Known::JSON_Schema_2020_12_Validation) &&
           vocabularies.contains(
-              Vocabularies::Known::JSON_Schema_2020_12_Applicator)) ||
+              SchemaVocabularies::Known::JSON_Schema_2020_12_Applicator)) ||
          (vocabularies.contains(
-              Vocabularies::Known::JSON_Schema_2019_09_Validation) &&
+              SchemaVocabularies::Known::JSON_Schema_2019_09_Validation) &&
           vocabularies.contains(
-              Vocabularies::Known::JSON_Schema_2019_09_Applicator)) ||
+              SchemaVocabularies::Known::JSON_Schema_2019_09_Applicator)) ||
          vocabularies.contains_any(
-             {Vocabularies::Known::JSON_Schema_Draft_7,
-              Vocabularies::Known::JSON_Schema_Draft_6,
-              Vocabularies::Known::JSON_Schema_Draft_4})) &&
+             {SchemaVocabularies::Known::JSON_Schema_Draft_7,
+              SchemaVocabularies::Known::JSON_Schema_Draft_6,
+              SchemaVocabularies::Known::JSON_Schema_Draft_4})) &&
         schema.is_object());
 
     const auto *type{schema.try_at("type")};
@@ -40,8 +40,8 @@ public:
       const auto &metadata{walker(entry.first, vocabularies)};
       if (metadata.instances.any() &&
           !(vocabularies.contains_any(
-                {Vocabularies::Known::JSON_Schema_2020_12_Unevaluated,
-                 Vocabularies::Known::JSON_Schema_2019_09_Applicator}) &&
+                {SchemaVocabularies::Known::JSON_Schema_2020_12_Unevaluated,
+                 SchemaVocabularies::Known::JSON_Schema_2019_09_Applicator}) &&
             (entry.first == "unevaluatedProperties" ||
              entry.first == "unevaluatedItems"))) {
         this->keyword_instances_[entry.first] = metadata.instances;

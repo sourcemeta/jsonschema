@@ -6,16 +6,17 @@ public:
   [[nodiscard]] auto
   condition(const sourcemeta::core::JSON &schema,
             const sourcemeta::core::JSON &,
-            const sourcemeta::blaze::Vocabularies &vocabularies,
+            const sourcemeta::blaze::SchemaVocabularies &vocabularies,
             const sourcemeta::blaze::SchemaFrame &frame,
             const sourcemeta::blaze::SchemaFrame::Location &location,
             const sourcemeta::blaze::SchemaWalker &walker,
             const sourcemeta::blaze::SchemaResolver &) const -> bool override {
     static const sourcemeta::core::JSON::String KEYWORD{"disallow"};
-    ONLY_CONTINUE_IF(vocabularies.contains_any(
-                         {Vocabularies::Known::JSON_Schema_Draft_3,
-                          Vocabularies::Known::JSON_Schema_Draft_3_Hyper}) &&
-                     schema.is_object());
+    ONLY_CONTINUE_IF(
+        vocabularies.contains_any(
+            {SchemaVocabularies::Known::JSON_Schema_Draft_3,
+             SchemaVocabularies::Known::JSON_Schema_Draft_3_Hyper}) &&
+        schema.is_object());
 
     const auto *disallow{schema.try_at(KEYWORD)};
     ONLY_CONTINUE_IF(disallow && disallow->is_array() && disallow->size() == 1);
@@ -89,7 +90,7 @@ private:
   static auto wraps_single_constraint(
       const sourcemeta::core::JSON &schema, const std::string_view keyword,
       const sourcemeta::blaze::SchemaWalker &walker,
-      const sourcemeta::blaze::Vocabularies &vocabularies) -> bool {
+      const sourcemeta::blaze::SchemaVocabularies &vocabularies) -> bool {
     for (const auto &entry : schema.as_object()) {
       if (entry.first == keyword) {
         continue;

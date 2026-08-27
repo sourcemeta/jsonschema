@@ -10,10 +10,11 @@ public:
             "have an x- prefix"} {};
 
   [[nodiscard]] auto
-  condition(const JSON &schema, const JSON &, const Vocabularies &vocabularies,
-            const SchemaFrame &, const SchemaFrame::Location &,
-            const SchemaWalker &walker, const SchemaResolver &,
-            const bool) const -> SchemaTransformRule::Result override {
+  condition(const JSON &schema, const JSON &,
+            const SchemaVocabularies &vocabularies, const SchemaFrame &,
+            const SchemaFrame::Location &, const SchemaWalker &walker,
+            const SchemaResolver &, const bool) const
+      -> SchemaTransformRule::Result override {
     ONLY_CONTINUE_IF(schema.is_object());
     std::vector<Pointer> locations;
     for (const auto &entry : schema.as_object()) {

@@ -6,7 +6,7 @@ public:
   [[nodiscard]] auto
   condition(const sourcemeta::core::JSON &schema,
             const sourcemeta::core::JSON &root,
-            const sourcemeta::blaze::Vocabularies &vocabularies,
+            const sourcemeta::blaze::SchemaVocabularies &vocabularies,
             const sourcemeta::blaze::SchemaFrame &frame,
             const sourcemeta::blaze::SchemaFrame::Location &location,
             const sourcemeta::blaze::SchemaWalker &walker,
@@ -14,23 +14,24 @@ public:
       -> bool override {
     ONLY_CONTINUE_IF(schema.is_object());
     ONLY_CONTINUE_IF(vocabularies.contains_any(
-        {Vocabularies::Known::JSON_Schema_2020_12_Validation,
-         Vocabularies::Known::JSON_Schema_2019_09_Validation,
-         Vocabularies::Known::JSON_Schema_Draft_7,
-         Vocabularies::Known::JSON_Schema_Draft_6,
-         Vocabularies::Known::JSON_Schema_Draft_4,
-         Vocabularies::Known::JSON_Schema_Draft_3,
-         Vocabularies::Known::JSON_Schema_Draft_2,
-         Vocabularies::Known::JSON_Schema_Draft_1,
-         Vocabularies::Known::JSON_Schema_Draft_0}));
+        {SchemaVocabularies::Known::JSON_Schema_2020_12_Validation,
+         SchemaVocabularies::Known::JSON_Schema_2019_09_Validation,
+         SchemaVocabularies::Known::JSON_Schema_Draft_7,
+         SchemaVocabularies::Known::JSON_Schema_Draft_6,
+         SchemaVocabularies::Known::JSON_Schema_Draft_4,
+         SchemaVocabularies::Known::JSON_Schema_Draft_3,
+         SchemaVocabularies::Known::JSON_Schema_Draft_2,
+         SchemaVocabularies::Known::JSON_Schema_Draft_1,
+         SchemaVocabularies::Known::JSON_Schema_Draft_0}));
     ONLY_CONTINUE_IF(!schema.defines("type"));
     ONLY_CONTINUE_IF(!schema.defines("enum"));
-    ONLY_CONTINUE_IF(!vocabularies.contains_any(
-                         {Vocabularies::Known::JSON_Schema_2020_12_Validation,
-                          Vocabularies::Known::JSON_Schema_2019_09_Validation,
-                          Vocabularies::Known::JSON_Schema_Draft_7,
-                          Vocabularies::Known::JSON_Schema_Draft_6}) ||
-                     !schema.defines("const"));
+    ONLY_CONTINUE_IF(
+        !vocabularies.contains_any(
+            {SchemaVocabularies::Known::JSON_Schema_2020_12_Validation,
+             SchemaVocabularies::Known::JSON_Schema_2019_09_Validation,
+             SchemaVocabularies::Known::JSON_Schema_Draft_7,
+             SchemaVocabularies::Known::JSON_Schema_Draft_6}) ||
+        !schema.defines("const"));
 
     for (const auto &entry : schema.as_object()) {
       const auto &keyword_type{walker(entry.first, vocabularies).type};
@@ -49,8 +50,10 @@ public:
           return IS_IN_PLACE_APPLICATOR(keyword_type) &&
                  keyword_type != SchemaKeywordType::ApplicatorElementsInPlace;
         },
-        [](const sourcemeta::core::JSON &ancestor_schema, const Vocabularies &)
-            -> bool { return ancestor_schema.defines("type"); })};
+        [](const sourcemeta::core::JSON &ancestor_schema,
+           const SchemaVocabularies &) -> bool {
+          return ancestor_schema.defines("type");
+        })};
 
     if (ancestor.has_value()) {
       const auto &ancestor_type{
