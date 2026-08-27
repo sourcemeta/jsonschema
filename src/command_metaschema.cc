@@ -143,6 +143,9 @@ auto sourcemeta::jsonschema::metaschema(
     } catch (const sourcemeta::blaze::SchemaKeywordError &error) {
       throw sourcemeta::core::FileError<sourcemeta::blaze::SchemaKeywordError>(
           entry.resolution_base, error);
+    } catch (const sourcemeta::blaze::SchemaFrameError &error) {
+      throw sourcemeta::core::FileError<sourcemeta::blaze::SchemaFrameError>(
+          entry.resolution_base, error);
     } catch (const sourcemeta::blaze::CompilerInvalidRegexError &error) {
       throw sourcemeta::core::FileError<
           sourcemeta::blaze::CompilerInvalidRegexError>(entry.resolution_base,
@@ -165,6 +168,10 @@ auto sourcemeta::jsonschema::metaschema(
       throw sourcemeta::core::FileError<
           sourcemeta::blaze::SchemaVocabularyError>(entry.resolution_base,
                                                     error.uri(), error.what());
+    } catch (const sourcemeta::blaze::SchemaUnknownBaseDialectError &) {
+      throw sourcemeta::core::FileError<
+          sourcemeta::blaze::SchemaUnknownBaseDialectError>(
+          entry.resolution_base);
     } catch (const sourcemeta::blaze::SchemaUnknownDialectError &) {
       throw sourcemeta::core::FileError<
           sourcemeta::blaze::SchemaUnknownDialectError>(entry.resolution_base);

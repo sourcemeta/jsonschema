@@ -1,0 +1,45 @@
+WRITE schema.json UNTIL EOF
+{
+  "$schema": "https://example.com/meta",
+  "$id": "https://example.com/schema",
+  "type": "string",
+  "$defs": {
+    "meta": {
+      "$id": "https://example.com/meta",
+      "$vocabulary": {
+        "https://json-schema.org/draft/2020-12/vocab/core": true
+      }
+    }
+  }
+}
+EOF
+
+// Schema input error
+RUN metaschema schema.json STDIN /dev/null IN . INTO result.txt EXPECTING 4
+
+REPLACE $CWD WITH '[CWD]' IN result.txt
+
+WRITE expected.txt UNTIL EOF
+2> error: Could not determine the base dialect of the schema
+2>   at file path [CWD]/schema.json
+2>
+2> Are you sure the input is a valid JSON Schema and its base dialect is known?
+2> If the input does not declare the `$schema` keyword, you might want to
+2> explicitly declare a default dialect using `--default-dialect/-d`
+EOF
+
+COMPARE result.txt AGAINST expected.txt
+
+// Schema input error
+RUN metaschema schema.json --json STDIN /dev/null IN . INTO result_json.txt EXPECTING 4
+
+REPLACE $CWD WITH '[CWD]' IN result_json.txt
+
+WRITE expected_json.txt UNTIL EOF
+1> {
+1>   "error": "Could not determine the base dialect of the schema",
+1>   "filePath": "[CWD]/schema.json"
+1> }
+EOF
+
+COMPARE result_json.txt AGAINST expected_json.txt
