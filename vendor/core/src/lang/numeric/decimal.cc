@@ -489,6 +489,31 @@ auto format_special_value(std::string &result, std::uint8_t flags,
   return false;
 }
 
+// The General Decimal Arithmetic Specification states that the result of an
+// arithmetic operation with a NaN operand carries a sign and diagnostic
+// information "copied from the first operand which is a signaling NaN, or if
+// neither is signaling then from the first operand which is a NaN"
+auto left_nan_has_precedence(const sourcemeta::core::Decimal &left,
+                             const sourcemeta::core::Decimal &right) -> bool {
+  if (left.is_snan()) {
+    return true;
+  }
+
+  if (right.is_snan()) {
+    return false;
+  }
+
+  return left.is_nan();
+}
+
+auto propagate_nan(const sourcemeta::core::Decimal &left,
+                   const sourcemeta::core::Decimal &right)
+    -> sourcemeta::core::Decimal {
+  const auto &source{left_nan_has_precedence(left, right) ? left : right};
+  const auto result{sourcemeta::core::Decimal::nan(source.nan_payload())};
+  return source.is_signed() ? -result : result;
+}
+
 } // namespace
 
 namespace sourcemeta::core {
@@ -1467,12 +1492,8 @@ auto Decimal::divide_integer(const Decimal &other) const -> Decimal {
     throw NumericInvalidOperationError{};
   }
 
-  if (this->is_nan()) {
-    return Decimal::nan(this->nan_payload());
-  }
-
-  if (other.is_nan()) {
-    return Decimal::nan(other.nan_payload());
+  if (this->is_nan() || other.is_nan()) {
+    return propagate_nan(*this, other);
   }
 
   if (this->is_infinite() && other.is_infinite()) {
@@ -1743,7 +1764,7 @@ auto Decimal::operator>=(const Decimal &other) const -> bool {
 auto Decimal::operator+=(const Decimal &other) -> Decimal & {
   if (!this->is_finite() || !other.is_finite()) {
     if (this->is_nan() || other.is_nan()) {
-      *this = Decimal::nan();
+      *this = propagate_nan(*this, other);
       return *this;
     }
 
@@ -1878,13 +1899,20 @@ auto Decimal::operator+=(const Decimal &other) -> Decimal & {
 }
 
 auto Decimal::operator-=(const Decimal &other) -> Decimal & {
+  // Negating the right operand first would flip the sign that a NaN operand
+  // must contribute to the result unchanged
+  if (this->is_nan() || other.is_nan()) {
+    *this = propagate_nan(*this, other);
+    return *this;
+  }
+
   return *this += (-other);
 }
 
 auto Decimal::operator*=(const Decimal &other) -> Decimal & {
   if (!this->is_finite() || !other.is_finite()) {
     if (this->is_nan() || other.is_nan()) {
-      *this = Decimal::nan();
+      *this = propagate_nan(*this, other);
       return *this;
     }
 
@@ -1972,7 +2000,7 @@ auto Decimal::operator*=(const Decimal &other) -> Decimal & {
 
 auto Decimal::operator/=(const Decimal &other) -> Decimal & {
   if (this->is_nan() || other.is_nan()) {
-    *this = Decimal::nan();
+    *this = propagate_nan(*this, other);
     return *this;
   }
 
@@ -2030,7 +2058,7 @@ auto Decimal::operator/=(const Decimal &other) -> Decimal & {
 
 auto Decimal::operator%=(const Decimal &other) -> Decimal & {
   if (this->is_nan() || other.is_nan()) {
-    *this = Decimal::nan();
+    *this = propagate_nan(*this, other);
     return *this;
   }
 

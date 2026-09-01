@@ -35,10 +35,14 @@ public:
                              exclusive_maximum->is_boolean() &&
                              exclusive_maximum->to_boolean()};
     ONLY_CONTINUE_IF(exclusive_min || exclusive_max);
+    this->unsatisfiable_ = UNSATISFIABLE_SCHEMA(vocabularies);
     return true;
   }
 
   auto transform(sourcemeta::core::JSON &schema) const -> void override {
-    schema.into(sourcemeta::core::JSON{false});
+    INTO_UNSATISFIABLE(schema, this->unsatisfiable_);
   }
+
+private:
+  mutable sourcemeta::core::JSON unsatisfiable_{false};
 };

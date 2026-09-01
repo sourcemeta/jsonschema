@@ -20,8 +20,16 @@ auto compiler_draft4_validation_required(const Context &context,
                                          const DynamicContext &dynamic_context,
                                          const Instructions &current)
     -> Instructions {
-  if (!schema_context.schema.at(dynamic_context.keyword).is_array()) {
-    return {};
+  // Draft 4 alone asks that `required` name at least one property
+  using Known = sourcemeta::blaze::SchemaVocabularies::Known;
+  const auto allows_empty{!schema_context.vocabularies.contains_any(
+      {Known::JSON_Schema_Draft_4, Known::JSON_Schema_Draft_4_Hyper})};
+  if (!is_string_array(schema_context.schema.at(dynamic_context.keyword)) ||
+      (!allows_empty &&
+       schema_context.schema.at(dynamic_context.keyword).empty())) {
+    throw sourcemeta::blaze::CompilerError(
+        schema_context.base, to_pointer(schema_context.relative_pointer),
+        EXPECTED_PROPERTY_NAME_ARRAY);
   }
 
   return compile_required_assertions(
@@ -34,11 +42,12 @@ auto compiler_draft4_applicator_allof(const Context &context,
                                       const SchemaContext &schema_context,
                                       const DynamicContext &dynamic_context,
                                       const Instructions &) -> Instructions {
-  if (!schema_context.schema.at(dynamic_context.keyword).is_array()) {
-    return {};
+  if (!is_schema_array(schema_context.schema.at(dynamic_context.keyword),
+                       booleans_are_schemas(schema_context.vocabularies))) {
+    throw sourcemeta::blaze::CompilerError(
+        schema_context.base, to_pointer(schema_context.relative_pointer),
+        EXPECTED_SCHEMA_ARRAY);
   }
-
-  assert(!schema_context.schema.at(dynamic_context.keyword).empty());
 
   Instructions children;
 
@@ -67,6 +76,11 @@ auto compiler_draft4_applicator_allof(const Context &context,
       }
     }
 
+    // Every branch imposed no constraints, so neither does the conjunction
+    if (children.empty()) {
+      return {};
+    }
+
     return {make(sourcemeta::blaze::InstructionIndex::LogicalAnd, context,
                  schema_context, dynamic_context, ValueNone{},
                  std::move(children))};
@@ -77,11 +91,12 @@ auto compiler_draft4_applicator_anyof(const Context &context,
                                       const SchemaContext &schema_context,
                                       const DynamicContext &dynamic_context,
                                       const Instructions &) -> Instructions {
-  if (!schema_context.schema.at(dynamic_context.keyword).is_array()) {
-    return {};
+  if (!is_schema_array(schema_context.schema.at(dynamic_context.keyword),
+                       booleans_are_schemas(schema_context.vocabularies))) {
+    throw sourcemeta::blaze::CompilerError(
+        schema_context.base, to_pointer(schema_context.relative_pointer),
+        EXPECTED_SCHEMA_ARRAY);
   }
-
-  assert(!schema_context.schema.at(dynamic_context.keyword).empty());
 
   Instructions disjunctors;
   for (std::uint64_t index = 0;
@@ -153,11 +168,12 @@ auto compiler_draft4_applicator_oneof(const Context &context,
                                       const SchemaContext &schema_context,
                                       const DynamicContext &dynamic_context,
                                       const Instructions &) -> Instructions {
-  if (!schema_context.schema.at(dynamic_context.keyword).is_array()) {
-    return {};
+  if (!is_schema_array(schema_context.schema.at(dynamic_context.keyword),
+                       booleans_are_schemas(schema_context.vocabularies))) {
+    throw sourcemeta::blaze::CompilerError(
+        schema_context.base, to_pointer(schema_context.relative_pointer),
+        EXPECTED_SCHEMA_ARRAY);
   }
-
-  assert(!schema_context.schema.at(dynamic_context.keyword).empty());
 
   Instructions disjunctors;
   for (std::uint64_t index = 0;
@@ -218,11 +234,19 @@ auto compiler_draft4_validation_maxproperties(
     const Context &context, const SchemaContext &schema_context,
     const DynamicContext &dynamic_context, const Instructions &)
     -> Instructions {
-  if (!schema_context.schema.at(dynamic_context.keyword).is_integral()) {
-    return {};
+  if (!schema_context.schema.at(dynamic_context.keyword).is_integral() ||
+      (!integral_reals_are_integers(schema_context.vocabularies) &&
+       !schema_context.schema.at(dynamic_context.keyword).is_integer())) {
+    throw sourcemeta::blaze::CompilerError(
+        schema_context.base, to_pointer(schema_context.relative_pointer),
+        EXPECTED_INTEGER);
   }
 
-  assert(schema_context.schema.at(dynamic_context.keyword).is_positive());
+  if (!schema_context.schema.at(dynamic_context.keyword).is_positive()) {
+    throw sourcemeta::blaze::CompilerError(
+        schema_context.base, to_pointer(schema_context.relative_pointer),
+        EXPECTED_NON_NEGATIVE);
+  }
 
   if (schema_context.schema.defines("type") &&
       schema_context.schema.at("type").is_string() &&
@@ -251,11 +275,19 @@ auto compiler_draft4_validation_minproperties(
     const Context &context, const SchemaContext &schema_context,
     const DynamicContext &dynamic_context, const Instructions &)
     -> Instructions {
-  if (!schema_context.schema.at(dynamic_context.keyword).is_integral()) {
-    return {};
+  if (!schema_context.schema.at(dynamic_context.keyword).is_integral() ||
+      (!integral_reals_are_integers(schema_context.vocabularies) &&
+       !schema_context.schema.at(dynamic_context.keyword).is_integer())) {
+    throw sourcemeta::blaze::CompilerError(
+        schema_context.base, to_pointer(schema_context.relative_pointer),
+        EXPECTED_INTEGER);
   }
 
-  assert(schema_context.schema.at(dynamic_context.keyword).is_positive());
+  if (!schema_context.schema.at(dynamic_context.keyword).is_positive()) {
+    throw sourcemeta::blaze::CompilerError(
+        schema_context.base, to_pointer(schema_context.relative_pointer),
+        EXPECTED_NON_NEGATIVE);
+  }
 
   if (schema_context.schema.defines("type") &&
       schema_context.schema.at("type").is_string() &&

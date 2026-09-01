@@ -4,7 +4,6 @@
   "title": "Canonical JSON Schema Draft 4",
   "description": "Meta-schema that validates whether a given JSON Schema Draft 4 document is in canonical form",
   "examples": [
-    true,
     {
       "$ref": "#/definitions/foo"
     },
@@ -53,7 +52,7 @@
     "schema": {
       "anyOf": [
         {
-          "type": "boolean"
+          "const": {}
         },
         {
           "x-lint-exclude": "simple_properties_identifiers",
@@ -252,7 +251,14 @@
               }
             },
             "additionalProperties": {
-              "$ref": "#/$defs/schema"
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/schema"
+                },
+                {
+                  "type": "boolean"
+                }
+              ]
             },
             "required": {
               "type": "array",
@@ -336,7 +342,14 @@
               }
             },
             "additionalItems": {
-              "$ref": "#/$defs/schema"
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/schema"
+                },
+                {
+                  "type": "boolean"
+                }
+              ]
             },
             "minItems": {
               "type": "integer",

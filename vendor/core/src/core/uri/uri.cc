@@ -15,6 +15,12 @@ auto URI::from_fragment(const std::string_view fragment) -> URI {
   return result;
 }
 
+auto URI::from_unescaped_fragment(const std::string_view fragment) -> URI {
+  URI result;
+  result.unescaped_fragment(fragment);
+  return result;
+}
+
 auto URI::from_iri(const std::string_view input) -> URI {
   URI result;
   result.iri_ = true;

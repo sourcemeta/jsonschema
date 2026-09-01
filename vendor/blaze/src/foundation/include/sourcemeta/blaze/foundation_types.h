@@ -4,20 +4,26 @@
 #include <sourcemeta/blaze/foundation_vocabularies.h>
 #include <sourcemeta/core/json.h>
 #include <sourcemeta/core/jsonpointer.h>
+#include <sourcemeta/core/memory.h>
 
-#include <cstdint>       // std::uint8_t
-#include <format>        // std::formatter, std::format_to
-#include <functional>    // std::function, std::reference_wrapper
-#include <optional>      // std::optional
-#include <ostream>       // std::ostream
-#include <sstream>       // std::ostringstream
-#include <string>        // std::string
-#include <string_view>   // std::string_view
-#include <unordered_set> // std::unordered_set
+#include <cstdint>     // std::uint8_t
+#include <format>      // std::formatter, std::format_to
+#include <functional>  // std::function, std::reference_wrapper
+#include <optional>    // std::optional
+#include <ostream>     // std::ostream
+#include <span>        // std::span
+#include <sstream>     // std::ostringstream
+#include <string>      // std::string
+#include <string_view> // std::string_view
 
 namespace sourcemeta::blaze {
 
-// Take a URI and get back a schema
+/// @ingroup foundation
+/// What a sourcemeta::blaze::SchemaResolver hands back: either a schema it
+/// owns, or a reference to one that outlives the call
+using SchemaResolverResult =
+    sourcemeta::core::OwnedOrReference<sourcemeta::core::JSON>;
+
 /// @ingroup foundation
 ///
 /// Some functions need to reference other schemas by their URIs. To accomplish
@@ -32,8 +38,7 @@ namespace sourcemeta::blaze {
 /// requests, or anything your application might require. Unless your resolver
 /// is trivial, it is recommended to create a callable object that implements
 /// the function interface.
-using SchemaResolver =
-    std::function<std::optional<sourcemeta::core::JSON>(std::string_view)>;
+using SchemaResolver = std::function<SchemaResolverResult(std::string_view)>;
 
 /// @ingroup foundation
 /// The reference type
@@ -187,13 +192,13 @@ struct SchemaWalkerResult {
   /// The walker strategy to continue traversing across the schema
   SchemaKeywordType type;
   /// The vocabulary associated with the keyword, if any
-  std::optional<SchemaVocabularies::URI> vocabulary;
+  std::optional<SchemaVocabularies::URIView> vocabulary;
   /// The keywords a given keyword depends on (if any) during the evaluation
   /// process
-  std::unordered_set<std::string_view> dependencies;
+  std::span<const std::string_view> dependencies;
   /// The keywords a given keyword depends on for evaluation ordering purposes
   /// only (not semantic dependencies)
-  std::unordered_set<std::string_view> order_dependencies;
+  std::span<const std::string_view> order_dependencies;
   /// The JSON instance types that this keyword applies to (empty means all)
   sourcemeta::core::JSON::TypeSet instances;
 
@@ -205,15 +210,14 @@ struct SchemaWalkerResult {
   auto operator=(SchemaWalkerResult &&) -> SchemaWalkerResult & = default;
   ~SchemaWalkerResult() = default;
 
-  SchemaWalkerResult(SchemaKeywordType type_,
-                     std::optional<SchemaVocabularies::URI> vocabulary_,
-                     std::unordered_set<std::string_view> dependencies_,
-                     std::unordered_set<std::string_view> order_dependencies_,
-                     sourcemeta::core::JSON::TypeSet instances_)
-      : type{type_}, vocabulary{std::move(vocabulary_)},
-        dependencies{std::move(dependencies_)},
-        order_dependencies{std::move(order_dependencies_)},
-        instances{instances_} {}
+  constexpr SchemaWalkerResult(
+      SchemaKeywordType type_,
+      std::optional<SchemaVocabularies::URIView> vocabulary_,
+      std::span<const std::string_view> dependencies_,
+      std::span<const std::string_view> order_dependencies_,
+      sourcemeta::core::JSON::TypeSet instances_)
+      : type{type_}, vocabulary{vocabulary_}, dependencies{dependencies_},
+        order_dependencies{order_dependencies_}, instances{instances_} {}
 };
 
 /// @ingroup foundation

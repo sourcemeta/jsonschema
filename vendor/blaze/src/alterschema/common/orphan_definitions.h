@@ -69,19 +69,13 @@ private:
   static auto
   subtree_has_dynamic_anchor(const sourcemeta::blaze::SchemaFrame &frame,
                              const WeakPointer &entry_pointer) -> bool {
-    for (const auto &[key, location] : frame.locations()) {
-      if (key.first != sourcemeta::blaze::SchemaReferenceType::Dynamic) {
-        continue;
-      }
-      if (location.type !=
-          sourcemeta::blaze::SchemaFrame::LocationType::Anchor) {
-        continue;
-      }
-      if (location.pointer.starts_with(entry_pointer)) {
-        return true;
-      }
-    }
-    return false;
+    return frame.any_anchor(
+        sourcemeta::blaze::SchemaReferenceType::Dynamic,
+        [&entry_pointer](
+            const std::string_view,
+            const sourcemeta::blaze::SchemaFrame::Location &location) -> bool {
+          return location.pointer.starts_with(entry_pointer);
+        });
   }
 
   static auto has_reachable_reference_through(
@@ -90,31 +84,22 @@ private:
       const sourcemeta::blaze::SchemaWalker &walker,
       const sourcemeta::blaze::SchemaResolver &resolver,
       const WeakPointer &pointer) -> bool {
-    for (const auto &reference : frame.references()) {
-      const auto destination{frame.traverse(reference.second.destination)};
-      if (!destination.has_value()) {
-        continue;
-      }
+    return frame.any_reference_into(
+        pointer,
+        [&](const sourcemeta::blaze::SchemaReferenceType,
+            const sourcemeta::core::WeakPointer &source_pointer,
+            const sourcemeta::blaze::SchemaFrame::Reference &) -> bool {
+          if (source_pointer.empty()) {
+            return true;
+          }
 
-      if (!destination->get().pointer.starts_with(pointer)) {
-        continue;
-      }
-
-      const auto &source_pointer{reference.first.second};
-      if (source_pointer.empty()) {
-        return true;
-      }
-
-      const auto source_location{frame.traverse(
-          source_pointer.initial(),
-          sourcemeta::blaze::SchemaFrame::LocationType::Subschema)};
-      if (source_location.has_value() &&
-          frame.is_reachable(base, source_location->get(), walker, resolver)) {
-        return true;
-      }
-    }
-
-    return false;
+          const auto source_location{frame.traverse(
+              source_pointer.initial(),
+              sourcemeta::blaze::SchemaFrame::LocationType::Subschema)};
+          return source_location.has_value() &&
+                 frame.is_reachable(base, source_location->get(), walker,
+                                    resolver);
+        });
   }
 
   static auto

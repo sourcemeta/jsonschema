@@ -23,6 +23,7 @@ public:
 
     const auto *one_of{schema.try_at(KEYWORD)};
     ONLY_CONTINUE_IF(one_of && one_of->is_array() && one_of->size() == 1);
+    ONLY_CONTINUE_IF(one_of->at(0).is_object() || one_of->at(0).is_boolean());
     ONLY_CONTINUE_IF(!frame.has_references_through(
         location.pointer,
         sourcemeta::core::WeakPointer::Token{std::cref(KEYWORD)}));

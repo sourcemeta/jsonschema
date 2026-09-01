@@ -110,22 +110,30 @@ public:
 
     this->strategy_ = Strategy::FullRestructure;
     this->applicators_with_refs_ = 0;
-    for (const auto &reference : frame.references()) {
-      const auto &source_pointer{reference.first.second};
-      if (!source_pointer.starts_with(location.pointer)) {
-        continue;
-      }
-      const auto relative{source_pointer.resolve_from(location.pointer)};
-      if (relative.empty() || !relative.at(0).is_property()) {
-        continue;
-      }
-      const auto &first_keyword{relative.at(0).to_property()};
-      const auto bit{applicator_bit(first_keyword)};
-      if (bit != 0) {
-        const auto destination{frame.traverse(reference.second.destination)};
-        if (destination.has_value()) {
-          const auto &dest_pointer{destination->get().pointer};
-          if (dest_pointer.starts_with(location.pointer)) {
+    frame.for_each_reference_from(
+        location.pointer,
+        [&](const sourcemeta::blaze::SchemaReferenceType,
+            const sourcemeta::core::WeakPointer &source_pointer,
+            const sourcemeta::blaze::SchemaFrame::Reference &reference)
+            -> void {
+          const auto relative{source_pointer.resolve_from(location.pointer)};
+          if (relative.empty() || !relative.at(0).is_property()) {
+            return;
+          }
+
+          const auto &first_keyword{relative.at(0).to_property()};
+          const auto bit{applicator_bit(first_keyword)};
+          if (bit == 0) {
+            return;
+          }
+
+          const auto destination{frame.traverse(reference.destination)};
+          if (destination.has_value()) {
+            const auto &dest_pointer{destination->get().pointer};
+            if (!dest_pointer.starts_with(location.pointer)) {
+              return;
+            }
+
             const auto relative_dest{
                 dest_pointer.resolve_from(location.pointer)};
             if (!relative_dest.empty() && relative_dest.at(0).is_property() &&
@@ -133,16 +141,13 @@ public:
                  relative_dest.at(0).to_property() == "$defs" ||
                  relative_dest.at(0).to_property() == "dependencies" ||
                  relative_dest.at(0).to_property() == "dependentSchemas")) {
-              continue;
+              return;
             }
-          } else {
-            continue;
           }
-        }
-        this->strategy_ = Strategy::SafeExtract;
-        this->applicators_with_refs_ |= bit;
-      }
-    }
+
+          this->strategy_ = Strategy::SafeExtract;
+          this->applicators_with_refs_ |= bit;
+        });
 
     if (this->strategy_ == Strategy::SafeExtract && !has_structural) {
       if (!has_allof) {
@@ -150,39 +155,38 @@ public:
         return true;
       }
 
-      bool all_refs_fixed{true};
-      for (const auto &reference : frame.references()) {
-        const auto &source_pointer{reference.first.second};
-        if (!source_pointer.starts_with(location.pointer)) {
-          continue;
-        }
-        const auto relative_src{source_pointer.resolve_from(location.pointer)};
-        if (relative_src.empty() || !relative_src.at(0).is_property()) {
-          continue;
-        }
-        const auto &src_keyword{relative_src.at(0).to_property()};
-        if (src_keyword != "not" && src_keyword != "anyOf" &&
-            src_keyword != "oneOf" &&
-            !(this->has_if_then_else_ &&
-              (src_keyword == "if" || src_keyword == "then" ||
-               src_keyword == "else"))) {
-          continue;
-        }
+      const auto all_refs_fixed{!frame.any_reference_from(
+          location.pointer,
+          [&](const sourcemeta::blaze::SchemaReferenceType,
+              const sourcemeta::core::WeakPointer &source_pointer,
+              const sourcemeta::blaze::SchemaFrame::Reference &reference)
+              -> bool {
+            const auto relative_src{
+                source_pointer.resolve_from(location.pointer)};
+            if (relative_src.empty() || !relative_src.at(0).is_property()) {
+              return false;
+            }
 
-        const auto destination{frame.traverse(reference.second.destination)};
-        if (!destination.has_value()) {
-          all_refs_fixed = false;
-          break;
-        }
+            const auto &src_keyword{relative_src.at(0).to_property()};
+            if (src_keyword != "not" && src_keyword != "anyOf" &&
+                src_keyword != "oneOf" &&
+                !(this->has_if_then_else_ &&
+                  (src_keyword == "if" || src_keyword == "then" ||
+                   src_keyword == "else"))) {
+              return false;
+            }
 
-        const auto relative_dest{
-            destination->get().pointer.resolve_from(location.pointer)};
-        if (relative_dest.empty() || !relative_dest.at(0).is_property() ||
-            relative_dest.at(0).to_property() != "allOf") {
-          all_refs_fixed = false;
-          break;
-        }
-      }
+            const auto destination{frame.traverse(reference.destination)};
+            if (!destination.has_value()) {
+              return true;
+            }
+
+            const auto relative_dest{
+                destination->get().pointer.resolve_from(location.pointer)};
+            return relative_dest.empty() ||
+                   !relative_dest.at(0).is_property() ||
+                   relative_dest.at(0).to_property() != "allOf";
+          })};
 
       if (all_refs_fixed) {
         this->strategy_ = Strategy::MergeIntoAllOf;

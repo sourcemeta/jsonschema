@@ -298,26 +298,26 @@ private:
       const sourcemeta::blaze::SchemaFrame &frame,
       const sourcemeta::blaze::SchemaWalker &walker,
       const sourcemeta::blaze::SchemaResolver &resolver) -> bool {
-    for (const auto &entry : frame.locations()) {
-      if (entry.second.type !=
-              sourcemeta::blaze::SchemaFrame::LocationType::Resource &&
-          entry.second.type !=
-              sourcemeta::blaze::SchemaFrame::LocationType::Subschema) {
-        continue;
-      }
-      const auto absolute{sourcemeta::core::to_pointer(entry.second.pointer)};
-      const auto &subschema{sourcemeta::core::get(root, absolute)};
-      if (!subschema.is_object() || !subschema.defines("unevaluatedItems")) {
-        continue;
-      }
-      const auto &location_vocabularies{
-          frame.vocabularies(entry.second, resolver)};
-      const auto &keyword_metadata{
-          walker("unevaluatedItems", location_vocabularies)};
-      if (keyword_metadata.type !=
-          sourcemeta::blaze::SchemaKeywordType::Unknown) {
-        return true;
-      }
+    if (frame.any_subschema(
+            [&](const sourcemeta::blaze::SchemaFrame::Location &entry) -> bool {
+              const auto absolute{sourcemeta::core::to_pointer(entry.pointer)};
+              const auto &subschema{sourcemeta::core::get(root, absolute)};
+              if (!subschema.is_object() ||
+                  !subschema.defines("unevaluatedItems")) {
+                return false;
+              }
+              const auto &location_vocabularies{
+                  frame.vocabularies(entry, resolver)};
+              const auto &keyword_metadata{
+                  walker("unevaluatedItems", location_vocabularies)};
+              if (keyword_metadata.type !=
+                  sourcemeta::blaze::SchemaKeywordType::Unknown) {
+                return true;
+              }
+
+              return false;
+            })) {
+      return true;
     }
     return false;
   }
@@ -326,22 +326,18 @@ private:
       const sourcemeta::core::JSON &root,
       const sourcemeta::blaze::SchemaFrame &frame,
       const sourcemeta::blaze::SchemaFrame::Location &location) -> bool {
-    for (const auto &entry : frame.locations()) {
-      if (entry.second.type !=
-              sourcemeta::blaze::SchemaFrame::LocationType::Resource &&
-          entry.second.type !=
-              sourcemeta::blaze::SchemaFrame::LocationType::Subschema) {
-        continue;
-      }
-      if (entry.second.pointer.size() <= location.pointer.size() ||
-          !entry.second.pointer.starts_with(location.pointer)) {
-        continue;
-      }
-      const auto absolute{sourcemeta::core::to_pointer(entry.second.pointer)};
-      const auto &descendant{sourcemeta::core::get(root, absolute)};
-      if (has_pending_pattern(descendant, entry.second)) {
-        return true;
-      }
+    if (frame.any_subschema_under(
+            location.pointer,
+            [&](const sourcemeta::blaze::SchemaFrame::Location &entry) -> bool {
+              const auto absolute{sourcemeta::core::to_pointer(entry.pointer)};
+              const auto &descendant{sourcemeta::core::get(root, absolute)};
+              if (has_pending_pattern(descendant, entry)) {
+                return true;
+              }
+
+              return false;
+            })) {
+      return true;
     }
     return false;
   }
@@ -430,25 +426,28 @@ private:
     std::optional<
         std::reference_wrapper<const sourcemeta::blaze::SchemaFrame::Location>>
         closest;
-    for (const auto &entry : frame.locations()) {
-      const bool entry_is_resource_scope{
-          entry.second.type ==
-              sourcemeta::blaze::SchemaFrame::LocationType::Resource ||
-          entry.second.pointer.empty()};
-      if (!entry_is_resource_scope) {
-        continue;
-      }
-      if (entry.second.pointer.size() > current_location.pointer.size()) {
-        continue;
-      }
-      if (!current_location.pointer.starts_with(entry.second.pointer)) {
-        continue;
-      }
-      if (!closest.has_value() ||
-          entry.second.pointer.size() > closest.value().get().pointer.size()) {
-        closest = std::cref(entry.second);
-      }
-    }
+    frame.for_each_location(
+        [&](const sourcemeta::blaze::SchemaReferenceType,
+            const std::string_view,
+            const sourcemeta::blaze::SchemaFrame::Location &entry) -> void {
+          const bool entry_is_resource_scope{
+              entry.type ==
+                  sourcemeta::blaze::SchemaFrame::LocationType::Resource ||
+              entry.pointer.empty()};
+          if (!entry_is_resource_scope) {
+            return;
+          }
+          if (entry.pointer.size() > current_location.pointer.size()) {
+            return;
+          }
+          if (!current_location.pointer.starts_with(entry.pointer)) {
+            return;
+          }
+          if (!closest.has_value() ||
+              entry.pointer.size() > closest.value().get().pointer.size()) {
+            closest = std::cref(entry);
+          }
+        });
     return closest;
   }
 
@@ -475,29 +474,25 @@ private:
     std::set<std::string> existing_valid;
     std::vector<std::pair<std::string, sourcemeta::core::WeakPointer>> invalid;
 
-    for (const auto &entry : frame.locations()) {
-      if (entry.second.type !=
-          sourcemeta::blaze::SchemaFrame::LocationType::Anchor) {
-        continue;
-      }
-      if (entry.first.first != sourcemeta::blaze::SchemaReferenceType::Static) {
-        continue;
-      }
-      if (!pointer_within_resource(entry.second.pointer, resource_pointer)) {
-        continue;
-      }
-      const sourcemeta::core::URI anchor_uri{entry.first.second};
-      const auto fragment{anchor_uri.fragment()};
-      if (!fragment.has_value() || fragment.value().empty()) {
-        continue;
-      }
-      const std::string anchor_name{fragment.value()};
-      if (is_valid_2020_12_anchor(anchor_name)) {
-        existing_valid.insert(anchor_name);
-      } else {
-        invalid.emplace_back(anchor_name, entry.second.pointer);
-      }
-    }
+    frame.for_each_anchor(
+        sourcemeta::blaze::SchemaReferenceType::Static,
+        [&](const std::string_view uri,
+            const sourcemeta::blaze::SchemaFrame::Location &entry) -> void {
+          if (!pointer_within_resource(entry.pointer, resource_pointer)) {
+            return;
+          }
+          const sourcemeta::core::URI anchor_uri{uri};
+          const auto fragment{anchor_uri.fragment()};
+          if (!fragment.has_value() || fragment.value().empty()) {
+            return;
+          }
+          const std::string anchor_name{fragment.value()};
+          if (is_valid_2020_12_anchor(anchor_name)) {
+            existing_valid.insert(anchor_name);
+          } else {
+            invalid.emplace_back(anchor_name, entry.pointer);
+          }
+        });
 
     if (invalid.empty()) {
       return;
@@ -546,32 +541,33 @@ private:
            .new_name = rename_iter->second});
     }
 
-    for (const auto &reference : frame.references()) {
-      if (!pointer_within_resource(reference.first.second, resource_pointer)) {
-        continue;
-      }
-      if (!reference.second.fragment.has_value()) {
-        continue;
-      }
-      const auto &fragment{reference.second.fragment.value()};
-      if (fragment.empty() || fragment.front() == '/') {
-        continue;
-      }
-      const auto rename_iter{rename_map.find(std::string{fragment})};
-      if (rename_iter == rename_map.end()) {
-        continue;
-      }
+    frame.for_each_reference_from(
+        resource_pointer,
+        [&](const sourcemeta::blaze::SchemaReferenceType,
+            const sourcemeta::core::WeakPointer &origin,
+            const sourcemeta::blaze::SchemaFrame::Reference &reference)
+            -> void {
+          if (!reference.fragment.has_value()) {
+            return;
+          }
+          const auto &fragment{reference.fragment.value()};
+          if (fragment.empty() || fragment.front() == '/') {
+            return;
+          }
+          const auto rename_iter{rename_map.find(std::string{fragment})};
+          if (rename_iter == rename_map.end()) {
+            return;
+          }
 
-      sourcemeta::core::URI ref_uri{reference.second.original};
-      ref_uri.fragment(rename_iter->second);
-      const auto new_value{ref_uri.recompose()};
+          sourcemeta::core::URI ref_uri{reference.original};
+          ref_uri.fragment(rename_iter->second);
+          const auto new_value{ref_uri.recompose()};
 
-      const auto relative_weak{
-          reference.first.second.resolve_from(resource_pointer)};
-      this->anchor_ref_rewrites_.push_back(
-          {.ref_pointer = sourcemeta::core::to_pointer(relative_weak),
-           .new_value = new_value});
-    }
+          const auto relative_weak{origin.resolve_from(resource_pointer)};
+          this->anchor_ref_rewrites_.push_back(
+              {.ref_pointer = sourcemeta::core::to_pointer(relative_weak),
+               .new_value = new_value});
+        });
   }
 
   static auto enclosing_resource_has_pending_sanitization(
@@ -585,33 +581,30 @@ private:
     }
     const auto &resource_pointer{closest.value().get().pointer};
 
-    for (const auto &entry : frame.locations()) {
-      if (entry.second.type !=
-          sourcemeta::blaze::SchemaFrame::LocationType::Anchor) {
-        continue;
-      }
-      if (entry.first.first != sourcemeta::blaze::SchemaReferenceType::Static) {
-        continue;
-      }
-      if (!pointer_within_resource(entry.second.pointer, resource_pointer)) {
-        continue;
-      }
-      const sourcemeta::core::URI anchor_uri{entry.first.second};
-      const auto fragment{anchor_uri.fragment()};
-      if (!fragment.has_value() || fragment.value().empty()) {
-        continue;
-      }
-      if (!is_valid_2020_12_anchor(fragment.value())) {
-        const auto absolute{sourcemeta::core::to_pointer(entry.second.pointer)};
-        const auto &subschema{sourcemeta::core::get(root, absolute)};
-        if (subschema.is_object() && subschema.defines("$anchor") &&
-            subschema.at("$anchor").is_string() &&
-            subschema.at("$anchor").to_string() == fragment.value()) {
-          return true;
-        }
-      }
-    }
-    return false;
+    return frame.any_anchor(
+        sourcemeta::blaze::SchemaReferenceType::Static,
+        [&](const std::string_view uri,
+            const sourcemeta::blaze::SchemaFrame::Location &entry) -> bool {
+          if (!pointer_within_resource(entry.pointer, resource_pointer)) {
+            return false;
+          }
+          const sourcemeta::core::URI anchor_uri{uri};
+          const auto fragment{anchor_uri.fragment()};
+          if (!fragment.has_value() || fragment.value().empty()) {
+            return false;
+          }
+          if (!is_valid_2020_12_anchor(fragment.value())) {
+            const auto absolute{sourcemeta::core::to_pointer(entry.pointer)};
+            const auto &subschema{sourcemeta::core::get(root, absolute)};
+            if (subschema.is_object() && subschema.defines("$anchor") &&
+                subschema.at("$anchor").is_string() &&
+                subschema.at("$anchor").to_string() == fragment.value()) {
+              return true;
+            }
+          }
+
+          return false;
+        });
   }
 
   auto apply_anchor_sanitization(sourcemeta::core::JSON &schema) const -> void {
@@ -637,38 +630,34 @@ private:
 
     const auto &resource_pointer{closest.value().get().pointer};
     std::set<std::string> seen;
-    for (const auto &entry : frame.locations()) {
-      if (entry.second.type !=
-              sourcemeta::blaze::SchemaFrame::LocationType::Resource &&
-          entry.second.type !=
-              sourcemeta::blaze::SchemaFrame::LocationType::Subschema) {
-        continue;
-      }
-      if (!entry.second.pointer.starts_with(resource_pointer)) {
-        continue;
-      }
-      if (entry.second.type ==
-              sourcemeta::blaze::SchemaFrame::LocationType::Resource &&
-          entry.second.pointer.size() > resource_pointer.size()) {
-        continue;
-      }
-      const auto pointer_str{sourcemeta::core::to_string(entry.second.pointer)};
-      if (seen.contains(pointer_str)) {
-        continue;
-      }
-      seen.insert(pointer_str);
+    return frame.any_subschema(
+        [&](const sourcemeta::blaze::SchemaFrame::Location &entry) -> bool {
+          if (!entry.pointer.starts_with(resource_pointer)) {
+            return false;
+          }
+          if (entry.type ==
+                  sourcemeta::blaze::SchemaFrame::LocationType::Resource &&
+              entry.pointer.size() > resource_pointer.size()) {
+            return false;
+          }
+          const auto pointer_str{sourcemeta::core::to_string(entry.pointer)};
+          if (seen.contains(pointer_str)) {
+            return false;
+          }
+          seen.insert(pointer_str);
 
-      const auto absolute{sourcemeta::core::to_pointer(entry.second.pointer)};
-      const auto &subschema{sourcemeta::core::get(root, absolute)};
-      if (!subschema.is_object()) {
-        continue;
-      }
-      if (subschema.defines("$recursiveAnchor") &&
-          subschema.at("$recursiveAnchor").is_boolean() &&
-          subschema.at("$recursiveAnchor").to_boolean()) {
-        return true;
-      }
-    }
-    return false;
+          const auto absolute{sourcemeta::core::to_pointer(entry.pointer)};
+          const auto &subschema{sourcemeta::core::get(root, absolute)};
+          if (!subschema.is_object()) {
+            return false;
+          }
+          if (subschema.defines("$recursiveAnchor") &&
+              subschema.at("$recursiveAnchor").is_boolean() &&
+              subschema.at("$recursiveAnchor").to_boolean()) {
+            return true;
+          }
+
+          return false;
+        });
   }
 };

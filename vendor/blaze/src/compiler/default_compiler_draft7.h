@@ -27,8 +27,10 @@ auto compiler_draft7_applicator_if(const Context &context,
                    make_weak_pointer(KEYWORD_THEN)),
                schema_context.base)
             .recompose()};
-    assert(context.frame.locations().contains(
-        {sourcemeta::blaze::SchemaReferenceType::Static, destination}));
+    assert(context.frame
+               .location(sourcemeta::blaze::SchemaReferenceType::Static,
+                         destination)
+               .has_value());
 
     // If `if` compiled to nothing, the `then` children will be hoisted to the
     // current level without the `LogicalCondition` wrapper. When the schema
@@ -100,8 +102,10 @@ auto compiler_draft7_applicator_if(const Context &context,
                    make_weak_pointer(KEYWORD_ELSE)),
                schema_context.base)
             .recompose()};
-    assert(context.frame.locations().contains(
-        {sourcemeta::blaze::SchemaReferenceType::Static, destination}));
+    assert(context.frame
+               .location(sourcemeta::blaze::SchemaReferenceType::Static,
+                         destination)
+               .has_value());
     DynamicContext new_dynamic_context{
         .keyword = KEYWORD_ELSE,
         .base_schema_location = dynamic_context.base_schema_location,

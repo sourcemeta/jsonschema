@@ -75,8 +75,8 @@ public:
     // Deliberately framed without a default identifier, so that the root
     // comes back empty exactly when the schema declares none of its own
     sourcemeta::blaze::SchemaFrame declared_frame{
-        sourcemeta::blaze::SchemaFrame::Mode::Root};
-    declared_frame.analyse(root, walker, resolver, location.dialect);
+        sourcemeta::blaze::SchemaFrame::Mode::Root, root, walker, resolver,
+        location.dialect};
     std::string_view default_id{location.base};
     if (!declared_frame.root().empty() || default_id.empty()) {
       default_id = "";

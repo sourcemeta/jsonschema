@@ -1042,6 +1042,13 @@ export function describe(valid, instruction, evaluatePath,
   }
 
   if (opcode === ASSERTION_NOT_TYPE_STRICT_ANY) {
+    // Draft 3 permits a negative `maxLength`, which we compile into a check
+    // that the value is not a string, as no string is that short
+    if (keyword === 'maxLength') {
+      return 'The value was expected to be of a type other than string, as no ' +
+        'string is short enough to satisfy a negative maximum length';
+    }
+
     return describeNotTypesCheck(valid, targetType, value);
   }
 

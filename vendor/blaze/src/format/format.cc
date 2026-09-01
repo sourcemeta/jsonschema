@@ -145,17 +145,13 @@ auto format(sourcemeta::core::JSON &schema, const SchemaWalker &walker,
   std::vector<sourcemeta::core::Pointer> subschemas;
 
   {
-    SchemaFrame frame{SchemaFrame::Mode::Locations};
-    frame.analyse(schema, walker, resolver, default_dialect);
+    SchemaFrame frame{SchemaFrame::Mode::Locations, schema, walker, resolver,
+                      default_dialect};
 
-    for (const auto &entry : frame.locations()) {
-      if (entry.second.type != SchemaFrame::LocationType::Resource &&
-          entry.second.type != SchemaFrame::LocationType::Subschema) {
-        continue;
-      }
-
-      subschemas.push_back(sourcemeta::core::to_pointer(entry.second.pointer));
-    }
+    frame.for_each_subschema(
+        [&subschemas](const SchemaFrame::Location &location) -> void {
+          subschemas.push_back(sourcemeta::core::to_pointer(location.pointer));
+        });
   }
 
   for (const auto &pointer : subschemas) {

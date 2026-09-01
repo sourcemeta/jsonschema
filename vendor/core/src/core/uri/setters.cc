@@ -327,6 +327,28 @@ auto URI::fragment(const std::string_view fragment) -> URI & {
   return *this;
 }
 
+auto URI::unescaped_fragment(const std::string_view fragment) -> URI & {
+  std::string value;
+  value.reserve(fragment.size());
+
+  // RFC 3986 Section 2.4: "Because the percent ("%") character serves as the
+  // indicator for percent-encoded octets, it must be percent-encoded as "%25"
+  // for that octet to be used as data within a URI". Escaping it is what makes
+  // the encoding total, as every other character a fragment cannot hold
+  // literally is escaped when recomposing, and none of those escapes can be
+  // mistaken for input the caller wrote
+  for (const auto character : fragment) {
+    if (character == URI_PERCENT) {
+      uri_percent_encode_byte(value, URI_PERCENT);
+    } else {
+      value.push_back(character);
+    }
+  }
+
+  this->fragment_ = std::move(value);
+  return *this;
+}
+
 auto URI::query(const std::string_view query) -> URI & {
   if (query.empty()) {
     this->query_ = std::nullopt;

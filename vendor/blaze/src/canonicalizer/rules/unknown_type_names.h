@@ -34,7 +34,7 @@ public:
 
     if (type->is_array()) {
       for (const auto &entry : type->as_array()) {
-        if (entry.is_string() && !parse_schema_type(entry).any()) {
+        if (!entry.is_string() || !parse_schema_type(entry).any()) {
           return true;
         }
       }
@@ -44,14 +44,21 @@ public:
   }
 
   auto transform(sourcemeta::core::JSON &schema) const -> void override {
-    if (schema.at("type").is_string()) {
+    if (!schema.at("type").is_array()) {
       schema.erase("type");
       return;
     }
 
     auto recognised{sourcemeta::core::JSON::make_array()};
     for (const auto &entry : schema.at("type").as_array()) {
-      if (entry.is_string() && !parse_schema_type(entry).any()) {
+      // An entry that is not a type name at all is not something the union can
+      // recover from, so the keyword stops being a constraint entirely
+      if (!entry.is_string()) {
+        schema.erase("type");
+        return;
+      }
+
+      if (!parse_schema_type(entry).any()) {
         continue;
       }
 

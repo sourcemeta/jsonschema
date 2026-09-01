@@ -436,7 +436,12 @@ auto to_uri(const Pointer &pointer) -> URI {
                            std::allocator<JSON::Char>>
       result;
   stringify<JSON::Char, JSON::CharTraits, std::allocator>(pointer, result);
-  return URI::from_fragment(result.str());
+  // RFC 6901 Section 6: "A JSON Pointer can be represented in a URI fragment
+  // identifier by encoding it into octets using UTF-8, while percent-encoding
+  // those characters not allowed by the fragment rule in [RFC3986]". The
+  // stringified pointer is the literal text to encode, so a token that already
+  // reads as an escape sequence must not be taken as one
+  return URI::from_unescaped_fragment(result.str());
 }
 
 auto to_uri(const Pointer &pointer, const URI &base) -> URI {
@@ -448,7 +453,7 @@ auto to_uri(const WeakPointer &pointer) -> URI {
                            std::allocator<JSON::Char>>
       result;
   stringify(pointer, result);
-  return URI::from_fragment(result.str());
+  return URI::from_unescaped_fragment(result.str());
 }
 
 auto to_uri(const WeakPointer &pointer, const URI &base) -> URI {

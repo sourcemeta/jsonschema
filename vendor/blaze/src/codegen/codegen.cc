@@ -78,8 +78,12 @@ auto compile(const sourcemeta::core::JSON &input,
   // --------------------------------------------------------------------------
 
   sourcemeta::blaze::SchemaFrame frame{
-      sourcemeta::blaze::SchemaFrame::Mode::References};
-  frame.analyse(schema, walker, resolver, default_dialect, default_id);
+      sourcemeta::blaze::SchemaFrame::Mode::References,
+      schema,
+      walker,
+      resolver,
+      default_dialect,
+      default_id};
 
   // --------------------------------------------------------------------------
   // (4) Convert every subschema into a code generation object
@@ -90,30 +94,26 @@ auto compile(const sourcemeta::core::JSON &input,
                      sourcemeta::core::WeakPointer::Comparator>
       visited;
   CodegenIRResult result;
-  for (const auto &[key, location] : frame.locations()) {
-    if (location.type !=
-            sourcemeta::blaze::SchemaFrame::LocationType::Resource &&
-        location.type !=
-            sourcemeta::blaze::SchemaFrame::LocationType::Subschema) {
-      continue;
-    }
+  frame.for_each_subschema(
+      [&](const sourcemeta::blaze::SchemaFrame::Location &location) -> void {
+        // Framing may report resource twice or more given default identifiers
+        // and nested resources
+        const auto [visited_iterator, inserted] =
+            visited.insert(location.pointer);
+        if (!inserted) {
+          return;
+        }
 
-    // Framing may report resource twice or more given default identifiers and
-    // nested resources
-    const auto [visited_iterator, inserted] = visited.insert(location.pointer);
-    if (!inserted) {
-      continue;
-    }
+        // Skip subschemas under validation-only keywords that do not contribute
+        // to the type structure (like `contains`)
+        if (is_validation_subschema(frame, location, walker, resolver)) {
+          return;
+        }
 
-    // Skip subschemas under validation-only keywords that do not contribute
-    // to the type structure (like `contains`)
-    if (is_validation_subschema(frame, location, walker, resolver)) {
-      continue;
-    }
-
-    const auto &subschema{sourcemeta::core::get(schema, location.pointer)};
-    result.push_back(compiler(schema, frame, location, resolver, subschema));
-  }
+        const auto &subschema{sourcemeta::core::get(schema, location.pointer)};
+        result.push_back(
+            compiler(schema, frame, location, resolver, subschema));
+      });
 
   // --------------------------------------------------------------------------
   // (5) Sort entries so that dependencies come before dependents

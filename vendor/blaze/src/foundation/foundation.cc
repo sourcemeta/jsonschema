@@ -389,8 +389,7 @@ base_dialect_with_visited(const sourcemeta::core::JSON &schema,
   }
 
   // Otherwise, traverse the metaschema hierarchy up
-  const std::optional<sourcemeta::core::JSON> metaschema{
-      resolver(effective_dialect)};
+  const auto metaschema{resolver(effective_dialect)};
   if (!metaschema.has_value()) {
     sourcemeta::core::URI effective_dialect_uri;
     try {
@@ -618,8 +617,8 @@ auto sourcemeta::blaze::vocabularies(
   // over what the resolver knows about, as the schema pins the exact
   // meta-schema it is described by
   return vocabularies(
-      [&schema, &resolver](const std::string_view identifier)
-          -> std::optional<sourcemeta::core::JSON> {
+      [&schema,
+       &resolver](const std::string_view identifier) -> SchemaResolverResult {
         const auto *embedded{sourcemeta::blaze::metaschema_try_embedded(
             schema, identifier, resolver)};
         if (embedded) {
@@ -694,8 +693,7 @@ auto sourcemeta::blaze::vocabularies(const SchemaResolver &resolver,
    * (3) If the dialect is vocabulary aware, then fetch such dialect
    */
 
-  const std::optional<sourcemeta::core::JSON> maybe_schema_dialect{
-      resolver(dialect)};
+  const auto maybe_schema_dialect{resolver(dialect)};
   if (!maybe_schema_dialect.has_value()) {
     throw sourcemeta::blaze::SchemaResolutionError(
         dialect, "Could not resolve the metaschema of the schema");

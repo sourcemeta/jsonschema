@@ -47,10 +47,14 @@ public:
           return declared_types.test(std::to_underlying(value.type())) ||
                  (integer_matches_integral && value.is_integral());
         }));
+    this->unsatisfiable_ = UNSATISFIABLE_SCHEMA(vocabularies);
     return true;
   }
 
   auto transform(sourcemeta::core::JSON &schema) const -> void override {
-    schema.into(sourcemeta::core::JSON{false});
+    INTO_UNSATISFIABLE(schema, this->unsatisfiable_);
   }
+
+private:
+  mutable sourcemeta::core::JSON unsatisfiable_{false};
 };

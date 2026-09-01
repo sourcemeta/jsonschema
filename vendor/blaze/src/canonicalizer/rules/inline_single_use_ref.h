@@ -63,16 +63,21 @@ public:
     ONLY_CONTINUE_IF(container == "definitions" || container == "$defs");
 
     std::size_t ref_count{0};
-    for (const auto &reference : frame.references()) {
-      const auto dest{frame.traverse(reference.second.destination)};
-      if (!dest.has_value()) {
-        continue;
-      }
-      if (dest->get().pointer.starts_with(target_pointer) ||
-          target_pointer.starts_with(dest->get().pointer)) {
-        ++ref_count;
-      }
-    }
+    frame.for_each_reference(
+        [&](const sourcemeta::blaze::SchemaReferenceType,
+            const sourcemeta::core::WeakPointer &,
+            const sourcemeta::blaze::SchemaFrame::Reference &reference)
+            -> void {
+          const auto dest{frame.traverse(reference.destination)};
+          if (!dest.has_value()) {
+            return;
+          }
+
+          if (dest->get().pointer.starts_with(target_pointer) ||
+              target_pointer.starts_with(dest->get().pointer)) {
+            ++ref_count;
+          }
+        });
 
     ONLY_CONTINUE_IF(ref_count == 1);
 
