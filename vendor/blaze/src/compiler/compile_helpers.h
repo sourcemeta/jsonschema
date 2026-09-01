@@ -328,6 +328,36 @@ unsigned_integer_property(const sourcemeta::core::JSON &document,
   return unsigned_integer_property(document, property).value_or(otherwise);
 }
 
+// A schema context only knows where it sits within the schema resource that
+// encloses it, while an error must report where the problem is within the
+// document that the schema came from. Prepending the pointer of that resource
+// bridges the two, so that a consumer can resolve the location against the
+// document it parsed without keeping a frame of its own
+inline auto
+absolute_schema_location(const Context &context,
+                         const sourcemeta::core::URI &base,
+                         const sourcemeta::core::WeakPointer &relative_pointer)
+    -> sourcemeta::core::Pointer {
+  const auto resource{context.frame.location(
+      sourcemeta::blaze::SchemaReferenceType::Static, base.recompose())};
+  // Framing is where this base came from, so the resource it names is there.
+  // Were that to stop holding, the relative pointer is all we could report,
+  // and it would silently mean something else, so catch the drift here
+  assert(resource.has_value());
+  if (!resource.has_value()) [[unlikely]] {
+    return to_pointer(relative_pointer);
+  }
+
+  return to_pointer(resource.value().get().pointer.concat(relative_pointer));
+}
+
+inline auto absolute_schema_location(const Context &context,
+                                     const SchemaContext &schema_context)
+    -> sourcemeta::core::Pointer {
+  return absolute_schema_location(context, schema_context.base,
+                                  schema_context.relative_pointer);
+}
+
 inline auto static_frame_entry(const Context &context,
                                const SchemaContext &schema_context)
     -> const sourcemeta::blaze::SchemaFrame::Location & {

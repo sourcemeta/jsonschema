@@ -14,13 +14,15 @@
 #include "compile_helpers.h"
 
 static auto parse_regex(const std::string &pattern,
+                        const sourcemeta::blaze::Context &context,
                         const sourcemeta::core::URI &base,
                         const sourcemeta::core::WeakPointer &schema_location)
     -> sourcemeta::core::Regex {
   const auto result{sourcemeta::core::to_regex(pattern)};
   if (!result.has_value()) [[unlikely]] {
     throw sourcemeta::blaze::CompilerInvalidRegexError(
-        base, to_pointer(schema_location), pattern);
+        base, absolute_schema_location(context, base, schema_location),
+        pattern);
   }
 
   return result.value();
@@ -405,8 +407,7 @@ auto compiler_draft3_core_ref(const Context &context,
   if (!reference.has_value()) [[unlikely]] {
     throw sourcemeta::blaze::SchemaReferenceError(
         schema_context.schema.at(dynamic_context.keyword).to_string(),
-        to_pointer(schema_context.relative_pointer),
-        "Could not resolve schema reference");
+        to_pointer(entry.pointer), "Could not resolve schema reference");
   }
 
   const auto key{std::make_tuple(type,
@@ -645,7 +646,7 @@ auto compiler_draft3_applicator_properties_with_options(
 
   if (!schema_context.schema.at(dynamic_context.keyword).is_object()) {
     throw sourcemeta::blaze::CompilerError(
-        schema_context.base, to_pointer(schema_context.relative_pointer),
+        schema_context.base, absolute_schema_location(context, schema_context),
         EXPECTED_OBJECT);
   }
 
@@ -1166,7 +1167,7 @@ auto compiler_draft3_applicator_patternproperties_with_options(
     const bool track_evaluation) -> Instructions {
   if (!schema_context.schema.at(dynamic_context.keyword).is_object()) {
     throw sourcemeta::blaze::CompilerError(
-        schema_context.base, to_pointer(schema_context.relative_pointer),
+        schema_context.base, absolute_schema_location(context, schema_context),
         EXPECTED_OBJECT);
   }
 
@@ -1216,13 +1217,13 @@ auto compiler_draft3_applicator_patternproperties_with_options(
         schema_context.schema.defines("additionalProperties") &&
         schema_context.schema.at("additionalProperties").is_boolean() &&
         !schema_context.schema.at("additionalProperties").to_boolean()) {
-      children.push_back(
-          make(sourcemeta::blaze::InstructionIndex::LoopPropertiesRegexClosed,
-               context, schema_context, dynamic_context,
-               ValueRegex{.first = parse_regex(pattern, schema_context.base,
-                                               schema_context.relative_pointer),
-                          .second = pattern},
-               std::move(substeps)));
+      children.push_back(make(
+          sourcemeta::blaze::InstructionIndex::LoopPropertiesRegexClosed,
+          context, schema_context, dynamic_context,
+          ValueRegex{.first = parse_regex(pattern, context, schema_context.base,
+                                          schema_context.relative_pointer),
+                     .second = pattern},
+          std::move(substeps)));
 
       // If the `patternProperties` subschema for the given pattern does
       // nothing, then we can avoid generating an entire loop for it
@@ -1234,13 +1235,14 @@ auto compiler_draft3_applicator_patternproperties_with_options(
                  context, schema_context, dynamic_context,
                  ValueString{maybe_prefix.value()}, std::move(substeps)));
       } else {
-        children.push_back(make(
-            sourcemeta::blaze::InstructionIndex::LoopPropertiesRegex, context,
-            schema_context, dynamic_context,
-            ValueRegex{.first = parse_regex(pattern, schema_context.base,
-                                            schema_context.relative_pointer),
-                       .second = pattern},
-            std::move(substeps)));
+        children.push_back(
+            make(sourcemeta::blaze::InstructionIndex::LoopPropertiesRegex,
+                 context, schema_context, dynamic_context,
+                 ValueRegex{
+                     .first = parse_regex(pattern, context, schema_context.base,
+                                          schema_context.relative_pointer),
+                     .second = pattern},
+                 std::move(substeps)));
       }
     }
   }
@@ -1351,7 +1353,7 @@ auto compiler_draft3_applicator_additionalproperties_with_options(
             "patternProperties"};
         filter_regexes.push_back(
             {.first =
-                 parse_regex(entry.first, schema_context.base,
+                 parse_regex(entry.first, context, schema_context.base,
                              schema_context.relative_pointer.initial().concat(
                                  sourcemeta::blaze::make_weak_pointer(
                                      pattern_properties_keyword))),
@@ -1473,7 +1475,7 @@ auto compiler_draft3_validation_pattern(const Context &context,
                                         const Instructions &) -> Instructions {
   if (!schema_context.schema.at(dynamic_context.keyword).is_string()) {
     throw sourcemeta::blaze::CompilerError(
-        schema_context.base, to_pointer(schema_context.relative_pointer),
+        schema_context.base, absolute_schema_location(context, schema_context),
         EXPECTED_STRING);
   }
 
@@ -1485,12 +1487,12 @@ auto compiler_draft3_validation_pattern(const Context &context,
 
   const auto &regex_string{
       schema_context.schema.at(dynamic_context.keyword).to_string()};
-  return {
-      make(sourcemeta::blaze::InstructionIndex::AssertionRegex, context,
-           schema_context, dynamic_context,
-           ValueRegex{.first = parse_regex(regex_string, schema_context.base,
-                                           schema_context.relative_pointer),
-                      .second = regex_string})};
+  return {make(sourcemeta::blaze::InstructionIndex::AssertionRegex, context,
+               schema_context, dynamic_context,
+               ValueRegex{.first = parse_regex(regex_string, context,
+                                               schema_context.base,
+                                               schema_context.relative_pointer),
+                          .second = regex_string})};
 }
 
 auto compiler_draft3_applicator_items_array(
@@ -1503,7 +1505,7 @@ auto compiler_draft3_applicator_items_array(
 
   if (!schema_context.schema.at(dynamic_context.keyword).is_array()) {
     throw sourcemeta::blaze::CompilerError(
-        schema_context.base, to_pointer(schema_context.relative_pointer),
+        schema_context.base, absolute_schema_location(context, schema_context),
         EXPECTED_ARRAY);
   }
 
@@ -1517,7 +1519,7 @@ auto compiler_draft3_applicator_items_array(
       !all_are_schemas(items,
                        booleans_are_schemas(schema_context.vocabularies))) {
     throw sourcemeta::blaze::CompilerError(
-        schema_context.base, to_pointer(schema_context.relative_pointer),
+        schema_context.base, absolute_schema_location(context, schema_context),
         allows_empty ? EXPECTED_SCHEMA_ARRAY_ANY_SIZE : EXPECTED_SCHEMA_ARRAY);
   }
 
@@ -1661,7 +1663,8 @@ auto compiler_draft3_applicator_items_with_options(
         !all_are_schemas(entries,
                          booleans_are_schemas(schema_context.vocabularies))) {
       throw sourcemeta::blaze::CompilerError(
-          schema_context.base, to_pointer(schema_context.relative_pointer),
+          schema_context.base,
+          absolute_schema_location(context, schema_context),
           allows_empty ? EXPECTED_SCHEMA_ARRAY_ANY_SIZE
                        : EXPECTED_SCHEMA_ARRAY);
     }
@@ -1903,7 +1906,7 @@ auto compiler_draft3_validation_enum(const Context &context,
                                      const Instructions &) -> Instructions {
   if (!schema_context.schema.at(dynamic_context.keyword).is_array()) {
     throw sourcemeta::blaze::CompilerError(
-        schema_context.base, to_pointer(schema_context.relative_pointer),
+        schema_context.base, absolute_schema_location(context, schema_context),
         EXPECTED_ARRAY);
   }
 
@@ -1916,7 +1919,7 @@ auto compiler_draft3_validation_enum(const Context &context,
       (schema_context.schema.at(dynamic_context.keyword).empty() ||
        !schema_context.schema.at(dynamic_context.keyword).unique())) {
     throw sourcemeta::blaze::CompilerError(
-        schema_context.base, to_pointer(schema_context.relative_pointer),
+        schema_context.base, absolute_schema_location(context, schema_context),
         EXPECTED_UNIQUE_VALUES);
   }
 
@@ -1992,7 +1995,7 @@ auto compiler_draft3_validation_maxlength(const Context &context,
       (!integral_reals_are_integers(schema_context.vocabularies) &&
        !schema_context.schema.at(dynamic_context.keyword).is_integer())) {
     throw sourcemeta::blaze::CompilerError(
-        schema_context.base, to_pointer(schema_context.relative_pointer),
+        schema_context.base, absolute_schema_location(context, schema_context),
         EXPECTED_INTEGER);
   }
 
@@ -2003,7 +2006,7 @@ auto compiler_draft3_validation_maxlength(const Context &context,
           {Known::JSON_Schema_Draft_3, Known::JSON_Schema_Draft_3_Hyper}) &&
       !schema_context.schema.at(dynamic_context.keyword).is_positive()) {
     throw sourcemeta::blaze::CompilerError(
-        schema_context.base, to_pointer(schema_context.relative_pointer),
+        schema_context.base, absolute_schema_location(context, schema_context),
         EXPECTED_NON_NEGATIVE);
   }
 
@@ -2053,13 +2056,13 @@ auto compiler_draft3_validation_minlength(const Context &context,
       (!integral_reals_are_integers(schema_context.vocabularies) &&
        !schema_context.schema.at(dynamic_context.keyword).is_integer())) {
     throw sourcemeta::blaze::CompilerError(
-        schema_context.base, to_pointer(schema_context.relative_pointer),
+        schema_context.base, absolute_schema_location(context, schema_context),
         EXPECTED_INTEGER);
   }
 
   if (!schema_context.schema.at(dynamic_context.keyword).is_positive()) {
     throw sourcemeta::blaze::CompilerError(
-        schema_context.base, to_pointer(schema_context.relative_pointer),
+        schema_context.base, absolute_schema_location(context, schema_context),
         EXPECTED_NON_NEGATIVE);
   }
 
@@ -2099,13 +2102,13 @@ auto compiler_draft3_validation_maxitems(const Context &context,
       (!integral_reals_are_integers(schema_context.vocabularies) &&
        !schema_context.schema.at(dynamic_context.keyword).is_integer())) {
     throw sourcemeta::blaze::CompilerError(
-        schema_context.base, to_pointer(schema_context.relative_pointer),
+        schema_context.base, absolute_schema_location(context, schema_context),
         EXPECTED_INTEGER);
   }
 
   if (!schema_context.schema.at(dynamic_context.keyword).is_positive()) {
     throw sourcemeta::blaze::CompilerError(
-        schema_context.base, to_pointer(schema_context.relative_pointer),
+        schema_context.base, absolute_schema_location(context, schema_context),
         EXPECTED_NON_NEGATIVE);
   }
 
@@ -2140,13 +2143,13 @@ auto compiler_draft3_validation_minitems(const Context &context,
       (!integral_reals_are_integers(schema_context.vocabularies) &&
        !schema_context.schema.at(dynamic_context.keyword).is_integer())) {
     throw sourcemeta::blaze::CompilerError(
-        schema_context.base, to_pointer(schema_context.relative_pointer),
+        schema_context.base, absolute_schema_location(context, schema_context),
         EXPECTED_INTEGER);
   }
 
   if (!schema_context.schema.at(dynamic_context.keyword).is_positive()) {
     throw sourcemeta::blaze::CompilerError(
-        schema_context.base, to_pointer(schema_context.relative_pointer),
+        schema_context.base, absolute_schema_location(context, schema_context),
         EXPECTED_NON_NEGATIVE);
   }
 
@@ -2181,7 +2184,7 @@ auto compiler_draft3_validation_maximum(const Context &context,
                                         const Instructions &) -> Instructions {
   if (!schema_context.schema.at(dynamic_context.keyword).is_number()) {
     throw sourcemeta::blaze::CompilerError(
-        schema_context.base, to_pointer(schema_context.relative_pointer),
+        schema_context.base, absolute_schema_location(context, schema_context),
         EXPECTED_NUMBER);
   }
 
@@ -2217,7 +2220,7 @@ auto compiler_draft3_validation_minimum(const Context &context,
                                         const Instructions &) -> Instructions {
   if (!schema_context.schema.at(dynamic_context.keyword).is_number()) {
     throw sourcemeta::blaze::CompilerError(
-        schema_context.base, to_pointer(schema_context.relative_pointer),
+        schema_context.base, absolute_schema_location(context, schema_context),
         EXPECTED_NUMBER);
   }
 
@@ -2267,7 +2270,8 @@ auto compiler_draft3_validation_type(const Context &context,
     if (value.is_array()) {
       if (!is_draft3_type_union(value)) {
         throw sourcemeta::blaze::CompilerError(
-            schema_context.base, to_pointer(schema_context.relative_pointer),
+            schema_context.base,
+            absolute_schema_location(context, schema_context),
             EXPECTED_TYPE_NAMES);
       }
 
@@ -2554,7 +2558,8 @@ auto compiler_draft3_validation_type(const Context &context,
       return {};
     } else {
       throw sourcemeta::blaze::CompilerError(
-          schema_context.base, to_pointer(schema_context.relative_pointer),
+          schema_context.base,
+          absolute_schema_location(context, schema_context),
           EXPECTED_TYPE_NAMES);
     }
   } else if (value.is_array() && value.size() == 1 &&
@@ -2597,7 +2602,8 @@ auto compiler_draft3_validation_type(const Context &context,
       return {};
     } else {
       throw sourcemeta::blaze::CompilerError(
-          schema_context.base, to_pointer(schema_context.relative_pointer),
+          schema_context.base,
+          absolute_schema_location(context, schema_context),
           EXPECTED_TYPE_NAMES);
     }
   } else if (value.is_array()) {
@@ -2609,7 +2615,8 @@ auto compiler_draft3_validation_type(const Context &context,
               return element.is_string() || (is_draft3 && element.is_object());
             })) {
       throw sourcemeta::blaze::CompilerError(
-          schema_context.base, to_pointer(schema_context.relative_pointer),
+          schema_context.base,
+          absolute_schema_location(context, schema_context),
           EXPECTED_TYPE_NAMES);
     }
 
@@ -2638,7 +2645,8 @@ auto compiler_draft3_validation_type(const Context &context,
         types.set(std::to_underlying(sourcemeta::core::JSON::Type::String));
       } else if (!is_draft3) {
         throw sourcemeta::blaze::CompilerError(
-            schema_context.base, to_pointer(schema_context.relative_pointer),
+            schema_context.base,
+            absolute_schema_location(context, schema_context),
             EXPECTED_TYPE_NAMES);
       }
     }
@@ -2662,7 +2670,7 @@ auto compiler_draft3_validation_type(const Context &context,
 
   // Every dialect asks that `type` be a type name or an array of them
   throw sourcemeta::blaze::CompilerError(
-      schema_context.base, to_pointer(schema_context.relative_pointer),
+      schema_context.base, absolute_schema_location(context, schema_context),
       EXPECTED_TYPE_NAMES);
 }
 
@@ -2677,7 +2685,7 @@ auto compiler_draft3_validation_disallow(const Context &context,
   if (!value.is_string() &&
       (!value.is_array() || !is_draft3_type_union(value))) {
     throw sourcemeta::blaze::CompilerError(
-        schema_context.base, to_pointer(schema_context.relative_pointer),
+        schema_context.base, absolute_schema_location(context, schema_context),
         EXPECTED_TYPE_NAMES);
   }
 
@@ -2766,7 +2774,7 @@ auto compiler_draft3_applicator_extends(const Context &context,
       !all_are_schemas(value,
                        booleans_are_schemas(schema_context.vocabularies))) {
     throw sourcemeta::blaze::CompilerError(
-        schema_context.base, to_pointer(schema_context.relative_pointer),
+        schema_context.base, absolute_schema_location(context, schema_context),
         EXPECTED_SCHEMA_ARRAY_ANY_SIZE);
   }
 
@@ -2840,7 +2848,7 @@ auto compiler_draft3_applicator_dependencies(
     -> Instructions {
   if (!schema_context.schema.at(dynamic_context.keyword).is_object()) {
     throw sourcemeta::blaze::CompilerError(
-        schema_context.base, to_pointer(schema_context.relative_pointer),
+        schema_context.base, absolute_schema_location(context, schema_context),
         EXPECTED_OBJECT);
   }
 
@@ -2867,7 +2875,7 @@ auto compiler_draft3_applicator_dependencies(
                    (is_draft3 && entry.second.is_string());
           })) {
     throw sourcemeta::blaze::CompilerError(
-        schema_context.base, to_pointer(schema_context.relative_pointer),
+        schema_context.base, absolute_schema_location(context, schema_context),
         EXPECTED_DEPENDENCIES);
   }
 
@@ -2927,7 +2935,7 @@ auto compiler_draft3_validation_divisibleby(
     -> Instructions {
   if (!schema_context.schema.at(dynamic_context.keyword).is_number()) {
     throw sourcemeta::blaze::CompilerError(
-        schema_context.base, to_pointer(schema_context.relative_pointer),
+        schema_context.base, absolute_schema_location(context, schema_context),
         EXPECTED_NUMBER);
   }
 
@@ -2937,7 +2945,7 @@ auto compiler_draft3_validation_divisibleby(
       schema_context.schema.at(dynamic_context.keyword) ==
           sourcemeta::core::JSON{0}) {
     throw sourcemeta::blaze::CompilerError(
-        schema_context.base, to_pointer(schema_context.relative_pointer),
+        schema_context.base, absolute_schema_location(context, schema_context),
         EXPECTED_POSITIVE);
   }
 
@@ -3169,7 +3177,8 @@ auto compiler_draft3_validation_format(const Context &context,
       // TODO: Support this old format, even though not even the official test
       // suite covers it
       throw sourcemeta::blaze::CompilerError(
-          schema_context.base, to_pointer(schema_context.relative_pointer),
+          schema_context.base,
+          absolute_schema_location(context, schema_context),
           "The \"utc-millisec\" format is not supported in assertion mode yet");
     } else if (name == "regex") {
       type = ValueStringType::Regex;
@@ -3179,20 +3188,22 @@ auto compiler_draft3_validation_format(const Context &context,
       // TODO: Support this old format, even though not even the official test
       // suite covers it
       throw sourcemeta::blaze::CompilerError(
-          schema_context.base, to_pointer(schema_context.relative_pointer),
+          schema_context.base,
+          absolute_schema_location(context, schema_context),
           "The \"style\" format is not supported in assertion mode yet");
     } else if (name == "phone") {
       // TODO: Support this old format, even though not even the official test
       // suite covers it
       throw sourcemeta::blaze::CompilerError(
-          schema_context.base, to_pointer(schema_context.relative_pointer),
+          schema_context.base,
+          absolute_schema_location(context, schema_context),
           "The \"phone\" format is not supported in assertion mode yet");
     } else {
       return {};
     }
   } else {
     throw sourcemeta::blaze::CompilerError(
-        schema_context.base, to_pointer(schema_context.relative_pointer),
+        schema_context.base, absolute_schema_location(context, schema_context),
         unsupported_dialect_message);
   }
 

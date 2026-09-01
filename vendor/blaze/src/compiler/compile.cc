@@ -215,7 +215,7 @@ auto compile_subschema(const sourcemeta::blaze::Context &context,
       schema_context.relative_pointer.empty() &&
       !booleans_are_schemas(schema_context.vocabularies)) [[unlikely]] {
     throw sourcemeta::blaze::CompilerError(
-        schema_context.base, to_pointer(schema_context.relative_pointer),
+        schema_context.base, absolute_schema_location(context, schema_context),
         "This dialect does not support boolean schemas");
   }
 
@@ -266,16 +266,20 @@ auto compile_subschema(const sourcemeta::blaze::Context &context,
           !schema_context.schema.defines(KEYWORD_MAXIMUM)))) [[unlikely]] {
       throw sourcemeta::blaze::CompilerError(
           schema_context.base,
-          to_pointer(schema_context.relative_pointer.concat(
-              sourcemeta::blaze::make_weak_pointer(keyword))),
+          absolute_schema_location(
+              context, schema_context.base,
+              schema_context.relative_pointer.concat(
+                  sourcemeta::blaze::make_weak_pointer(keyword))),
           "This keyword was expected to accompany the bound it applies to");
     }
 
     if (shape_error) [[unlikely]] {
       throw sourcemeta::blaze::CompilerError(
           schema_context.base,
-          to_pointer(schema_context.relative_pointer.concat(
-              sourcemeta::blaze::make_weak_pointer(keyword))),
+          absolute_schema_location(
+              context, schema_context.base,
+              schema_context.relative_pointer.concat(
+                  sourcemeta::blaze::make_weak_pointer(keyword))),
           shape_error);
     }
 
@@ -455,8 +459,7 @@ auto compile(const sourcemeta::core::JSON &schema,
       !booleans_are_schemas(frame.vocabularies(entrypoint_location, resolver)))
       [[unlikely]] {
     throw CompilerError(sourcemeta::core::URI{entrypoint_location.base},
-                        to_pointer(entrypoint_location.pointer.slice(
-                            entrypoint_location.relative_pointer)),
+                        to_pointer(entrypoint_location.pointer),
                         "This dialect does not support boolean schemas");
   }
 
@@ -771,7 +774,7 @@ auto compile(const Context &context, const SchemaContext &schema_context,
                      destination)
            .has_value()) [[unlikely]] {
     throw sourcemeta::blaze::SchemaReferenceError(
-        destination, to_pointer(schema_context.relative_pointer),
+        destination, absolute_schema_location(context, schema_context),
         "The target of the reference does not exist in the schema");
   }
 

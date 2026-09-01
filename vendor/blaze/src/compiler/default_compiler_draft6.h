@@ -41,7 +41,7 @@ auto compiler_draft6_validation_type(const Context &context,
 
     // No known type was named at all, which the meta-schema rejects
     throw sourcemeta::blaze::CompilerError(
-        schema_context.base, to_pointer(schema_context.relative_pointer),
+        schema_context.base, absolute_schema_location(context, schema_context),
         EXPECTED_TYPE_NAMES);
   }
 
@@ -289,7 +289,8 @@ auto compiler_draft6_validation_type(const Context &context,
                    sourcemeta::core::JSON::Type::String)};
     } else {
       throw sourcemeta::blaze::CompilerError(
-          schema_context.base, to_pointer(schema_context.relative_pointer),
+          schema_context.base,
+          absolute_schema_location(context, schema_context),
           EXPECTED_TYPE_NAMES);
     }
   } else if (schema_context.schema.at(dynamic_context.keyword).is_array() &&
@@ -332,7 +333,8 @@ auto compiler_draft6_validation_type(const Context &context,
                    sourcemeta::core::JSON::Type::String)};
     } else {
       throw sourcemeta::blaze::CompilerError(
-          schema_context.base, to_pointer(schema_context.relative_pointer),
+          schema_context.base,
+          absolute_schema_location(context, schema_context),
           EXPECTED_TYPE_NAMES);
     }
   } else if (schema_context.schema.at(dynamic_context.keyword).is_array()) {
@@ -341,7 +343,8 @@ auto compiler_draft6_validation_type(const Context &context,
     if (schema_context.schema.at(dynamic_context.keyword).empty() ||
         !schema_context.schema.at(dynamic_context.keyword).unique()) {
       throw sourcemeta::blaze::CompilerError(
-          schema_context.base, to_pointer(schema_context.relative_pointer),
+          schema_context.base,
+          absolute_schema_location(context, schema_context),
           EXPECTED_TYPE_NAMES);
     }
 
@@ -350,7 +353,8 @@ auto compiler_draft6_validation_type(const Context &context,
          schema_context.schema.at(dynamic_context.keyword).as_array()) {
       if (!type.is_string()) {
         throw sourcemeta::blaze::CompilerError(
-            schema_context.base, to_pointer(schema_context.relative_pointer),
+            schema_context.base,
+            absolute_schema_location(context, schema_context),
             EXPECTED_TYPE_NAMES);
       }
 
@@ -373,7 +377,8 @@ auto compiler_draft6_validation_type(const Context &context,
         types.set(std::to_underlying(sourcemeta::core::JSON::Type::String));
       } else {
         throw sourcemeta::blaze::CompilerError(
-            schema_context.base, to_pointer(schema_context.relative_pointer),
+            schema_context.base,
+            absolute_schema_location(context, schema_context),
             EXPECTED_TYPE_NAMES);
       }
     }
@@ -385,7 +390,7 @@ auto compiler_draft6_validation_type(const Context &context,
 
   // Neither a type name nor a union of them, which the meta-schema rejects
   throw sourcemeta::blaze::CompilerError(
-      schema_context.base, to_pointer(schema_context.relative_pointer),
+      schema_context.base, absolute_schema_location(context, schema_context),
       EXPECTED_TYPE_NAMES);
 }
 
@@ -405,7 +410,7 @@ auto compiler_draft6_validation_exclusivemaximum(
     -> Instructions {
   if (!schema_context.schema.at(dynamic_context.keyword).is_number()) {
     throw sourcemeta::blaze::CompilerError(
-        schema_context.base, to_pointer(schema_context.relative_pointer),
+        schema_context.base, absolute_schema_location(context, schema_context),
         EXPECTED_NUMBER);
   }
 
@@ -428,7 +433,7 @@ auto compiler_draft6_validation_exclusiveminimum(
     -> Instructions {
   if (!schema_context.schema.at(dynamic_context.keyword).is_number()) {
     throw sourcemeta::blaze::CompilerError(
-        schema_context.base, to_pointer(schema_context.relative_pointer),
+        schema_context.base, absolute_schema_location(context, schema_context),
         EXPECTED_NUMBER);
   }
 

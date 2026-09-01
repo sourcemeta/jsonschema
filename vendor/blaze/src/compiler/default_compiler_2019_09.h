@@ -15,7 +15,7 @@ auto compiler_2019_09_applicator_dependentschemas(
     -> Instructions {
   if (!schema_context.schema.at(dynamic_context.keyword).is_object()) {
     throw sourcemeta::blaze::CompilerError(
-        schema_context.base, to_pointer(schema_context.relative_pointer),
+        schema_context.base, absolute_schema_location(context, schema_context),
         EXPECTED_OBJECT);
   }
 
@@ -26,7 +26,7 @@ auto compiler_2019_09_applicator_dependentschemas(
             return is_schema(entry.second, allow_boolean);
           })) {
     throw sourcemeta::blaze::CompilerError(
-        schema_context.base, to_pointer(schema_context.relative_pointer),
+        schema_context.base, absolute_schema_location(context, schema_context),
         EXPECTED_SCHEMA_OBJECT);
   }
 
@@ -78,7 +78,7 @@ auto compiler_2019_09_validation_dependentrequired(
     -> Instructions {
   if (!schema_context.schema.at(dynamic_context.keyword).is_object()) {
     throw sourcemeta::blaze::CompilerError(
-        schema_context.base, to_pointer(schema_context.relative_pointer),
+        schema_context.base, absolute_schema_location(context, schema_context),
         EXPECTED_OBJECT);
   }
 
@@ -88,7 +88,7 @@ auto compiler_2019_09_validation_dependentrequired(
             return is_string_array(entry.second);
           })) {
     throw sourcemeta::blaze::CompilerError(
-        schema_context.base, to_pointer(schema_context.relative_pointer),
+        schema_context.base, absolute_schema_location(context, schema_context),
         EXPECTED_DEPENDENCIES);
   }
 
@@ -395,7 +395,7 @@ auto compiler_2019_09_applicator_unevaluatedproperties(
                 "patternProperties"};
             filter_regexes.push_back(
                 {.first = parse_regex(
-                     property.first, schema_context.base,
+                     property.first, context, schema_context.base,
                      schema_context.relative_pointer.initial().concat(
                          sourcemeta::blaze::make_weak_pointer(
                              pattern_properties_keyword))),

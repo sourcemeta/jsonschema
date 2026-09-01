@@ -28,7 +28,7 @@ auto compiler_draft4_validation_required(const Context &context,
       (!allows_empty &&
        schema_context.schema.at(dynamic_context.keyword).empty())) {
     throw sourcemeta::blaze::CompilerError(
-        schema_context.base, to_pointer(schema_context.relative_pointer),
+        schema_context.base, absolute_schema_location(context, schema_context),
         EXPECTED_PROPERTY_NAME_ARRAY);
   }
 
@@ -45,7 +45,7 @@ auto compiler_draft4_applicator_allof(const Context &context,
   if (!is_schema_array(schema_context.schema.at(dynamic_context.keyword),
                        booleans_are_schemas(schema_context.vocabularies))) {
     throw sourcemeta::blaze::CompilerError(
-        schema_context.base, to_pointer(schema_context.relative_pointer),
+        schema_context.base, absolute_schema_location(context, schema_context),
         EXPECTED_SCHEMA_ARRAY);
   }
 
@@ -94,7 +94,7 @@ auto compiler_draft4_applicator_anyof(const Context &context,
   if (!is_schema_array(schema_context.schema.at(dynamic_context.keyword),
                        booleans_are_schemas(schema_context.vocabularies))) {
     throw sourcemeta::blaze::CompilerError(
-        schema_context.base, to_pointer(schema_context.relative_pointer),
+        schema_context.base, absolute_schema_location(context, schema_context),
         EXPECTED_SCHEMA_ARRAY);
   }
 
@@ -171,7 +171,7 @@ auto compiler_draft4_applicator_oneof(const Context &context,
   if (!is_schema_array(schema_context.schema.at(dynamic_context.keyword),
                        booleans_are_schemas(schema_context.vocabularies))) {
     throw sourcemeta::blaze::CompilerError(
-        schema_context.base, to_pointer(schema_context.relative_pointer),
+        schema_context.base, absolute_schema_location(context, schema_context),
         EXPECTED_SCHEMA_ARRAY);
   }
 
@@ -238,13 +238,13 @@ auto compiler_draft4_validation_maxproperties(
       (!integral_reals_are_integers(schema_context.vocabularies) &&
        !schema_context.schema.at(dynamic_context.keyword).is_integer())) {
     throw sourcemeta::blaze::CompilerError(
-        schema_context.base, to_pointer(schema_context.relative_pointer),
+        schema_context.base, absolute_schema_location(context, schema_context),
         EXPECTED_INTEGER);
   }
 
   if (!schema_context.schema.at(dynamic_context.keyword).is_positive()) {
     throw sourcemeta::blaze::CompilerError(
-        schema_context.base, to_pointer(schema_context.relative_pointer),
+        schema_context.base, absolute_schema_location(context, schema_context),
         EXPECTED_NON_NEGATIVE);
   }
 
@@ -279,13 +279,13 @@ auto compiler_draft4_validation_minproperties(
       (!integral_reals_are_integers(schema_context.vocabularies) &&
        !schema_context.schema.at(dynamic_context.keyword).is_integer())) {
     throw sourcemeta::blaze::CompilerError(
-        schema_context.base, to_pointer(schema_context.relative_pointer),
+        schema_context.base, absolute_schema_location(context, schema_context),
         EXPECTED_INTEGER);
   }
 
   if (!schema_context.schema.at(dynamic_context.keyword).is_positive()) {
     throw sourcemeta::blaze::CompilerError(
-        schema_context.base, to_pointer(schema_context.relative_pointer),
+        schema_context.base, absolute_schema_location(context, schema_context),
         EXPECTED_NON_NEGATIVE);
   }
 
