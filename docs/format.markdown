@@ -10,6 +10,11 @@ jsonschema fmt [schemas-or-directories...]
   [--json/-j]
 ```
 
+> [!NOTE]
+> See [Resolving External References](./guides/resolution.markdown) for every way of
+> making referenced schemas available, including how to handle a reference whose
+> URI differs from the identifier the target schema declares.
+
 Schemas are code. As such, they are expected follow consistent stylistic
 conventions.  Just as code-formatters like
 [clang-format](https://clang.llvm.org/docs/ClangFormat.html), JavaScript's

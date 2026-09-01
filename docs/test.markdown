@@ -14,6 +14,11 @@ jsonschema test [schemas-or-directories...]
   [--jobs/-J <count>]
 ```
 
+> [!NOTE]
+> See [Resolving External References](./guides/resolution.markdown) for every way of
+> making referenced schemas available, including how to handle a reference whose
+> URI differs from the identifier the target schema declares.
+
 Schemas are code. As such, you should run an automated unit testing suite
 against them. Just like popular test frameworks like [Jest](https://jestjs.io),
 [GoogleTest](https://google.github.io/googletest/), and

@@ -13,6 +13,11 @@ jsonschema compile <schema.json|.yaml> [--http/-h] [--verbose/-v] [--debug/-g]
   [--format-assertion/-F]
 ```
 
+> [!NOTE]
+> See [Resolving External References](./guides/resolution.markdown) for every way of
+> making referenced schemas available, including how to handle a reference whose
+> URI differs from the identifier the target schema declares.
+
 The `validate` command will first compile the schema into an optimised
 low-level form (the compiled _template_) before evaluating using the
 [Blaze](https://github.com/sourcemeta/blaze) high-performance JSON Schema
