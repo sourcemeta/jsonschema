@@ -133,6 +133,9 @@ auto parse_test_suite(const sourcemeta::jsonschema::InputJSON &entry,
     throw sourcemeta::core::FileError<
         sourcemeta::blaze::CompilerReferenceTargetNotSchemaError>{
         entry.resolution_base, error};
+  } catch (const sourcemeta::blaze::CompilerError &error) {
+    throw sourcemeta::core::FileError<sourcemeta::blaze::CompilerError>{
+        entry.resolution_base, error};
   } catch (
       const sourcemeta::blaze::SchemaRelativeMetaschemaResolutionError &error) {
     throw sourcemeta::core::FileError<

@@ -7,8 +7,8 @@ WRITE schema.json UNTIL EOF
   "type": "object",
   "additionalProperties": false,
   "properties": {
-    "foo": true,
-    "bar": true
+    "foo": {},
+    "bar": {}
   }
 }
 EOF

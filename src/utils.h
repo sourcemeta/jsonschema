@@ -255,16 +255,20 @@ bundle_for_evaluation(const sourcemeta::core::JSON &schema,
 }
 
 inline auto
-frame_for_evaluation(sourcemeta::blaze::SchemaFrame &frame,
-                     const sourcemeta::core::JSON &bundled,
+frame_for_evaluation(const sourcemeta::core::JSON &bundled,
                      const sourcemeta::blaze::SchemaResolver &resolver,
                      const std::string &dialect, const std::string &default_id,
                      const std::filesystem::path &resolution_base,
                      const sourcemeta::core::PointerPositionTracker &positions)
-    -> void {
+    -> sourcemeta::blaze::SchemaFrame {
   try {
-    frame.analyse(bundled, sourcemeta::blaze::schema_walker, resolver, dialect,
-                  default_id);
+    return sourcemeta::blaze::SchemaFrame{
+        sourcemeta::blaze::SchemaFrame::Mode::References,
+        bundled,
+        sourcemeta::blaze::schema_walker,
+        resolver,
+        dialect,
+        default_id};
   } catch (const sourcemeta::blaze::SchemaKeywordError &error) {
     throw sourcemeta::core::FileError<sourcemeta::blaze::SchemaKeywordError>(
         resolution_base, error);
@@ -325,6 +329,9 @@ inline auto compile_for_evaluation(
   } catch (const sourcemeta::blaze::CompilerInvalidRegexError &error) {
     throw sourcemeta::core::FileError<
         sourcemeta::blaze::CompilerInvalidRegexError>(resolution_base, error);
+  } catch (const sourcemeta::blaze::CompilerError &error) {
+    throw sourcemeta::core::FileError<sourcemeta::blaze::CompilerError>(
+        resolution_base, error);
   } catch (
       const sourcemeta::blaze::CompilerReferenceTargetNotSchemaError &error) {
     throw sourcemeta::core::FileError<

@@ -1,0 +1,35 @@
+WRITE schema.json UNTIL EOF
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.com",
+  "properties": true
+}
+EOF
+
+WRITE test.json UNTIL EOF
+{
+  "target": "https://example.com",
+  "tests": [
+    {
+      "valid": true,
+      "data": {}
+    }
+  ]
+}
+EOF
+
+// Schema input error
+RUN test test.json --resolve schema.json --json STDIN /dev/null IN . INTO result_0.txt EXPECTING 4
+
+REPLACE $CWD WITH '[CWD]' IN result_0.txt
+
+WRITE expected_0.txt UNTIL EOF
+1> {
+1>   "error": "This keyword was expected to be set to an object whose values are valid schemas",
+1>   "filePath": "[CWD]/test.json",
+1>   "location": "/properties",
+1>   "baseURI": "https://example.com"
+1> }
+EOF
+
+COMPARE result_0.txt AGAINST expected_0.txt

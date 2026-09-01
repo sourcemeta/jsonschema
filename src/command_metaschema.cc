@@ -84,18 +84,18 @@ auto sourcemeta::jsonschema::metaschema(
             entry.resolution_base);
       }
 
-      sourcemeta::blaze::SchemaFrame schema_frame{
-          sourcemeta::blaze::SchemaFrame::Mode::Root};
-      schema_frame.analyse(entry.second, sourcemeta::blaze::schema_walker,
-                           custom_resolver, default_dialect_option);
+      const sourcemeta::blaze::SchemaFrame schema_frame{
+          sourcemeta::blaze::SchemaFrame::Mode::Root, entry.second,
+          sourcemeta::blaze::schema_walker, custom_resolver,
+          default_dialect_option};
       const sourcemeta::core::JSON bundled{sourcemeta::blaze::bundle(
           schema_frame.metaschema(custom_resolver),
           sourcemeta::blaze::schema_walker, custom_resolver,
           sourcemeta::blaze::BundleMode::References, default_dialect_option)};
-      sourcemeta::blaze::SchemaFrame frame{
-          sourcemeta::blaze::SchemaFrame::Mode::References};
-      frame.analyse(bundled, sourcemeta::blaze::schema_walker, custom_resolver,
-                    default_dialect_option);
+      const sourcemeta::blaze::SchemaFrame frame{
+          sourcemeta::blaze::SchemaFrame::Mode::References, bundled,
+          sourcemeta::blaze::schema_walker, custom_resolver,
+          default_dialect_option};
 
       if (!cache.contains(std::string{dialect})) {
         const auto metaschema_template{sourcemeta::blaze::compile(
@@ -150,6 +150,9 @@ auto sourcemeta::jsonschema::metaschema(
       throw sourcemeta::core::FileError<
           sourcemeta::blaze::CompilerInvalidRegexError>(entry.resolution_base,
                                                         error);
+    } catch (const sourcemeta::blaze::CompilerError &error) {
+      throw sourcemeta::core::FileError<sourcemeta::blaze::CompilerError>(
+          entry.resolution_base, error);
     } catch (
         const sourcemeta::blaze::CompilerReferenceTargetNotSchemaError &error) {
       throw sourcemeta::core::FileError<

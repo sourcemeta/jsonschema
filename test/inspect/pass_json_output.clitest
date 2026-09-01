@@ -15,6 +15,7 @@ RUN inspect schema.json --json STDIN /dev/null IN . INTO result.txt EXPECTING 0
 
 WRITE expected.txt UNTIL EOF
 1> {
+1>   "mode": "references",
 1>   "locations": {
 1>     "static": {
 1>       "https://example.com": {
@@ -28,7 +29,18 @@ WRITE expected.txt UNTIL EOF
 1>         "dialect": "https://json-schema.org/draft/2020-12/schema",
 1>         "baseDialect": "https://json-schema.org/draft/2020-12/schema",
 1>         "propertyName": false,
-1>         "orphan": false
+1>         "orphan": false,
+1>         "hasReferencesTo": false,
+1>         "hasReferencesThrough": true,
+1>         "vocabularies": {
+1>           "https://json-schema.org/draft/2020-12/vocab/core": true,
+1>           "https://json-schema.org/draft/2020-12/vocab/applicator": true,
+1>           "https://json-schema.org/draft/2020-12/vocab/unevaluated": true,
+1>           "https://json-schema.org/draft/2020-12/vocab/validation": true,
+1>           "https://json-schema.org/draft/2020-12/vocab/meta-data": true,
+1>           "https://json-schema.org/draft/2020-12/vocab/format-annotation": true,
+1>           "https://json-schema.org/draft/2020-12/vocab/content": true
+1>         }
 1>       },
 1>       "https://example.com#/$defs": {
 1>         "parent": "",
@@ -41,7 +53,18 @@ WRITE expected.txt UNTIL EOF
 1>         "dialect": "https://json-schema.org/draft/2020-12/schema",
 1>         "baseDialect": "https://json-schema.org/draft/2020-12/schema",
 1>         "propertyName": false,
-1>         "orphan": false
+1>         "orphan": false,
+1>         "hasReferencesTo": false,
+1>         "hasReferencesThrough": true,
+1>         "vocabularies": {
+1>           "https://json-schema.org/draft/2020-12/vocab/core": true,
+1>           "https://json-schema.org/draft/2020-12/vocab/applicator": true,
+1>           "https://json-schema.org/draft/2020-12/vocab/unevaluated": true,
+1>           "https://json-schema.org/draft/2020-12/vocab/validation": true,
+1>           "https://json-schema.org/draft/2020-12/vocab/meta-data": true,
+1>           "https://json-schema.org/draft/2020-12/vocab/format-annotation": true,
+1>           "https://json-schema.org/draft/2020-12/vocab/content": true
+1>         }
 1>       },
 1>       "https://example.com#/$defs/string": {
 1>         "parent": "",
@@ -54,7 +77,18 @@ WRITE expected.txt UNTIL EOF
 1>         "dialect": "https://json-schema.org/draft/2020-12/schema",
 1>         "baseDialect": "https://json-schema.org/draft/2020-12/schema",
 1>         "propertyName": false,
-1>         "orphan": true
+1>         "orphan": true,
+1>         "hasReferencesTo": true,
+1>         "hasReferencesThrough": true,
+1>         "vocabularies": {
+1>           "https://json-schema.org/draft/2020-12/vocab/core": true,
+1>           "https://json-schema.org/draft/2020-12/vocab/applicator": true,
+1>           "https://json-schema.org/draft/2020-12/vocab/unevaluated": true,
+1>           "https://json-schema.org/draft/2020-12/vocab/validation": true,
+1>           "https://json-schema.org/draft/2020-12/vocab/meta-data": true,
+1>           "https://json-schema.org/draft/2020-12/vocab/format-annotation": true,
+1>           "https://json-schema.org/draft/2020-12/vocab/content": true
+1>         }
 1>       },
 1>       "https://example.com#/$defs/string/type": {
 1>         "parent": "/$defs/string",
@@ -67,7 +101,18 @@ WRITE expected.txt UNTIL EOF
 1>         "dialect": "https://json-schema.org/draft/2020-12/schema",
 1>         "baseDialect": "https://json-schema.org/draft/2020-12/schema",
 1>         "propertyName": false,
-1>         "orphan": true
+1>         "orphan": true,
+1>         "hasReferencesTo": false,
+1>         "hasReferencesThrough": false,
+1>         "vocabularies": {
+1>           "https://json-schema.org/draft/2020-12/vocab/core": true,
+1>           "https://json-schema.org/draft/2020-12/vocab/applicator": true,
+1>           "https://json-schema.org/draft/2020-12/vocab/unevaluated": true,
+1>           "https://json-schema.org/draft/2020-12/vocab/validation": true,
+1>           "https://json-schema.org/draft/2020-12/vocab/meta-data": true,
+1>           "https://json-schema.org/draft/2020-12/vocab/format-annotation": true,
+1>           "https://json-schema.org/draft/2020-12/vocab/content": true
+1>         }
 1>       },
 1>       "https://example.com#/$id": {
 1>         "parent": "",
@@ -80,7 +125,18 @@ WRITE expected.txt UNTIL EOF
 1>         "dialect": "https://json-schema.org/draft/2020-12/schema",
 1>         "baseDialect": "https://json-schema.org/draft/2020-12/schema",
 1>         "propertyName": false,
-1>         "orphan": false
+1>         "orphan": false,
+1>         "hasReferencesTo": false,
+1>         "hasReferencesThrough": false,
+1>         "vocabularies": {
+1>           "https://json-schema.org/draft/2020-12/vocab/core": true,
+1>           "https://json-schema.org/draft/2020-12/vocab/applicator": true,
+1>           "https://json-schema.org/draft/2020-12/vocab/unevaluated": true,
+1>           "https://json-schema.org/draft/2020-12/vocab/validation": true,
+1>           "https://json-schema.org/draft/2020-12/vocab/meta-data": true,
+1>           "https://json-schema.org/draft/2020-12/vocab/format-annotation": true,
+1>           "https://json-schema.org/draft/2020-12/vocab/content": true
+1>         }
 1>       },
 1>       "https://example.com#/$ref": {
 1>         "parent": "",
@@ -93,7 +149,18 @@ WRITE expected.txt UNTIL EOF
 1>         "dialect": "https://json-schema.org/draft/2020-12/schema",
 1>         "baseDialect": "https://json-schema.org/draft/2020-12/schema",
 1>         "propertyName": false,
-1>         "orphan": false
+1>         "orphan": false,
+1>         "hasReferencesTo": false,
+1>         "hasReferencesThrough": false,
+1>         "vocabularies": {
+1>           "https://json-schema.org/draft/2020-12/vocab/core": true,
+1>           "https://json-schema.org/draft/2020-12/vocab/applicator": true,
+1>           "https://json-schema.org/draft/2020-12/vocab/unevaluated": true,
+1>           "https://json-schema.org/draft/2020-12/vocab/validation": true,
+1>           "https://json-schema.org/draft/2020-12/vocab/meta-data": true,
+1>           "https://json-schema.org/draft/2020-12/vocab/format-annotation": true,
+1>           "https://json-schema.org/draft/2020-12/vocab/content": true
+1>         }
 1>       },
 1>       "https://example.com#/$schema": {
 1>         "parent": "",
@@ -106,7 +173,18 @@ WRITE expected.txt UNTIL EOF
 1>         "dialect": "https://json-schema.org/draft/2020-12/schema",
 1>         "baseDialect": "https://json-schema.org/draft/2020-12/schema",
 1>         "propertyName": false,
-1>         "orphan": false
+1>         "orphan": false,
+1>         "hasReferencesTo": false,
+1>         "hasReferencesThrough": false,
+1>         "vocabularies": {
+1>           "https://json-schema.org/draft/2020-12/vocab/core": true,
+1>           "https://json-schema.org/draft/2020-12/vocab/applicator": true,
+1>           "https://json-schema.org/draft/2020-12/vocab/unevaluated": true,
+1>           "https://json-schema.org/draft/2020-12/vocab/validation": true,
+1>           "https://json-schema.org/draft/2020-12/vocab/meta-data": true,
+1>           "https://json-schema.org/draft/2020-12/vocab/format-annotation": true,
+1>           "https://json-schema.org/draft/2020-12/vocab/content": true
+1>         }
 1>       },
 1>       "https://example.com#/description": {
 1>         "parent": "",
@@ -119,7 +197,18 @@ WRITE expected.txt UNTIL EOF
 1>         "dialect": "https://json-schema.org/draft/2020-12/schema",
 1>         "baseDialect": "https://json-schema.org/draft/2020-12/schema",
 1>         "propertyName": false,
-1>         "orphan": false
+1>         "orphan": false,
+1>         "hasReferencesTo": false,
+1>         "hasReferencesThrough": false,
+1>         "vocabularies": {
+1>           "https://json-schema.org/draft/2020-12/vocab/core": true,
+1>           "https://json-schema.org/draft/2020-12/vocab/applicator": true,
+1>           "https://json-schema.org/draft/2020-12/vocab/unevaluated": true,
+1>           "https://json-schema.org/draft/2020-12/vocab/validation": true,
+1>           "https://json-schema.org/draft/2020-12/vocab/meta-data": true,
+1>           "https://json-schema.org/draft/2020-12/vocab/format-annotation": true,
+1>           "https://json-schema.org/draft/2020-12/vocab/content": true
+1>         }
 1>       },
 1>       "https://example.com#/title": {
 1>         "parent": "",
@@ -132,7 +221,18 @@ WRITE expected.txt UNTIL EOF
 1>         "dialect": "https://json-schema.org/draft/2020-12/schema",
 1>         "baseDialect": "https://json-schema.org/draft/2020-12/schema",
 1>         "propertyName": false,
-1>         "orphan": false
+1>         "orphan": false,
+1>         "hasReferencesTo": false,
+1>         "hasReferencesThrough": false,
+1>         "vocabularies": {
+1>           "https://json-schema.org/draft/2020-12/vocab/core": true,
+1>           "https://json-schema.org/draft/2020-12/vocab/applicator": true,
+1>           "https://json-schema.org/draft/2020-12/vocab/unevaluated": true,
+1>           "https://json-schema.org/draft/2020-12/vocab/validation": true,
+1>           "https://json-schema.org/draft/2020-12/vocab/meta-data": true,
+1>           "https://json-schema.org/draft/2020-12/vocab/format-annotation": true,
+1>           "https://json-schema.org/draft/2020-12/vocab/content": true
+1>         }
 1>       }
 1>     },
 1>     "dynamic": {}
@@ -142,6 +242,7 @@ WRITE expected.txt UNTIL EOF
 1>       "type": "static",
 1>       "origin": "/$ref",
 1>       "position": [ 6, 3, 6, 26 ],
+1>       "original": "#/$defs/string",
 1>       "destination": "https://example.com#/$defs/string",
 1>       "base": "https://example.com",
 1>       "fragment": "/$defs/string"
@@ -150,6 +251,7 @@ WRITE expected.txt UNTIL EOF
 1>       "type": "static",
 1>       "origin": "/$schema",
 1>       "position": [ 2, 3, 2, 59 ],
+1>       "original": "https://json-schema.org/draft/2020-12/schema",
 1>       "destination": "https://json-schema.org/draft/2020-12/schema",
 1>       "base": "https://json-schema.org/draft/2020-12/schema",
 1>       "fragment": null

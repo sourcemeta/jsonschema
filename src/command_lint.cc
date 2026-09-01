@@ -449,6 +449,14 @@ auto sourcemeta::jsonschema::lint(const sourcemeta::core::Options &options)
               throw sourcemeta::core::FileError<
                   sourcemeta::blaze::CompilerInvalidRegexError>(
                   entry.resolution_base, error);
+            } catch (const sourcemeta::blaze::CompilerError &error) {
+              if (printed_progress) {
+                std::cerr << "\n";
+              }
+
+              throw sourcemeta::core::FileError<
+                  sourcemeta::blaze::CompilerError>(entry.resolution_base,
+                                                    error);
             } catch (
                 const sourcemeta::blaze::CompilerReferenceTargetNotSchemaError
                     &error) {
@@ -612,6 +620,10 @@ auto sourcemeta::jsonschema::lint(const sourcemeta::core::Options &options)
               throw sourcemeta::core::FileError<
                   sourcemeta::blaze::CompilerInvalidRegexError>(
                   entry.resolution_base, error);
+            } catch (const sourcemeta::blaze::CompilerError &error) {
+              throw sourcemeta::core::FileError<
+                  sourcemeta::blaze::CompilerError>(entry.resolution_base,
+                                                    error);
             } catch (
                 const sourcemeta::blaze::CompilerReferenceTargetNotSchemaError
                     &error) {
