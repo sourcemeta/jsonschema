@@ -4,8 +4,8 @@
 // one change: the two `--resolve` arguments are swapped, so the schema is
 // imported before the meta-schema that its `$schema` points at.
 //
-// Importing a schema frames it, and framing needs the meta-schema resolved
-// right then. Before import order stopped mattering, this exited 4 with:
+// A schema cannot be imported until the meta-schema it declares is available.
+// Before import order stopped mattering, this exited 4 with:
 //
 //   error: Could not resolve the metaschema of the schema
 //     at identifier https://example.com/my-meta

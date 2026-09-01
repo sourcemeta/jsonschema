@@ -335,17 +335,22 @@ public:
         }
 
         try {
-          this->add(schema, default_dialect);
+          this->add(schema, dependency_path, default_dialect);
         } catch (...) {
           continue;
         }
 
-        this->schemas.emplace(dependency_uri, schema);
+        if (this->schemas.emplace(dependency_uri, schema).second) {
+          this->origins.emplace(
+              dependency_uri,
+              std::make_pair(dependency_path, sourcemeta::core::Pointer{}));
+        }
       }
     }
   }
 
   auto add(const sourcemeta::core::JSON &schema,
+           const std::filesystem::path &origin,
            const std::string_view default_dialect = "",
            const std::string_view default_id = "",
            const std::function<void(const sourcemeta::core::JSON::String &)>
@@ -378,9 +383,16 @@ public:
 
       const auto result{this->schemas.emplace(key.second, subschema)};
       if (!result.second && result.first->second != subschema) {
-        throw sourcemeta::blaze::SchemaFrameError(
-            key.second, "Cannot register the same identifier twice");
+        const auto other{this->origins.find(key.second)};
+        assert(other != this->origins.cend());
+        throw SchemaIdentifierConflictError{
+            key.second, sourcemeta::core::to_pointer(entry.pointer),
+            other->second.first, other->second.second};
       }
+
+      this->origins.emplace(
+          key.second,
+          std::make_pair(origin, sourcemeta::core::to_pointer(entry.pointer)));
 
       if (callback) {
         callback(key.second);
@@ -433,7 +445,7 @@ private:
 
     try {
       const auto result =
-          this->add(entry.second, default_dialect,
+          this->add(entry.second, entry.resolution_base, default_dialect,
                     sourcemeta::jsonschema::default_id(entry),
                     [this](const auto &identifier) {
                       LOG_DEBUG(this->options_)
@@ -445,6 +457,19 @@ private:
                       << "  at " << entry.first << "\n"
                       << "Are you sure this schema sets any identifiers?\n";
       }
+    } catch (const SchemaIdentifierConflictError &error) {
+      const auto position{entry.positions.get(error.location())};
+      if (position.has_value()) {
+        throw PositionError<
+            sourcemeta::core::FileError<SchemaIdentifierConflictError>>(
+            std::get<0>(position.value()), std::get<1>(position.value()),
+            entry.resolution_base, error.identifier(), error.location(),
+            error.other_path(), error.other());
+      }
+
+      throw sourcemeta::core::FileError<SchemaIdentifierConflictError>(
+          entry.resolution_base, error.identifier(), error.location(),
+          error.other_path(), error.other());
     } catch (const sourcemeta::blaze::SchemaKeywordError &error) {
       throw sourcemeta::core::FileError<sourcemeta::blaze::SchemaKeywordError>(
           entry.resolution_base, error);
@@ -491,6 +516,9 @@ private:
   }
 
   std::map<std::string, sourcemeta::core::JSON> schemas{};
+  std::map<std::string,
+           std::pair<std::filesystem::path, sourcemeta::core::Pointer>>
+      origins{};
   const sourcemeta::core::Options &options_;
   const std::optional<sourcemeta::blaze::Configuration> configuration_;
   bool remote_{false};

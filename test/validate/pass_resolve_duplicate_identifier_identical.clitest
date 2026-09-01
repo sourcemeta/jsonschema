@@ -1,0 +1,46 @@
+// Two files may declare the same identifier as long as they agree.
+//
+// A repeated identifier is only rejected when the schema already imported under
+// it differs from the new one, so importing the same schema twice through two
+// paths is not an error. This is the other half of
+// `fail_resolve_duplicate_identifier_reports_both_files`, and it is why that
+// error talks about conflicting schemas rather than about registering an
+// identifier twice.
+
+WRITE schema.json UNTIL EOF
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$ref": "https://example.com/shared"
+}
+EOF
+
+WRITE schemas/aaa.json UNTIL EOF
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.com/shared",
+  "type": "string"
+}
+EOF
+
+WRITE schemas/zzz.json UNTIL EOF
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.com/shared",
+  "type": "string"
+}
+EOF
+
+WRITE instance.json UNTIL EOF
+"hello"
+EOF
+
+RUN validate schema.json instance.json --resolve schemas --verbose STDIN /dev/null IN . INTO result_0.txt EXPECTING 0
+
+REPLACE $CWD WITH '[CWD]' IN result_0.txt
+
+WRITE expected_0.txt UNTIL EOF
+2> ok: [CWD]/instance.json
+2>   matches [CWD]/schema.json
+EOF
+
+COMPARE result_0.txt AGAINST expected_0.txt
