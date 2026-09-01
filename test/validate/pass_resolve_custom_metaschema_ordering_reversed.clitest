@@ -1,0 +1,62 @@
+// `--resolve` must not depend on the order of its arguments.
+//
+// This is the fixture of `pass_resolve_custom_metaschema_ordering` with exactly
+// one change: the two `--resolve` arguments are swapped, so the schema is
+// imported before the meta-schema that its `$schema` points at.
+//
+// Importing a schema frames it, and framing needs the meta-schema resolved
+// right then. Before import order stopped mattering, this exited 4 with:
+//
+//   error: Could not resolve the metaschema of the schema
+//     at identifier https://example.com/my-meta
+//     at file path [CWD]/aa-schema.json
+//
+//   This is likely because you forgot to import such schema using `--resolve/-r`
+//
+// That hint was wrong, which is what made the failure confusing rather than
+// merely annoying: the meta-schema was already on the command line, one
+// argument too late, and nothing pointed at argument order as the cause.
+//
+// The file names are deliberately `aa-` and `zz-` prefixed. Import order across
+// separate `--resolve` arguments follows the command line rather than the file
+// names, so the names rule out sorting and isolate argument order as the only
+// variable. See `pass_resolve_directory_metaschema_ordering` for the case where
+// the names are what decides.
+
+WRITE schema.json UNTIL EOF
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$ref": "https://example.com/my-schema"
+}
+EOF
+
+WRITE zz-meta.json UNTIL EOF
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.com/my-meta",
+  "$vocabulary": {
+    "https://json-schema.org/draft/2020-12/vocab/core": true,
+    "https://json-schema.org/draft/2020-12/vocab/applicator": true,
+    "https://json-schema.org/draft/2020-12/vocab/validation": true
+  }
+}
+EOF
+
+WRITE aa-schema.json UNTIL EOF
+{
+  "$schema": "https://example.com/my-meta",
+  "$id": "https://example.com/my-schema",
+  "type": "string"
+}
+EOF
+
+WRITE instance.json UNTIL EOF
+"hello"
+EOF
+
+RUN validate schema.json instance.json --resolve aa-schema.json --resolve zz-meta.json STDIN /dev/null IN . INTO result_0.txt EXPECTING 0
+
+WRITE expected_0.txt UNTIL EOF
+EOF
+
+COMPARE result_0.txt AGAINST expected_0.txt

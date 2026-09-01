@@ -1,0 +1,82 @@
+// `--resolve <directory>` must not depend on the file names inside it.
+//
+// Same underlying constraint as `pass_resolve_custom_metaschema_ordering_reversed`,
+// but reached without the user writing any order at all. `for_each_json` sorts
+// the entries that each argument contributes, so within a single directory the
+// import order is alphabetical, and a meta-schema whose file name sorted after
+// the schemas declaring it could never be imported in time.
+//
+// The two directories below hold byte-identical schemas. The only difference is
+// which file name sorts first:
+//
+//   good/aa-meta.json + good/zz-schema.json   meta-schema first
+//   bad/aa-schema.json + bad/zz-meta.json     schema first
+//
+// The second one used to exit 4 while the first passed, so two directories with
+// the same content behaved differently and renaming the files was the only fix
+// available to the user. Both must pass.
+
+WRITE schema.json UNTIL EOF
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$ref": "https://example.com/my-schema"
+}
+EOF
+
+WRITE good/aa-meta.json UNTIL EOF
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.com/my-meta",
+  "$vocabulary": {
+    "https://json-schema.org/draft/2020-12/vocab/core": true,
+    "https://json-schema.org/draft/2020-12/vocab/applicator": true,
+    "https://json-schema.org/draft/2020-12/vocab/validation": true
+  }
+}
+EOF
+
+WRITE good/zz-schema.json UNTIL EOF
+{
+  "$schema": "https://example.com/my-meta",
+  "$id": "https://example.com/my-schema",
+  "type": "string"
+}
+EOF
+
+WRITE bad/zz-meta.json UNTIL EOF
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.com/my-meta",
+  "$vocabulary": {
+    "https://json-schema.org/draft/2020-12/vocab/core": true,
+    "https://json-schema.org/draft/2020-12/vocab/applicator": true,
+    "https://json-schema.org/draft/2020-12/vocab/validation": true
+  }
+}
+EOF
+
+WRITE bad/aa-schema.json UNTIL EOF
+{
+  "$schema": "https://example.com/my-meta",
+  "$id": "https://example.com/my-schema",
+  "type": "string"
+}
+EOF
+
+WRITE instance.json UNTIL EOF
+"hello"
+EOF
+
+RUN validate schema.json instance.json --resolve good STDIN /dev/null IN . INTO result_0.txt EXPECTING 0
+
+WRITE expected_0.txt UNTIL EOF
+EOF
+
+COMPARE result_0.txt AGAINST expected_0.txt
+
+RUN validate schema.json instance.json --resolve bad STDIN /dev/null IN . INTO result_1.txt EXPECTING 0
+
+WRITE expected_1.txt UNTIL EOF
+EOF
+
+COMPARE result_1.txt AGAINST expected_1.txt

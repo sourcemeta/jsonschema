@@ -1,0 +1,70 @@
+// Import order must stop mattering for a chain of meta-schemas, not just for a
+// single meta-schema and the schema that uses it.
+//
+// `meta-b` is described by `meta-a`, `meta-c` by `meta-b`, and the schema by
+// `meta-c`, so importing them all takes three rounds no matter how they are
+// ordered. The `--resolve` arguments below are in the worst possible order,
+// exactly reversed, which pins the behaviour as one that keeps making progress
+// until nothing is left rather than one that merely tolerates a single hop.
+
+WRITE schema.json UNTIL EOF
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$ref": "https://example.com/leaf"
+}
+EOF
+
+WRITE meta-a.json UNTIL EOF
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.com/meta-a",
+  "$vocabulary": {
+    "https://json-schema.org/draft/2020-12/vocab/core": true,
+    "https://json-schema.org/draft/2020-12/vocab/applicator": true,
+    "https://json-schema.org/draft/2020-12/vocab/validation": true
+  }
+}
+EOF
+
+WRITE meta-b.json UNTIL EOF
+{
+  "$schema": "https://example.com/meta-a",
+  "$id": "https://example.com/meta-b",
+  "$vocabulary": {
+    "https://json-schema.org/draft/2020-12/vocab/core": true,
+    "https://json-schema.org/draft/2020-12/vocab/applicator": true,
+    "https://json-schema.org/draft/2020-12/vocab/validation": true
+  }
+}
+EOF
+
+WRITE meta-c.json UNTIL EOF
+{
+  "$schema": "https://example.com/meta-b",
+  "$id": "https://example.com/meta-c",
+  "$vocabulary": {
+    "https://json-schema.org/draft/2020-12/vocab/core": true,
+    "https://json-schema.org/draft/2020-12/vocab/applicator": true,
+    "https://json-schema.org/draft/2020-12/vocab/validation": true
+  }
+}
+EOF
+
+WRITE leaf.json UNTIL EOF
+{
+  "$schema": "https://example.com/meta-c",
+  "$id": "https://example.com/leaf",
+  "type": "string"
+}
+EOF
+
+WRITE instance.json UNTIL EOF
+"hello"
+EOF
+
+RUN validate schema.json instance.json --resolve leaf.json --resolve meta-c.json --resolve meta-b.json --resolve meta-a.json STDIN /dev/null IN . INTO result_0.txt EXPECTING 0
+
+WRITE expected_0.txt UNTIL EOF
+EOF
+
+COMPARE result_0.txt AGAINST expected_0.txt
