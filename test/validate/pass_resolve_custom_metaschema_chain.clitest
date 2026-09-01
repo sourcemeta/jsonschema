@@ -2,11 +2,11 @@
 // single meta-schema and the schema that uses it.
 //
 // `meta-b` is described by `meta-a`, `meta-c` by `meta-b`, and the leaf schema
-// by `meta-c`. Listed in dependency order these import in a single pass, but
-// the `--resolve` arguments below are in the worst possible order, exactly
-// reversed, so only one of them can be imported at a time and all four passes
-// are needed. That pins the behaviour as one that keeps making progress until
-// nothing is left rather than one that merely tolerates a single hop.
+// by `meta-c`, so each one only becomes importable once the one before it is.
+// The `--resolve` arguments below are in the worst possible order, exactly
+// reversed, which means the whole chain has to be worked through end to end.
+// That covers more than a schema and its meta-schema, where tolerating a single
+// hop would be enough.
 
 WRITE schema.json UNTIL EOF
 {

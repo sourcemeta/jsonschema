@@ -1,10 +1,9 @@
 // A conflicting identifier must name both sides of the conflict.
 //
-// `CustomResolver::add` rejects an identifier that another schema already
-// claimed with different contents. It used to report only `entry.resolution_base`
-// of whichever file was being processed at that moment, which is always the one
-// that arrived second, so the file that actually claimed the identifier was
-// never mentioned and which file got blamed came down to import order rather
+// Importing two schemas that claim the same identifier with different contents
+// is an error. That error used to name only the file that arrived second,
+// leaving the file which actually claimed the identifier unmentioned, so which
+// of the two got blamed came down to the order they were imported in rather
 // than to the conflict itself.
 //
 // The duplicate below is embedded at `/$defs/buried` rather than sitting at the

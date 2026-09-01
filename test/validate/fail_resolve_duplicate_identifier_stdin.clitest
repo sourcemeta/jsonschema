@@ -1,15 +1,14 @@
 // The other side of a conflict may be standard input, which is not a path.
 //
-// A schema read from `--resolve -` records the standard input sentinel as its
-// origin rather than a real file, so rendering it has to go through
-// `stdin_path_string` instead of resolving it against the filesystem. Doing the
-// latter produced a path that does not exist, of the shape
-// `<cwd>/tag:sourcemeta.com,2026:jsonschema/stdin`.
+// A schema read from `--resolve -` has no file behind it, so the reported path
+// has to stay the standard input identifier rather than being resolved against
+// the filesystem. Resolving it produced a path that does not exist, of the
+// shape `<cwd>/tag:sourcemeta.com,2026:jsonschema/stdin`.
 //
 // Standard input is imported first here so that it is the side already holding
 // the identifier, which is the side reported as `other path`. The reverse
-// arrangement already went through the right helper, so only this ordering
-// exercises it.
+// arrangement already printed the identifier correctly, so only this ordering
+// covers it.
 
 WRITE schema.json UNTIL EOF
 {

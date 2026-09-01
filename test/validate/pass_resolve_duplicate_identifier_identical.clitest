@@ -1,8 +1,8 @@
 // Two files may declare the same identifier as long as they agree.
 //
-// `CustomResolver::add` only rejects a repeated identifier when the schema
-// already registered under it differs from the new one, so importing the same
-// schema twice through two paths is not an error. This is the other half of
+// A repeated identifier is only rejected when the schema already imported under
+// it differs from the new one, so importing the same schema twice through two
+// paths is not an error. This is the other half of
 // `fail_resolve_duplicate_identifier_reports_both_files`, and it is why that
 // error talks about conflicting schemas rather than about registering an
 // identifier twice.

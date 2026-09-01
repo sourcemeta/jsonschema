@@ -1,10 +1,9 @@
 // `--resolve <directory>` must not depend on the file names inside it.
 //
 // Same underlying constraint as `pass_resolve_custom_metaschema_ordering_reversed`,
-// but reached without the user writing any order at all. `for_each_json` sorts
-// the entries that each argument contributes, so within a single directory the
-// import order is alphabetical, and a meta-schema whose file name sorted after
-// the schemas declaring it could never be imported in time.
+// but reached without the user writing any order at all. Schemas found in a
+// directory are imported in alphabetical order, so a meta-schema whose file name
+// sorted after the schemas declaring it could never be imported in time.
 //
 // The two directories below hold byte-identical schemas. The only difference is
 // which file name sorts first:
