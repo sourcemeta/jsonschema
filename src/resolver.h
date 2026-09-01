@@ -464,12 +464,12 @@ private:
             sourcemeta::core::FileError<SchemaIdentifierConflictError>>(
             std::get<0>(position.value()), std::get<1>(position.value()),
             entry.resolution_base, error.identifier(), error.location(),
-            error.other_file_path(), error.other());
+            error.other_path(), error.other());
       }
 
       throw sourcemeta::core::FileError<SchemaIdentifierConflictError>(
           entry.resolution_base, error.identifier(), error.location(),
-          error.other_file_path(), error.other());
+          error.other_path(), error.other());
     } catch (const sourcemeta::blaze::SchemaKeywordError &error) {
       throw sourcemeta::core::FileError<sourcemeta::blaze::SchemaKeywordError>(
           entry.resolution_base, error);

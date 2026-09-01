@@ -7,7 +7,7 @@
 // `<cwd>/tag:sourcemeta.com,2026:jsonschema/stdin`.
 //
 // Standard input is imported first here so that it is the side already holding
-// the identifier, which is the side reported as `other file path`. The reverse
+// the identifier, which is the side reported as `other path`. The reverse
 // arrangement already went through the right helper, so only this ordering
 // exercises it.
 
@@ -50,7 +50,7 @@ WRITE expected_0.txt UNTIL EOF
 2>   at column 1
 2>   at file path [CWD]/conflicting.json
 2>   at location ""
-2>   at other file path tag:sourcemeta.com,2026:jsonschema/stdin
+2>   at other path tag:sourcemeta.com,2026:jsonschema/stdin
 2>   at other location ""
 EOF
 
@@ -69,7 +69,7 @@ WRITE expected_1.txt UNTIL EOF
 1>   "column": 1,
 1>   "filePath": "[CWD]/conflicting.json",
 1>   "location": "",
-1>   "otherFilePath": "tag:sourcemeta.com,2026:jsonschema/stdin",
+1>   "otherPath": "tag:sourcemeta.com,2026:jsonschema/stdin",
 1>   "otherLocation": ""
 1> }
 EOF

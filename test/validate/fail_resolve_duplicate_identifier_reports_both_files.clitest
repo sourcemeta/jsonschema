@@ -12,10 +12,6 @@
 // byte the same as for a top-level duplicate, so it identified neither the
 // other file nor the position within either of them.
 //
-// Real vendored schemas hit this. FIRST.org ships `cvss-v3.1.json` and
-// `cvss-v3.1_strict.json` with identical `$id` values, so pointing `--resolve`
-// at that directory conflicts.
-//
 // Note that sharing an identifier is only an error when the schemas disagree.
 // Two files that declare the same `$id` with identical contents resolve fine,
 // which is why the message talks about conflicting schemas rather than about
@@ -62,7 +58,7 @@ WRITE expected_0.txt UNTIL EOF
 2>   at column 5
 2>   at file path [CWD]/schemas/zzz.json
 2>   at location "/$defs/buried"
-2>   at other file path [CWD]/schemas/aaa.json
+2>   at other path [CWD]/schemas/aaa.json
 2>   at other location ""
 EOF
 
@@ -81,7 +77,7 @@ WRITE expected_1.txt UNTIL EOF
 1>   "column": 5,
 1>   "filePath": "[CWD]/schemas/zzz.json",
 1>   "location": "/$defs/buried",
-1>   "otherFilePath": "[CWD]/schemas/aaa.json",
+1>   "otherPath": "[CWD]/schemas/aaa.json",
 1>   "otherLocation": ""
 1> }
 EOF

@@ -58,12 +58,11 @@ class SchemaIdentifierConflictError : public std::runtime_error {
 public:
   SchemaIdentifierConflictError(std::string identifier,
                                 sourcemeta::core::Pointer location,
-                                std::filesystem::path other_file_path,
+                                std::filesystem::path other_path,
                                 sourcemeta::core::Pointer other)
       : std::runtime_error{"Conflicting schemas for the same identifier"},
         identifier_{std::move(identifier)}, location_{std::move(location)},
-        other_file_path_{std::move(other_file_path)}, other_{std::move(other)} {
-  }
+        other_path_{std::move(other_path)}, other_{std::move(other)} {}
 
   [[nodiscard]] auto identifier() const noexcept -> const std::string & {
     return this->identifier_;
@@ -74,9 +73,9 @@ public:
     return this->location_;
   }
 
-  [[nodiscard]] auto other_file_path() const noexcept
+  [[nodiscard]] auto other_path() const noexcept
       -> const std::filesystem::path & {
-    return this->other_file_path_;
+    return this->other_path_;
   }
 
   [[nodiscard]] auto other() const noexcept
@@ -87,7 +86,7 @@ public:
 private:
   std::string identifier_;
   sourcemeta::core::Pointer location_;
-  std::filesystem::path other_file_path_;
+  std::filesystem::path other_path_;
   sourcemeta::core::Pointer other_;
 };
 
@@ -769,16 +768,14 @@ inline auto print_exception(const bool is_json, const Exception &exception)
 
   if constexpr (requires(const Exception &current) {
                   {
-                    current.other_file_path()
+                    current.other_path()
                   } -> std::convertible_to<std::filesystem::path>;
                 }) {
-    const auto other_path_string{
-        stdin_path_string(exception.other_file_path())};
+    const auto other_path_string{stdin_path_string(exception.other_path())};
     if (is_json) {
-      error_json.assign("otherFilePath",
-                        sourcemeta::core::JSON{other_path_string});
+      error_json.assign("otherPath", sourcemeta::core::JSON{other_path_string});
     } else {
-      std::cerr << "  at other file path " << other_path_string << "\n";
+      std::cerr << "  at other path " << other_path_string << "\n";
     }
   }
 

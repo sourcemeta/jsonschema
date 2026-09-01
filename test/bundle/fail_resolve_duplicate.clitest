@@ -40,7 +40,7 @@ WRITE expected_0.txt UNTIL EOF
 2>   at column 1
 2>   at file path [CWD]/schemas/remote.json
 2>   at location ""
-2>   at other file path [CWD]/schemas/duplicated.json
+2>   at other path [CWD]/schemas/duplicated.json
 2>   at other location ""
 EOF
 
@@ -59,7 +59,7 @@ WRITE expected_1.txt UNTIL EOF
 1>   "column": 1,
 1>   "filePath": "[CWD]/schemas/remote.json",
 1>   "location": "",
-1>   "otherFilePath": "[CWD]/schemas/duplicated.json",
+1>   "otherPath": "[CWD]/schemas/duplicated.json",
 1>   "otherLocation": ""
 1> }
 EOF
