@@ -453,7 +453,7 @@ public:
     auto schema{std::move(fetched).to_owned()};
     sourcemeta::blaze::schema_reidentify(schema, string_identifier,
                                          base_dialect.value());
-    return std::move(schema);
+    return schema;
   }
 
 private:
