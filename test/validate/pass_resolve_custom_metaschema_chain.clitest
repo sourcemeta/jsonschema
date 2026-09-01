@@ -1,11 +1,12 @@
 // Import order must stop mattering for a chain of meta-schemas, not just for a
 // single meta-schema and the schema that uses it.
 //
-// `meta-b` is described by `meta-a`, `meta-c` by `meta-b`, and the schema by
-// `meta-c`, so importing them all takes three rounds no matter how they are
-// ordered. The `--resolve` arguments below are in the worst possible order,
-// exactly reversed, which pins the behaviour as one that keeps making progress
-// until nothing is left rather than one that merely tolerates a single hop.
+// `meta-b` is described by `meta-a`, `meta-c` by `meta-b`, and the leaf schema
+// by `meta-c`. Listed in dependency order these import in a single pass, but
+// the `--resolve` arguments below are in the worst possible order, exactly
+// reversed, so only one of them can be imported at a time and all four passes
+// are needed. That pins the behaviour as one that keeps making progress until
+// nothing is left rather than one that merely tolerates a single hop.
 
 WRITE schema.json UNTIL EOF
 {
@@ -62,9 +63,13 @@ WRITE instance.json UNTIL EOF
 "hello"
 EOF
 
-RUN validate schema.json instance.json --resolve leaf.json --resolve meta-c.json --resolve meta-b.json --resolve meta-a.json STDIN /dev/null IN . INTO result_0.txt EXPECTING 0
+RUN validate schema.json instance.json --resolve leaf.json --resolve meta-c.json --resolve meta-b.json --resolve meta-a.json --verbose STDIN /dev/null IN . INTO result_0.txt EXPECTING 0
+
+REPLACE $CWD WITH '[CWD]' IN result_0.txt
 
 WRITE expected_0.txt UNTIL EOF
+2> ok: [CWD]/instance.json
+2>   matches [CWD]/schema.json
 EOF
 
 COMPARE result_0.txt AGAINST expected_0.txt

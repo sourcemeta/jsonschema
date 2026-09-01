@@ -309,8 +309,11 @@ public:
           }
         }
 
-        // No pass can make progress anymore, so the schema that the first
-        // deferred entry is waiting for is genuinely missing
+        // Nothing can make progress anymore, so report the first failure,
+        // which is exactly what the user would have seen if imports were
+        // never retried. Note that when several entries remain stuck, the
+        // one we report might be waiting on another stuck entry rather than
+        // on the schema that is genuinely missing
         if (deferred.size() == pending.size()) {
           std::rethrow_exception(failure);
         }

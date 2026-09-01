@@ -54,9 +54,13 @@ WRITE instance.json UNTIL EOF
 "hello"
 EOF
 
-RUN validate schema.json instance.json --resolve aa-schema.json --resolve zz-meta.json STDIN /dev/null IN . INTO result_0.txt EXPECTING 0
+RUN validate schema.json instance.json --resolve aa-schema.json --resolve zz-meta.json --verbose STDIN /dev/null IN . INTO result_0.txt EXPECTING 0
+
+REPLACE $CWD WITH '[CWD]' IN result_0.txt
 
 WRITE expected_0.txt UNTIL EOF
+2> ok: [CWD]/instance.json
+2>   matches [CWD]/schema.json
 EOF
 
 COMPARE result_0.txt AGAINST expected_0.txt
