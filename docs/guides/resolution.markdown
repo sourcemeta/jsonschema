@@ -24,8 +24,8 @@ The same section settles what a URI may point at:
 In other words, one schema may be reachable under several URIs, but asking a
 single URI to mean two different schemas is an error that this CLI reports.
 
-This page describes every way of putting a schema into the resolution context.
-It applies to every command that supports the `--resolve/-r` option.
+This page describes how to get the schemas you reference into that resolution
+context. It applies to every command that supports the `--resolve/-r` option.
 
 Importing Local Schemas
 -----------------------
@@ -57,9 +57,14 @@ Then `--resolve string.json` tells the CLI where to find it:
 jsonschema bundle schema.json --resolve string.json
 ```
 
-Because the association comes from the schema's own identifier, the file name
-does not matter, but the identifier does. Importing a file whose identifier is
-not the one being referenced has no effect on that reference.
+An imported schema becomes reachable under two things: every identifier it
+declares, and the `file://` URI of the file it was read from. The second is what
+makes relative references between unidentified files work, as the next section
+explains.
+
+What it is *not* reachable under is its name on disk. Importing a file whose
+identifier is not the one being referenced has no effect on that reference, no
+matter what the file is called.
 
 You may pass `--resolve/-r` as many times as you need, and you may point it at
 a directory to import every schema inside it:
@@ -217,8 +222,9 @@ consumers reference the unversioned one:
 ```
 
 Here `https://example.com/string` and `https://example.com/string?20260101` are
-different URIs, so `--resolve/-r` alone cannot connect them. It only ever
-imports a schema under the identifier the schema itself declares.
+different URIs, so `--resolve/-r` alone cannot connect them. Importing that file
+makes it reachable under the identifier it declares and under the `file://` URI
+it was read from, and the reference matches neither.
 
 For these cases, declare the association explicitly using the `resolve`
 property of the [`jsonschema.json`](../configuration.markdown) configuration
@@ -249,19 +255,18 @@ reference over the network:
 jsonschema bundle schema.json --http
 ```
 
-Schemas imported through `--resolve/-r` or through the `resolve` configuration
-property take precedence, so this only applies to references that are not
-already known. Use `--header/-H` to pass credentials to a private registry:
+A schema that is already imported through `--resolve/-r` is found before any
+network request is attempted, so `--http/-h` only comes into play for references
+that are not otherwise available.
+
+Note that a `resolve` entry in `jsonschema.json` behaves differently, because it
+does not supply a schema, it only changes which URI is looked up. If it points
+at a local path, that file is read from disk. If it points at another HTTP or
+HTTPS URI, fetching that target still requires `--http/-h`.
+
+Use `--header/-H` to pass credentials to a private registry:
 
 ```sh
 jsonschema bundle schema.json \
   --http --header "Authorization: Bearer $REGISTRY_TOKEN"
 ```
-
-Vendoring Dependencies
-----------------------
-
-If you would rather fetch remote schemas once and commit them, declare them as
-`dependencies` in [`jsonschema.json`](../configuration.markdown) and run
-[`jsonschema install`](../install.markdown). Installed dependencies are added to
-the resolution context automatically, with no `--resolve/-r` needed.
