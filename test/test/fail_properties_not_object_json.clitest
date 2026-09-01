@@ -27,7 +27,7 @@ WRITE expected_0.txt UNTIL EOF
 1> {
 1>   "error": "This keyword was expected to be set to an object whose values are valid schemas",
 1>   "filePath": "[CWD]/test.json",
-1>   "location": "/properties",
+1>   "location": "/$defs/https:~1~1example.com/properties",
 1>   "baseURI": "https://example.com"
 1> }
 EOF

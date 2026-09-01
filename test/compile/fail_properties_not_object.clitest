@@ -13,6 +13,8 @@ REPLACE $CWD WITH '[CWD]' IN result_0.txt
 
 WRITE expected_0.txt UNTIL EOF
 2> error: This keyword was expected to be set to an object whose values are valid schemas
+2>   at line 4
+2>   at column 3
 2>   at file path [CWD]/schema.json
 2>   at location "/properties"
 2>   at base uri https://example.com
@@ -30,6 +32,8 @@ REPLACE $CWD WITH '[CWD]' IN result_1.txt
 WRITE expected_1.txt UNTIL EOF
 1> {
 1>   "error": "This keyword was expected to be set to an object whose values are valid schemas",
+1>   "line": 4,
+1>   "column": 3,
 1>   "filePath": "[CWD]/schema.json",
 1>   "location": "/properties",
 1>   "baseURI": "https://example.com"

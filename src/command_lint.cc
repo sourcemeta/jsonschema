@@ -454,6 +454,15 @@ auto sourcemeta::jsonschema::lint(const sourcemeta::core::Options &options)
                 std::cerr << "\n";
               }
 
+              const auto position{entry.positions.get(error.location())};
+              if (position.has_value()) {
+                throw PositionError<sourcemeta::core::FileError<
+                    sourcemeta::blaze::CompilerError>>(
+                    std::get<0>(position.value()),
+                    std::get<1>(position.value()), entry.resolution_base,
+                    error);
+              }
+
               throw sourcemeta::core::FileError<
                   sourcemeta::blaze::CompilerError>(entry.resolution_base,
                                                     error);
@@ -621,6 +630,15 @@ auto sourcemeta::jsonschema::lint(const sourcemeta::core::Options &options)
                   sourcemeta::blaze::CompilerInvalidRegexError>(
                   entry.resolution_base, error);
             } catch (const sourcemeta::blaze::CompilerError &error) {
+              const auto position{entry.positions.get(error.location())};
+              if (position.has_value()) {
+                throw PositionError<sourcemeta::core::FileError<
+                    sourcemeta::blaze::CompilerError>>(
+                    std::get<0>(position.value()),
+                    std::get<1>(position.value()), entry.resolution_base,
+                    error);
+              }
+
               throw sourcemeta::core::FileError<
                   sourcemeta::blaze::CompilerError>(entry.resolution_base,
                                                     error);

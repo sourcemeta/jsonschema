@@ -27,7 +27,7 @@ WRITE expected_0.txt UNTIL EOF
 1> [CWD]/test.json:
 2> error: This keyword was expected to be set to an object whose values are valid schemas
 2>   at file path [CWD]/test.json
-2>   at location "/properties"
+2>   at location "/$defs/https:~1~1example.com/properties"
 2>   at base uri https://example.com
 2>
 2> Use the `metaschema` command to check the schema against its meta-schema

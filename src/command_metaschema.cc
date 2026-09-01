@@ -150,6 +150,8 @@ auto sourcemeta::jsonschema::metaschema(
       throw sourcemeta::core::FileError<
           sourcemeta::blaze::CompilerInvalidRegexError>(entry.resolution_base,
                                                         error);
+      // No position, as what compiles here is the meta-schema while the
+      // positions on hand describe the schema being validated against it
     } catch (const sourcemeta::blaze::CompilerError &error) {
       throw sourcemeta::core::FileError<sourcemeta::blaze::CompilerError>(
           entry.resolution_base, error);

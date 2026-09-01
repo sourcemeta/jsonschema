@@ -14,12 +14,8 @@ WRITE schema.json UNTIL EOF
 }
 EOF
 
-WRITE instance.json UNTIL EOF
-{}
-EOF
-
 // Schema input error
-RUN validate schema.json instance.json STDIN /dev/null IN . INTO result_0.txt EXPECTING 4
+RUN compile schema.json STDIN /dev/null IN . INTO result_0.txt EXPECTING 4
 
 REPLACE $CWD WITH '[CWD]' IN result_0.txt
 

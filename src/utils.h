@@ -309,24 +309,6 @@ frame_for_evaluation(const sourcemeta::core::JSON &bundled,
   }
 }
 
-// A compiler error names its location relative to the schema resource that
-// declares it, so the enclosing resource is what turns it into a location
-// within the document that the caller parsed
-inline auto
-absolute_schema_location(const sourcemeta::blaze::SchemaFrame &frame,
-                         const sourcemeta::core::URI &base,
-                         const sourcemeta::core::Pointer &relative)
-    -> std::optional<sourcemeta::core::Pointer> {
-  const auto resource{frame.location(
-      sourcemeta::blaze::SchemaReferenceType::Static, base.recompose())};
-  if (!resource.has_value()) {
-    return std::nullopt;
-  }
-
-  return sourcemeta::core::to_pointer(resource.value().get().pointer)
-      .concat(relative);
-}
-
 inline auto compile_for_evaluation(
     const sourcemeta::core::JSON &bundled,
     const sourcemeta::blaze::SchemaResolver &resolver,
@@ -348,16 +330,12 @@ inline auto compile_for_evaluation(
     throw sourcemeta::core::FileError<
         sourcemeta::blaze::CompilerInvalidRegexError>(resolution_base, error);
   } catch (const sourcemeta::blaze::CompilerError &error) {
-    const auto location{
-        absolute_schema_location(frame, error.base(), error.location())};
-    if (location.has_value()) {
-      const auto position{positions.get(location.value())};
-      if (position.has_value()) {
-        throw PositionError<
-            sourcemeta::core::FileError<sourcemeta::blaze::CompilerError>>(
-            std::get<0>(position.value()), std::get<1>(position.value()),
-            resolution_base, error);
-      }
+    const auto position{positions.get(error.location())};
+    if (position.has_value()) {
+      throw PositionError<
+          sourcemeta::core::FileError<sourcemeta::blaze::CompilerError>>(
+          std::get<0>(position.value()), std::get<1>(position.value()),
+          resolution_base, error);
     }
 
     throw sourcemeta::core::FileError<sourcemeta::blaze::CompilerError>(
