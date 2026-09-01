@@ -773,8 +773,7 @@ inline auto print_exception(const bool is_json, const Exception &exception)
                   } -> std::convertible_to<std::filesystem::path>;
                 }) {
     const auto other_path_string{
-        sourcemeta::core::weakly_canonical(exception.other_file_path())
-            .generic_string()};
+        stdin_path_string(exception.other_file_path())};
     if (is_json) {
       error_json.assign("otherFilePath",
                         sourcemeta::core::JSON{other_path_string});

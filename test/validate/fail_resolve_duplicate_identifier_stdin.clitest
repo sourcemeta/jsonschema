@@ -1,0 +1,77 @@
+// The other side of a conflict may be standard input, which is not a path.
+//
+// A schema read from `--resolve -` records the standard input sentinel as its
+// origin rather than a real file, so rendering it has to go through
+// `stdin_path_string` instead of resolving it against the filesystem. Doing the
+// latter produced a path that does not exist, of the shape
+// `<cwd>/tag:sourcemeta.com,2026:jsonschema/stdin`.
+//
+// Standard input is imported first here so that it is the side already holding
+// the identifier, which is the side reported as `other file path`. The reverse
+// arrangement already went through the right helper, so only this ordering
+// exercises it.
+
+WRITE schema.json UNTIL EOF
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$ref": "https://example.com/shared"
+}
+EOF
+
+WRITE conflicting.json UNTIL EOF
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.com/shared",
+  "type": "number"
+}
+EOF
+
+WRITE stdin.json UNTIL EOF
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.com/shared",
+  "type": "string"
+}
+EOF
+
+WRITE instance.json UNTIL EOF
+"hello"
+EOF
+
+// Schema input error
+RUN validate schema.json instance.json --resolve - --resolve conflicting.json STDIN stdin.json IN . INTO result_0.txt EXPECTING 4
+
+REPLACE $CWD WITH '[CWD]' IN result_0.txt
+
+WRITE expected_0.txt UNTIL EOF
+2> error: Conflicting schemas for the same identifier
+2>   at identifier https://example.com/shared
+2>   at line 1
+2>   at column 1
+2>   at file path [CWD]/conflicting.json
+2>   at location ""
+2>   at other file path tag:sourcemeta.com,2026:jsonschema/stdin
+2>   at other location ""
+EOF
+
+COMPARE result_0.txt AGAINST expected_0.txt
+
+// Schema input error
+RUN validate schema.json instance.json --resolve - --resolve conflicting.json --json STDIN stdin.json IN . INTO result_1.txt EXPECTING 4
+
+REPLACE $CWD WITH '[CWD]' IN result_1.txt
+
+WRITE expected_1.txt UNTIL EOF
+1> {
+1>   "error": "Conflicting schemas for the same identifier",
+1>   "identifier": "https://example.com/shared",
+1>   "line": 1,
+1>   "column": 1,
+1>   "filePath": "[CWD]/conflicting.json",
+1>   "location": "",
+1>   "otherFilePath": "tag:sourcemeta.com,2026:jsonschema/stdin",
+1>   "otherLocation": ""
+1> }
+EOF
+
+COMPARE result_1.txt AGAINST expected_1.txt
