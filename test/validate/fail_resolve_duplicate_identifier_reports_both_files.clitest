@@ -1,0 +1,89 @@
+// A conflicting identifier must name both sides of the conflict.
+//
+// `CustomResolver::add` rejects an identifier that another schema already
+// claimed with different contents. It used to report only `entry.resolution_base`
+// of whichever file was being processed at that moment, which is always the one
+// that arrived second, so the file that actually claimed the identifier was
+// never mentioned and which file got blamed came down to import order rather
+// than to the conflict itself.
+//
+// The duplicate below is embedded at `/$defs/buried` rather than sitting at the
+// top level, which is the case the old message served worst: it was byte for
+// byte the same as for a top-level duplicate, so it identified neither the
+// other file nor the position within either of them.
+//
+// Real vendored schemas hit this. FIRST.org ships `cvss-v3.1.json` and
+// `cvss-v3.1_strict.json` with identical `$id` values, so pointing `--resolve`
+// at that directory conflicts.
+//
+// Note that sharing an identifier is only an error when the schemas disagree.
+// Two files that declare the same `$id` with identical contents resolve fine,
+// which is why the message talks about conflicting schemas rather than about
+// registering an identifier twice.
+
+WRITE schema.json UNTIL EOF
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$ref": "https://example.com/shared"
+}
+EOF
+
+WRITE schemas/aaa.json UNTIL EOF
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.com/shared",
+  "type": "string"
+}
+EOF
+
+WRITE schemas/zzz.json UNTIL EOF
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.com/outer",
+  "$defs": {
+    "buried": { "$id": "https://example.com/shared", "type": "number" }
+  }
+}
+EOF
+
+WRITE instance.json UNTIL EOF
+"hello"
+EOF
+
+// Schema input error
+RUN validate schema.json instance.json --resolve schemas STDIN /dev/null IN . INTO result_0.txt EXPECTING 4
+
+REPLACE $CWD WITH '[CWD]' IN result_0.txt
+
+WRITE expected_0.txt UNTIL EOF
+2> error: Conflicting schemas for the same identifier
+2>   at identifier https://example.com/shared
+2>   at line 5
+2>   at column 5
+2>   at file path [CWD]/schemas/zzz.json
+2>   at location "/$defs/buried"
+2>   at other file path [CWD]/schemas/aaa.json
+2>   at other location ""
+EOF
+
+COMPARE result_0.txt AGAINST expected_0.txt
+
+// Schema input error
+RUN validate schema.json instance.json --resolve schemas --json STDIN /dev/null IN . INTO result_1.txt EXPECTING 4
+
+REPLACE $CWD WITH '[CWD]' IN result_1.txt
+
+WRITE expected_1.txt UNTIL EOF
+1> {
+1>   "error": "Conflicting schemas for the same identifier",
+1>   "identifier": "https://example.com/shared",
+1>   "line": 5,
+1>   "column": 5,
+1>   "filePath": "[CWD]/schemas/zzz.json",
+1>   "location": "/$defs/buried",
+1>   "otherFilePath": "[CWD]/schemas/aaa.json",
+1>   "otherLocation": ""
+1> }
+EOF
+
+COMPARE result_1.txt AGAINST expected_1.txt

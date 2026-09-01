@@ -54,6 +54,43 @@ private:
   std::uint64_t column_;
 };
 
+class SchemaIdentifierConflictError : public std::runtime_error {
+public:
+  SchemaIdentifierConflictError(std::string identifier,
+                                sourcemeta::core::Pointer location,
+                                std::filesystem::path other_file_path,
+                                sourcemeta::core::Pointer other)
+      : std::runtime_error{"Conflicting schemas for the same identifier"},
+        identifier_{std::move(identifier)}, location_{std::move(location)},
+        other_file_path_{std::move(other_file_path)}, other_{std::move(other)} {
+  }
+
+  [[nodiscard]] auto identifier() const noexcept -> const std::string & {
+    return this->identifier_;
+  }
+
+  [[nodiscard]] auto location() const noexcept
+      -> const sourcemeta::core::Pointer & {
+    return this->location_;
+  }
+
+  [[nodiscard]] auto other_file_path() const noexcept
+      -> const std::filesystem::path & {
+    return this->other_file_path_;
+  }
+
+  [[nodiscard]] auto other() const noexcept
+      -> const sourcemeta::core::Pointer & {
+    return this->other_;
+  }
+
+private:
+  std::string identifier_;
+  sourcemeta::core::Pointer location_;
+  std::filesystem::path other_file_path_;
+  sourcemeta::core::Pointer other_;
+};
+
 class PositionalArgumentError : public std::runtime_error {
 public:
   PositionalArgumentError(std::string message, std::string example)
@@ -732,6 +769,22 @@ inline auto print_exception(const bool is_json, const Exception &exception)
 
   if constexpr (requires(const Exception &current) {
                   {
+                    current.other_file_path()
+                  } -> std::convertible_to<std::filesystem::path>;
+                }) {
+    const auto other_path_string{
+        sourcemeta::core::weakly_canonical(exception.other_file_path())
+            .generic_string()};
+    if (is_json) {
+      error_json.assign("otherFilePath",
+                        sourcemeta::core::JSON{other_path_string});
+    } else {
+      std::cerr << "  at other file path " << other_path_string << "\n";
+    }
+  }
+
+  if constexpr (requires(const Exception &current) {
+                  {
                     current.other()
                   } -> std::convertible_to<const sourcemeta::core::Pointer &>;
                 }) {
@@ -1189,6 +1242,16 @@ inline auto try_catch(const sourcemeta::core::Options &options,
                    "valid according to its meta-schema?\n";
     }
 
+    return EXIT_SCHEMA_INPUT_ERROR;
+  } catch (const PositionError<
+           sourcemeta::core::FileError<SchemaIdentifierConflictError>> &error) {
+    const auto is_json{options.contains("json")};
+    print_exception(is_json, error);
+    return EXIT_SCHEMA_INPUT_ERROR;
+  } catch (
+      const sourcemeta::core::FileError<SchemaIdentifierConflictError> &error) {
+    const auto is_json{options.contains("json")};
+    print_exception(is_json, error);
     return EXIT_SCHEMA_INPUT_ERROR;
   } catch (const PositionError<sourcemeta::core::FileError<
                sourcemeta::blaze::SchemaAnchorCollisionError>> &error) {
