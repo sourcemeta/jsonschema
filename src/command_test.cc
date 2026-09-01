@@ -133,9 +133,9 @@ auto parse_test_suite(const sourcemeta::jsonschema::InputJSON &entry,
     throw sourcemeta::core::FileError<
         sourcemeta::blaze::CompilerReferenceTargetNotSchemaError>{
         entry.resolution_base, error};
+  } catch (const sourcemeta::blaze::CompilerError &error) {
     // No position, as what compiles here is the schema the document targets
     // while the positions on hand describe the test document itself
-  } catch (const sourcemeta::blaze::CompilerError &error) {
     throw sourcemeta::core::FileError<sourcemeta::blaze::CompilerError>{
         entry.resolution_base, error};
   } catch (
@@ -157,14 +157,8 @@ auto parse_test_suite(const sourcemeta::jsonschema::InputJSON &entry,
     throw sourcemeta::core::FileError<
         sourcemeta::blaze::SchemaUnknownDialectError>{entry.resolution_base};
   } catch (const sourcemeta::blaze::SchemaAnchorCollisionError &error) {
-    const auto position{entry.positions.get(error.location())};
-    if (position.has_value()) {
-      throw sourcemeta::jsonschema::PositionError<sourcemeta::core::FileError<
-          sourcemeta::blaze::SchemaAnchorCollisionError>>(
-          std::get<0>(position.value()), std::get<1>(position.value()),
-          entry.resolution_base, error);
-    }
-
+    // No position, as what compiles here is the schema the document targets
+    // while the positions on hand describe the test document itself
     throw sourcemeta::core::FileError<
         sourcemeta::blaze::SchemaAnchorCollisionError>{entry.resolution_base,
                                                        error};
