@@ -10,6 +10,11 @@ jsonschema bundle <schema.json|.yaml>
   [--without-id/-w] [--default-dialect/-d <uri>] [--json/-j]
 ```
 
+> [!NOTE]
+> See [Resolving External References](./guides/resolution.markdown) for every way of
+> making referenced schemas available, including how to handle a reference whose
+> URI differs from the identifier the target schema declares.
+
 A schema may contain references to remote schemas outside the scope of the
 given schema. These remote schemas may live in other files, or may be served by
 others over the Internet. JSON Schema supports a standardized process, referred

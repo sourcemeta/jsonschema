@@ -15,6 +15,11 @@ jsonschema validate <schema.json|.yaml> <instance.json|.jsonl|.jsonl.gz|.yaml|di
   [--continue/-c] [--format-assertion/-F]
 ```
 
+> [!NOTE]
+> See [Resolving External References](./guides/resolution.markdown) for every way of
+> making referenced schemas available, including how to handle a reference whose
+> URI differs from the identifier the target schema declares.
+
 The most popular use case of JSON Schema is to validate JSON documents. The
 JSON Schema CLI offers a `validate` command to evaluate one or many JSON
 instances, directories of instances, or JSONL datasets against a JSON Schema,

@@ -12,6 +12,11 @@ jsonschema rdf <schema.json|.yaml> <instance.json|.yaml>
   [--default-dialect/-d <uri>] [--json/-j]
 ```
 
+> [!NOTE]
+> See [Resolving External References](./guides/resolution.markdown) for every way of
+> making referenced schemas available, including how to handle a reference whose
+> URI differs from the identifier the target schema declares.
+
 The same JSON Schema that validates your data can also declare what that data
 means. The `rdf` command evaluates an instance against a schema annotated
 with `x-jsonld-*` keywords and, if the instance is valid, prints the instance
