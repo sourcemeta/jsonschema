@@ -66,7 +66,10 @@ public:
     for (const auto &location : this->locations_) {
       const auto &property{
           schema.at("required").at(location.at(1).to_index()).to_string()};
-      schema.at("properties").assign(property, sourcemeta::core::JSON{true});
+      // Draft 4 and earlier have no boolean schemas, and the empty object is
+      // the canonical way to say "unconstrained" in every dialect
+      schema.at("properties")
+          .assign(property, sourcemeta::core::JSON::make_object());
     }
   }
 

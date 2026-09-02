@@ -41,7 +41,7 @@ auto dependency_fetch(const sourcemeta::core::Options &options,
                       std::string_view uri) -> sourcemeta::core::JSON {
   auto result{sourcemeta::jsonschema::fetch_schema(options, uri, true, true)};
   if (result.has_value()) {
-    return std::move(result.value());
+    return std::move(result).to_owned();
   }
 
   throw sourcemeta::core::FileError<sourcemeta::blaze::SchemaResolutionError>(
@@ -51,7 +51,7 @@ auto dependency_fetch(const sourcemeta::core::Options &options,
 auto dependency_resolve(const sourcemeta::core::Options &options,
                         const sourcemeta::blaze::Configuration &configuration,
                         std::string_view identifier)
-    -> std::optional<sourcemeta::core::JSON> {
+    -> sourcemeta::blaze::SchemaResolverResult {
   const std::string string_identifier{identifier};
 
   const auto mapped{sourcemeta::jsonschema::resolve_map_uri(configuration,
@@ -436,7 +436,7 @@ auto sourcemeta::jsonschema::install(const sourcemeta::core::Options &options)
 
   const sourcemeta::blaze::SchemaResolver resolver{
       [&options, &configuration](std::string_view identifier)
-          -> std::optional<sourcemeta::core::JSON> {
+          -> sourcemeta::blaze::SchemaResolverResult {
         return dependency_resolve(options, configuration, identifier);
       }};
 

@@ -331,7 +331,7 @@ auto operator<<(std::basic_ostream<JSON::Char, JSON::CharTraits> &stream,
 ///     {sourcemeta::core::JSON::Type::Object,
 ///      sourcemeta::core::JSON::Type::Array});
 /// ```
-SOURCEMETA_FORCEINLINE inline auto
+SOURCEMETA_FORCEINLINE constexpr auto
 make_set(std::initializer_list<JSON::Type> types) -> JSON::TypeSet {
   JSON::TypeSet result;
   for (const auto type : types) {

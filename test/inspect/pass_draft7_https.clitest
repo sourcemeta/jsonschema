@@ -23,6 +23,10 @@ WRITE expected.txt UNTIL EOF
 1>     Parent            : <NONE>
 1>     Property Name     : no
 1>     Orphan            : no
+1>     Referenced        : no
+1>     Referenced Within : no
+1>     Vocabularies      :
+1>       http://json-schema.org/draft-07/schema# (required)
 1>
 1> (POINTER) URI: https://example.com#/$id
 1>     Type              : Static
@@ -36,6 +40,10 @@ WRITE expected.txt UNTIL EOF
 1>     Parent            :
 1>     Property Name     : no
 1>     Orphan            : no
+1>     Referenced        : no
+1>     Referenced Within : no
+1>     Vocabularies      :
+1>       http://json-schema.org/draft-07/schema# (required)
 1>
 1> (POINTER) URI: https://example.com#/$schema
 1>     Type              : Static
@@ -49,6 +57,10 @@ WRITE expected.txt UNTIL EOF
 1>     Parent            :
 1>     Property Name     : no
 1>     Orphan            : no
+1>     Referenced        : no
+1>     Referenced Within : no
+1>     Vocabularies      :
+1>       http://json-schema.org/draft-07/schema# (required)
 1>
 1> (POINTER) URI: https://example.com#/description
 1>     Type              : Static
@@ -62,6 +74,10 @@ WRITE expected.txt UNTIL EOF
 1>     Parent            :
 1>     Property Name     : no
 1>     Orphan            : no
+1>     Referenced        : no
+1>     Referenced Within : no
+1>     Vocabularies      :
+1>       http://json-schema.org/draft-07/schema# (required)
 1>
 1> (POINTER) URI: https://example.com#/title
 1>     Type              : Static
@@ -75,6 +91,10 @@ WRITE expected.txt UNTIL EOF
 1>     Parent            :
 1>     Property Name     : no
 1>     Orphan            : no
+1>     Referenced        : no
+1>     Referenced Within : no
+1>     Vocabularies      :
+1>       http://json-schema.org/draft-07/schema# (required)
 1>
 1> (POINTER) URI: https://example.com#/type
 1>     Type              : Static
@@ -88,10 +108,15 @@ WRITE expected.txt UNTIL EOF
 1>     Parent            :
 1>     Property Name     : no
 1>     Orphan            : no
+1>     Referenced        : no
+1>     Referenced Within : no
+1>     Vocabularies      :
+1>       http://json-schema.org/draft-07/schema# (required)
 1>
 1> (REFERENCE) ORIGIN: /$schema
 1>     Type              : Static
 1>     File Position     : 2:3
+1>     Original          : https://json-schema.org/draft-07/schema#
 1>     Destination       : https://json-schema.org/draft-07/schema
 1>     - (w/o fragment)  : https://json-schema.org/draft-07/schema
 1>     - (fragment)      : <NONE>

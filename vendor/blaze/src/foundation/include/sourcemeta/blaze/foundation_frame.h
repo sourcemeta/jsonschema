@@ -13,18 +13,14 @@
 #include <sourcemeta/core/json.h>
 #include <sourcemeta/core/jsonpointer.h>
 
-#include <concepts>      // std::invocable
-#include <cstdint>       // std::uint8_t
-#include <deque>         // std::deque
-#include <functional>    // std::reference_wrapper
-#include <map>           // std::map
-#include <optional>      // std::optional
-#include <set>           // std::set
-#include <tuple>         // std::tuple
-#include <unordered_map> // std::unordered_map
-#include <unordered_set> // std::unordered_set
-#include <utility>       // std::pair
-#include <vector>        // std::vector
+#include <concepts>   // std::invocable
+#include <cstdint>    // std::uint8_t
+#include <functional> // std::reference_wrapper
+#include <map>        // std::map
+#include <memory>     // std::unique_ptr
+#include <optional>   // std::optional
+#include <utility>    // std::pair
+#include <vector>     // std::vector
 
 namespace sourcemeta::blaze {
 
@@ -51,19 +47,17 @@ namespace sourcemeta::blaze {
 ///   }
 /// })JSON");
 ///
-/// sourcemeta::blaze::SchemaFrame
-///   frame{sourcemeta::blaze::SchemaFrame::Mode::References};
-///
-/// frame.analyse(document,
+/// const sourcemeta::blaze::SchemaFrame frame{
+///   sourcemeta::blaze::SchemaFrame::Mode::References, document,
 ///   sourcemeta::blaze::schema_walker,
-///   sourcemeta::blaze::schema_resolver);
+///   sourcemeta::blaze::schema_resolver};
 /// ```
 class SOURCEMETA_BLAZE_FOUNDATION_EXPORT SchemaFrame {
 public:
   /// The mode of framing. More extensive analysis can be compute and memory
   /// intensive. Each mode is a superset of the previous one. Note that
   /// sourcemeta::blaze::SchemaFrame::Mode::Root reports on a single schema,
-  /// so analysing a wrapper that holds more than one yields an empty frame
+  /// so framing a wrapper that holds more than one yields no locations
   enum class Mode : std::uint8_t { Root, Locations, References };
 
   /// How a caller-provided default identifier relates to the one that the
@@ -75,7 +69,7 @@ public:
     Fallback
   };
 
-  SchemaFrame(const Mode mode) : mode_{mode} {}
+  ~SchemaFrame();
 
   // We rely on internal caches that would be dangling otherwise
   SchemaFrame(const SchemaFrame &) = delete;
@@ -86,8 +80,8 @@ public:
   // Query the current mode that the schema frame was configured with
   [[nodiscard]] auto mode() const noexcept -> Mode { return this->mode_; }
 
-  /// A single entry in a JSON Schema reference map
-  struct ReferencesEntry {
+  /// A reference that the schema declares, as found by framing
+  struct Reference {
     std::string_view original;
     // TODO: This one is tricky to turn into a view, as there is no
     // location entry to point to if it is an external unresolved reference
@@ -96,17 +90,6 @@ public:
     std::string_view base;
     std::optional<std::string_view> fragment;
   };
-
-  /// A JSON Schema reference map is a mapping of a JSON Pointer
-  /// of a subschema to a destination static reference URI.
-  /// For convenience, the value consists of the URI on its entirety,
-  /// but also broken down by its potential fragment component.
-  /// The reference type is part of the key as it is possible to
-  /// have a static and a dynamic reference to the same location
-  /// on the same schema object.
-  using References =
-      std::map<std::pair<SchemaReferenceType, sourcemeta::core::WeakPointer>,
-               ReferencesEntry>;
 
 #if defined(__GNUC__)
 #pragma GCC diagnostic push
@@ -119,7 +102,6 @@ public:
   enum class LocationType : std::uint8_t {
     Resource,
     Anchor,
-    // TODO: Distinguish between a Pointer and a Keyword
     Pointer,
     Subschema
   };
@@ -140,55 +122,51 @@ public:
     bool orphan;
   };
 
-  /// A JSON Schema reference frame is a mapping of URIs to schema identifiers,
-  /// JSON Pointers within the schema, and subschemas dialects. We call it
-  /// reference frame as this mapping is essential for resolving references.
-  // TODO: Consider replacing std::map with std::flat_map once libc++
-  // supports it (__cpp_lib_flat_map) for better cache locality
-  using Locations =
-      // While it might seem weird that we namespace the location URIs with a
-      // reference type, it is essential for distinguishing schema resource URIs
-      // from `$recursiveRef: true` on another place of the schema schema
-      // resource, as otherwise they would both have the exact same URI, but
-      // point to different places.
-      std::map<std::pair<SchemaReferenceType, sourcemeta::core::JSON::String>,
-               Location>;
-
   /// A list of paths to frame within a schema wrapper
   using Paths = std::vector<sourcemeta::core::WeakPointer>;
 
-  /// Export the frame entries as JSON
+  /// Export the frame as JSON
   [[nodiscard]] auto to_json(
+      const SchemaResolver &resolver,
       const std::optional<sourcemeta::core::PointerPositionTracker> &tracker =
           std::nullopt) const -> sourcemeta::core::JSON;
 
-  /// Analyse a schema or set of schemas from a given root. Passing
-  /// multiple paths that have any overlap is undefined behaviour
+  /// Frame a schema or set of schemas from a given root. Passing multiple
+  /// paths that have any overlap is undefined behaviour
+  ///
+  /// A frame is analysed once, on construction, and is immutable afterwards
   ///
   /// The resulting locations point into the schema rather than copying from
   /// it, so the schema must outlive the frame. The same goes for
   /// `default_dialect`, as a location that has no dialect of its own reports
   /// the default back as a view into what the caller passed. In contrast,
   /// `default_id` is copied, so it does not need to outlive this call
-  auto analyse(const sourcemeta::core::JSON &root, const SchemaWalker &walker,
-               const SchemaResolver &resolver,
-               std::string_view default_dialect = "",
-               std::string_view default_id = "",
-               IdentifierMode identifier_mode = IdentifierMode::Additional,
-               const Paths &paths = {sourcemeta::core::EMPTY_WEAK_POINTER})
-      -> void;
-
-  /// Access the analysed schema locations
-  [[nodiscard]] auto locations() const noexcept -> const Locations &;
-
-  /// Access the analysed schema references
-  [[nodiscard]] auto references() const noexcept -> const References &;
+  SchemaFrame(const Mode mode, const sourcemeta::core::JSON &root,
+              const SchemaWalker &walker, const SchemaResolver &resolver,
+              std::string_view default_dialect = "",
+              std::string_view default_id = "",
+              IdentifierMode identifier_mode = IdentifierMode::Additional,
+              const Paths &paths = {sourcemeta::core::EMPTY_WEAK_POINTER});
 
   /// Get a specific reference entry by type and pointer
   [[nodiscard]] auto
   reference(const SchemaReferenceType type,
             const sourcemeta::core::WeakPointer &pointer) const
-      -> std::optional<std::reference_wrapper<const ReferencesEntry>>;
+      -> std::optional<std::reference_wrapper<const Reference>>;
+
+  /// Get a specific location entry by reference type and URI
+  [[nodiscard]] auto location(const SchemaReferenceType type,
+                              const std::string_view uri) const
+      -> std::optional<std::reference_wrapper<const Location>>;
+
+  /// The number of locations in the frame
+  [[nodiscard]] auto location_count() const noexcept -> std::size_t;
+
+  /// The number of references in the frame
+  [[nodiscard]] auto reference_count() const noexcept -> std::size_t;
+
+  /// Check whether the analysed schema makes use of dynamic referencing at all
+  [[nodiscard]] auto has_dynamic_references() const noexcept -> bool;
 
   /// Check whether the analysed schema has no external references
   [[nodiscard]] auto standalone() const noexcept -> bool;
@@ -204,7 +182,7 @@ public:
 
   /// Get the vocabularies associated with a location entry. The frame owns
   /// the result, computing it at most once per dialect that it came across.
-  /// Note that as with the meta-schemas that `analyse` found embedded in the
+  /// Note that as with the meta-schemas that framing found embedded in the
   /// document, what the first resolver reported for a given dialect is what
   /// every later call reports, whichever resolver they pass
   /// Get the meta-schema of the analysed schema, preferring one embedded in
@@ -256,6 +234,224 @@ public:
       -> std::pair<SchemaReferenceType,
                    std::optional<std::reference_wrapper<const Location>>>;
 
+  /// Iterate over every schema resource and subschema, skipping the pointer
+  /// and anchor entries that do not stand for a schema of their own
+  template <std::invocable<const Location &> F>
+  auto for_each_subschema(const F &callback) const -> void {
+    for (const auto &entry : this->locations_) {
+      if (entry.second.type == LocationType::Resource ||
+          entry.second.type == LocationType::Subschema) {
+        callback(entry.second);
+      }
+    }
+  }
+
+  /// Iterate over every schema resource and subschema strictly below the given
+  /// pointer
+  template <std::invocable<const Location &> F>
+  auto for_each_subschema_under(const sourcemeta::core::WeakPointer &pointer,
+                                const F &callback) const -> void {
+    for (const auto &entry : this->locations_) {
+      if ((entry.second.type == LocationType::Resource ||
+           entry.second.type == LocationType::Subschema) &&
+          entry.second.pointer.size() > pointer.size() &&
+          entry.second.pointer.starts_with(pointer)) {
+        callback(entry.second);
+      }
+    }
+  }
+
+  /// Check whether any schema resource or subschema satisfies the predicate
+  template <std::predicate<const Location &> F>
+  [[nodiscard]] auto any_subschema(const F &predicate) const -> bool {
+    for (const auto &entry : this->locations_) {
+      if ((entry.second.type == LocationType::Resource ||
+           entry.second.type == LocationType::Subschema) &&
+          predicate(entry.second)) {
+        return true;
+      }
+    }
+
+    return false;
+  }
+
+  /// Check whether any schema resource or subschema strictly below the given
+  /// pointer satisfies the predicate
+  template <std::predicate<const Location &> F>
+  [[nodiscard]] auto
+  any_subschema_under(const sourcemeta::core::WeakPointer &pointer,
+                      const F &predicate) const -> bool {
+    for (const auto &entry : this->locations_) {
+      if ((entry.second.type == LocationType::Resource ||
+           entry.second.type == LocationType::Subschema) &&
+          entry.second.pointer.size() > pointer.size() &&
+          entry.second.pointer.starts_with(pointer) &&
+          predicate(entry.second)) {
+        return true;
+      }
+    }
+
+    return false;
+  }
+
+  /// Iterate over every anchor of the given kind, along with its URI
+  template <std::invocable<std::string_view, const Location &> F>
+  auto for_each_anchor(const SchemaReferenceType type, const F &callback) const
+      -> void {
+    for (const auto &entry : this->locations_) {
+      if (entry.first.first == type &&
+          entry.second.type == LocationType::Anchor) {
+        callback(entry.first.second, entry.second);
+      }
+    }
+  }
+
+  /// Check whether any anchor of the given kind satisfies the predicate
+  template <std::predicate<std::string_view, const Location &> F>
+  [[nodiscard]] auto any_anchor(const SchemaReferenceType type,
+                                const F &predicate) const -> bool {
+    for (const auto &entry : this->locations_) {
+      if (entry.first.first == type &&
+          entry.second.type == LocationType::Anchor &&
+          predicate(entry.first.second, entry.second)) {
+        return true;
+      }
+    }
+
+    return false;
+  }
+
+  /// Iterate over every schema resource, along with its URI
+  template <std::invocable<std::string_view, const Location &> F>
+  auto for_each_resource(const F &callback) const -> void {
+    for (const auto &entry : this->locations_) {
+      if (entry.second.type == LocationType::Resource) {
+        callback(entry.first.second, entry.second);
+      }
+    }
+  }
+
+  /// Iterate over every location, whatever kind it is
+  template <
+      std::invocable<SchemaReferenceType, std::string_view, const Location &> F>
+  auto for_each_location(const F &callback) const -> void {
+    for (const auto &entry : this->locations_) {
+      callback(entry.first.first, entry.first.second, entry.second);
+    }
+  }
+
+  /// Check whether any location satisfies the predicate
+  template <
+      std::predicate<SchemaReferenceType, std::string_view, const Location &> F>
+  [[nodiscard]] auto any_location(const F &predicate) const -> bool {
+    for (const auto &entry : this->locations_) {
+      if (predicate(entry.first.first, entry.first.second, entry.second)) {
+        return true;
+      }
+    }
+
+    return false;
+  }
+
+  /// Iterate over every reference, along with the pointer it originates from
+  template <
+      std::invocable<SchemaReferenceType, const sourcemeta::core::WeakPointer &,
+                     const Reference &>
+          F>
+  auto for_each_reference(const F &callback) const -> void {
+    for (const auto &entry : this->references_) {
+      callback(entry.first.first, entry.first.second, entry.second);
+    }
+  }
+
+  /// Check whether any reference satisfies the predicate
+  template <
+      std::predicate<SchemaReferenceType, const sourcemeta::core::WeakPointer &,
+                     const Reference &>
+          F>
+  [[nodiscard]] auto any_reference(const F &predicate) const -> bool {
+    for (const auto &entry : this->references_) {
+      if (predicate(entry.first.first, entry.first.second, entry.second)) {
+        return true;
+      }
+    }
+
+    return false;
+  }
+
+  /// Iterate over every reference that originates at or below the given pointer
+  template <
+      std::invocable<SchemaReferenceType, const sourcemeta::core::WeakPointer &,
+                     const Reference &>
+          F>
+  auto for_each_reference_from(const sourcemeta::core::WeakPointer &pointer,
+                               const F &callback) const -> void {
+    for (const auto &entry : this->references_) {
+      if (entry.first.second.starts_with(pointer)) {
+        callback(entry.first.first, entry.first.second, entry.second);
+      }
+    }
+  }
+
+  /// Check whether any reference originating at or below the given pointer
+  /// satisfies the predicate
+  template <
+      std::predicate<SchemaReferenceType, const sourcemeta::core::WeakPointer &,
+                     const Reference &>
+          F>
+  [[nodiscard]] auto
+  any_reference_from(const sourcemeta::core::WeakPointer &pointer,
+                     const F &predicate) const -> bool {
+    for (const auto &entry : this->references_) {
+      if (entry.first.second.starts_with(pointer) &&
+          predicate(entry.first.first, entry.first.second, entry.second)) {
+        return true;
+      }
+    }
+
+    return false;
+  }
+
+  /// Iterate over every reference whose destination resolves at or below the
+  /// given pointer. Note that unlike
+  /// sourcemeta::blaze::SchemaFrame::has_references_to, which matches a
+  /// destination exactly, this covers the entire subtree
+  template <
+      std::invocable<SchemaReferenceType, const sourcemeta::core::WeakPointer &,
+                     const Reference &>
+          F>
+  auto for_each_reference_into(const sourcemeta::core::WeakPointer &pointer,
+                               const F &callback) const -> void {
+    for (const auto &entry : this->references_) {
+      const auto destination{this->traverse(entry.second.destination)};
+      if (destination.has_value() &&
+          destination.value().get().pointer.starts_with(pointer)) {
+        callback(entry.first.first, entry.first.second, entry.second);
+      }
+    }
+  }
+
+  /// Check whether any reference whose destination resolves at or below the
+  /// given pointer satisfies the predicate
+  template <
+      std::predicate<SchemaReferenceType, const sourcemeta::core::WeakPointer &,
+                     const Reference &>
+          F>
+  [[nodiscard]] auto
+  any_reference_into(const sourcemeta::core::WeakPointer &pointer,
+                     const F &predicate) const -> bool {
+    for (const auto &entry : this->references_) {
+      const auto destination{this->traverse(entry.second.destination)};
+      if (destination.has_value() &&
+          destination.value().get().pointer.starts_with(pointer) &&
+          predicate(entry.first.first, entry.first.second, entry.second)) {
+        return true;
+      }
+    }
+
+    return false;
+  }
+
   /// Iterate over all resource URIs in the frame
   template <std::invocable<std::string_view> F>
   auto for_each_resource_uri(const F &callback) const -> void {
@@ -268,9 +464,9 @@ public:
 
   /// Iterate over all unresolved references (where destination cannot be
   /// traversed)
-  template <std::invocable<const sourcemeta::core::WeakPointer &,
-                           const ReferencesEntry &>
-                F>
+  template <
+      std::invocable<const sourcemeta::core::WeakPointer &, const Reference &>
+          F>
   auto for_each_unresolved_reference(const F &callback) const -> void {
     for (const auto &[key, reference] : this->references_) {
       if (!this->traverse(reference.destination).has_value()) {
@@ -298,12 +494,6 @@ public:
   [[nodiscard]] auto relative_instance_location(const Location &location) const
       -> sourcemeta::core::WeakPointer;
 
-  /// Check if the frame has no analysed data
-  [[nodiscard]] auto empty() const noexcept -> bool;
-
-  /// Reset the frame, clearing all analysed data
-  auto reset() -> void;
-
   /// Determines if a location could be evaluated during validation
   [[nodiscard]] auto is_reachable(const Location &base,
                                   const Location &location,
@@ -311,6 +501,26 @@ public:
                                   const SchemaResolver &resolver) const -> bool;
 
 private:
+  /// A JSON Schema reference map is a mapping of a JSON Pointer
+  /// of a subschema to a destination static reference URI.
+  /// For convenience, the value consists of the URI on its entirety,
+  /// but also broken down by its potential fragment component.
+  /// The reference type is part of the key as it is possible to
+  /// have a static and a dynamic reference to the same location
+  /// on the same schema object.
+  using References =
+      std::map<std::pair<SchemaReferenceType, sourcemeta::core::WeakPointer>,
+               Reference>;
+
+  using Locations =
+      // While it might seem weird that we namespace the location URIs with a
+      // reference type, it is essential for distinguishing schema resource URIs
+      // from `$recursiveRef: true` on another place of the schema schema
+      // resource, as otherwise they would both have the exact same URI, but
+      // point to different places.
+      std::map<std::pair<SchemaReferenceType, sourcemeta::core::JSON::String>,
+               Location>;
+
   Mode mode_;
 // Exporting symbols that depends on the standard C++ library is considered
 // safe.
@@ -321,108 +531,10 @@ private:
   sourcemeta::core::JSON::String root_;
   Locations locations_;
   References references_;
-  // Custom meta-schemas that the resolver could not resolve but that were
-  // found embedded in the analysed document itself. The values point into
-  // the analysed document, which the frame must not outlive anyway
-  std::unordered_map<sourcemeta::core::JSON::String,
-                     const sourcemeta::core::JSON *>
-      probed_metaschemas_;
-  // Meta-schemas that the resolver produced, which we must own to hand out
-  // references to. A map, as handing out those references means they have to
-  // survive later insertions
-  mutable std::map<sourcemeta::core::JSON::String, sourcemeta::core::JSON>
-      metaschemas_;
-  // SchemaVocabularies are a function of the base dialect and dialect alone,
-  // and a schema only tends to make use of a handful of those. We own the
-  // dialect that we key on, as the view that the location holds may point into
-  // a default dialect that the caller of `analyse` only kept around for the
-  // duration of that call. A deque, as handing out references to the
-  // vocabularies means they must survive later insertions
-  mutable std::deque<std::tuple<
-      SchemaBaseDialect, sourcemeta::core::JSON::String, SchemaVocabularies>>
-      vocabularies_;
-  mutable std::unordered_map<
-      std::reference_wrapper<const sourcemeta::core::WeakPointer>,
-      std::vector<const Location *>, sourcemeta::core::WeakPointer::Hasher,
-      sourcemeta::core::WeakPointer::Comparator>
-      pointer_to_location_;
-  mutable std::unordered_set<
-      std::reference_wrapper<const sourcemeta::core::WeakPointer>,
-      sourcemeta::core::WeakPointer::Hasher,
-      sourcemeta::core::WeakPointer::Comparator>
-      pointers_with_non_orphan_;
-  using ReachabilityCache =
-      std::unordered_map<const sourcemeta::core::WeakPointer *, bool>;
-  struct ReachabilityKey {
-    const sourcemeta::core::WeakPointer *pointer;
-    bool orphan;
-    auto operator==(const ReachabilityKey &other) const noexcept -> bool {
-      return this->pointer == other.pointer && this->orphan == other.orphan;
-    }
-  };
-  struct ReachabilityKeyHasher {
-    auto operator()(const ReachabilityKey &key) const noexcept -> std::size_t {
-      return std::hash<const void *>{}(key.pointer) ^
-             (std::hash<bool>{}(key.orphan) << 1);
-    }
-  };
-  mutable std::unordered_map<ReachabilityKey, ReachabilityCache,
-                             ReachabilityKeyHasher>
-      reachability_;
-  mutable std::unordered_map<
-      std::reference_wrapper<const sourcemeta::core::WeakPointer>,
-      std::vector<const sourcemeta::core::WeakPointer *>,
-      sourcemeta::core::WeakPointer::Hasher,
-      sourcemeta::core::WeakPointer::Comparator>
-      references_by_destination_;
-  mutable std::unordered_set<
-      std::reference_wrapper<const sourcemeta::core::WeakPointer>,
-      sourcemeta::core::WeakPointer::Hasher,
-      sourcemeta::core::WeakPointer::Comparator>
-      location_members_children_;
-  mutable std::unordered_map<
-      std::reference_wrapper<const sourcemeta::core::WeakPointer>,
-      std::vector<const Location *>, sourcemeta::core::WeakPointer::Hasher,
-      sourcemeta::core::WeakPointer::Comparator>
-      descendants_by_pointer_;
-  struct PotentialSource {
-    const sourcemeta::core::WeakPointer *source_pointer;
-    sourcemeta::core::WeakPointer source_parent;
-    bool crosses;
-  };
-  mutable std::unordered_map<const Location *, std::vector<PotentialSource>>
-      potential_sources_by_location_;
-  struct ReachabilityEdge {
-    const Location *target;
-    bool orphan_context_only;
-    bool is_reference;
-  };
-  mutable std::unordered_map<const Location *, std::vector<ReachabilityEdge>>
-      reachability_graph_;
-  mutable std::unordered_map<
-      std::reference_wrapper<const sourcemeta::core::WeakPointer>,
-      const sourcemeta::core::WeakPointer *,
-      sourcemeta::core::WeakPointer::Hasher,
-      sourcemeta::core::WeakPointer::Comparator>
-      canonical_pointer_;
-  mutable std::unordered_map<const Location *,
-                             const sourcemeta::core::WeakPointer *>
-      location_to_canonical_;
-  bool standalone_{false};
-
-  auto populate_pointer_to_location() const -> void;
-  auto populate_reference_graph() const -> void;
-  auto populate_location_members(const SchemaWalker &walker,
-                                 const SchemaResolver &resolver) const -> void;
-  auto populate_descendants() const -> void;
-  auto populate_potential_sources(const SchemaWalker &walker,
-                                  const SchemaResolver &resolver) const -> void;
-  auto populate_reachability_graph(const SchemaWalker &walker,
-                                   const SchemaResolver &resolver) const
-      -> void;
-  auto populate_reachability(const Location &base, const SchemaWalker &walker,
-                             const SchemaResolver &resolver) const
-      -> const ReachabilityCache &;
+  // What the frame derives rather than is, kept out of line so that this
+  // declaration stays down to the schema it framed
+  struct Cache;
+  std::unique_ptr<Cache> cache_;
 #if defined(_MSC_VER)
 #pragma warning(default : 4251 4275)
 #endif

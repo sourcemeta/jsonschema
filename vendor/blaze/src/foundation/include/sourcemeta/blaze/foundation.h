@@ -29,10 +29,11 @@
 namespace sourcemeta::blaze {
 
 /// @ingroup foundation
-/// A default resolver that relies on built-in official schemas.
+/// A default resolver that relies on built-in official schemas. The schemas
+/// are parsed once and handed back by reference, so they must not outlive the
+/// program.
 SOURCEMETA_BLAZE_FOUNDATION_EXPORT
-auto schema_resolver(const std::string_view identifier)
-    -> std::optional<sourcemeta::core::JSON>;
+auto schema_resolver(const std::string_view identifier) -> SchemaResolverResult;
 
 /// @ingroup foundation
 /// Check if a given identifier corresponds to a known built-in schema

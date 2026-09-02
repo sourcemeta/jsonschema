@@ -32,11 +32,10 @@ auto wrap(const sourcemeta::core::JSON &schema, const SchemaFrame &frame,
   }
 
   assert(sourcemeta::core::try_get(schema, pointer));
-  const auto has_internal_references{
-      std::any_of(frame.references().cbegin(), frame.references().cend(),
-                  [&pointer](const auto &reference) -> auto {
-                    return reference.first.second.starts_with(pointer);
-                  })};
+  const auto has_internal_references{frame.any_reference_from(
+      pointer,
+      [](const SchemaReferenceType, const sourcemeta::core::WeakPointer &,
+         const SchemaFrame::Reference &) -> bool { return true; })};
 
   if (!has_internal_references) {
     auto subschema{sourcemeta::core::get(schema, pointer)};
@@ -67,8 +66,8 @@ auto wrap(const sourcemeta::core::JSON &schema, const SchemaFrame &frame,
   constexpr std::string_view WRAPPER_IDENTIFIER{"__sourcemeta-core-wrap__"};
   // Deliberately framed without a default identifier, so that the root comes
   // back empty exactly when the schema declares none of its own
-  SchemaFrame declared_frame{SchemaFrame::Mode::Root};
-  declared_frame.analyse(copy, walker, resolver, location.dialect);
+  SchemaFrame declared_frame{SchemaFrame::Mode::Root, copy, walker, resolver,
+                             location.dialect};
   const std::string_view maybe_id{declared_frame.root()};
   const auto id{maybe_id.empty() ? WRAPPER_IDENTIFIER : maybe_id};
 

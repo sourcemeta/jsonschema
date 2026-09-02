@@ -4,6 +4,7 @@
 #include <sourcemeta/core/yaml.h>
 
 #include <iostream> // std::cout
+#include <optional> // std::optional
 #include <ostream>  // std::ostream
 #include <utility>  // std::unreachable
 
@@ -14,141 +15,185 @@
 #include "resolver.h"
 #include "utils.h"
 
+auto print_location(std::ostream &stream,
+                    const sourcemeta::blaze::SchemaFrame &frame,
+                    const sourcemeta::blaze::SchemaResolver &resolver,
+                    const sourcemeta::core::PointerPositionTracker &positions,
+                    const sourcemeta::blaze::SchemaReferenceType type,
+                    const std::string_view uri,
+                    const sourcemeta::blaze::SchemaFrame::Location &location)
+    -> void {
+  switch (location.type) {
+    case sourcemeta::blaze::SchemaFrame::LocationType::Resource:
+      stream << "(RESOURCE)";
+      break;
+    case sourcemeta::blaze::SchemaFrame::LocationType::Anchor:
+      stream << "(ANCHOR)";
+      break;
+    case sourcemeta::blaze::SchemaFrame::LocationType::Pointer:
+      stream << "(POINTER)";
+      break;
+    case sourcemeta::blaze::SchemaFrame::LocationType::Subschema:
+      stream << "(SUBSCHEMA)";
+      break;
+    default:
+      std::unreachable();
+  }
+
+  stream << " URI: " << uri << "\n";
+
+  if (type == sourcemeta::blaze::SchemaReferenceType::Static) {
+    stream << "    Type              : Static\n";
+  } else {
+    stream << "    Type              : Dynamic\n";
+  }
+
+  stream << "    Root              : "
+         << (frame.root().empty() ? "<ANONYMOUS>" : frame.root()) << "\n";
+
+  if (location.pointer.empty()) {
+    stream << "    Pointer           :\n";
+  } else {
+    stream << "    Pointer           : ";
+    sourcemeta::core::stringify(location.pointer, stream);
+    stream << "\n";
+  }
+
+  const auto position{
+      positions.get(sourcemeta::core::to_pointer(location.pointer))};
+  if (position.has_value()) {
+    const auto [line, column, end_line, end_column] = position.value();
+    stream << "    File Position     : " << line << ":" << column << "\n";
+  } else {
+    stream << "    File Position     : <unknown>:<unknown>\n";
+  }
+
+  stream << "    Base              : " << location.base << "\n";
+
+  const auto relative_pointer{
+      location.pointer.slice(location.relative_pointer)};
+  if (relative_pointer.empty()) {
+    stream << "    Relative Pointer  :\n";
+  } else {
+    stream << "    Relative Pointer  : ";
+    sourcemeta::core::stringify(relative_pointer, stream);
+    stream << "\n";
+  }
+
+  stream << "    Dialect           : " << location.dialect << "\n";
+  stream << "    Base Dialect      : " << location.base_dialect << "\n";
+
+  if (location.parent.has_value()) {
+    if (location.parent.value().empty()) {
+      stream << "    Parent            :\n";
+    } else {
+      stream << "    Parent            : ";
+      sourcemeta::core::stringify(location.parent.value(), stream);
+      stream << "\n";
+    }
+  } else {
+    stream << "    Parent            : <NONE>\n";
+  }
+
+  if (location.property_name) {
+    stream << "    Property Name     : yes\n";
+  } else {
+    stream << "    Property Name     : no\n";
+  }
+
+  if (location.orphan) {
+    stream << "    Orphan            : yes\n";
+  } else {
+    stream << "    Orphan            : no\n";
+  }
+
+  if (frame.has_references_to(location.pointer)) {
+    stream << "    Referenced        : yes\n";
+  } else {
+    stream << "    Referenced        : no\n";
+  }
+
+  if (frame.has_references_through(location.pointer)) {
+    stream << "    Referenced Within : yes\n";
+  } else {
+    stream << "    Referenced Within : no\n";
+  }
+
+  stream << "    Vocabularies      :\n";
+  frame.vocabularies(location, resolver)
+      .for_each(
+          [&stream](
+              const sourcemeta::blaze::SchemaVocabularies::URI &vocabulary,
+              const bool required) -> void {
+            stream << "      " << vocabulary << " ("
+                   << (required ? "required" : "optional") << ")\n";
+          });
+}
+
+auto print_reference(std::ostream &stream,
+                     const sourcemeta::core::PointerPositionTracker &positions,
+                     const sourcemeta::blaze::SchemaReferenceType type,
+                     const sourcemeta::core::WeakPointer &origin,
+                     const sourcemeta::blaze::SchemaFrame::Reference &reference)
+    -> void {
+  stream << "(REFERENCE) ORIGIN: ";
+  sourcemeta::core::stringify(origin, stream);
+  stream << "\n";
+
+  if (type == sourcemeta::blaze::SchemaReferenceType::Static) {
+    stream << "    Type              : Static\n";
+  } else {
+    stream << "    Type              : Dynamic\n";
+  }
+
+  const auto position{positions.get(sourcemeta::core::to_pointer(origin))};
+  if (position.has_value()) {
+    const auto [line, column, end_line, end_column] = position.value();
+    stream << "    File Position     : " << line << ":" << column << "\n";
+  } else {
+    stream << "    File Position     : <unknown>:<unknown>\n";
+  }
+
+  stream << "    Original          : " << reference.original << "\n";
+  stream << "    Destination       : " << reference.destination << "\n";
+  stream << "    - (w/o fragment)  : "
+         << (reference.base.empty() ? "<NONE>" : reference.base) << "\n";
+  stream << "    - (fragment)      : " << reference.fragment.value_or("<NONE>")
+         << "\n";
+}
+
 auto print_frame(std::ostream &stream,
                  const sourcemeta::blaze::SchemaFrame &frame,
+                 const sourcemeta::blaze::SchemaResolver &resolver,
                  const sourcemeta::core::PointerPositionTracker &positions)
     -> void {
-  if (frame.locations().empty()) {
+  if (frame.location_count() == 0) {
     return;
   }
 
-  for (auto iterator = frame.locations().cbegin();
-       iterator != frame.locations().cend(); iterator++) {
-    const auto &location{*iterator};
+  bool first{true};
+  frame.for_each_location(
+      [&stream, &frame, &resolver, &positions, &first](
+          const sourcemeta::blaze::SchemaReferenceType type,
+          const std::string_view uri,
+          const sourcemeta::blaze::SchemaFrame::Location &location) -> void {
+        if (first) {
+          first = false;
+        } else {
+          stream << "\n";
+        }
 
-    switch (location.second.type) {
-      case sourcemeta::blaze::SchemaFrame::LocationType::Resource:
-        stream << "(RESOURCE)";
-        break;
-      case sourcemeta::blaze::SchemaFrame::LocationType::Anchor:
-        stream << "(ANCHOR)";
-        break;
-      case sourcemeta::blaze::SchemaFrame::LocationType::Pointer:
-        stream << "(POINTER)";
-        break;
-      case sourcemeta::blaze::SchemaFrame::LocationType::Subschema:
-        stream << "(SUBSCHEMA)";
-        break;
-      default:
-        std::unreachable();
-    }
+        print_location(stream, frame, resolver, positions, type, uri, location);
+      });
 
-    stream << " URI: " << location.first.second << "\n";
-
-    if (location.first.first ==
-        sourcemeta::blaze::SchemaReferenceType::Static) {
-      stream << "    Type              : Static\n";
-    } else {
-      stream << "    Type              : Dynamic\n";
-    }
-
-    stream << "    Root              : "
-           << (frame.root().empty() ? "<ANONYMOUS>" : frame.root()) << "\n";
-
-    if (location.second.pointer.empty()) {
-      stream << "    Pointer           :\n";
-    } else {
-      stream << "    Pointer           : ";
-      sourcemeta::core::stringify(location.second.pointer, stream);
-      stream << "\n";
-    }
-
-    const auto position{
-        positions.get(sourcemeta::core::to_pointer(location.second.pointer))};
-    if (position.has_value()) {
-      const auto [line, column, end_line, end_column] = position.value();
-      stream << "    File Position     : " << line << ":" << column << "\n";
-    } else {
-      stream << "    File Position     : <unknown>:<unknown>\n";
-    }
-
-    stream << "    Base              : " << location.second.base << "\n";
-
-    const auto relative_pointer{
-        location.second.pointer.slice(location.second.relative_pointer)};
-    if (relative_pointer.empty()) {
-      stream << "    Relative Pointer  :\n";
-    } else {
-      stream << "    Relative Pointer  : ";
-      sourcemeta::core::stringify(relative_pointer, stream);
-      stream << "\n";
-    }
-
-    stream << "    Dialect           : " << location.second.dialect << "\n";
-    stream << "    Base Dialect      : " << location.second.base_dialect
-           << "\n";
-
-    if (location.second.parent.has_value()) {
-      if (location.second.parent.value().empty()) {
-        stream << "    Parent            :\n";
-      } else {
-        stream << "    Parent            : ";
-        sourcemeta::core::stringify(location.second.parent.value(), stream);
+  frame.for_each_reference(
+      [&stream, &positions](
+          const sourcemeta::blaze::SchemaReferenceType type,
+          const sourcemeta::core::WeakPointer &origin,
+          const sourcemeta::blaze::SchemaFrame::Reference &reference) -> void {
         stream << "\n";
-      }
-    } else {
-      stream << "    Parent            : <NONE>\n";
-    }
-
-    if (location.second.property_name) {
-      stream << "    Property Name     : yes\n";
-    } else {
-      stream << "    Property Name     : no\n";
-    }
-
-    if (location.second.orphan) {
-      stream << "    Orphan            : yes\n";
-    } else {
-      stream << "    Orphan            : no\n";
-    }
-
-    if (std::next(iterator) != frame.locations().cend()) {
-      stream << "\n";
-    }
-  }
-
-  for (auto iterator = frame.references().cbegin();
-       iterator != frame.references().cend(); iterator++) {
-    stream << "\n";
-    const auto &reference{*iterator};
-    stream << "(REFERENCE) ORIGIN: ";
-    sourcemeta::core::stringify(reference.first.second, stream);
-    stream << "\n";
-
-    if (reference.first.first ==
-        sourcemeta::blaze::SchemaReferenceType::Static) {
-      stream << "    Type              : Static\n";
-    } else {
-      stream << "    Type              : Dynamic\n";
-    }
-
-    const auto position{
-        positions.get(sourcemeta::core::to_pointer(reference.first.second))};
-    if (position.has_value()) {
-      const auto [line, column, end_line, end_column] = position.value();
-      stream << "    File Position     : " << line << ":" << column << "\n";
-    } else {
-      stream << "    File Position     : <unknown>:<unknown>\n";
-    }
-
-    stream << "    Destination       : " << reference.second.destination
-           << "\n";
-    stream << "    - (w/o fragment)  : "
-           << (reference.second.base.empty() ? "<NONE>" : reference.second.base)
-           << "\n";
-    stream << "    - (fragment)      : "
-           << reference.second.fragment.value_or("<NONE>") << "\n";
-  }
+        print_reference(stream, positions, type, origin, reference);
+      });
 }
 
 auto sourcemeta::jsonschema::inspect(const sourcemeta::core::Options &options)
@@ -197,14 +242,14 @@ auto sourcemeta::jsonschema::inspect(const sourcemeta::core::Options &options)
       read_configuration(options, configuration_path, schema_config_base)};
   const auto dialect{default_dialect(options, configuration)};
 
-  sourcemeta::blaze::SchemaFrame frame{
-      sourcemeta::blaze::SchemaFrame::Mode::References};
+  const auto &custom_resolver{
+      resolver(options, options.contains("http"), dialect, configuration)};
+
+  std::optional<sourcemeta::blaze::SchemaFrame> frame;
 
   try {
-    const auto &custom_resolver{
-        resolver(options, options.contains("http"), dialect, configuration)};
-    frame.analyse(schema, sourcemeta::blaze::schema_walker, custom_resolver,
-                  dialect,
+    frame.emplace(sourcemeta::blaze::SchemaFrame::Mode::References, schema,
+                  sourcemeta::blaze::schema_walker, custom_resolver, dialect,
                   sourcemeta::jsonschema::default_id(schema_resolution_base,
                                                      schema_from_stdin),
                   sourcemeta::blaze::SchemaFrame::IdentifierMode::Fallback);
@@ -247,9 +292,10 @@ auto sourcemeta::jsonschema::inspect(const sourcemeta::core::Options &options)
   }
 
   if (options.contains("json")) {
-    sourcemeta::core::prettify(frame.to_json(positions), std::cout);
+    sourcemeta::core::prettify(
+        frame.value().to_json(custom_resolver, positions), std::cout);
     std::cout << "\n";
   } else {
-    print_frame(std::cout, frame, positions);
+    print_frame(std::cout, frame.value(), custom_resolver, positions);
   }
 }

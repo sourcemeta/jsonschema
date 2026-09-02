@@ -28,8 +28,8 @@
 #include <string>      // std::string
 #include <string_view> // std::string_view
 #include <thread>      // std::this_thread::sleep_for
-#include <utility> // std::pair, std::piecewise_construct, std::forward_as_tuple
-#include <vector>  // std::vector
+#include <utility> // std::pair, std::piecewise_construct, std::forward_as_tuple, std::move
+#include <vector> // std::vector
 
 namespace sourcemeta::jsonschema {
 
@@ -193,7 +193,7 @@ static inline auto fetch_schema(const sourcemeta::core::Options &options,
                                 std::string_view identifier,
                                 const bool remote = true,
                                 const bool bundle = false)
-    -> std::optional<sourcemeta::core::JSON> {
+    -> sourcemeta::blaze::SchemaResolverResult {
   auto official_result{sourcemeta::blaze::schema_resolver(identifier)};
   if (official_result.has_value()) {
     return official_result;
@@ -240,32 +240,30 @@ static inline auto fetch_schema(const sourcemeta::core::Options &options,
 }
 
 static inline auto
-ensure_identifier(sourcemeta::core::JSON &schema, const std::string_view target,
-                  const sourcemeta::blaze::SchemaResolver &resolver) -> void {
+anonymous_base_dialect(const sourcemeta::core::JSON &schema,
+                       const sourcemeta::blaze::SchemaResolver &resolver)
+    -> std::optional<sourcemeta::blaze::SchemaBaseDialect> {
   if (!schema.is_object()) {
-    return;
+    return std::nullopt;
   }
-
-  sourcemeta::blaze::SchemaFrame frame{
-      sourcemeta::blaze::SchemaFrame::Mode::Root};
 
   try {
-    frame.analyse(schema, sourcemeta::blaze::schema_walker, resolver);
+    const sourcemeta::blaze::SchemaFrame frame{
+        sourcemeta::blaze::SchemaFrame::Mode::Root, schema,
+        sourcemeta::blaze::schema_walker, resolver};
+    if (!frame.root().empty()) {
+      return std::nullopt;
+    }
+
+    const auto location{frame.root_location()};
+    if (!location.has_value()) {
+      return std::nullopt;
+    }
+
+    return location.value().get().base_dialect;
   } catch (const sourcemeta::blaze::SchemaUnknownBaseDialectError &) {
-    return;
+    return std::nullopt;
   }
-
-  if (!frame.root().empty()) {
-    return;
-  }
-
-  const auto location{frame.root_location()};
-  if (!location.has_value()) {
-    return;
-  }
-
-  sourcemeta::blaze::schema_reidentify(schema, target,
-                                       location.value().get().base_dialect);
 }
 
 class CustomResolver {
@@ -349,6 +347,15 @@ public:
     }
   }
 
+  // Prevent accidental copies, as every schema this imported would come
+  // along. Passing this resolver by value to anything that takes a
+  // sourcemeta::blaze::SchemaResolver would do exactly that
+  CustomResolver(const CustomResolver &) = delete;
+  auto operator=(const CustomResolver &) -> CustomResolver & = delete;
+  CustomResolver(CustomResolver &&) = default;
+  auto operator=(CustomResolver &&) -> CustomResolver & = delete;
+  ~CustomResolver() = default;
+
   auto add(const sourcemeta::core::JSON &schema,
            const std::filesystem::path &origin,
            const std::string_view default_dialect = "",
@@ -359,53 +366,58 @@ public:
 
     // Registering the top-level schema is not enough. We need to check
     // and register every embedded schema resource too
-    sourcemeta::blaze::SchemaFrame frame{
-        sourcemeta::blaze::SchemaFrame::Mode::References};
-    frame.analyse(schema, sourcemeta::blaze::schema_walker, *this,
-                  default_dialect, default_id);
+    const sourcemeta::blaze::SchemaFrame frame{
+        sourcemeta::blaze::SchemaFrame::Mode::References,
+        schema,
+        sourcemeta::blaze::schema_walker,
+        std::ref(*this),
+        default_dialect,
+        default_id};
 
     bool added_any_schema{false};
-    for (const auto &[key, entry] : frame.locations()) {
-      if (entry.type !=
-          sourcemeta::blaze::SchemaFrame::LocationType::Resource) {
-        continue;
-      }
+    frame.for_each_resource(
+        [this, &schema, &frame, &origin, &callback, &added_any_schema](
+            const std::string_view uri,
+            const sourcemeta::blaze::SchemaFrame::Location &entry) -> void {
+          auto subschema{sourcemeta::core::get(schema, entry.pointer)};
+          // Reject a resource whose vocabularies we cannot make sense of
+          // upfront, rather than at the point some consumer relies on them
+          [[maybe_unused]] const auto &subschema_vocabularies{
+              frame.vocabularies(entry, std::ref(*this))};
 
-      auto subschema{sourcemeta::core::get(schema, entry.pointer)};
-      const auto subschema_vocabularies{frame.vocabularies(entry, *this)};
+          // Given we might be resolving embedded resources, we fully
+          // resolve their dialect and identifiers, otherwise the
+          // consumer might have no idea what to do with them
+          subschema.assign("$schema", sourcemeta::core::JSON{entry.dialect});
+          sourcemeta::blaze::schema_reidentify(subschema, uri,
+                                               entry.base_dialect);
 
-      // Given we might be resolving embedded resources, we fully
-      // resolve their dialect and identifiers, otherwise the
-      // consumer might have no idea what to do with them
-      subschema.assign("$schema", sourcemeta::core::JSON{entry.dialect});
-      sourcemeta::blaze::schema_reidentify(subschema, key.second,
-                                           entry.base_dialect);
+          const std::string identifier{uri};
+          const auto result{this->schemas.emplace(identifier, subschema)};
+          if (!result.second && result.first->second != subschema) {
+            const auto other{this->origins.find(identifier)};
+            assert(other != this->origins.cend());
+            throw SchemaIdentifierConflictError{
+                identifier, sourcemeta::core::to_pointer(entry.pointer),
+                other->second.first, other->second.second};
+          }
 
-      const auto result{this->schemas.emplace(key.second, subschema)};
-      if (!result.second && result.first->second != subschema) {
-        const auto other{this->origins.find(key.second)};
-        assert(other != this->origins.cend());
-        throw SchemaIdentifierConflictError{
-            key.second, sourcemeta::core::to_pointer(entry.pointer),
-            other->second.first, other->second.second};
-      }
+          this->origins.emplace(
+              identifier, std::make_pair(origin, sourcemeta::core::to_pointer(
+                                                     entry.pointer)));
 
-      this->origins.emplace(
-          key.second,
-          std::make_pair(origin, sourcemeta::core::to_pointer(entry.pointer)));
+          if (callback) {
+            callback(identifier);
+          }
 
-      if (callback) {
-        callback(key.second);
-      }
-
-      added_any_schema = true;
-    }
+          added_any_schema = true;
+        });
 
     return added_any_schema;
   }
 
   auto operator()(std::string_view identifier) const
-      -> std::optional<sourcemeta::core::JSON> {
+      -> sourcemeta::blaze::SchemaResolverResult {
     const std::string string_identifier{identifier};
     const auto mapped_result = this->configuration_.and_then(
         [&string_identifier](const sourcemeta::blaze::Configuration &config)
@@ -419,16 +431,29 @@ public:
                                 << target << " given the configuration file\n";
     }
 
-    if (this->schemas.contains(target)) {
-      return this->schemas.at(target);
+    const auto match{this->schemas.find(target)};
+    if (match != this->schemas.cend()) {
+      return match->second;
     }
 
     auto fetched{fetch_schema(this->options_, target, this->remote_)};
-    if (fetched.has_value()) {
-      ensure_identifier(fetched.value(), string_identifier, *this);
+    if (!fetched.has_value()) {
+      return fetched;
     }
 
-    return fetched;
+    // Only a schema that declares no identifier of its own needs one, and
+    // taking ownership just to set it would defeat handing schemas back by
+    // reference
+    const auto base_dialect{
+        anonymous_base_dialect(fetched.value(), std::ref(*this))};
+    if (!base_dialect.has_value()) {
+      return fetched;
+    }
+
+    auto schema{std::move(fetched).to_owned()};
+    sourcemeta::blaze::schema_reidentify(schema, string_identifier,
+                                         base_dialect.value());
+    return schema;
   }
 
 private:
@@ -528,22 +553,27 @@ inline auto
 resolver(const sourcemeta::core::Options &options, const bool remote,
          const std::string_view default_dialect,
          const std::optional<sourcemeta::blaze::Configuration> &configuration)
-    -> const CustomResolver & {
+    -> const sourcemeta::blaze::SchemaResolver & {
   using CacheKey = std::pair<bool, std::string>;
   static std::map<CacheKey, CustomResolver> resolver_cache;
+  // What callers get is a handle that refers back to the cached resolver,
+  // as the resolver itself must never be copied into the callee
+  static std::map<CacheKey, sourcemeta::blaze::SchemaResolver> handle_cache;
   const CacheKey cache_key{remote, std::string{default_dialect}};
 
-  // Check if resolver is already cached
-  auto iterator{resolver_cache.find(cache_key)};
-  if (iterator != resolver_cache.end()) {
-    return iterator->second;
+  const auto handle{handle_cache.find(cache_key)};
+  if (handle != handle_cache.cend()) {
+    return handle->second;
   }
 
-  // Construct resolver directly in cache
-  auto [inserted_iterator, inserted] = resolver_cache.emplace(
-      std::piecewise_construct, std::forward_as_tuple(cache_key),
-      std::forward_as_tuple(options, configuration, remote, default_dialect));
-  return inserted_iterator->second;
+  const auto iterator{
+      resolver_cache
+          .emplace(std::piecewise_construct, std::forward_as_tuple(cache_key),
+                   std::forward_as_tuple(options, configuration, remote,
+                                         default_dialect))
+          .first};
+  return handle_cache.emplace(cache_key, std::ref(iterator->second))
+      .first->second;
 }
 
 } // namespace sourcemeta::jsonschema

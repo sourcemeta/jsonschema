@@ -57,10 +57,13 @@ auto sourcemeta::jsonschema::compile(const sourcemeta::core::Options &options)
           sourcemeta::blaze::BundleMode::References, dialect,
           schema_default_id)};
 
-      sourcemeta::blaze::SchemaFrame frame{
-          sourcemeta::blaze::SchemaFrame::Mode::References};
-      frame.analyse(bundled, sourcemeta::blaze::schema_walker, custom_resolver,
-                    dialect, schema_default_id);
+      const sourcemeta::blaze::SchemaFrame frame{
+          sourcemeta::blaze::SchemaFrame::Mode::References,
+          bundled,
+          sourcemeta::blaze::schema_walker,
+          custom_resolver,
+          dialect,
+          schema_default_id};
 
       std::string entrypoint_uri;
       try {
@@ -92,6 +95,17 @@ auto sourcemeta::jsonschema::compile(const sourcemeta::core::Options &options)
   } catch (const sourcemeta::blaze::CompilerInvalidRegexError &error) {
     throw sourcemeta::core::FileError<
         sourcemeta::blaze::CompilerInvalidRegexError>(schema_path, error);
+  } catch (const sourcemeta::blaze::CompilerError &error) {
+    const auto position{parsed_schema.positions.get(error.location())};
+    if (position.has_value()) {
+      throw PositionError<
+          sourcemeta::core::FileError<sourcemeta::blaze::CompilerError>>(
+          std::get<0>(position.value()), std::get<1>(position.value()),
+          schema_path, error);
+    }
+
+    throw sourcemeta::core::FileError<sourcemeta::blaze::CompilerError>(
+        schema_path, error);
   } catch (
       const sourcemeta::blaze::CompilerReferenceTargetNotSchemaError &error) {
     throw sourcemeta::core::FileError<

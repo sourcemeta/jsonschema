@@ -5,6 +5,7 @@
 #include <algorithm>     // std::erase_if
 #include <cassert>       // assert
 #include <functional>    // std::hash
+#include <optional>      // std::optional
 #include <sstream>       // std::ostringstream
 #include <tuple>         // std::tuple
 #include <unordered_set> // std::unordered_set
@@ -56,48 +57,43 @@ auto check_rules(
   std::size_t subschema_count{0};
   std::size_t subschema_failures{0};
 
-  for (const auto &entry : frame.locations()) {
-    if (entry.second.type !=
-            sourcemeta::blaze::SchemaFrame::LocationType::Resource &&
-        entry.second.type !=
-            sourcemeta::blaze::SchemaFrame::LocationType::Subschema) {
-      continue;
-    }
+  frame.for_each_subschema(
 
-    const auto [visited_iterator, inserted] =
-        visited.insert(sourcemeta::core::to_pointer(entry.second.pointer));
-    if (!inserted) {
-      continue;
-    }
-    const auto &entry_pointer{*visited_iterator};
+      [&](const sourcemeta::blaze::SchemaFrame::Location &location) -> void {
+        const auto [visited_iterator, inserted] =
+            visited.insert(sourcemeta::core::to_pointer(location.pointer));
+        if (!inserted) {
+          return;
+        }
+        const auto &entry_pointer{*visited_iterator};
 
-    subschema_count += 1;
+        subschema_count += 1;
 
-    const auto &current{sourcemeta::core::get(schema, entry_pointer)};
-    const auto &current_vocabularies{
-        frame.vocabularies(entry.second, resolver)};
+        const auto &current{sourcemeta::core::get(schema, entry_pointer)};
+        const auto &current_vocabularies{
+            frame.vocabularies(location, resolver)};
 
-    bool subschema_failed{false};
-    for (const auto &[rule, mutates, _] : rules) {
-      if (non_mutating_only && mutates) {
-        continue;
-      }
+        bool subschema_failed{false};
+        for (const auto &[rule, mutates, _] : rules) {
+          if (non_mutating_only && mutates) {
+            continue;
+          }
 
-      const auto outcome{rule->check(current, schema, current_vocabularies,
-                                     walker, resolver, frame, entry.second,
-                                     exclude_keyword, is_metaschema)};
-      if (outcome.applies) {
-        subschema_failed = true;
-        callback(entry_pointer, rule->name(), rule->message(), outcome,
-                 mutates);
-      }
-    }
+          const auto outcome{rule->check(current, schema, current_vocabularies,
+                                         walker, resolver, frame, location,
+                                         exclude_keyword, is_metaschema)};
+          if (outcome.applies) {
+            subschema_failed = true;
+            callback(entry_pointer, rule->name(), rule->message(), outcome,
+                     mutates);
+          }
+        }
 
-    if (subschema_failed) {
-      subschema_failures += 1;
-      result = false;
-    }
-  }
+        if (subschema_failed) {
+          subschema_failures += 1;
+          result = false;
+        }
+      });
 
   return {result,
           calculate_health_percentage(subschema_count, subschema_failures)};
@@ -174,9 +170,14 @@ auto SchemaTransformer::check(const core::JSON &schema,
                               const core::JSON::String &exclude_keyword,
                               const bool is_metaschema) const
     -> std::pair<bool, std::uint8_t> {
-  blaze::SchemaFrame frame{blaze::SchemaFrame::Mode::References};
-  frame.analyse(schema, walker, resolver, default_dialect, default_id,
-                sourcemeta::blaze::SchemaFrame::IdentifierMode::Fallback);
+  blaze::SchemaFrame frame{
+      blaze::SchemaFrame::Mode::References,
+      schema,
+      walker,
+      resolver,
+      default_dialect,
+      default_id,
+      sourcemeta::blaze::SchemaFrame::IdentifierMode::Fallback};
   return check_rules(schema, frame, this->rules, walker, resolver, callback,
                      exclude_keyword, false, is_metaschema);
 }
@@ -195,7 +196,7 @@ auto SchemaTransformer::apply(core::JSON &schema,
                      ProcessedRuleHasher>
       processed_rules;
 
-  blaze::SchemaFrame frame{blaze::SchemaFrame::Mode::References};
+  std::optional<blaze::SchemaFrame> frame;
 
   struct PotentiallyBrokenReference {
     core::Pointer origin;
@@ -209,188 +210,196 @@ auto SchemaTransformer::apply(core::JSON &schema,
   std::vector<PotentiallyBrokenReference> potentially_broken_references;
 
   while (true) {
-    if (frame.empty()) {
+    if (!frame.has_value()) {
       if (schema.is_boolean()) {
         break;
       }
 
-      frame.analyse(schema, walker, resolver, default_dialect, default_id,
+      frame.emplace(blaze::SchemaFrame::Mode::References, schema, walker,
+                    resolver, default_dialect, default_id,
                     sourcemeta::blaze::SchemaFrame::IdentifierMode::Fallback);
     }
 
     std::unordered_set<core::Pointer, core::Pointer::Hasher> visited;
     bool applied{false};
 
-    for (const auto &entry : frame.locations()) {
-      if (entry.second.type != blaze::SchemaFrame::LocationType::Resource &&
-          entry.second.type != blaze::SchemaFrame::LocationType::Subschema) {
-        continue;
-      }
-
-      const auto [visited_iterator, inserted] =
-          visited.insert(core::to_pointer(entry.second.pointer));
-      if (!inserted) {
-        continue;
-      }
-      const auto &entry_pointer{*visited_iterator};
-      auto &current{core::get(schema, entry_pointer)};
-      const auto current_vocabularies{
-          frame.vocabularies(entry.second, resolver)};
-
-      for (const auto &[rule, mutates, reframe_after_transform] : this->rules) {
-        if (!mutates) {
-          continue;
-        }
-
-        auto outcome{rule->check(current, schema, current_vocabularies, walker,
-                                 resolver, frame, entry.second, exclude_keyword,
-                                 is_metaschema)};
-
-        if (!outcome.applies) {
-          continue;
-        }
-
-        potentially_broken_references.clear();
-        for (const auto &reference : frame.references()) {
-          const auto destination{frame.traverse(reference.second.destination)};
-          if (!destination.has_value() ||
-              !reference.second.fragment.has_value() ||
-              !reference.second.fragment.value().starts_with('/')) {
-            continue;
+    // Stopping the traversal stands in for the restart that the
+    // rules request once they mutate the schema
+    [[maybe_unused]] const auto restarted{frame->any_subschema(
+        [&](const blaze::SchemaFrame::Location &location) -> bool {
+          const auto [visited_iterator, inserted] =
+              visited.insert(core::to_pointer(location.pointer));
+          if (!inserted) {
+            return false;
           }
+          const auto &entry_pointer{*visited_iterator};
+          auto &current{core::get(schema, entry_pointer)};
+          const auto current_vocabularies{
+              frame->vocabularies(location, resolver)};
 
-          const auto &target{destination.value().get()};
-          potentially_broken_references.push_back(
-              {.origin = core::to_pointer(reference.first.second),
-               .original = core::JSON::String{reference.second.original},
-               .destination = reference.second.destination,
-               .fragment =
-                   core::JSON::String{reference.second.fragment.value()},
-               .target_pointer = core::to_pointer(target.pointer),
-               .target_relative_pointer = target.relative_pointer});
-        }
+          for (const auto &[rule, mutates, reframe_after_transform] :
+               this->rules) {
+            if (!mutates) {
+              continue;
+            }
 
-        rule->transform(current, outcome);
-        callback(entry_pointer, rule->name(), rule->message(), outcome, true);
+            auto outcome{rule->check(current, schema, current_vocabularies,
+                                     walker, resolver, *frame, location,
+                                     exclude_keyword, is_metaschema)};
 
-        applied = true;
+            if (!outcome.applies) {
+              continue;
+            }
 
-        if (reframe_after_transform) {
-          frame.analyse(
-              schema, walker, resolver, default_dialect, default_id,
-              sourcemeta::blaze::SchemaFrame::IdentifierMode::Fallback);
-        } else if (current.is_boolean()) {
-          std::tuple<core::Pointer, std::string_view, core::JSON> mark{
-              entry_pointer, rule->name(), current};
-          if (processed_rules.contains(mark)) {
-            throw SchemaTransformRuleProcessedTwiceError(rule->name(),
-                                                         entry_pointer);
-          }
+            potentially_broken_references.clear();
+            frame->for_each_reference([&](const blaze::SchemaReferenceType,
+                                          const core::WeakPointer &origin,
+                                          const blaze::SchemaFrame::Reference
+                                              &reference) -> void {
+              const auto destination{frame->traverse(reference.destination)};
+              if (!destination.has_value() || !reference.fragment.has_value() ||
+                  !reference.fragment.value().starts_with('/')) {
+                return;
+              }
 
-          processed_rules.emplace(std::move(mark));
-          frame.reset();
-          goto blaze_transformer_start_again;
-        }
+              const auto &target{destination.value().get()};
+              potentially_broken_references.push_back(
+                  {.origin = core::to_pointer(origin),
+                   .original = core::JSON::String{reference.original},
+                   .destination = reference.destination,
+                   .fragment = core::JSON::String{reference.fragment.value()},
+                   .target_pointer = core::to_pointer(target.pointer),
+                   .target_relative_pointer = target.relative_pointer});
+            });
 
-        const auto new_location{
-            frame.traverse(core::to_weak_pointer(entry_pointer))};
-        assert(new_location.has_value());
+            rule->transform(current, outcome);
+            callback(entry_pointer, rule->name(), rule->message(), outcome,
+                     true);
 
-        // Fix broken references before re-checking the condition,
-        // as the re-check may mutate rule state that rereference needs
-        bool references_fixed{false};
-        const auto resource_offset{new_location.value().get().relative_pointer};
-        const auto current_slice{entry_pointer.slice(resource_offset)};
-        for (const auto &saved_reference : potentially_broken_references) {
-          if (core::try_get(schema, saved_reference.target_pointer)) {
-            continue;
-          }
+            applied = true;
 
-          // If the origin was also relocated, resolve its new location
-          auto effective_origin{saved_reference.origin};
-          if (!core::try_get(schema, saved_reference.origin.initial())) {
-            try {
-              const auto new_origin{rule->rereference(
+            if (reframe_after_transform) {
+              frame.emplace(
+                  blaze::SchemaFrame::Mode::References, schema, walker,
+                  resolver, default_dialect, default_id,
+                  sourcemeta::blaze::SchemaFrame::IdentifierMode::Fallback);
+            } else if (current.is_boolean()) {
+              std::tuple<core::Pointer, std::string_view, core::JSON> mark{
+                  entry_pointer, rule->name(), current};
+              if (processed_rules.contains(mark)) {
+                throw SchemaTransformRuleProcessedTwiceError(rule->name(),
+                                                             entry_pointer);
+              }
+
+              processed_rules.emplace(std::move(mark));
+              frame.reset();
+              return true;
+            }
+
+            const auto new_location{
+                frame->traverse(core::to_weak_pointer(entry_pointer))};
+            assert(new_location.has_value());
+
+            // Fix broken references before re-checking the condition,
+            // as the re-check may mutate rule state that rereference needs
+            bool references_fixed{false};
+            const auto resource_offset{
+                new_location.value().get().relative_pointer};
+            const auto current_slice{entry_pointer.slice(resource_offset)};
+            for (const auto &saved_reference : potentially_broken_references) {
+              if (core::try_get(schema, saved_reference.target_pointer)) {
+                continue;
+              }
+
+              // If the origin was also relocated, resolve its new location
+              auto effective_origin{saved_reference.origin};
+              if (!core::try_get(schema, saved_reference.origin.initial())) {
+                try {
+                  const auto new_origin{rule->rereference(
+                      saved_reference.destination, saved_reference.origin,
+                      saved_reference.origin.slice(resource_offset),
+                      current_slice)};
+                  effective_origin =
+                      saved_reference.origin.slice(0, resource_offset)
+                          .concat(new_origin);
+                } catch (...) {
+                  continue;
+                }
+                if (!core::try_get(schema, effective_origin.initial())) {
+                  continue;
+                }
+              }
+
+              const auto new_relative{rule->rereference(
                   saved_reference.destination, saved_reference.origin,
-                  saved_reference.origin.slice(resource_offset),
+                  saved_reference.target_pointer.slice(
+                      saved_reference.target_relative_pointer),
                   current_slice)};
-              effective_origin =
-                  saved_reference.origin.slice(0, resource_offset)
-                      .concat(new_origin);
-            } catch (...) {
-              continue;
+              const auto new_fragment{
+                  saved_reference.fragment ==
+                          core::to_string(saved_reference.target_pointer)
+                      ? saved_reference.target_pointer
+                            .slice(0, saved_reference.target_relative_pointer)
+                            .concat(new_relative)
+                      : new_relative};
+
+              core::URI original{saved_reference.original};
+              original.fragment(core::to_string(new_fragment));
+              core::set(schema, effective_origin,
+                        core::JSON{original.recompose()});
+              references_fixed = true;
             }
-            if (!core::try_get(schema, effective_origin.initial())) {
-              continue;
+
+            const auto new_vocabularies{
+                frame->vocabularies(new_location.value().get(), resolver)};
+
+            if (rule->check(current, schema, new_vocabularies, walker, resolver,
+                            *frame, new_location.value().get(), exclude_keyword,
+                            is_metaschema)
+                    .applies) {
+              std::ostringstream error;
+              error << "Rule condition holds after application: "
+                    << rule->name();
+              throw std::runtime_error(error.str());
+            }
+
+            std::tuple<core::Pointer, std::string_view, core::JSON> mark{
+                entry_pointer, rule->name(), current};
+            if (processed_rules.contains(mark)) {
+              throw SchemaTransformRuleProcessedTwiceError(rule->name(),
+                                                           entry_pointer);
+            }
+
+            processed_rules.emplace(std::move(mark));
+
+            if (references_fixed) {
+              frame.reset();
+            }
+
+            if (references_fixed || reframe_after_transform) {
+              return true;
             }
           }
 
-          const auto new_relative{rule->rereference(
-              saved_reference.destination, saved_reference.origin,
-              saved_reference.target_pointer.slice(
-                  saved_reference.target_relative_pointer),
-              current_slice)};
-          const auto new_fragment{
-              saved_reference.fragment ==
-                      core::to_string(saved_reference.target_pointer)
-                  ? saved_reference.target_pointer
-                        .slice(0, saved_reference.target_relative_pointer)
-                        .concat(new_relative)
-                  : new_relative};
+          return false;
+        })};
 
-          core::URI original{saved_reference.original};
-          original.fragment(core::to_string(new_fragment));
-          core::set(schema, effective_origin, core::JSON{original.recompose()});
-          references_fixed = true;
-        }
-
-        const auto new_vocabularies{
-            frame.vocabularies(new_location.value().get(), resolver)};
-
-        if (rule->check(current, schema, new_vocabularies, walker, resolver,
-                        frame, new_location.value().get(), exclude_keyword,
-                        is_metaschema)
-                .applies) {
-          std::ostringstream error;
-          error << "Rule condition holds after application: " << rule->name();
-          throw std::runtime_error(error.str());
-        }
-
-        std::tuple<core::Pointer, std::string_view, core::JSON> mark{
-            entry_pointer, rule->name(), current};
-        if (processed_rules.contains(mark)) {
-          throw SchemaTransformRuleProcessedTwiceError(rule->name(),
-                                                       entry_pointer);
-        }
-
-        processed_rules.emplace(std::move(mark));
-
-        if (references_fixed) {
-          frame.reset();
-        }
-
-        if (references_fixed || reframe_after_transform) {
-          goto blaze_transformer_start_again;
-        }
-      }
-    }
-
-  blaze_transformer_start_again:
     if (!applied) {
       break;
     }
   }
 
-  if (frame.empty() && !schema.is_boolean()) {
-    frame.analyse(schema, walker, resolver, default_dialect, default_id,
+  if (!frame.has_value() && !schema.is_boolean()) {
+    frame.emplace(blaze::SchemaFrame::Mode::References, schema, walker,
+                  resolver, default_dialect, default_id,
                   sourcemeta::blaze::SchemaFrame::IdentifierMode::Fallback);
   }
 
-  if (frame.empty()) {
+  if (!frame.has_value()) {
     return {true, static_cast<std::uint8_t>(100)};
   }
 
-  return check_rules(schema, frame, this->rules, walker, resolver, callback,
+  return check_rules(schema, *frame, this->rules, walker, resolver, callback,
                      exclude_keyword, true, is_metaschema);
 }
 

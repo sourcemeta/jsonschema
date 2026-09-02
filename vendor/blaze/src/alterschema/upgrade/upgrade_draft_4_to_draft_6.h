@@ -40,29 +40,21 @@ public:
     }
 
     if (!sanitization_branch) {
-      for (const auto &entry : frame.locations()) {
-        if (entry.second.type !=
-                sourcemeta::blaze::SchemaFrame::LocationType::Resource &&
-            entry.second.type !=
-                sourcemeta::blaze::SchemaFrame::LocationType::Subschema) {
-          continue;
-        }
+      if (frame.any_subschema_under(
+              location.pointer,
+              [&root](const sourcemeta::blaze::SchemaFrame::Location &entry)
+                  -> bool {
+                const auto entry_pointer{
+                    sourcemeta::core::to_pointer(entry.pointer)};
+                const auto &entry_schema{
+                    sourcemeta::core::get(root, entry_pointer)};
+                if (entry_schema.is_object() && entry_schema.defines("$ref")) {
+                  return false;
+                }
 
-        if (!is_strict_descendant(location.pointer, entry.second.pointer)) {
-          continue;
-        }
-
-        const auto entry_pointer{
-            sourcemeta::core::to_pointer(entry.second.pointer)};
-        const auto &entry_schema{sourcemeta::core::get(root, entry_pointer)};
-
-        if (entry_schema.is_object() && entry_schema.defines("$ref")) {
-          continue;
-        }
-
-        if (has_pending_draft_4_pattern(entry_schema)) {
-          return false;
-        }
+                return has_pending_draft_4_pattern(entry_schema);
+              })) {
+        return false;
       }
     }
 
@@ -174,20 +166,6 @@ private:
     }
 
     return false;
-  }
-
-  static auto
-  is_strict_descendant(const sourcemeta::core::WeakPointer &ancestor,
-                       const sourcemeta::core::WeakPointer &candidate) -> bool {
-    if (candidate.size() <= ancestor.size()) {
-      return false;
-    }
-    for (std::size_t index{0}; index < ancestor.size(); ++index) {
-      if (!(ancestor.at(index) == candidate.at(index))) {
-        return false;
-      }
-    }
-    return true;
   }
 
   static auto is_strict_plain_name_first_char(const char character) -> bool {
@@ -580,32 +558,35 @@ private:
       const sourcemeta::core::JSON &root,
       const sourcemeta::blaze::SchemaFrame &frame) -> bool {
     std::optional<sourcemeta::core::WeakPointer> closest;
-    for (const auto &entry : frame.locations()) {
-      const bool entry_is_resource_scope =
-          entry.second.type ==
-              sourcemeta::blaze::SchemaFrame::LocationType::Resource ||
-          entry.second.pointer.empty();
-      if (!entry_is_resource_scope) {
-        continue;
-      }
-      if (entry.second.pointer.size() > location.pointer.size()) {
-        continue;
-      }
-      bool is_ancestor{true};
-      for (std::size_t index{0}; index < entry.second.pointer.size(); ++index) {
-        if (!(entry.second.pointer.at(index) == location.pointer.at(index))) {
-          is_ancestor = false;
-          break;
-        }
-      }
-      if (!is_ancestor) {
-        continue;
-      }
-      if (!closest.has_value() ||
-          entry.second.pointer.size() > closest.value().size()) {
-        closest = entry.second.pointer;
-      }
-    }
+    frame.for_each_location(
+        [&](const sourcemeta::blaze::SchemaReferenceType,
+            const std::string_view,
+            const sourcemeta::blaze::SchemaFrame::Location &entry) -> void {
+          const bool entry_is_resource_scope =
+              entry.type ==
+                  sourcemeta::blaze::SchemaFrame::LocationType::Resource ||
+              entry.pointer.empty();
+          if (!entry_is_resource_scope) {
+            return;
+          }
+          if (entry.pointer.size() > location.pointer.size()) {
+            return;
+          }
+          bool is_ancestor{true};
+          for (std::size_t index{0}; index < entry.pointer.size(); ++index) {
+            if (!(entry.pointer.at(index) == location.pointer.at(index))) {
+              is_ancestor = false;
+              break;
+            }
+          }
+          if (!is_ancestor) {
+            return;
+          }
+          if (!closest.has_value() ||
+              entry.pointer.size() > closest.value().size()) {
+            closest = entry.pointer;
+          }
+        });
     if (!closest.has_value()) {
       return false;
     }

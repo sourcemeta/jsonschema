@@ -111,6 +111,8 @@ public:
     return this->identifier_;
   }
 
+  /// Where the problem is, as a pointer from the root of the document
+  /// that the schema came from
   [[nodiscard]] auto location() const noexcept
       -> const sourcemeta::core::Pointer & {
     return this->schema_location_;
@@ -238,6 +240,8 @@ public:
     return this->identifier_;
   }
 
+  /// Where the problem is, as a pointer from the root of the document
+  /// that the schema came from
   [[nodiscard]] auto location() const noexcept
       -> const sourcemeta::core::Pointer & {
     return this->location_;

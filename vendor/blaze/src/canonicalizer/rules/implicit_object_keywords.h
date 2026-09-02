@@ -40,12 +40,12 @@ public:
     }
 
     if (this->add_min_properties_) {
-      if (schema.defines("required") && schema.at("required").is_array()) {
-        schema.assign("minProperties",
-                      sourcemeta::core::JSON{schema.at("required").size()});
-      } else {
-        schema.assign("minProperties", sourcemeta::core::JSON{0});
-      }
+      const auto *required{schema.try_at("required")};
+      schema.assign(
+          "minProperties",
+          sourcemeta::core::JSON{required && is_property_name_array(*required)
+                                     ? required->size()
+                                     : 0});
     }
 
     if (this->add_properties_) {
@@ -182,11 +182,15 @@ private:
     const bool is_modern{vocabularies.contains_any(
         {SchemaVocabularies::Known::JSON_Schema_2019_09_Applicator,
          SchemaVocabularies::Known::JSON_Schema_2020_12_Applicator})};
-    const bool is_pre_draft4{vocabularies.contains_any(
+    // `items` takes a schema, and no dialect before Draft 6 has boolean
+    // schemas to offer it. `additionalProperties` is different: every dialect
+    // that has it accepts a boolean there
+    const bool without_boolean_schemas{vocabularies.contains_any(
         {SchemaVocabularies::Known::JSON_Schema_Draft_0,
          SchemaVocabularies::Known::JSON_Schema_Draft_1,
          SchemaVocabularies::Known::JSON_Schema_Draft_2,
-         SchemaVocabularies::Known::JSON_Schema_Draft_3})};
+         SchemaVocabularies::Known::JSON_Schema_Draft_3,
+         SchemaVocabularies::Known::JSON_Schema_Draft_4})};
 
     this->add_unique_items_ =
         !schema.defines("uniqueItems") &&
@@ -195,7 +199,7 @@ private:
              SchemaVocabularies::Known::JSON_Schema_Draft_1});
 
     this->add_items_ = !is_modern && !schema.defines("items");
-    this->items_as_object_ = is_pre_draft4;
+    this->items_as_object_ = without_boolean_schemas;
 
     this->add_min_items_ = !schema.defines("minItems");
 

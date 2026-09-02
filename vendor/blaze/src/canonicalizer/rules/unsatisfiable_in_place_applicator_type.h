@@ -77,6 +77,7 @@ public:
 
     ONLY_CONTINUE_IF(!locations.empty());
     this->locations_ = std::move(locations);
+    this->unsatisfiable_ = UNSATISFIABLE_SCHEMA(vocabularies);
     return true;
   }
 
@@ -85,15 +86,16 @@ public:
       if (location.size() == 2) {
         const auto &keyword{location.at(0).to_property()};
         const auto index{location.at(1).to_index()};
-        schema.at(keyword).at(index).into(sourcemeta::core::JSON{false});
+        INTO_UNSATISFIABLE(schema.at(keyword).at(index), this->unsatisfiable_);
       } else {
         assert(location.size() == 1);
         const auto &keyword{location.at(0).to_property()};
-        schema.at(keyword).into(sourcemeta::core::JSON{false});
+        INTO_UNSATISFIABLE(schema.at(keyword), this->unsatisfiable_);
       }
     }
   }
 
 private:
   mutable std::vector<sourcemeta::core::Pointer> locations_;
+  mutable sourcemeta::core::JSON unsatisfiable_{false};
 };

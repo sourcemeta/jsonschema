@@ -32,6 +32,16 @@ WRITE expected.txt UNTIL EOF
 1>     Parent            :
 1>     Property Name     : no
 1>     Orphan            : yes
+1>     Referenced        : yes
+1>     Referenced Within : yes
+1>     Vocabularies      :
+1>       https://json-schema.org/draft/2020-12/vocab/core (required)
+1>       https://json-schema.org/draft/2020-12/vocab/applicator (required)
+1>       https://json-schema.org/draft/2020-12/vocab/unevaluated (required)
+1>       https://json-schema.org/draft/2020-12/vocab/validation (required)
+1>       https://json-schema.org/draft/2020-12/vocab/meta-data (required)
+1>       https://json-schema.org/draft/2020-12/vocab/format-annotation (required)
+1>       https://json-schema.org/draft/2020-12/vocab/content (required)
 1>
 1> (POINTER) URI: https://example.com/meta#/$id
 1>     Type              : Static
@@ -45,6 +55,16 @@ WRITE expected.txt UNTIL EOF
 1>     Parent            : /$defs/https:~1~1example.com~1meta
 1>     Property Name     : no
 1>     Orphan            : yes
+1>     Referenced        : no
+1>     Referenced Within : no
+1>     Vocabularies      :
+1>       https://json-schema.org/draft/2020-12/vocab/core (required)
+1>       https://json-schema.org/draft/2020-12/vocab/applicator (required)
+1>       https://json-schema.org/draft/2020-12/vocab/unevaluated (required)
+1>       https://json-schema.org/draft/2020-12/vocab/validation (required)
+1>       https://json-schema.org/draft/2020-12/vocab/meta-data (required)
+1>       https://json-schema.org/draft/2020-12/vocab/format-annotation (required)
+1>       https://json-schema.org/draft/2020-12/vocab/content (required)
 1>
 1> (POINTER) URI: https://example.com/meta#/$schema
 1>     Type              : Static
@@ -58,6 +78,16 @@ WRITE expected.txt UNTIL EOF
 1>     Parent            : /$defs/https:~1~1example.com~1meta
 1>     Property Name     : no
 1>     Orphan            : yes
+1>     Referenced        : no
+1>     Referenced Within : no
+1>     Vocabularies      :
+1>       https://json-schema.org/draft/2020-12/vocab/core (required)
+1>       https://json-schema.org/draft/2020-12/vocab/applicator (required)
+1>       https://json-schema.org/draft/2020-12/vocab/unevaluated (required)
+1>       https://json-schema.org/draft/2020-12/vocab/validation (required)
+1>       https://json-schema.org/draft/2020-12/vocab/meta-data (required)
+1>       https://json-schema.org/draft/2020-12/vocab/format-annotation (required)
+1>       https://json-schema.org/draft/2020-12/vocab/content (required)
 1>
 1> (POINTER) URI: https://example.com/meta#/$vocabulary
 1>     Type              : Static
@@ -71,6 +101,16 @@ WRITE expected.txt UNTIL EOF
 1>     Parent            : /$defs/https:~1~1example.com~1meta
 1>     Property Name     : no
 1>     Orphan            : yes
+1>     Referenced        : no
+1>     Referenced Within : no
+1>     Vocabularies      :
+1>       https://json-schema.org/draft/2020-12/vocab/core (required)
+1>       https://json-schema.org/draft/2020-12/vocab/applicator (required)
+1>       https://json-schema.org/draft/2020-12/vocab/unevaluated (required)
+1>       https://json-schema.org/draft/2020-12/vocab/validation (required)
+1>       https://json-schema.org/draft/2020-12/vocab/meta-data (required)
+1>       https://json-schema.org/draft/2020-12/vocab/format-annotation (required)
+1>       https://json-schema.org/draft/2020-12/vocab/content (required)
 1>
 1> (POINTER) URI: https://example.com/meta#/$vocabulary/https:~1~1json-schema.org~1draft~12020-12~1vocab~1core
 1>     Type              : Static
@@ -84,6 +124,16 @@ WRITE expected.txt UNTIL EOF
 1>     Parent            : /$defs/https:~1~1example.com~1meta
 1>     Property Name     : no
 1>     Orphan            : yes
+1>     Referenced        : no
+1>     Referenced Within : no
+1>     Vocabularies      :
+1>       https://json-schema.org/draft/2020-12/vocab/core (required)
+1>       https://json-schema.org/draft/2020-12/vocab/applicator (required)
+1>       https://json-schema.org/draft/2020-12/vocab/unevaluated (required)
+1>       https://json-schema.org/draft/2020-12/vocab/validation (required)
+1>       https://json-schema.org/draft/2020-12/vocab/meta-data (required)
+1>       https://json-schema.org/draft/2020-12/vocab/format-annotation (required)
+1>       https://json-schema.org/draft/2020-12/vocab/content (required)
 1>
 1> (POINTER) URI: https://example.com/meta#/$vocabulary/https:~1~1json-schema.org~1draft~12020-12~1vocab~1validation
 1>     Type              : Static
@@ -97,6 +147,16 @@ WRITE expected.txt UNTIL EOF
 1>     Parent            : /$defs/https:~1~1example.com~1meta
 1>     Property Name     : no
 1>     Orphan            : yes
+1>     Referenced        : no
+1>     Referenced Within : no
+1>     Vocabularies      :
+1>       https://json-schema.org/draft/2020-12/vocab/core (required)
+1>       https://json-schema.org/draft/2020-12/vocab/applicator (required)
+1>       https://json-schema.org/draft/2020-12/vocab/unevaluated (required)
+1>       https://json-schema.org/draft/2020-12/vocab/validation (required)
+1>       https://json-schema.org/draft/2020-12/vocab/meta-data (required)
+1>       https://json-schema.org/draft/2020-12/vocab/format-annotation (required)
+1>       https://json-schema.org/draft/2020-12/vocab/content (required)
 1>
 1> (POINTER) URI: https://example.com/meta#/type
 1>     Type              : Static
@@ -110,6 +170,16 @@ WRITE expected.txt UNTIL EOF
 1>     Parent            : /$defs/https:~1~1example.com~1meta
 1>     Property Name     : no
 1>     Orphan            : yes
+1>     Referenced        : no
+1>     Referenced Within : no
+1>     Vocabularies      :
+1>       https://json-schema.org/draft/2020-12/vocab/core (required)
+1>       https://json-schema.org/draft/2020-12/vocab/applicator (required)
+1>       https://json-schema.org/draft/2020-12/vocab/unevaluated (required)
+1>       https://json-schema.org/draft/2020-12/vocab/validation (required)
+1>       https://json-schema.org/draft/2020-12/vocab/meta-data (required)
+1>       https://json-schema.org/draft/2020-12/vocab/format-annotation (required)
+1>       https://json-schema.org/draft/2020-12/vocab/content (required)
 1>
 1> (RESOURCE) URI: https://example.com/schema
 1>     Type              : Static
@@ -123,6 +193,11 @@ WRITE expected.txt UNTIL EOF
 1>     Parent            : <NONE>
 1>     Property Name     : no
 1>     Orphan            : no
+1>     Referenced        : no
+1>     Referenced Within : yes
+1>     Vocabularies      :
+1>       https://json-schema.org/draft/2020-12/vocab/core (required)
+1>       https://json-schema.org/draft/2020-12/vocab/validation (required)
 1>
 1> (POINTER) URI: https://example.com/schema#/$defs
 1>     Type              : Static
@@ -136,6 +211,11 @@ WRITE expected.txt UNTIL EOF
 1>     Parent            :
 1>     Property Name     : no
 1>     Orphan            : no
+1>     Referenced        : no
+1>     Referenced Within : yes
+1>     Vocabularies      :
+1>       https://json-schema.org/draft/2020-12/vocab/core (required)
+1>       https://json-schema.org/draft/2020-12/vocab/validation (required)
 1>
 1> (SUBSCHEMA) URI: https://example.com/schema#/$defs/https:~1~1example.com~1meta
 1>     Type              : Static
@@ -149,6 +229,16 @@ WRITE expected.txt UNTIL EOF
 1>     Parent            :
 1>     Property Name     : no
 1>     Orphan            : yes
+1>     Referenced        : yes
+1>     Referenced Within : yes
+1>     Vocabularies      :
+1>       https://json-schema.org/draft/2020-12/vocab/core (required)
+1>       https://json-schema.org/draft/2020-12/vocab/applicator (required)
+1>       https://json-schema.org/draft/2020-12/vocab/unevaluated (required)
+1>       https://json-schema.org/draft/2020-12/vocab/validation (required)
+1>       https://json-schema.org/draft/2020-12/vocab/meta-data (required)
+1>       https://json-schema.org/draft/2020-12/vocab/format-annotation (required)
+1>       https://json-schema.org/draft/2020-12/vocab/content (required)
 1>
 1> (POINTER) URI: https://example.com/schema#/$defs/https:~1~1example.com~1meta/$id
 1>     Type              : Static
@@ -162,6 +252,16 @@ WRITE expected.txt UNTIL EOF
 1>     Parent            : /$defs/https:~1~1example.com~1meta
 1>     Property Name     : no
 1>     Orphan            : yes
+1>     Referenced        : no
+1>     Referenced Within : no
+1>     Vocabularies      :
+1>       https://json-schema.org/draft/2020-12/vocab/core (required)
+1>       https://json-schema.org/draft/2020-12/vocab/applicator (required)
+1>       https://json-schema.org/draft/2020-12/vocab/unevaluated (required)
+1>       https://json-schema.org/draft/2020-12/vocab/validation (required)
+1>       https://json-schema.org/draft/2020-12/vocab/meta-data (required)
+1>       https://json-schema.org/draft/2020-12/vocab/format-annotation (required)
+1>       https://json-schema.org/draft/2020-12/vocab/content (required)
 1>
 1> (POINTER) URI: https://example.com/schema#/$defs/https:~1~1example.com~1meta/$schema
 1>     Type              : Static
@@ -175,6 +275,16 @@ WRITE expected.txt UNTIL EOF
 1>     Parent            : /$defs/https:~1~1example.com~1meta
 1>     Property Name     : no
 1>     Orphan            : yes
+1>     Referenced        : no
+1>     Referenced Within : no
+1>     Vocabularies      :
+1>       https://json-schema.org/draft/2020-12/vocab/core (required)
+1>       https://json-schema.org/draft/2020-12/vocab/applicator (required)
+1>       https://json-schema.org/draft/2020-12/vocab/unevaluated (required)
+1>       https://json-schema.org/draft/2020-12/vocab/validation (required)
+1>       https://json-schema.org/draft/2020-12/vocab/meta-data (required)
+1>       https://json-schema.org/draft/2020-12/vocab/format-annotation (required)
+1>       https://json-schema.org/draft/2020-12/vocab/content (required)
 1>
 1> (POINTER) URI: https://example.com/schema#/$defs/https:~1~1example.com~1meta/$vocabulary
 1>     Type              : Static
@@ -188,6 +298,16 @@ WRITE expected.txt UNTIL EOF
 1>     Parent            : /$defs/https:~1~1example.com~1meta
 1>     Property Name     : no
 1>     Orphan            : yes
+1>     Referenced        : no
+1>     Referenced Within : no
+1>     Vocabularies      :
+1>       https://json-schema.org/draft/2020-12/vocab/core (required)
+1>       https://json-schema.org/draft/2020-12/vocab/applicator (required)
+1>       https://json-schema.org/draft/2020-12/vocab/unevaluated (required)
+1>       https://json-schema.org/draft/2020-12/vocab/validation (required)
+1>       https://json-schema.org/draft/2020-12/vocab/meta-data (required)
+1>       https://json-schema.org/draft/2020-12/vocab/format-annotation (required)
+1>       https://json-schema.org/draft/2020-12/vocab/content (required)
 1>
 1> (POINTER) URI: https://example.com/schema#/$defs/https:~1~1example.com~1meta/$vocabulary/https:~1~1json-schema.org~1draft~12020-12~1vocab~1core
 1>     Type              : Static
@@ -201,6 +321,16 @@ WRITE expected.txt UNTIL EOF
 1>     Parent            : /$defs/https:~1~1example.com~1meta
 1>     Property Name     : no
 1>     Orphan            : yes
+1>     Referenced        : no
+1>     Referenced Within : no
+1>     Vocabularies      :
+1>       https://json-schema.org/draft/2020-12/vocab/core (required)
+1>       https://json-schema.org/draft/2020-12/vocab/applicator (required)
+1>       https://json-schema.org/draft/2020-12/vocab/unevaluated (required)
+1>       https://json-schema.org/draft/2020-12/vocab/validation (required)
+1>       https://json-schema.org/draft/2020-12/vocab/meta-data (required)
+1>       https://json-schema.org/draft/2020-12/vocab/format-annotation (required)
+1>       https://json-schema.org/draft/2020-12/vocab/content (required)
 1>
 1> (POINTER) URI: https://example.com/schema#/$defs/https:~1~1example.com~1meta/$vocabulary/https:~1~1json-schema.org~1draft~12020-12~1vocab~1validation
 1>     Type              : Static
@@ -214,6 +344,16 @@ WRITE expected.txt UNTIL EOF
 1>     Parent            : /$defs/https:~1~1example.com~1meta
 1>     Property Name     : no
 1>     Orphan            : yes
+1>     Referenced        : no
+1>     Referenced Within : no
+1>     Vocabularies      :
+1>       https://json-schema.org/draft/2020-12/vocab/core (required)
+1>       https://json-schema.org/draft/2020-12/vocab/applicator (required)
+1>       https://json-schema.org/draft/2020-12/vocab/unevaluated (required)
+1>       https://json-schema.org/draft/2020-12/vocab/validation (required)
+1>       https://json-schema.org/draft/2020-12/vocab/meta-data (required)
+1>       https://json-schema.org/draft/2020-12/vocab/format-annotation (required)
+1>       https://json-schema.org/draft/2020-12/vocab/content (required)
 1>
 1> (POINTER) URI: https://example.com/schema#/$defs/https:~1~1example.com~1meta/type
 1>     Type              : Static
@@ -227,6 +367,16 @@ WRITE expected.txt UNTIL EOF
 1>     Parent            : /$defs/https:~1~1example.com~1meta
 1>     Property Name     : no
 1>     Orphan            : yes
+1>     Referenced        : no
+1>     Referenced Within : no
+1>     Vocabularies      :
+1>       https://json-schema.org/draft/2020-12/vocab/core (required)
+1>       https://json-schema.org/draft/2020-12/vocab/applicator (required)
+1>       https://json-schema.org/draft/2020-12/vocab/unevaluated (required)
+1>       https://json-schema.org/draft/2020-12/vocab/validation (required)
+1>       https://json-schema.org/draft/2020-12/vocab/meta-data (required)
+1>       https://json-schema.org/draft/2020-12/vocab/format-annotation (required)
+1>       https://json-schema.org/draft/2020-12/vocab/content (required)
 1>
 1> (POINTER) URI: https://example.com/schema#/$id
 1>     Type              : Static
@@ -240,6 +390,11 @@ WRITE expected.txt UNTIL EOF
 1>     Parent            :
 1>     Property Name     : no
 1>     Orphan            : no
+1>     Referenced        : no
+1>     Referenced Within : no
+1>     Vocabularies      :
+1>       https://json-schema.org/draft/2020-12/vocab/core (required)
+1>       https://json-schema.org/draft/2020-12/vocab/validation (required)
 1>
 1> (POINTER) URI: https://example.com/schema#/$schema
 1>     Type              : Static
@@ -253,6 +408,11 @@ WRITE expected.txt UNTIL EOF
 1>     Parent            :
 1>     Property Name     : no
 1>     Orphan            : no
+1>     Referenced        : no
+1>     Referenced Within : no
+1>     Vocabularies      :
+1>       https://json-schema.org/draft/2020-12/vocab/core (required)
+1>       https://json-schema.org/draft/2020-12/vocab/validation (required)
 1>
 1> (POINTER) URI: https://example.com/schema#/type
 1>     Type              : Static
@@ -266,10 +426,16 @@ WRITE expected.txt UNTIL EOF
 1>     Parent            :
 1>     Property Name     : no
 1>     Orphan            : no
+1>     Referenced        : no
+1>     Referenced Within : no
+1>     Vocabularies      :
+1>       https://json-schema.org/draft/2020-12/vocab/core (required)
+1>       https://json-schema.org/draft/2020-12/vocab/validation (required)
 1>
 1> (REFERENCE) ORIGIN: /$defs/https:~1~1example.com~1meta/$schema
 1>     Type              : Static
 1>     File Position     : 7:7
+1>     Original          : https://json-schema.org/draft/2020-12/schema
 1>     Destination       : https://json-schema.org/draft/2020-12/schema
 1>     - (w/o fragment)  : https://json-schema.org/draft/2020-12/schema
 1>     - (fragment)      : <NONE>
@@ -277,6 +443,7 @@ WRITE expected.txt UNTIL EOF
 1> (REFERENCE) ORIGIN: /$schema
 1>     Type              : Static
 1>     File Position     : 2:3
+1>     Original          : https://example.com/meta
 1>     Destination       : https://example.com/meta
 1>     - (w/o fragment)  : https://example.com/meta
 1>     - (fragment)      : <NONE>

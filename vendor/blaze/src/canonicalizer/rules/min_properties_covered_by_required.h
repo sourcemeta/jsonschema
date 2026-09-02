@@ -24,10 +24,10 @@ public:
     const auto *min_properties{schema.try_at("minProperties")};
     ONLY_CONTINUE_IF(min_properties && min_properties->is_integer());
     const auto *required{schema.try_at("required")};
-    ONLY_CONTINUE_IF(
-        required && required->is_array() && required->unique() &&
-        std::cmp_greater(required->size(), static_cast<std::uint64_t>(
-                                               min_properties->to_integer())));
+    ONLY_CONTINUE_IF(required && is_property_name_array(*required));
+    ONLY_CONTINUE_IF(std::cmp_greater(
+        required->size(),
+        static_cast<std::uint64_t>(min_properties->to_integer())));
     return true;
   }
 

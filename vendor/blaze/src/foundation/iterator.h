@@ -70,325 +70,399 @@ resolve_dialect_at(const sourcemeta::core::JSON &subschema,
           .override_active = override_active};
 }
 
-inline auto walk(const std::optional<sourcemeta::core::WeakPointer> &parent,
-                 const sourcemeta::core::WeakPointer &pointer,
-                 std::vector<SubschemaEntry> &subschemas,
-                 const sourcemeta::core::JSON &subschema,
-                 const sourcemeta::blaze::SchemaWalker &walker,
-                 const sourcemeta::blaze::SchemaResolver &resolver,
-                 const std::string_view dialect,
-                 const sourcemeta::blaze::SchemaBaseDialect base_dialect,
-                 const std::size_t level, const bool orphan,
-                 const bool property_name) -> void {
-  if (!subschema.is_object() && !subschema.is_boolean()) {
-    return;
-  }
+// A subschema that the traversal has discovered but not visited yet
+struct PendingSubschema {
+  std::optional<sourcemeta::core::WeakPointer> parent;
+  sourcemeta::core::WeakPointer pointer;
+  std::reference_wrapper<const sourcemeta::core::JSON> subschema;
+  std::string_view dialect;
+  sourcemeta::blaze::SchemaBaseDialect base_dialect;
+  std::size_t level;
+  bool orphan;
+  bool property_name;
+};
 
-  // Recalculate the dialect and its vocabularies at every step.
-  // This is needed for correctly traversing through schemas that
-  // contains pointers that use different dialect/vocabularies.
-  // This is often the case for bundled schemas.
+inline auto enqueue(std::vector<PendingSubschema> &children,
+                    const sourcemeta::core::WeakPointer &parent,
+                    sourcemeta::core::WeakPointer pointer,
+                    const sourcemeta::core::JSON &subschema,
+                    const std::string_view dialect,
+                    const sourcemeta::blaze::SchemaBaseDialect base_dialect,
+                    const std::size_t level, const bool orphan,
+                    const bool property_name) -> void {
+  children.push_back({.parent = parent,
+                      .pointer = std::move(pointer),
+                      .subschema = subschema,
+                      .dialect = dialect,
+                      .base_dialect = base_dialect,
+                      .level = level,
+                      .orphan = orphan,
+                      .property_name = property_name});
+}
 
-  // However, we need to be careful with not considering `$schema` on subschemas
-  // that do not represent schema resources, as this is not allowed in JSON
-  // Schema. See
-  // https://json-schema.org/draft/2019-09/draft-handrews-json-schema-02#rfc.section.8.1.1
-  // To play it safe, in those cases, we will continue with the current dialect
-  // / base dialect and ignore the invalid standalone `$schema`. The caller has
-  // enough information to detect those cases and throw an error if they desire
-  // to be more strict.
+// Traversal is driven by an explicit work stack rather than recursion, so that
+// framing a deeply nested schema is bounded by the heap instead of the call
+// stack
+inline auto
+walk(const std::optional<sourcemeta::core::WeakPointer> &root_parent,
+     const sourcemeta::core::WeakPointer &root_pointer,
+     std::vector<SubschemaEntry> &subschemas,
+     const sourcemeta::core::JSON &root_subschema,
+     const sourcemeta::blaze::SchemaWalker &walker,
+     const sourcemeta::blaze::SchemaResolver &resolver,
+     const std::string_view root_dialect,
+     const sourcemeta::blaze::SchemaBaseDialect root_base_dialect,
+     const std::size_t root_level, const bool root_orphan,
+     const bool root_property_name) -> void {
+  std::vector<PendingSubschema> pending;
+  pending.push_back({.parent = root_parent,
+                     .pointer = root_pointer,
+                     .subschema = root_subschema,
+                     .dialect = root_dialect,
+                     .base_dialect = root_base_dialect,
+                     .level = root_level,
+                     .orphan = root_orphan,
+                     .property_name = root_property_name});
 
-  const auto enclosing_ref_overrides{
-      subschema.is_object() && subschema.defines("$ref") &&
-      sourcemeta::blaze::ref_overrides_adjacent_keywords(base_dialect)};
+  std::vector<PendingSubschema> children;
+  while (!pending.empty()) {
+    const auto current{std::move(pending.back())};
+    pending.pop_back();
 
-  const auto entry{resolve_dialect_at(subschema, dialect, base_dialect,
-                                      resolver, level,
-                                      !enclosing_ref_overrides)};
-  const auto current_dialect{entry.dialect};
-  const auto current_base_dialect{entry.base_dialect};
+    const auto &parent{current.parent};
+    const auto &pointer{current.pointer};
+    const auto &subschema{current.subschema.get()};
+    const auto dialect{current.dialect};
+    const auto base_dialect{current.base_dialect};
+    const auto level{current.level};
+    const auto orphan{current.orphan};
+    const auto property_name{current.property_name};
 
-  // A subschema may be an embedded resource that pins its own custom
-  // meta-schema inside its own `$defs`/`definitions`. Probe for it here, the
-  // same way we do at the document root, so that nested self-contained
-  // meta-schemas resolve to their embedded definition before the resolver
-  const auto vocabularies{sourcemeta::blaze::vocabularies(
-      [&subschema, &resolver](const std::string_view identifier)
-          -> std::optional<sourcemeta::core::JSON> {
-        const auto *embedded{sourcemeta::blaze::metaschema_try_embedded(
-            subschema, identifier, resolver)};
-        if (embedded) {
-          return *embedded;
-        }
-
-        return resolver(identifier);
-      },
-      current_base_dialect, current_dialect)};
-
-  SubschemaEntry iterator_entry{.parent = parent,
-                                .pointer = pointer,
-                                .dialect = current_dialect,
-                                .vocabularies = vocabularies,
-                                .base_dialect = current_base_dialect,
-                                .subschema = subschema,
-                                .orphan = orphan,
-                                .property_name = property_name};
-  subschemas.push_back(std::move(iterator_entry));
-
-  // We can't recurse any further
-  if (!subschema.is_object()) {
-    return;
-  }
-
-  const auto child{entry.override_active
-                       ? resolve_dialect_at(subschema, dialect, base_dialect,
-                                            resolver, level, false)
-                       : entry};
-  const auto child_dialect{child.dialect};
-  const auto child_base_dialect{child.base_dialect};
-
-  const auto has_overriding_ref{
-      subschema.defines("$ref") &&
-      sourcemeta::blaze::ref_overrides_adjacent_keywords(current_base_dialect)};
-  for (auto &pair : subschema.as_object()) {
-    const auto &keyword_info{walker(pair.first, vocabularies)};
-
-    // Ignore the current keyword sibling to `$ref in Draft 7 and older in EVERY
-    // case. Note that we purposely DO NOT try to add workarounds for the
-    // top-level, `$schema`, or anything else to be purely compliant and avoid
-    // lots of gray areas here
-    if (has_overriding_ref &&
-        keyword_info.type != sourcemeta::blaze::SchemaKeywordType::Reference) {
+    if (!subschema.is_object() && !subschema.is_boolean()) {
       continue;
     }
 
-    switch (keyword_info.type) {
-      case sourcemeta::blaze::SchemaKeywordType::
-          ApplicatorValueTraverseSomeProperty: {
-        sourcemeta::core::WeakPointer new_pointer{pointer};
-        new_pointer.push_back(std::cref(pair.first));
-        walk(pointer, new_pointer, subschemas, pair.second, walker, resolver,
-             child_dialect, child_base_dialect, level + 1, orphan, false);
-      } break;
+    // Recalculate the dialect and its vocabularies at every step.
+    // This is needed for correctly traversing through schemas that
+    // contains pointers that use different dialect/vocabularies.
+    // This is often the case for bundled schemas.
 
-      case sourcemeta::blaze::SchemaKeywordType::
-          ApplicatorValueTraverseAnyPropertyKey: {
-        sourcemeta::core::WeakPointer new_pointer{pointer};
-        new_pointer.push_back(std::cref(pair.first));
-        walk(pointer, new_pointer, subschemas, pair.second, walker, resolver,
-             child_dialect, child_base_dialect, level + 1, orphan, true);
-      } break;
+    // However, we need to be careful with not considering `$schema` on
+    // subschemas that do not represent schema resources, as this is not allowed
+    // in JSON Schema. See
+    // https://json-schema.org/draft/2019-09/draft-handrews-json-schema-02#rfc.section.8.1.1
+    // To play it safe, in those cases, we will continue with the current
+    // dialect / base dialect and ignore the invalid standalone `$schema`. The
+    // caller has enough information to detect those cases and throw an error if
+    // they desire to be more strict.
 
-      case sourcemeta::blaze::SchemaKeywordType::
-          ApplicatorValueTraverseAnyItem: {
-        sourcemeta::core::WeakPointer new_pointer{pointer};
-        new_pointer.push_back(std::cref(pair.first));
-        walk(pointer, new_pointer, subschemas, pair.second, walker, resolver,
-             child_dialect, child_base_dialect, level + 1, orphan, false);
-      } break;
+    const auto enclosing_ref_overrides{
+        subschema.is_object() && subschema.defines("$ref") &&
+        sourcemeta::blaze::ref_overrides_adjacent_keywords(base_dialect)};
 
-      case sourcemeta::blaze::SchemaKeywordType::
-          ApplicatorValueTraverseSomeItem: {
-        sourcemeta::core::WeakPointer new_pointer{pointer};
-        new_pointer.push_back(std::cref(pair.first));
-        walk(pointer, new_pointer, subschemas, pair.second, walker, resolver,
-             child_dialect, child_base_dialect, level + 1, orphan, false);
-      } break;
+    const auto entry{resolve_dialect_at(subschema, dialect, base_dialect,
+                                        resolver, level,
+                                        !enclosing_ref_overrides)};
+    const auto current_dialect{entry.dialect};
+    const auto current_base_dialect{entry.base_dialect};
 
-      case sourcemeta::blaze::SchemaKeywordType::
-          ApplicatorValueTraverseParent: {
-        sourcemeta::core::WeakPointer new_pointer{pointer};
-        new_pointer.push_back(std::cref(pair.first));
-        walk(pointer, new_pointer, subschemas, pair.second, walker, resolver,
-             child_dialect, child_base_dialect, level + 1, orphan, false);
-      } break;
-
-      case sourcemeta::blaze::SchemaKeywordType::ApplicatorValueInPlaceOther: {
-        sourcemeta::core::WeakPointer new_pointer{pointer};
-        new_pointer.push_back(std::cref(pair.first));
-        walk(pointer, new_pointer, subschemas, pair.second, walker, resolver,
-             child_dialect, child_base_dialect, level + 1, orphan,
-             property_name);
-      } break;
-
-      case sourcemeta::blaze::SchemaKeywordType::ApplicatorValueInPlaceNegate: {
-        sourcemeta::core::WeakPointer new_pointer{pointer};
-        new_pointer.push_back(std::cref(pair.first));
-        walk(pointer, new_pointer, subschemas, pair.second, walker, resolver,
-             child_dialect, child_base_dialect, level + 1, orphan,
-             property_name);
-      } break;
-
-      case sourcemeta::blaze::SchemaKeywordType::ApplicatorValueInPlaceMaybe: {
-        sourcemeta::core::WeakPointer new_pointer{pointer};
-        new_pointer.push_back(std::cref(pair.first));
-        walk(pointer, new_pointer, subschemas, pair.second, walker, resolver,
-             child_dialect, child_base_dialect, level + 1, orphan,
-             property_name);
-      } break;
-
-      case sourcemeta::blaze::SchemaKeywordType::ApplicatorElementsTraverseItem:
-        if (pair.second.is_array()) {
-          for (std::size_t index = 0; index < pair.second.size(); index++) {
-            sourcemeta::core::WeakPointer new_pointer{pointer};
-            new_pointer.push_back(std::cref(pair.first));
-            new_pointer.emplace_back(index);
-            walk(pointer, new_pointer, subschemas, pair.second.at(index),
-                 walker, resolver, child_dialect, child_base_dialect, level + 1,
-                 orphan, false);
+    // A subschema may be an embedded resource that pins its own custom
+    // meta-schema inside its own `$defs`/`definitions`. Probe for it here, the
+    // same way we do at the document root, so that nested self-contained
+    // meta-schemas resolve to their embedded definition before the resolver
+    const auto vocabularies{sourcemeta::blaze::vocabularies(
+        [&subschema,
+         &resolver](const std::string_view identifier) -> SchemaResolverResult {
+          const auto *embedded{sourcemeta::blaze::metaschema_try_embedded(
+              subschema, identifier, resolver)};
+          if (embedded) {
+            return *embedded;
           }
-        }
 
-        break;
+          return resolver(identifier);
+        },
+        current_base_dialect, current_dialect)};
 
-      case sourcemeta::blaze::SchemaKeywordType::ApplicatorElementsInPlace:
-        if (pair.second.is_array()) {
-          for (std::size_t index = 0; index < pair.second.size(); index++) {
-            sourcemeta::core::WeakPointer new_pointer{pointer};
-            new_pointer.push_back(std::cref(pair.first));
-            new_pointer.emplace_back(index);
-            walk(pointer, new_pointer, subschemas, pair.second.at(index),
-                 walker, resolver, child_dialect, child_base_dialect, level + 1,
-                 orphan, property_name);
-          }
-        }
+    SubschemaEntry iterator_entry{.parent = parent,
+                                  .pointer = pointer,
+                                  .dialect = current_dialect,
+                                  .vocabularies = vocabularies,
+                                  .base_dialect = current_base_dialect,
+                                  .subschema = subschema,
+                                  .orphan = orphan,
+                                  .property_name = property_name};
+    subschemas.push_back(std::move(iterator_entry));
 
-        break;
+    // We can't recurse any further
+    if (!subschema.is_object()) {
+      continue;
+    }
 
-      case sourcemeta::blaze::SchemaKeywordType::ApplicatorElementsInPlaceSome:
-        if (pair.second.is_array()) {
-          for (std::size_t index = 0; index < pair.second.size(); index++) {
-            sourcemeta::core::WeakPointer new_pointer{pointer};
-            new_pointer.push_back(std::cref(pair.first));
-            new_pointer.emplace_back(index);
-            walk(pointer, new_pointer, subschemas, pair.second.at(index),
-                 walker, resolver, child_dialect, child_base_dialect, level + 1,
-                 orphan, property_name);
-          }
-        }
+    const auto child{entry.override_active
+                         ? resolve_dialect_at(subschema, dialect, base_dialect,
+                                              resolver, level, false)
+                         : entry};
+    const auto child_dialect{child.dialect};
+    const auto child_base_dialect{child.base_dialect};
 
-        break;
+    const auto has_overriding_ref{
+        subschema.defines("$ref") &&
+        sourcemeta::blaze::ref_overrides_adjacent_keywords(
+            current_base_dialect)};
+    for (auto &pair : subschema.as_object()) {
+      const auto &keyword_info{walker(pair.first, vocabularies)};
 
-      case sourcemeta::blaze::SchemaKeywordType::
-          ApplicatorElementsInPlaceSomeNegate:
-        if (pair.second.is_array()) {
-          for (std::size_t index = 0; index < pair.second.size(); index++) {
-            sourcemeta::core::WeakPointer new_pointer{pointer};
-            new_pointer.push_back(std::cref(pair.first));
-            new_pointer.emplace_back(index);
-            walk(pointer, new_pointer, subschemas, pair.second.at(index),
-                 walker, resolver, child_dialect, child_base_dialect, level + 1,
-                 orphan, property_name);
-          }
-        }
+      // Ignore the current keyword sibling to `$ref in Draft 7 and older in
+      // EVERY case. Note that we purposely DO NOT try to add workarounds for
+      // the top-level, `$schema`, or anything else to be purely compliant and
+      // avoid lots of gray areas here
+      if (has_overriding_ref &&
+          keyword_info.type !=
+              sourcemeta::blaze::SchemaKeywordType::Reference) {
+        continue;
+      }
 
-        break;
-
-      case sourcemeta::blaze::SchemaKeywordType::
-          ApplicatorMembersTraversePropertyStatic:
-        if (pair.second.is_object()) {
-          for (auto &subpair : pair.second.as_object()) {
-            sourcemeta::core::WeakPointer new_pointer{pointer};
-            new_pointer.push_back(std::cref(pair.first));
-            new_pointer.push_back(std::cref(subpair.first));
-            walk(pointer, new_pointer, subschemas, subpair.second, walker,
-                 resolver, child_dialect, child_base_dialect, level + 1, orphan,
-                 false);
-          }
-        }
-
-        break;
-
-      case sourcemeta::blaze::SchemaKeywordType::
-          ApplicatorMembersTraversePropertyRegex:
-        if (pair.second.is_object()) {
-          for (auto &subpair : pair.second.as_object()) {
-            sourcemeta::core::WeakPointer new_pointer{pointer};
-            new_pointer.push_back(std::cref(pair.first));
-            new_pointer.push_back(std::cref(subpair.first));
-            walk(pointer, new_pointer, subschemas, subpair.second, walker,
-                 resolver, child_dialect, child_base_dialect, level + 1, orphan,
-                 false);
-          }
-        }
-
-        break;
-
-      case sourcemeta::blaze::SchemaKeywordType::ApplicatorMembersInPlaceSome:
-        if (pair.second.is_object()) {
-          for (auto &subpair : pair.second.as_object()) {
-            sourcemeta::core::WeakPointer new_pointer{pointer};
-            new_pointer.push_back(std::cref(pair.first));
-            new_pointer.push_back(std::cref(subpair.first));
-            walk(pointer, new_pointer, subschemas, subpair.second, walker,
-                 resolver, child_dialect, child_base_dialect, level + 1, orphan,
-                 property_name);
-          }
-        }
-
-        break;
-
-      case sourcemeta::blaze::SchemaKeywordType::LocationMembers:
-        if (pair.second.is_object()) {
-          for (auto &subpair : pair.second.as_object()) {
-            sourcemeta::core::WeakPointer new_pointer{pointer};
-            new_pointer.push_back(std::cref(pair.first));
-            new_pointer.push_back(std::cref(subpair.first));
-            walk(pointer, new_pointer, subschemas, subpair.second, walker,
-                 resolver, child_dialect, child_base_dialect, level + 1, true,
-                 false);
-          }
-        }
-
-        break;
-
-      case sourcemeta::blaze::SchemaKeywordType::
-          ApplicatorValueOrElementsTraverseAnyItemOrItem:
-        if (pair.second.is_array()) {
-          for (std::size_t index = 0; index < pair.second.size(); index++) {
-            sourcemeta::core::WeakPointer new_pointer{pointer};
-            new_pointer.push_back(std::cref(pair.first));
-            new_pointer.emplace_back(index);
-            walk(pointer, new_pointer, subschemas, pair.second.at(index),
-                 walker, resolver, child_dialect, child_base_dialect, level + 1,
-                 orphan, false);
-          }
-        } else {
+      switch (keyword_info.type) {
+        case sourcemeta::blaze::SchemaKeywordType::
+            ApplicatorValueTraverseSomeProperty: {
           sourcemeta::core::WeakPointer new_pointer{pointer};
           new_pointer.push_back(std::cref(pair.first));
-          walk(pointer, new_pointer, subschemas, pair.second, walker, resolver,
-               child_dialect, child_base_dialect, level + 1, orphan, false);
-        }
+          enqueue(children, pointer, std::move(new_pointer), pair.second,
+                  child_dialect, child_base_dialect, level + 1, orphan, false);
+        } break;
 
-        break;
-
-      case sourcemeta::blaze::SchemaKeywordType::
-          ApplicatorValueOrElementsInPlace:
-        if (pair.second.is_array()) {
-          for (std::size_t index = 0; index < pair.second.size(); index++) {
-            sourcemeta::core::WeakPointer new_pointer{pointer};
-            new_pointer.push_back(std::cref(pair.first));
-            new_pointer.emplace_back(index);
-            walk(pointer, new_pointer, subschemas, pair.second.at(index),
-                 walker, resolver, child_dialect, child_base_dialect, level + 1,
-                 orphan, property_name);
-          }
-        } else {
+        case sourcemeta::blaze::SchemaKeywordType::
+            ApplicatorValueTraverseAnyPropertyKey: {
           sourcemeta::core::WeakPointer new_pointer{pointer};
           new_pointer.push_back(std::cref(pair.first));
-          walk(pointer, new_pointer, subschemas, pair.second, walker, resolver,
-               child_dialect, child_base_dialect, level + 1, orphan,
-               property_name);
-        }
+          enqueue(children, pointer, std::move(new_pointer), pair.second,
+                  child_dialect, child_base_dialect, level + 1, orphan, true);
+        } break;
 
-        break;
-      case sourcemeta::blaze::SchemaKeywordType::Assertion:
-      case sourcemeta::blaze::SchemaKeywordType::Annotation:
-      case sourcemeta::blaze::SchemaKeywordType::Reference:
-      case sourcemeta::blaze::SchemaKeywordType::Other:
-      case sourcemeta::blaze::SchemaKeywordType::Comment:
-      case sourcemeta::blaze::SchemaKeywordType::Unknown:
-        break;
+        case sourcemeta::blaze::SchemaKeywordType::
+            ApplicatorValueTraverseAnyItem: {
+          sourcemeta::core::WeakPointer new_pointer{pointer};
+          new_pointer.push_back(std::cref(pair.first));
+          enqueue(children, pointer, std::move(new_pointer), pair.second,
+                  child_dialect, child_base_dialect, level + 1, orphan, false);
+        } break;
+
+        case sourcemeta::blaze::SchemaKeywordType::
+            ApplicatorValueTraverseSomeItem: {
+          sourcemeta::core::WeakPointer new_pointer{pointer};
+          new_pointer.push_back(std::cref(pair.first));
+          enqueue(children, pointer, std::move(new_pointer), pair.second,
+                  child_dialect, child_base_dialect, level + 1, orphan, false);
+        } break;
+
+        case sourcemeta::blaze::SchemaKeywordType::
+            ApplicatorValueTraverseParent: {
+          sourcemeta::core::WeakPointer new_pointer{pointer};
+          new_pointer.push_back(std::cref(pair.first));
+          enqueue(children, pointer, std::move(new_pointer), pair.second,
+                  child_dialect, child_base_dialect, level + 1, orphan, false);
+        } break;
+
+        case sourcemeta::blaze::SchemaKeywordType::
+            ApplicatorValueInPlaceOther: {
+          sourcemeta::core::WeakPointer new_pointer{pointer};
+          new_pointer.push_back(std::cref(pair.first));
+          enqueue(children, pointer, std::move(new_pointer), pair.second,
+                  child_dialect, child_base_dialect, level + 1, orphan,
+                  property_name);
+        } break;
+
+        case sourcemeta::blaze::SchemaKeywordType::
+            ApplicatorValueInPlaceNegate: {
+          sourcemeta::core::WeakPointer new_pointer{pointer};
+          new_pointer.push_back(std::cref(pair.first));
+          enqueue(children, pointer, std::move(new_pointer), pair.second,
+                  child_dialect, child_base_dialect, level + 1, orphan,
+                  property_name);
+        } break;
+
+        case sourcemeta::blaze::SchemaKeywordType::
+            ApplicatorValueInPlaceMaybe: {
+          sourcemeta::core::WeakPointer new_pointer{pointer};
+          new_pointer.push_back(std::cref(pair.first));
+          enqueue(children, pointer, std::move(new_pointer), pair.second,
+                  child_dialect, child_base_dialect, level + 1, orphan,
+                  property_name);
+        } break;
+
+        case sourcemeta::blaze::SchemaKeywordType::
+            ApplicatorElementsTraverseItem:
+          if (pair.second.is_array()) {
+            for (std::size_t index = 0; index < pair.second.size(); index++) {
+              sourcemeta::core::WeakPointer new_pointer{pointer};
+              new_pointer.push_back(std::cref(pair.first));
+              new_pointer.emplace_back(index);
+              enqueue(children, pointer, std::move(new_pointer),
+                      pair.second.at(index), child_dialect, child_base_dialect,
+                      level + 1, orphan, false);
+            }
+          }
+
+          break;
+
+        case sourcemeta::blaze::SchemaKeywordType::ApplicatorElementsInPlace:
+          if (pair.second.is_array()) {
+            for (std::size_t index = 0; index < pair.second.size(); index++) {
+              sourcemeta::core::WeakPointer new_pointer{pointer};
+              new_pointer.push_back(std::cref(pair.first));
+              new_pointer.emplace_back(index);
+              enqueue(children, pointer, std::move(new_pointer),
+                      pair.second.at(index), child_dialect, child_base_dialect,
+                      level + 1, orphan, property_name);
+            }
+          }
+
+          break;
+
+        case sourcemeta::blaze::SchemaKeywordType::
+            ApplicatorElementsInPlaceSome:
+          if (pair.second.is_array()) {
+            for (std::size_t index = 0; index < pair.second.size(); index++) {
+              sourcemeta::core::WeakPointer new_pointer{pointer};
+              new_pointer.push_back(std::cref(pair.first));
+              new_pointer.emplace_back(index);
+              enqueue(children, pointer, std::move(new_pointer),
+                      pair.second.at(index), child_dialect, child_base_dialect,
+                      level + 1, orphan, property_name);
+            }
+          }
+
+          break;
+
+        case sourcemeta::blaze::SchemaKeywordType::
+            ApplicatorElementsInPlaceSomeNegate:
+          if (pair.second.is_array()) {
+            for (std::size_t index = 0; index < pair.second.size(); index++) {
+              sourcemeta::core::WeakPointer new_pointer{pointer};
+              new_pointer.push_back(std::cref(pair.first));
+              new_pointer.emplace_back(index);
+              enqueue(children, pointer, std::move(new_pointer),
+                      pair.second.at(index), child_dialect, child_base_dialect,
+                      level + 1, orphan, property_name);
+            }
+          }
+
+          break;
+
+        case sourcemeta::blaze::SchemaKeywordType::
+            ApplicatorMembersTraversePropertyStatic:
+          if (pair.second.is_object()) {
+            for (auto &subpair : pair.second.as_object()) {
+              sourcemeta::core::WeakPointer new_pointer{pointer};
+              new_pointer.push_back(std::cref(pair.first));
+              new_pointer.push_back(std::cref(subpair.first));
+              enqueue(children, pointer, std::move(new_pointer), subpair.second,
+                      child_dialect, child_base_dialect, level + 1, orphan,
+                      false);
+            }
+          }
+
+          break;
+
+        case sourcemeta::blaze::SchemaKeywordType::
+            ApplicatorMembersTraversePropertyRegex:
+          if (pair.second.is_object()) {
+            for (auto &subpair : pair.second.as_object()) {
+              sourcemeta::core::WeakPointer new_pointer{pointer};
+              new_pointer.push_back(std::cref(pair.first));
+              new_pointer.push_back(std::cref(subpair.first));
+              enqueue(children, pointer, std::move(new_pointer), subpair.second,
+                      child_dialect, child_base_dialect, level + 1, orphan,
+                      false);
+            }
+          }
+
+          break;
+
+        case sourcemeta::blaze::SchemaKeywordType::ApplicatorMembersInPlaceSome:
+          if (pair.second.is_object()) {
+            for (auto &subpair : pair.second.as_object()) {
+              sourcemeta::core::WeakPointer new_pointer{pointer};
+              new_pointer.push_back(std::cref(pair.first));
+              new_pointer.push_back(std::cref(subpair.first));
+              enqueue(children, pointer, std::move(new_pointer), subpair.second,
+                      child_dialect, child_base_dialect, level + 1, orphan,
+                      property_name);
+            }
+          }
+
+          break;
+
+        case sourcemeta::blaze::SchemaKeywordType::LocationMembers:
+          if (pair.second.is_object()) {
+            for (auto &subpair : pair.second.as_object()) {
+              sourcemeta::core::WeakPointer new_pointer{pointer};
+              new_pointer.push_back(std::cref(pair.first));
+              new_pointer.push_back(std::cref(subpair.first));
+              enqueue(children, pointer, std::move(new_pointer), subpair.second,
+                      child_dialect, child_base_dialect, level + 1, true,
+                      false);
+            }
+          }
+
+          break;
+
+        case sourcemeta::blaze::SchemaKeywordType::
+            ApplicatorValueOrElementsTraverseAnyItemOrItem:
+          if (pair.second.is_array()) {
+            for (std::size_t index = 0; index < pair.second.size(); index++) {
+              sourcemeta::core::WeakPointer new_pointer{pointer};
+              new_pointer.push_back(std::cref(pair.first));
+              new_pointer.emplace_back(index);
+              enqueue(children, pointer, std::move(new_pointer),
+                      pair.second.at(index), child_dialect, child_base_dialect,
+                      level + 1, orphan, false);
+            }
+          } else {
+            sourcemeta::core::WeakPointer new_pointer{pointer};
+            new_pointer.push_back(std::cref(pair.first));
+            enqueue(children, pointer, std::move(new_pointer), pair.second,
+                    child_dialect, child_base_dialect, level + 1, orphan,
+                    false);
+          }
+
+          break;
+
+        case sourcemeta::blaze::SchemaKeywordType::
+            ApplicatorValueOrElementsInPlace:
+          if (pair.second.is_array()) {
+            for (std::size_t index = 0; index < pair.second.size(); index++) {
+              sourcemeta::core::WeakPointer new_pointer{pointer};
+              new_pointer.push_back(std::cref(pair.first));
+              new_pointer.emplace_back(index);
+              enqueue(children, pointer, std::move(new_pointer),
+                      pair.second.at(index), child_dialect, child_base_dialect,
+                      level + 1, orphan, property_name);
+            }
+          } else {
+            sourcemeta::core::WeakPointer new_pointer{pointer};
+            new_pointer.push_back(std::cref(pair.first));
+            enqueue(children, pointer, std::move(new_pointer), pair.second,
+                    child_dialect, child_base_dialect, level + 1, orphan,
+                    property_name);
+          }
+
+          break;
+        case sourcemeta::blaze::SchemaKeywordType::Assertion:
+        case sourcemeta::blaze::SchemaKeywordType::Annotation:
+        case sourcemeta::blaze::SchemaKeywordType::Reference:
+        case sourcemeta::blaze::SchemaKeywordType::Other:
+        case sourcemeta::blaze::SchemaKeywordType::Comment:
+        case sourcemeta::blaze::SchemaKeywordType::Unknown:
+          break;
+      }
+    }
+
+    // Push in reverse so that the first child is popped first, which keeps the
+    // resulting order identical to a depth-first recursive traversal
+    while (!children.empty()) {
+      pending.push_back(std::move(children.back()));
+      children.pop_back();
     }
   }
 }

@@ -481,12 +481,11 @@ auto handle_ref(const sourcemeta::core::JSON &schema,
   ref_pointer.push_back("$ref");
   const auto ref_weak_pointer{sourcemeta::core::to_weak_pointer(ref_pointer)};
 
-  const auto &references{frame.references()};
-  const auto reference{references.find(
-      {sourcemeta::blaze::SchemaReferenceType::Static, ref_weak_pointer})};
-  assert(reference != references.cend());
+  const auto reference{frame.reference(
+      sourcemeta::blaze::SchemaReferenceType::Static, ref_weak_pointer)};
+  assert(reference.has_value());
 
-  const auto &destination{reference->second.destination};
+  const auto &destination{reference.value().get().destination};
   const auto target{frame.traverse(destination)};
   if (!target.has_value()) {
     throw CodegenUnexpectedSchemaError(
@@ -519,14 +518,12 @@ auto handle_dynamic_ref(
   ref_pointer.push_back("$dynamicRef");
   const auto ref_weak_pointer{sourcemeta::core::to_weak_pointer(ref_pointer)};
 
-  const auto &references{frame.references()};
-
   // Note: The frame internally converts single-target dynamic references to
   // static reference
-  const auto static_reference{references.find(
-      {sourcemeta::blaze::SchemaReferenceType::Static, ref_weak_pointer})};
-  if (static_reference != references.cend()) {
-    const auto &destination{static_reference->second.destination};
+  const auto static_reference{frame.reference(
+      sourcemeta::blaze::SchemaReferenceType::Static, ref_weak_pointer)};
+  if (static_reference.has_value()) {
+    const auto &destination{static_reference.value().get().destination};
     const auto target{frame.traverse(destination)};
     if (!target.has_value()) {
       throw CodegenUnexpectedSchemaError(
@@ -544,28 +541,29 @@ auto handle_dynamic_ref(
 
   // Multi-target dynamic reference: find all dynamic anchors with the matching
   // fragment and emit a union of all possible targets
-  const auto dynamic_reference{references.find(
-      {sourcemeta::blaze::SchemaReferenceType::Dynamic, ref_weak_pointer})};
-  assert(dynamic_reference != references.cend());
-  assert(dynamic_reference->second.fragment.has_value());
-  const auto &fragment{dynamic_reference->second.fragment.value()};
+  const auto dynamic_reference{frame.reference(
+      sourcemeta::blaze::SchemaReferenceType::Dynamic, ref_weak_pointer)};
+  assert(dynamic_reference.has_value());
+  assert(dynamic_reference.value().get().fragment.has_value());
+  const auto &fragment{dynamic_reference.value().get().fragment.value()};
 
   std::vector<CodegenIRType> branches;
-  for (const auto &[key, entry] : frame.locations()) {
-    if (key.first != sourcemeta::blaze::SchemaReferenceType::Dynamic ||
-        entry.type != sourcemeta::blaze::SchemaFrame::LocationType::Anchor) {
-      continue;
-    }
+  frame.for_each_anchor(
+      sourcemeta::blaze::SchemaReferenceType::Dynamic,
+      [&](const std::string_view uri,
+          const sourcemeta::blaze::SchemaFrame::Location &entry) -> void {
+        const sourcemeta::core::URI anchor_uri{
+            sourcemeta::core::JSON::String{uri}};
+        const auto anchor_fragment{anchor_uri.fragment()};
+        if (!anchor_fragment.has_value() ||
+            anchor_fragment.value() != fragment) {
+          return;
+        }
 
-    const sourcemeta::core::URI anchor_uri{key.second};
-    const auto anchor_fragment{anchor_uri.fragment()};
-    if (!anchor_fragment.has_value() || anchor_fragment.value() != fragment) {
-      continue;
-    }
-
-    branches.push_back({.pointer = sourcemeta::core::to_pointer(entry.pointer),
-                        .symbol = symbol(frame, entry)});
-  }
+        branches.push_back(
+            {.pointer = sourcemeta::core::to_pointer(entry.pointer),
+             .symbol = symbol(frame, entry)});
+      });
 
   assert(!branches.empty());
   return CodegenIRUnion{

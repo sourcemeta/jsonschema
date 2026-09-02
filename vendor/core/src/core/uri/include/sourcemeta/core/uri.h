@@ -421,7 +421,8 @@ public:
   /// ```
   [[nodiscard]] auto fragment() const -> std::optional<std::string_view>;
 
-  /// Set the fragment part of the URI. For example:
+  /// Set the fragment part of the URI, taking the input as already
+  /// percent-encoded. For example:
   ///
   /// ```cpp
   /// #include <sourcemeta/core/uri.h>
@@ -434,6 +435,19 @@ public:
   /// assert(uri.fragment().value() == "foo");
   /// ```
   auto fragment(const std::string_view fragment) -> URI &;
+
+  /// Set the fragment part of the URI, taking the input as literal text that
+  /// still needs to be percent-encoded. For example:
+  ///
+  /// ```cpp
+  /// #include <sourcemeta/core/uri.h>
+  /// #include <cassert>
+  ///
+  /// sourcemeta::core::URI uri{"https://www.sourcemeta.com"};
+  /// uri.unescaped_fragment("/100%");
+  /// assert(uri.recompose() == "https://www.sourcemeta.com#/100%25");
+  /// ```
+  auto unescaped_fragment(const std::string_view fragment) -> URI &;
 
   /// A non-owning, zero-copy view over the RFC 3986 query
   /// component of a URI. Provides convenience access to query
@@ -773,7 +787,8 @@ public:
   /// To support ordering of URIs
   auto operator<(const URI &other) const noexcept -> bool;
 
-  /// Create a URI from a fragment. For example:
+  /// Create a URI from a fragment that is already percent-encoded. For
+  /// example:
   ///
   /// ```cpp
   /// #include <sourcemeta/core/uri.h>
@@ -784,6 +799,19 @@ public:
   /// assert(uri.recompose() == "#foo");
   /// ```
   static auto from_fragment(const std::string_view fragment) -> URI;
+
+  /// Create a URI from a fragment given as literal text that still needs to be
+  /// percent-encoded. For example:
+  ///
+  /// ```cpp
+  /// #include <sourcemeta/core/uri.h>
+  /// #include <cassert>
+  ///
+  /// const sourcemeta::core::URI uri{
+  ///   sourcemeta::core::URI::from_unescaped_fragment("/100%")};
+  /// assert(uri.recompose() == "#/100%25");
+  /// ```
+  static auto from_unescaped_fragment(const std::string_view fragment) -> URI;
 
   /// Create a URI from a file system path. For example:
   ///

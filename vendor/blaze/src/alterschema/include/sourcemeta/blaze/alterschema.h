@@ -152,10 +152,9 @@ private:
 ///   "items": { "type": "string" }
 /// })JSON");
 ///
-/// sourcemeta::blaze::SchemaFrame frame{
-///     sourcemeta::blaze::SchemaFrame::Mode::References};
-/// frame.analyse(document, sourcemeta::blaze::schema_walker,
-///               sourcemeta::blaze::schema_resolver);
+/// const sourcemeta::blaze::SchemaFrame frame{
+///     sourcemeta::blaze::SchemaFrame::Mode::References, document,
+///     sourcemeta::blaze::schema_walker, sourcemeta::blaze::schema_resolver};
 ///
 /// const auto location{frame.traverse(
 ///     sourcemeta::core::WeakPointer{"items"},

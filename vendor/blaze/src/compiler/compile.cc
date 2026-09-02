@@ -13,6 +13,7 @@
 #include <unordered_map> // std::unordered_map
 #include <unordered_set> // std::unordered_set
 #include <utility>       // std::move, std::pair
+#include <variant>       // std::holds_alternative
 #include <vector>        // std::vector
 
 #include "compile_helpers.h"
@@ -21,6 +22,184 @@
 
 namespace {
 
+// A `$schema` reference points at a meta-schema rather than into the schema
+// itself, so reference planning ignores it
+auto is_metaschema_reference(const sourcemeta::core::WeakPointer &origin)
+    -> bool {
+  return !origin.empty() && origin.back().is_property() &&
+         origin.back().to_property() == "$schema";
+}
+
+// Draft 6 introduced boolean schemas. Draft 4 and earlier have none, and the
+// only places they accept a boolean are `additionalProperties` and
+// `additionalItems`, whose own definitions spell that out
+auto booleans_are_schemas(
+    const sourcemeta::blaze::SchemaVocabularies &vocabularies) -> bool {
+  using Known = sourcemeta::blaze::SchemaVocabularies::Known;
+  return !vocabularies.contains_any(
+      {Known::JSON_Schema_Draft_3, Known::JSON_Schema_Draft_3_Hyper,
+       Known::JSON_Schema_Draft_4, Known::JSON_Schema_Draft_4_Hyper});
+}
+
+// Draft 4 and earlier spell these as flags on a sibling bound rather than as
+// bounds of their own, and their meta-schemas ask for that sibling to be there
+auto exclusive_bounds_need_a_sibling(
+    const sourcemeta::blaze::SchemaVocabularies &vocabularies) -> bool {
+  using Known = sourcemeta::blaze::SchemaVocabularies::Known;
+  return vocabularies.contains_any(
+      {Known::JSON_Schema_Draft_3, Known::JSON_Schema_Draft_3_Hyper,
+       Known::JSON_Schema_Draft_4, Known::JSON_Schema_Draft_4_Hyper});
+}
+
+auto is_schema(const sourcemeta::core::JSON &value, const bool allow_boolean)
+    -> bool {
+  return value.is_object() || (allow_boolean && value.is_boolean());
+}
+
+// The reason the keyword's value is not the shape the meta-schema asks for, or
+// `nullptr` when it is. The location the error carries names the keyword, so
+// these read as statements about it
+auto keyword_shape_error(
+    const sourcemeta::core::JSON::String &keyword,
+    const sourcemeta::blaze::SchemaKeywordType type, const bool known,
+    const sourcemeta::core::JSON &value, const bool allow_boolean,
+    const sourcemeta::blaze::SchemaVocabularies &vocabularies) -> const char * {
+  using namespace sourcemeta::blaze;
+  static constexpr auto EXPECTED_STRING{
+      "This keyword was expected to be set to a string"};
+  static constexpr auto EXPECTED_ARRAY{
+      "This keyword was expected to be set to an array"};
+  static constexpr auto EXPECTED_BOOLEAN{
+      "This keyword was expected to be set to a boolean"};
+  static constexpr auto EXPECTED_NUMBER{
+      "This keyword was expected to be set to a number"};
+  static constexpr auto EXPECTED_NON_NEGATIVE_INTEGER{
+      "This keyword was expected to be set to a non-negative integer"};
+  static constexpr auto EXPECTED_SCHEMA{
+      "This keyword was expected to be set to a valid schema"};
+  static constexpr auto EXPECTED_SCHEMA_OR_ARRAY{
+      "This keyword was expected to be set to a valid schema or to an array "
+      "of them"};
+  static constexpr auto EXPECTED_SCHEMA_ARRAY{
+      "This keyword was expected to be set to an array of valid schemas"};
+  static constexpr auto EXPECTED_SCHEMA_OBJECT{
+      "This keyword was expected to be set to an object whose values are "
+      "valid schemas"};
+
+  // What follows describes the contracts of the official vocabularies. A
+  // keyword the dialect does not define carries no vocabulary at all, and one
+  // that a custom vocabulary defines carries its URI rather than a known
+  // value, so neither is held to these
+  if (known) {
+    if (keyword == "title" || keyword == "description" ||
+        keyword == "$comment" || keyword == "format" ||
+        keyword == "contentEncoding" || keyword == "contentMediaType") {
+      return value.is_string() ? nullptr : EXPECTED_STRING;
+    } else if (keyword == "uniqueItems" || keyword == "deprecated" ||
+               keyword == "readOnly" || keyword == "writeOnly") {
+      return value.is_boolean() ? nullptr : EXPECTED_BOOLEAN;
+    } else if (keyword == "examples") {
+      return value.is_array() ? nullptr : EXPECTED_ARRAY;
+    } else if (keyword == "maxContains" || keyword == "minContains") {
+      // These only exist from 2019-09 onwards, where a number whose fractional
+      // part is zero counts as an integer
+      return (value.is_integral() && value.is_positive())
+                 ? nullptr
+                 : EXPECTED_NON_NEGATIVE_INTEGER;
+    } else if (keyword == "exclusiveMaximum" || keyword == "exclusiveMinimum") {
+      return (vocabularies.contains_any(
+                  {SchemaVocabularies::Known::JSON_Schema_Draft_3,
+                   SchemaVocabularies::Known::JSON_Schema_Draft_3_Hyper,
+                   SchemaVocabularies::Known::JSON_Schema_Draft_4,
+                   SchemaVocabularies::Known::JSON_Schema_Draft_4_Hyper})
+                  ? (value.is_boolean() ? nullptr : EXPECTED_BOOLEAN)
+                  : (value.is_number() ? nullptr : EXPECTED_NUMBER));
+    } else if ((keyword == "$defs" || keyword == "definitions") &&
+               // The walker treats these as containers in every dialect, but
+               // no meta-schema before Draft 4 defines either of them
+               !vocabularies.contains_any(
+                   {SchemaVocabularies::Known::JSON_Schema_Draft_3,
+                    SchemaVocabularies::Known::JSON_Schema_Draft_3_Hyper})) {
+      return (value.is_object() &&
+              std::ranges::all_of(value.as_object(),
+                                  [allow_boolean](const auto &entry) -> bool {
+                                    return is_schema(entry.second,
+                                                     allow_boolean);
+                                  }))
+                 ? nullptr
+                 : EXPECTED_SCHEMA_OBJECT;
+    }
+  }
+
+  // Draft 3 spells `required` as a flag on the property itself rather than as
+  // a list on the object, so the shape it asks for is a different one
+  if (keyword == "required" &&
+      vocabularies.contains_any(
+          {SchemaVocabularies::Known::JSON_Schema_Draft_3,
+           SchemaVocabularies::Known::JSON_Schema_Draft_3_Hyper})) {
+    return value.is_boolean() ? nullptr : EXPECTED_BOOLEAN;
+  }
+
+  switch (type) {
+    case SchemaKeywordType::ApplicatorValueTraverseSomeProperty:
+    case SchemaKeywordType::ApplicatorValueTraverseAnyPropertyKey:
+    case SchemaKeywordType::ApplicatorValueTraverseAnyItem:
+    case SchemaKeywordType::ApplicatorValueTraverseSomeItem:
+    case SchemaKeywordType::ApplicatorValueTraverseParent:
+    case SchemaKeywordType::ApplicatorValueInPlaceMaybe:
+    case SchemaKeywordType::ApplicatorValueInPlaceOther:
+    case SchemaKeywordType::ApplicatorValueInPlaceNegate:
+      return is_schema(value, allow_boolean) ? nullptr : EXPECTED_SCHEMA;
+    case SchemaKeywordType::ApplicatorValueOrElementsTraverseAnyItemOrItem:
+    case SchemaKeywordType::ApplicatorValueOrElementsInPlace:
+      return (is_schema(value, allow_boolean) || value.is_array())
+                 ? nullptr
+                 : EXPECTED_SCHEMA_OR_ARRAY;
+    // Note that `ApplicatorElementsInPlaceSome` and its negated variant are
+    // deliberately absent, as Draft 3 `type` and `disallow` also take a plain
+    // type name, so their strategy does not mandate an array. So is
+    // `ApplicatorMembersInPlaceSome`, as Draft 4 `dependencies` also takes a
+    // list of property names as a member
+    case SchemaKeywordType::ApplicatorElementsTraverseItem:
+    case SchemaKeywordType::ApplicatorElementsInPlace:
+      return (value.is_array() &&
+              std::ranges::all_of(value.as_array(),
+                                  [allow_boolean](const auto &entry) -> bool {
+                                    return is_schema(entry, allow_boolean);
+                                  }))
+                 ? nullptr
+                 : EXPECTED_SCHEMA_ARRAY;
+    case SchemaKeywordType::ApplicatorMembersTraversePropertyStatic:
+    case SchemaKeywordType::ApplicatorMembersTraversePropertyRegex:
+      return (value.is_object() &&
+              std::ranges::all_of(value.as_object(),
+                                  [allow_boolean](const auto &entry) -> bool {
+                                    return is_schema(entry.second,
+                                                     allow_boolean);
+                                  }))
+                 ? nullptr
+                 : EXPECTED_SCHEMA_OBJECT;
+    // The walker only reports this for a keyword the dialect in use actually
+    // defines, so an unknown keyword never reaches here and stays ignored, as
+    // the specification requires
+    case SchemaKeywordType::Annotation:
+      if (keyword == "title" || keyword == "description" ||
+          keyword == "contentEncoding" || keyword == "contentMediaType") {
+        return value.is_string() ? nullptr : EXPECTED_STRING;
+      } else if (keyword == "examples") {
+        return value.is_array() ? nullptr : EXPECTED_ARRAY;
+      } else if (keyword == "deprecated" || keyword == "readOnly" ||
+                 keyword == "writeOnly") {
+        return value.is_boolean() ? nullptr : EXPECTED_BOOLEAN;
+      }
+
+      // Others, like `default`, take any value at all
+      return nullptr;
+    default:
+      return nullptr;
+  }
+}
+
 auto compile_subschema(const sourcemeta::blaze::Context &context,
                        const sourcemeta::blaze::SchemaContext &schema_context,
                        const sourcemeta::blaze::DynamicContext &dynamic_context)
@@ -28,6 +207,17 @@ auto compile_subschema(const sourcemeta::blaze::Context &context,
   using namespace sourcemeta::blaze;
   assert((schema_context.schema.is_object() ||
           schema_context.schema.is_boolean()));
+
+  // A boolean in a keyword position is settled by the keyword's own contract,
+  // which the shape check below applies. What is left is the root of a schema
+  // resource, where a dialect without boolean schemas admits no boolean at all
+  if (schema_context.schema.is_boolean() &&
+      schema_context.relative_pointer.empty() &&
+      !booleans_are_schemas(schema_context.vocabularies)) [[unlikely]] {
+    throw sourcemeta::blaze::CompilerError(
+        schema_context.base, absolute_schema_location(context, schema_context),
+        "This dialect does not support boolean schemas");
+  }
 
   // Handle boolean schemas earlier on, as nobody should be able to
   // override what these mean.
@@ -51,6 +241,48 @@ auto compile_subschema(const sourcemeta::blaze::Context &context,
            schema_context.vocabularies}) {
     assert(entry.pointer.back().is_property());
     const auto &keyword{entry.pointer.back().to_property()};
+    const auto &metadata{context.walker(keyword, schema_context.vocabularies)};
+    const auto official{
+        metadata.vocabulary.has_value() &&
+        std::holds_alternative<sourcemeta::blaze::SchemaVocabularies::Known>(
+            metadata.vocabulary.value())};
+    // Draft 3 has no boolean schemas, but its own definitions of these two
+    // keywords accept a boolean in place of one
+    const auto allow_boolean{
+        booleans_are_schemas(schema_context.vocabularies) ||
+        keyword == "additionalProperties" || keyword == "additionalItems"};
+    const auto *shape_error{keyword_shape_error(
+        keyword, metadata.type, official, schema_context.schema.at(keyword),
+        allow_boolean, schema_context.vocabularies)};
+    // Draft 3 spells these as flags on a sibling bound rather than as bounds of
+    // their own, and its meta-schema asks for that sibling to be there
+    static const sourcemeta::core::JSON::String KEYWORD_MINIMUM{"minimum"};
+    static const sourcemeta::core::JSON::String KEYWORD_MAXIMUM{"maximum"};
+    if (official &&
+        exclusive_bounds_need_a_sibling(schema_context.vocabularies) &&
+        ((keyword == "exclusiveMinimum" &&
+          !schema_context.schema.defines(KEYWORD_MINIMUM)) ||
+         (keyword == "exclusiveMaximum" &&
+          !schema_context.schema.defines(KEYWORD_MAXIMUM)))) [[unlikely]] {
+      throw sourcemeta::blaze::CompilerError(
+          schema_context.base,
+          absolute_schema_location(
+              context, schema_context.base,
+              schema_context.relative_pointer.concat(
+                  sourcemeta::blaze::make_weak_pointer(keyword))),
+          "This keyword was expected to accompany the bound it applies to");
+    }
+
+    if (shape_error) [[unlikely]] {
+      throw sourcemeta::blaze::CompilerError(
+          schema_context.base,
+          absolute_schema_location(
+              context, schema_context.base,
+              schema_context.relative_pointer.concat(
+                  sourcemeta::blaze::make_weak_pointer(keyword))),
+          shape_error);
+    }
+
     // Bases must not contain fragments
     assert(!schema_context.base.fragment().has_value());
     for (auto &&step : context.compiler(
@@ -66,9 +298,10 @@ auto compile_subschema(const sourcemeta::blaze::Context &context,
               .base_instance_location = dynamic_context.base_instance_location},
              steps)) {
       // Just a sanity check to ensure every keyword location is indeed valid
-      assert(context.frame.locations().contains(
-          {sourcemeta::blaze::SchemaReferenceType::Static,
-           context.extra[step.extra_index].keyword_location}));
+      assert(context.frame
+                 .location(sourcemeta::blaze::SchemaReferenceType::Static,
+                           context.extra[step.extra_index].keyword_location)
+                 .has_value());
       steps.push_back(std::move(step));
     }
   }
@@ -93,34 +326,25 @@ auto defines_any_whitelisted_keyword(
                                  sourcemeta::core::JSON::Object::hash(keyword));
   }
 
-  for (const auto &entry : frame.locations()) {
-    if (entry.second.type ==
-            sourcemeta::blaze::SchemaFrame::LocationType::Pointer ||
-        entry.second.type ==
-            sourcemeta::blaze::SchemaFrame::LocationType::Anchor) {
-      continue;
-    }
+  return frame.any_subschema(
+      [&](const sourcemeta::blaze::SchemaFrame::Location &location) -> bool {
+        const auto &subschema{sourcemeta::core::get(schema, location.pointer)};
+        if (!subschema.is_object()) {
+          return false;
+        }
 
-    const auto &subschema{sourcemeta::core::get(schema, entry.second.pointer)};
-    if (!subschema.is_object()) {
-      continue;
-    }
+        bool defines_keyword{false};
+        for (const auto &[keyword, keyword_hash] : hashed_keywords) {
+          if (subschema.defines(keyword, keyword_hash)) {
+            defines_keyword = true;
+            break;
+          }
+        }
 
-    bool defines_keyword{false};
-    for (const auto &[keyword, keyword_hash] : hashed_keywords) {
-      if (subschema.defines(keyword, keyword_hash)) {
-        defines_keyword = true;
-        break;
-      }
-    }
-
-    if (defines_keyword && frame.is_reachable(entrypoint_location, entry.second,
-                                              walker, resolver)) {
-      return true;
-    }
-  }
-
-  return false;
+        return defines_keyword &&
+               frame.is_reachable(entrypoint_location, location, walker,
+                                  resolver);
+      });
 }
 
 // TODO: Somehow move this logic up to `SchemaFrame`
@@ -128,22 +352,23 @@ auto schema_frame_populate_target_types(
     const sourcemeta::blaze::SchemaFrame &frame,
     std::unordered_map<std::string_view, std::pair<bool, bool>> &target_types)
     -> void {
-  for (const auto &reference : frame.references()) {
-    if (!reference.first.second.empty() &&
-        reference.first.second.back().is_property() &&
-        reference.first.second.back().to_property() == "$schema") {
-      continue;
-    }
+  frame.for_each_reference(
+      [&](const sourcemeta::blaze::SchemaReferenceType,
+          const sourcemeta::core::WeakPointer &origin,
+          const sourcemeta::blaze::SchemaFrame::Reference &reference) -> void {
+        if (is_metaschema_reference(origin)) {
+          return;
+        }
 
-    const auto reference_location{frame.traverse(reference.first.second)};
-    assert(reference_location.has_value());
-    auto &context{target_types[reference.second.destination]};
-    if (reference_location->get().property_name) {
-      context.first = true;
-    } else {
-      context.second = true;
-    }
-  }
+        const auto reference_location{frame.traverse(origin)};
+        assert(reference_location.has_value());
+        auto &context{target_types[reference.destination]};
+        if (reference_location->get().property_name) {
+          context.first = true;
+        } else {
+          context.second = true;
+        }
+      });
 
   std::unordered_map<std::string_view, const sourcemeta::core::WeakPointer *>
       destination_pointers;
@@ -157,21 +382,22 @@ auto schema_frame_populate_target_types(
 
   std::unordered_map<std::string_view, std::vector<std::string_view>>
       references_within;
-  for (const auto &reference : frame.references()) {
-    if (!reference.first.second.empty() &&
-        reference.first.second.back().is_property() &&
-        reference.first.second.back().to_property() == "$schema") {
-      continue;
-    }
+  frame.for_each_reference(
+      [&](const sourcemeta::blaze::SchemaReferenceType,
+          const sourcemeta::core::WeakPointer &origin,
+          const sourcemeta::blaze::SchemaFrame::Reference &reference) -> void {
+        if (is_metaschema_reference(origin)) {
+          return;
+        }
 
-    for (const auto &[destination, destination_pointer] :
-         destination_pointers) {
-      if (reference.first.second.starts_with(*destination_pointer) &&
-          reference.first.second.size() > destination_pointer->size()) {
-        references_within[destination].push_back(reference.second.destination);
-      }
-    }
-  }
+        for (const auto &[destination, destination_pointer] :
+             destination_pointers) {
+          if (origin.starts_with(*destination_pointer) &&
+              origin.size() > destination_pointer->size()) {
+            references_within[destination].push_back(reference.destination);
+          }
+        }
+      });
 
   bool changed{true};
   while (changed) {
@@ -224,6 +450,19 @@ auto compile(const sourcemeta::core::JSON &schema,
         entrypoint, "The given entry point URI is not a valid subschema"};
   }
 
+  // Compiling from an entry point makes that subschema a root of its own, and
+  // a dialect without boolean schemas has no more room for a boolean there
+  // than it has at the root of a schema resource
+  const auto &entrypoint_schema{
+      sourcemeta::core::get(schema, entrypoint_location.pointer)};
+  if (entrypoint_schema.is_boolean() &&
+      !booleans_are_schemas(frame.vocabularies(entrypoint_location, resolver)))
+      [[unlikely]] {
+    throw CompilerError(sourcemeta::core::URI{entrypoint_location.base},
+                        to_pointer(entrypoint_location.pointer),
+                        "This dialect does not support boolean schemas");
+  }
+
   const bool collects_annotations{
       mode == Mode::Exhaustive ||
       (effective_tweaks.annotations.has_value() &&
@@ -237,12 +476,11 @@ auto compile(const sourcemeta::core::JSON &schema,
   ///////////////////////////////////////////////////////////////////
 
   std::vector<std::string> resources;
-  for (const auto &entry : frame.locations()) {
-    if (entry.second.type ==
-        sourcemeta::blaze::SchemaFrame::LocationType::Resource) {
-      resources.push_back(entry.first.second);
-    }
-  }
+  frame.for_each_resource(
+      [&resources](const std::string_view uri,
+                   const sourcemeta::blaze::SchemaFrame::Location &) -> void {
+        resources.emplace_back(uri);
+      });
 
   // Rule out any duplicates as we will use this list as the
   // source for a perfect hash function on schema resources.
@@ -256,16 +494,9 @@ auto compile(const sourcemeta::core::JSON &schema,
   // (2) Check if the schema relies on dynamic scopes
   ///////////////////////////////////////////////////////////////////
 
-  bool uses_dynamic_scopes{false};
-  for (const auto &reference : frame.references()) {
-    // Check whether dynamic referencing takes places in this schema. If not,
-    // we can avoid the overhead of keeping track of dynamics scopes, etc
-    if (reference.first.first ==
-        sourcemeta::blaze::SchemaReferenceType::Dynamic) {
-      uses_dynamic_scopes = true;
-      break;
-    }
-  }
+  // If dynamic referencing does not take place in this schema, we can avoid
+  // the overhead of keeping track of dynamic scopes, etc
+  const auto uses_dynamic_scopes{frame.has_dynamic_references()};
 
   ///////////////////////////////////////////////////////////////////
   // (3) Plan which static references we will precompile
@@ -283,71 +514,68 @@ auto compile(const sourcemeta::core::JSON &schema,
                       entrypoint, false),
       std::make_pair(0, nullptr));
 
-  for (const auto &reference : frame.references()) {
-    // Ignore meta-schema references
-    if (!reference.first.second.empty() &&
-        reference.first.second.back().is_property() &&
-        reference.first.second.back().to_property() == "$schema") {
-      continue;
-    }
+  frame.for_each_reference(
+      [&](const sourcemeta::blaze::SchemaReferenceType type,
+          const sourcemeta::core::WeakPointer &origin,
+          const sourcemeta::blaze::SchemaFrame::Reference &reference) -> void {
+        if (is_metaschema_reference(origin)) {
+          return;
+        }
 
-    auto reference_origin{frame.traverse(reference.first.second)};
-    assert(reference_origin.has_value());
-    while (reference_origin->get().type ==
-               sourcemeta::blaze::SchemaFrame::LocationType::Pointer &&
-           reference_origin->get().parent.has_value()) {
-      reference_origin = frame.traverse(reference_origin->get().parent.value());
-      assert(reference_origin.has_value());
-    }
+        auto reference_origin{frame.traverse(origin)};
+        assert(reference_origin.has_value());
+        while (reference_origin->get().type ==
+                   sourcemeta::blaze::SchemaFrame::LocationType::Pointer &&
+               reference_origin->get().parent.has_value()) {
+          reference_origin =
+              frame.traverse(reference_origin->get().parent.value());
+          assert(reference_origin.has_value());
+        }
 
-    // Skip unreachable targets
-    if (reference_origin->get().type !=
-            sourcemeta::blaze::SchemaFrame::LocationType::Pointer &&
-        !frame.is_reachable(entrypoint_location, reference_origin->get(),
-                            walker, resolver)) {
-      continue;
-    }
+        // Skip unreachable targets
+        if (reference_origin->get().type !=
+                sourcemeta::blaze::SchemaFrame::LocationType::Pointer &&
+            !frame.is_reachable(entrypoint_location, reference_origin->get(),
+                                walker, resolver)) {
+          return;
+        }
 
-    assert(target_types.contains(reference.second.destination));
-    const auto &[needs_name,
-                 needs_instance]{target_types.at(reference.second.destination)};
+        assert(target_types.contains(reference.destination));
+        const auto &[needs_name,
+                     needs_instance]{target_types.at(reference.destination)};
 
-    if (needs_name) {
-      targets_map.emplace(
-          std::make_tuple(reference.first.first,
-                          std::string_view{reference.second.destination}, true),
-          std::make_pair(targets_map.size(), &reference.first.second));
-    }
+        if (needs_name) {
+          targets_map.emplace(
+              std::make_tuple(type, std::string_view{reference.destination},
+                              true),
+              std::make_pair(targets_map.size(), &origin));
+        }
 
-    if (needs_instance) {
-      targets_map.emplace(
-          std::make_tuple(reference.first.first,
-                          std::string_view{reference.second.destination},
-                          false),
-          std::make_pair(targets_map.size(), &reference.first.second));
-    }
-  }
+        if (needs_instance) {
+          targets_map.emplace(
+              std::make_tuple(type, std::string_view{reference.destination},
+                              false),
+              std::make_pair(targets_map.size(), &origin));
+        }
+      });
 
   // Also add dynamic anchors that may not be directly referenced
   // but could be used as override targets during dynamic resolution
-  for (const auto &entry : frame.locations()) {
-    if (entry.second.type !=
-            sourcemeta::blaze::SchemaFrame::LocationType::Anchor ||
-        entry.first.first != sourcemeta::blaze::SchemaReferenceType::Dynamic) {
-      continue;
-    }
+  frame.for_each_anchor(
+      sourcemeta::blaze::SchemaReferenceType::Dynamic,
+      [&](const std::string_view uri,
+          const sourcemeta::blaze::SchemaFrame::Location &location) -> void {
+        // Skip unreachable dynamic anchors
+        if (!frame.is_reachable(entrypoint_location, location, walker,
+                                resolver)) {
+          return;
+        }
 
-    // Skip unreachable dynamic anchors
-    if (!frame.is_reachable(entrypoint_location, entry.second, walker,
-                            resolver)) {
-      continue;
-    }
-
-    targets_map.emplace(std::make_tuple(entry.first.first,
-                                        std::string_view{entry.first.second},
-                                        false),
-                        std::make_pair(targets_map.size(), nullptr));
-  }
+        targets_map.emplace(
+            std::make_tuple(sourcemeta::blaze::SchemaReferenceType::Dynamic,
+                            uri, false),
+            std::make_pair(targets_map.size(), nullptr));
+      });
 
   ///////////////////////////////////////////////////////////////////
   // (4) Build the global compilation context
@@ -379,39 +607,34 @@ auto compile(const sourcemeta::core::JSON &schema,
 
   std::vector<std::pair<std::size_t, std::size_t>> labels_map;
   if (uses_dynamic_scopes) {
-    for (const auto &entry : context.frame.locations()) {
-      // We are only trying to find dynamic anchors
-      if (entry.second.type !=
-              sourcemeta::blaze::SchemaFrame::LocationType::Anchor ||
-          entry.first.first !=
-              sourcemeta::blaze::SchemaReferenceType::Dynamic) {
-        continue;
-      }
+    context.frame.for_each_anchor(
+        sourcemeta::blaze::SchemaReferenceType::Dynamic,
+        [&](const std::string_view uri,
+            const sourcemeta::blaze::SchemaFrame::Location &entry) -> void {
+          // Skip unreachable dynamic anchors
+          if (!context.frame.is_reachable(entrypoint_location, entry,
+                                          context.walker, context.resolver)) {
+            return;
+          }
 
-      // Skip unreachable dynamic anchors
-      if (!context.frame.is_reachable(entrypoint_location, entry.second,
-                                      context.walker, context.resolver)) {
-        continue;
-      }
+          // Compute the hash for this dynamic anchor
+          const sourcemeta::core::URI anchor_uri{uri};
+          const auto label{Evaluator::hash(
+              schema_resource_id(
+                  context.resources,
+                  anchor_uri.recompose_without_fragment().value_or("")),
+              anchor_uri.fragment().value_or(""))};
 
-      // Compute the hash for this dynamic anchor
-      const sourcemeta::core::URI anchor_uri{entry.first.second};
-      const auto label{Evaluator::hash(
-          schema_resource_id(
-              context.resources,
-              anchor_uri.recompose_without_fragment().value_or("")),
-          anchor_uri.fragment().value_or(""))};
+          // Find the index in targets for this dynamic anchor
+          const auto key{
+              std::make_tuple(sourcemeta::blaze::SchemaReferenceType::Dynamic,
+                              std::string_view{uri}, false)};
+          assert(context.targets.contains(key));
+          const auto index{context.targets.at(key).first};
+          assert(index < context.targets.size());
 
-      // Find the index in targets for this dynamic anchor
-      const auto key{
-          std::make_tuple(sourcemeta::blaze::SchemaReferenceType::Dynamic,
-                          std::string_view{entry.first.second}, false)};
-      assert(context.targets.contains(key));
-      const auto index{context.targets.at(key).first};
-      assert(index < context.targets.size());
-
-      labels_map.emplace_back(label, index);
-    }
+          labels_map.emplace_back(label, index);
+        });
   }
 
   ///////////////////////////////////////////////////////////////////
@@ -521,8 +744,12 @@ auto compile(const sourcemeta::core::JSON &schema,
       default_dialect, default_id)};
 
   sourcemeta::blaze::SchemaFrame frame{
-      sourcemeta::blaze::SchemaFrame::Mode::References};
-  frame.analyse(result, walker, resolver, default_dialect, default_id);
+      sourcemeta::blaze::SchemaFrame::Mode::References,
+      result,
+      walker,
+      resolver,
+      default_dialect,
+      default_id};
   return compile(result, walker, resolver, compiler, frame,
                  entrypoint.empty() ? frame.root() : entrypoint, mode, tweaks);
 }
@@ -542,18 +769,27 @@ auto compile(const Context &context, const SchemaContext &schema_context,
                 .recompose()};
 
   // Otherwise the recursion attempt is non-sense
-  if (!context.frame.locations().contains(
-          {sourcemeta::blaze::SchemaReferenceType::Static, destination}))
-      [[unlikely]] {
+  if (!context.frame
+           .location(sourcemeta::blaze::SchemaReferenceType::Static,
+                     destination)
+           .has_value()) [[unlikely]] {
     throw sourcemeta::blaze::SchemaReferenceError(
-        destination, to_pointer(schema_context.relative_pointer),
+        destination, absolute_schema_location(context, schema_context),
         "The target of the reference does not exist in the schema");
   }
 
-  const auto &entry{context.frame.locations().at(
-      {sourcemeta::blaze::SchemaReferenceType::Static, destination})};
+  const auto &entry{
+      context.frame
+          .location(sourcemeta::blaze::SchemaReferenceType::Static, destination)
+          .value()
+          .get()};
   const auto &new_schema{get(context.root, entry.pointer)};
-  assert((new_schema.is_object() || new_schema.is_boolean()));
+
+  // An invalid schema may set an applicator to a value that is not a schema
+  // at all, in which case we consider it to impose no constraints
+  if (!new_schema.is_object() && !new_schema.is_boolean()) [[unlikely]] {
+    return {};
+  }
 
   const sourcemeta::core::WeakPointer destination_pointer{
       dynamic_context.keyword.empty()

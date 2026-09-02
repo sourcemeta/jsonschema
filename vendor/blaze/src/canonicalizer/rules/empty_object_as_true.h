@@ -15,8 +15,7 @@ public:
                          {SchemaVocabularies::Known::JSON_Schema_2020_12_Core,
                           SchemaVocabularies::Known::JSON_Schema_2019_09_Core,
                           SchemaVocabularies::Known::JSON_Schema_Draft_7,
-                          SchemaVocabularies::Known::JSON_Schema_Draft_6,
-                          SchemaVocabularies::Known::JSON_Schema_Draft_4}) &&
+                          SchemaVocabularies::Known::JSON_Schema_Draft_6}) &&
                      schema.is_object() && schema.empty());
     return true;
   }

@@ -31,26 +31,18 @@ public:
 
     ONLY_CONTINUE_IF(needs_dialect_transition || needs_metaschema_vocabulary);
 
-    for (const auto &entry : frame.locations()) {
-      if (entry.second.type !=
-              sourcemeta::blaze::SchemaFrame::LocationType::Resource &&
-          entry.second.type !=
-              sourcemeta::blaze::SchemaFrame::LocationType::Subschema) {
-        continue;
-      }
-
-      if (entry.second.pointer.size() <= location.pointer.size() ||
-          !entry.second.pointer.starts_with(location.pointer)) {
-        continue;
-      }
-
-      const auto entry_pointer{
-          sourcemeta::core::to_pointer(entry.second.pointer)};
-      const auto &entry_schema{sourcemeta::core::get(root, entry_pointer)};
-
-      if (has_descendant_pending_pattern(entry_schema, entry.second.dialect)) {
-        return false;
-      }
+    if (frame.any_subschema_under(
+            location.pointer,
+            [&root](
+                const sourcemeta::blaze::SchemaFrame::Location &entry) -> bool {
+              const auto entry_pointer{
+                  sourcemeta::core::to_pointer(entry.pointer)};
+              const auto &entry_schema{
+                  sourcemeta::core::get(root, entry_pointer)};
+              return has_descendant_pending_pattern(entry_schema,
+                                                    entry.dialect);
+            })) {
+      return false;
     }
 
     this->metaschema_synthesis_pending_ = needs_metaschema_vocabulary;

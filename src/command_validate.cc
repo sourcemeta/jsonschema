@@ -306,11 +306,9 @@ auto sourcemeta::jsonschema::validate(const sourcemeta::core::Options &options)
       bundle_for_evaluation(schema, custom_resolver, dialect, schema_default_id,
                             schema_resolution_base, parsed_schema.positions)};
 
-  sourcemeta::blaze::SchemaFrame frame{
-      sourcemeta::blaze::SchemaFrame::Mode::References};
-  frame_for_evaluation(frame, bundled, custom_resolver, dialect,
-                       schema_default_id, schema_resolution_base,
-                       parsed_schema.positions);
+  const auto frame{
+      frame_for_evaluation(bundled, custom_resolver, dialect, schema_default_id,
+                           schema_resolution_base, parsed_schema.positions)};
 
   std::string entrypoint_uri{frame.root()};
   if (options.contains("entrypoint") && !options.at("entrypoint").empty()) {

@@ -365,166 +365,283 @@ static auto parse_identifier(const std::string_view identifier) -> KnownSchema {
 }
 
 auto sourcemeta::blaze::schema_resolver(const std::string_view identifier)
-    -> std::optional<sourcemeta::core::JSON> {
+    -> sourcemeta::blaze::SchemaResolverResult {
   switch (parse_identifier(identifier)) {
-    case KnownSchema::JSONSCHEMA_2020_12:
-      return sourcemeta::core::parse_json(
-          R"EOF(@METASCHEMA_JSONSCHEMA_2020_12@)EOF");
-    case KnownSchema::HYPERSCHEMA_2020_12:
-      return sourcemeta::core::parse_json(
-          R"EOF(@METASCHEMA_HYPERSCHEMA_2020_12@)EOF");
-    case KnownSchema::JSONSCHEMA_2020_12_APPLICATOR:
-      return sourcemeta::core::parse_json(
-          R"EOF(@METASCHEMA_JSONSCHEMA_2020_12_APPLICATOR@)EOF");
-    case KnownSchema::JSONSCHEMA_2020_12_CONTENT:
-      return sourcemeta::core::parse_json(
-          R"EOF(@METASCHEMA_JSONSCHEMA_2020_12_CONTENT@)EOF");
-    case KnownSchema::JSONSCHEMA_2020_12_CORE:
-      return sourcemeta::core::parse_json(
-          R"EOF(@METASCHEMA_JSONSCHEMA_2020_12_CORE@)EOF");
-    case KnownSchema::JSONSCHEMA_2020_12_FORMAT_ANNOTATION:
-      return sourcemeta::core::parse_json(
-          R"EOF(@METASCHEMA_JSONSCHEMA_2020_12_FORMAT_ANNOTATION@)EOF");
-    case KnownSchema::JSONSCHEMA_2020_12_FORMAT_ASSERTION:
-      return sourcemeta::core::parse_json(
-          R"EOF(@METASCHEMA_JSONSCHEMA_2020_12_FORMAT_ASSERTION@)EOF");
-    case KnownSchema::JSONSCHEMA_2020_12_HYPER_SCHEMA:
-      return sourcemeta::core::parse_json(
-          R"EOF(@METASCHEMA_JSONSCHEMA_2020_12_HYPER_SCHEMA@)EOF");
-    case KnownSchema::JSONSCHEMA_2020_12_META_DATA:
-      return sourcemeta::core::parse_json(
-          R"EOF(@METASCHEMA_JSONSCHEMA_2020_12_META_DATA@)EOF");
-    case KnownSchema::JSONSCHEMA_2020_12_UNEVALUATED:
-      return sourcemeta::core::parse_json(
-          R"EOF(@METASCHEMA_JSONSCHEMA_2020_12_UNEVALUATED@)EOF");
-    case KnownSchema::JSONSCHEMA_2020_12_VALIDATION:
-      return sourcemeta::core::parse_json(
-          R"EOF(@METASCHEMA_JSONSCHEMA_2020_12_VALIDATION@)EOF");
-    case KnownSchema::LINKS_2020_12:
-      return sourcemeta::core::parse_json(
-          R"EOF(@METASCHEMA_LINKS_2020_12@)EOF");
-    case KnownSchema::JSONSCHEMA_2020_12_OUTPUT:
-      return sourcemeta::core::parse_json(
-          R"EOF(@METASCHEMA_JSONSCHEMA_2020_12_OUTPUT@)EOF");
-    case KnownSchema::JSONSCHEMA_2019_09:
-      return sourcemeta::core::parse_json(
-          R"EOF(@METASCHEMA_JSONSCHEMA_2019_09@)EOF");
-    case KnownSchema::HYPERSCHEMA_2019_09:
-      return sourcemeta::core::parse_json(
-          R"EOF(@METASCHEMA_HYPERSCHEMA_2019_09@)EOF");
-    case KnownSchema::JSONSCHEMA_2019_09_APPLICATOR:
-      return sourcemeta::core::parse_json(
-          R"EOF(@METASCHEMA_JSONSCHEMA_2019_09_APPLICATOR@)EOF");
-    case KnownSchema::JSONSCHEMA_2019_09_CONTENT:
-      return sourcemeta::core::parse_json(
-          R"EOF(@METASCHEMA_JSONSCHEMA_2019_09_CONTENT@)EOF");
-    case KnownSchema::JSONSCHEMA_2019_09_CORE:
-      return sourcemeta::core::parse_json(
-          R"EOF(@METASCHEMA_JSONSCHEMA_2019_09_CORE@)EOF");
-    case KnownSchema::JSONSCHEMA_2019_09_FORMAT:
-      return sourcemeta::core::parse_json(
-          R"EOF(@METASCHEMA_JSONSCHEMA_2019_09_FORMAT@)EOF");
-    case KnownSchema::JSONSCHEMA_2019_09_HYPER_SCHEMA:
-      return sourcemeta::core::parse_json(
-          R"EOF(@METASCHEMA_JSONSCHEMA_2019_09_HYPER_SCHEMA@)EOF");
-    case KnownSchema::JSONSCHEMA_2019_09_META_DATA:
-      return sourcemeta::core::parse_json(
-          R"EOF(@METASCHEMA_JSONSCHEMA_2019_09_META_DATA@)EOF");
-    case KnownSchema::JSONSCHEMA_2019_09_VALIDATION:
-      return sourcemeta::core::parse_json(
-          R"EOF(@METASCHEMA_JSONSCHEMA_2019_09_VALIDATION@)EOF");
-    case KnownSchema::LINKS_2019_09:
-      return sourcemeta::core::parse_json(
-          R"EOF(@METASCHEMA_LINKS_2019_09@)EOF");
-    case KnownSchema::JSONSCHEMA_2019_09_OUTPUT:
-      return sourcemeta::core::parse_json(
-          R"EOF(@METASCHEMA_JSONSCHEMA_2019_09_OUTPUT@)EOF");
-    case KnownSchema::HYPERSCHEMA_2019_09_OUTPUT:
-      return sourcemeta::core::parse_json(
-          R"EOF(@METASCHEMA_HYPERSCHEMA_2019_09_OUTPUT@)EOF");
-    case KnownSchema::JSONSCHEMA_DRAFT7:
-      return sourcemeta::core::parse_json(
-          R"EOF(@METASCHEMA_JSONSCHEMA_DRAFT7@)EOF");
-    case KnownSchema::HYPERSCHEMA_DRAFT7:
-      return sourcemeta::core::parse_json(
-          R"EOF(@METASCHEMA_HYPERSCHEMA_DRAFT7@)EOF");
-    case KnownSchema::LINKS_DRAFT7:
-      return sourcemeta::core::parse_json(R"EOF(@METASCHEMA_LINKS_DRAFT7@)EOF");
-    case KnownSchema::HYPERSCHEMA_DRAFT7_OUTPUT:
-      return sourcemeta::core::parse_json(
-          R"EOF(@METASCHEMA_HYPERSCHEMA_DRAFT7_OUTPUT@)EOF");
-    case KnownSchema::JSONSCHEMA_DRAFT6:
-      return sourcemeta::core::parse_json(
-          R"EOF(@METASCHEMA_JSONSCHEMA_DRAFT6@)EOF");
-    case KnownSchema::HYPERSCHEMA_DRAFT6:
-      return sourcemeta::core::parse_json(
-          R"EOF(@METASCHEMA_HYPERSCHEMA_DRAFT6@)EOF");
-    case KnownSchema::LINKS_DRAFT6:
-      return sourcemeta::core::parse_json(R"EOF(@METASCHEMA_LINKS_DRAFT6@)EOF");
-    case KnownSchema::JSONSCHEMA_DRAFT4:
-      return sourcemeta::core::parse_json(
-          R"EOF(@METASCHEMA_JSONSCHEMA_DRAFT4@)EOF");
-    case KnownSchema::HYPERSCHEMA_DRAFT4:
-      return sourcemeta::core::parse_json(
-          R"EOF(@METASCHEMA_HYPERSCHEMA_DRAFT4@)EOF");
-    case KnownSchema::LINKS_DRAFT4:
-      return sourcemeta::core::parse_json(R"EOF(@METASCHEMA_LINKS_DRAFT4@)EOF");
-    case KnownSchema::JSONSCHEMA_DRAFT3:
-      return sourcemeta::core::parse_json(
-          R"EOF(@METASCHEMA_JSONSCHEMA_DRAFT3@)EOF");
-    case KnownSchema::HYPERSCHEMA_DRAFT3:
-      return sourcemeta::core::parse_json(
-          R"EOF(@METASCHEMA_HYPERSCHEMA_DRAFT3@)EOF");
-    case KnownSchema::LINKS_DRAFT3:
-      return sourcemeta::core::parse_json(R"EOF(@METASCHEMA_LINKS_DRAFT3@)EOF");
-    case KnownSchema::JSON_REF_DRAFT3:
-      return sourcemeta::core::parse_json(
-          R"EOF(@METASCHEMA_JSON_REF_DRAFT3@)EOF");
-    case KnownSchema::JSONSCHEMA_DRAFT2:
-      return sourcemeta::core::parse_json(
-          R"EOF(@METASCHEMA_JSONSCHEMA_DRAFT2@)EOF");
-    case KnownSchema::HYPERSCHEMA_DRAFT2:
-      return sourcemeta::core::parse_json(
-          R"EOF(@METASCHEMA_HYPERSCHEMA_DRAFT2@)EOF");
-    case KnownSchema::LINKS_DRAFT2:
-      return sourcemeta::core::parse_json(R"EOF(@METASCHEMA_LINKS_DRAFT2@)EOF");
-    case KnownSchema::JSON_REF_DRAFT2:
-      return sourcemeta::core::parse_json(
-          R"EOF(@METASCHEMA_JSON_REF_DRAFT2@)EOF");
-    case KnownSchema::JSONSCHEMA_DRAFT1:
-      return sourcemeta::core::parse_json(
-          R"EOF(@METASCHEMA_JSONSCHEMA_DRAFT1@)EOF");
-    case KnownSchema::HYPERSCHEMA_DRAFT1:
-      return sourcemeta::core::parse_json(
-          R"EOF(@METASCHEMA_HYPERSCHEMA_DRAFT1@)EOF");
-    case KnownSchema::LINKS_DRAFT1:
-      return sourcemeta::core::parse_json(R"EOF(@METASCHEMA_LINKS_DRAFT1@)EOF");
-    case KnownSchema::JSON_REF_DRAFT1:
-      return sourcemeta::core::parse_json(
-          R"EOF(@METASCHEMA_JSON_REF_DRAFT1@)EOF");
-    case KnownSchema::JSONSCHEMA_DRAFT0:
-      return sourcemeta::core::parse_json(
-          R"EOF(@METASCHEMA_JSONSCHEMA_DRAFT0@)EOF");
-    case KnownSchema::HYPERSCHEMA_DRAFT0:
-      return sourcemeta::core::parse_json(
-          R"EOF(@METASCHEMA_HYPERSCHEMA_DRAFT0@)EOF");
-    case KnownSchema::LINKS_DRAFT0:
-      return sourcemeta::core::parse_json(R"EOF(@METASCHEMA_LINKS_DRAFT0@)EOF");
-    case KnownSchema::JSON_REF_DRAFT0:
-      return sourcemeta::core::parse_json(
-          R"EOF(@METASCHEMA_JSON_REF_DRAFT0@)EOF");
-    case KnownSchema::OAS_3_2_DIALECT_2025_09_17:
-      return sourcemeta::core::parse_json(
-          R"EOF(@OPENAPI_OAS_3_2_DIALECT_2025_09_17@)EOF");
-    case KnownSchema::OAS_3_2_META_2025_09_17:
-      return sourcemeta::core::parse_json(
-          R"EOF(@OPENAPI_OAS_3_2_META_2025_09_17@)EOF");
-    case KnownSchema::OAS_3_1_DIALECT_BASE:
-      return sourcemeta::core::parse_json(
-          R"EOF(@OPENAPI_OAS_3_1_DIALECT_BASE@)EOF");
-    case KnownSchema::OAS_3_1_META_BASE:
-      return sourcemeta::core::parse_json(
-          R"EOF(@OPENAPI_OAS_3_1_META_BASE@)EOF");
+    case KnownSchema::JSONSCHEMA_2020_12: {
+      static const auto schema{sourcemeta::core::parse_json(
+          R"EOF(@METASCHEMA_JSONSCHEMA_2020_12@)EOF")};
+      return schema;
+    }
+    case KnownSchema::HYPERSCHEMA_2020_12: {
+      static const auto schema{sourcemeta::core::parse_json(
+          R"EOF(@METASCHEMA_HYPERSCHEMA_2020_12@)EOF")};
+      return schema;
+    }
+    case KnownSchema::JSONSCHEMA_2020_12_APPLICATOR: {
+      static const auto schema{sourcemeta::core::parse_json(
+          R"EOF(@METASCHEMA_JSONSCHEMA_2020_12_APPLICATOR@)EOF")};
+      return schema;
+    }
+    case KnownSchema::JSONSCHEMA_2020_12_CONTENT: {
+      static const auto schema{sourcemeta::core::parse_json(
+          R"EOF(@METASCHEMA_JSONSCHEMA_2020_12_CONTENT@)EOF")};
+      return schema;
+    }
+    case KnownSchema::JSONSCHEMA_2020_12_CORE: {
+      static const auto schema{sourcemeta::core::parse_json(
+          R"EOF(@METASCHEMA_JSONSCHEMA_2020_12_CORE@)EOF")};
+      return schema;
+    }
+    case KnownSchema::JSONSCHEMA_2020_12_FORMAT_ANNOTATION: {
+      static const auto schema{sourcemeta::core::parse_json(
+          R"EOF(@METASCHEMA_JSONSCHEMA_2020_12_FORMAT_ANNOTATION@)EOF")};
+      return schema;
+    }
+    case KnownSchema::JSONSCHEMA_2020_12_FORMAT_ASSERTION: {
+      static const auto schema{sourcemeta::core::parse_json(
+          R"EOF(@METASCHEMA_JSONSCHEMA_2020_12_FORMAT_ASSERTION@)EOF")};
+      return schema;
+    }
+    case KnownSchema::JSONSCHEMA_2020_12_HYPER_SCHEMA: {
+      static const auto schema{sourcemeta::core::parse_json(
+          R"EOF(@METASCHEMA_JSONSCHEMA_2020_12_HYPER_SCHEMA@)EOF")};
+      return schema;
+    }
+    case KnownSchema::JSONSCHEMA_2020_12_META_DATA: {
+      static const auto schema{sourcemeta::core::parse_json(
+          R"EOF(@METASCHEMA_JSONSCHEMA_2020_12_META_DATA@)EOF")};
+      return schema;
+    }
+    case KnownSchema::JSONSCHEMA_2020_12_UNEVALUATED: {
+      static const auto schema{sourcemeta::core::parse_json(
+          R"EOF(@METASCHEMA_JSONSCHEMA_2020_12_UNEVALUATED@)EOF")};
+      return schema;
+    }
+    case KnownSchema::JSONSCHEMA_2020_12_VALIDATION: {
+      static const auto schema{sourcemeta::core::parse_json(
+          R"EOF(@METASCHEMA_JSONSCHEMA_2020_12_VALIDATION@)EOF")};
+      return schema;
+    }
+    case KnownSchema::LINKS_2020_12: {
+      static const auto schema{
+          sourcemeta::core::parse_json(R"EOF(@METASCHEMA_LINKS_2020_12@)EOF")};
+      return schema;
+    }
+    case KnownSchema::JSONSCHEMA_2020_12_OUTPUT: {
+      static const auto schema{sourcemeta::core::parse_json(
+          R"EOF(@METASCHEMA_JSONSCHEMA_2020_12_OUTPUT@)EOF")};
+      return schema;
+    }
+    case KnownSchema::JSONSCHEMA_2019_09: {
+      static const auto schema{sourcemeta::core::parse_json(
+          R"EOF(@METASCHEMA_JSONSCHEMA_2019_09@)EOF")};
+      return schema;
+    }
+    case KnownSchema::HYPERSCHEMA_2019_09: {
+      static const auto schema{sourcemeta::core::parse_json(
+          R"EOF(@METASCHEMA_HYPERSCHEMA_2019_09@)EOF")};
+      return schema;
+    }
+    case KnownSchema::JSONSCHEMA_2019_09_APPLICATOR: {
+      static const auto schema{sourcemeta::core::parse_json(
+          R"EOF(@METASCHEMA_JSONSCHEMA_2019_09_APPLICATOR@)EOF")};
+      return schema;
+    }
+    case KnownSchema::JSONSCHEMA_2019_09_CONTENT: {
+      static const auto schema{sourcemeta::core::parse_json(
+          R"EOF(@METASCHEMA_JSONSCHEMA_2019_09_CONTENT@)EOF")};
+      return schema;
+    }
+    case KnownSchema::JSONSCHEMA_2019_09_CORE: {
+      static const auto schema{sourcemeta::core::parse_json(
+          R"EOF(@METASCHEMA_JSONSCHEMA_2019_09_CORE@)EOF")};
+      return schema;
+    }
+    case KnownSchema::JSONSCHEMA_2019_09_FORMAT: {
+      static const auto schema{sourcemeta::core::parse_json(
+          R"EOF(@METASCHEMA_JSONSCHEMA_2019_09_FORMAT@)EOF")};
+      return schema;
+    }
+    case KnownSchema::JSONSCHEMA_2019_09_HYPER_SCHEMA: {
+      static const auto schema{sourcemeta::core::parse_json(
+          R"EOF(@METASCHEMA_JSONSCHEMA_2019_09_HYPER_SCHEMA@)EOF")};
+      return schema;
+    }
+    case KnownSchema::JSONSCHEMA_2019_09_META_DATA: {
+      static const auto schema{sourcemeta::core::parse_json(
+          R"EOF(@METASCHEMA_JSONSCHEMA_2019_09_META_DATA@)EOF")};
+      return schema;
+    }
+    case KnownSchema::JSONSCHEMA_2019_09_VALIDATION: {
+      static const auto schema{sourcemeta::core::parse_json(
+          R"EOF(@METASCHEMA_JSONSCHEMA_2019_09_VALIDATION@)EOF")};
+      return schema;
+    }
+    case KnownSchema::LINKS_2019_09: {
+      static const auto schema{
+          sourcemeta::core::parse_json(R"EOF(@METASCHEMA_LINKS_2019_09@)EOF")};
+      return schema;
+    }
+    case KnownSchema::JSONSCHEMA_2019_09_OUTPUT: {
+      static const auto schema{sourcemeta::core::parse_json(
+          R"EOF(@METASCHEMA_JSONSCHEMA_2019_09_OUTPUT@)EOF")};
+      return schema;
+    }
+    case KnownSchema::HYPERSCHEMA_2019_09_OUTPUT: {
+      static const auto schema{sourcemeta::core::parse_json(
+          R"EOF(@METASCHEMA_HYPERSCHEMA_2019_09_OUTPUT@)EOF")};
+      return schema;
+    }
+    case KnownSchema::JSONSCHEMA_DRAFT7: {
+      static const auto schema{sourcemeta::core::parse_json(
+          R"EOF(@METASCHEMA_JSONSCHEMA_DRAFT7@)EOF")};
+      return schema;
+    }
+    case KnownSchema::HYPERSCHEMA_DRAFT7: {
+      static const auto schema{sourcemeta::core::parse_json(
+          R"EOF(@METASCHEMA_HYPERSCHEMA_DRAFT7@)EOF")};
+      return schema;
+    }
+    case KnownSchema::LINKS_DRAFT7: {
+      static const auto schema{
+          sourcemeta::core::parse_json(R"EOF(@METASCHEMA_LINKS_DRAFT7@)EOF")};
+      return schema;
+    }
+    case KnownSchema::HYPERSCHEMA_DRAFT7_OUTPUT: {
+      static const auto schema{sourcemeta::core::parse_json(
+          R"EOF(@METASCHEMA_HYPERSCHEMA_DRAFT7_OUTPUT@)EOF")};
+      return schema;
+    }
+    case KnownSchema::JSONSCHEMA_DRAFT6: {
+      static const auto schema{sourcemeta::core::parse_json(
+          R"EOF(@METASCHEMA_JSONSCHEMA_DRAFT6@)EOF")};
+      return schema;
+    }
+    case KnownSchema::HYPERSCHEMA_DRAFT6: {
+      static const auto schema{sourcemeta::core::parse_json(
+          R"EOF(@METASCHEMA_HYPERSCHEMA_DRAFT6@)EOF")};
+      return schema;
+    }
+    case KnownSchema::LINKS_DRAFT6: {
+      static const auto schema{
+          sourcemeta::core::parse_json(R"EOF(@METASCHEMA_LINKS_DRAFT6@)EOF")};
+      return schema;
+    }
+    case KnownSchema::JSONSCHEMA_DRAFT4: {
+      static const auto schema{sourcemeta::core::parse_json(
+          R"EOF(@METASCHEMA_JSONSCHEMA_DRAFT4@)EOF")};
+      return schema;
+    }
+    case KnownSchema::HYPERSCHEMA_DRAFT4: {
+      static const auto schema{sourcemeta::core::parse_json(
+          R"EOF(@METASCHEMA_HYPERSCHEMA_DRAFT4@)EOF")};
+      return schema;
+    }
+    case KnownSchema::LINKS_DRAFT4: {
+      static const auto schema{
+          sourcemeta::core::parse_json(R"EOF(@METASCHEMA_LINKS_DRAFT4@)EOF")};
+      return schema;
+    }
+    case KnownSchema::JSONSCHEMA_DRAFT3: {
+      static const auto schema{sourcemeta::core::parse_json(
+          R"EOF(@METASCHEMA_JSONSCHEMA_DRAFT3@)EOF")};
+      return schema;
+    }
+    case KnownSchema::HYPERSCHEMA_DRAFT3: {
+      static const auto schema{sourcemeta::core::parse_json(
+          R"EOF(@METASCHEMA_HYPERSCHEMA_DRAFT3@)EOF")};
+      return schema;
+    }
+    case KnownSchema::LINKS_DRAFT3: {
+      static const auto schema{
+          sourcemeta::core::parse_json(R"EOF(@METASCHEMA_LINKS_DRAFT3@)EOF")};
+      return schema;
+    }
+    case KnownSchema::JSON_REF_DRAFT3: {
+      static const auto schema{sourcemeta::core::parse_json(
+          R"EOF(@METASCHEMA_JSON_REF_DRAFT3@)EOF")};
+      return schema;
+    }
+    case KnownSchema::JSONSCHEMA_DRAFT2: {
+      static const auto schema{sourcemeta::core::parse_json(
+          R"EOF(@METASCHEMA_JSONSCHEMA_DRAFT2@)EOF")};
+      return schema;
+    }
+    case KnownSchema::HYPERSCHEMA_DRAFT2: {
+      static const auto schema{sourcemeta::core::parse_json(
+          R"EOF(@METASCHEMA_HYPERSCHEMA_DRAFT2@)EOF")};
+      return schema;
+    }
+    case KnownSchema::LINKS_DRAFT2: {
+      static const auto schema{
+          sourcemeta::core::parse_json(R"EOF(@METASCHEMA_LINKS_DRAFT2@)EOF")};
+      return schema;
+    }
+    case KnownSchema::JSON_REF_DRAFT2: {
+      static const auto schema{sourcemeta::core::parse_json(
+          R"EOF(@METASCHEMA_JSON_REF_DRAFT2@)EOF")};
+      return schema;
+    }
+    case KnownSchema::JSONSCHEMA_DRAFT1: {
+      static const auto schema{sourcemeta::core::parse_json(
+          R"EOF(@METASCHEMA_JSONSCHEMA_DRAFT1@)EOF")};
+      return schema;
+    }
+    case KnownSchema::HYPERSCHEMA_DRAFT1: {
+      static const auto schema{sourcemeta::core::parse_json(
+          R"EOF(@METASCHEMA_HYPERSCHEMA_DRAFT1@)EOF")};
+      return schema;
+    }
+    case KnownSchema::LINKS_DRAFT1: {
+      static const auto schema{
+          sourcemeta::core::parse_json(R"EOF(@METASCHEMA_LINKS_DRAFT1@)EOF")};
+      return schema;
+    }
+    case KnownSchema::JSON_REF_DRAFT1: {
+      static const auto schema{sourcemeta::core::parse_json(
+          R"EOF(@METASCHEMA_JSON_REF_DRAFT1@)EOF")};
+      return schema;
+    }
+    case KnownSchema::JSONSCHEMA_DRAFT0: {
+      static const auto schema{sourcemeta::core::parse_json(
+          R"EOF(@METASCHEMA_JSONSCHEMA_DRAFT0@)EOF")};
+      return schema;
+    }
+    case KnownSchema::HYPERSCHEMA_DRAFT0: {
+      static const auto schema{sourcemeta::core::parse_json(
+          R"EOF(@METASCHEMA_HYPERSCHEMA_DRAFT0@)EOF")};
+      return schema;
+    }
+    case KnownSchema::LINKS_DRAFT0: {
+      static const auto schema{
+          sourcemeta::core::parse_json(R"EOF(@METASCHEMA_LINKS_DRAFT0@)EOF")};
+      return schema;
+    }
+    case KnownSchema::JSON_REF_DRAFT0: {
+      static const auto schema{sourcemeta::core::parse_json(
+          R"EOF(@METASCHEMA_JSON_REF_DRAFT0@)EOF")};
+      return schema;
+    }
+    case KnownSchema::OAS_3_2_DIALECT_2025_09_17: {
+      static const auto schema{sourcemeta::core::parse_json(
+          R"EOF(@OPENAPI_OAS_3_2_DIALECT_2025_09_17@)EOF")};
+      return schema;
+    }
+    case KnownSchema::OAS_3_2_META_2025_09_17: {
+      static const auto schema{sourcemeta::core::parse_json(
+          R"EOF(@OPENAPI_OAS_3_2_META_2025_09_17@)EOF")};
+      return schema;
+    }
+    case KnownSchema::OAS_3_1_DIALECT_BASE: {
+      static const auto schema{sourcemeta::core::parse_json(
+          R"EOF(@OPENAPI_OAS_3_1_DIALECT_BASE@)EOF")};
+      return schema;
+    }
+    case KnownSchema::OAS_3_1_META_BASE: {
+      static const auto schema{
+          sourcemeta::core::parse_json(R"EOF(@OPENAPI_OAS_3_1_META_BASE@)EOF")};
+      return schema;
+    }
     case KnownSchema::UNKNOWN:
       return std::nullopt;
   }

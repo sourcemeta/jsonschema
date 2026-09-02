@@ -70,8 +70,13 @@ public:
     }
 
     auto remote{resolver(reference_base)};
+    std::optional<sourcemeta::core::JSON> owned;
+    if (remote.has_value()) {
+      owned = std::move(remote).to_owned();
+    }
+
     const auto &[entry,
-                 _]{this->resolver_cache_.emplace(base_key, std::move(remote))};
+                 _]{this->resolver_cache_.emplace(base_key, std::move(owned))};
     if (!entry->second.has_value()) {
       return APPLIES_TO_KEYWORDS(KEYWORD);
     }
@@ -94,17 +99,16 @@ private:
       frame_cache_;
 
   [[nodiscard]] auto
-  is_fragment_invalid(const SchemaFrame::ReferencesEntry &reference_entry,
+  is_fragment_invalid(const SchemaFrame::Reference &reference_entry,
                       const std::optional<JSON> &remote,
                       const JSON::String &base_key, const SchemaWalker &walker,
                       const SchemaResolver &resolver,
                       const SchemaFrame::Location &location) const -> bool {
     auto frame_iterator{this->frame_cache_.find(base_key)};
     if (frame_iterator == this->frame_cache_.end()) {
-      auto remote_frame{
-          std::make_unique<SchemaFrame>(SchemaFrame::Mode::Locations)};
-      remote_frame->analyse(remote.value(), walker, resolver, location.dialect,
-                            base_key);
+      auto remote_frame{std::make_unique<SchemaFrame>(
+          SchemaFrame::Mode::Locations, remote.value(), walker, resolver,
+          location.dialect, base_key)};
       frame_iterator =
           this->frame_cache_.emplace(base_key, std::move(remote_frame)).first;
     }

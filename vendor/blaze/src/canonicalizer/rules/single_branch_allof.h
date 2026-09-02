@@ -33,6 +33,7 @@ public:
         location.pointer,
         sourcemeta::core::WeakPointer::Token{std::cref(KEYWORD)}));
     const auto &branch{all_of->at(0)};
+    ONLY_CONTINUE_IF(branch.is_object() || branch.is_boolean());
     if (branch.is_object()) {
       ONLY_CONTINUE_IF(!branch.defines("$ref") &&
                        !branch.defines("$dynamicRef") &&

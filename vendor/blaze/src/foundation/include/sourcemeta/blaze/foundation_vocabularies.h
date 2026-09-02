@@ -77,6 +77,10 @@ struct SOURCEMETA_BLAZE_FOUNDATION_EXPORT SchemaVocabularies {
   /// custom string URI
   using URI = std::variant<Known, sourcemeta::core::JSON::String>;
 
+  /// A vocabulary URI that does not own its custom string, for tables that
+  /// point at storage that outlives them
+  using URIView = std::variant<Known, std::string_view>;
+
 public:
   SchemaVocabularies() = default;
   SchemaVocabularies(const SchemaVocabularies &) = default;
@@ -130,6 +134,24 @@ public:
 
   /// Check if there are any unknown vocabularies
   [[nodiscard]] auto has_unknown() const noexcept -> bool;
+
+  /// Iterate over every vocabulary, along with whether it is required
+  template <typename Callback>
+  auto for_each(const Callback &callback) const -> void {
+    for (std::size_t index = 0; index < KNOWN_VOCABULARY_COUNT; ++index) {
+      if (this->required_known[index]) {
+        callback(URI{static_cast<Known>(index)}, true);
+      } else if (this->optional_known[index]) {
+        callback(URI{static_cast<Known>(index)}, false);
+      }
+    }
+
+    if (this->unknown.has_value()) {
+      for (const auto &[uri, required] : this->unknown.value()) {
+        callback(URI{uri}, required);
+      }
+    }
+  }
 
   /// Throw if the current vocabularies have required ones outside the given
   /// supported set

@@ -1153,6 +1153,26 @@ inline auto try_catch(const sourcemeta::core::Options &options,
     }
 
     return EXIT_SCHEMA_INPUT_ERROR;
+  } catch (const PositionError<sourcemeta::core::FileError<
+               sourcemeta::blaze::CompilerError>> &error) {
+    const auto is_json{options.contains("json")};
+    print_exception(is_json, error);
+    if (!is_json) {
+      std::cerr << "\nUse the `metaschema` command to check the schema against "
+                   "its meta-schema\n";
+    }
+
+    return EXIT_SCHEMA_INPUT_ERROR;
+  } catch (const sourcemeta::core::FileError<sourcemeta::blaze::CompilerError>
+               &error) {
+    const auto is_json{options.contains("json")};
+    print_exception(is_json, error);
+    if (!is_json) {
+      std::cerr << "\nUse the `metaschema` command to check the schema against "
+                   "its meta-schema\n";
+    }
+
+    return EXIT_SCHEMA_INPUT_ERROR;
   } catch (
       const sourcemeta::core::FileError<sourcemeta::blaze::SchemaReferenceError>
           &error) {
