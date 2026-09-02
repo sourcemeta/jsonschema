@@ -405,6 +405,20 @@ private:
   std::filesystem::path path_;
 };
 
+class ConfigurationFileNotFoundError : public std::runtime_error {
+public:
+  ConfigurationFileNotFoundError(std::filesystem::path path)
+      : std::runtime_error{"The given configuration file does not exist"},
+        path_{std::move(path)} {}
+
+  [[nodiscard]] auto path() const noexcept -> const std::filesystem::path & {
+    return this->path_;
+  }
+
+private:
+  std::filesystem::path path_;
+};
+
 class LockNotFoundError : public std::runtime_error {
 public:
   LockNotFoundError(std::filesystem::path path)
@@ -968,6 +982,10 @@ inline auto try_catch(const sourcemeta::core::Options &options,
                    "docs/install.markdown\n";
     }
 
+    return EXIT_OTHER_INPUT_ERROR;
+  } catch (const ConfigurationFileNotFoundError &error) {
+    const auto is_json{options.contains("json")};
+    print_exception(is_json, error);
     return EXIT_OTHER_INPUT_ERROR;
   } catch (const LockNotFoundError &error) {
     const auto is_json{options.contains("json")};

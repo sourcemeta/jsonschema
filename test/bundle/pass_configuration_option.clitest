@@ -1,0 +1,46 @@
+MAKE DIRECTORY config
+
+WRITE schema.json UNTIL EOF
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.com/test",
+  "$ref": "https://example.com/my-external-schema.json"
+}
+EOF
+
+WRITE config/dependency.json UNTIL EOF
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "string"
+}
+EOF
+
+WRITE config/jsonschema.json UNTIL EOF
+{
+  "resolve": {
+    "https://example.com/my-external-schema.json": "./dependency.json"
+  }
+}
+EOF
+
+RUN bundle --configuration config/jsonschema.json schema.json --verbose STDIN /dev/null IN . INTO result.txt EXPECTING 0
+
+REPLACE $CWD WITH '[CWD]' IN result.txt
+
+WRITE expected.txt UNTIL EOF
+1> {
+1>   "$schema": "https://json-schema.org/draft/2020-12/schema",
+1>   "$id": "https://example.com/test",
+1>   "$ref": "https://example.com/my-external-schema.json",
+1>   "$defs": {
+1>     "https://example.com/my-external-schema.json": {
+1>       "$schema": "https://json-schema.org/draft/2020-12/schema",
+1>       "$id": "https://example.com/my-external-schema.json",
+1>       "type": "string"
+1>     }
+1>   }
+1> }
+2> Using configuration file: [CWD]/config/jsonschema.json
+EOF
+
+COMPARE result.txt AGAINST expected.txt

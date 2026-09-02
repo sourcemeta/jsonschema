@@ -1,0 +1,36 @@
+WRITE schema.json UNTIL EOF
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "string"
+}
+EOF
+
+WRITE instance.json UNTIL EOF
+"foo"
+EOF
+
+// Other input error
+RUN validate --configuration jsonschema.ci.json schema.json instance.json STDIN /dev/null IN . INTO result_0.txt EXPECTING 6
+
+REPLACE $CWD WITH '[CWD]' IN result_0.txt
+
+WRITE expected_0.txt UNTIL EOF
+2> error: The given configuration file does not exist
+2>   at file path [CWD]/jsonschema.ci.json
+EOF
+
+COMPARE result_0.txt AGAINST expected_0.txt
+
+// Other input error
+RUN validate --json --configuration jsonschema.ci.json schema.json instance.json STDIN /dev/null IN . INTO result_1.txt EXPECTING 6
+
+REPLACE $CWD WITH '[CWD]' IN result_1.txt
+
+WRITE expected_1.txt UNTIL EOF
+1> {
+1>   "error": "The given configuration file does not exist",
+1>   "filePath": "[CWD]/jsonschema.ci.json"
+1> }
+EOF
+
+COMPARE result_1.txt AGAINST expected_1.txt

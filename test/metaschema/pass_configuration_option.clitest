@@ -1,0 +1,33 @@
+MAKE DIRECTORY config
+
+WRITE schema.json UNTIL EOF
+{
+  "type": "string",
+  "$defs": {
+    "foo": {
+      "type": [ "string", "null" ]
+    }
+  }
+}
+EOF
+
+WRITE config/jsonschema.json UNTIL EOF
+{
+  "defaultDialect": "https://json-schema.org/draft/2020-12/schema"
+}
+EOF
+
+RUN metaschema --configuration config/jsonschema.json --verbose $CWD/schema.json STDIN /dev/null IN . INTO result.txt EXPECTING 0
+
+REPLACE $CWD WITH '[CWD]' IN result.txt
+
+WRITE expected.txt UNTIL EOF
+2> Using configuration file: [CWD]/config/jsonschema.json
+2> Using extension: .json
+2> Using extension: .yaml
+2> Using extension: .yml
+2> ok: [CWD]/schema.json
+2>   matches https://json-schema.org/draft/2020-12/schema
+EOF
+
+COMPARE result.txt AGAINST expected.txt

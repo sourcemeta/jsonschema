@@ -35,7 +35,7 @@ auto sourcemeta::jsonschema::encode(const sourcemeta::core::Options &options)
   })JSON")};
 
   const auto configuration_path{
-      find_configuration(options.positional().front())};
+      find_configuration(options, options.positional().front())};
   const auto &configuration{read_configuration(options, configuration_path)};
   const auto dialect{default_dialect(options, configuration)};
   const auto &custom_resolver{

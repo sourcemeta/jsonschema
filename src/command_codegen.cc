@@ -41,7 +41,7 @@ auto sourcemeta::jsonschema::codegen(const sourcemeta::core::Options &options)
   auto parsed_schema{read_file(schema_path)};
   const auto &schema{parsed_schema.document};
 
-  const auto configuration_path{find_configuration(schema_path)};
+  const auto configuration_path{find_configuration(options, schema_path)};
   const auto &configuration{
       read_configuration(options, configuration_path, schema_path)};
   const auto dialect{default_dialect(options, configuration)};

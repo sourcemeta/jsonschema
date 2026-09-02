@@ -1,0 +1,24 @@
+MAKE DIRECTORY config
+
+WRITE schema.json UNTIL EOF
+{
+  "type": "string"
+}
+EOF
+
+WRITE config/jsonschema.json UNTIL EOF
+{
+  "defaultDialect": "https://json-schema.org/draft/2020-12/schema"
+}
+EOF
+
+RUN codegen --configuration config/jsonschema.json $CWD/schema.json --target typescript --verbose STDIN /dev/null IN . INTO result.txt EXPECTING 0
+
+REPLACE $CWD WITH '[CWD]' IN result.txt
+
+WRITE expected.txt UNTIL EOF
+1> export type Schema = string;
+2> Using configuration file: [CWD]/config/jsonschema.json
+EOF
+
+COMPARE result.txt AGAINST expected.txt

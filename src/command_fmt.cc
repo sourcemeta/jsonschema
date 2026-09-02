@@ -95,7 +95,7 @@ auto sourcemeta::jsonschema::fmt(const sourcemeta::core::Options &options)
 
   const auto handle_stdin = [&]() {
     const auto current_path{std::filesystem::current_path()};
-    const auto configuration_path{find_configuration(current_path)};
+    const auto configuration_path{find_configuration(options, current_path)};
     const auto &configuration{
         read_configuration(options, configuration_path, current_path)};
     const auto display_path{stdin_path()};
@@ -199,7 +199,8 @@ auto sourcemeta::jsonschema::fmt(const sourcemeta::core::Options &options)
     }
 
     try {
-      const auto configuration_path{find_configuration(entry.resolution_base)};
+      const auto configuration_path{
+          find_configuration(options, entry.resolution_base)};
       const auto &configuration{read_configuration(options, configuration_path,
                                                    entry.resolution_base)};
       const auto dialect{default_dialect(options, configuration)};

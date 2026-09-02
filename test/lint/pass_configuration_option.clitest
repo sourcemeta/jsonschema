@@ -1,0 +1,42 @@
+MAKE DIRECTORY config
+
+WRITE config/jsonschema.json UNTIL EOF
+{
+  "lint": {
+    "exclude": [
+      "enum_with_type",
+      "content_media_type_without_encoding",
+      "enum_to_const"
+    ]
+  }
+}
+EOF
+
+WRITE schema.json UNTIL EOF
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Test",
+  "description": "Test schema",
+  "examples": [ "foo" ],
+  "type": "string",
+  "enum": [ "foo" ],
+  "contentMediaType": "application/json"
+}
+EOF
+
+RUN lint --configuration config/jsonschema.json --verbose schema.json STDIN /dev/null IN . INTO result_0.txt EXPECTING 0
+
+REPLACE $CWD WITH '[CWD]' IN result_0.txt
+
+WRITE expected_0.txt UNTIL EOF
+2> Using configuration file: [CWD]/config/jsonschema.json
+2> Disabling rule from configuration: content_media_type_without_encoding
+2> Disabling rule from configuration: enum_to_const
+2> Disabling rule from configuration: enum_with_type
+2> Using extension: .json
+2> Using extension: .yaml
+2> Using extension: .yml
+2> Linting: [CWD]/schema.json
+EOF
+
+COMPARE result_0.txt AGAINST expected_0.txt

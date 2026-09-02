@@ -5,7 +5,7 @@ Codegen
 jsonschema codegen <schema.json|.yaml> --target/-t <target> [--name/-n <name>]
   [--json/-j] [--verbose/-v] [--debug/-g]
   [--resolve/-r <schemas-or-directories>]
-  [--default-dialect/-d <uri>]
+  [--default-dialect/-d <uri>] [--configuration/-C <path>]
 ```
 
 > [!NOTE]

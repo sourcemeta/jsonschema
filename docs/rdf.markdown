@@ -9,7 +9,7 @@ jsonschema rdf <schema.json|.yaml> <instance.json|.yaml>
   [--header/-H "<name>: <value>"]
   [--resolve/-r <schemas-or-directories> ...]
   [--extension/-e <extension>] [--ignore/-i <schemas-or-directories>]
-  [--default-dialect/-d <uri>] [--json/-j]
+  [--default-dialect/-d <uri>] [--json/-j] [--configuration/-C <path>]
 ```
 
 > [!NOTE]

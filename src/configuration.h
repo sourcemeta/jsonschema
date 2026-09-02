@@ -23,8 +23,32 @@
 
 namespace sourcemeta::jsonschema {
 
-inline auto find_configuration(const std::filesystem::path &path)
+inline auto configuration_override(const sourcemeta::core::Options &options)
     -> std::optional<std::filesystem::path> {
+  if (!options.contains("configuration")) {
+    return std::nullopt;
+  }
+
+  const std::filesystem::path given{options.at("configuration").front()};
+  if (std::filesystem::is_directory(given)) {
+    return sourcemeta::core::weakly_canonical(given / "jsonschema.json");
+  }
+
+  return sourcemeta::core::weakly_canonical(given);
+}
+
+inline auto find_configuration(const sourcemeta::core::Options &options,
+                               const std::filesystem::path &path)
+    -> std::optional<std::filesystem::path> {
+  const auto given{configuration_override(options)};
+  if (given.has_value()) {
+    if (!std::filesystem::is_regular_file(given.value())) {
+      throw ConfigurationFileNotFoundError{given.value()};
+    }
+
+    return given;
+  }
+
   return sourcemeta::blaze::Configuration::find(path);
 }
 
@@ -43,11 +67,16 @@ inline auto load_configuration(
 
   std::optional<sourcemeta::blaze::Configuration> result{std::nullopt};
   if (configuration_path.has_value()) {
-    LOG_DEBUG(options) << "Using configuration file: "
-                       << sourcemeta::core::weakly_canonical(
-                              configuration_path.value())
-                              .generic_string()
-                       << "\n";
+    const auto configuration_display_path{
+        sourcemeta::core::weakly_canonical(configuration_path.value())
+            .generic_string()};
+    if (options.contains("configuration")) {
+      LOG_VERBOSE(options) << "Using configuration file: "
+                           << configuration_display_path << "\n";
+    } else {
+      LOG_DEBUG(options) << "Using configuration file: "
+                         << configuration_display_path << "\n";
+    }
     sourcemeta::core::PointerPositionTracker positions;
     auto property_storage = std::make_shared<std::deque<std::string>>();
     try {

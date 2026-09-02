@@ -245,6 +245,12 @@ itself looked up in `resolve` again.
 This works without passing `--resolve/-r` at all, and is the mechanism to reach
 for whenever a reference and an identifier genuinely differ.
 
+> [!NOTE]
+> By default the CLI looks for that configuration file next to the schemas it
+> processes, walking up the directory tree. Pass the global
+> `--configuration/-C` option to name the file to use instead, as in
+> `jsonschema bundle schema.json --configuration ./schemas/jsonschema.json`.
+
 Resolving Over HTTP
 -------------------
 

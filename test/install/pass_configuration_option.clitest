@@ -1,0 +1,78 @@
+MAKE DIRECTORY source
+
+MAKE DIRECTORY config
+
+MAKE DIRECTORY elsewhere
+
+WRITE source/user.json UNTIL EOF
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "string"
+}
+EOF
+
+WRITE config/jsonschema.json UNTIL EOF
+{
+  "dependencies": {
+    "[CWD_URI]/source/user.json": "./vendor/user.json"
+  }
+}
+EOF
+
+REPLACE '[CWD_URI]' WITH $CWD_URI IN config/jsonschema.json
+
+RUN install --configuration $CWD/config/jsonschema.json STDIN /dev/null IN elsewhere INTO result_0.txt EXPECTING 0
+
+REPLACE $CWD_URI WITH '[CWD_URI]' IN result_0.txt
+REPLACE $CWD WITH '[CWD]' IN result_0.txt
+
+WRITE expected_0.txt UNTIL EOF
+2> Fetching       : [CWD_URI]/source/user.json
+2> Installed      : [CWD]/config/vendor/user.json
+EOF
+
+COMPARE result_0.txt AGAINST expected_0.txt
+
+COPY config/vendor/user.json TO checked_schema.json
+REPLACE $CWD_URI WITH '[CWD_URI]' IN checked_schema.json
+REPLACE $CWD WITH '[CWD]' IN checked_schema.json
+
+WRITE expected_schema.json UNTIL EOF
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "string",
+  "$id": "[CWD_URI]/source/user.json"
+}
+EOF
+
+COMPARE checked_schema.json AGAINST expected_schema.json
+
+CHECKSUM SHA256 config/vendor/user.json AS HASH
+
+COPY config/jsonschema.lock.json TO checked_lock.json
+REPLACE $CWD_URI WITH '[CWD_URI]' IN checked_lock.json
+REPLACE $CWD WITH '[CWD]' IN checked_lock.json
+
+WRITE expected_lock.json UNTIL EOF
+{
+  "version": 1,
+  "dependencies": {
+    "[CWD_URI]/source/user.json": {
+      "path": "./vendor/user.json",
+      "hash": "[HASH]",
+      "hashAlgorithm": "sha256"
+    }
+  }
+}
+EOF
+
+REPLACE '[HASH]' WITH $HASH IN expected_lock.json
+
+COMPARE checked_lock.json AGAINST expected_lock.json
+
+TREE elsewhere INTO listing.txt
+
+WRITE expected_listing.txt UNTIL EOF
+EOF
+
+COMPARE listing.txt AGAINST expected_listing.txt

@@ -79,7 +79,8 @@ auto sourcemeta::jsonschema::rdf(const sourcemeta::core::Options &options)
   const auto schema_resolution_base{
       schema_from_stdin ? stdin_path() : std::filesystem::path(schema_path)};
 
-  const auto configuration_path{find_configuration(schema_config_base)};
+  const auto configuration_path{
+      find_configuration(options, schema_config_base)};
   const auto &configuration{
       read_configuration(options, configuration_path, schema_config_base)};
   const auto dialect{default_dialect(options, configuration)};

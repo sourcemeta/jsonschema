@@ -107,7 +107,9 @@ CLI locates the schemas that your schemas reference, covering the
 
 > See [`jsonschema.json`](./docs/configuration.markdown) for an _experimental_
 manifest for describing JSON Schema data models inspired by NPM's
-`package.json`, including dependency management.
+`package.json`, including dependency management. Every command takes a
+`--configuration/-C` option to select one explicitly instead of looking for it
+next to your schemas.
 
 Note that YAML is supported in most commands!
 

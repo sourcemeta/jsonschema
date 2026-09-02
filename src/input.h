@@ -436,7 +436,7 @@ inline auto for_each_json(const std::vector<std::string_view> &arguments,
 
   if (arguments.empty()) {
     const auto current_path{std::filesystem::current_path()};
-    const auto configuration_path{find_configuration(current_path)};
+    const auto configuration_path{find_configuration(options, current_path)};
     const auto &configuration{read_configuration(options, configuration_path)};
 
     const auto &scan_path = configuration.has_value()
@@ -477,9 +477,9 @@ inline auto for_each_json(const std::vector<std::string_view> &arguments,
       const auto entry_path{
           sourcemeta::core::weakly_canonical(std::filesystem::path{entry})};
       const auto configuration_path{
-          find_configuration(std::filesystem::is_directory(entry_path)
-                                 ? entry_path
-                                 : entry_path.parent_path())};
+          find_configuration(options, std::filesystem::is_directory(entry_path)
+                                          ? entry_path
+                                          : entry_path.parent_path())};
       if (configuration_path.has_value() &&
           seen_configurations.insert(configuration_path.value().string())
               .second) {
@@ -494,10 +494,10 @@ inline auto for_each_json(const std::vector<std::string_view> &arguments,
       if (entry != "-") {
         const auto entry_path{
             sourcemeta::core::weakly_canonical(std::filesystem::path{entry})};
-        entry_configuration_path =
-            find_configuration(std::filesystem::is_directory(entry_path)
-                                   ? entry_path
-                                   : entry_path.parent_path());
+        entry_configuration_path = find_configuration(
+            options, std::filesystem::is_directory(entry_path)
+                         ? entry_path
+                         : entry_path.parent_path());
       }
       const auto &entry_configuration{
           load_configuration(options, entry_configuration_path)};

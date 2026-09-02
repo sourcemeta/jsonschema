@@ -1,0 +1,43 @@
+MAKE DIRECTORY config
+
+WRITE schema.json UNTIL EOF
+{
+  "type": "object",
+  "x-jsonld-type": "https://schema.org/Person",
+  "properties": {
+    "name": { "type": "string", "x-jsonld-id": "https://schema.org/name" }
+  }
+}
+EOF
+
+WRITE instance.json UNTIL EOF
+{ "name": "Ada" }
+EOF
+
+WRITE config/jsonschema.json UNTIL EOF
+{
+  "defaultDialect": "https://json-schema.org/draft/2020-12/schema"
+}
+EOF
+
+RUN rdf --configuration config/jsonschema.json schema.json instance.json --verbose STDIN /dev/null IN . INTO result_0.txt EXPECTING 0
+
+REPLACE $CWD WITH '[CWD]' IN result_0.txt
+
+WRITE expected_0.txt UNTIL EOF
+1> [
+1>   {
+1>     "@type": [ "https://schema.org/Person" ],
+1>     "https://schema.org/name": [
+1>       {
+1>         "@value": "Ada"
+1>       }
+1>     ]
+1>   }
+1> ]
+2> Using configuration file: [CWD]/config/jsonschema.json
+2> ok: [CWD]/instance.json
+2>   matches [CWD]/schema.json
+EOF
+
+COMPARE result_0.txt AGAINST expected_0.txt
