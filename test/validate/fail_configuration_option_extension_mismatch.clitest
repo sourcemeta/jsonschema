@@ -36,3 +36,17 @@ WRITE expected_0.txt UNTIL EOF
 EOF
 
 COMPARE result_0.txt AGAINST expected_0.txt
+
+// Schema input error
+RUN validate --json --configuration config/jsonschema.json $CWD/schema.json $CWD/instance.json STDIN /dev/null IN . INTO result_1.txt EXPECTING 4
+
+REPLACE $CWD WITH '[CWD]' IN result_1.txt
+
+WRITE expected_1.txt UNTIL EOF
+1> {
+1>   "error": "Could not determine the base dialect of the schema",
+1>   "filePath": "[CWD]/schema.json"
+1> }
+EOF
+
+COMPARE result_1.txt AGAINST expected_1.txt

@@ -1,6 +1,6 @@
 MAKE DIRECTORY source
 
-MAKE DIRECTORY project/schemas
+MAKE DIRECTORY project
 
 WRITE source/user.json UNTIL EOF
 {

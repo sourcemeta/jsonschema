@@ -20,7 +20,9 @@ WRITE config/jsonschema.json UNTIL EOF
 }
 EOF
 
-RUN rdf --configuration config/jsonschema.json schema.json instance.json STDIN /dev/null IN . INTO result_0.txt EXPECTING 0
+RUN rdf --configuration config/jsonschema.json schema.json instance.json --verbose STDIN /dev/null IN . INTO result_0.txt EXPECTING 0
+
+REPLACE $CWD WITH '[CWD]' IN result_0.txt
 
 WRITE expected_0.txt UNTIL EOF
 1> [
@@ -33,6 +35,9 @@ WRITE expected_0.txt UNTIL EOF
 1>     ]
 1>   }
 1> ]
+2> Using configuration file: [CWD]/config/jsonschema.json
+2> ok: [CWD]/instance.json
+2>   matches [CWD]/schema.json
 EOF
 
 COMPARE result_0.txt AGAINST expected_0.txt

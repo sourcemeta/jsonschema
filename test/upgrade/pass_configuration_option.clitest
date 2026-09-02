@@ -13,7 +13,9 @@ WRITE config/jsonschema.json UNTIL EOF
 }
 EOF
 
-RUN upgrade --configuration config/jsonschema.json schema.json STDIN /dev/null IN . INTO result.txt EXPECTING 0
+RUN upgrade --configuration config/jsonschema.json schema.json --verbose STDIN /dev/null IN . INTO result.txt EXPECTING 0
+
+REPLACE $CWD WITH '[CWD]' IN result.txt
 
 WRITE expected.txt UNTIL EOF
 1> {
@@ -21,6 +23,7 @@ WRITE expected.txt UNTIL EOF
 1>   "$id": "https://example.com/test",
 1>   "type": "integer"
 1> }
+2> Using configuration file: [CWD]/config/jsonschema.json
 EOF
 
 COMPARE result.txt AGAINST expected.txt

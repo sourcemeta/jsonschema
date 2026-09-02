@@ -69,3 +69,10 @@ EOF
 REPLACE '[HASH]' WITH $HASH IN expected_lock.json
 
 COMPARE checked_lock.json AGAINST expected_lock.json
+
+TREE elsewhere INTO listing.txt
+
+WRITE expected_listing.txt UNTIL EOF
+EOF
+
+COMPARE listing.txt AGAINST expected_listing.txt
