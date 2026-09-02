@@ -11,6 +11,7 @@ jsonschema compile <schema.json|.yaml> [--http/-h] [--verbose/-v] [--debug/-g]
   [--ignore/-i <schemas-or-directories>] [--fast/-f] [--default-dialect/-d <uri>]
   [--minify/-m] [--json/-j] [--include/-n <name>] [--entrypoint/-p <pointer|uri>]
   [--format-assertion/-F]
+  [--configuration/-C <path>]
 ```
 
 > [!NOTE]

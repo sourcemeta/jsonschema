@@ -1,0 +1,13 @@
+MAKE DIRECTORY project
+
+// Other input error
+RUN install --configuration $CWD/project/jsonschema.json STDIN /dev/null IN . INTO result_0.txt EXPECTING 6
+
+REPLACE $CWD WITH '[CWD]' IN result_0.txt
+
+WRITE expected_0.txt UNTIL EOF
+2> error: The given configuration file does not exist
+2>   at file path [CWD]/project/jsonschema.json
+EOF
+
+COMPARE result_0.txt AGAINST expected_0.txt

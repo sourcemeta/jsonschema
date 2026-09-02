@@ -8,6 +8,7 @@ jsonschema fmt [schemas-or-directories...]
   [--extension/-e <extension>] [--ignore/-i <schemas-or-directories>]
   [--keep-ordering/-k] [--indentation/-n <spaces>] [--default-dialect/-d <uri>]
   [--json/-j]
+  [--configuration/-C <path>]
 ```
 
 > [!NOTE]

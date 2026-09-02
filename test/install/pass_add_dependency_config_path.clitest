@@ -1,0 +1,44 @@
+MAKE DIRECTORY source
+
+MAKE DIRECTORY project/schemas
+
+WRITE source/user.json UNTIL EOF
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "string"
+}
+EOF
+
+WRITE project/jsonschema.json UNTIL EOF
+{
+  "path": "./schemas"
+}
+EOF
+
+RUN install $CWD_URI/source/user.json ./vendor/user.json STDIN /dev/null IN project INTO result_0.txt EXPECTING 0
+
+REPLACE $CWD_URI WITH '[CWD_URI]' IN result_0.txt
+REPLACE $CWD WITH '[CWD]' IN result_0.txt
+
+WRITE expected_0.txt UNTIL EOF
+2> Adding         : [CWD_URI]/source/user.json -> ./vendor/user.json
+2> Fetching       : [CWD_URI]/source/user.json
+2> Installed      : [CWD]/project/vendor/user.json
+EOF
+
+COMPARE result_0.txt AGAINST expected_0.txt
+
+COPY project/jsonschema.json TO checked_config.json
+REPLACE $CWD_URI WITH '[CWD_URI]' IN checked_config.json
+REPLACE $CWD WITH '[CWD]' IN checked_config.json
+
+WRITE expected_config.json UNTIL EOF
+{
+  "path": "./schemas",
+  "dependencies": {
+    "[CWD_URI]/source/user.json": "./vendor/user.json"
+  }
+}
+EOF
+
+COMPARE checked_config.json AGAINST expected_config.json

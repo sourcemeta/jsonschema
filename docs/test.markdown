@@ -12,6 +12,7 @@ jsonschema test [schemas-or-directories...]
   [--extension/-e <extension>] [--ignore/-i <schemas-or-directories>]
   [--default-dialect/-d <uri>] [--json/-j] [--format-assertion/-F]
   [--jobs/-J <count>]
+  [--configuration/-C <path>]
 ```
 
 > [!NOTE]

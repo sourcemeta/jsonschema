@@ -5,6 +5,7 @@ Decode
 jsonschema decode <output.binpack> <output.json|.jsonl>
   [--verbose/-v] [--debug/-g]
   [--default-dialect/-d <uri>] [--json/-j]
+  [--configuration/-C <path>]
 ```
 
 This command decodes a JSON document using [JSON

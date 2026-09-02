@@ -13,6 +13,7 @@ jsonschema validate <schema.json|.yaml> <instance.json|.jsonl|.jsonl.gz|.yaml|di
   [--ignore/-i <schemas-or-directories>] [--trace/-t] [--fast/-f]
   [--template/-m <template.json>] [--json/-j] [--entrypoint/-p <pointer|uri>]
   [--continue/-c] [--format-assertion/-F]
+  [--configuration/-C <path>]
 ```
 
 > [!NOTE]

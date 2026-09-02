@@ -237,7 +237,8 @@ auto sourcemeta::jsonschema::inspect(const sourcemeta::core::Options &options)
                                            : schema_resolution_base};
   }
 
-  const auto configuration_path{find_configuration(schema_config_base)};
+  const auto configuration_path{
+      find_configuration(options, schema_config_base)};
   const auto &configuration{
       read_configuration(options, configuration_path, schema_config_base)};
   const auto dialect{default_dialect(options, configuration)};

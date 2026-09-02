@@ -66,7 +66,8 @@ auto sourcemeta::jsonschema::metaschema(
                                             : entry.resolution_base};
     }
 
-    const auto configuration_path{find_configuration(entry.resolution_base)};
+    const auto configuration_path{
+        find_configuration(options, entry.resolution_base)};
     const auto &configuration{
         read_configuration(options, configuration_path, entry.resolution_base)};
     const auto default_dialect_option{default_dialect(options, configuration)};

@@ -122,6 +122,21 @@ auto output_json(sourcemeta::core::JSON &events_array) -> void {
   std::cout << "\n";
 }
 
+auto existing_configuration_path(
+    const std::optional<std::filesystem::path> &given)
+    -> std::optional<std::filesystem::path> {
+  if (!given.has_value()) {
+    return sourcemeta::blaze::Configuration::find(
+        std::filesystem::current_path());
+  }
+
+  if (std::filesystem::is_regular_file(given.value())) {
+    return given;
+  }
+
+  return std::nullopt;
+}
+
 enum class OrphanedBehavior : std::uint8_t { Delete, Error };
 
 auto make_on_event(const sourcemeta::core::Options &options,
@@ -292,8 +307,10 @@ auto sourcemeta::jsonschema::install(const sourcemeta::core::Options &options)
 
   validate_http_headers(options);
 
+  const auto given_configuration_path{
+      sourcemeta::jsonschema::configuration_override(options)};
   auto configuration_path{
-      sourcemeta::blaze::Configuration::find(std::filesystem::current_path())};
+      existing_configuration_path(given_configuration_path)};
 
   if (positional_arguments.size() == 2) {
     const std::string dependency_uri{positional_arguments.at(0)};
@@ -315,13 +332,15 @@ auto sourcemeta::jsonschema::install(const sourcemeta::core::Options &options)
                                                    error);
       }
     } else {
-      configuration_path = std::filesystem::current_path() / "jsonschema.json";
-      add_configuration.absolute_path = std::filesystem::current_path();
-      add_configuration.base_path = std::filesystem::current_path();
+      configuration_path = given_configuration_path.value_or(
+          std::filesystem::current_path() / "jsonschema.json");
+      const auto configuration_base{configuration_path.value().parent_path()};
+      add_configuration.absolute_path = configuration_base;
+      add_configuration.base_path = configuration_base;
     }
 
     const auto absolute_target{std::filesystem::weakly_canonical(
-        std::filesystem::current_path() / input_path)};
+        add_configuration.base_path / input_path)};
     try {
       const sourcemeta::core::URI uri{dependency_uri};
       add_configuration.dependencies.erase(
@@ -344,9 +363,9 @@ auto sourcemeta::jsonschema::install(const sourcemeta::core::Options &options)
                        add_configuration.to_json().at("dependencies"));
     atomic_write_json(configuration_path.value(), config_json);
 
-    auto relative_target{std::filesystem::relative(
-                             absolute_target, add_configuration.absolute_path)
-                             .generic_string()};
+    auto relative_target{
+        std::filesystem::relative(absolute_target, add_configuration.base_path)
+            .generic_string()};
     if (!relative_target.starts_with("..")) {
       relative_target = "./" + relative_target;
     }
@@ -364,6 +383,10 @@ auto sourcemeta::jsonschema::install(const sourcemeta::core::Options &options)
   }
 
   if (!configuration_path.has_value()) {
+    if (given_configuration_path.has_value()) {
+      throw ConfigurationFileNotFoundError{given_configuration_path.value()};
+    }
+
     throw ConfigurationNotFoundError{std::filesystem::current_path()};
   }
 

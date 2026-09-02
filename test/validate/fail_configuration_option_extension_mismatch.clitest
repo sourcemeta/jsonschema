@@ -1,0 +1,38 @@
+MAKE DIRECTORY config
+
+WRITE schema.json UNTIL EOF
+{
+  "properties": {
+    "foo": {
+      "type": "string"
+    }
+  }
+}
+EOF
+
+WRITE instance.json UNTIL EOF
+{ "foo": "bar" }
+EOF
+
+WRITE config/jsonschema.json UNTIL EOF
+{
+  "extension": ".yaml",
+  "defaultDialect": "https://json-schema.org/draft/2020-12/schema"
+}
+EOF
+
+// Schema input error
+RUN validate --configuration config/jsonschema.json $CWD/schema.json $CWD/instance.json STDIN /dev/null IN . INTO result_0.txt EXPECTING 4
+
+REPLACE $CWD WITH '[CWD]' IN result_0.txt
+
+WRITE expected_0.txt UNTIL EOF
+2> error: Could not determine the base dialect of the schema
+2>   at file path [CWD]/schema.json
+2>
+2> Are you sure the input is a valid JSON Schema and its base dialect is known?
+2> If the input does not declare the `$schema` keyword, you might want to
+2> explicitly declare a default dialect using `--default-dialect/-d`
+EOF
+
+COMPARE result_0.txt AGAINST expected_0.txt

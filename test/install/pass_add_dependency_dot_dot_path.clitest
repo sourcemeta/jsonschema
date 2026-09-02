@@ -21,9 +21,9 @@ REPLACE $CWD_URI WITH '[CWD_URI]' IN result_0.txt
 REPLACE $CWD WITH '[CWD]' IN result_0.txt
 
 WRITE expected_0.txt UNTIL EOF
-2> Adding         : [CWD_URI]/source/user.json -> ./vendor/user.json
+2> Adding         : [CWD_URI]/source/user.json -> ../vendor/user.json
 2> Fetching       : [CWD_URI]/source/user.json
-2> Installed      : [CWD]/project/vendor/user.json
+2> Installed      : [CWD]/vendor/user.json
 EOF
 
 COMPARE result_0.txt AGAINST expected_0.txt
@@ -35,14 +35,14 @@ REPLACE $CWD WITH '[CWD]' IN checked_file_1.txt
 WRITE expected_file_1.txt UNTIL EOF
 {
   "dependencies": {
-    "[CWD_URI]/source/user.json": "./vendor/user.json"
+    "[CWD_URI]/source/user.json": "../vendor/user.json"
   }
 }
 EOF
 
 COMPARE checked_file_1.txt AGAINST expected_file_1.txt
 
-COPY project/vendor/user.json TO checked_file_2.txt
+COPY vendor/user.json TO checked_file_2.txt
 REPLACE $CWD_URI WITH '[CWD_URI]' IN checked_file_2.txt
 REPLACE $CWD WITH '[CWD]' IN checked_file_2.txt
 

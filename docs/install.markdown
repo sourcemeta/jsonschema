@@ -5,6 +5,7 @@ Installing Dependencies
 jsonschema install [<uri> <path>]
   [--force/-f] [--frozen/-z]
   [--header/-H "<name>: <value>"] [--verbose/-v] [--debug/-g] [--json/-j]
+  [--configuration/-C <path>]
 ```
 
 Many applications rely on consuming schemas authored and maintained by others.
@@ -39,9 +40,9 @@ jsonschema install https://schemas.sourcemeta.com/sourcemeta/std/v0/jsonrpc/v2.0
 ```
 
 This adds the dependency to `jsonschema.json` (creating the file if it does not
-exist) and immediately fetches it. The path is stored relative to
-`jsonschema.json`, so you can run this command from any subdirectory of your
-project.
+exist) and immediately fetches it. The path is both resolved and stored relative
+to the directory that holds `jsonschema.json`, so you can run this command from
+any subdirectory of your project and get the same result.
 
 Alternatively, you can declare dependencies manually. Create a
 [`jsonschema.json`](./configuration.markdown) configuration file in your

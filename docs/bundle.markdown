@@ -8,6 +8,7 @@ jsonschema bundle <schema.json|.yaml>
   [--resolve/-r <schemas-or-directories> ...]
   [--extension/-e <extension>] [--ignore/-i <schemas-or-directories>]
   [--without-id/-w] [--default-dialect/-d <uri>] [--json/-j]
+  [--configuration/-C <path>]
 ```
 
 > [!NOTE]

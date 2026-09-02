@@ -23,8 +23,32 @@
 
 namespace sourcemeta::jsonschema {
 
-inline auto find_configuration(const std::filesystem::path &path)
+inline auto configuration_override(const sourcemeta::core::Options &options)
     -> std::optional<std::filesystem::path> {
+  if (!options.contains("configuration")) {
+    return std::nullopt;
+  }
+
+  const std::filesystem::path given{options.at("configuration").front()};
+  if (std::filesystem::is_directory(given)) {
+    return sourcemeta::core::weakly_canonical(given / "jsonschema.json");
+  }
+
+  return sourcemeta::core::weakly_canonical(given);
+}
+
+inline auto find_configuration(const sourcemeta::core::Options &options,
+                               const std::filesystem::path &path)
+    -> std::optional<std::filesystem::path> {
+  const auto given{configuration_override(options)};
+  if (given.has_value()) {
+    if (!std::filesystem::is_regular_file(given.value())) {
+      throw ConfigurationFileNotFoundError{given.value()};
+    }
+
+    return given;
+  }
+
   return sourcemeta::blaze::Configuration::find(path);
 }
 

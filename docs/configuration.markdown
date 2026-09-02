@@ -70,3 +70,67 @@ Lookup Algorithm
 ----------------
 
 The JSON Schema CLI automatically discovers `jsonschema.json` configuration files using an ancestor lookup algorithm, similar to how NPM locates `package.json` files. When processing a schema, the CLI first looks for a `jsonschema.json` file in the same directory as the schema. If not found, it searches the parent directory, then the parent's parent directory, and so on, until a configuration file is found or the filesystem root is reached.
+
+Selecting a Configuration File
+------------------------------
+
+Every command accepts a global `--configuration/-C` option to name the
+configuration file to use, skipping the lookup algorithm entirely:
+
+```sh
+jsonschema lint --configuration ./schemas/jsonschema.json
+```
+
+The option takes either a file or the directory that contains a
+`jsonschema.json` file, so the following is equivalent to the above:
+
+```sh
+jsonschema lint --configuration ./schemas
+```
+
+Every relative path inside the configuration file, such as `path`, `resolve`,
+`ignore`, `dependencies`, and `lint.rules`, keeps resolving against the
+directory that contains the configuration file, no matter where you invoke the
+CLI from. Given the following project:
+
+```
+myproject/
+├── jsonschema.json
+└── schemas/
+    └── user.json
+```
+
+Where `jsonschema.json` declares a `path` property:
+
+```json
+{
+  "path": "./schemas"
+}
+```
+
+Then linting the project from anywhere on the filesystem looks like this,
+without passing any input path at all:
+
+```sh
+jsonschema lint --configuration myproject/jsonschema.json
+```
+
+When you pass this option, the CLI no longer looks for `jsonschema.json` files
+next to the schemas it processes, so a configuration file that would otherwise
+be discovered is ignored. Because the file is named explicitly, it does not
+have to be called `jsonschema.json`, which lets a project keep more than one
+configuration:
+
+```sh
+jsonschema lint --configuration ./jsonschema.ci.json
+```
+
+Note that the `extension` property still determines which files a configuration
+file describes. If you point this option at a configuration file that does not
+describe the schema being processed, the configuration is ignored for that
+schema, as if it had not been passed.
+
+For the [`install`](./install.markdown) command, this option also determines
+where dependencies are declared and where the `jsonschema.lock.json` lock file
+is written. When adding a new dependency, the given configuration file is
+created if it does not exist yet.

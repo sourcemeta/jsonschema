@@ -34,6 +34,7 @@ _jsonschema() {
     '(--http -h)'{--http,-h}'[Enable HTTP resolution]'
     '(--debug -g)'{--debug,-g}'[Enable debug output]'
     '*'{--header,-H}'[Send a custom HTTP header (Name: Value)]:header:'
+    '(--configuration -C)'{--configuration,-C}'[Use the given configuration file]:configuration file:_files'
   )
 
   _arguments -C \

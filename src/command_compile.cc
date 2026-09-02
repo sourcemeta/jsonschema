@@ -29,7 +29,7 @@ auto sourcemeta::jsonschema::compile(const sourcemeta::core::Options &options)
   validate_http_headers(options);
 
   const auto &schema_path{options.positional().at(0)};
-  const auto configuration_path{find_configuration(schema_path)};
+  const auto configuration_path{find_configuration(options, schema_path)};
   const auto &configuration{
       read_configuration(options, configuration_path, schema_path)};
   const auto dialect{default_dialect(options, configuration)};

@@ -13,7 +13,7 @@ _jsonschema() {
 
   commands="validate metaschema compile test fmt lint bundle inspect encode decode codegen install upgrade rdf version help"
 
-  global_options="--verbose -v --resolve -r --default-dialect -d --json -j --http -h --debug -g --header -H"
+  global_options="--verbose -v --resolve -r --default-dialect -d --json -j --http -h --debug -g --header -H --configuration -C"
 
   if [ "${COMP_CWORD}" -eq 1 ]
   then
@@ -33,7 +33,7 @@ _jsonschema() {
       COMPREPLY=( $(compgen -W ".json .yaml .yml" -- "${current}") )
       return 0
       ;;
-    --resolve|-r|--ignore|-i)
+    --resolve|-r|--ignore|-i|--configuration|-C)
       COMPREPLY=( $(compgen -f -d -- "${current}") )
       return 0
       ;;

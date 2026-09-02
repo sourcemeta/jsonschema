@@ -14,6 +14,9 @@ WRITE expected.txt UNTIL EOF
 1>                                   into the resolution context
 1>    --default-dialect, -d <uri>    Specify the URI for the default dialect to be used
 1>                                   if the `$schema` keyword is not set
+1>    --configuration, -C <path>     Use the given configuration file instead of
+1>                                   looking for a `jsonschema.json` file. May also
+1>                                   point to the directory that contains it
 1>    --json, -j                     Prefer JSON output if supported
 1>    --http, -h                     Allow network access to resolve remote schemas
 1>    --header, -H <name: value>     Send a custom HTTP header on every outgoing

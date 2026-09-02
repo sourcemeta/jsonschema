@@ -11,6 +11,7 @@ jsonschema metaschema [schemas-or-directories...]
   [--resolve/-r <schemas-or-directories> ...]
   [--ignore/-i <schemas-or-directories>] [--trace/-t]
   [--default-dialect/-d <uri>] [--json/-j] [--format-assertion/-F]
+  [--configuration/-C <path>]
 ```
 
 > [!NOTE]

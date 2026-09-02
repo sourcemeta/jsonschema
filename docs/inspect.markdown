@@ -4,6 +4,7 @@ Inspect
 ```sh
 jsonschema inspect <schema.json|.yaml> [--json/-j] [--verbose/-v] [--debug/-g]
   [--default-dialect/-d <uri>]
+  [--configuration/-C <path>]
 ```
 
 To evaluate a schema, an implementation will first scan it to determine the

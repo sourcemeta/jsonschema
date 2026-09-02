@@ -7,6 +7,7 @@ jsonschema upgrade <schema.json|.yaml> [--to/-t draft4|draft6|draft7|2019-09|202
   [--header/-H "<name>: <value>"]
   [--resolve/-r <schemas-or-directories> ...]
   [--default-dialect/-d <uri>]
+  [--configuration/-C <path>]
 ```
 
 > [!NOTE]

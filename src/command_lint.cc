@@ -213,7 +213,7 @@ load_rules_from_options(sourcemeta::blaze::SchemaTransformer &bundle,
     sourcemeta::jsonschema::LOG_VERBOSE(options)
         << "Loading custom rule: " << rule_path.generic_string() << "\n";
     const auto configuration_path{
-        sourcemeta::jsonschema::find_configuration(rule_path)};
+        sourcemeta::jsonschema::find_configuration(options, rule_path)};
     const auto &configuration{sourcemeta::jsonschema::read_configuration(
         options, configuration_path, rule_path)};
     const auto dialect{
@@ -255,7 +255,7 @@ auto sourcemeta::jsonschema::lint(const sourcemeta::core::Options &options)
   }
 
   for (const auto &input_path : input_paths) {
-    const auto configuration_path{find_configuration(input_path)};
+    const auto configuration_path{find_configuration(options, input_path)};
     if (!configuration_path.has_value()) {
       continue;
     }
@@ -386,7 +386,8 @@ auto sourcemeta::jsonschema::lint(const sourcemeta::core::Options &options)
     const auto entries = for_each_json(options);
 
     for (const auto &entry : entries) {
-      const auto configuration_path{find_configuration(entry.resolution_base)};
+      const auto configuration_path{
+          find_configuration(options, entry.resolution_base)};
       const auto &configuration{read_configuration(options, configuration_path,
                                                    entry.resolution_base)};
       const auto dialect{default_dialect(options, configuration)};
@@ -598,7 +599,8 @@ auto sourcemeta::jsonschema::lint(const sourcemeta::core::Options &options)
     }
   } else {
     for (const auto &entry : for_each_json(options)) {
-      const auto configuration_path{find_configuration(entry.resolution_base)};
+      const auto configuration_path{
+          find_configuration(options, entry.resolution_base)};
       const auto &configuration{read_configuration(options, configuration_path,
                                                    entry.resolution_base)};
       const auto dialect{default_dialect(options, configuration)};

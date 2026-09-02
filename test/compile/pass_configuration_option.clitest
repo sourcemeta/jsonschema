@@ -1,0 +1,66 @@
+MAKE DIRECTORY config
+
+WRITE schema.json UNTIL EOF
+{
+  "$id": "https://example.com",
+  "additionalProperties": {
+    "type": "string"
+  }
+}
+EOF
+
+WRITE config/jsonschema.json UNTIL EOF
+{
+  "defaultDialect": "https://json-schema.org/draft/2020-12/schema"
+}
+EOF
+
+RUN compile --configuration config/jsonschema.json $CWD/schema.json --verbose STDIN /dev/null IN . INTO result.txt EXPECTING 0
+
+WRITE expected.txt UNTIL EOF
+1> [
+1>   6,
+1>   false,
+1>   true,
+1>   [
+1>     [
+1>       [
+1>         67,
+1>         [ "additionalProperties" ],
+1>         [],
+1>         "https://example.com#/additionalProperties",
+1>         2,
+1>         2,
+1>         [ 0 ],
+1>         [
+1>           [
+1>             11,
+1>             [ "type" ],
+1>             [],
+1>             "https://example.com#/additionalProperties/type",
+1>             2,
+1>             1,
+1>             [ 8, 4 ]
+1>           ],
+1>           [
+1>             52,
+1>             [],
+1>             [],
+1>             "https://example.com#/additionalProperties",
+1>             2,
+1>             2,
+1>             [ 0 ]
+1>           ]
+1>         ]
+1>       ]
+1>     ]
+1>   ],
+1>   [],
+1>   [
+1>     "https://json-schema.org/draft/2020-12/vocab/validation",
+1>     "https://json-schema.org/draft/2020-12/vocab/applicator"
+1>   ]
+1> ]
+EOF
+
+COMPARE result.txt AGAINST expected.txt

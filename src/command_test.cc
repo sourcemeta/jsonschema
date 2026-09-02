@@ -169,8 +169,8 @@ auto warm_caches(const sourcemeta::core::Options &options,
                  const std::vector<sourcemeta::jsonschema::InputJSON> &entries)
     -> void {
   for (const auto &entry : entries) {
-    const auto configuration_path{
-        sourcemeta::jsonschema::find_configuration(entry.resolution_base)};
+    const auto configuration_path{sourcemeta::jsonschema::find_configuration(
+        options, entry.resolution_base)};
     const auto &configuration{sourcemeta::jsonschema::read_configuration(
         options, configuration_path)};
     const auto dialect{
@@ -195,8 +195,8 @@ auto run_suite_as_text(const sourcemeta::core::Options &options,
                        const sourcemeta::jsonschema::InputJSON &entry,
                        const bool verbose, std::ostream &stream)
     -> sourcemeta::blaze::TestSuite::Result {
-  const auto configuration_path{
-      sourcemeta::jsonschema::find_configuration(entry.resolution_base)};
+  const auto configuration_path{sourcemeta::jsonschema::find_configuration(
+      options, entry.resolution_base)};
   const auto &configuration{
       sourcemeta::jsonschema::read_configuration(options, configuration_path)};
   const auto dialect{
@@ -392,8 +392,8 @@ struct CtrfSuiteReport {
 auto run_suite_as_ctrf(const sourcemeta::core::Options &options,
                        const sourcemeta::jsonschema::InputJSON &entry,
                        CtrfSuiteReport &report) -> void {
-  const auto configuration_path{
-      sourcemeta::jsonschema::find_configuration(entry.resolution_base)};
+  const auto configuration_path{sourcemeta::jsonschema::find_configuration(
+      options, entry.resolution_base)};
   const auto &configuration{
       sourcemeta::jsonschema::read_configuration(options, configuration_path)};
   const auto dialect{

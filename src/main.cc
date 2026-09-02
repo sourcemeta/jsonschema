@@ -21,6 +21,9 @@ Global Options:
                                   into the resolution context
    --default-dialect, -d <uri>    Specify the URI for the default dialect to be used
                                   if the `$schema` keyword is not set
+   --configuration, -C <path>     Use the given configuration file instead of
+                                  looking for a `jsonschema.json` file. May also
+                                  point to the directory that contains it
    --json, -j                     Prefer JSON output if supported
    --http, -h                     Allow network access to resolve remote schemas
    --header, -H <name: value>     Send a custom HTTP header on every outgoing
@@ -296,6 +299,7 @@ auto main(int argc, char *argv[]) noexcept -> int {
   app.flag("json", {"j"});
   app.option("resolve", {"r"});
   app.option("default-dialect", {"d"});
+  app.option("configuration", {"C"});
   app.option("header", {"H"});
 
   return sourcemeta::jsonschema::try_catch(app, [&app, argc, &argv]() {
