@@ -4,8 +4,7 @@ Encode
 ```sh
 jsonschema encode <document.json|.jsonl> <output.binpack>
   [--verbose/-v] [--debug/-g]
-  [--default-dialect/-d <uri>] [--json/-j]
-  [--configuration/-C <path>]
+  [--default-dialect/-d <uri>] [--json/-j] [--configuration/-C <path>]
 ```
 
 This command encodes a JSON document using [JSON

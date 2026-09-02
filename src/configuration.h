@@ -67,11 +67,16 @@ inline auto load_configuration(
 
   std::optional<sourcemeta::blaze::Configuration> result{std::nullopt};
   if (configuration_path.has_value()) {
-    LOG_DEBUG(options) << "Using configuration file: "
-                       << sourcemeta::core::weakly_canonical(
-                              configuration_path.value())
-                              .generic_string()
-                       << "\n";
+    const auto configuration_display_path{
+        sourcemeta::core::weakly_canonical(configuration_path.value())
+            .generic_string()};
+    if (options.contains("configuration")) {
+      LOG_VERBOSE(options) << "Using configuration file: "
+                           << configuration_display_path << "\n";
+    } else {
+      LOG_DEBUG(options) << "Using configuration file: "
+                         << configuration_display_path << "\n";
+    }
     sourcemeta::core::PointerPositionTracker positions;
     auto property_storage = std::make_shared<std::deque<std::string>>();
     try {

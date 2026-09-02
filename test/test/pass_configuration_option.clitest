@@ -40,6 +40,7 @@ WRITE expected_0.txt UNTIL EOF
 1>   1/2 PASS First test
 1>   2/2 PASS Invalid type
 2> Using parallelism: 1
+2> Using configuration file: [CWD]/config/jsonschema.json
 2> Using extension: .json
 2> Using extension: .yaml
 2> Using extension: .yml

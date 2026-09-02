@@ -14,8 +14,11 @@ EOF
 
 RUN codegen --configuration config/jsonschema.json $CWD/schema.json --target typescript --verbose STDIN /dev/null IN . INTO result.txt EXPECTING 0
 
+REPLACE $CWD WITH '[CWD]' IN result.txt
+
 WRITE expected.txt UNTIL EOF
 1> export type Schema = string;
+2> Using configuration file: [CWD]/config/jsonschema.json
 EOF
 
 COMPARE result.txt AGAINST expected.txt

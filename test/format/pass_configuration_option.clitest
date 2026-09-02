@@ -23,6 +23,7 @@ RUN fmt --configuration $CWD/config/jsonschema.json --verbose STDIN /dev/null IN
 REPLACE $CWD WITH '[CWD]' IN result.txt
 
 WRITE expected.txt UNTIL EOF
+2> Using configuration file: [CWD]/config/jsonschema.json
 2> Using extension: .json
 2> Using extension: .yaml
 2> Using extension: .yml

@@ -22,6 +22,7 @@ RUN metaschema --configuration config/jsonschema.json --verbose $CWD/schema.json
 REPLACE $CWD WITH '[CWD]' IN result.txt
 
 WRITE expected.txt UNTIL EOF
+2> Using configuration file: [CWD]/config/jsonschema.json
 2> Using extension: .json
 2> Using extension: .yaml
 2> Using extension: .yml

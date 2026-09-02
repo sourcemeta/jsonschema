@@ -23,6 +23,7 @@ RUN validate --configuration jsonschema.ci.json --verbose $CWD/schema.json $CWD/
 REPLACE $CWD WITH '[CWD]' IN result_0.txt
 
 WRITE expected_0.txt UNTIL EOF
+2> Using configuration file: [CWD]/jsonschema.ci.json
 2> ok: [CWD]/instance.json
 2>   matches [CWD]/schema.json
 2> annotation: "foo"

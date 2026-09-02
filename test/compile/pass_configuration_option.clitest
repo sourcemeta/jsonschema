@@ -17,6 +17,8 @@ EOF
 
 RUN compile --configuration config/jsonschema.json $CWD/schema.json --verbose STDIN /dev/null IN . INTO result.txt EXPECTING 0
 
+REPLACE $CWD WITH '[CWD]' IN result.txt
+
 WRITE expected.txt UNTIL EOF
 1> [
 1>   6,
@@ -61,6 +63,7 @@ WRITE expected.txt UNTIL EOF
 1>     "https://json-schema.org/draft/2020-12/vocab/applicator"
 1>   ]
 1> ]
+2> Using configuration file: [CWD]/config/jsonschema.json
 EOF
 
 COMPARE result.txt AGAINST expected.txt
