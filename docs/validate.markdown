@@ -46,9 +46,9 @@ code 2.
 > during validation. No additional options are needed.
 
 > [!NOTE]
-> Annotations are only printed when passing the `--verbose`/`-v` or the
-> `--trace`/`-t` options. However, annotation collection will be skipped if the
-> `--fast`/`-f` option is passed.
+> Annotations are reported through the `--json`/`-j` output and through the
+> `--trace`/`-t` option. Neither reports them when the `--fast`/`-f` option is
+> passed, as fast mode does not collect annotations.
 
 > [!WARNING]
 > By default, schemas are validated in exhaustive mode, which results in better

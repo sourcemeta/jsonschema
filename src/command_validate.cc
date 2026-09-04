@@ -209,8 +209,6 @@ auto process_entry(const sourcemeta::jsonschema::InputJSON &entry,
         << "\n  matches "
         << sourcemeta::jsonschema::stdin_path_string(schema_resolution_base)
         << "\n";
-    sourcemeta::jsonschema::print_annotations(output, options, entry.positions,
-                                              std::cerr);
   } else {
     if (continue_on_error && entry.multidocument && !result) {
       std::cerr << "\n";
@@ -471,7 +469,6 @@ auto sourcemeta::jsonschema::validate(const sourcemeta::core::Options &options)
                      .generic_string()
               << "\n  matches " << stdin_path_string(schema_resolution_base)
               << "\n";
-          print_annotations(output, options, tracker, std::cerr);
         } else {
           std::cerr << "fail: "
                     << sourcemeta::core::weakly_canonical(instance_path)

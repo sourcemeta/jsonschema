@@ -27,37 +27,10 @@ WRITE expected_0.txt UNTIL EOF
 2> Interpreting input as GZIP-compressed JSONL: [CWD]/instance.jsonl.gz
 2> ok: [CWD]/instance.jsonl.gz (entry #1)
 2>   matches [CWD]/schema.json
-2> annotation: "Test schema"
-2>   at instance location ""
-2>   at evaluate path "/description"
-2> annotation: "Test"
-2>   at instance location ""
-2>   at evaluate path "/title"
-2> annotation: "foo"
-2>   at instance location ""
-2>   at evaluate path "/properties"
 2> ok: [CWD]/instance.jsonl.gz (entry #2)
 2>   matches [CWD]/schema.json
-2> annotation: "Test schema"
-2>   at instance location ""
-2>   at evaluate path "/description"
-2> annotation: "Test"
-2>   at instance location ""
-2>   at evaluate path "/title"
-2> annotation: "foo"
-2>   at instance location ""
-2>   at evaluate path "/properties"
 2> ok: [CWD]/instance.jsonl.gz (entry #3)
 2>   matches [CWD]/schema.json
-2> annotation: "Test schema"
-2>   at instance location ""
-2>   at evaluate path "/description"
-2> annotation: "Test"
-2>   at instance location ""
-2>   at evaluate path "/title"
-2> annotation: "foo"
-2>   at instance location ""
-2>   at evaluate path "/properties"
 EOF
 
 COMPARE result_0.txt AGAINST expected_0.txt
