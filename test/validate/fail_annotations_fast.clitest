@@ -11,17 +11,15 @@ WRITE schema.json UNTIL EOF
 }
 EOF
 
-WRITE stdin_input UNTIL EOF
+WRITE instance.json UNTIL EOF
 { "foo": "bar" }
 EOF
 
-RUN validate schema.json - --verbose STDIN stdin_input IN . INTO result_0.txt EXPECTING 0
-
-REPLACE $CWD WITH '[CWD]' IN result_0.txt
+// Invalid CLI arguments
+RUN validate schema.json instance.json --annotations --fast STDIN /dev/null IN . INTO result_0.txt EXPECTING 5
 
 WRITE expected_0.txt UNTIL EOF
-2> ok: tag:sourcemeta.com,2026:jsonschema/stdin
-2>   matches [CWD]/schema.json
+2> error: The `--annotations/-a` option cannot be used with `--fast/-f`, as fast mode does not collect annotations
 EOF
 
 COMPARE result_0.txt AGAINST expected_0.txt

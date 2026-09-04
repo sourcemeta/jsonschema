@@ -27,9 +27,6 @@ REPLACE $CWD WITH '[CWD]' IN result_0.txt
 WRITE expected_0.txt UNTIL EOF
 2> ok: [CWD]/instance.json
 2>   matches [CWD]/level1/level2/level3/schema.json
-2> annotation: "foo"
-2>   at instance location "" (line 1, column 1)
-2>   at evaluate path "/properties"
 EOF
 
 COMPARE result_0.txt AGAINST expected_0.txt

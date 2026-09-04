@@ -450,7 +450,7 @@ print_annotations(const sourcemeta::blaze::SimpleOutput &output,
                   const sourcemeta::core::Options &options,
                   const sourcemeta::core::PointerPositionTracker &tracker,
                   std::ostream &stream) -> void {
-  if (options.contains("verbose")) {
+  if (options.contains("annotations")) {
     for (const auto &annotation : output.annotations()) {
       stream << "annotation: ";
       sourcemeta::core::stringify(annotation.value, stream);

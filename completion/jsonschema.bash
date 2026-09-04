@@ -103,7 +103,7 @@ _jsonschema() {
 
   case "${command}" in
     validate)
-      local options="--benchmark -b --loop -l --extension -e --ignore -i --trace -t --fast -f --template -m"
+      local options="--benchmark -b --loop -l --extension -e --ignore -i --trace -t --fast -f --template -m --annotations -a"
       if [[ ${current} == -* ]]
       then
         COMPREPLY=( $(compgen -W "${options} ${global_options}" -- "${current}") )

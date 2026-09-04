@@ -27,15 +27,6 @@ WRITE expected_1.txt UNTIL EOF
 2> Parsing pre-compiled schema template: [CWD]/template.json
 2> ok: [CWD]/instance.json
 2>   matches [CWD]/schema.json
-2> annotation: "Test schema"
-2>   at instance location "" (line 1, column 1)
-2>   at evaluate path "/description"
-2> annotation: "Test"
-2>   at instance location "" (line 1, column 1)
-2>   at evaluate path "/title"
-2> annotation: "foo"
-2>   at instance location "" (line 1, column 1)
-2>   at evaluate path "/properties"
 EOF
 
 COMPARE result_1.txt AGAINST expected_1.txt
