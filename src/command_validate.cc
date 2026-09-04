@@ -171,7 +171,7 @@ auto process_entry(const sourcemeta::jsonschema::InputJSON &entry,
   }
 
   if (benchmark) {
-    return true;
+    return subresult || continue_on_error;
   }
 
   if (trace) {
