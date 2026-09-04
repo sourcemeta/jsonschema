@@ -43,11 +43,9 @@ Commands:
             [--benchmark/-b] [--loop <iterations>] [--extension/-e <extension>]
             [--ignore/-i <schemas-or-directories>] [--trace/-t] [--fast/-f]
             [--template/-m <template.json>] [--entrypoint/-p <pointer|uri>]
-            [--continue/-c] [--format-assertion/-F] [--annotations/-a]
+            [--continue/-c] [--format-assertion/-F]
 
        Validate one or more instances against the given schema.
-       Use --annotations/-a to print the annotations that each successful
-       instance produced.
 
        By default, schemas are validated in exhaustive mode, which results in
        better error messages, at the expense of speed. The --fast/-f option
@@ -216,7 +214,6 @@ auto jsonschema_main(const std::string &program, const std::string &command,
     app.flag("fast", {"f"});
     app.flag("format-assertion", {"F"});
     app.flag("continue", {"c"});
-    app.flag("annotations", {"a"});
     app.option("extension", {"e"});
     app.option("ignore", {"i"});
     app.option("template", {"m"});

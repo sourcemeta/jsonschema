@@ -72,15 +72,6 @@ auto get_schema_template(
       positions);
 }
 
-auto instance_status_stream(const sourcemeta::core::Options &options)
-    -> std::ostream & {
-  if (options.contains("annotations")) {
-    return std::cerr;
-  }
-
-  return sourcemeta::jsonschema::LOG_VERBOSE(options);
-}
-
 auto parse_loop(const sourcemeta::core::Options &options) -> std::uint64_t {
   if (options.contains("loop")) {
     return std::stoull(std::string{options.at("loop").front()});
@@ -207,18 +198,17 @@ auto process_entry(const sourcemeta::jsonschema::InputJSON &entry,
     }
   } else if (subresult) {
     if (continue_on_error && entry.multidocument && !result) {
-      instance_status_stream(options) << "\n";
+      sourcemeta::jsonschema::LOG_VERBOSE(options) << "\n";
     }
-    instance_status_stream(options) << "ok: " << entry.first;
+    sourcemeta::jsonschema::LOG_VERBOSE(options) << "ok: " << entry.first;
     if (entry.multidocument) {
-      instance_status_stream(options) << " (entry #" << entry.index + 1 << ")";
+      sourcemeta::jsonschema::LOG_VERBOSE(options)
+          << " (entry #" << entry.index + 1 << ")";
     }
-    instance_status_stream(options)
+    sourcemeta::jsonschema::LOG_VERBOSE(options)
         << "\n  matches "
         << sourcemeta::jsonschema::stdin_path_string(schema_resolution_base)
         << "\n";
-    sourcemeta::jsonschema::print_annotations(output, options, entry.positions,
-                                              std::cerr);
   } else {
     if (continue_on_error && entry.multidocument && !result) {
       std::cerr << "\n";
@@ -300,21 +290,6 @@ auto sourcemeta::jsonschema::validate(const sourcemeta::core::Options &options)
   const auto trace{options.contains("trace")};
   const auto json_output{options.contains("json")};
   const auto continue_on_error{options.contains("continue")};
-
-  if (options.contains("annotations") && fast_mode) {
-    throw OptionConflictError{
-        "The `--annotations/-a` option cannot be used with `--fast/-f`"};
-  }
-
-  if (options.contains("annotations") && benchmark) {
-    throw OptionConflictError{
-        "The `--annotations/-a` option cannot be used with `--benchmark/-b`"};
-  }
-
-  if (options.contains("annotations") && trace) {
-    throw OptionConflictError{
-        "The `--annotations/-a` option cannot be used with `--trace/-t`"};
-  }
 
   if (options.contains("entrypoint") && !options.at("entrypoint").empty() &&
       options.contains("template") && !options.at("template").empty()) {
@@ -488,13 +463,12 @@ auto sourcemeta::jsonschema::validate(const sourcemeta::core::Options &options)
           sourcemeta::core::prettify(suboutput, std::cout);
           std::cout << "\n";
         } else if (subresult) {
-          instance_status_stream(options)
+          LOG_VERBOSE(options)
               << "ok: "
               << sourcemeta::core::weakly_canonical(instance_path)
                      .generic_string()
               << "\n  matches " << stdin_path_string(schema_resolution_base)
               << "\n";
-          print_annotations(output, options, tracker, std::cerr);
         } else {
           std::cerr << "fail: "
                     << sourcemeta::core::weakly_canonical(instance_path)

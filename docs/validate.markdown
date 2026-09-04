@@ -13,7 +13,6 @@ jsonschema validate <schema.json|.yaml> <instance.json|.jsonl|.jsonl.gz|.yaml|di
   [--ignore/-i <schemas-or-directories>] [--trace/-t] [--fast/-f]
   [--template/-m <template.json>] [--json/-j] [--entrypoint/-p <pointer|uri>]
   [--continue/-c] [--format-assertion/-F] [--configuration/-C <path>]
-  [--annotations/-a]
 ```
 
 > [!NOTE]
@@ -47,8 +46,9 @@ code 2.
 > during validation. No additional options are needed.
 
 > [!NOTE]
-> Annotations are only printed when passing the `--annotations`/`-a`, or
-> implicitly through the `--trace`/`-t` option when `--fast` is not used.
+> Annotations are reported through the `--json`/`-j` output and through the
+> `--trace`/`-t` option. Neither reports them when the `--fast`/`-f` option is
+> passed, as fast mode does not collect annotations.
 
 > [!WARNING]
 > By default, schemas are validated in exhaustive mode, which results in better

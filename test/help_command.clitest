@@ -36,11 +36,9 @@ WRITE expected.txt UNTIL EOF
 1>             [--benchmark/-b] [--loop <iterations>] [--extension/-e <extension>]
 1>             [--ignore/-i <schemas-or-directories>] [--trace/-t] [--fast/-f]
 1>             [--template/-m <template.json>] [--entrypoint/-p <pointer|uri>]
-1>             [--continue/-c] [--format-assertion/-F] [--annotations/-a]
+1>             [--continue/-c] [--format-assertion/-F]
 1>
 1>        Validate one or more instances against the given schema.
-1>        Use --annotations/-a to print the annotations that each successful
-1>        instance produced.
 1>
 1>        By default, schemas are validated in exhaustive mode, which results in
 1>        better error messages, at the expense of speed. The --fast/-f option

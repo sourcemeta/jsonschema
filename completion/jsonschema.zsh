@@ -59,7 +59,6 @@ _jsonschema() {
             '(--trace -t)'{--trace,-t}'[Enable trace output]' \
             '(--fast -f)'{--fast,-f}'[Optimise for speed]' \
             '(--template -m)'{--template,-m}'[Use pre-compiled schema template]:template file:_files -g "*.json"' \
-            '(--annotations -a)'{--annotations,-a}'[Print annotations]' \
             '1:schema file:_files -g "*.json *.yaml *.yml"' \
             '*:instance file:_files -g "*.json *.yaml *.yml *.jsonl"'
           ;;
