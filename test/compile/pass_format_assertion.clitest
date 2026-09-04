@@ -26,7 +26,7 @@ REPLACE $CWD WITH '[CWD]' IN result.txt
 
 WRITE expected.txt UNTIL EOF
 1> [
-1>   6,
+1>   7,
 1>   false,
 1>   true,
 1>   [
@@ -41,7 +41,7 @@ WRITE expected.txt UNTIL EOF
 1>         [ 14, 5 ]
 1>       ],
 1>       [
-1>         96,
+1>         97,
 1>         [],
 1>         [],
 1>         "[CWD_URI]/schema.json#/format",

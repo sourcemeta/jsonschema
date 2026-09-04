@@ -27,7 +27,7 @@ WRITE expected.txt UNTIL EOF
 1>       "absoluteKeywordLocation": "https://example.com#/description",
 1>       "instanceLocation": "",
 1>       "instancePosition": [ 1, 1, 1, 16 ],
-1>       "annotation": [ "Test schema" ]
+1>       "annotation": "Test schema"
 1>     },
 1>     {
 1>       "keywordLocation": "/properties",
@@ -41,7 +41,7 @@ WRITE expected.txt UNTIL EOF
 1>       "absoluteKeywordLocation": "https://example.com#/title",
 1>       "instanceLocation": "",
 1>       "instancePosition": [ 1, 1, 1, 16 ],
-1>       "annotation": [ "Test" ]
+1>       "annotation": "Test"
 1>     }
 1>   ]
 1> }

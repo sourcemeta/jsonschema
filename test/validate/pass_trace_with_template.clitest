@@ -50,7 +50,7 @@ WRITE expected_1.txt UNTIL EOF
 1>    at keyword location "https://example.com#/properties/foo/type"
 1>    at vocabulary "https://json-schema.org/draft/2020-12/vocab/validation"
 1>
-1> @- (annotation) "/properties" (AnnotationEmit)
+1> @- (annotation) "/properties" (AnnotationEmitWrapped)
 1>    value "foo"
 1>    at instance location "" (line 1, column 1)
 1>    at keyword location "https://example.com#/properties"

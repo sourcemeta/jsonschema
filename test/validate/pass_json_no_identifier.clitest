@@ -29,7 +29,7 @@ WRITE expected.txt UNTIL EOF
 1>       "absoluteKeywordLocation": "[CWD_URI]/schema.json#/description",
 1>       "instanceLocation": "",
 1>       "instancePosition": [ 1, 1, 1, 16 ],
-1>       "annotation": [ "Test schema" ]
+1>       "annotation": "Test schema"
 1>     },
 1>     {
 1>       "keywordLocation": "/properties",
@@ -43,7 +43,7 @@ WRITE expected.txt UNTIL EOF
 1>       "absoluteKeywordLocation": "[CWD_URI]/schema.json#/title",
 1>       "instanceLocation": "",
 1>       "instancePosition": [ 1, 1, 1, 16 ],
-1>       "annotation": [ "Test" ]
+1>       "annotation": "Test"
 1>     }
 1>   ]
 1> }
