@@ -10,6 +10,10 @@
 
 namespace sourcemeta::jsonbinpack::v1 {
 
+// The encoding names are the ones the JSON BinPack specification defines, so
+// they keep their casing rather than following the C++ naming convention
+// NOLINTBEGIN(readability-identifier-naming)
+
 auto BOUNDED_MULTIPLE_8BITS_ENUM_FIXED(const sourcemeta::core::JSON &options)
     -> Encoding {
   assert(options.defines("minimum"));
@@ -66,6 +70,7 @@ auto ARBITRARY_MULTIPLE_ZIGZAG_VARINT(const sourcemeta::core::JSON &options)
       .multiplier = static_cast<std::uint64_t>(multiplier.to_integer())};
 }
 
+// NOLINTEND(readability-identifier-naming)
 } // namespace sourcemeta::jsonbinpack::v1
 
 #endif

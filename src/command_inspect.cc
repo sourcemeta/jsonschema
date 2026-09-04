@@ -198,7 +198,7 @@ auto print_frame(std::ostream &stream,
 
 auto sourcemeta::jsonschema::inspect(const sourcemeta::core::Options &options)
     -> void {
-  if (options.positional().size() < 1) {
+  if (options.positional().empty()) {
     throw PositionalArgumentError{"This command expects a path to a schema",
                                   "jsonschema inspect path/to/schema.json"};
   }
@@ -249,7 +249,7 @@ auto sourcemeta::jsonschema::inspect(const sourcemeta::core::Options &options)
   std::optional<sourcemeta::blaze::SchemaFrame> frame;
 
   try {
-    frame.emplace(sourcemeta::blaze::SchemaFrame::Mode::References, schema,
+    frame.emplace(sourcemeta::blaze::SchemaFrame::Mode::Pointers, schema,
                   sourcemeta::blaze::schema_walker, custom_resolver, dialect,
                   sourcemeta::jsonschema::default_id(schema_resolution_base,
                                                      schema_from_stdin),

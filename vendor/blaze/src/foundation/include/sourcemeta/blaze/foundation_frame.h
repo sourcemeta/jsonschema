@@ -15,6 +15,7 @@
 
 #include <concepts>   // std::invocable
 #include <cstdint>    // std::uint8_t
+#include <deque>      // std::deque
 #include <functional> // std::reference_wrapper
 #include <map>        // std::map
 #include <memory>     // std::unique_ptr
@@ -58,7 +59,15 @@ public:
   /// intensive. Each mode is a superset of the previous one. Note that
   /// sourcemeta::blaze::SchemaFrame::Mode::Root reports on a single schema,
   /// so framing a wrapper that holds more than one yields no locations
-  enum class Mode : std::uint8_t { Root, Locations, References };
+  ///
+  /// sourcemeta::blaze::SchemaFrame::Mode::Locations and
+  /// sourcemeta::blaze::SchemaFrame::Mode::References locate the schemas of
+  /// the document rather than each of its JSON Pointers, and the latter also
+  /// locates whatever place a reference names. Reach for
+  /// sourcemeta::blaze::SchemaFrame::Mode::Pointers only to address a keyword
+  /// or a value of the document by URI, as computing those locations tends to
+  /// dominate the cost of framing
+  enum class Mode : std::uint8_t { Root, Locations, References, Pointers };
 
   /// How a caller-provided default identifier relates to the one that the
   /// schema declares, if any
@@ -529,6 +538,11 @@ private:
 #pragma warning(disable : 4251 4275)
 #endif
   sourcemeta::core::JSON::String root_;
+  // A reference may target a place that no schema location covers, in which
+  // case framing materialises one for it. Unlike every other location, the
+  // tokens of those pointers are not borrowed from the analysed document, so
+  // they have to be declared here to outlive the locations that borrow them
+  std::deque<sourcemeta::core::Pointer> reference_pointers_;
   Locations locations_;
   References references_;
   // What the frame derives rather than is, kept out of line so that this

@@ -98,7 +98,8 @@ auto Encoder::BOUNDED_8BIT_PREFIX_UTF8_STRING_SHARED(
 
 auto Encoder::RFC3339_DATE_INTEGER_TRIPLET(
     const sourcemeta::core::JSON &document,
-    const struct RFC3339_DATE_INTEGER_TRIPLET &) -> void {
+    [[maybe_unused]] const struct RFC3339_DATE_INTEGER_TRIPLET &options)
+    -> void {
   assert(document.is_string());
   const auto &value{document.to_string()};
   assert(value.size() == 10);
@@ -122,7 +123,8 @@ auto Encoder::RFC3339_DATE_INTEGER_TRIPLET(
 
 auto Encoder::PREFIX_VARINT_LENGTH_STRING_SHARED(
     const sourcemeta::core::JSON &document,
-    const struct PREFIX_VARINT_LENGTH_STRING_SHARED &) -> void {
+    [[maybe_unused]] const struct PREFIX_VARINT_LENGTH_STRING_SHARED &options)
+    -> void {
   assert(document.is_string());
   const sourcemeta::core::JSON::String &value{document.to_string()};
 

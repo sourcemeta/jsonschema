@@ -67,8 +67,7 @@ enum class StandardOutput : std::uint8_t {
 /// assert(result.at("valid").is_boolean());
 /// assert(result.at("valid").to_boolean());
 ///
-/// sourcemeta::core::prettify(result,
-///   std::cout, sourcemeta::blaze::standard_output_compare);
+/// sourcemeta::core::prettify(result, std::cout);
 /// std::cout << "\n";
 /// ```
 ///

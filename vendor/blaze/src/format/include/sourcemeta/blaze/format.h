@@ -38,8 +38,11 @@ namespace sourcemeta::blaze {
 /// #include <sstream>
 ///
 /// sourcemeta::core::JSON schema =
-///   sourcemeta::core::parse_json(
-///     "{ \"type\": \"string\", \"minLength\": 3 }");
+///   sourcemeta::core::parse_json(R"JSON({
+///     "type": "string",
+///     "minLength": 3,
+///     "$schema": "https://json-schema.org/draft/2020-12/schema"
+///   })JSON");
 /// sourcemeta::blaze::format(schema, sourcemeta::blaze::schema_walker,
 ///                           sourcemeta::blaze::schema_resolver);
 /// std::ostringstream stream;

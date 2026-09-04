@@ -40,8 +40,18 @@ if(NOT Mimalloc_FOUND)
   add_library(mimalloc ${MIMALLOC_SOURCES})
   sourcemeta_add_default_options(PRIVATE mimalloc)
 
+  # Link the resolved thread library rather than the imported target, as the
+  # latter obliges every consumer of the exported package to run FindThreads,
+  # whose try_compile cannot run inside build systems that read the export by
+  # tracing CMake instead of calling it. The imported target also carries a
+  # compile option on the platforms whose threads need one, which we set here
   find_package(Threads REQUIRED)
-  target_link_libraries(mimalloc PRIVATE Threads::Threads)
+  if(THREADS_HAVE_PTHREAD_ARG)
+    target_compile_options(mimalloc PRIVATE -pthread)
+  endif()
+  if(CMAKE_THREAD_LIBS_INIT)
+    target_link_libraries(mimalloc PRIVATE "${CMAKE_THREAD_LIBS_INIT}")
+  endif()
 
   target_include_directories(mimalloc PUBLIC
     "$<BUILD_INTERFACE:${MIMALLOC_DIR}/include>"
@@ -145,8 +155,6 @@ if(NOT Mimalloc_FOUND)
       COMPONENT sourcemeta_core_dev)
 
     file(WRITE ${CMAKE_CURRENT_BINARY_DIR}/mimalloc-config.cmake
-      "include(CMakeFindDependencyMacro)\n"
-      "find_dependency(Threads)\n"
       "include(\"\${CMAKE_CURRENT_LIST_DIR}/mimalloc.cmake\")\n"
       "check_required_components(\"mimalloc\")\n")
     install(FILES

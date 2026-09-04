@@ -2,14 +2,16 @@
 #include <sourcemeta/core/io.h>
 #include <sourcemeta/core/json.h>
 
-#include <cassert>    // assert
-#include <cstdint>    // std::uint8_t
-#include <filesystem> // std::filesystem
-#include <iostream>   // std::cerr, std::cout
-#include <optional>   // std::optional
-#include <ostream>    // std::ostream
-#include <string>     // std::string
-#include <utility>    // std::move, std::to_underlying
+#include <array>       // std::to_array
+#include <cassert>     // assert
+#include <cstdint>     // std::uint8_t
+#include <filesystem>  // std::filesystem
+#include <iostream>    // std::cerr, std::cout
+#include <optional>    // std::optional
+#include <ostream>     // std::ostream
+#include <string>      // std::string
+#include <string_view> // std::string_view
+#include <utility>     // std::move, std::to_underlying
 
 #include "command.h"
 #include "configuration.h"
@@ -64,6 +66,8 @@ auto dependency_resolve(const sourcemeta::core::Options &options,
         return result;
       }
     } catch (...) {
+      // Failing to fetch a mapped URI is expected to fall back to the
+      // remaining resolution strategies
     }
   }
 
@@ -90,15 +94,13 @@ auto emit_debug(const sourcemeta::core::Options &options,
   }
 
   using Type = sourcemeta::blaze::Configuration::FetchEvent::Type;
-  static const char *type_names[] = {
-      "fetch/start",   "fetch/end",    "bundle/start", "bundle/end",
-      "write/start",   "write/end",    "verify/start", "verify/end",
-      "up-to-date",    "file-missing", "orphaned",     "mismatched",
-      "path-mismatch", "untracked",    "error"};
-  static_assert(sizeof(type_names) / sizeof(type_names[0]) ==
-                std::to_underlying(Type::Error) + 1);
+  static constexpr auto TYPE_NAMES{std::to_array<std::string_view>(
+      {"fetch/start", "fetch/end", "bundle/start", "bundle/end", "write/start",
+       "write/end", "verify/start", "verify/end", "up-to-date", "file-missing",
+       "orphaned", "mismatched", "path-mismatch", "untracked", "error"})};
+  static_assert(TYPE_NAMES.size() == std::to_underlying(Type::Error) + 1);
   const auto type_index{std::to_underlying(event.type)};
-  std::cerr << "debug: " << type_names[type_index] << ": " << event.uri << " ("
+  std::cerr << "debug: " << TYPE_NAMES[type_index] << ": " << event.uri << " ("
             << (event.index + 1) << "/" << event.total << ")";
   if (!event.path.empty()) {
     std::cerr << " -> " << event.path.generic_string();
@@ -288,7 +290,7 @@ auto sourcemeta::jsonschema::install(const sourcemeta::core::Options &options)
   auto events_array{sourcemeta::core::JSON::make_array()};
 
   const auto &positional_arguments{options.positional()};
-  if (positional_arguments.size() != 0 && positional_arguments.size() != 2) {
+  if (!positional_arguments.empty() && positional_arguments.size() != 2) {
     throw PositionalArgumentError{
         "The install command takes either zero or two positional arguments",
         "jsonschema install https://example.com/schema ./vendor/schema.json"};

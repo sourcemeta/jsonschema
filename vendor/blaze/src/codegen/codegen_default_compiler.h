@@ -109,13 +109,34 @@ auto handle_object(const sourcemeta::core::JSON &schema,
   assert(subschema.defines("properties"));
 
   const auto &properties{subschema.at("properties")};
+  if (!properties.is_object()) {
+    throw CodegenUnsupportedKeywordValueError(
+        schema, location.pointer, "properties", "Expected an object value");
+  }
 
   std::unordered_set<std::string_view> required_set;
   if (subschema.defines("required")) {
     const auto &required{subschema.at("required")};
+    if (!required.is_array()) {
+      throw CodegenUnsupportedKeywordValueError(
+          schema, location.pointer, "required", "Expected an array value");
+    }
+
     for (const auto &item : required.as_array()) {
-      // Guaranteed by canonicalisation
-      assert(properties.defines(item.to_string()));
+      if (!item.is_string()) {
+        throw CodegenUnsupportedKeywordValueError(
+            schema, location.pointer, "required",
+            "Expected an array of string values");
+      }
+
+      // Canonicalisation adds a required property that the schema leaves
+      // unconstrained, but it cannot do so for an object that forbids it
+      if (!properties.defines(item.to_string())) {
+        throw CodegenUnexpectedSchemaError(
+            schema, location.pointer,
+            "This schema requires a property that it does not allow");
+      }
+
       required_set.insert(item.to_string());
     }
   }
@@ -160,6 +181,12 @@ auto handle_object(const sourcemeta::core::JSON &schema,
   std::vector<CodegenIRObjectPatternProperty> pattern;
   if (subschema.defines("patternProperties")) {
     const auto &pattern_props{subschema.at("patternProperties")};
+    if (!pattern_props.is_object()) {
+      throw CodegenUnsupportedKeywordValueError(schema, location.pointer,
+                                                "patternProperties",
+                                                "Expected an object value");
+    }
+
     for (const auto &entry : pattern_props.as_object()) {
       auto pattern_pointer{sourcemeta::core::to_pointer(location.pointer)};
       pattern_pointer.push_back("patternProperties");
@@ -249,7 +276,10 @@ auto handle_array(const sourcemeta::core::JSON &schema,
           SchemaVocabularies::Known::JSON_Schema_2020_12_Applicator) &&
       subschema.defines("prefixItems")) {
     const auto &prefix_items{subschema.at("prefixItems")};
-    assert(prefix_items.is_array());
+    if (!prefix_items.is_array()) {
+      throw CodegenUnsupportedKeywordValueError(
+          schema, location.pointer, "prefixItems", "Expected an array value");
+    }
 
     std::vector<CodegenIRType> tuple_items;
     for (std::size_t index = 0; index < prefix_items.size(); ++index) {
@@ -364,6 +394,10 @@ auto handle_enum(const sourcemeta::core::JSON &schema,
                            "description", "default", "deprecated", "readOnly",
                            "writeOnly", "examples"});
   const auto &enum_json{subschema.at("enum")};
+  if (!enum_json.is_array()) {
+    throw CodegenUnsupportedKeywordValueError(schema, location.pointer, "enum",
+                                              "Expected an array value");
+  }
 
   // Boolean and null special cases
   if (enum_json.size() == 1 && enum_json.at(0).is_null()) {
@@ -404,7 +438,12 @@ auto handle_anyof(const sourcemeta::core::JSON &schema,
        "writeOnly", "examples", "unevaluatedProperties", "unevaluatedItems"});
 
   const auto &any_of{subschema.at("anyOf")};
-  assert(any_of.is_array());
+  if (!any_of.is_array() || any_of.empty()) {
+    throw CodegenUnsupportedKeywordValueError(
+        schema, location.pointer, "anyOf", "Expected a non-empty array value");
+  }
+
+  // Canonicalisation merges a single branch into its parent
   assert(any_of.size() >= 2);
 
   std::vector<CodegenIRType> branches;
@@ -441,7 +480,12 @@ auto handle_oneof(const sourcemeta::core::JSON &schema,
        "writeOnly", "examples", "unevaluatedProperties", "unevaluatedItems"});
 
   const auto &one_of{subschema.at("oneOf")};
-  assert(one_of.is_array());
+  if (!one_of.is_array() || one_of.empty()) {
+    throw CodegenUnsupportedKeywordValueError(
+        schema, location.pointer, "oneOf", "Expected a non-empty array value");
+  }
+
+  // Canonicalisation merges a single branch into its parent
   assert(one_of.size() >= 2);
 
   std::vector<CodegenIRType> branches;
@@ -585,7 +629,10 @@ auto handle_allof(const sourcemeta::core::JSON &schema,
        "writeOnly", "examples", "unevaluatedProperties", "unevaluatedItems"});
 
   const auto &all_of{subschema.at("allOf")};
-  assert(all_of.is_array());
+  if (!all_of.is_array() || all_of.empty()) {
+    throw CodegenUnsupportedKeywordValueError(
+        schema, location.pointer, "allOf", "Expected a non-empty array value");
+  }
 
   if (all_of.size() == 1) {
     auto target_pointer{sourcemeta::core::to_pointer(location.pointer)};

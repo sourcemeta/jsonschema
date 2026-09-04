@@ -48,9 +48,7 @@ namespace sourcemeta::blaze {
 ///
 /// const sourcemeta::core::JSON instance{5};
 ///
-/// sourcemeta::blaze::TraceOutput output{
-///     sourcemeta::blaze::schema_walker,
-///     sourcemeta::blaze::schema_resolver,
+/// sourcemeta::blaze::TraceOutput output{schema_template,
 ///     [](const sourcemeta::blaze::TraceOutput::Entry &entry) {
 ///       std::cerr << entry.name << "\n";
 ///     }};

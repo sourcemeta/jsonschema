@@ -5,16 +5,16 @@
 #include <sourcemeta/core/json.h>
 #include <sourcemeta/core/jsonpointer.h>
 
-#include <sourcemeta/blaze/alterschema.h>
 #include <sourcemeta/blaze/compiler.h>
 
-#include <cstdlib>    // EXIT_SUCCESS
-#include <filesystem> // std::filesystem::current_path
-#include <iostream>   // std::cerr, std::cout
-#include <numeric>    // std::accumulate
-#include <optional>   // std::optional
-#include <ostream>    // std::ostream
-#include <sstream>    // std::ostringstream
+#include <cstdlib>     // EXIT_SUCCESS
+#include <filesystem>  // std::filesystem::current_path
+#include <iostream>    // std::cerr, std::cout
+#include <numeric>     // std::accumulate
+#include <optional>    // std::optional
+#include <ostream>     // std::ostream
+#include <sstream>     // std::ostringstream
+#include <string_view> // std::string_view
 
 #include "command.h"
 #include "configuration.h"
@@ -24,7 +24,7 @@
 #include "resolver.h"
 #include "utils.h"
 
-static const sourcemeta::core::JSON::String EXCLUDE_KEYWORD{"x-lint-exclude"};
+constexpr std::string_view EXCLUDE_KEYWORD{"x-lint-exclude"};
 
 template <typename Options, typename Iterator>
 static auto disable_lint_rules(sourcemeta::blaze::SchemaTransformer &bundle,
@@ -412,7 +412,7 @@ auto sourcemeta::jsonschema::lint(const sourcemeta::core::Options &options)
                   get_lint_callback(errors_array, entry, output_json, true,
                                     printed_progress),
                   dialect, sourcemeta::jsonschema::default_id(entry),
-                  EXCLUDE_KEYWORD);
+                  sourcemeta::core::JSON::String{EXCLUDE_KEYWORD});
               if (printed_progress) {
                 std::cerr << "\n";
               }
@@ -618,14 +618,14 @@ auto sourcemeta::jsonschema::lint(const sourcemeta::core::Options &options)
                   get_lint_callback(errors_array, entry, output_json, false,
                                     printed_progress),
                   dialect, sourcemeta::jsonschema::default_id(entry),
-                  EXCLUDE_KEYWORD);
+                  sourcemeta::core::JSON::String{EXCLUDE_KEYWORD});
               scores.emplace_back(subresult.second);
               if (subresult.first) {
                 return EXIT_SUCCESS;
-              } else {
-                // Return 2 for logical lint failures
-                return EXIT_EXPECTED_FAILURE;
               }
+
+              // Return 2 for logical lint failures
+              return EXIT_EXPECTED_FAILURE;
             } catch (
                 const sourcemeta::blaze::CompilerInvalidRegexError &error) {
               throw sourcemeta::core::FileError<

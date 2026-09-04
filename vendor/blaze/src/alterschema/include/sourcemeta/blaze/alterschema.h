@@ -79,8 +79,16 @@ enum class AlterSchemaMode : std::uint8_t {
 ///   }
 /// })JSON");
 ///
-/// bundle.apply(schema, sourcemeta::blaze::schema_walker,
-///              sourcemeta::blaze::schema_resolver);
+/// const auto result{bundle.apply(schema,
+///   sourcemeta::blaze::schema_walker,
+///   sourcemeta::blaze::schema_resolver,
+///   [](const auto &pointer,
+///      const auto &name,
+///      const auto &message,
+///      const auto &outcome,
+///      const auto dismissed) {
+///     // Do something with the information
+///   })};
 /// ```
 SOURCEMETA_BLAZE_ALTERSCHEMA_EXPORT
 auto add(SchemaTransformer &bundle, const AlterSchemaMode mode) -> void;
@@ -142,6 +150,7 @@ private:
 ///
 /// ```cpp
 /// #include <sourcemeta/core/json.h>
+/// #include <sourcemeta/core/jsonpointer.h>
 /// #include <sourcemeta/blaze/alterschema.h>
 /// #include <sourcemeta/blaze/foundation.h>
 /// #include <iostream>
@@ -156,8 +165,9 @@ private:
 ///     sourcemeta::blaze::SchemaFrame::Mode::References, document,
 ///     sourcemeta::blaze::schema_walker, sourcemeta::blaze::schema_resolver};
 ///
+/// const sourcemeta::core::Pointer pointer{"items"};
 /// const auto location{frame.traverse(
-///     sourcemeta::core::WeakPointer{"items"},
+///     sourcemeta::core::to_weak_pointer(pointer),
 ///     sourcemeta::blaze::SchemaFrame::LocationType::Subschema)};
 ///
 /// sourcemeta::core::WeakPointer base;

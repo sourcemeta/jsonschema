@@ -29,15 +29,21 @@ struct AnnotationLocation {
   std::reference_wrapper<const std::string> schema_location;
 };
 
+struct AnnotationGroup {
+  std::vector<sourcemeta::core::JSON> values;
+  bool is_wrapped{false};
+};
+
 auto group_annotations(const SimpleOutput &output)
-    -> std::map<AnnotationLocation, std::vector<sourcemeta::core::JSON>> {
-  std::map<AnnotationLocation, std::vector<sourcemeta::core::JSON>> result;
+    -> std::map<AnnotationLocation, AnnotationGroup> {
+  std::map<AnnotationLocation, AnnotationGroup> result;
   for (const auto &entry : output.annotations()) {
-    auto &values{result[{.instance_location = entry.instance_location,
-                         .evaluate_path = entry.evaluate_path,
-                         .schema_location = entry.schema_location}]};
-    if (values.empty() || values.back() != entry.value) {
-      values.push_back(entry.value);
+    auto &group{result[{.instance_location = entry.instance_location,
+                        .evaluate_path = entry.evaluate_path,
+                        .schema_location = entry.schema_location}]};
+    group.is_wrapped = entry.is_wrapped;
+    if (group.values.empty() || group.values.back() != entry.value) {
+      group.values.push_back(entry.value);
     }
   }
 
@@ -87,8 +93,15 @@ auto handle_standard(Evaluator &evaluator, const Template &schema,
           }
         }
 
-        unit.assign_assume_new("annotation",
-                               sourcemeta::core::to_json(annotation.second));
+        if (annotation.second.is_wrapped) {
+          unit.assign_assume_new("annotation", sourcemeta::core::to_json(
+                                                   annotation.second.values));
+        } else {
+          assert(!annotation.second.values.empty());
+          unit.assign_assume_new(
+              "annotation",
+              sourcemeta::core::JSON{annotation.second.values.back()});
+        }
         annotations.push_back(std::move(unit));
       }
 

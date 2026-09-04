@@ -19,7 +19,7 @@
 #include <cstddef>   // std::size_t
 #include <exception> // std::exception_ptr, std::current_exception, std::rethrow_exception
 #include <iostream>    // std::cout
-#include <mutex>       // std::mutex, std::lock_guard
+#include <mutex>       // std::mutex, std::scoped_lock
 #include <optional>    // std::optional
 #include <sstream>     // std::ostringstream
 #include <string>      // std::string
@@ -222,7 +222,7 @@ auto run_suite_as_text(const sourcemeta::core::Options &options,
           stream << "\n";
         }
 
-        const auto entry_indent{multi_target ? "    " : "  "};
+        const auto *const entry_indent{multi_target ? "    " : "  "};
 
         const auto &description{test_case.description.empty()
                                     ? "<no description>"
@@ -325,7 +325,7 @@ auto report_as_text(const sourcemeta::core::Options &options,
           const auto suite_result{
               run_suite_as_text(options, entry, verbose, buffer)};
 
-          const std::lock_guard<std::mutex> lock{output_mutex};
+          const std::scoped_lock<std::mutex> lock{output_mutex};
           std::cout << buffer.str();
 
           if (suite_result.passed != suite_result.total) {
@@ -336,7 +336,7 @@ auto report_as_text(const sourcemeta::core::Options &options,
             empty_test_suite = true;
           }
         } catch (...) {
-          const std::lock_guard<std::mutex> lock{output_mutex};
+          const std::scoped_lock<std::mutex> lock{output_mutex};
           if (!first_error) {
             first_error = std::current_exception();
             first_error_path = entry.first;
@@ -509,7 +509,7 @@ auto report_as_ctrf(const sourcemeta::core::Options &options,
               options, entry,
               reports[static_cast<std::size_t>(&entry - entries.data())]);
         } catch (...) {
-          const std::lock_guard<std::mutex> lock{error_mutex};
+          const std::scoped_lock<std::mutex> lock{error_mutex};
           if (!first_error) {
             first_error = std::current_exception();
             skip_remaining.store(true);

@@ -38,7 +38,6 @@ using SchemaUnevaluatedEntries =
 ///
 /// This function performs a static analysis pass on `unevaluatedProperties` and
 /// `unevaluatedItems` occurences throughout the entire schema (if any).
-/// ```
 auto SOURCEMETA_BLAZE_COMPILER_EXPORT
 unevaluated(const sourcemeta::core::JSON &schema,
             const sourcemeta::blaze::SchemaFrame &frame,

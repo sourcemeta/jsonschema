@@ -99,6 +99,9 @@ auto test_compare_equal(const Left &left, const Right &right) -> bool {
                 test_comparable_integer<Right>) {
     return std::cmp_equal(left, right);
   } else {
+    // Character types reach this branch, and comparing whatever the caller
+    // passed is the whole point of the helper
+    // NOLINTNEXTLINE(bugprone-signed-char-misuse)
     return left == right;
   }
 }
@@ -249,6 +252,10 @@ auto test_expect_comparison(std::string_view file, int line,
 
 } // namespace sourcemeta::core
 
+// The registration symbol is a namespace-scope object whose initializer runs
+// the registry call, which no static initialization check can prove
+// non-throwing
+// NOLINTBEGIN(cert-err58-cpp,bugprone-throwing-static-initialization)
 #define SOURCEMETA_CORE_TEST_REGISTER(name)                                    \
   static auto sourcemeta_test_body_##name()->void;                             \
   [[maybe_unused]] static const int sourcemeta_test_registration_##name =      \
@@ -282,6 +289,7 @@ auto test_expect_comparison(std::string_view file, int line,
 
 #define TEST_F(fixture, name)                                                  \
   SOURCEMETA_CORE_TEST_REGISTER_FIXTURE(fixture, name)
+// NOLINTEND(cert-err58-cpp,bugprone-throwing-static-initialization)
 
 #define SOURCEMETA_CORE_TEST_COMPARE(actual, expected, comparator, operation)  \
   ::sourcemeta::core::test_expect_comparison(                                  \
@@ -307,6 +315,9 @@ auto test_expect_comparison(std::string_view file, int line,
   SOURCEMETA_CORE_TEST_COMPARE(actual, expected, test_compare_greater_equal,   \
                                ">=")
 
+// The assertion macros wrap their body in a loop so that they expand into a
+// single statement that still requires a trailing semicolon at the call site
+// NOLINTBEGIN(cppcoreguidelines-avoid-do-while)
 #define SOURCEMETA_CORE_TEST_COMPARE_FLOATING(actual, expected, type)          \
   do {                                                                         \
     const type sourcemeta_test_actual{static_cast<type>(actual)};              \
@@ -357,6 +368,8 @@ auto test_expect_comparison(std::string_view file, int line,
                                               "expected false: " #condition);  \
     }                                                                          \
   } while (false)
+
+// NOLINTEND(cppcoreguidelines-avoid-do-while)
 
 #define FAIL()                                                                 \
   ::sourcemeta::core::test_report_failure(__FILE__, __LINE__,                  \

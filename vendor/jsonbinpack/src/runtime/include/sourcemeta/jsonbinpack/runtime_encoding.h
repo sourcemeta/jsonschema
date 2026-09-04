@@ -14,6 +14,10 @@ namespace sourcemeta::jsonbinpack {
 // Forward declarations for the sole purpose of being bale to define circular
 // structures
 #ifndef DOXYGEN
+// The encoding names are the ones the JSON BinPack specification
+// defines, so they keep their casing rather than following the C++
+// naming convention
+// NOLINTBEGIN(readability-identifier-naming)
 struct BOUNDED_MULTIPLE_8BITS_ENUM_FIXED;
 struct FLOOR_MULTIPLE_ENUM_VARINT;
 struct ROOF_MULTIPLE_MIRROR_ENUM_VARINT;
@@ -36,6 +40,7 @@ struct FLOOR_TYPED_ARRAY;
 struct ROOF_TYPED_ARRAY;
 struct FIXED_TYPED_ARBITRARY_OBJECT;
 struct VARINT_TYPED_ARBITRARY_OBJECT;
+// NOLINTEND(readability-identifier-naming)
 #endif
 
 /// @ingroup runtime
@@ -51,6 +56,11 @@ using Encoding = std::variant<
     PREFIX_VARINT_LENGTH_STRING_SHARED, FIXED_TYPED_ARRAY,
     BOUNDED_8BITS_TYPED_ARRAY, FLOOR_TYPED_ARRAY, ROOF_TYPED_ARRAY,
     FIXED_TYPED_ARBITRARY_OBJECT, VARINT_TYPED_ARBITRARY_OBJECT>;
+
+// The encoding names are the ones the JSON BinPack specification
+// defines, so they keep their casing rather than following the C++
+// naming convention
+// NOLINTBEGIN(readability-identifier-naming)
 
 /// @ingroup runtime
 /// @defgroup encoding_integer Integer Encodings
@@ -403,7 +413,7 @@ struct CONST_NONE {
 struct ANY_PACKED_TYPE_TAG_BYTE_PREFIX {};
 #ifndef DOXYGEN
 namespace internal::ANY_PACKED_TYPE_TAG_BYTE_PREFIX {
-constexpr auto type_size = 3;
+constexpr auto TYPE_SIZE = 3;
 constexpr std::uint8_t TYPE_SHARED_STRING = 0b00000000;
 constexpr std::uint8_t TYPE_STRING = 0b00000001;
 constexpr std::uint8_t TYPE_LONG_STRING = 0b00000010;
@@ -412,18 +422,18 @@ constexpr std::uint8_t TYPE_ARRAY = 0b00000100;
 constexpr std::uint8_t TYPE_POSITIVE_INTEGER_BYTE = 0b00000101;
 constexpr std::uint8_t TYPE_NEGATIVE_INTEGER_BYTE = 0b00000110;
 constexpr std::uint8_t TYPE_OTHER = 0b00000111;
-static_assert(TYPE_SHARED_STRING <= sourcemeta::core::uint_max<type_size>);
-static_assert(TYPE_STRING <= sourcemeta::core::uint_max<type_size>);
-static_assert(TYPE_LONG_STRING <= sourcemeta::core::uint_max<type_size>);
-static_assert(TYPE_OBJECT <= sourcemeta::core::uint_max<type_size>);
-static_assert(TYPE_ARRAY <= sourcemeta::core::uint_max<type_size>);
+static_assert(TYPE_SHARED_STRING <= sourcemeta::core::uint_max<TYPE_SIZE>);
+static_assert(TYPE_STRING <= sourcemeta::core::uint_max<TYPE_SIZE>);
+static_assert(TYPE_LONG_STRING <= sourcemeta::core::uint_max<TYPE_SIZE>);
+static_assert(TYPE_OBJECT <= sourcemeta::core::uint_max<TYPE_SIZE>);
+static_assert(TYPE_ARRAY <= sourcemeta::core::uint_max<TYPE_SIZE>);
 static_assert(TYPE_POSITIVE_INTEGER_BYTE <=
-              sourcemeta::core::uint_max<type_size>);
+              sourcemeta::core::uint_max<TYPE_SIZE>);
 static_assert(TYPE_NEGATIVE_INTEGER_BYTE <=
-              sourcemeta::core::uint_max<type_size>);
-static_assert(TYPE_OTHER <= sourcemeta::core::uint_max<type_size>);
+              sourcemeta::core::uint_max<TYPE_SIZE>);
+static_assert(TYPE_OTHER <= sourcemeta::core::uint_max<TYPE_SIZE>);
 
-constexpr auto subtype_size = 5;
+constexpr auto SUBTYPE_SIZE = 5;
 constexpr std::uint8_t SUBTYPE_FALSE = 0b00000000;
 constexpr std::uint8_t SUBTYPE_TRUE = 0b00000001;
 constexpr std::uint8_t SUBTYPE_NULL = 0b00000010;
@@ -436,24 +446,24 @@ constexpr std::uint8_t SUBTYPE_LONG_STRING_BASE_EXPONENT_8 = 0b00001000;
 constexpr std::uint8_t SUBTYPE_LONG_STRING_BASE_EXPONENT_9 = 0b00001001;
 constexpr std::uint8_t SUBTYPE_LONG_STRING_BASE_EXPONENT_10 = 0b00001010;
 
-static_assert(SUBTYPE_FALSE <= sourcemeta::core::uint_max<subtype_size>);
-static_assert(SUBTYPE_TRUE <= sourcemeta::core::uint_max<subtype_size>);
-static_assert(SUBTYPE_NULL <= sourcemeta::core::uint_max<subtype_size>);
+static_assert(SUBTYPE_FALSE <= sourcemeta::core::uint_max<SUBTYPE_SIZE>);
+static_assert(SUBTYPE_TRUE <= sourcemeta::core::uint_max<SUBTYPE_SIZE>);
+static_assert(SUBTYPE_NULL <= sourcemeta::core::uint_max<SUBTYPE_SIZE>);
 static_assert(SUBTYPE_POSITIVE_INTEGER <=
-              sourcemeta::core::uint_max<subtype_size>);
+              sourcemeta::core::uint_max<SUBTYPE_SIZE>);
 static_assert(SUBTYPE_NEGATIVE_INTEGER <=
-              sourcemeta::core::uint_max<subtype_size>);
-static_assert(SUBTYPE_NUMBER <= sourcemeta::core::uint_max<subtype_size>);
+              sourcemeta::core::uint_max<SUBTYPE_SIZE>);
+static_assert(SUBTYPE_NUMBER <= sourcemeta::core::uint_max<SUBTYPE_SIZE>);
 static_assert(SUBTYPE_POSITIVE_REAL_INTEGER_BYTE <=
-              sourcemeta::core::uint_max<subtype_size>);
+              sourcemeta::core::uint_max<SUBTYPE_SIZE>);
 static_assert(SUBTYPE_LONG_STRING_BASE_EXPONENT_7 <=
-              sourcemeta::core::uint_max<subtype_size>);
+              sourcemeta::core::uint_max<SUBTYPE_SIZE>);
 static_assert(SUBTYPE_LONG_STRING_BASE_EXPONENT_8 <=
-              sourcemeta::core::uint_max<subtype_size>);
+              sourcemeta::core::uint_max<SUBTYPE_SIZE>);
 static_assert(SUBTYPE_LONG_STRING_BASE_EXPONENT_9 <=
-              sourcemeta::core::uint_max<subtype_size>);
+              sourcemeta::core::uint_max<SUBTYPE_SIZE>);
 static_assert(SUBTYPE_LONG_STRING_BASE_EXPONENT_10 <=
-              sourcemeta::core::uint_max<subtype_size>);
+              sourcemeta::core::uint_max<SUBTYPE_SIZE>);
 
 // Note that the binary values actually match the declared exponents
 static_assert(SUBTYPE_LONG_STRING_BASE_EXPONENT_7 == 7);
@@ -1048,6 +1058,8 @@ struct VARINT_TYPED_ARBITRARY_OBJECT {
 };
 
 /// @}
+
+// NOLINTEND(readability-identifier-naming)
 
 } // namespace sourcemeta::jsonbinpack
 

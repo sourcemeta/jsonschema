@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.16)
+cmake_minimum_required(VERSION 3.24)
 project(blaze VERSION 0.0.1 LANGUAGES CXX
   DESCRIPTION "The ultra high-performance JSON Schema evaluator"
   HOMEPAGE_URL "https://github.com/sourcemeta/blaze")

@@ -15,7 +15,7 @@ RUN inspect schema.json --json STDIN /dev/null IN . INTO result.txt EXPECTING 0
 
 WRITE expected.txt UNTIL EOF
 1> {
-1>   "mode": "references",
+1>   "mode": "pointers",
 1>   "locations": {
 1>     "static": {
 1>       "https://example.com": {

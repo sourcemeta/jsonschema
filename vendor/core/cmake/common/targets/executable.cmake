@@ -71,4 +71,9 @@ function(sourcemeta_executable)
   endif()
 
   set_target_properties("${TARGET_NAME}" PROPERTIES FOLDER "${FOLDER_NAME}")
+
+  # We don't want consumers to be bothered with this
+  if(PROJECT_IS_TOP_LEVEL)
+    sourcemeta_clang_tidy_attempt_enable(TARGET "${TARGET_NAME}")
+  endif()
 endfunction()

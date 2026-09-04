@@ -169,28 +169,36 @@ inline auto read_file(const std::filesystem::path &path) -> ParsedJSON {
   if (extension == ".yaml" || extension == ".yml") {
     auto callback = make_position_callback(positions, property_storage);
     sourcemeta::core::read_yaml(path, document, callback);
-    return {std::move(document), std::move(positions),
-            std::move(property_storage), true};
-  } else if (extension == ".json") {
+    return {.document = std::move(document),
+            .positions = std::move(positions),
+            .property_storage = std::move(property_storage),
+            .yaml = true};
+  }
+
+  if (extension == ".json") {
     auto callback = make_position_callback(positions, property_storage);
     sourcemeta::core::read_json(path, document, callback);
-    return {std::move(document), std::move(positions),
-            std::move(property_storage), false};
+    return {.document = std::move(document),
+            .positions = std::move(positions),
+            .property_storage = std::move(property_storage)};
   }
 
   try {
     auto callback = make_position_callback(positions, property_storage);
     sourcemeta::core::read_json(path, document, callback);
-    return {std::move(document), std::move(positions),
-            std::move(property_storage), false};
+    return {.document = std::move(document),
+            .positions = std::move(positions),
+            .property_storage = std::move(property_storage)};
   } catch (const sourcemeta::core::JSONParseError &) {
     sourcemeta::core::PointerPositionTracker yaml_positions;
     auto yaml_property_storage = std::make_shared<std::deque<std::string>>();
     auto callback =
         make_position_callback(yaml_positions, yaml_property_storage);
     sourcemeta::core::read_yaml(path, document, callback);
-    return {std::move(document), std::move(yaml_positions),
-            std::move(yaml_property_storage), true};
+    return {.document = std::move(document),
+            .positions = std::move(yaml_positions),
+            .property_storage = std::move(yaml_property_storage),
+            .yaml = true};
   }
 }
 
@@ -208,8 +216,9 @@ inline auto read_from_stdin(std::string *raw_input = nullptr) -> ParsedJSON {
     sourcemeta::core::JSON document{sourcemeta::core::JSON{nullptr}};
     auto callback = make_position_callback(positions, property_storage);
     sourcemeta::core::parse_json(json_stream, document, callback);
-    return {std::move(document), std::move(positions),
-            std::move(property_storage), false};
+    return {.document = std::move(document),
+            .positions = std::move(positions),
+            .property_storage = std::move(property_storage)};
   } catch (const sourcemeta::core::JSONParseError &json_error) {
     try {
       std::istringstream yaml_stream{input};
@@ -218,8 +227,10 @@ inline auto read_from_stdin(std::string *raw_input = nullptr) -> ParsedJSON {
       sourcemeta::core::JSON document{sourcemeta::core::JSON{nullptr}};
       auto callback = make_position_callback(positions, property_storage);
       sourcemeta::core::parse_yaml(yaml_stream, document, callback);
-      return {std::move(document), std::move(positions),
-              std::move(property_storage), true};
+      return {.document = std::move(document),
+              .positions = std::move(positions),
+              .property_storage = std::move(property_storage),
+              .yaml = true};
     } catch (...) {
       throw sourcemeta::core::JSONFileParseError(stdin_path(), json_error);
     }
@@ -235,10 +246,13 @@ handle_json_entry(const std::filesystem::path &entry_path,
   if (entry_path == "-") {
     auto parsed{read_from_stdin()};
     const auto path{stdin_path()};
-    result.push_back({std::string{STDIN_DEFAULT_ID}, path,
-                      std::move(parsed.document), std::move(parsed.positions),
-                      0, false, parsed.yaml, true,
-                      std::move(parsed.property_storage)});
+    result.push_back({.first = std::string{STDIN_DEFAULT_ID},
+                      .resolution_base = path,
+                      .second = std::move(parsed.document),
+                      .positions = std::move(parsed.positions),
+                      .yaml = parsed.yaml,
+                      .from_stdin = true,
+                      .property_storage = std::move(parsed.property_storage)});
     return;
   }
 
@@ -264,10 +278,13 @@ handle_json_entry(const std::filesystem::path &entry_path,
 
         // TODO: Print a verbose message for what is getting parsed
         auto parsed{read_file(canonical)};
-        result.push_back({canonical.generic_string(), std::move(canonical),
-                          std::move(parsed.document),
-                          std::move(parsed.positions), 0, false, parsed.yaml,
-                          false, std::move(parsed.property_storage)});
+        result.push_back(
+            {.first = canonical.generic_string(),
+             .resolution_base = std::move(canonical),
+             .second = std::move(parsed.document),
+             .positions = std::move(parsed.positions),
+             .yaml = parsed.yaml,
+             .property_storage = std::move(parsed.property_storage)});
       }
     }
   } else {
@@ -290,15 +307,13 @@ handle_json_entry(const std::filesystem::path &entry_path,
                    stream, sourcemeta::core::JSONL::Mode::GZIP}) {
             // TODO: Get real positions for JSONL
             sourcemeta::core::PointerPositionTracker positions;
-            result.push_back({canonical.generic_string(),
-                              canonical,
-                              document,
-                              std::move(positions),
-                              index,
-                              true,
-                              false,
-                              false,
-                              {}});
+            result.push_back({.first = canonical.generic_string(),
+                              .resolution_base = canonical,
+                              .second = document,
+                              .positions = std::move(positions),
+                              .index = index,
+                              .multidocument = true,
+                              .property_storage = {}});
             index += 1;
           }
         } catch (const sourcemeta::core::GZIPError &error) {
@@ -321,15 +336,13 @@ handle_json_entry(const std::filesystem::path &entry_path,
           for (const auto &document : sourcemeta::core::JSONL{stream}) {
             // TODO: Get real positions for JSONL
             sourcemeta::core::PointerPositionTracker positions;
-            result.push_back({canonical.generic_string(),
-                              canonical,
-                              document,
-                              std::move(positions),
-                              index,
-                              true,
-                              false,
-                              false,
-                              {}});
+            result.push_back({.first = canonical.generic_string(),
+                              .resolution_base = canonical,
+                              .second = document,
+                              .positions = std::move(positions),
+                              .index = index,
+                              .multidocument = true,
+                              .property_storage = {}});
             index += 1;
           }
         } catch (const sourcemeta::core::JSONParseError &error) {
@@ -377,8 +390,10 @@ handle_json_entry(const std::filesystem::path &entry_path,
           } catch (const sourcemeta::core::YAMLParseError &error) {
             throw sourcemeta::core::YAMLFileParseError{canonical, error};
           }
-          documents.push_back({std::move(document), std::move(positions),
-                               std::move(property_storage)});
+          documents.push_back(
+              {.document = std::move(document),
+               .positions = std::move(positions),
+               .property_storage = std::move(property_storage)});
           line_offset += max_line > 0 ? max_line - 1 : 0;
         }
 
@@ -387,18 +402,25 @@ handle_json_entry(const std::filesystem::path &entry_path,
                                << canonical.generic_string() << "\n";
           std::size_t index{0};
           for (auto &entry : documents) {
-            result.push_back({canonical.generic_string(), canonical,
-                              std::move(entry.document),
-                              std::move(entry.positions), index, true, true,
-                              false, std::move(entry.property_storage)});
+            result.push_back(
+                {.first = canonical.generic_string(),
+                 .resolution_base = canonical,
+                 .second = std::move(entry.document),
+                 .positions = std::move(entry.positions),
+                 .index = index,
+                 .multidocument = true,
+                 .yaml = true,
+                 .property_storage = std::move(entry.property_storage)});
             index += 1;
           }
         } else if (documents.size() == 1) {
-          result.push_back({canonical.generic_string(), std::move(canonical),
-                            std::move(documents.front().document),
-                            std::move(documents.front().positions), 0, false,
-                            true, false,
-                            std::move(documents.front().property_storage)});
+          result.push_back({.first = canonical.generic_string(),
+                            .resolution_base = canonical,
+                            .second = std::move(documents.front().document),
+                            .positions = std::move(documents.front().positions),
+                            .yaml = true,
+                            .property_storage =
+                                std::move(documents.front().property_storage)});
         }
       } else {
         if (std::filesystem::is_regular_file(canonical) &&
@@ -407,10 +429,13 @@ handle_json_entry(const std::filesystem::path &entry_path,
         }
         // TODO: Print a verbose message for what is getting parsed
         auto parsed{read_file(canonical)};
-        result.push_back({canonical.generic_string(), std::move(canonical),
-                          std::move(parsed.document),
-                          std::move(parsed.positions), 0, false, parsed.yaml,
-                          false, std::move(parsed.property_storage)});
+        result.push_back(
+            {.first = canonical.generic_string(),
+             .resolution_base = canonical,
+             .second = std::move(parsed.document),
+             .positions = std::move(parsed.positions),
+             .yaml = parsed.yaml,
+             .property_storage = std::move(parsed.property_storage)});
       }
     }
   }

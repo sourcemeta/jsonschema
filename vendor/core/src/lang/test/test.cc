@@ -158,6 +158,19 @@ auto test_run(int argc, char **argv) -> int {
   std::cout << "TAP version 14\n";
   std::cout << "1.." << selected.size() << "\n";
 
+  // A test binary exists to run tests, so selecting none exits with failure on
+  // purpose. An empty run means either broken registration or a filter that
+  // matches nothing, neither of which may pass as a green suite
+  if (selected.empty()) {
+    if (needle.empty()) {
+      print_diagnostic("no tests were registered");
+    } else {
+      print_diagnostic("no tests matched the filter: " + std::string{needle});
+    }
+
+    return EXIT_FAILURE;
+  }
+
   std::size_t number{0};
   std::size_t passed{0};
   std::size_t failed{0};

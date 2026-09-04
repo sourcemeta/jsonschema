@@ -86,7 +86,7 @@ private:
       if (walk_relative.empty() || !walk_relative.at(0).is_property()) {
         break;
       }
-      const auto walk_entry{frame.traverse(frame.uri(wp).value().get())};
+      const auto walk_entry{frame.traverse(wp)};
       if (!walk_entry.has_value()) {
         break;
       }

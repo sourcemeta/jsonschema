@@ -21,42 +21,42 @@ auto Cache::record(const sourcemeta::core::JSON::String &value,
   }
 
   // Remove the oldest entries to make space if needed
-  while (!this->data.empty() &&
-         this->byte_size + value_size >= MAXIMUM_BYTE_SIZE) {
+  while (!this->data_.empty() &&
+         this->byte_size_ + value_size >= MAXIMUM_BYTE_SIZE) {
     this->remove_oldest();
   }
 
-  auto result{this->data.insert({std::make_pair(value, type), offset})};
+  auto result{this->data_.insert({std::make_pair(value, type), offset})};
   if (result.second) {
-    this->byte_size += value_size;
-    this->order.emplace(offset, result.first->first);
+    this->byte_size_ += value_size;
+    this->order_.emplace(offset, result.first->first);
   } else if (offset > result.first->second) {
-    this->order.erase(result.first->second);
+    this->order_.erase(result.first->second);
     // If the string already exists, we want to
     // bump the offset for locality purposes.
     result.first->second = offset;
-    this->order.emplace(offset, result.first->first);
+    this->order_.emplace(offset, result.first->first);
   }
 
   // Otherwise we are doing something wrong
-  assert(this->order.size() == this->data.size());
+  assert(this->order_.size() == this->data_.size());
 }
 
 auto Cache::remove_oldest() -> void {
-  assert(!this->data.empty());
+  assert(!this->data_.empty());
   // std::map are by definition ordered by key,
   // so the begin iterator points to the entry
   // with the lowest offset, a.k.a. the oldest.
-  const auto iterator{this->order.cbegin()};
-  this->byte_size -= iterator->second.get().first.size();
-  this->data.erase(iterator->second.get());
-  this->order.erase(iterator);
+  const auto iterator{this->order_.cbegin()};
+  this->byte_size_ -= iterator->second.get().first.size();
+  this->data_.erase(iterator->second.get());
+  this->order_.erase(iterator);
 }
 
 auto Cache::find(const sourcemeta::core::JSON::String &value,
                  const Type type) const -> std::optional<std::uint64_t> {
-  const auto result{this->data.find(std::make_pair(value, type))};
-  if (result == this->data.cend()) {
+  const auto result{this->data_.find(std::make_pair(value, type))};
+  if (result == this->data_.cend()) {
     return std::nullopt;
   }
 

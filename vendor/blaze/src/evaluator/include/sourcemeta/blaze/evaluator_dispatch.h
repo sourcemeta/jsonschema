@@ -1579,6 +1579,12 @@ INSTRUCTION_HANDLER(AnnotationEmit) {
                       value);
 }
 
+INSTRUCTION_HANDLER(AnnotationEmitWrapped) {
+  const auto &value{assume_value<ValueJSON>(instruction.value)};
+  EVALUATE_ANNOTATION(AnnotationEmitWrapped,
+                      context.evaluator->instance_location, value);
+}
+
 INSTRUCTION_HANDLER(AnnotationToParent) {
   const auto &value{assume_value<ValueJSON>(instruction.value)};
   EVALUATE_ANNOTATION(
@@ -2816,7 +2822,7 @@ using DispatchHandler = bool (*)(
 template <bool Track, bool Dynamic, bool HasCallback>
 // Must have same order as InstructionIndex
 // NOLINTNEXTLINE(modernize-avoid-c-arrays)
-static constexpr DispatchHandler<Track, Dynamic, HasCallback> handlers[100] = {
+static constexpr DispatchHandler<Track, Dynamic, HasCallback> handlers[101] = {
     AssertionFail,
     AssertionDefines,
     AssertionDefinesStrict,
@@ -2868,6 +2874,7 @@ static constexpr DispatchHandler<Track, Dynamic, HasCallback> handlers[100] = {
     AssertionArrayPrefixEvaluate,
     AssertionObjectPropertiesSimple,
     AnnotationEmit,
+    AnnotationEmitWrapped,
     AnnotationToParent,
     AnnotationBasenameToParent,
     Evaluate,

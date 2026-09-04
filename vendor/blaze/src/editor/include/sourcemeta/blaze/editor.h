@@ -39,6 +39,20 @@ namespace sourcemeta::blaze {
 /// #include <sourcemeta/blaze/foundation.h>
 /// #include <sourcemeta/blaze/editor.h>
 ///
+/// // A custom resolver that knows about the referenced schema
+/// static auto test_resolver(std::string_view identifier)
+///     -> sourcemeta::blaze::SchemaResolverResult {
+///   if (identifier == "https://www.example.com/another") {
+///     return sourcemeta::core::parse_json(R"JSON({
+///       "$id": "https://www.example.com/another",
+///       "$schema": "https://json-schema.org/draft/2020-12/schema",
+///       "type": "string"
+///     })JSON");
+///   } else {
+///     return sourcemeta::blaze::schema_resolver(identifier);
+///   }
+/// }
+///
 /// auto schema = sourcemeta::core::parse_json(R"JSON({
 ///   "$id": "https://www.example.com/schema",
 ///   "$schema": "https://json-schema.org/draft/2020-12/schema",
@@ -46,12 +60,10 @@ namespace sourcemeta::blaze {
 /// })JSON");
 ///
 /// sourcemeta::blaze::bundle(schema,
-///   sourcemeta::blaze::schema_walker,
-///   sourcemeta::blaze::schema_resolver,
+///   sourcemeta::blaze::schema_walker, test_resolver,
 ///   sourcemeta::blaze::BundleMode::NonOfficialMetaschemas);
 /// sourcemeta::blaze::for_editor(schema,
-///   sourcemeta::blaze::schema_walker,
-///   sourcemeta::blaze::schema_resolver);
+///   sourcemeta::blaze::schema_walker, test_resolver);
 /// ```
 SOURCEMETA_BLAZE_EDITOR_EXPORT
 auto for_editor(sourcemeta::core::JSON &schema,

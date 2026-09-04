@@ -24,7 +24,7 @@ import {
   ASSERTION_PROPERTY_TYPE_STRICT_ANY, ASSERTION_PROPERTY_TYPE_STRICT_ANY_EVALUATE,
   ASSERTION_ARRAY_PREFIX, ASSERTION_ARRAY_PREFIX_EVALUATE,
   ASSERTION_OBJECT_PROPERTIES_SIMPLE,
-  ANNOTATION_EMIT, ANNOTATION_TO_PARENT, ANNOTATION_BASENAME_TO_PARENT,
+  ANNOTATION_EMIT, ANNOTATION_EMIT_WRAPPED, ANNOTATION_TO_PARENT, ANNOTATION_BASENAME_TO_PARENT,
   EVALUATE,
   LOGICAL_NOT, LOGICAL_NOT_EVALUATE,
   LOGICAL_OR, LOGICAL_AND, LOGICAL_XOR, LOGICAL_CONDITION,
@@ -546,7 +546,7 @@ export function describe(valid, instruction, evaluatePath,
       'in scope that declared a recursive anchor';
   }
 
-  if (opcode === ANNOTATION_EMIT) {
+  if (opcode === ANNOTATION_EMIT || opcode === ANNOTATION_EMIT_WRAPPED) {
     if (keyword === 'properties') {
       return 'The object property ' + escapeString(annotation) +
         ' successfully validated against its property subschema';

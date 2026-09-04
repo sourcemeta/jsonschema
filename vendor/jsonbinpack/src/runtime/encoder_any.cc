@@ -30,7 +30,7 @@ auto Encoder::BYTE_CHOICE_INDEX(const sourcemeta::core::JSON &document,
 auto Encoder::LARGE_CHOICE_INDEX(const sourcemeta::core::JSON &document,
                                  const struct LARGE_CHOICE_INDEX &options)
     -> void {
-  assert(options.choices.size() > 0);
+  assert(!options.choices.empty());
   const auto iterator{std::ranges::find_if(
       options.choices,
       [&document](const auto &choice) -> bool { return choice == document; })};
@@ -44,7 +44,7 @@ auto Encoder::LARGE_CHOICE_INDEX(const sourcemeta::core::JSON &document,
 auto Encoder::TOP_LEVEL_BYTE_CHOICE_INDEX(
     const sourcemeta::core::JSON &document,
     const struct TOP_LEVEL_BYTE_CHOICE_INDEX &options) -> void {
-  assert(options.choices.size() > 0);
+  assert(!options.choices.empty());
   assert(sourcemeta::core::is_byte(options.choices.size()));
   const auto iterator{std::ranges::find_if(
       options.choices,
@@ -60,38 +60,35 @@ auto Encoder::TOP_LEVEL_BYTE_CHOICE_INDEX(
 }
 
 auto Encoder::CONST_NONE(
-#ifndef NDEBUG
-    const sourcemeta::core::JSON &document, const struct CONST_NONE &options)
-#else
-    const sourcemeta::core::JSON &, const struct CONST_NONE &)
-#endif
-    -> void {
+    [[maybe_unused]] const sourcemeta::core::JSON &document,
+    [[maybe_unused]] const struct CONST_NONE &options) -> void {
   assert(document == options.value);
 }
 
 auto Encoder::ANY_PACKED_TYPE_TAG_BYTE_PREFIX(
     const sourcemeta::core::JSON &document,
-    const struct ANY_PACKED_TYPE_TAG_BYTE_PREFIX &) -> void {
+    [[maybe_unused]] const struct ANY_PACKED_TYPE_TAG_BYTE_PREFIX &options)
+    -> void {
   using namespace internal::ANY_PACKED_TYPE_TAG_BYTE_PREFIX;
   if (document.is_null()) {
-    this->put_byte(TYPE_OTHER | (SUBTYPE_NULL << type_size));
+    this->put_byte(TYPE_OTHER | (SUBTYPE_NULL << TYPE_SIZE));
   } else if (document.is_boolean()) {
     const std::uint8_t subtype{document.to_boolean() ? SUBTYPE_TRUE
                                                      : SUBTYPE_FALSE};
     this->put_byte(TYPE_OTHER |
-                   static_cast<std::uint8_t>(subtype << type_size));
+                   static_cast<std::uint8_t>(subtype << TYPE_SIZE));
   } else if (document.is_real() && document.is_integral()) {
     const auto value{document.as_integer()};
     if (value >= 0 && sourcemeta::core::is_byte(value)) {
       this->put_byte(TYPE_OTHER | SUBTYPE_POSITIVE_REAL_INTEGER_BYTE
-                                      << type_size);
+                                      << TYPE_SIZE);
       this->put_byte(static_cast<std::uint8_t>(value));
     } else {
-      this->put_byte(TYPE_OTHER | SUBTYPE_NUMBER << type_size);
+      this->put_byte(TYPE_OTHER | SUBTYPE_NUMBER << TYPE_SIZE);
       this->DOUBLE_VARINT_TUPLE(document, {});
     }
   } else if (document.is_real()) {
-    this->put_byte(TYPE_OTHER | SUBTYPE_NUMBER << type_size);
+    this->put_byte(TYPE_OTHER | SUBTYPE_NUMBER << TYPE_SIZE);
     this->DOUBLE_VARINT_TUPLE(document, {});
   } else if (document.is_integer()) {
     const std::int64_t value{document.to_integer()};
@@ -105,7 +102,7 @@ auto Encoder::ANY_PACKED_TYPE_TAG_BYTE_PREFIX(
       const std::uint8_t absolute_byte{static_cast<std::uint8_t>(absolute)};
       if (absolute < sourcemeta::core::uint_max<5>) {
         this->put_byte(
-            type | static_cast<std::uint8_t>((absolute_byte + 1) << type_size));
+            type | static_cast<std::uint8_t>((absolute_byte + 1) << TYPE_SIZE));
       } else {
         this->put_byte(type);
         this->put_byte(absolute_byte);
@@ -114,7 +111,7 @@ auto Encoder::ANY_PACKED_TYPE_TAG_BYTE_PREFIX(
       const std::uint8_t subtype{is_positive ? SUBTYPE_POSITIVE_INTEGER
                                              : SUBTYPE_NEGATIVE_INTEGER};
       this->put_byte(TYPE_OTHER |
-                     static_cast<std::uint8_t>(subtype << type_size));
+                     static_cast<std::uint8_t>(subtype << TYPE_SIZE));
       this->put_varint(absolute);
     }
   } else if (document.is_string()) {
@@ -125,7 +122,7 @@ auto Encoder::ANY_PACKED_TYPE_TAG_BYTE_PREFIX(
       const std::uint8_t type{shared.has_value() ? TYPE_SHARED_STRING
                                                  : TYPE_STRING};
       this->put_byte(
-          static_cast<std::uint8_t>(type | ((size + 1) << type_size)));
+          static_cast<std::uint8_t>(type | ((size + 1) << TYPE_SIZE)));
       if (shared.has_value()) {
         this->put_varint(this->position() - shared.value());
       } else {
@@ -139,7 +136,7 @@ auto Encoder::ANY_PACKED_TYPE_TAG_BYTE_PREFIX(
                !shared.has_value()) {
       this->put_byte(static_cast<std::uint8_t>(
           TYPE_LONG_STRING |
-          ((size - sourcemeta::core::uint_max<5>) << type_size)));
+          ((size - sourcemeta::core::uint_max<5>) << TYPE_SIZE)));
       this->put_string_utf8(value, size);
     } else if (size >= 2 << (SUBTYPE_LONG_STRING_BASE_EXPONENT_7 - 1) &&
                !shared.has_value()) {
@@ -147,7 +144,7 @@ auto Encoder::ANY_PACKED_TYPE_TAG_BYTE_PREFIX(
           size, 2, SUBTYPE_LONG_STRING_BASE_EXPONENT_7,
           SUBTYPE_LONG_STRING_BASE_EXPONENT_10)};
       this->put_byte(
-          static_cast<std::uint8_t>(TYPE_OTHER | (exponent << type_size)));
+          static_cast<std::uint8_t>(TYPE_OTHER | (exponent << TYPE_SIZE)));
       this->put_varint(size - static_cast<std::uint64_t>(2 << (exponent - 1)));
       this->put_string_utf8(value, size);
     } else {
@@ -159,9 +156,10 @@ auto Encoder::ANY_PACKED_TYPE_TAG_BYTE_PREFIX(
       }
 
       // If we got this far, the string is at least a certain length
-      return FLOOR_VARINT_PREFIX_UTF8_STRING_SHARED(
+      FLOOR_VARINT_PREFIX_UTF8_STRING_SHARED(
           document,
           {static_cast<std::uint64_t>(sourcemeta::core::uint_max<5> * 2)});
+      return;
     }
   } else if (document.is_array()) {
     const auto size{document.size()};
@@ -170,7 +168,7 @@ auto Encoder::ANY_PACKED_TYPE_TAG_BYTE_PREFIX(
       this->put_varint(size - sourcemeta::core::uint_max<5>);
     } else {
       this->put_byte(
-          static_cast<std::uint8_t>(TYPE_ARRAY | ((size + 1) << type_size)));
+          static_cast<std::uint8_t>(TYPE_ARRAY | ((size + 1) << TYPE_SIZE)));
     }
 
     Encoding encoding{
@@ -186,7 +184,7 @@ auto Encoder::ANY_PACKED_TYPE_TAG_BYTE_PREFIX(
       this->put_varint(size - sourcemeta::core::uint_max<5>);
     } else {
       this->put_byte(
-          static_cast<std::uint8_t>(TYPE_OBJECT | ((size + 1) << type_size)));
+          static_cast<std::uint8_t>(TYPE_OBJECT | ((size + 1) << TYPE_SIZE)));
     }
 
     Encoding key_encoding{

@@ -298,10 +298,9 @@ auto compile_subschema(const sourcemeta::blaze::Context &context,
               .base_instance_location = dynamic_context.base_instance_location},
              steps)) {
       // Just a sanity check to ensure every keyword location is indeed valid
-      assert(context.frame
-                 .location(sourcemeta::blaze::SchemaReferenceType::Static,
-                           context.extra[step.extra_index].keyword_location)
-                 .has_value());
+      assert(sourcemeta::core::try_get(
+                 context.root,
+                 absolute_schema_pointer(context, schema_context)) != nullptr);
       steps.push_back(std::move(step));
     }
   }
@@ -360,7 +359,9 @@ auto schema_frame_populate_target_types(
           return;
         }
 
-        const auto reference_location{frame.traverse(origin)};
+        // A reference is always a keyword of the subschema that declares it,
+        // so that subschema is what the origin sits directly inside of
+        const auto reference_location{frame.traverse(origin.initial())};
         assert(reference_location.has_value());
         auto &context{target_types[reference.destination]};
         if (reference_location->get().property_name) {
@@ -427,6 +428,43 @@ auto schema_frame_populate_target_types(
 
 namespace sourcemeta::blaze {
 
+// Whether an entry point that the frame could not locate nonetheless names a
+// place that the document has, which means it is a keyword rather than a
+// schema. Only reachable when the entry point carries a pointer fragment, as
+// anything else can only ever name a schema
+auto entrypoint_names_non_schema(const sourcemeta::core::JSON &schema,
+                                 const sourcemeta::blaze::SchemaFrame &frame,
+                                 const std::string_view entrypoint) -> bool {
+  std::optional<sourcemeta::core::URI> uri;
+  try {
+    uri.emplace(sourcemeta::core::JSON::String{entrypoint});
+  } catch (const sourcemeta::core::URIParseError &) {
+    // A URI that does not even parse names nothing at all, so leave the
+    // caller to report it as the invalid entry point that it is
+    return false;
+  }
+
+  const auto relative{sourcemeta::core::fragment_to_pointer(uri.value())};
+  if (!relative.has_value()) {
+    return false;
+  }
+
+  const auto base{uri.value().recompose_without_fragment().value_or(
+      sourcemeta::core::JSON::String{})};
+  const auto base_location{frame.traverse(base)};
+  if (!base_location.has_value()) {
+    // A base that framing does not know names some other document, which this
+    // one has nothing to say about
+    return base.empty() &&
+           sourcemeta::core::try_get(schema, relative.value()) != nullptr;
+  }
+
+  return sourcemeta::core::try_get(
+             schema,
+             sourcemeta::core::to_pointer(base_location.value().get().pointer)
+                 .concat(relative.value())) != nullptr;
+}
+
 auto compile(const sourcemeta::core::JSON &schema,
              const sourcemeta::blaze::SchemaWalker &walker,
              const sourcemeta::blaze::SchemaResolver &resolver,
@@ -439,8 +477,14 @@ auto compile(const sourcemeta::core::JSON &schema,
 
   const auto maybe_entrypoint_location{frame.traverse(entrypoint)};
   if (!maybe_entrypoint_location.has_value()) [[unlikely]] {
+    // A frame that only locates schemas has nothing to say about an entry
+    // point that names a plain keyword, so tell the two apart by asking the
+    // document rather than reporting a place that does exist as missing
     throw CompilerInvalidEntryPoint{
-        entrypoint, "The given entry point URI does not exist in the schema"};
+        entrypoint,
+        entrypoint_names_non_schema(schema, frame, entrypoint)
+            ? "The given entry point URI is not a valid subschema"
+            : "The given entry point URI does not exist in the schema"};
   }
 
   const auto &entrypoint_location{maybe_entrypoint_location->get()};
@@ -522,20 +566,11 @@ auto compile(const sourcemeta::core::JSON &schema,
           return;
         }
 
-        auto reference_origin{frame.traverse(origin)};
+        const auto reference_origin{frame.traverse(origin.initial())};
         assert(reference_origin.has_value());
-        while (reference_origin->get().type ==
-                   sourcemeta::blaze::SchemaFrame::LocationType::Pointer &&
-               reference_origin->get().parent.has_value()) {
-          reference_origin =
-              frame.traverse(reference_origin->get().parent.value());
-          assert(reference_origin.has_value());
-        }
 
         // Skip unreachable targets
-        if (reference_origin->get().type !=
-                sourcemeta::blaze::SchemaFrame::LocationType::Pointer &&
-            !frame.is_reachable(entrypoint_location, reference_origin->get(),
+        if (!frame.is_reachable(entrypoint_location, reference_origin->get(),
                                 walker, resolver)) {
           return;
         }
@@ -759,31 +794,49 @@ auto compile(const Context &context, const SchemaContext &schema_context,
              const sourcemeta::core::WeakPointer &schema_suffix,
              const sourcemeta::core::WeakPointer &instance_suffix,
              const std::optional<std::string_view> uri) -> Instructions {
-  // Determine URI of the destination after recursion
-  const std::string destination{
-      uri.has_value()
-          ? sourcemeta::core::URI::canonicalize(uri.value())
-          : to_uri(schema_context.relative_pointer.concat(schema_suffix),
-                   schema_context.base)
-                .canonicalize()
-                .recompose()};
+  // An explicit URI is a jump elsewhere in the schema, which only the frame
+  // can resolve. Without one we are recursing within the subschema we are
+  // already at, so where we land follows from the pointer we came in with
+  std::optional<
+      std::reference_wrapper<const sourcemeta::blaze::SchemaFrame::Location>>
+      entry;
+  sourcemeta::core::WeakPointer target;
+  if (uri.has_value()) {
+    const auto destination{sourcemeta::core::URI::canonicalize(uri.value())};
+    entry = context.frame.location(
+        sourcemeta::blaze::SchemaReferenceType::Static, destination);
+    // Otherwise the recursion attempt is non-sense
+    if (!entry.has_value()) [[unlikely]] {
+      throw sourcemeta::blaze::SchemaReferenceError(
+          destination, absolute_schema_location(context, schema_context),
+          "The target of the reference does not exist in the schema");
+    }
 
-  // Otherwise the recursion attempt is non-sense
-  if (!context.frame
-           .location(sourcemeta::blaze::SchemaReferenceType::Static,
-                     destination)
-           .has_value()) [[unlikely]] {
-    throw sourcemeta::blaze::SchemaReferenceError(
-        destination, absolute_schema_location(context, schema_context),
-        "The target of the reference does not exist in the schema");
+    target = entry.value().get().pointer;
+  } else {
+    target =
+        absolute_schema_pointer(context, schema_context).concat(schema_suffix);
+    // Otherwise the recursion attempt is non-sense
+    if (sourcemeta::core::try_get(context.root, target) == nullptr)
+        [[unlikely]] {
+      throw sourcemeta::blaze::SchemaReferenceError(
+          to_uri(schema_context.relative_pointer.concat(schema_suffix),
+                 schema_context.base)
+              .canonicalize()
+              .recompose(),
+          absolute_schema_location(context, schema_context),
+          "The target of the reference does not exist in the schema");
+    }
+
+    // A pointer that sits under more than one base is framed once per base, so
+    // this may be any of those entries. They are interchangeable here, as
+    // framing resolves the base, the dialect and the depth of a location from
+    // the resource nearest to it rather than from the URI it got keyed under,
+    // so every entry of a given pointer reports the same ones
+    entry = context.frame.traverse(target);
   }
 
-  const auto &entry{
-      context.frame
-          .location(sourcemeta::blaze::SchemaReferenceType::Static, destination)
-          .value()
-          .get()};
-  const auto &new_schema{get(context.root, entry.pointer)};
+  const auto &new_schema{get(context.root, target)};
 
   // An invalid schema may set an applicator to a value that is not a schema
   // at all, in which case we consider it to impose no constraints
@@ -798,16 +851,28 @@ auto compile(const Context &context, const SchemaContext &schema_context,
                 .concat(make_weak_pointer(dynamic_context.keyword))
                 .concat(schema_suffix)};
 
-  const auto new_relative_pointer{entry.pointer.slice(entry.relative_pointer)};
+  // A schema that the walker never descended into has no location of its own,
+  // in which case it inherits the resource and the dialect of what encloses it
+  const auto new_relative_pointer{
+      entry.has_value()
+          ? entry.value().get().pointer.slice(
+                entry.value().get().relative_pointer)
+          : schema_context.relative_pointer.concat(schema_suffix)};
   const sourcemeta::core::URI new_base{
-      sourcemeta::core::URI{entry.base}.recompose_without_fragment().value_or(
-          "")};
+      entry.has_value()
+          ? sourcemeta::core::URI{entry.value().get().base}
+                .recompose_without_fragment()
+                .value_or("")
+          : schema_context.base.recompose_without_fragment().value_or("")};
 
   return compile_subschema(
       context,
       {.relative_pointer = new_relative_pointer,
        .schema = new_schema,
-       .vocabularies = context.frame.vocabularies(entry, context.resolver),
+       .vocabularies = entry.has_value()
+                           ? context.frame.vocabularies(entry.value().get(),
+                                                        context.resolver)
+                           : schema_context.vocabularies,
        .base = new_base,
        .is_property_name = schema_context.is_property_name},
       {.keyword = dynamic_context.keyword,

@@ -14,6 +14,10 @@
 
 namespace sourcemeta::jsonbinpack::v1 {
 
+// The encoding names are the ones the JSON BinPack specification defines, so
+// they keep their casing rather than following the C++ naming convention
+// NOLINTBEGIN(readability-identifier-naming)
+
 auto FIXED_TYPED_ARRAY(const sourcemeta::core::JSON &options) -> Encoding {
   assert(options.defines("size"));
   assert(options.defines("encoding"));
@@ -112,6 +116,7 @@ auto ROOF_TYPED_ARRAY(const sourcemeta::core::JSON &options) -> Encoding {
       .prefix_encodings = std::move(encodings)};
 }
 
+// NOLINTEND(readability-identifier-naming)
 } // namespace sourcemeta::jsonbinpack::v1
 
 #endif

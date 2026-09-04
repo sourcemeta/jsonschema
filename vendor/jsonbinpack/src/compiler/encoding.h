@@ -13,7 +13,7 @@ inline auto make_resolver(const sourcemeta::blaze::SchemaResolver &fallback)
   return [&fallback](std::string_view identifier)
              -> sourcemeta::blaze::SchemaResolverResult {
     if (identifier == ENCODING_V1) {
-      static const auto schema{sourcemeta::core::parse_json(R"JSON({
+      static const auto SCHEMA{sourcemeta::core::parse_json(R"JSON({
         "$id": "tag:sourcemeta.com,2024:jsonbinpack/encoding/v1",
         "$schema": "https://json-schema.org/draft/2020-12/schema",
         "$vocabulary": {
@@ -21,10 +21,10 @@ inline auto make_resolver(const sourcemeta::blaze::SchemaResolver &fallback)
           "tag:sourcemeta.com,2024:jsonbinpack/encoding/v1": true
         }
       })JSON")};
-      return schema;
-    } else {
-      return fallback(identifier);
+      return SCHEMA;
     }
+
+    return fallback(identifier);
   };
 }
 

@@ -36,10 +36,10 @@ private:
 #if defined(_MSC_VER)
 #pragma warning(disable : 4251 4275)
 #endif
-  std::uint64_t byte_size{0};
+  std::uint64_t byte_size_{0};
   using Entry = std::pair<sourcemeta::core::JSON::String, Type>;
-  std::map<Entry, std::uint64_t> data;
-  std::map<std::uint64_t, std::reference_wrapper<const Entry>> order;
+  std::map<Entry, std::uint64_t> data_;
+  std::map<std::uint64_t, std::reference_wrapper<const Entry>> order_;
 #if defined(_MSC_VER)
 #pragma warning(default : 4251 4275)
 #endif

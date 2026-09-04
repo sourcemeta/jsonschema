@@ -30,9 +30,9 @@ auto get_precompiled_schema_template_path(
     -> std::optional<std::filesystem::path> {
   if (options.contains("template") && !options.at("template").empty()) {
     return options.at("template").front();
-  } else {
-    return std::nullopt;
   }
+
+  return std::nullopt;
 }
 
 auto get_schema_template(
@@ -57,11 +57,11 @@ auto get_schema_template(
         sourcemeta::blaze::from_json(schema_template)};
     if (precompiled_result.has_value()) {
       return precompiled_result.value();
-    } else {
-      sourcemeta::jsonschema::LOG_WARNING()
-          << "Failed to parse pre-compiled schema template. "
-             "Compiling from scratch\n";
     }
+
+    sourcemeta::jsonschema::LOG_WARNING()
+        << "Failed to parse pre-compiled schema template. "
+           "Compiling from scratch\n";
   }
 
   return sourcemeta::jsonschema::compile_for_evaluation(
@@ -74,10 +74,10 @@ auto get_schema_template(
 
 auto parse_loop(const sourcemeta::core::Options &options) -> std::uint64_t {
   if (options.contains("loop")) {
-    return std::stoull(options.at("loop").front().data());
-  } else {
-    return 1;
+    return std::stoull(std::string{options.at("loop").front()});
   }
+
+  return 1;
 }
 
 // validate instance in a loop to measure avg and stdev
@@ -87,11 +87,13 @@ auto run_loop(sourcemeta::blaze::Evaluator &evaluator,
               const std::string &instance_path, const int64_t instance_index,
               const uint64_t loop) -> bool {
   const auto iterations = static_cast<double>(loop);
-  double sum = 0.0, sum2 = 0.0, empty = 0.0;
+  double sum = 0.0;
+  double sum_of_squares = 0.0;
+  double empty = 0.0;
   bool result = true;
 
   // Overhead evaluation, if not to optimize out!
-  for (auto index = loop; index; index--) {
+  for (auto index = loop; index > 0; index--) {
     const auto start{std::chrono::high_resolution_clock::now()};
     const auto end{std::chrono::high_resolution_clock::now()};
     empty +=
@@ -103,7 +105,7 @@ auto run_loop(sourcemeta::blaze::Evaluator &evaluator,
   empty /= iterations;
 
   // Actual performance loop
-  for (auto index = loop; index; index--) {
+  for (auto index = loop; index > 0; index--) {
     const auto start{std::chrono::high_resolution_clock::now()};
     result = evaluator.validate(schema_template, instance);
     const auto end{std::chrono::high_resolution_clock::now()};
@@ -115,16 +117,18 @@ auto run_loop(sourcemeta::blaze::Evaluator &evaluator,
         1000.0;
     const auto delay = std::max(0.0, raw_delay - empty);
     sum += delay;
-    sum2 += delay * delay;
+    sum_of_squares += delay * delay;
   }
 
   // Display json source, result and performance
   auto avg = sum / iterations;
-  auto stdev = loop == 1 ? 0.0 : std::sqrt(sum2 / iterations - avg * avg);
+  auto stdev =
+      loop == 1 ? 0.0 : std::sqrt((sum_of_squares / iterations) - (avg * avg));
 
   std::cout << instance_path;
-  if (instance_index >= 0)
+  if (instance_index >= 0) {
     std::cout << "[" << instance_index << "]";
+  }
   std::cout << std::fixed;
   std::cout.precision(3);
   std::cout << ": " << (result ? "PASS" : "FAIL") << " " << avg << " +- "
@@ -168,7 +172,9 @@ auto process_entry(const sourcemeta::jsonschema::InputJSON &entry,
 
   if (benchmark) {
     return true;
-  } else if (trace) {
+  }
+
+  if (trace) {
     result = result && subresult;
   } else if (json_output) {
     if (!entry.multidocument) {
@@ -231,7 +237,7 @@ auto process_entry(const sourcemeta::jsonschema::InputJSON &entry,
 
 auto sourcemeta::jsonschema::validate(const sourcemeta::core::Options &options)
     -> void {
-  if (options.positional().size() < 1) {
+  if (options.positional().empty()) {
     throw PositionalArgumentError{
         "This command expects a path to a schema and a path to an\n"
         "instance to validate against the schema",
@@ -426,8 +432,8 @@ auto sourcemeta::jsonschema::validate(const sourcemeta::core::Options &options)
         bool subresult{true};
         if (benchmark) {
           subresult = run_loop(evaluator, schema_template, instance,
-                               instance_path.generic_string(), (int64_t)-1,
-                               benchmark_loop);
+                               instance_path.generic_string(),
+                               static_cast<std::int64_t>(-1), benchmark_loop);
           if (!subresult) {
             result = false;
           }

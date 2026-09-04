@@ -21,14 +21,14 @@ auto Decoder::BOUNDED_MULTIPLE_8BITS_ENUM_FIXED(
     // corresponds to a valid 64-bit signed integer.
     return sourcemeta::core::JSON{static_cast<std::int64_t>(
         (byte * options.multiplier) + closest_minimum_multiple)};
-  } else {
-    const std::uint64_t closest_minimum_multiple{
-        sourcemeta::core::abs(closest_minimum) * options.multiplier};
-    // We trust the encoder that the data we are seeing
-    // corresponds to a valid 64-bit signed integer.
-    return sourcemeta::core::JSON{static_cast<std::int64_t>(
-        (byte * options.multiplier) - closest_minimum_multiple)};
   }
+
+  const std::uint64_t closest_minimum_multiple{
+      sourcemeta::core::abs(closest_minimum) * options.multiplier};
+  // We trust the encoder that the data we are seeing
+  // corresponds to a valid 64-bit signed integer.
+  return sourcemeta::core::JSON{static_cast<std::int64_t>(
+      (byte * options.multiplier) - closest_minimum_multiple)};
 }
 
 auto Decoder::FLOOR_MULTIPLE_ENUM_VARINT(
@@ -44,14 +44,14 @@ auto Decoder::FLOOR_MULTIPLE_ENUM_VARINT(
     // corresponds to a valid 64-bit signed integer.
     return sourcemeta::core::JSON{static_cast<std::int64_t>(
         (this->get_varint() * options.multiplier) + closest_minimum_multiple)};
-  } else {
-    const std::uint64_t closest_minimum_multiple{
-        sourcemeta::core::abs(closest_minimum) * options.multiplier};
-    // We trust the encoder that the data we are seeing
-    // corresponds to a valid 64-bit signed integer.
-    return sourcemeta::core::JSON{static_cast<std::int64_t>(
-        (this->get_varint() * options.multiplier) - closest_minimum_multiple)};
   }
+
+  const std::uint64_t closest_minimum_multiple{
+      sourcemeta::core::abs(closest_minimum) * options.multiplier};
+  // We trust the encoder that the data we are seeing
+  // corresponds to a valid 64-bit signed integer.
+  return sourcemeta::core::JSON{static_cast<std::int64_t>(
+      (this->get_varint() * options.multiplier) - closest_minimum_multiple)};
 }
 
 auto Decoder::ROOF_MULTIPLE_MIRROR_ENUM_VARINT(
@@ -68,15 +68,15 @@ auto Decoder::ROOF_MULTIPLE_MIRROR_ENUM_VARINT(
     return sourcemeta::core::JSON{static_cast<std::int64_t>(
         -(static_cast<std::int64_t>(this->get_varint() * options.multiplier)) +
         static_cast<std::int64_t>(closest_maximum_multiple))};
-  } else {
-    const std::uint64_t closest_maximum_multiple{
-        sourcemeta::core::abs(closest_maximum) * options.multiplier};
-    // We trust the encoder that the data we are seeing
-    // corresponds to a valid 64-bit signed integer.
-    return sourcemeta::core::JSON{static_cast<std::int64_t>(
-        -(static_cast<std::int64_t>(this->get_varint() * options.multiplier)) -
-        static_cast<std::int64_t>(closest_maximum_multiple))};
   }
+
+  const std::uint64_t closest_maximum_multiple{
+      sourcemeta::core::abs(closest_maximum) * options.multiplier};
+  // We trust the encoder that the data we are seeing
+  // corresponds to a valid 64-bit signed integer.
+  return sourcemeta::core::JSON{static_cast<std::int64_t>(
+      -(static_cast<std::int64_t>(this->get_varint() * options.multiplier)) -
+      static_cast<std::int64_t>(closest_maximum_multiple))};
 }
 
 auto Decoder::ARBITRARY_MULTIPLE_ZIGZAG_VARINT(

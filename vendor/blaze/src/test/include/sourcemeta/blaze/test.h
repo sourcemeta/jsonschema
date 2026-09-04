@@ -150,6 +150,8 @@ struct SOURCEMETA_BLAZE_TEST_EXPORT TestSuite {
   /// #include <sourcemeta/core/jsonpointer.h>
   /// #include <sourcemeta/blaze/foundation.h>
   ///
+  /// #include <filesystem>
+  /// #include <functional>
   /// #include <iostream>
   ///
   /// const auto input{R"JSON({
@@ -166,8 +168,8 @@ struct SOURCEMETA_BLAZE_TEST_EXPORT TestSuite {
   /// })JSON"};
   ///
   /// sourcemeta::core::PointerPositionTracker tracker;
-  /// const auto document{
-  ///     sourcemeta::core::parse_json(input, std::ref(tracker))};
+  /// sourcemeta::core::JSON document{nullptr};
+  /// sourcemeta::core::parse_json(input, document, std::ref(tracker));
   ///
   /// auto suite{sourcemeta::blaze::TestSuite::parse(
   ///     document, tracker, std::filesystem::current_path(),
@@ -203,6 +205,8 @@ struct SOURCEMETA_BLAZE_TEST_EXPORT TestSuite {
   /// #include <sourcemeta/blaze/foundation.h>
   ///
   /// #include <cassert>
+  /// #include <filesystem>
+  /// #include <functional>
   ///
   /// const auto input{R"JSON({
   ///   "target": "https://json-schema.org/draft/2020-12/schema",
@@ -213,8 +217,8 @@ struct SOURCEMETA_BLAZE_TEST_EXPORT TestSuite {
   /// })JSON"};
   ///
   /// sourcemeta::core::PointerPositionTracker tracker;
-  /// const auto document{
-  ///     sourcemeta::core::parse_json(input, std::ref(tracker))};
+  /// sourcemeta::core::JSON document{nullptr};
+  /// sourcemeta::core::parse_json(input, document, std::ref(tracker));
   ///
   /// const auto suite{sourcemeta::blaze::TestSuite::parse(
   ///     document, tracker, std::filesystem::current_path(),

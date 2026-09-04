@@ -22,7 +22,7 @@ export interface StandardOutputAnnotationEntry {
   keywordLocation: string;
   absoluteKeywordLocation: string;
   instanceLocation: string;
-  annotation: unknown[];
+  annotation: unknown;
 }
 
 export type StandardOutputFlagResult = { valid: boolean };

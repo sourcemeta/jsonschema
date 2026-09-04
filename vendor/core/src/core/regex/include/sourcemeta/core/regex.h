@@ -181,19 +181,38 @@ auto replace_all(const Regex &regex, const std::string_view subject,
 /// readings of the standard, meaning the one that JavaScript selects with the
 /// `u` flag or the one it selects with the `v` flag. The latter is what makes
 /// set notation, such as nested classes, set operations and string
-/// disjunctions, come out valid.
+/// disjunctions, come out valid. JSON Schema recommends the former for the
+/// sake of Unicode support.
 ///
-/// The legacy reading of Annex B, which JavaScript selects when no flag is
-/// given, is deliberately not accepted. That reading treats a great deal of
-/// otherwise malformed input as literal text, so a pattern written for another
-/// flavour would pass without meaning what its author intended. The official
-/// JSON Schema test suite agrees, as it requires an alarm escape to be
-/// rejected even though the legacy reading accepts it as a literal.
+/// The reading that JavaScript selects when neither flag is given is
+/// deliberately not accepted. That is the reading on which Annex B of the
+/// standard applies, and the standard is explicit about who that annex is
+/// for: "The ECMAScript language syntax and semantics defined in this annex
+/// are required when the ECMAScript host is a web browser. The content of this
+/// annex is normative but optional if the ECMAScript host is not a web
+/// browser." It is equally explicit about who should stay away from it:
+/// "ECMAScript implementations are discouraged from implementing these
+/// features unless the implementation is part of a web browser or is required
+/// to run the same legacy ECMAScript code that web browsers encounter", and of
+/// the features themselves it says that they "are not considered part of the
+/// core ECMAScript language". Neither condition holds for reading a schema.
+/// Both Unicode-aware readings turn the annex off in any case, as "none of
+/// these extensions change the syntax of Unicode patterns recognized when
+/// parsing with the [UnicodeMode] parameter present on the goal symbol". See
+/// https://tc39.es/ecma262/#sec-additional-ecmascript-features-for-web-browsers
+/// and https://tc39.es/ecma262/#sec-regular-expressions-patterns
 ///
-/// In practice this means that a syntax character standing on its own, such as
-/// an unescaped brace or closing bracket, makes a pattern invalid, and that
-/// property escapes only resolve against the property names and values that
-/// the standard permits. For example:
+/// The practical effect of that annex is to turn a great deal of otherwise
+/// malformed input into literal text, so a pattern written for another flavour
+/// would pass without meaning what its author intended. Leaving it aside, a
+/// syntax character standing on its own, such as an unescaped brace or closing
+/// bracket, makes a pattern invalid, an escape of a letter that the standard
+/// leaves undefined makes a pattern invalid, and property escapes only resolve
+/// against the property names and values that the standard permits. The
+/// discarded reading is also the only one that allows escaping a character
+/// that cannot continue an identifier, so escaped punctuation outside a
+/// character class is turned down as well. A web browser accepts all of these,
+/// and this is where the two answers part company. For example:
 ///
 /// ```cpp
 /// #include <sourcemeta/core/regex.h>
@@ -205,12 +224,16 @@ auto replace_all(const Regex &regex, const std::string_view subject,
 /// assert(!sourcemeta::core::is_regex_ecma("^(abc]"));
 /// assert(!sourcemeta::core::is_regex_ecma("\\a"));
 /// assert(!sourcemeta::core::is_regex_ecma("^{.*}$"));
+/// assert(!sourcemeta::core::is_regex_ecma("a]"));
+/// assert(!sourcemeta::core::is_regex_ecma("foo\\Kbar"));
 /// ```
 ///
 /// Note that a pattern being valid does not mean this project can compile it,
-/// as the standard places no bound on how much a quantifier may repeat while
-/// the underlying engine does. Use `to_regex` to find out whether a pattern
-/// can also be matched with.
+/// as the standard places no bound on how much a quantifier may repeat nor on
+/// how deeply groups and classes may nest, while this reader stops at 255
+/// levels and the underlying engine has limits of its own. Use `to_regex` to
+/// find out whether a pattern can also be matched with, bearing in mind that
+/// the dialects it offers are not the reading described here.
 SOURCEMETA_CORE_REGEX_EXPORT
 auto is_regex_ecma(const std::string_view pattern) -> bool;
 

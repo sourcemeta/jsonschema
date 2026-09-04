@@ -52,7 +52,7 @@ public:
 
   /// Hold nothing
   // NOLINTNEXTLINE(google-explicit-constructor,hicpp-explicit-conversions)
-  OwnedOrReference(std::nullopt_t) {}
+  OwnedOrReference([[maybe_unused]] const std::nullopt_t value) {}
 
   /// Take ownership of a value that may or may not be there
   // NOLINTNEXTLINE(google-explicit-constructor,hicpp-explicit-conversions)

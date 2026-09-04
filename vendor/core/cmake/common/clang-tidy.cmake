@@ -111,6 +111,7 @@ function(sourcemeta_clang_tidy_attempt_enable)
     set(CLANG_TIDY_CONFIG "${CMAKE_CURRENT_FUNCTION_LIST_DIR}/clang-tidy.json")
     execute_process(COMMAND xcrun --show-sdk-path
         OUTPUT_VARIABLE MACOSX_SDK_PATH OUTPUT_STRIP_TRAILING_WHITESPACE)
+
     set(SOURCEMETA_CXX_CLANG_TIDY
         "${CLANG_TIDY_BIN};--config-file=${CLANG_TIDY_CONFIG};-header-filter=${PROJECT_SOURCE_DIR}/src/*"
         "--extra-arg=-isysroot"
@@ -118,6 +119,17 @@ function(sourcemeta_clang_tidy_attempt_enable)
         CACHE STRING "CXX_CLANG_TIDY")
   endif()
 
+  # The static analyzer roughly triples ClangTidy time per translation unit, so
+  # it stays out of the local edit loop. This sits outside the cache guard above
+  # so that toggling the option takes effect on an existing build tree. The
+  # `--checks` argument is appended to the `Checks` option of the configuration
+  # file rather than replacing it, so the group composes with whatever the file
+  # enables
+  set(TARGET_CLANG_TIDY "${SOURCEMETA_CXX_CLANG_TIDY}")
+  if(SOURCEMETA_CORE_CLANG_TIDY_ANALYZER)
+    list(APPEND TARGET_CLANG_TIDY "--checks=clang-analyzer-*")
+  endif()
+
   set_target_properties("${SOURCEMETA_TARGET_CLANG_TIDY_ATTEMPT_ENABLE_TARGET}"
-    PROPERTIES CXX_CLANG_TIDY "${SOURCEMETA_CXX_CLANG_TIDY}")
+    PROPERTIES CXX_CLANG_TIDY "${TARGET_CLANG_TIDY}")
 endfunction()
