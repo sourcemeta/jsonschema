@@ -23,7 +23,8 @@ WRITE expected_0.txt UNTIL EOF
 2>   at location "/pattern"
 2>   at base uri [CWD_URI]/schema.json
 2>
-2> Detailed regex error messages are not yet supported
+2> Regular expressions in JSON Schema are expected to follow ECMA-262,
+2> excluding the Annex B extensions that only web browsers implement
 2> Try tools like https://regex101.com to debug further
 EOF
 

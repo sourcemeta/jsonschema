@@ -1,0 +1,58 @@
+WRITE schema.json UNTIL EOF
+{
+  "$id": "https://example.com/invalid-regex-schema",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "string",
+  "pattern": "[invalid("
+}
+EOF
+
+WRITE test.json UNTIL EOF
+{
+  "target": "https://example.com/invalid-regex-schema",
+  "tests": [
+    {
+      "description": "Test case",
+      "valid": true,
+      "data": "hello"
+    }
+  ]
+}
+EOF
+
+// Schema input error
+RUN test test.json --resolve schema.json STDIN /dev/null IN . INTO result_0.txt EXPECTING 4
+
+REPLACE $CWD WITH '[CWD]' IN result_0.txt
+
+WRITE expected_0.txt UNTIL EOF
+1> [CWD]/test.json:
+2> error: Invalid regular expression
+2>   at regex [invalid(
+2>   at file path [CWD]/test.json
+2>   at location "/$defs/https:~1~1example.com~1invalid-regex-schema/pattern"
+2>   at base uri https://example.com/invalid-regex-schema
+2>
+2> Regular expressions in JSON Schema are expected to follow ECMA-262,
+2> excluding the Annex B extensions that only web browsers implement
+2> Try tools like https://regex101.com to debug further
+EOF
+
+COMPARE result_0.txt AGAINST expected_0.txt
+
+// Schema input error
+RUN test test.json --resolve schema.json --json STDIN /dev/null IN . INTO result_1.txt EXPECTING 4
+
+REPLACE $CWD WITH '[CWD]' IN result_1.txt
+
+WRITE expected_1.txt UNTIL EOF
+1> {
+1>   "error": "Invalid regular expression",
+1>   "regex": "[invalid(",
+1>   "filePath": "[CWD]/test.json",
+1>   "location": "/$defs/https:~1~1example.com~1invalid-regex-schema/pattern",
+1>   "baseURI": "https://example.com/invalid-regex-schema"
+1> }
+EOF
+
+COMPARE result_1.txt AGAINST expected_1.txt
