@@ -192,7 +192,7 @@ auto process_entry(const sourcemeta::jsonschema::InputJSON &entry,
     std::cout << "\n";
     if (!suboutput.at("valid").to_boolean()) {
       result = false;
-      if (entry.multidocument && !continue_on_error) {
+      if (!continue_on_error) {
         return false;
       }
     }
@@ -223,7 +223,7 @@ auto process_entry(const sourcemeta::jsonschema::InputJSON &entry,
     }
     sourcemeta::jsonschema::print(output, entry.positions, std::cerr);
     result = false;
-    if (entry.multidocument && !continue_on_error) {
+    if (!continue_on_error) {
       return false;
     }
   }
@@ -376,6 +376,7 @@ auto sourcemeta::jsonschema::validate(const sourcemeta::core::Options &options)
       }
     }
   } else {
+    bool proceed{true};
     for (const auto &instance_path_view : instance_arguments) {
       const std::filesystem::path instance_path{instance_path_view};
       if (trace && (instance_path.extension() == ".jsonl" ||
@@ -407,6 +408,7 @@ auto sourcemeta::jsonschema::validate(const sourcemeta::core::Options &options)
                              benchmark_loop, trace, fast_mode, json_output,
                              continue_on_error, schema_resolution_base, options,
                              result)) {
+            proceed = false;
             break;
           }
         }
@@ -458,6 +460,7 @@ auto sourcemeta::jsonschema::validate(const sourcemeta::core::Options &options)
           assert(suboutput.at("valid").is_boolean());
           if (!suboutput.at("valid").to_boolean()) {
             result = false;
+            proceed = continue_on_error;
           }
 
           sourcemeta::core::prettify(suboutput, std::cout);
@@ -476,7 +479,12 @@ auto sourcemeta::jsonschema::validate(const sourcemeta::core::Options &options)
                     << "\n";
           print(output, tracker, std::cerr);
           result = false;
+          proceed = continue_on_error;
         }
+      }
+
+      if (!proceed) {
+        break;
       }
     }
   }
