@@ -307,6 +307,18 @@ auto sourcemeta::jsonschema::validate(const sourcemeta::core::Options &options)
         "fast mode does not collect annotations"};
   }
 
+  if (options.contains("annotations") && benchmark) {
+    throw OptionConflictError{
+        "The `--annotations/-a` option cannot be used with `--benchmark/-b`, "
+        "as benchmark mode does not collect annotations"};
+  }
+
+  if (options.contains("annotations") && trace) {
+    throw OptionConflictError{
+        "The `--annotations/-a` option cannot be used with `--trace/-t`, as "
+        "trace output already reports annotations"};
+  }
+
   if (options.contains("entrypoint") && !options.at("entrypoint").empty() &&
       options.contains("template") && !options.at("template").empty()) {
     throw OptionConflictError{
