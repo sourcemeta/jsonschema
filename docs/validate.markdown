@@ -47,12 +47,8 @@ code 2.
 > during validation. No additional options are needed.
 
 > [!NOTE]
-> Annotations are only printed when passing the `--annotations`/`-a` or the
-> `--trace`/`-t` options. The `--annotations`/`-a` option also prints a status
-> line for every instance that passes validation, without which the annotations
-> could not be attributed to an instance. It cannot be combined with the
-> `--fast`/`-f` or `--benchmark`/`-b` options, as neither collects annotations,
-> nor with the `--trace`/`-t` option, which reports annotations of its own.
+> Annotations are only printed when passing the `--annotations`/`-a`, or
+> implicitly through the `--trace`/`-t` option when `--fast` is not used.
 
 > [!WARNING]
 > By default, schemas are validated in exhaustive mode, which results in better
