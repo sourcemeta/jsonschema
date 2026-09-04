@@ -9,6 +9,10 @@
 
 namespace sourcemeta::jsonschema {
 
+// These loggers are spelled in upper case to read as the macros that
+// conditional logging conventionally takes the shape of at the call site
+// NOLINTBEGIN(readability-identifier-naming)
+
 inline auto LOG_VERBOSE(const sourcemeta::core::Options &options)
     -> std::ostream & {
   if (options.contains("verbose") || options.contains("debug")) {
@@ -34,6 +38,8 @@ inline auto LOG_WARNING() -> std::ostream & {
   std::cerr << "warning: ";
   return std::cerr;
 }
+
+// NOLINTEND(readability-identifier-naming)
 
 } // namespace sourcemeta::jsonschema
 

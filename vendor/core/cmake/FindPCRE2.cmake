@@ -201,6 +201,7 @@ if(NOT PCRE2_FOUND)
         NAMELINK_COMPONENT sourcemeta_core_dev
       ARCHIVE DESTINATION "${CMAKE_INSTALL_LIBDIR}"
         COMPONENT sourcemeta_core_dev)
+    sourcemeta_library_export_flatten(pcre2)
     install(EXPORT pcre2
       DESTINATION "${CMAKE_INSTALL_LIBDIR}/cmake/pcre2"
       NAMESPACE PCRE2::

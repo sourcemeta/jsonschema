@@ -129,19 +129,34 @@ elseif(APPLE)
   target_include_directories(sourcemeta_core_crypto
     PRIVATE "${CMAKE_CURRENT_BINARY_DIR}")
 
-  target_link_libraries(sourcemeta_core_crypto PRIVATE "-framework Security")
+  # Resolve the frameworks to absolute bundle paths rather than passing raw
+  # linker flags, as the exported interface is also read by build systems that
+  # only understand a path to a library
+  find_library(CRYPTOKIT_SECURITY_FRAMEWORK Security REQUIRED)
+  find_library(CRYPTOKIT_CORE_FOUNDATION_FRAMEWORK CoreFoundation REQUIRED)
+  find_library(CRYPTOKIT_CRYPTOKIT_FRAMEWORK CryptoKit REQUIRED)
+  find_library(CRYPTOKIT_FOUNDATION_FRAMEWORK Foundation REQUIRED)
   target_link_libraries(sourcemeta_core_crypto
-    PRIVATE "-framework CoreFoundation")
-  target_link_libraries(sourcemeta_core_crypto PRIVATE "-framework CryptoKit")
-  target_link_libraries(sourcemeta_core_crypto PRIVATE "-framework Foundation")
+    PRIVATE "${CRYPTOKIT_SECURITY_FRAMEWORK}")
+  target_link_libraries(sourcemeta_core_crypto
+    PRIVATE "${CRYPTOKIT_CORE_FOUNDATION_FRAMEWORK}")
+  target_link_libraries(sourcemeta_core_crypto
+    PRIVATE "${CRYPTOKIT_CRYPTOKIT_FRAMEWORK}")
+  target_link_libraries(sourcemeta_core_crypto
+    PRIVATE "${CRYPTOKIT_FOUNDATION_FRAMEWORK}")
 
   # Resolve the Swift runtime that the shim autolinks, both at link and at load.
   # PUBLIC rather than INTERFACE so that a shared build of this library, which
-  # has its own link step pulling in the Swift object, also gets the flags
+  # has its own link step pulling in the Swift object, also gets the flags.
+  # Every option is a single token, as the multi-token spellings need a SHELL:
+  # prefix that only CMake knows how to strip back out of the exported
+  # interface, and every one of them addresses the linker directly, as these
+  # paths serve libraries that no command line asks for by name and a build
+  # system that resolves the named ones itself would drop a plain search path
   target_link_options(sourcemeta_core_crypto PUBLIC
-    "SHELL:-L ${CRYPTOKIT_SDK}/usr/lib/swift"
-    "SHELL:-L ${CRYPTOKIT_RUNTIME_LIB}"
-    "SHELL:-Xlinker -rpath -Xlinker /usr/lib/swift")
+    "-Wl,-L${CRYPTOKIT_SDK}/usr/lib/swift"
+    "-Wl,-L${CRYPTOKIT_RUNTIME_LIB}"
+    "-Wl,-rpath,/usr/lib/swift")
 elseif(WIN32)
   target_sources(sourcemeta_core_crypto PRIVATE
     crypto_sha1_windows.cc crypto_sha256_windows.cc

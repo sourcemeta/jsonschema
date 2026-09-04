@@ -7,7 +7,7 @@
 #include <exception> // std::exception_ptr, std::current_exception, std::rethrow_exception
 #include <functional> // std::function
 #include <iterator>   // std::input_iterator, std::iter_reference_t
-#include <mutex>      // std::mutex, std::lock_guard
+#include <mutex>      // std::mutex, std::scoped_lock
 #include <queue>      // std::queue
 #include <stdexcept>  // std::runtime_error
 #include <thread>     // std::thread
@@ -48,7 +48,7 @@ inline auto parallel_for_each_drain_and_join(std::queue<Iterator> &tasks,
                                              std::vector<std::thread> &workers)
     -> void {
   {
-    std::lock_guard<std::mutex> lock{queue_mutex};
+    std::scoped_lock lock{queue_mutex};
     std::queue<Iterator> empty;
     tasks.swap(empty);
   }
@@ -84,7 +84,7 @@ inline auto parallel_for_each_drain_and_join(std::queue<Iterator> &tasks,
 ///     [&mutex, &result](const auto value,
 ///                       const auto parallelism,
 ///                       const auto cursor) {
-///       std::lock_guard<std::mutex> lock{mutex};
+///       std::scoped_lock lock{mutex};
 ///       result.push_back(value);
 ///       std::cerr << "Processing " << cursor
 ///                 << " with parallelism " << parallelism << "\n";
@@ -128,8 +128,8 @@ auto parallel_for_each(
 
   std::exception_ptr exception = nullptr;
   auto handle_exception = [&exception_mutex,
-                           &exception](std::exception_ptr pointer) {
-    std::lock_guard<std::mutex> lock{exception_mutex};
+                           &exception](const std::exception_ptr &pointer) {
+    std::scoped_lock lock{exception_mutex};
     if (!exception) {
       exception = pointer;
     }
@@ -150,7 +150,7 @@ auto parallel_for_each(
         Iterator iterator;
         std::size_t cursor{0};
         {
-          std::lock_guard<std::mutex> lock{queue_mutex};
+          std::scoped_lock lock{queue_mutex};
           if (tasks.empty()) {
             return;
           }

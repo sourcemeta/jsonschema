@@ -267,7 +267,7 @@ auto process_start_time() noexcept
 
   const std::chrono::duration<double> since_epoch{
       static_cast<double>(information.pbi_start_tvsec) +
-      static_cast<double>(information.pbi_start_tvusec) / 1000000.0};
+      (static_cast<double>(information.pbi_start_tvusec) / 1000000.0)};
   return std::chrono::system_clock::time_point{
       std::chrono::duration_cast<std::chrono::system_clock::duration>(
           since_epoch)};

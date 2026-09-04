@@ -13,7 +13,7 @@ EOF
 RUN compile --minify schema.json STDIN /dev/null IN . INTO result.txt EXPECTING 0
 
 WRITE expected.txt UNTIL EOF
-1> [6,false,true,[[[50,["description"],[],"https://example.com#/description",2,1,[1,"Test schema"]],[50,["title"],[],"https://example.com#/title",2,1,[1,"Test"]],[67,["additionalProperties"],[],"https://example.com#/additionalProperties",2,3,[0],[[11,["type"],[],"https://example.com#/additionalProperties/type",2,2,[8,4]],[52,[],[],"https://example.com#/additionalProperties",2,3,[0]]]]]],[],["https://json-schema.org/draft/2020-12/vocab/meta-data","https://json-schema.org/draft/2020-12/vocab/validation","https://json-schema.org/draft/2020-12/vocab/applicator"]]
+1> [7,false,true,[[[50,["description"],[],"https://example.com#/description",2,1,[1,"Test schema"]],[50,["title"],[],"https://example.com#/title",2,1,[1,"Test"]],[68,["additionalProperties"],[],"https://example.com#/additionalProperties",2,3,[0],[[11,["type"],[],"https://example.com#/additionalProperties/type",2,2,[8,4]],[53,[],[],"https://example.com#/additionalProperties",2,3,[0]]]]]],[],["https://json-schema.org/draft/2020-12/vocab/meta-data","https://json-schema.org/draft/2020-12/vocab/validation","https://json-schema.org/draft/2020-12/vocab/applicator"]]
 EOF
 
 COMPARE result.txt AGAINST expected.txt

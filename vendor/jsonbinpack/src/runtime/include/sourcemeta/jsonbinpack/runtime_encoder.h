@@ -22,6 +22,9 @@ public:
 
 // The methods that implement individual encodings as considered private
 #ifndef DOXYGEN
+// The encoding names are the ones the JSON BinPack specification defines, so
+// they keep their casing rather than following the C++ naming convention
+// NOLINTBEGIN(readability-identifier-naming)
 #define DECLARE_ENCODING(name)                                                 \
   auto name(const sourcemeta::core::JSON &document, const name &) -> void;
 
@@ -64,6 +67,7 @@ public:
   DECLARE_ENCODING(VARINT_TYPED_ARBITRARY_OBJECT)
 
 #undef DECLARE_ENCODING
+// NOLINTEND(readability-identifier-naming)
 #endif
 
 private:

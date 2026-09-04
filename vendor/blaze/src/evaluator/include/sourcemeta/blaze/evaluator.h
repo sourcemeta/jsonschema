@@ -46,7 +46,7 @@ struct Template {
 };
 
 /// @ingroup evaluator
-constexpr std::size_t JSON_VERSION{6};
+constexpr std::size_t JSON_VERSION{7};
 
 /// @ingroup evaluator
 /// Parse a template from JSON
@@ -136,9 +136,11 @@ public:
   /// #include <sourcemeta/blaze/compiler.h>
   ///
   /// #include <sourcemeta/core/json.h>
+  /// #include <sourcemeta/core/jsonpointer.h>
   /// #include <sourcemeta/blaze/foundation.h>
   ///
   /// #include <cassert>
+  /// #include <cstddef>
   /// #include <iostream>
   ///
   /// const sourcemeta::core::JSON schema =
@@ -153,21 +155,28 @@ public:
   ///     sourcemeta::blaze::default_schema_compiler)};
   ///
   /// static auto callback(
-  ///     bool result,
+  ///     const sourcemeta::blaze::EvaluationType type,
+  ///     const bool result,
   ///     const sourcemeta::blaze::Instruction &instruction,
-  ///     const sourcemeta::core::Pointer &evaluate_path,
-  ///     const sourcemeta::core::Pointer &instance_location,
-  ///     const sourcemeta::core::JSON &document,
+  ///     const sourcemeta::blaze::InstructionExtra &extra,
+  ///     const sourcemeta::core::WeakPointer &evaluate_path,
+  ///     const sourcemeta::core::WeakPointer &instance_location,
   ///     const sourcemeta::core::JSON &annotation) -> void {
-  ///   std::cout << "TYPE: " << (result ? "Success" : "Failure") << "\n";
-  ///   std::cout << "INSTRUCTION:\n";
-  ///   sourcemeta::core::prettify(sourcemeta::blaze::to_json({instruction}),
-  ///                                     std::cout);
-  ///   std::cout << "\nEVALUATE PATH:";
+  ///   if (type == sourcemeta::blaze::EvaluationType::Pre) {
+  ///     return;
+  ///   }
+  ///
+  ///   std::cout << "RESULT: " << (result ? "Success" : "Failure") << "\n";
+  ///   std::cout << "INSTRUCTION: "
+  ///             << sourcemeta::blaze::InstructionNames[
+  ///                  static_cast<std::size_t>(instruction.type)]
+  ///             << "\n";
+  ///   std::cout << "KEYWORD LOCATION: " << extra.keyword_location << "\n";
+  ///   std::cout << "EVALUATE PATH: ";
   ///   sourcemeta::core::stringify(evaluate_path, std::cout);
-  ///   std::cout << "\nINSTANCE LOCATION:";
+  ///   std::cout << "\nINSTANCE LOCATION: ";
   ///   sourcemeta::core::stringify(instance_location, std::cout);
-  ///   std::cout << "\nANNOTATION:\n";
+  ///   std::cout << "\nANNOTATION: ";
   ///   sourcemeta::core::prettify(annotation, std::cout);
   ///   std::cout << "\n";
   /// }

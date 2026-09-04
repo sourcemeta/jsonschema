@@ -10,6 +10,10 @@
 
 namespace sourcemeta::jsonbinpack::v1 {
 
+// The encoding names are the ones the JSON BinPack specification defines, so
+// they keep their casing rather than following the C++ naming convention
+// NOLINTBEGIN(readability-identifier-naming)
+
 auto UTF8_STRING_NO_LENGTH(const sourcemeta::core::JSON &options) -> Encoding {
   assert(options.defines("size"));
   const auto &size{options.at("size")};
@@ -54,15 +58,17 @@ auto BOUNDED_8BIT_PREFIX_UTF8_STRING_SHARED(
       .maximum = static_cast<std::uint64_t>(maximum.to_integer())};
 }
 
-auto RFC3339_DATE_INTEGER_TRIPLET(const sourcemeta::core::JSON &) -> Encoding {
+auto RFC3339_DATE_INTEGER_TRIPLET(
+    [[maybe_unused]] const sourcemeta::core::JSON &options) -> Encoding {
   return sourcemeta::jsonbinpack::RFC3339_DATE_INTEGER_TRIPLET{};
 }
 
-auto PREFIX_VARINT_LENGTH_STRING_SHARED(const sourcemeta::core::JSON &)
-    -> Encoding {
+auto PREFIX_VARINT_LENGTH_STRING_SHARED(
+    [[maybe_unused]] const sourcemeta::core::JSON &options) -> Encoding {
   return sourcemeta::jsonbinpack::PREFIX_VARINT_LENGTH_STRING_SHARED{};
 }
 
+// NOLINTEND(readability-identifier-naming)
 } // namespace sourcemeta::jsonbinpack::v1
 
 #endif

@@ -70,6 +70,23 @@ inline auto UNSATISFIABLE_SCHEMA(const SchemaVocabularies &vocabularies)
     return result;
   }
 
+  // Draft 2 and earlier have no boolean schemas either, and their negation
+  // keyword takes type names rather than schemas, so the name to rule out is
+  // the wildcard that every instance answers to
+  if (vocabularies.contains_any(
+          {SchemaVocabularies::Known::JSON_Schema_Draft_0,
+           SchemaVocabularies::Known::JSON_Schema_Draft_0_Hyper,
+           SchemaVocabularies::Known::JSON_Schema_Draft_1,
+           SchemaVocabularies::Known::JSON_Schema_Draft_1_Hyper,
+           SchemaVocabularies::Known::JSON_Schema_Draft_2,
+           SchemaVocabularies::Known::JSON_Schema_Draft_2_Hyper})) {
+    auto types{sourcemeta::core::JSON::make_array()};
+    types.push_back(sourcemeta::core::JSON{"any"});
+    auto result{sourcemeta::core::JSON::make_object()};
+    result.assign("disallow", std::move(types));
+    return result;
+  }
+
   return sourcemeta::core::JSON{false};
 }
 
@@ -117,7 +134,7 @@ auto WALK_UP(const sourcemeta::core::JSON &root, const SchemaFrame &frame,
     const auto &parent_pointer{current_parent.value()};
     const auto relative_pointer{current_pointer.resolve_from(parent_pointer)};
     assert(!relative_pointer.empty() && relative_pointer.at(0).is_property());
-    const auto parent{frame.traverse(frame.uri(parent_pointer).value().get())};
+    const auto parent{frame.traverse(parent_pointer)};
     assert(parent.has_value());
     const auto &parent_vocabularies{
         frame.vocabularies(parent.value().get(), resolver)};

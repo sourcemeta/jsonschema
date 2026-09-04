@@ -338,8 +338,8 @@ public:
           continue;
         }
 
-        if (this->schemas.emplace(dependency_uri, schema).second) {
-          this->origins.emplace(
+        if (this->schemas_.emplace(dependency_uri, schema).second) {
+          this->origins_.emplace(
               dependency_uri,
               std::make_pair(dependency_path, sourcemeta::core::Pointer{}));
         }
@@ -393,16 +393,16 @@ public:
                                                entry.base_dialect);
 
           const std::string identifier{uri};
-          const auto result{this->schemas.emplace(identifier, subschema)};
+          const auto result{this->schemas_.emplace(identifier, subschema)};
           if (!result.second && result.first->second != subschema) {
-            const auto other{this->origins.find(identifier)};
-            assert(other != this->origins.cend());
+            const auto other{this->origins_.find(identifier)};
+            assert(other != this->origins_.cend());
             throw SchemaIdentifierConflictError{
                 identifier, sourcemeta::core::to_pointer(entry.pointer),
                 other->second.first, other->second.second};
           }
 
-          this->origins.emplace(
+          this->origins_.emplace(
               identifier, std::make_pair(origin, sourcemeta::core::to_pointer(
                                                      entry.pointer)));
 
@@ -431,8 +431,8 @@ public:
                                 << target << " given the configuration file\n";
     }
 
-    const auto match{this->schemas.find(target)};
-    if (match != this->schemas.cend()) {
+    const auto match{this->schemas_.find(target)};
+    if (match != this->schemas_.cend()) {
       return match->second;
     }
 
@@ -540,10 +540,10 @@ private:
     }
   }
 
-  std::map<std::string, sourcemeta::core::JSON> schemas{};
+  std::map<std::string, sourcemeta::core::JSON> schemas_{};
   std::map<std::string,
            std::pair<std::filesystem::path, sourcemeta::core::Pointer>>
-      origins{};
+      origins_{};
   const sourcemeta::core::Options &options_;
   const std::optional<sourcemeta::blaze::Configuration> configuration_;
   bool remote_{false};

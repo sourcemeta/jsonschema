@@ -27,9 +27,9 @@ auto Decoder::FLOOR_VARINT_PREFIX_UTF8_STRING_SHARED(
     const sourcemeta::core::JSON value{this->get_string_utf8(length)};
     this->seek(current);
     return value;
-  } else {
-    return UTF8_STRING_NO_LENGTH({length});
   }
+
+  return UTF8_STRING_NO_LENGTH({length});
 }
 
 auto Decoder::ROOF_VARINT_PREFIX_UTF8_STRING_SHARED(
@@ -47,9 +47,9 @@ auto Decoder::ROOF_VARINT_PREFIX_UTF8_STRING_SHARED(
     const sourcemeta::core::JSON value{UTF8_STRING_NO_LENGTH({length})};
     this->seek(current);
     return value;
-  } else {
-    return UTF8_STRING_NO_LENGTH({length});
   }
+
+  return UTF8_STRING_NO_LENGTH({length});
 }
 
 auto Decoder::BOUNDED_8BIT_PREFIX_UTF8_STRING_SHARED(
@@ -69,13 +69,14 @@ auto Decoder::BOUNDED_8BIT_PREFIX_UTF8_STRING_SHARED(
     const sourcemeta::core::JSON value{UTF8_STRING_NO_LENGTH({length})};
     this->seek(current);
     return value;
-  } else {
-    return UTF8_STRING_NO_LENGTH({length});
   }
+
+  return UTF8_STRING_NO_LENGTH({length});
 }
 
 auto Decoder::RFC3339_DATE_INTEGER_TRIPLET(
-    const struct RFC3339_DATE_INTEGER_TRIPLET &) -> sourcemeta::core::JSON {
+    [[maybe_unused]] const struct RFC3339_DATE_INTEGER_TRIPLET &options)
+    -> sourcemeta::core::JSON {
   const std::uint16_t year{this->get_word()};
   const std::uint8_t month{this->get_byte()};
   const std::uint8_t day{this->get_byte()};
@@ -110,9 +111,9 @@ auto Decoder::PREFIX_VARINT_LENGTH_STRING_SHARED(
         PREFIX_VARINT_LENGTH_STRING_SHARED(options)};
     this->seek(current);
     return value;
-  } else {
-    return sourcemeta::core::JSON{this->get_string_utf8(prefix - 1)};
   }
+
+  return sourcemeta::core::JSON{this->get_string_utf8(prefix - 1)};
 }
 
 } // namespace sourcemeta::jsonbinpack

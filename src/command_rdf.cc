@@ -161,7 +161,7 @@ auto sourcemeta::jsonschema::rdf(const sourcemeta::core::Options &options)
       throw PositionError<RdfResolutionError>{
           std::get<0>(position.value()),
           std::get<1>(position.value()),
-          std::move(error.message),
+          error.message,
           std::string{facet_name(error.facet)},
           std::move(error.instance_location),
           std::move(error.schema_location),
@@ -170,7 +170,7 @@ auto sourcemeta::jsonschema::rdf(const sourcemeta::core::Options &options)
           instance_from_stdin ? stdin_path() : instance_path};
     }
 
-    throw RdfResolutionError{std::move(error.message),
+    throw RdfResolutionError{error.message,
                              std::string{facet_name(error.facet)},
                              std::move(error.instance_location),
                              std::move(error.schema_location),

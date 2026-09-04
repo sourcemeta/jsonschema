@@ -162,7 +162,7 @@ For more documentation, visit https://github.com/sourcemeta/jsonschema
 )EOF"};
 
 auto jsonschema_main(const std::string &program, const std::string &command,
-                     sourcemeta::core::Options &app, int argc, char *argv[])
+                     sourcemeta::core::Options &app, int argc, char **argv)
     -> int {
   if (command == "fmt") {
     app.flag("check", {"c"});
@@ -173,18 +173,24 @@ auto jsonschema_main(const std::string &program, const std::string &command,
     app.parse(argc, argv, {.skip = 1});
     sourcemeta::jsonschema::fmt(app);
     return EXIT_SUCCESS;
-  } else if (command == "inspect") {
+  }
+
+  if (command == "inspect") {
     app.parse(argc, argv, {.skip = 1});
     sourcemeta::jsonschema::inspect(app);
     return EXIT_SUCCESS;
-  } else if (command == "bundle") {
+  }
+
+  if (command == "bundle") {
     app.flag("without-id", {"w"});
     app.option("extension", {"e"});
     app.option("ignore", {"i"});
     app.parse(argc, argv, {.skip = 1});
     sourcemeta::jsonschema::bundle(app);
     return EXIT_SUCCESS;
-  } else if (command == "lint") {
+  }
+
+  if (command == "lint") {
     app.flag("fix", {"f"});
     app.flag("format", {"m"});
     app.flag("format-assertion", {"F"});
@@ -200,7 +206,9 @@ auto jsonschema_main(const std::string &program, const std::string &command,
     app.parse(argc, argv, {.skip = 1});
     sourcemeta::jsonschema::lint(app);
     return EXIT_SUCCESS;
-  } else if (command == "validate") {
+  }
+
+  if (command == "validate") {
     app.flag("benchmark", {"b"});
     app.flag("trace", {"t"});
     app.flag("fast", {"f"});
@@ -214,7 +222,9 @@ auto jsonschema_main(const std::string &program, const std::string &command,
     app.parse(argc, argv, {.skip = 1});
     sourcemeta::jsonschema::validate(app);
     return EXIT_SUCCESS;
-  } else if (command == "metaschema") {
+  }
+
+  if (command == "metaschema") {
     app.flag("trace", {"t"});
     app.flag("format-assertion", {"F"});
     app.option("extension", {"e"});
@@ -222,7 +232,9 @@ auto jsonschema_main(const std::string &program, const std::string &command,
     app.parse(argc, argv, {.skip = 1});
     sourcemeta::jsonschema::metaschema(app);
     return EXIT_SUCCESS;
-  } else if (command == "compile") {
+  }
+
+  if (command == "compile") {
     app.flag("fast", {"f"});
     app.flag("format-assertion", {"F"});
     app.flag("minify", {"m"});
@@ -231,7 +243,9 @@ auto jsonschema_main(const std::string &program, const std::string &command,
     app.parse(argc, argv, {.skip = 1});
     sourcemeta::jsonschema::compile(app);
     return EXIT_SUCCESS;
-  } else if (command == "test") {
+  }
+
+  if (command == "test") {
     app.flag("format-assertion", {"F"});
     app.option("extension", {"e"});
     app.option("ignore", {"i"});
@@ -239,33 +253,45 @@ auto jsonschema_main(const std::string &program, const std::string &command,
     app.parse(argc, argv, {.skip = 1});
     sourcemeta::jsonschema::test(app);
     return EXIT_SUCCESS;
-  } else if (command == "encode") {
+  }
+
+  if (command == "encode") {
     app.parse(argc, argv, {.skip = 1});
     sourcemeta::jsonschema::encode(app);
     return EXIT_SUCCESS;
-  } else if (command == "decode") {
+  }
+
+  if (command == "decode") {
     app.parse(argc, argv, {.skip = 1});
     sourcemeta::jsonschema::decode(app);
     return EXIT_SUCCESS;
-  } else if (command == "codegen") {
+  }
+
+  if (command == "codegen") {
     app.option("name", {"n"});
     app.option("target", {"t"});
     app.parse(argc, argv, {.skip = 1});
     sourcemeta::jsonschema::codegen(app);
     return EXIT_SUCCESS;
-  } else if (command == "install") {
+  }
+
+  if (command == "install") {
     app.flag("force", {"f"});
     app.flag("frozen", {"z"});
     app.parse(argc, argv, {.skip = 1});
     sourcemeta::jsonschema::install(app);
     return EXIT_SUCCESS;
-  } else if (command == "upgrade") {
+  }
+
+  if (command == "upgrade") {
     app.option("to", {"t"});
     app.flag("meta", {"m"});
     app.parse(argc, argv, {.skip = 1});
     sourcemeta::jsonschema::upgrade(app);
     return EXIT_SUCCESS;
-  } else if (command == "rdf") {
+  }
+
+  if (command == "rdf") {
     app.flag("fast", {"f"});
     app.flag("flatten", {"l"});
     app.flag("format-assertion", {"F"});
@@ -275,23 +301,26 @@ auto jsonschema_main(const std::string &program, const std::string &command,
     app.parse(argc, argv, {.skip = 1});
     sourcemeta::jsonschema::rdf(app);
     return EXIT_SUCCESS;
-  } else if (command == "help" || command == "--help" || command == "-h") {
+  }
+
+  if (command == "help" || command == "--help" || command == "-h") {
     std::println("JSON Schema CLI - v{}",
                  sourcemeta::jsonschema::PROJECT_VERSION);
     std::println("Usage: {} <command> [arguments...]",
                  std::filesystem::path{program}.filename().string());
     std::print("{}", USAGE_DETAILS);
     return EXIT_SUCCESS;
-  } else if (command == "version" || command == "--version" ||
-             command == "-v") {
+  }
+
+  if (command == "version" || command == "--version" || command == "-v") {
     std::println("{}", sourcemeta::jsonschema::PROJECT_VERSION);
     return EXIT_SUCCESS;
-  } else {
-    throw sourcemeta::jsonschema::UnknownCommandError{command};
   }
+
+  throw sourcemeta::jsonschema::UnknownCommandError{command};
 }
 
-auto main(int argc, char *argv[]) noexcept -> int {
+auto main(int argc, char **argv) noexcept -> int {
   sourcemeta::core::Options app;
   app.flag("http", {"h"});
   app.flag("verbose", {"v"});
@@ -302,7 +331,7 @@ auto main(int argc, char *argv[]) noexcept -> int {
   app.option("configuration", {"C"});
   app.option("header", {"H"});
 
-  return sourcemeta::jsonschema::try_catch(app, [&app, argc, &argv]() {
+  return sourcemeta::jsonschema::try_catch(app, [&app, argc, argv]() {
     const std::string program{argv[0]};
     const std::string command{argc > 1 ? argv[1] : "help"};
     return jsonschema_main(program, command, app, argc, argv);

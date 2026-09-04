@@ -18,7 +18,7 @@
 
 auto sourcemeta::jsonschema::bundle(const sourcemeta::core::Options &options)
     -> void {
-  if (options.positional().size() < 1) {
+  if (options.positional().empty()) {
     throw PositionalArgumentError{"This command expects a path to a schema",
                                   "jsonschema bundle path/to/schema.json"};
   }

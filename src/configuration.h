@@ -163,9 +163,9 @@ inline auto read_configuration(
         << sourcemeta::core::weakly_canonical(configuration_path.value())
                .generic_string()
         << "\n";
-    static const std::optional<sourcemeta::blaze::Configuration> empty{
+    static const std::optional<sourcemeta::blaze::Configuration> EMPTY{
         std::nullopt};
-    return empty;
+    return EMPTY;
   }
   return configuration;
 }

@@ -88,6 +88,7 @@ public:
     sourcemeta::core::WeakPointer evaluate_path;
     std::reference_wrapper<const std::string> schema_location;
     sourcemeta::core::JSON value;
+    bool is_wrapped;
   };
 
   auto operator()(const EvaluationType type, const bool result,

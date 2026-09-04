@@ -34,11 +34,11 @@ auto Decoder::TOP_LEVEL_BYTE_CHOICE_INDEX(
   assert(sourcemeta::core::is_byte(options.choices.size()));
   if (!this->has_more_data()) {
     return options.choices.front();
-  } else {
-    const std::uint16_t index{static_cast<std::uint16_t>(this->get_byte() + 1)};
-    assert(options.choices.size() > index);
-    return options.choices[index];
   }
+
+  const std::uint16_t index{static_cast<std::uint16_t>(this->get_byte() + 1)};
+  assert(options.choices.size() > index);
+  return options.choices[index];
 }
 
 auto Decoder::CONST_NONE(const struct CONST_NONE &options)
@@ -47,12 +47,13 @@ auto Decoder::CONST_NONE(const struct CONST_NONE &options)
 }
 
 auto Decoder::ANY_PACKED_TYPE_TAG_BYTE_PREFIX(
-    const struct ANY_PACKED_TYPE_TAG_BYTE_PREFIX &) -> sourcemeta::core::JSON {
+    [[maybe_unused]] const struct ANY_PACKED_TYPE_TAG_BYTE_PREFIX &options)
+    -> sourcemeta::core::JSON {
   using namespace internal::ANY_PACKED_TYPE_TAG_BYTE_PREFIX;
   const std::uint8_t byte{this->get_byte()};
   const std::uint8_t type{
-      static_cast<std::uint8_t>(byte & (0xff >> subtype_size))};
-  const std::uint8_t subtype{static_cast<std::uint8_t>(byte >> type_size)};
+      static_cast<std::uint8_t>(byte & (0xff >> SUBTYPE_SIZE))};
+  const std::uint8_t subtype{static_cast<std::uint8_t>(byte >> TYPE_SIZE)};
 
   if (type == TYPE_OTHER) {
     switch (subtype) {
@@ -99,9 +100,9 @@ auto Decoder::ANY_PACKED_TYPE_TAG_BYTE_PREFIX(
       case TYPE_SHARED_STRING: {
         const auto length = subtype == 0
                                 ? this->get_varint() - 1 +
-                                      static_cast<std::uint64_t>(
-                                          sourcemeta::core::uint_max<5>) *
-                                          2
+                                      (static_cast<std::uint64_t>(
+                                           sourcemeta::core::uint_max<5>) *
+                                       2)
                                 : subtype - 1;
         const std::uint64_t position{this->position()};
         const std::uint64_t current{this->rewind(this->get_varint(), position)};

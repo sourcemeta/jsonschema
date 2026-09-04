@@ -33,7 +33,7 @@ auto effective_dialect(const sourcemeta::core::JSON &schema,
   }
 
   const auto *dialect{schema.try_at("$schema")};
-  if (!dialect) {
+  if (dialect == nullptr) {
     return default_dialect;
   }
 

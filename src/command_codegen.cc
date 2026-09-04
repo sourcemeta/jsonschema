@@ -18,7 +18,7 @@
 
 auto sourcemeta::jsonschema::codegen(const sourcemeta::core::Options &options)
     -> void {
-  if (options.positional().size() < 1) {
+  if (options.positional().empty()) {
     throw PositionalArgumentError{"This command expects a path to a schema",
                                   "jsonschema codegen path/to/schema.json "
                                   "--name MyType --target typescript"};

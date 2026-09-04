@@ -30,13 +30,21 @@ auto parse_target_dialect(const std::string_view value)
     -> std::optional<sourcemeta::blaze::AlterSchemaMode> {
   if (value == "draft4") {
     return sourcemeta::blaze::AlterSchemaMode::UpgradeDraft4;
-  } else if (value == "draft6") {
+  }
+
+  if (value == "draft6") {
     return sourcemeta::blaze::AlterSchemaMode::UpgradeDraft6;
-  } else if (value == "draft7") {
+  }
+
+  if (value == "draft7") {
     return sourcemeta::blaze::AlterSchemaMode::UpgradeDraft7;
-  } else if (value == "2019-09") {
+  }
+
+  if (value == "2019-09") {
     return sourcemeta::blaze::AlterSchemaMode::Upgrade201909;
-  } else if (value == "2020-12") {
+  }
+
+  if (value == "2020-12") {
     return sourcemeta::blaze::AlterSchemaMode::Upgrade202012;
   }
 
@@ -169,7 +177,7 @@ auto assert_upgradable(
 
 auto sourcemeta::jsonschema::upgrade(const sourcemeta::core::Options &options)
     -> void {
-  if (options.positional().size() < 1) {
+  if (options.positional().empty()) {
     throw PositionalArgumentError{"This command expects a path to a schema",
                                   "jsonschema upgrade path/to/schema.json"};
   }

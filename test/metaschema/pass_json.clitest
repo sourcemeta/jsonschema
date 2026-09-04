@@ -32,21 +32,21 @@ WRITE expected.txt UNTIL EOF
 1>       "absoluteKeywordLocation": "https://json-schema.org/draft/2020-12/meta/core#/title",
 1>       "instanceLocation": "",
 1>       "instancePosition": [ 1, 1, 11, 1 ],
-1>       "annotation": [ "Core vocabulary meta-schema" ]
+1>       "annotation": "Core vocabulary meta-schema"
 1>     },
 1>     {
 1>       "keywordLocation": "/allOf/1/$ref/title",
 1>       "absoluteKeywordLocation": "https://json-schema.org/draft/2020-12/meta/applicator#/title",
 1>       "instanceLocation": "",
 1>       "instancePosition": [ 1, 1, 11, 1 ],
-1>       "annotation": [ "Applicator vocabulary meta-schema" ]
+1>       "annotation": "Applicator vocabulary meta-schema"
 1>     },
 1>     {
 1>       "keywordLocation": "/allOf/2/$ref/title",
 1>       "absoluteKeywordLocation": "https://json-schema.org/draft/2020-12/meta/unevaluated#/title",
 1>       "instanceLocation": "",
 1>       "instancePosition": [ 1, 1, 11, 1 ],
-1>       "annotation": [ "Unevaluated applicator vocabulary meta-schema" ]
+1>       "annotation": "Unevaluated applicator vocabulary meta-schema"
 1>     },
 1>     {
 1>       "keywordLocation": "/allOf/3/$ref/properties",
@@ -60,7 +60,7 @@ WRITE expected.txt UNTIL EOF
 1>       "absoluteKeywordLocation": "https://json-schema.org/draft/2020-12/meta/validation#/title",
 1>       "instanceLocation": "",
 1>       "instancePosition": [ 1, 1, 11, 1 ],
-1>       "annotation": [ "Validation vocabulary meta-schema" ]
+1>       "annotation": "Validation vocabulary meta-schema"
 1>     },
 1>     {
 1>       "keywordLocation": "/allOf/4/$ref/properties",
@@ -74,28 +74,28 @@ WRITE expected.txt UNTIL EOF
 1>       "absoluteKeywordLocation": "https://json-schema.org/draft/2020-12/meta/meta-data#/title",
 1>       "instanceLocation": "",
 1>       "instancePosition": [ 1, 1, 11, 1 ],
-1>       "annotation": [ "Meta-data vocabulary meta-schema" ]
+1>       "annotation": "Meta-data vocabulary meta-schema"
 1>     },
 1>     {
 1>       "keywordLocation": "/allOf/5/$ref/title",
 1>       "absoluteKeywordLocation": "https://json-schema.org/draft/2020-12/meta/format-annotation#/title",
 1>       "instanceLocation": "",
 1>       "instancePosition": [ 1, 1, 11, 1 ],
-1>       "annotation": [ "Format vocabulary meta-schema for annotation results" ]
+1>       "annotation": "Format vocabulary meta-schema for annotation results"
 1>     },
 1>     {
 1>       "keywordLocation": "/allOf/6/$ref/title",
 1>       "absoluteKeywordLocation": "https://json-schema.org/draft/2020-12/meta/content#/title",
 1>       "instanceLocation": "",
 1>       "instancePosition": [ 1, 1, 11, 1 ],
-1>       "annotation": [ "Content vocabulary meta-schema" ]
+1>       "annotation": "Content vocabulary meta-schema"
 1>     },
 1>     {
 1>       "keywordLocation": "/title",
 1>       "absoluteKeywordLocation": "https://json-schema.org/draft/2020-12/schema#/title",
 1>       "instanceLocation": "",
 1>       "instancePosition": [ 1, 1, 11, 1 ],
-1>       "annotation": [ "Core and Validation specifications meta-schema" ]
+1>       "annotation": "Core and Validation specifications meta-schema"
 1>     },
 1>     {
 1>       "keywordLocation": "/allOf/0/$ref/properties/$defs/additionalProperties",
@@ -109,21 +109,21 @@ WRITE expected.txt UNTIL EOF
 1>       "absoluteKeywordLocation": "https://json-schema.org/draft/2020-12/meta/core#/title",
 1>       "instanceLocation": "/$defs/foo",
 1>       "instancePosition": [ 7, 5, 9, 5 ],
-1>       "annotation": [ "Core vocabulary meta-schema" ]
+1>       "annotation": "Core vocabulary meta-schema"
 1>     },
 1>     {
 1>       "keywordLocation": "/allOf/0/$ref/properties/$defs/additionalProperties/$dynamicRef/allOf/1/$ref/title",
 1>       "absoluteKeywordLocation": "https://json-schema.org/draft/2020-12/meta/applicator#/title",
 1>       "instanceLocation": "/$defs/foo",
 1>       "instancePosition": [ 7, 5, 9, 5 ],
-1>       "annotation": [ "Applicator vocabulary meta-schema" ]
+1>       "annotation": "Applicator vocabulary meta-schema"
 1>     },
 1>     {
 1>       "keywordLocation": "/allOf/0/$ref/properties/$defs/additionalProperties/$dynamicRef/allOf/2/$ref/title",
 1>       "absoluteKeywordLocation": "https://json-schema.org/draft/2020-12/meta/unevaluated#/title",
 1>       "instanceLocation": "/$defs/foo",
 1>       "instancePosition": [ 7, 5, 9, 5 ],
-1>       "annotation": [ "Unevaluated applicator vocabulary meta-schema" ]
+1>       "annotation": "Unevaluated applicator vocabulary meta-schema"
 1>     },
 1>     {
 1>       "keywordLocation": "/allOf/0/$ref/properties/$defs/additionalProperties/$dynamicRef/allOf/3/$ref/properties",
@@ -137,49 +137,49 @@ WRITE expected.txt UNTIL EOF
 1>       "absoluteKeywordLocation": "https://json-schema.org/draft/2020-12/meta/validation#/title",
 1>       "instanceLocation": "/$defs/foo",
 1>       "instancePosition": [ 7, 5, 9, 5 ],
-1>       "annotation": [ "Validation vocabulary meta-schema" ]
+1>       "annotation": "Validation vocabulary meta-schema"
 1>     },
 1>     {
 1>       "keywordLocation": "/allOf/0/$ref/properties/$defs/additionalProperties/$dynamicRef/allOf/4/$ref/title",
 1>       "absoluteKeywordLocation": "https://json-schema.org/draft/2020-12/meta/meta-data#/title",
 1>       "instanceLocation": "/$defs/foo",
 1>       "instancePosition": [ 7, 5, 9, 5 ],
-1>       "annotation": [ "Meta-data vocabulary meta-schema" ]
+1>       "annotation": "Meta-data vocabulary meta-schema"
 1>     },
 1>     {
 1>       "keywordLocation": "/allOf/0/$ref/properties/$defs/additionalProperties/$dynamicRef/allOf/5/$ref/title",
 1>       "absoluteKeywordLocation": "https://json-schema.org/draft/2020-12/meta/format-annotation#/title",
 1>       "instanceLocation": "/$defs/foo",
 1>       "instancePosition": [ 7, 5, 9, 5 ],
-1>       "annotation": [ "Format vocabulary meta-schema for annotation results" ]
+1>       "annotation": "Format vocabulary meta-schema for annotation results"
 1>     },
 1>     {
 1>       "keywordLocation": "/allOf/0/$ref/properties/$defs/additionalProperties/$dynamicRef/allOf/6/$ref/title",
 1>       "absoluteKeywordLocation": "https://json-schema.org/draft/2020-12/meta/content#/title",
 1>       "instanceLocation": "/$defs/foo",
 1>       "instancePosition": [ 7, 5, 9, 5 ],
-1>       "annotation": [ "Content vocabulary meta-schema" ]
+1>       "annotation": "Content vocabulary meta-schema"
 1>     },
 1>     {
 1>       "keywordLocation": "/allOf/0/$ref/properties/$defs/additionalProperties/$dynamicRef/title",
 1>       "absoluteKeywordLocation": "https://json-schema.org/draft/2020-12/schema#/title",
 1>       "instanceLocation": "/$defs/foo",
 1>       "instancePosition": [ 7, 5, 9, 5 ],
-1>       "annotation": [ "Core and Validation specifications meta-schema" ]
+1>       "annotation": "Core and Validation specifications meta-schema"
 1>     },
 1>     {
 1>       "keywordLocation": "/allOf/0/$ref/properties/$defs/additionalProperties/$dynamicRef/allOf/3/$ref/properties/type/anyOf/1/items",
 1>       "absoluteKeywordLocation": "https://json-schema.org/draft/2020-12/meta/validation#/properties/type/anyOf/1/items",
 1>       "instanceLocation": "/$defs/foo/type",
 1>       "instancePosition": [ 8, 7, 8, 34 ],
-1>       "annotation": [ true ]
+1>       "annotation": true
 1>     },
 1>     {
 1>       "keywordLocation": "/allOf/0/$ref/properties/$schema/$ref/format",
 1>       "absoluteKeywordLocation": "https://json-schema.org/draft/2020-12/meta/core#/$defs/uriString/format",
 1>       "instanceLocation": "/$schema",
 1>       "instancePosition": [ 2, 3, 2, 59 ],
-1>       "annotation": [ "uri" ]
+1>       "annotation": "uri"
 1>     }
 1>   ]
 1> }

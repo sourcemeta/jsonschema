@@ -102,7 +102,7 @@ auto WALK_UP(const JSON &root, const SchemaFrame &frame,
     const auto &parent_pointer{current_parent.value()};
     const auto relative_pointer{current_pointer.resolve_from(parent_pointer)};
     assert(!relative_pointer.empty() && relative_pointer.at(0).is_property());
-    const auto parent{frame.traverse(frame.uri(parent_pointer).value().get())};
+    const auto parent{frame.traverse(parent_pointer)};
     assert(parent.has_value());
     const auto &parent_vocabularies{
         frame.vocabularies(parent.value().get(), resolver)};

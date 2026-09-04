@@ -358,14 +358,28 @@ inline auto absolute_schema_location(const Context &context,
                                   schema_context.relative_pointer);
 }
 
-inline auto static_frame_entry(const Context &context,
-                               const SchemaContext &schema_context)
-    -> const sourcemeta::blaze::SchemaFrame::Location & {
-  const auto current{
-      to_uri(schema_context.relative_pointer, schema_context.base).recompose()};
-  const auto type{sourcemeta::blaze::SchemaReferenceType::Static};
-  assert(context.frame.location(type, current).has_value());
-  return context.frame.location(type, current).value().get();
+// Same bridging as above, but keeping the pointer weak, as every caller only
+// wants to address the frame with it rather than to hand it out
+inline auto
+absolute_schema_pointer(const Context &context,
+                        const sourcemeta::core::URI &base,
+                        const sourcemeta::core::WeakPointer &relative_pointer)
+    -> sourcemeta::core::WeakPointer {
+  const auto resource{context.frame.location(
+      sourcemeta::blaze::SchemaReferenceType::Static, base.recompose())};
+  assert(resource.has_value());
+  if (!resource.has_value()) [[unlikely]] {
+    return relative_pointer;
+  }
+
+  return resource.value().get().pointer.concat(relative_pointer);
+}
+
+inline auto absolute_schema_pointer(const Context &context,
+                                    const SchemaContext &schema_context)
+    -> sourcemeta::core::WeakPointer {
+  return absolute_schema_pointer(context, schema_context.base,
+                                 schema_context.relative_pointer);
 }
 
 // Whether the current keyword value, as a schema, contains any nested
@@ -376,9 +390,8 @@ inline auto static_frame_entry(const Context &context,
 inline auto defines_nested_subschemas(const Context &context,
                                       const SchemaContext &schema_context)
     -> bool {
-  const auto &entry{static_frame_entry(context, schema_context)};
   return context.frame.any_subschema_under(
-      entry.pointer,
+      absolute_schema_pointer(context, schema_context),
       [](const sourcemeta::blaze::SchemaFrame::Location &) -> bool {
         return true;
       });
@@ -401,12 +414,15 @@ inline auto find_adjacent(const Context &context,
                           const std::set<std::string> &vocabularies,
                           const std::string &keyword,
                           const sourcemeta::core::JSON::Type type) -> auto {
-  std::vector<std::string> possible_keyword_uris;
-  possible_keyword_uris.push_back(
-      to_uri(schema_context.relative_pointer.initial().concat(
-                 make_weak_pointer(keyword)),
-             schema_context.base)
-          .recompose());
+  // A candidate is the subschema that may declare the keyword, paired with the
+  // vocabularies in force there, as following a reference can land the search
+  // in a resource that speaks a different dialect than the one we started from
+  std::vector<std::pair<sourcemeta::core::WeakPointer,
+                        std::reference_wrapper<const SchemaVocabularies>>>
+      candidates;
+  const auto current{
+      absolute_schema_pointer(context, schema_context).initial()};
+  candidates.emplace_back(current, std::cref(schema_context.vocabularies));
 
   // TODO: Do something similar with `allOf`
 
@@ -414,62 +430,40 @@ inline auto find_adjacent(const Context &context,
   static const std::string ref_keyword{"$ref"};
   if (schema_context.schema.defines("$ref")) {
     const auto reference_type{sourcemeta::blaze::SchemaReferenceType::Static};
-    const auto destination_uri{
-        to_uri(schema_context.relative_pointer.initial().concat(
-                   make_weak_pointer(ref_keyword)),
-               schema_context.base)
-            .recompose()};
-    assert(context.frame.location(reference_type, destination_uri).has_value());
-    const auto &destination{
-        context.frame.location(reference_type, destination_uri).value().get()};
-    assert(context.frame.reference(reference_type, destination.pointer)
-               .has_value());
+    const auto origin{current.concat(make_weak_pointer(ref_keyword))};
+    assert(context.frame.reference(reference_type, origin).has_value());
     const auto &reference{
-        context.frame.reference(reference_type, destination.pointer)
-            .value()
-            .get()};
-    const auto keyword_uri{
-        sourcemeta::core::to_uri(
-            sourcemeta::core::to_pointer(
-                std::string{reference.fragment.value_or("")})
-                .concat(keyword))
-            .resolve_from(sourcemeta::core::URI{reference.base})};
+        context.frame.reference(reference_type, origin).value().get()};
+    const auto destination{context.frame.traverse(reference.destination)};
 
     // TODO: When this logic is used by
     // `unevaluatedProperties`/`unevaluatedItems`, how can we let the
     // applicators we detect here know that they have already been taken into
     // consideration and thus do not have to track evaluation?
-    possible_keyword_uris.push_back(keyword_uri.recompose());
+    if (destination.has_value()) {
+      candidates.emplace_back(
+          destination.value().get().pointer,
+          std::cref(context.frame.vocabularies(destination.value().get(),
+                                               context.resolver)));
+    }
   }
 
   std::vector<std::reference_wrapper<const sourcemeta::core::JSON>> result;
 
-  for (const auto &possible_keyword_uri : possible_keyword_uris) {
-    if (!context.frame
-             .location(sourcemeta::blaze::SchemaReferenceType::Static,
-                       possible_keyword_uri)
-             .has_value()) {
+  for (const auto &[subschema, subschema_vocabularies] : candidates) {
+    const auto *value{sourcemeta::core::try_get(
+        context.root, subschema.concat(make_weak_pointer(keyword)))};
+    if (value == nullptr) {
       continue;
     }
-
-    const auto &frame_entry{
-        context.frame
-            .location(sourcemeta::blaze::SchemaReferenceType::Static,
-                      possible_keyword_uri)
-            .value()
-            .get()};
-    const auto &subschema{
-        sourcemeta::core::get(context.root, frame_entry.pointer)};
-    const auto subschema_vocabularies{
-        context.frame.vocabularies(frame_entry, context.resolver)};
 
     if (std::ranges::any_of(
             vocabularies,
             [&subschema_vocabularies](const auto &vocabulary) -> auto {
-              return subschema_vocabularies.contains(vocabulary);
+              return subschema_vocabularies.get().contains(vocabulary);
             }) &&
-        subschema.type() == type) {
-      result.emplace_back(subschema);
+        value->type() == type) {
+      result.emplace_back(*value);
     }
   }
 
@@ -511,8 +505,8 @@ inline auto requires_evaluation(const Context &context,
 
 inline auto requires_evaluation(const Context &context,
                                 const SchemaContext &schema_context) -> bool {
-  const auto &entry{static_frame_entry(context, schema_context)};
-  return requires_evaluation(context, entry.pointer);
+  return requires_evaluation(context,
+                             absolute_schema_pointer(context, schema_context));
 }
 
 inline auto annotations_enabled(const Context &context,

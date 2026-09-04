@@ -14,13 +14,13 @@ RUN compile schema.json --fast STDIN /dev/null IN . INTO result.txt EXPECTING 0
 
 WRITE expected.txt UNTIL EOF
 1> [
-1>   6,
+1>   7,
 1>   false,
 1>   false,
 1>   [
 1>     [
 1>       [
-1>         77,
+1>         78,
 1>         [ "additionalProperties", "type" ],
 1>         [],
 1>         "https://example.com#/additionalProperties/type",

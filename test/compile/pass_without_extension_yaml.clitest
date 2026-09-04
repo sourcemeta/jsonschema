@@ -10,13 +10,13 @@ RUN compile schema STDIN /dev/null IN . INTO result.txt EXPECTING 0
 
 WRITE expected.txt UNTIL EOF
 1> [
-1>   6,
+1>   7,
 1>   false,
 1>   true,
 1>   [
 1>     [
 1>       [
-1>         99,
+1>         100,
 1>         [ "$ref" ],
 1>         [],
 1>         "https://example.com#/$ref",

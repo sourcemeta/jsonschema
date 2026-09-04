@@ -92,7 +92,7 @@ private:
 
 class PositionalArgumentError : public std::runtime_error {
 public:
-  PositionalArgumentError(std::string message, std::string example)
+  PositionalArgumentError(const std::string &message, std::string example)
       : std::runtime_error{message}, example_{std::move(example)} {}
 
   [[nodiscard]] auto example() const noexcept -> const std::string & {
@@ -105,7 +105,8 @@ private:
 
 class InvalidOptionEnumerationValueError : public std::runtime_error {
 public:
-  InvalidOptionEnumerationValueError(std::string message, std::string option,
+  InvalidOptionEnumerationValueError(const std::string &message,
+                                     std::string option,
                                      std::initializer_list<std::string> values)
       : std::runtime_error{message}, option_{std::move(option)},
         values_{values} {}
@@ -156,8 +157,8 @@ private:
 
 class YAMLInputError : public std::runtime_error {
 public:
-  YAMLInputError(std::string message, std::filesystem::path path)
-      : std::runtime_error{std::move(message)}, path_{std::move(path)} {}
+  YAMLInputError(const std::string &message, std::filesystem::path path)
+      : std::runtime_error{message}, path_{std::move(path)} {}
 
   [[nodiscard]] auto path() const noexcept -> const std::filesystem::path & {
     return this->path_;
@@ -169,14 +170,14 @@ private:
 
 class OptionConflictError : public std::runtime_error {
 public:
-  OptionConflictError(std::string message)
-      : std::runtime_error{std::move(message)} {}
+  OptionConflictError(const std::string &message)
+      : std::runtime_error{message} {}
 };
 
 class StdinError : public std::runtime_error {
 public:
-  explicit StdinError(std::string message)
-      : std::runtime_error{std::move(message)} {}
+  explicit StdinError(const std::string &message)
+      : std::runtime_error{message} {}
 };
 
 class InvalidJobsError : public std::runtime_error {
@@ -187,8 +188,8 @@ public:
 
 class InvalidLintRuleError : public std::runtime_error {
 public:
-  InvalidLintRuleError(std::string message, std::string rule)
-      : std::runtime_error{std::move(message)}, rule_{std::move(rule)} {}
+  InvalidLintRuleError(const std::string &message, std::string rule)
+      : std::runtime_error{message}, rule_{std::move(rule)} {}
 
   [[nodiscard]] auto rule() const noexcept -> const std::string & {
     return this->rule_;
@@ -229,9 +230,9 @@ private:
 
 class LintAutoFixError : public std::runtime_error {
 public:
-  LintAutoFixError(std::string message, std::filesystem::path path,
+  LintAutoFixError(const std::string &message, std::filesystem::path path,
                    sourcemeta::core::Pointer location)
-      : std::runtime_error{std::move(message)}, path_{std::move(path)},
+      : std::runtime_error{message}, path_{std::move(path)},
         location_{std::move(location)} {}
 
   [[nodiscard]] auto path() const noexcept -> const std::filesystem::path & {
@@ -279,13 +280,13 @@ private:
 
 class RdfResolutionError : public std::runtime_error {
 public:
-  RdfResolutionError(std::string message, std::string facet,
+  RdfResolutionError(const std::string &message, std::string facet,
                      sourcemeta::core::Pointer instance_location,
                      std::string schema_location,
                      std::optional<std::string> conflicting_schema_location,
                      std::optional<std::string> inert_override_location,
                      std::filesystem::path path)
-      : std::runtime_error{std::move(message)}, facet_{std::move(facet)},
+      : std::runtime_error{message}, facet_{std::move(facet)},
         instance_location_{std::move(instance_location)},
         schema_location_{std::move(schema_location)},
         conflicting_schema_location_{std::move(conflicting_schema_location)},
@@ -447,8 +448,8 @@ private:
 
 class InstallError : public std::runtime_error {
 public:
-  InstallError(std::string message, std::string uri)
-      : std::runtime_error{std::move(message)}, uri_{std::move(uri)} {}
+  InstallError(const std::string &message, std::string uri)
+      : std::runtime_error{message}, uri_{std::move(uri)} {}
 
   [[nodiscard]] auto uri() const noexcept -> const std::string & {
     return this->uri_;
@@ -529,12 +530,13 @@ inline auto stdin_path() -> std::filesystem::path {
   return std::filesystem::path{STDIN_DEFAULT_ID};
 }
 
-inline auto stdin_path_string(const std::filesystem::path &p) -> std::string {
-  if (p == stdin_path()) {
+inline auto stdin_path_string(const std::filesystem::path &path)
+    -> std::string {
+  if (path == stdin_path()) {
     return std::string{STDIN_DEFAULT_ID};
   }
 
-  return sourcemeta::core::weakly_canonical(p).generic_string();
+  return sourcemeta::core::weakly_canonical(path).generic_string();
 }
 
 template <typename Exception>
@@ -560,13 +562,6 @@ inline auto print_exception(const bool is_json, const Exception &exception)
     } else {
       std::cerr << "error: The input was supposed to be a file but it is a "
                    "directory\n";
-    }
-  } else if constexpr (std::is_base_of_v<std::filesystem::filesystem_error,
-                                         Exception>) {
-    if (is_json) {
-      error_json.assign("error", sourcemeta::core::JSON{exception.what()});
-    } else {
-      std::cerr << "error: " << exception.what() << "\n";
     }
   } else {
     if (is_json) {

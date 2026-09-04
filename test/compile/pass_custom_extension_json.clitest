@@ -10,7 +10,7 @@ RUN compile schema.custom STDIN /dev/null IN . INTO result.txt EXPECTING 0
 
 WRITE expected.txt UNTIL EOF
 1> [
-1>   6,
+1>   7,
 1>   false,
 1>   true,
 1>   [

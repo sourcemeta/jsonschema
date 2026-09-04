@@ -35,11 +35,11 @@ auto Encoder::FLOOR_MULTIPLE_ENUM_VARINT(
   assert(options.multiplier > 0);
   assert(sourcemeta::core::abs(value) % options.multiplier == 0);
   if (options.multiplier == 1) {
-    return this->put_varint(
-        static_cast<std::uint64_t>(value - options.minimum));
+    this->put_varint(static_cast<std::uint64_t>(value - options.minimum));
+    return;
   }
 
-  return this->put_varint(
+  this->put_varint(
       (static_cast<std::uint64_t>(value) / options.multiplier) -
       static_cast<std::uint64_t>(sourcemeta::core::divide_ceil(
           options.minimum, static_cast<std::uint64_t>(options.multiplier))));
@@ -54,14 +54,13 @@ auto Encoder::ROOF_MULTIPLE_MIRROR_ENUM_VARINT(
   assert(options.multiplier > 0);
   assert(sourcemeta::core::abs(value) % options.multiplier == 0);
   if (options.multiplier == 1) {
-    return this->put_varint(
-        static_cast<std::uint64_t>(options.maximum - value));
+    this->put_varint(static_cast<std::uint64_t>(options.maximum - value));
+    return;
   }
 
-  return this->put_varint(
-      static_cast<std::uint64_t>(
-          sourcemeta::core::divide_floor(options.maximum, options.multiplier)) -
-      (static_cast<std::uint64_t>(value) / options.multiplier));
+  this->put_varint(static_cast<std::uint64_t>(sourcemeta::core::divide_floor(
+                       options.maximum, options.multiplier)) -
+                   (static_cast<std::uint64_t>(value) / options.multiplier));
 }
 
 auto Encoder::ARBITRARY_MULTIPLE_ZIGZAG_VARINT(
