@@ -1161,8 +1161,11 @@ inline auto try_catch(const sourcemeta::core::Options &options,
     const auto is_json{options.contains("json")};
     print_exception(is_json, error);
     if (!is_json) {
-      std::cerr << "\nDetailed regex error messages are not yet supported\n"
-                   "Try tools like https://regex101.com to debug further\n";
+      std::cerr
+          << "\nRegular expressions in JSON Schema are expected to follow "
+             "ECMA-262,\nexcluding the Annex B extensions that only web "
+             "browsers implement\n"
+             "Try tools like https://regex101.com to debug further\n";
     }
 
     return EXIT_SCHEMA_INPUT_ERROR;
