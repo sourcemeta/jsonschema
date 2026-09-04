@@ -35,29 +35,58 @@ namespace sourcemeta::jsonschema {
 
 static constexpr std::uint8_t HTTP_MAXIMUM_RETRIES{3};
 
+// Keys are canonicalized once, up front, rather than on every lookup, which
+// would make resolution linear in the size of the map for each reference
+static inline auto canonical_resolve_map(
+    const std::unordered_map<std::string, std::string> &resolve_map)
+    -> std::unordered_map<std::string, std::string> {
+  std::unordered_map<std::string, std::string> result;
+  result.reserve(resolve_map.size());
+  for (const auto &entry : resolve_map) {
+    result.emplace(sourcemeta::core::URI::canonicalize(entry.first),
+                   entry.second);
+  }
+
+  return result;
+}
+
 static inline auto find_resolve_match(
     const std::unordered_map<std::string, std::string> &resolve_map,
     const std::string &identifier)
     -> std::unordered_map<std::string, std::string>::const_iterator {
-  auto match{resolve_map.find(identifier)};
-  if (match == resolve_map.cend() && !identifier.ends_with(".json")) {
-    match = resolve_map.find(identifier + ".json");
+  // Comparing canonical URIs lets a key match however the user spelled it.
+  // Canonicalization drops an empty fragment, lowercases the scheme and
+  // resolves dot segments, all per RFC 3986. The `.json` extension is not a URI
+  // concern, so that one alternative is still tried by hand, and only after the
+  // identifier itself, so that a map holding both spellings is unambiguous
+  const auto canonical{sourcemeta::core::URI::canonicalize(identifier)};
+  const auto match{resolve_map.find(canonical)};
+  if (match != resolve_map.cend()) {
+    return match;
   }
-  if (match == resolve_map.cend() && identifier.ends_with(".json")) {
-    match = resolve_map.find(identifier.substr(0, identifier.size() - 5));
+
+  return resolve_map.find(canonical.ends_with(".json")
+                              ? canonical.substr(0, canonical.size() - 5)
+                              : canonical + ".json");
+}
+
+static inline auto
+resolve_map_uri(const std::unordered_map<std::string, std::string> &resolve_map,
+                const std::filesystem::path &base_path,
+                const std::string &identifier) -> std::optional<std::string> {
+  const auto match{find_resolve_match(resolve_map, identifier)};
+  if (match == resolve_map.cend()) {
+    return std::nullopt;
   }
-  return match;
+
+  return resolve_relative_uri(match->second, base_path);
 }
 
 static inline auto
 resolve_map_uri(const sourcemeta::blaze::Configuration &configuration,
                 const std::string &identifier) -> std::optional<std::string> {
-  const auto match{find_resolve_match(configuration.resolve, identifier)};
-  if (match == configuration.resolve.cend()) {
-    return std::nullopt;
-  }
-
-  return resolve_relative_uri(match->second, configuration.base_path);
+  return resolve_map_uri(canonical_resolve_map(configuration.resolve),
+                         configuration.base_path, identifier);
 }
 
 static constexpr std::string_view HTTP_HEADER_EXAMPLE{
@@ -272,7 +301,12 @@ public:
       const sourcemeta::core::Options &options,
       const std::optional<sourcemeta::blaze::Configuration> &configuration,
       const bool remote, const std::string_view default_dialect)
-      : options_{options}, configuration_{configuration}, remote_{remote} {
+      : options_{options}, configuration_{configuration},
+        canonical_resolve_{
+            configuration.has_value()
+                ? canonical_resolve_map(configuration->resolve)
+                : std::unordered_map<std::string, std::string>{}},
+        remote_{remote} {
     if (options.contains("resolve")) {
       const auto entries{for_each_json(options.at("resolve"), options)};
       std::vector<std::size_t> pending;
@@ -420,9 +454,11 @@ public:
       -> sourcemeta::blaze::SchemaResolverResult {
     const std::string string_identifier{identifier};
     const auto mapped_result = this->configuration_.and_then(
-        [&string_identifier](const sourcemeta::blaze::Configuration &config)
+        [this,
+         &string_identifier](const sourcemeta::blaze::Configuration &config)
             -> std::optional<std::string> {
-          return resolve_map_uri(config, string_identifier);
+          return resolve_map_uri(this->canonical_resolve_, config.base_path,
+                                 string_identifier);
         });
     const std::string &target{mapped_result.has_value() ? mapped_result.value()
                                                         : string_identifier};
@@ -546,6 +582,7 @@ private:
       origins_{};
   const sourcemeta::core::Options &options_;
   const std::optional<sourcemeta::blaze::Configuration> configuration_;
+  const std::unordered_map<std::string, std::string> canonical_resolve_;
   bool remote_{false};
 };
 
