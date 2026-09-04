@@ -452,9 +452,9 @@ print_annotations(const sourcemeta::blaze::SimpleOutput &output,
                   std::ostream &stream) -> void {
   if (options.contains("annotations")) {
     for (const auto &annotation : output.annotations()) {
-      stream << "annotation: ";
+      stream << "  annotation: ";
       sourcemeta::core::stringify(annotation.value, stream);
-      stream << "\n  at instance location \"";
+      stream << "\n    at instance location \"";
       sourcemeta::core::stringify(annotation.instance_location, stream);
       stream << "\"";
 
@@ -465,7 +465,7 @@ print_annotations(const sourcemeta::blaze::SimpleOutput &output,
         stream << " (line " << line << ", column " << column << ")";
       }
 
-      stream << "\n  at evaluate path \"";
+      stream << "\n    at evaluate path \"";
       sourcemeta::core::stringify(annotation.evaluate_path, stream);
       stream << "\"\n";
     }

@@ -31,32 +31,32 @@ REPLACE $CWD WITH '[CWD]' IN result_0.txt
 WRITE expected_0.txt UNTIL EOF
 2> ok: [CWD]/instances/instance_1.json
 2>   matches [CWD]/schema.json
-2> annotation: "Test schema"
-2>   at instance location "" (line 1, column 1)
-2>   at evaluate path "/description"
-2> annotation: "Test"
-2>   at instance location "" (line 1, column 1)
-2>   at evaluate path "/title"
-2> annotation: "age"
-2>   at instance location "" (line 1, column 1)
-2>   at evaluate path "/properties"
-2> annotation: "name"
-2>   at instance location "" (line 1, column 1)
-2>   at evaluate path "/properties"
+2>   annotation: "Test schema"
+2>     at instance location "" (line 1, column 1)
+2>     at evaluate path "/description"
+2>   annotation: "Test"
+2>     at instance location "" (line 1, column 1)
+2>     at evaluate path "/title"
+2>   annotation: "age"
+2>     at instance location "" (line 1, column 1)
+2>     at evaluate path "/properties"
+2>   annotation: "name"
+2>     at instance location "" (line 1, column 1)
+2>     at evaluate path "/properties"
 2> ok: [CWD]/instances/instance_2.json
 2>   matches [CWD]/schema.json
-2> annotation: "Test schema"
-2>   at instance location "" (line 1, column 1)
-2>   at evaluate path "/description"
-2> annotation: "Test"
-2>   at instance location "" (line 1, column 1)
-2>   at evaluate path "/title"
-2> annotation: "age"
-2>   at instance location "" (line 1, column 1)
-2>   at evaluate path "/properties"
-2> annotation: "name"
-2>   at instance location "" (line 1, column 1)
-2>   at evaluate path "/properties"
+2>   annotation: "Test schema"
+2>     at instance location "" (line 1, column 1)
+2>     at evaluate path "/description"
+2>   annotation: "Test"
+2>     at instance location "" (line 1, column 1)
+2>     at evaluate path "/title"
+2>   annotation: "age"
+2>     at instance location "" (line 1, column 1)
+2>     at evaluate path "/properties"
+2>   annotation: "name"
+2>     at instance location "" (line 1, column 1)
+2>     at evaluate path "/properties"
 EOF
 
 COMPARE result_0.txt AGAINST expected_0.txt

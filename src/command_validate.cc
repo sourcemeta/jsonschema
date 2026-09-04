@@ -303,20 +303,17 @@ auto sourcemeta::jsonschema::validate(const sourcemeta::core::Options &options)
 
   if (options.contains("annotations") && fast_mode) {
     throw OptionConflictError{
-        "The `--annotations/-a` option cannot be used with `--fast/-f`, as "
-        "fast mode does not collect annotations"};
+        "The `--annotations/-a` option cannot be used with `--fast/-f`"};
   }
 
   if (options.contains("annotations") && benchmark) {
     throw OptionConflictError{
-        "The `--annotations/-a` option cannot be used with `--benchmark/-b`, "
-        "as benchmark mode does not collect annotations"};
+        "The `--annotations/-a` option cannot be used with `--benchmark/-b`"};
   }
 
   if (options.contains("annotations") && trace) {
     throw OptionConflictError{
-        "The `--annotations/-a` option cannot be used with `--trace/-t`, as "
-        "trace output already reports annotations"};
+        "The `--annotations/-a` option cannot be used with `--trace/-t`"};
   }
 
   if (options.contains("entrypoint") && !options.at("entrypoint").empty() &&

@@ -19,7 +19,7 @@ EOF
 RUN validate schema.json instance.json --annotations --fast STDIN /dev/null IN . INTO result_0.txt EXPECTING 5
 
 WRITE expected_0.txt UNTIL EOF
-2> error: The `--annotations/-a` option cannot be used with `--fast/-f`, as fast mode does not collect annotations
+2> error: The `--annotations/-a` option cannot be used with `--fast/-f`
 EOF
 
 COMPARE result_0.txt AGAINST expected_0.txt
