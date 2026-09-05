@@ -13,18 +13,16 @@ WRITE schema.json UNTIL EOF
 }
 EOF
 
-WRITE instances/instance_1.json UNTIL EOF
-{ "foo": "bar" }
-EOF
-
 // Other input error
-RUN validate schema.json instances --ignore instances STDIN /dev/null IN . INTO result_0.txt EXPECTING 6
+RUN validate schema.json instances --json STDIN /dev/null IN . INTO result_0.txt EXPECTING 6
 
 REPLACE $CWD WITH '[CWD]' IN result_0.txt
 
 WRITE expected_0.txt UNTIL EOF
-2> error: No input files found
-2>   at file path [CWD]/instances
+1> {
+1>   "error": "No input files found",
+1>   "filePath": "[CWD]/instances"
+1> }
 EOF
 
 COMPARE result_0.txt AGAINST expected_0.txt

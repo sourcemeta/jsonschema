@@ -15,7 +15,7 @@
 
 #include <algorithm>     // std::any_of, std::none_of, std::sort, std::count
 #include <cstddef>       // std::size_t
-#include <cstdint>       // std::uintptr_t
+#include <cstdint>       // std::uint8_t, std::uintptr_t
 #include <deque>         // std::deque
 #include <filesystem>    // std::filesystem
 #include <functional>    // std::ref, std::hash
@@ -29,6 +29,8 @@
 #include <vector>        // std::vector
 
 namespace sourcemeta::jsonschema {
+
+enum class InputRequirement : std::uint8_t { Optional, NonEmpty };
 
 struct InputJSON {
   std::string first;
@@ -452,7 +454,8 @@ check_no_duplicate_stdin(const std::vector<std::string_view> &arguments)
 }
 
 inline auto for_each_json(const std::vector<std::string_view> &arguments,
-                          const sourcemeta::core::Options &options)
+                          const sourcemeta::core::Options &options,
+                          const InputRequirement requirement)
     -> std::vector<InputJSON> {
   check_no_duplicate_stdin(arguments);
 
@@ -489,6 +492,10 @@ inline auto for_each_json(const std::vector<std::string_view> &arguments,
     const auto extensions{parse_extensions(options, configuration)};
 
     handle_json_entry(scan_path, blacklist, extensions, result, options);
+    if (result.empty() && requirement == InputRequirement::NonEmpty) {
+      throw sourcemeta::core::FileError<NoInputFilesError>(scan_path);
+    }
+
     std::sort(result.begin(), result.end(),
               [](const auto &left, const auto &right) { return left < right; });
   } else {
@@ -529,6 +536,11 @@ inline auto for_each_json(const std::vector<std::string_view> &arguments,
       const auto &extensions{parse_extensions(options, entry_configuration)};
       const auto before{result.size()};
       handle_json_entry(entry, blacklist, extensions, result, options);
+      if (result.size() == before &&
+          requirement == InputRequirement::NonEmpty) {
+        throw sourcemeta::core::FileError<NoInputFilesError>(entry);
+      }
+
       std::sort(
           result.begin() + static_cast<std::ptrdiff_t>(before), result.end(),
           [](const auto &left, const auto &right) { return left < right; });
@@ -538,9 +550,22 @@ inline auto for_each_json(const std::vector<std::string_view> &arguments,
   return result;
 }
 
+inline auto for_each_json(const std::vector<std::string_view> &arguments,
+                          const sourcemeta::core::Options &options)
+    -> std::vector<InputJSON> {
+  return for_each_json(arguments, options, InputRequirement::Optional);
+}
+
+inline auto for_each_json(const sourcemeta::core::Options &options,
+                          const InputRequirement requirement)
+    -> std::vector<InputJSON> {
+  return for_each_json(options.positional(), options, requirement);
+}
+
 inline auto for_each_json(const sourcemeta::core::Options &options)
     -> std::vector<InputJSON> {
-  return for_each_json(options.positional(), options);
+  return for_each_json(options.positional(), options,
+                       InputRequirement::Optional);
 }
 
 } // namespace sourcemeta::jsonschema

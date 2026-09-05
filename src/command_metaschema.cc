@@ -9,7 +9,6 @@
 #include <sourcemeta/blaze/output.h>
 
 #include <cassert>     // assert
-#include <cstddef>     // std::size_t
 #include <iostream>    // std::cout, std::cerr
 #include <map>         // std::map
 #include <sstream>     // std::ostringstream
@@ -57,13 +56,11 @@ auto sourcemeta::jsonschema::metaschema(
   const auto json_output{options.contains("json")};
 
   bool result{true};
-  std::size_t schema_count{0};
   sourcemeta::blaze::Evaluator evaluator;
 
   std::map<std::string, sourcemeta::blaze::Template> cache;
 
-  for (const auto &entry : for_each_json(options)) {
-    schema_count += 1;
+  for (const auto &entry : for_each_json(options, InputRequirement::NonEmpty)) {
     if (!entry.second.is_object() && !entry.second.is_boolean()) {
       throw NotSchemaError{entry.from_stdin ? stdin_path()
                                             : entry.resolution_base};
@@ -197,10 +194,6 @@ auto sourcemeta::jsonschema::metaschema(
           sourcemeta::blaze::SchemaAnchorCollisionError>(entry.resolution_base,
                                                          error);
     }
-  }
-
-  if (schema_count == 0) {
-    throw Fail{EXIT_OTHER_INPUT_ERROR};
   }
 
   if (!result) {
