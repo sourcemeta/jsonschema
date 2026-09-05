@@ -37,9 +37,9 @@ To help scripts distinguish validation errors, these are reported using exit
 code 2.
 
 > [!NOTE]
-> When validating JSONL datasets, the command stops at the first entry that
-> fails validation. Pass `--continue`/`-c` to report all failing entries
-> instead.
+> The command stops at the first instance that fails validation, whether that
+> instance is a file, an entry of a JSONL dataset, or one of many arguments.
+> Pass `--continue`/`-c` to report every failing instance instead.
 
 > [!TIP]
 > GZIP-compressed JSONL datasets (`.jsonl.gz`) are transparently decompressed
@@ -174,16 +174,16 @@ jsonschema validate path/to/my/schema.json path/to/my/dataset.jsonl
 jsonschema validate path/to/my/schema.json path/to/my/dataset.jsonl.gz
 ```
 
-### Validate a JSONL dataset reporting all failures
+### Report every failing instance instead of stopping at the first
 
 ```sh
 jsonschema validate path/to/my/schema.json path/to/my/dataset.jsonl --continue
 ```
 
-Note that even with `--continue`, only the first error of each failing entry is
-reported. Continuing validation past the first error within a single entry is a
-gray area not covered by the JSON Schema specification and potentially tricky to
-implement correctly at the evaluation level.
+Note that even with `--continue`, only the first error of each failing instance
+is reported. Continuing validation past the first error within a single instance
+is a gray area not covered by the JSON Schema specification and potentially
+tricky to implement correctly at the evaluation level.
 
 ### Validate a JSON instance enabling HTTP resolution
 

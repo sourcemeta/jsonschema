@@ -1,0 +1,27 @@
+WRITE schema.json UNTIL EOF
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Test",
+  "description": "Test schema",
+  "type": "string"
+}
+EOF
+
+WRITE instance.jsonl UNTIL EOF
+"Hello World!"
+1
+"Bonjour tout le monde!"
+EOF
+
+// Validation failure
+RUN validate schema.json instance.jsonl --benchmark STDIN /dev/null IN . INTO result_0.txt EXPECTING 2
+
+REPLACE $CWD WITH '[CWD]' IN result_0.txt
+REPLACE MATCHING '[0-9]+\.[0-9]+ \+- [0-9]+\.[0-9]+ us \([0-9]+\.[0-9]+\)' WITH '[TIMING]' IN result_0.txt
+
+WRITE expected_0.txt UNTIL EOF
+1> [CWD]/instance.jsonl[1]: PASS [TIMING]
+1> [CWD]/instance.jsonl[2]: FAIL [TIMING]
+EOF
+
+COMPARE result_0.txt AGAINST expected_0.txt
