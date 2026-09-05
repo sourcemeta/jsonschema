@@ -38,6 +38,11 @@ resolution context, otherwise the validator won't know where to look for them.
 To help scripts distinguish validation errors, these are reported using exit
 code 2.
 
+> [!NOTE]
+> A run that finds no schemas at all exits with code 6, so that a mistyped
+> `--extension`/`-e`, an over-broad `--ignore`/`-i`, or an empty directory fails
+> the build instead of silently succeeding.
+
 Examples
 --------
 

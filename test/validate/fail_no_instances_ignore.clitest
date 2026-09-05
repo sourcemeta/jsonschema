@@ -1,3 +1,5 @@
+MAKE DIRECTORY instances
+
 WRITE schema.json UNTIL EOF
 {
   "$schema": "http://json-schema.org/draft-04/schema#",
@@ -11,13 +13,14 @@ WRITE schema.json UNTIL EOF
 }
 EOF
 
-WRITE instance.jsonl UNTIL EOF
+WRITE instances/instance_1.json UNTIL EOF
+{ "foo": "bar" }
 EOF
 
-RUN validate schema.json instance.jsonl STDIN /dev/null IN . INTO result_0.txt EXPECTING 0
+// Other input error
+RUN validate schema.json instances --ignore instances STDIN /dev/null IN . INTO result_0.txt EXPECTING 6
 
 WRITE expected_0.txt UNTIL EOF
-2> warning: The JSONL file is empty
 EOF
 
 COMPARE result_0.txt AGAINST expected_0.txt

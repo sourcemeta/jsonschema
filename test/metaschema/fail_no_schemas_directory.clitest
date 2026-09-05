@@ -1,0 +1,9 @@
+MAKE DIRECTORY schemas
+
+// Other input error
+RUN metaschema schemas STDIN /dev/null IN . INTO result_0.txt EXPECTING 6
+
+WRITE expected_0.txt UNTIL EOF
+EOF
+
+COMPARE result_0.txt AGAINST expected_0.txt

@@ -37,6 +37,11 @@ To help scripts distinguish validation errors, these are reported using exit
 code 2.
 
 > [!NOTE]
+> A run that finds no instances at all exits with code 6, so that a mistyped
+> `--extension`/`-e`, an over-broad `--ignore`/`-i`, an empty directory, or an
+> empty JSONL dataset fails the build instead of silently succeeding.
+
+> [!NOTE]
 > The command stops at the first instance that fails validation, whether that
 > instance is a file, an entry of a JSONL dataset, or one of many arguments.
 > Pass `--continue`/`-c` to report every failing instance instead.
