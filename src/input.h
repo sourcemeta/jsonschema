@@ -536,14 +536,14 @@ inline auto for_each_json(const std::vector<std::string_view> &arguments,
       const auto &extensions{parse_extensions(options, entry_configuration)};
       const auto before{result.size()};
       handle_json_entry(entry, blacklist, extensions, result, options);
-      if (result.size() == before &&
-          requirement == InputRequirement::NonEmpty) {
-        throw sourcemeta::core::FileError<NoInputFilesError>(entry);
-      }
-
       std::sort(
           result.begin() + static_cast<std::ptrdiff_t>(before), result.end(),
           [](const auto &left, const auto &right) { return left < right; });
+    }
+
+    if (result.empty() && requirement == InputRequirement::NonEmpty) {
+      throw sourcemeta::core::FileError<NoInputFilesError>(
+          std::filesystem::path{arguments.front()});
     }
   }
 

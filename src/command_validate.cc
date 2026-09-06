@@ -11,6 +11,7 @@
 
 #include <chrono>      // std::chrono
 #include <cmath>       // std::sqrt
+#include <cstddef>     // std::size_t
 #include <iostream>    // std::cerr
 #include <string>      // std::string
 #include <string_view> // std::string_view
@@ -378,6 +379,7 @@ auto sourcemeta::jsonschema::validate(const sourcemeta::core::Options &options)
     }
   } else {
     bool proceed{true};
+    std::size_t instance_count{0};
     for (const auto &instance_path_view : instance_arguments) {
       const std::filesystem::path instance_path{instance_path_view};
       if (trace && (instance_path.extension() == ".jsonl" ||
@@ -404,8 +406,8 @@ auto sourcemeta::jsonschema::validate(const sourcemeta::core::Options &options)
           instance_path.string().ends_with(".jsonl.gz") ||
           instance_path.extension() == ".yaml" ||
           instance_path.extension() == ".yml") {
-        for (const auto &entry : for_each_json({instance_path_view}, options,
-                                               InputRequirement::NonEmpty)) {
+        for (const auto &entry : for_each_json({instance_path_view}, options)) {
+          instance_count += 1;
           if (!process_entry(entry, evaluator, schema_template, benchmark,
                              benchmark_loop, trace, fast_mode, json_output,
                              continue_on_error, schema_resolution_base, options,
@@ -428,6 +430,7 @@ auto sourcemeta::jsonschema::validate(const sourcemeta::core::Options &options)
           }
           return sourcemeta::core::read_yaml_or_json(instance_path);
         }()};
+        instance_count += 1;
         sourcemeta::blaze::SimpleOutput output{instance};
         sourcemeta::blaze::TraceOutput trace_output{
             schema_template, trace_callback(tracker, std::cout)};
@@ -488,6 +491,11 @@ auto sourcemeta::jsonschema::validate(const sourcemeta::core::Options &options)
       if (!proceed) {
         break;
       }
+    }
+
+    if (instance_count == 0) {
+      throw sourcemeta::core::FileError<NoInputFilesError>(
+          std::filesystem::path{instance_arguments.front()});
     }
   }
 
