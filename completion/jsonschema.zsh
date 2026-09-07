@@ -68,6 +68,7 @@ _jsonschema() {
             '(--extension -e)'{--extension,-e}'[Specify file extension]:extension:_jsonschema_extensions' \
             '(--ignore -i)'{--ignore,-i}'[Ignore schemas or directories]:path:_files' \
             '(--trace -t)'{--trace,-t}'[Enable trace output]' \
+            '(--continue -c)'{--continue,-c}'[Report every failing schema]' \
             '*:schema file:_files -g "*.json *.yaml *.yml"'
           ;;
         compile)

@@ -9,7 +9,7 @@ jsonschema metaschema [schemas-or-directories...]
   [--http/-h] [--verbose/-v] [--debug/-g] [--extension/-e <extension>]
   [--header/-H "<name>: <value>"]
   [--resolve/-r <schemas-or-directories> ...]
-  [--ignore/-i <schemas-or-directories>] [--trace/-t]
+  [--ignore/-i <schemas-or-directories>] [--trace/-t] [--continue/-c]
   [--default-dialect/-d <uri>] [--json/-j] [--format-assertion/-F]
   [--configuration/-C <path>]
 ```
