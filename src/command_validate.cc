@@ -512,6 +512,11 @@ auto sourcemeta::jsonschema::validate(const sourcemeta::core::Options &options)
     print_summary(summary, options, std::cerr);
   }
 
+  if (summary.stopped) {
+    LOG_WARNING()
+        << "Stopped at first failure, pass --continue/-c to keep going\n";
+  }
+
   if (summary.failed > 0) {
     throw Fail{EXIT_EXPECTED_FAILURE};
   }
