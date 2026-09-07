@@ -20,7 +20,7 @@ RUN validate - instance.json --resolve defs.json --verbose STDIN stdin_0 IN . IN
 REPLACE $CWD WITH '[CWD]' IN result.txt
 
 WRITE expected.txt UNTIL EOF
-2> ok: [CWD]/instance.json
+2> ok: instance.json
 2>   matches tag:sourcemeta.com,2026:jsonschema/stdin
 2>
 2> 1 validated, 1 passed, 0 failed

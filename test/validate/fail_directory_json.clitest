@@ -54,8 +54,8 @@ WRITE expected_0.txt UNTIL EOF
 1>     }
 1>   ]
 1> }
-2> [CWD]/instances/instance_1.json
-2> [CWD]/instances/instance_2.json
+2> instances/instance_1.json
+2> instances/instance_2.json
 EOF
 
 COMPARE result_0.txt AGAINST expected_0.txt

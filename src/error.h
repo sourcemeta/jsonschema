@@ -544,6 +544,28 @@ inline auto stdin_path_string(const std::filesystem::path &path)
   return sourcemeta::core::weakly_canonical(path).generic_string();
 }
 
+// Per instance output names paths the way the user did, while error output
+// keeps canonicalising through `stdin_path_string`
+inline auto relative_path_string(const std::filesystem::path &path)
+    -> std::string {
+  if (path == stdin_path()) {
+    return std::string{STDIN_DEFAULT_ID};
+  }
+
+  // Going through `sourcemeta::core::weakly_canonical` rather than
+  // `std::filesystem::relative` keeps the FIFO and FUSE guards that the
+  // standard one lacks, leaving only a lexical comparison to do
+  const auto canonical{sourcemeta::core::weakly_canonical(path)};
+  const auto base{
+      sourcemeta::core::weakly_canonical(std::filesystem::current_path())};
+  const auto result{canonical.lexically_relative(base)};
+  if (result.empty()) {
+    return canonical.generic_string();
+  }
+
+  return result.generic_string();
+}
+
 template <typename Exception>
 inline auto print_exception(const bool is_json, const Exception &exception)
     -> void {

@@ -35,12 +35,12 @@ EOF
 
 bindfs --no-allow-other "$TMP" "$FUSE_MOUNT"
 
-"$1" validate --verbose "$FUSE_MOUNT/level1/level2/level3/schema.json" \
-  "$FUSE_MOUNT/instance.json" > "$TMP/output.txt" 2>&1
+( cd "$FUSE_MOUNT" && "$1" validate --verbose \
+  level1/level2/level3/schema.json instance.json ) > "$TMP/output.txt" 2>&1
 
-cat << EOF > "$TMP/expected.txt"
-ok: $(realpath "$FUSE_MOUNT")/instance.json
-  matches $(realpath "$FUSE_MOUNT")/level1/level2/level3/schema.json
+cat << 'EOF' > "$TMP/expected.txt"
+ok: instance.json
+  matches level1/level2/level3/schema.json
 
 1 validated, 1 passed, 0 failed
 EOF

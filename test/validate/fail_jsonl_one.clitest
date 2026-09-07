@@ -19,7 +19,7 @@ RUN validate schema.json instance.jsonl STDIN /dev/null IN . INTO result_0.txt E
 REPLACE $CWD WITH '[CWD]' IN result_0.txt
 
 WRITE expected_0.txt UNTIL EOF
-2> fail: [CWD]/instance.jsonl (entry #2)
+2> fail: instance.jsonl (entry #2)
 2>
 2> [
 2>   {

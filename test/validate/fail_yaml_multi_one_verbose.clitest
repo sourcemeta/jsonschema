@@ -23,9 +23,9 @@ REPLACE $CWD WITH '[CWD]' IN result_0.txt
 
 WRITE expected_0.txt UNTIL EOF
 2> Interpreting input as YAML multi-document: [CWD]/instance.yaml
-2> ok: [CWD]/instance.yaml (entry #1)
-2>   matches [CWD]/schema.json
-2> fail: [CWD]/instance.yaml (entry #2)
+2> ok: instance.yaml (entry #1)
+2>   matches schema.json
+2> fail: instance.yaml (entry #2)
 2>
 2> [
 2>   {

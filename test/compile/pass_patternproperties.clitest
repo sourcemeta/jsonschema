@@ -40,7 +40,7 @@ RUN validate --template template.json schema.json instance_invalid.json STDIN /d
 REPLACE $CWD WITH '[CWD]' IN validated_invalid.txt
 
 WRITE expected_invalid.txt UNTIL EOF
-2> fail: [CWD]/instance_invalid.json
+2> fail: instance_invalid.json
 2> error: Schema validation failure
 2>   The value was expected to be of type string but it was of type integer
 2>     at instance location "/foo-bar" (line 1, column 3)

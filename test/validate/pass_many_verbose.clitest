@@ -28,12 +28,12 @@ RUN validate schema.json instance_1.json instance_2.json instance_3.json --verbo
 REPLACE $CWD WITH '[CWD]' IN result_0.txt
 
 WRITE expected_0.txt UNTIL EOF
-2> ok: [CWD]/instance_1.json
-2>   matches [CWD]/schema.json
-2> ok: [CWD]/instance_2.json
-2>   matches [CWD]/schema.json
-2> ok: [CWD]/instance_3.json
-2>   matches [CWD]/schema.json
+2> ok: instance_1.json
+2>   matches schema.json
+2> ok: instance_2.json
+2>   matches schema.json
+2> ok: instance_3.json
+2>   matches schema.json
 2>
 2> 3 validated, 3 passed, 0 failed
 EOF

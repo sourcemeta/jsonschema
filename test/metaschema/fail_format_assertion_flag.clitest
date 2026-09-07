@@ -12,7 +12,7 @@ RUN metaschema schema.json --format-assertion STDIN /dev/null IN . INTO result.t
 REPLACE $CWD WITH '[CWD]' IN result.txt
 
 WRITE expected.txt UNTIL EOF
-2> fail: [CWD]/schema.json
+2> fail: schema.json
 2> error: Schema validation failure
 2>   The string value "has spaces in it" was expected to represent a valid URI reference
 2>     at instance location "/$dynamicRef" (line 3, column 3)

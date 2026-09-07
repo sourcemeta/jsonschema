@@ -30,9 +30,9 @@ RUN validate schema.json instance_1.json instance_2.json instance_3.json --conti
 REPLACE $CWD WITH '[CWD]' IN result_0.txt
 
 WRITE expected_0.txt UNTIL EOF
-2> ok: [CWD]/instance_1.json
-2>   matches [CWD]/schema.json
-2> fail: [CWD]/instance_2.json
+2> ok: instance_1.json
+2>   matches schema.json
+2> fail: instance_2.json
 2> error: Schema validation failure
 2>   The value was expected to be of type string but it was of type integer
 2>     at instance location "/foo" (line 1, column 3)
@@ -40,8 +40,8 @@ WRITE expected_0.txt UNTIL EOF
 2>   The object value was expected to validate against the single defined property subschema
 2>     at instance location "" (line 1, column 1)
 2>     at evaluate path "/properties"
-2> ok: [CWD]/instance_3.json
-2>   matches [CWD]/schema.json
+2> ok: instance_3.json
+2>   matches schema.json
 2>
 2> 3 validated, 2 passed, 1 failed
 EOF

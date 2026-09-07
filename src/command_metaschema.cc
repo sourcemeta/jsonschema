@@ -119,7 +119,7 @@ auto sourcemeta::jsonschema::metaschema(
       } else if (json_output) {
         // Otherwise its impossible to correlate the output
         // when validating i.e. a directory of schemas
-        std::cerr << entry.first << "\n";
+        std::cerr << relative_path_string(entry.resolution_base) << "\n";
         const auto output{sourcemeta::blaze::standard(
             evaluator, cache.at(std::string{dialect}), entry.second,
             sourcemeta::blaze::StandardOutput::Basic, entry.positions)};
@@ -137,9 +137,11 @@ auto sourcemeta::jsonschema::metaschema(
         if (evaluator.validate(cache.at(std::string{dialect}), entry.second,
                                std::ref(output))) {
           LOG_VERBOSE(options)
-              << "ok: " << entry.first << "\n  matches " << dialect << "\n";
+              << "ok: " << relative_path_string(entry.resolution_base)
+              << "\n  matches " << dialect << "\n";
         } else {
-          std::cerr << "fail: " << entry.first << "\n";
+          std::cerr << "fail: " << relative_path_string(entry.resolution_base)
+                    << "\n";
           print(output, entry.positions, std::cerr);
           summary.failed += 1;
         }

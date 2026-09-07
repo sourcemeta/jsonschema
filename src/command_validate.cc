@@ -154,11 +154,12 @@ auto process_entry(const sourcemeta::jsonschema::InputJSON &entry,
   bool subresult{true};
   summary.validated += 1;
   if (benchmark) {
-    subresult = run_loop(evaluator, schema_template, entry.second, entry.first,
-                         entry.multidocument
-                             ? static_cast<std::int64_t>(entry.index + 1)
-                             : static_cast<std::int64_t>(-1),
-                         benchmark_loop);
+    subresult = run_loop(
+        evaluator, schema_template, entry.second,
+        sourcemeta::jsonschema::relative_path_string(entry.resolution_base),
+        entry.multidocument ? static_cast<std::int64_t>(entry.index + 1)
+                            : static_cast<std::int64_t>(-1),
+        benchmark_loop);
     if (!subresult) {
       summary.failed += 1;
     }
@@ -182,7 +183,9 @@ auto process_entry(const sourcemeta::jsonschema::InputJSON &entry,
     }
   } else if (json_output) {
     if (!entry.multidocument) {
-      std::cerr << entry.first << "\n";
+      std::cerr << sourcemeta::jsonschema::relative_path_string(
+                       entry.resolution_base)
+                << "\n";
     }
     const auto suboutput{sourcemeta::blaze::standard(
         evaluator, schema_template, entry.second,
@@ -204,20 +207,24 @@ auto process_entry(const sourcemeta::jsonschema::InputJSON &entry,
     if (continue_on_error && entry.multidocument && summary.failed > 0) {
       sourcemeta::jsonschema::LOG_VERBOSE(options) << "\n";
     }
-    sourcemeta::jsonschema::LOG_VERBOSE(options) << "ok: " << entry.first;
+    sourcemeta::jsonschema::LOG_VERBOSE(options)
+        << "ok: "
+        << sourcemeta::jsonschema::relative_path_string(entry.resolution_base);
     if (entry.multidocument) {
       sourcemeta::jsonschema::LOG_VERBOSE(options)
           << " (entry #" << entry.index + 1 << ")";
     }
     sourcemeta::jsonschema::LOG_VERBOSE(options)
         << "\n  matches "
-        << sourcemeta::jsonschema::stdin_path_string(schema_resolution_base)
+        << sourcemeta::jsonschema::relative_path_string(schema_resolution_base)
         << "\n";
   } else {
     if (continue_on_error && entry.multidocument && summary.failed > 0) {
       std::cerr << "\n";
     }
-    std::cerr << "fail: " << entry.first;
+    std::cerr << "fail: "
+              << sourcemeta::jsonschema::relative_path_string(
+                     entry.resolution_base);
     if (entry.multidocument) {
       std::cerr << " (entry #" << entry.index + 1 << ")\n\n";
       sourcemeta::core::prettify(entry.second, std::cerr);
@@ -443,7 +450,7 @@ auto sourcemeta::jsonschema::validate(const sourcemeta::core::Options &options)
         bool subresult{true};
         if (benchmark) {
           subresult = run_loop(evaluator, schema_template, instance,
-                               instance_path.generic_string(),
+                               relative_path_string(instance_path),
                                static_cast<std::int64_t>(-1), benchmark_loop);
         } else if (trace) {
           subresult = evaluator.validate(schema_template, instance,
@@ -477,16 +484,10 @@ auto sourcemeta::jsonschema::validate(const sourcemeta::core::Options &options)
           std::cout << "\n";
         } else if (subresult) {
           LOG_VERBOSE(options)
-              << "ok: "
-              << sourcemeta::core::weakly_canonical(instance_path)
-                     .generic_string()
-              << "\n  matches " << stdin_path_string(schema_resolution_base)
-              << "\n";
+              << "ok: " << relative_path_string(instance_path) << "\n  matches "
+              << relative_path_string(schema_resolution_base) << "\n";
         } else {
-          std::cerr << "fail: "
-                    << sourcemeta::core::weakly_canonical(instance_path)
-                           .generic_string()
-                    << "\n";
+          std::cerr << "fail: " << relative_path_string(instance_path) << "\n";
           print(output, tracker, std::cerr);
           summary.failed += 1;
           proceed = continue_on_error;

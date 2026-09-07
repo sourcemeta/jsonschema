@@ -24,7 +24,7 @@ REPLACE MATCHING '[0-9]+\.[0-9]+ \+- [0-9]+\.[0-9]+ us \([0-9]+\.[0-9]+\)' WITH 
 
 WRITE expected_0.txt UNTIL EOF
 1> instance.json: FAIL [TIMING]
-2> fail: [CWD]/instance.json
+2> fail: instance.json
 2> error: Schema validation failure
 EOF
 

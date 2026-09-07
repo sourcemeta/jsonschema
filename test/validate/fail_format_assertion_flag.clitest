@@ -16,7 +16,7 @@ RUN validate schema.json instance.json --format-assertion STDIN /dev/null IN . I
 REPLACE $CWD WITH '[CWD]' IN result_0.txt
 
 WRITE expected_0.txt UNTIL EOF
-2> fail: [CWD]/instance.json
+2> fail: instance.json
 2> error: Schema validation failure
 2>   The string value "not-an-email" was expected to represent a valid email address
 2>     at instance location "" (line 1, column 1)

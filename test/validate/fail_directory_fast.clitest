@@ -28,7 +28,7 @@ RUN validate schema.json instances --fast STDIN /dev/null IN . INTO result_0.txt
 REPLACE $CWD WITH '[CWD]' IN result_0.txt
 
 WRITE expected_0.txt UNTIL EOF
-2> fail: [CWD]/instances/instance_2.json
+2> fail: instances/instance_2.json
 2> error: Schema validation failure
 2>
 2> 2 validated, 1 passed, 1 failed

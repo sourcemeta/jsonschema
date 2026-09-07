@@ -30,7 +30,7 @@ RUN validate schema.json instance_1.json instance_2.json instance_3.json STDIN /
 REPLACE $CWD WITH '[CWD]' IN result_0.txt
 
 WRITE expected_0.txt UNTIL EOF
-2> fail: [CWD]/instance_2.json
+2> fail: instance_2.json
 2> error: Schema validation failure
 2>   The value was expected to be of type string but it was of type integer
 2>     at instance location "/foo" (line 1, column 3)

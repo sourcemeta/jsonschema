@@ -31,9 +31,9 @@ REPLACE $CWD WITH '[CWD]' IN result.txt
 
 WRITE expected.txt UNTIL EOF
 2> warning: Matching files with no extension
-2> ok: [CWD]/schemas/schema1
+2> ok: schemas/schema1
 2>   matches http://json-schema.org/draft-04/schema#
-2> ok: [CWD]/schemas/schema2
+2> ok: schemas/schema2
 2>   matches http://json-schema.org/draft-04/schema#
 2>
 2> 2 validated, 2 passed, 0 failed

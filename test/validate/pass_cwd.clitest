@@ -26,12 +26,12 @@ REPLACE $CWD WITH '[CWD]' IN result.txt
 
 WRITE expected.txt UNTIL EOF
 2> warning: Recursively processing every file in [CWD] as no input was provided
-2> ok: [CWD]/instance_1.json
-2>   matches [CWD]/schema.json
-2> ok: [CWD]/instance_2.json
-2>   matches [CWD]/schema.json
-2> ok: [CWD]/schema.json
-2>   matches [CWD]/schema.json
+2> ok: instance_1.json
+2>   matches schema.json
+2> ok: instance_2.json
+2>   matches schema.json
+2> ok: schema.json
+2>   matches schema.json
 2>
 2> 3 validated, 3 passed, 0 failed
 EOF
