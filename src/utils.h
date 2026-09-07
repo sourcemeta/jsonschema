@@ -449,6 +449,7 @@ inline auto print(const Entries &output,
 struct ValidationSummary {
   std::size_t validated{0};
   std::size_t failed{0};
+  bool stopped{false};
 };
 
 inline auto print_summary(const ValidationSummary &summary,

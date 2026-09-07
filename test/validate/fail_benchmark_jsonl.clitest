@@ -22,6 +22,7 @@ REPLACE MATCHING '[0-9]+\.[0-9]+ \+- [0-9]+\.[0-9]+ us \([0-9]+\.[0-9]+\)' WITH 
 WRITE expected_0.txt UNTIL EOF
 1> [CWD]/instance.jsonl[1]: PASS [TIMING]
 1> [CWD]/instance.jsonl[2]: FAIL [TIMING]
+2> warning: Stopped at first failure, pass --continue/-c to keep going
 EOF
 
 COMPARE result_0.txt AGAINST expected_0.txt

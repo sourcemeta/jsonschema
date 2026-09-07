@@ -12,6 +12,7 @@
 #include <chrono>      // std::chrono
 #include <cmath>       // std::sqrt
 #include <iostream>    // std::cerr
+#include <iterator>    // std::next
 #include <string>      // std::string
 #include <string_view> // std::string_view
 
@@ -370,18 +371,21 @@ auto sourcemeta::jsonschema::validate(const sourcemeta::core::Options &options)
                                 "given a single instance"};
     }
 
-    for (const auto &entry :
-         for_each_json({}, options, InputRequirement::NonEmpty)) {
-      if (!process_entry(entry, evaluator, schema_template, benchmark,
+    const auto entries{for_each_json({}, options, InputRequirement::NonEmpty)};
+    for (auto entry{entries.cbegin()}; entry != entries.cend(); ++entry) {
+      if (!process_entry(*entry, evaluator, schema_template, benchmark,
                          benchmark_loop, trace, fast_mode, json_output,
                          continue_on_error, schema_resolution_base, options,
                          summary)) {
+        summary.stopped = std::next(entry) != entries.cend();
         break;
       }
     }
   } else {
     bool proceed{true};
-    for (const auto &instance_path_view : instance_arguments) {
+    for (auto argument{instance_arguments.cbegin()};
+         argument != instance_arguments.cend(); ++argument) {
+      const auto &instance_path_view{*argument};
       const std::filesystem::path instance_path{instance_path_view};
       if (trace && (instance_path.extension() == ".jsonl" ||
                     instance_path.string().ends_with(".jsonl.gz"))) {
@@ -407,11 +411,13 @@ auto sourcemeta::jsonschema::validate(const sourcemeta::core::Options &options)
           instance_path.string().ends_with(".jsonl.gz") ||
           instance_path.extension() == ".yaml" ||
           instance_path.extension() == ".yml") {
-        for (const auto &entry : for_each_json({instance_path_view}, options)) {
-          if (!process_entry(entry, evaluator, schema_template, benchmark,
+        const auto entries{for_each_json({instance_path_view}, options)};
+        for (auto entry{entries.cbegin()}; entry != entries.cend(); ++entry) {
+          if (!process_entry(*entry, evaluator, schema_template, benchmark,
                              benchmark_loop, trace, fast_mode, json_output,
                              continue_on_error, schema_resolution_base, options,
                              summary)) {
+            summary.stopped = std::next(entry) != entries.cend();
             proceed = false;
             break;
           }
@@ -488,6 +494,10 @@ auto sourcemeta::jsonschema::validate(const sourcemeta::core::Options &options)
       }
 
       if (!proceed) {
+        if (std::next(argument) != instance_arguments.cend()) {
+          summary.stopped = true;
+        }
+
         break;
       }
     }
@@ -500,6 +510,11 @@ auto sourcemeta::jsonschema::validate(const sourcemeta::core::Options &options)
 
   if (!json_output && !trace && !benchmark) {
     print_summary(summary, options, std::cerr);
+  }
+
+  if (summary.stopped) {
+    LOG_WARNING()
+        << "Stopped at first failure, pass --continue/-c to keep going\n";
   }
 
   if (summary.failed > 0) {

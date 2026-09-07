@@ -33,6 +33,7 @@ WRITE expected_0.txt UNTIL EOF
 2>     at evaluate path "/type"
 2>
 2> 2 validated, 1 passed, 1 failed
+2> warning: Stopped at first failure, pass --continue/-c to keep going
 EOF
 
 COMPARE result_0.txt AGAINST expected_0.txt

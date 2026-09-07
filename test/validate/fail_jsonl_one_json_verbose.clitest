@@ -35,6 +35,7 @@ WRITE expected_0.txt UNTIL EOF
 1>   ]
 1> }
 2> Interpreting input as JSONL: [CWD]/instance.jsonl
+2> warning: Stopped at first failure, pass --continue/-c to keep going
 EOF
 
 COMPARE result_0.txt AGAINST expected_0.txt
