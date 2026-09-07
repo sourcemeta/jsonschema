@@ -68,8 +68,6 @@ CHECKSUM SHA256 project/vendor/b.json AS HASH_B
 
 COPY project/jsonschema.lock.json TO checked_lock.json
 REPLACE $CWD_URI WITH '[CWD_URI]' IN checked_lock.json
-REPLACE $CWD WITH '[CWD]' IN checked_lock.json
-
 WRITE expected_lock.json UNTIL EOF
 {
   "version": 1,
@@ -106,8 +104,6 @@ REPLACE '[CWD_URI]' WITH $CWD_URI IN project/jsonschema.json
 RUN install STDIN /dev/null IN project INTO result_1.txt EXPECTING 0
 
 REPLACE $CWD_URI WITH '[CWD_URI]' IN result_1.txt
-REPLACE $CWD WITH '[CWD]' IN result_1.txt
-
 WRITE expected_1.txt UNTIL EOF
 2> Up to date     : [CWD_URI]/source/a.json
 2> Orphaned       : [CWD_URI]/source/b.json
@@ -127,8 +123,6 @@ COMPARE project/vendor/a.json AGAINST expected_a.json
 
 COPY project/jsonschema.lock.json TO checked_lock_after.json
 REPLACE $CWD_URI WITH '[CWD_URI]' IN checked_lock_after.json
-REPLACE $CWD WITH '[CWD]' IN checked_lock_after.json
-
 WRITE expected_lock_after.json UNTIL EOF
 {
   "version": 1,

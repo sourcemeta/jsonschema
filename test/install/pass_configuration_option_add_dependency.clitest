@@ -26,8 +26,6 @@ COMPARE result_0.txt AGAINST expected_0.txt
 
 COPY project/jsonschema.ci.json TO checked_config.json
 REPLACE $CWD_URI WITH '[CWD_URI]' IN checked_config.json
-REPLACE $CWD WITH '[CWD]' IN checked_config.json
-
 WRITE expected_config.json UNTIL EOF
 {
   "dependencies": {
@@ -42,8 +40,6 @@ CHECKSUM SHA256 project/vendor/user.json AS HASH
 
 COPY project/jsonschema.lock.json TO checked_lock.json
 REPLACE $CWD_URI WITH '[CWD_URI]' IN checked_lock.json
-REPLACE $CWD WITH '[CWD]' IN checked_lock.json
-
 WRITE expected_lock.json UNTIL EOF
 {
   "version": 1,

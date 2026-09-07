@@ -55,8 +55,6 @@ COMPARE result_1.txt AGAINST expected_1.txt
 RUN rdf schema.json instance.json --format-assertion --json STDIN /dev/null IN . INTO result_2.txt EXPECTING 2
 
 REPLACE $CWD_URI WITH '[CWD_URI]' IN result_2.txt
-REPLACE $CWD WITH '[CWD]' IN result_2.txt
-
 WRITE expected_2.txt UNTIL EOF
 1> {
 1>   "valid": false,

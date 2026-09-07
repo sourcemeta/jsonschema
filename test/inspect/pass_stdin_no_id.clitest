@@ -7,8 +7,6 @@ EOF
 
 RUN inspect - STDIN input.json IN . INTO result.txt EXPECTING 0
 
-REPLACE $CWD WITH '[CWD]' IN result.txt
-
 WRITE expected.txt UNTIL EOF
 1> (RESOURCE) URI: tag:sourcemeta.com,2026:jsonschema/stdin
 1>     Type              : Static

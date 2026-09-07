@@ -26,8 +26,6 @@ EOF
 
 RUN validate schema.json instances --extension '' --verbose STDIN /dev/null IN . INTO result_0.txt EXPECTING 0
 
-REPLACE $CWD WITH '[CWD]' IN result_0.txt
-
 WRITE expected_0.txt UNTIL EOF
 2> warning: Matching files with no extension
 2> ok: instances/instance1

@@ -32,8 +32,6 @@ EOF
 
 RUN validate $CWD/schema.json $CWD/instance.json --resolve $CWD/remote.json --verbose STDIN /dev/null IN . INTO result_0.txt EXPECTING 0
 
-REPLACE $CWD WITH '[CWD]' IN result_0.txt
-
 WRITE expected_0.txt UNTIL EOF
 2> Using extension: .json
 2> Using extension: .yaml

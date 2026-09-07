@@ -37,8 +37,6 @@ COMPARE validated.txt AGAINST expected.txt
 // Validation failure
 RUN validate --template template.json schema.json instance_invalid.json STDIN /dev/null IN . INTO validated_invalid.txt EXPECTING 2
 
-REPLACE $CWD WITH '[CWD]' IN validated_invalid.txt
-
 WRITE expected_invalid.txt UNTIL EOF
 2> fail: instance_invalid.json
 2> error: Schema validation failure
@@ -58,8 +56,6 @@ COMPARE validated_invalid.txt AGAINST expected_invalid.txt
 RUN validate --template template.json schema.json instance_invalid.json --json STDIN /dev/null IN . INTO validated_invalid_json.txt EXPECTING 2
 
 REPLACE $CWD_URI WITH '[CWD_URI]' IN validated_invalid_json.txt
-REPLACE $CWD WITH '[CWD]' IN validated_invalid_json.txt
-
 WRITE expected_invalid_json.txt UNTIL EOF
 1> {
 1>   "valid": false,

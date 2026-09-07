@@ -20,8 +20,6 @@ EOF
 RUN inspect schema.json STDIN /dev/null IN . INTO result.txt EXPECTING 0
 
 REPLACE $CWD_URI WITH '[CWD_URI]' IN result.txt
-REPLACE $CWD WITH '[CWD]' IN result.txt
-
 WRITE expected.txt UNTIL EOF
 1> (RESOURCE) URI: https://example.com/x
 1>     Type              : Static

@@ -19,8 +19,6 @@ EOF
 
 RUN validate schema.json instance1.json - instance2.json --verbose STDIN stdin_input IN . INTO result_0.txt EXPECTING 0
 
-REPLACE $CWD WITH '[CWD]' IN result_0.txt
-
 WRITE expected_0.txt UNTIL EOF
 2> ok: instance1.json
 2>   matches schema.json

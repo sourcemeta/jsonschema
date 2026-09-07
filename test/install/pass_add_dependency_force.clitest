@@ -55,8 +55,6 @@ COMPARE result_1.txt AGAINST expected_1.txt
 
 COPY project/jsonschema.json TO checked_config.json
 REPLACE $CWD_URI WITH '[CWD_URI]' IN checked_config.json
-REPLACE $CWD WITH '[CWD]' IN checked_config.json
-
 WRITE expected_config.json UNTIL EOF
 {
   "dependencies": {
@@ -70,8 +68,6 @@ COMPARE checked_config.json AGAINST expected_config.json
 
 COPY project/vendor/user.json TO checked_user.json
 REPLACE $CWD_URI WITH '[CWD_URI]' IN checked_user.json
-REPLACE $CWD WITH '[CWD]' IN checked_user.json
-
 WRITE expected_user.json UNTIL EOF
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
@@ -84,8 +80,6 @@ COMPARE checked_user.json AGAINST expected_user.json
 
 COPY project/vendor/product.json TO checked_product.json
 REPLACE $CWD_URI WITH '[CWD_URI]' IN checked_product.json
-REPLACE $CWD WITH '[CWD]' IN checked_product.json
-
 WRITE expected_product.json UNTIL EOF
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
@@ -101,8 +95,6 @@ CHECKSUM SHA256 project/vendor/user.json AS HASH_USER
 
 COPY project/jsonschema.lock.json TO checked_lock.json
 REPLACE $CWD_URI WITH '[CWD_URI]' IN checked_lock.json
-REPLACE $CWD WITH '[CWD]' IN checked_lock.json
-
 WRITE expected_lock.json UNTIL EOF
 {
   "version": 1,

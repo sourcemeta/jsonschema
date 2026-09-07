@@ -12,8 +12,6 @@ EOF
 RUN bundle schema.json --http STDIN /dev/null IN . INTO result_0.txt EXPECTING 0
 
 REPLACE $CWD_URI WITH '[CWD_URI]' IN result_0.txt
-REPLACE $CWD WITH '[CWD]' IN result_0.txt
-
 WRITE expected_0.txt UNTIL EOF
 1> {
 1>   "$schema": "http://json-schema.org/draft-07/schema#",

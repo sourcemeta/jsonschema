@@ -68,8 +68,6 @@ EOF
 
 RUN validate schema.json instance.json --resolve good --verbose STDIN /dev/null IN . INTO result_0.txt EXPECTING 0
 
-REPLACE $CWD WITH '[CWD]' IN result_0.txt
-
 WRITE expected_0.txt UNTIL EOF
 2> ok: instance.json
 2>   matches schema.json
@@ -80,8 +78,6 @@ EOF
 COMPARE result_0.txt AGAINST expected_0.txt
 
 RUN validate schema.json instance.json --resolve bad --verbose STDIN /dev/null IN . INTO result_1.txt EXPECTING 0
-
-REPLACE $CWD WITH '[CWD]' IN result_1.txt
 
 WRITE expected_1.txt UNTIL EOF
 2> ok: instance.json

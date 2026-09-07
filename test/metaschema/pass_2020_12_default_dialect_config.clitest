@@ -17,8 +17,6 @@ EOF
 
 RUN metaschema --verbose $CWD/schema.json STDIN /dev/null IN . INTO result.txt EXPECTING 0
 
-REPLACE $CWD WITH '[CWD]' IN result.txt
-
 WRITE expected.txt UNTIL EOF
 2> Using extension: .json
 2> Using extension: .yaml

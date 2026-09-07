@@ -545,18 +545,17 @@ inline auto stdin_path_string(const std::filesystem::path &path)
 }
 
 // Per instance output names paths the way the user did, while error output
-// keeps canonicalising through `stdin_path_string`
-inline auto relative_path_string(const std::filesystem::path &path)
+// keeps canonicalising through `stdin_path_string`. The input must already be
+// canonical, so that this stays a lexical comparison that we can afford to do
+// once per instance
+inline auto relative_path_string(const std::filesystem::path &canonical)
     -> std::string {
-  if (path == stdin_path()) {
+  if (canonical == stdin_path()) {
     return std::string{STDIN_DEFAULT_ID};
   }
 
-  // Going through `sourcemeta::core::weakly_canonical` rather than
-  // `std::filesystem::relative` keeps the FIFO and FUSE guards that the
-  // standard one lacks, leaving only a lexical comparison to do
-  const auto canonical{sourcemeta::core::weakly_canonical(path)};
-  const auto base{
+  // The working directory cannot change while a command runs
+  static const auto base{
       sourcemeta::core::weakly_canonical(std::filesystem::current_path())};
   const auto result{canonical.lexically_relative(base)};
   if (result.empty()) {

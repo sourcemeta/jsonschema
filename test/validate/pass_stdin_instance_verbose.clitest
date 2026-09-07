@@ -17,8 +17,6 @@ EOF
 
 RUN validate schema.json - --verbose STDIN stdin_input IN . INTO result_0.txt EXPECTING 0
 
-REPLACE $CWD WITH '[CWD]' IN result_0.txt
-
 WRITE expected_0.txt UNTIL EOF
 2> ok: tag:sourcemeta.com,2026:jsonschema/stdin
 2>   matches schema.json

@@ -22,8 +22,6 @@ RUN bundle schema.json --resolve nested.json STDIN /dev/null IN . INTO result.tx
 EXTRACT STDOUT FROM result.txt INTO bundled.json
 
 REPLACE $CWD_URI WITH '[CWD_URI]' IN result.txt
-REPLACE $CWD WITH '[CWD]' IN result.txt
-
 WRITE expected_0.txt UNTIL EOF
 1> {
 1>   "$schema": "https://json-schema.org/draft/2020-12/schema",

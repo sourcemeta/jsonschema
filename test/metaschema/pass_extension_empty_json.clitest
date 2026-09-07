@@ -27,8 +27,6 @@ EOF
 
 RUN metaschema schemas --extension '' --verbose STDIN /dev/null IN . INTO result.txt EXPECTING 0
 
-REPLACE $CWD WITH '[CWD]' IN result.txt
-
 WRITE expected.txt UNTIL EOF
 2> warning: Matching files with no extension
 2> ok: schemas/schema1

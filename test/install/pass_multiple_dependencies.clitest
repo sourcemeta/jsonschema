@@ -43,8 +43,6 @@ COMPARE result_0.txt AGAINST expected_0.txt
 
 COPY project/vendor/alpha.json TO checked_alpha.json
 REPLACE $CWD_URI WITH '[CWD_URI]' IN checked_alpha.json
-REPLACE $CWD WITH '[CWD]' IN checked_alpha.json
-
 WRITE expected_alpha.json UNTIL EOF
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
@@ -57,8 +55,6 @@ COMPARE checked_alpha.json AGAINST expected_alpha.json
 
 COPY project/vendor/beta.json TO checked_beta.json
 REPLACE $CWD_URI WITH '[CWD_URI]' IN checked_beta.json
-REPLACE $CWD WITH '[CWD]' IN checked_beta.json
-
 WRITE expected_beta.json UNTIL EOF
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
@@ -74,8 +70,6 @@ CHECKSUM SHA256 project/vendor/beta.json AS HASH_BETA
 
 COPY project/jsonschema.lock.json TO checked_lock.json
 REPLACE $CWD_URI WITH '[CWD_URI]' IN checked_lock.json
-REPLACE $CWD WITH '[CWD]' IN checked_lock.json
-
 WRITE expected_lock.json UNTIL EOF
 {
   "version": 1,

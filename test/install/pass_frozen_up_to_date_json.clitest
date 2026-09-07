@@ -26,8 +26,6 @@ COPY project/jsonschema.lock.json TO lock_before.json
 RUN install --frozen --json STDIN /dev/null IN project INTO result_1.txt EXPECTING 0
 
 REPLACE $CWD_URI WITH '[CWD_URI]' IN result_1.txt
-REPLACE $CWD WITH '[CWD]' IN result_1.txt
-
 WRITE expected_1.txt UNTIL EOF
 1> {
 1>   "events": [

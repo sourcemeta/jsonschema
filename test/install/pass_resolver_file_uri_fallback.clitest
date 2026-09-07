@@ -52,8 +52,6 @@ COMPARE result_0.txt AGAINST expected_0.txt
 
 COPY project/vendor/meta.json TO checked_meta.json
 REPLACE $CWD_URI WITH '[CWD_URI]' IN checked_meta.json
-REPLACE $CWD WITH '[CWD]' IN checked_meta.json
-
 WRITE expected_meta.json UNTIL EOF
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
@@ -70,8 +68,6 @@ COMPARE checked_meta.json AGAINST expected_meta.json
 
 COPY project/vendor/a.json TO checked_a.json
 REPLACE $CWD_URI WITH '[CWD_URI]' IN checked_a.json
-REPLACE $CWD WITH '[CWD]' IN checked_a.json
-
 WRITE expected_a.json UNTIL EOF
 {
   "$schema": "[CWD_URI]/source/metaschema.json",
@@ -98,8 +94,6 @@ CHECKSUM SHA256 project/vendor/meta.json AS HASH_META
 
 COPY project/jsonschema.lock.json TO checked_lock.json
 REPLACE $CWD_URI WITH '[CWD_URI]' IN checked_lock.json
-REPLACE $CWD WITH '[CWD]' IN checked_lock.json
-
 WRITE expected_lock.json UNTIL EOF
 {
   "version": 1,

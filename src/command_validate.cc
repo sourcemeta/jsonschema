@@ -144,7 +144,7 @@ auto process_entry(const sourcemeta::jsonschema::InputJSON &entry,
                    const sourcemeta::blaze::Template &schema_template,
                    bool benchmark, std::uint64_t benchmark_loop, bool trace,
                    bool fast_mode, bool json_output, bool continue_on_error,
-                   const std::filesystem::path &schema_resolution_base,
+                   const std::filesystem::path &schema_display_path,
                    const sourcemeta::core::Options &options,
                    sourcemeta::jsonschema::ValidationSummary &summary) -> bool {
   sourcemeta::blaze::SimpleOutput output{entry.second};
@@ -216,7 +216,7 @@ auto process_entry(const sourcemeta::jsonschema::InputJSON &entry,
     }
     sourcemeta::jsonschema::LOG_VERBOSE(options)
         << "\n  matches "
-        << sourcemeta::jsonschema::relative_path_string(schema_resolution_base)
+        << sourcemeta::jsonschema::relative_path_string(schema_display_path)
         << "\n";
   } else {
     if (continue_on_error && entry.multidocument && summary.failed > 0) {
@@ -270,6 +270,10 @@ auto sourcemeta::jsonschema::validate(const sourcemeta::core::Options &options)
                                     : std::filesystem::path(schema_path)};
   const auto schema_resolution_base{
       schema_from_stdin ? stdin_path() : std::filesystem::path(schema_path)};
+  const auto schema_display_path{
+      schema_from_stdin
+          ? stdin_path()
+          : sourcemeta::core::weakly_canonical(schema_resolution_base)};
 
   const auto configuration_path{
       find_configuration(options, schema_config_base)};
@@ -382,7 +386,7 @@ auto sourcemeta::jsonschema::validate(const sourcemeta::core::Options &options)
     for (auto entry{entries.cbegin()}; entry != entries.cend(); ++entry) {
       if (!process_entry(*entry, evaluator, schema_template, benchmark,
                          benchmark_loop, trace, fast_mode, json_output,
-                         continue_on_error, schema_resolution_base, options,
+                         continue_on_error, schema_display_path, options,
                          summary)) {
         summary.stopped = std::next(entry) != entries.cend();
         break;
@@ -422,7 +426,7 @@ auto sourcemeta::jsonschema::validate(const sourcemeta::core::Options &options)
         for (auto entry{entries.cbegin()}; entry != entries.cend(); ++entry) {
           if (!process_entry(*entry, evaluator, schema_template, benchmark,
                              benchmark_loop, trace, fast_mode, json_output,
-                             continue_on_error, schema_resolution_base, options,
+                             continue_on_error, schema_display_path, options,
                              summary)) {
             summary.stopped = std::next(entry) != entries.cend();
             proceed = false;
@@ -430,6 +434,8 @@ auto sourcemeta::jsonschema::validate(const sourcemeta::core::Options &options)
           }
         }
       } else {
+        const auto instance_display_path{
+            sourcemeta::core::weakly_canonical(instance_path)};
         sourcemeta::core::PointerPositionTracker tracker;
         auto property_storage = std::make_shared<std::deque<std::string>>();
         const bool track_positions{(!fast_mode && !benchmark) || trace};
@@ -450,7 +456,7 @@ auto sourcemeta::jsonschema::validate(const sourcemeta::core::Options &options)
         bool subresult{true};
         if (benchmark) {
           subresult = run_loop(evaluator, schema_template, instance,
-                               relative_path_string(instance_path),
+                               relative_path_string(instance_display_path),
                                static_cast<std::int64_t>(-1), benchmark_loop);
         } else if (trace) {
           subresult = evaluator.validate(schema_template, instance,
@@ -484,10 +490,12 @@ auto sourcemeta::jsonschema::validate(const sourcemeta::core::Options &options)
           std::cout << "\n";
         } else if (subresult) {
           LOG_VERBOSE(options)
-              << "ok: " << relative_path_string(instance_path) << "\n  matches "
-              << relative_path_string(schema_resolution_base) << "\n";
+              << "ok: " << relative_path_string(instance_display_path)
+              << "\n  matches " << relative_path_string(schema_display_path)
+              << "\n";
         } else {
-          std::cerr << "fail: " << relative_path_string(instance_path) << "\n";
+          std::cerr << "fail: " << relative_path_string(instance_display_path)
+                    << "\n";
           print(output, tracker, std::cerr);
           summary.failed += 1;
           proceed = continue_on_error;

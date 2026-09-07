@@ -53,8 +53,6 @@ EOF
 
 RUN validate schema.json instance.json --resolve foo.json --resolve schemas --verbose STDIN /dev/null IN . INTO result_0.txt EXPECTING 0
 
-REPLACE $CWD WITH '[CWD]' IN result_0.txt
-
 WRITE expected_0.txt UNTIL EOF
 2> ok: instance.json
 2>   matches schema.json
