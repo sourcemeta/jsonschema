@@ -53,7 +53,7 @@ WRITE expected.txt UNTIL EOF
 1>
 1>    metaschema [schemas-or-directories...] [--extension/-e <extension>]
 1>               [--ignore/-i <schemas-or-directories>] [--trace/-t]
-1>               [--format-assertion/-F] [--continue/-c]
+1>               [--continue/-c] [--format-assertion/-F]
 1>
 1>        Validate that a schema or a set of schemas are valid with respect
 1>        to their metaschemas.

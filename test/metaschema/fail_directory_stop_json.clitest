@@ -1,0 +1,44 @@
+MAKE DIRECTORY schemas
+
+WRITE schemas/schema_1.json UNTIL EOF
+{
+  "$schema": "http://json-schema.org/draft-04/schema#",
+  "minimum": "foo"
+}
+EOF
+
+WRITE schemas/schema_2.json UNTIL EOF
+{
+  "$schema": "http://json-schema.org/draft-04/schema#",
+  "minimum": 1
+}
+EOF
+
+// Validation failure
+RUN metaschema schemas --json STDIN /dev/null IN . INTO result_0.txt EXPECTING 2
+
+WRITE expected_0.txt UNTIL EOF
+1> {
+1>   "valid": false,
+1>   "errors": [
+1>     {
+1>       "keywordLocation": "/properties/minimum/type",
+1>       "absoluteKeywordLocation": "http://json-schema.org/draft-04/schema#/properties/minimum/type",
+1>       "instanceLocation": "/minimum",
+1>       "instancePosition": [ 3, 3, 3, 18 ],
+1>       "error": "The value was expected to be of type number but it was of type string"
+1>     },
+1>     {
+1>       "keywordLocation": "/properties",
+1>       "absoluteKeywordLocation": "http://json-schema.org/draft-04/schema#/properties",
+1>       "instanceLocation": "",
+1>       "instancePosition": [ 1, 1, 4, 1 ],
+1>       "error": "The object value was expected to validate against the 33 defined properties subschemas"
+1>     }
+1>   ]
+1> }
+2> schemas/schema_1.json
+2> warning: Stopped at first failure, pass --continue/-c to keep going
+EOF
+
+COMPARE result_0.txt AGAINST expected_0.txt

@@ -60,7 +60,7 @@ Commands:
 
    metaschema [schemas-or-directories...] [--extension/-e <extension>]
               [--ignore/-i <schemas-or-directories>] [--trace/-t]
-              [--format-assertion/-F] [--continue/-c]
+              [--continue/-c] [--format-assertion/-F]
 
        Validate that a schema or a set of schemas are valid with respect
        to their metaschemas.
