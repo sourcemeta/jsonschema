@@ -15,6 +15,7 @@
 
 #include "error.h"
 #include "input.h"
+#include "logger.h"
 
 #include <algorithm>   // std::max, std::ranges::all_of
 #include <cctype>      // std::isdigit
@@ -449,6 +450,7 @@ inline auto print(const Entries &output,
 struct ValidationSummary {
   std::size_t validated{0};
   std::size_t failed{0};
+  bool stopped{false};
 };
 
 inline auto print_summary(const ValidationSummary &summary,
@@ -462,6 +464,11 @@ inline auto print_summary(const ValidationSummary &summary,
   stream << summary.validated << " validated, "
          << (summary.validated - summary.failed) << " passed, "
          << summary.failed << " failed\n";
+
+  if (summary.stopped) {
+    LOG_WARNING()
+        << "Stopped at first failure, pass --continue/-c to keep going\n";
+  }
 }
 
 inline auto
