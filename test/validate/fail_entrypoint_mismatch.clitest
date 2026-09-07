@@ -27,6 +27,8 @@ WRITE expected_0.txt UNTIL EOF
 2>   The integer value -5 was expected to be greater than or equal to the integer 1
 2>     at instance location "" (line 1, column 1)
 2>     at evaluate path "/minimum"
+2>
+2> 1 validated, 0 passed, 1 failed
 EOF
 
 COMPARE result_0.txt AGAINST expected_0.txt

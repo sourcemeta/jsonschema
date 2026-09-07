@@ -55,12 +55,13 @@ auto sourcemeta::jsonschema::metaschema(
   const auto trace{options.contains("trace")};
   const auto json_output{options.contains("json")};
 
-  bool result{true};
+  ValidationSummary summary;
   sourcemeta::blaze::Evaluator evaluator;
 
   std::map<std::string, sourcemeta::blaze::Template> cache;
 
   for (const auto &entry : for_each_json(options, InputRequirement::NonEmpty)) {
+    summary.validated += 1;
     if (!entry.second.is_object() && !entry.second.is_boolean()) {
       throw NotSchemaError{entry.from_stdin ? stdin_path()
                                             : entry.resolution_base};
@@ -111,8 +112,10 @@ auto sourcemeta::jsonschema::metaschema(
         sourcemeta::blaze::TraceOutput output{
             cache.at(std::string{dialect}),
             trace_callback(entry.positions, std::cout)};
-        result = evaluator.validate(cache.at(std::string{dialect}),
-                                    entry.second, std::ref(output));
+        if (!evaluator.validate(cache.at(std::string{dialect}), entry.second,
+                                std::ref(output))) {
+          summary.failed += 1;
+        }
       } else if (json_output) {
         // Otherwise its impossible to correlate the output
         // when validating i.e. a directory of schemas
@@ -124,7 +127,7 @@ auto sourcemeta::jsonschema::metaschema(
         assert(output.defines("valid"));
         assert(output.at("valid").is_boolean());
         if (!output.at("valid").to_boolean()) {
-          result = false;
+          summary.failed += 1;
         }
 
         sourcemeta::core::prettify(output, std::cout);
@@ -138,7 +141,7 @@ auto sourcemeta::jsonschema::metaschema(
         } else {
           std::cerr << "fail: " << entry.first << "\n";
           print(output, entry.positions, std::cerr);
-          result = false;
+          summary.failed += 1;
         }
       }
     } catch (const sourcemeta::blaze::SchemaKeywordError &error) {
@@ -196,7 +199,11 @@ auto sourcemeta::jsonschema::metaschema(
     }
   }
 
-  if (!result) {
+  if (!json_output && !trace) {
+    print_summary(summary, options, std::cerr);
+  }
+
+  if (summary.failed > 0) {
     throw Fail{EXIT_EXPECTED_FAILURE};
   }
 }

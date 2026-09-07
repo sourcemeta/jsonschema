@@ -32,6 +32,8 @@ WRITE expected.txt UNTIL EOF
 2>   matches [CWD]/schema.json
 2> ok: [CWD]/schema.json
 2>   matches [CWD]/schema.json
+2>
+2> 3 validated, 3 passed, 0 failed
 EOF
 
 COMPARE result.txt AGAINST expected.txt

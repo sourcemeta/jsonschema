@@ -40,6 +40,8 @@ WRITE expected_0.txt UNTIL EOF
 2>   The value was expected to be of type object but it was of type integer
 2>     at instance location ""
 2>     at evaluate path "/type"
+2>
+2> 3 validated, 1 passed, 2 failed
 EOF
 
 COMPARE result_0.txt AGAINST expected_0.txt

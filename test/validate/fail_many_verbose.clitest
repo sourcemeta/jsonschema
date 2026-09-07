@@ -40,6 +40,8 @@ WRITE expected_0.txt UNTIL EOF
 2>   The object value was expected to validate against the single defined property subschema
 2>     at instance location "" (line 1, column 1)
 2>     at evaluate path "/properties"
+2>
+2> 2 validated, 1 passed, 1 failed
 EOF
 
 COMPARE result_0.txt AGAINST expected_0.txt

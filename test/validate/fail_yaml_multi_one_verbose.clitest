@@ -37,6 +37,8 @@ WRITE expected_0.txt UNTIL EOF
 2>   The value was expected to be of type object but it was of type array
 2>     at instance location "" (line 4, column 1)
 2>     at evaluate path "/type"
+2>
+2> 2 validated, 1 passed, 1 failed
 EOF
 
 COMPARE result_0.txt AGAINST expected_0.txt

@@ -18,6 +18,7 @@
 
 #include <algorithm>   // std::max, std::ranges::all_of
 #include <cctype>      // std::isdigit
+#include <cstddef>     // std::size_t
 #include <filesystem>  // std::filesystem::path
 #include <memory>      // std::make_shared
 #include <optional>    // std::optional
@@ -443,6 +444,24 @@ inline auto print(const Entries &output,
     sourcemeta::core::stringify(entry.evaluate_path, stream);
     stream << "\"\n";
   }
+}
+
+struct ValidationSummary {
+  std::size_t validated{0};
+  std::size_t failed{0};
+};
+
+inline auto print_summary(const ValidationSummary &summary,
+                          const sourcemeta::core::Options &options,
+                          std::ostream &stream) -> void {
+  if (summary.failed > 0 || options.contains("verbose") ||
+      options.contains("debug")) {
+    stream << "\n";
+  }
+
+  stream << summary.validated << " validated, "
+         << (summary.validated - summary.failed) << " passed, "
+         << summary.failed << " failed\n";
 }
 
 inline auto

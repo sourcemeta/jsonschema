@@ -37,6 +37,8 @@ WRITE expected_0.txt UNTIL EOF
 2>
 2> ok: [CWD]/instance.jsonl (entry #3)
 2>   matches [CWD]/schema.json
+2>
+2> 3 validated, 2 passed, 1 failed
 EOF
 
 COMPARE result_0.txt AGAINST expected_0.txt

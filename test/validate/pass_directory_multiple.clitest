@@ -35,6 +35,7 @@ EOF
 RUN validate schema.json dir1 dir2 STDIN /dev/null IN . INTO result_0.txt EXPECTING 0
 
 WRITE expected_0.txt UNTIL EOF
+2> 4 validated, 4 passed, 0 failed
 EOF
 
 COMPARE result_0.txt AGAINST expected_0.txt
