@@ -21,7 +21,7 @@ EOF
 RUN validate schema.json instances --benchmark STDIN /dev/null IN . INTO result_0.txt EXPECTING 5
 
 WRITE expected_0.txt UNTIL EOF
-2> error: The `--benchmark/-b` option is only allowed given a single instance
+2> error: The `--benchmark/-b` option is only allowed given a single file
 EOF
 
 COMPARE result_0.txt AGAINST expected_0.txt
@@ -31,7 +31,7 @@ RUN validate schema.json instances --benchmark --json STDIN /dev/null IN . INTO 
 
 WRITE expected_1.txt UNTIL EOF
 1> {
-1>   "error": "The `--benchmark/-b` option is only allowed given a single instance"
+1>   "error": "The `--benchmark/-b` option is only allowed given a single file"
 1> }
 EOF
 

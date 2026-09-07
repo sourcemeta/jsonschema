@@ -39,6 +39,11 @@ resolution context, otherwise the validator won't know where to look for them.
 To help scripts distinguish validation errors, these are reported using exit
 code 2.
 
+> [!NOTE]
+> The `--trace`/`-t` option is only allowed given a single schema, as the trace
+> output carries no per schema header that would tell you which schema a line
+> belongs to.
+
 Examples
 --------
 

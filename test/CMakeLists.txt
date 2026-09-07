@@ -374,6 +374,8 @@ add_jsonschema_test(validate/pass_bundled_metaschema)
 # Metaschema
 add_jsonschema_test(metaschema/pass_trace)
 add_jsonschema_test(metaschema/fail_trace)
+add_jsonschema_test(metaschema/fail_trace_directory)
+add_jsonschema_test(metaschema/fail_trace_multiple)
 add_jsonschema_test(metaschema/fail_directory)
 add_jsonschema_test(metaschema/fail_directory_stop)
 add_jsonschema_test(metaschema/fail_directory_stop_json)

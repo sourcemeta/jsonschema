@@ -40,6 +40,9 @@ WRITE expected.txt UNTIL EOF
 1>
 1>        Validate one or more instances against the given schema.
 1>
+1>        The --trace/-t option is only allowed given a single instance, and
+1>        --benchmark/-b given a single file, which may be a JSONL dataset.
+1>
 1>        By default, schemas are validated in exhaustive mode, which results in
 1>        better error messages, at the expense of speed. The --fast/-f option
 1>        makes the schema compiler optimise for speed, at the expense of error
@@ -56,7 +59,8 @@ WRITE expected.txt UNTIL EOF
 1>               [--continue/-c] [--format-assertion/-F]
 1>
 1>        Validate that a schema or a set of schemas are valid with respect
-1>        to their metaschemas.
+1>        to their metaschemas. The --trace/-t option is only allowed given a
+1>        single schema.
 1>
 1>    compile <schema.json|.yaml> [--extension/-e <extension>]
 1>            [--ignore/-i <schemas-or-directories>] [--fast/-f] [--minify/-m]
