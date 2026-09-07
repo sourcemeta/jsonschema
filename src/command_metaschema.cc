@@ -63,6 +63,14 @@ auto sourcemeta::jsonschema::metaschema(
   std::map<std::string, sourcemeta::blaze::Template> cache;
 
   const auto entries{for_each_json(options, InputRequirement::NonEmpty)};
+
+  // Trace output carries no per schema header, so more than one schema would
+  // produce an unattributable stream of interleaved evaluation steps
+  if (trace && entries.size() > 1) {
+    throw OptionConflictError{
+        "The `--trace/-t` option is only allowed given a single schema"};
+  }
+
   for (auto iterator{entries.cbegin()}; iterator != entries.cend();
        ++iterator) {
     const auto &entry{*iterator};
