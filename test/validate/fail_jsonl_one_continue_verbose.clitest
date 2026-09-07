@@ -21,7 +21,6 @@ REPLACE $CWD WITH '[CWD]' IN result_0.txt
 WRITE expected_0.txt UNTIL EOF
 2> Interpreting input as JSONL: [CWD]/instance.jsonl
 2> ok: instance.jsonl (entry #1)
-2>   matches schema.json
 2> fail: instance.jsonl (entry #2)
 2>
 2> [
@@ -36,7 +35,6 @@ WRITE expected_0.txt UNTIL EOF
 2>     at evaluate path "/type"
 2>
 2> ok: instance.jsonl (entry #3)
-2>   matches schema.json
 2>
 2> 3 validated, 2 passed, 1 failed
 EOF

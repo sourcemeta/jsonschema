@@ -29,7 +29,6 @@ RUN validate schema.json instance_1.json instance_2.json instance_3.json --conti
 
 WRITE expected_0.txt UNTIL EOF
 2> ok: instance_1.json
-2>   matches schema.json
 2> fail: instance_2.json
 2> error: Schema validation failure
 2>   The value was expected to be of type string but it was of type integer
@@ -39,7 +38,6 @@ WRITE expected_0.txt UNTIL EOF
 2>     at instance location "" (line 1, column 1)
 2>     at evaluate path "/properties"
 2> ok: instance_3.json
-2>   matches schema.json
 2>
 2> 3 validated, 2 passed, 1 failed
 EOF

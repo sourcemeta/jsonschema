@@ -40,7 +40,6 @@ bindfs --no-allow-other "$TMP" "$FUSE_MOUNT"
 
 cat << 'EOF' > "$TMP/expected.txt"
 ok: instance.json
-  matches level1/level2/level3/schema.json
 
 1 validated, 1 passed, 0 failed
 EOF

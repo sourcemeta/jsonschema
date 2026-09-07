@@ -144,7 +144,6 @@ auto process_entry(const sourcemeta::jsonschema::InputJSON &entry,
                    const sourcemeta::blaze::Template &schema_template,
                    bool benchmark, std::uint64_t benchmark_loop, bool trace,
                    bool fast_mode, bool json_output, bool continue_on_error,
-                   const std::filesystem::path &schema_display_path,
                    const sourcemeta::core::Options &options,
                    sourcemeta::jsonschema::ValidationSummary &summary) -> bool {
   sourcemeta::blaze::SimpleOutput output{entry.second};
@@ -214,10 +213,7 @@ auto process_entry(const sourcemeta::jsonschema::InputJSON &entry,
       sourcemeta::jsonschema::LOG_VERBOSE(options)
           << " (entry #" << entry.index + 1 << ")";
     }
-    sourcemeta::jsonschema::LOG_VERBOSE(options)
-        << "\n  matches "
-        << sourcemeta::jsonschema::relative_path_string(schema_display_path)
-        << "\n";
+    sourcemeta::jsonschema::LOG_VERBOSE(options) << "\n";
   } else {
     if (continue_on_error && entry.multidocument && summary.failed > 0) {
       std::cerr << "\n";
@@ -270,10 +266,6 @@ auto sourcemeta::jsonschema::validate(const sourcemeta::core::Options &options)
                                     : std::filesystem::path(schema_path)};
   const auto schema_resolution_base{
       schema_from_stdin ? stdin_path() : std::filesystem::path(schema_path)};
-  const auto schema_display_path{
-      schema_from_stdin
-          ? stdin_path()
-          : sourcemeta::core::weakly_canonical(schema_resolution_base)};
 
   const auto configuration_path{
       find_configuration(options, schema_config_base)};
@@ -386,8 +378,7 @@ auto sourcemeta::jsonschema::validate(const sourcemeta::core::Options &options)
     for (auto entry{entries.cbegin()}; entry != entries.cend(); ++entry) {
       if (!process_entry(*entry, evaluator, schema_template, benchmark,
                          benchmark_loop, trace, fast_mode, json_output,
-                         continue_on_error, schema_display_path, options,
-                         summary)) {
+                         continue_on_error, options, summary)) {
         summary.stopped = std::next(entry) != entries.cend();
         break;
       }
@@ -426,8 +417,7 @@ auto sourcemeta::jsonschema::validate(const sourcemeta::core::Options &options)
         for (auto entry{entries.cbegin()}; entry != entries.cend(); ++entry) {
           if (!process_entry(*entry, evaluator, schema_template, benchmark,
                              benchmark_loop, trace, fast_mode, json_output,
-                             continue_on_error, schema_display_path, options,
-                             summary)) {
+                             continue_on_error, options, summary)) {
             summary.stopped = std::next(entry) != entries.cend();
             proceed = false;
             break;
@@ -490,9 +480,7 @@ auto sourcemeta::jsonschema::validate(const sourcemeta::core::Options &options)
           std::cout << "\n";
         } else if (subresult) {
           LOG_VERBOSE(options)
-              << "ok: " << relative_path_string(instance_display_path)
-              << "\n  matches " << relative_path_string(schema_display_path)
-              << "\n";
+              << "ok: " << relative_path_string(instance_display_path) << "\n";
         } else {
           std::cerr << "fail: " << relative_path_string(instance_display_path)
                     << "\n";

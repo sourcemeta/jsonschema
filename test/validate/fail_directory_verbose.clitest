@@ -30,7 +30,6 @@ RUN validate schema.json instances --verbose STDIN /dev/null IN . INTO result_0.
 
 WRITE expected_0.txt UNTIL EOF
 2> ok: instances/instance_1.json
-2>   matches schema.json
 2> fail: instances/nested/instance_2.json
 2> error: Schema validation failure
 2>   The value was expected to be of type integer but it was of type string
