@@ -1,0 +1,15 @@
+MAKE DIRECTORY schemas
+
+// Other input error
+RUN metaschema schemas --json STDIN /dev/null IN . INTO result_0.txt EXPECTING 6
+
+REPLACE $CWD WITH '[CWD]' IN result_0.txt
+
+WRITE expected_0.txt UNTIL EOF
+1> {
+1>   "error": "No input files found",
+1>   "filePath": "[CWD]/schemas"
+1> }
+EOF
+
+COMPARE result_0.txt AGAINST expected_0.txt

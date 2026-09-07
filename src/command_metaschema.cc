@@ -60,7 +60,7 @@ auto sourcemeta::jsonschema::metaschema(
 
   std::map<std::string, sourcemeta::blaze::Template> cache;
 
-  for (const auto &entry : for_each_json(options)) {
+  for (const auto &entry : for_each_json(options, InputRequirement::NonEmpty)) {
     if (!entry.second.is_object() && !entry.second.is_boolean()) {
       throw NotSchemaError{entry.from_stdin ? stdin_path()
                                             : entry.resolution_base};

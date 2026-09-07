@@ -1,3 +1,5 @@
+MAKE DIRECTORY instances
+
 WRITE schema.json UNTIL EOF
 {
   "$schema": "http://json-schema.org/draft-04/schema#",
@@ -11,18 +13,16 @@ WRITE schema.json UNTIL EOF
 }
 EOF
 
-WRITE instance.jsonl UNTIL EOF
-
-EOF
-
-COMPRESS GZIP instance.jsonl INTO instance.jsonl.gz
-
-RUN validate schema.json instance.jsonl.gz STDIN /dev/null IN . INTO result_0.txt EXPECTING 0
+// Other input error
+RUN validate schema.json instances --json STDIN /dev/null IN . INTO result_0.txt EXPECTING 6
 
 REPLACE $CWD WITH '[CWD]' IN result_0.txt
 
 WRITE expected_0.txt UNTIL EOF
-2> warning: The JSONL file is empty
+1> {
+1>   "error": "No input files found",
+1>   "filePath": "[CWD]/instances"
+1> }
 EOF
 
 COMPARE result_0.txt AGAINST expected_0.txt

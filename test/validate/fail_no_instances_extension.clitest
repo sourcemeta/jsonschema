@@ -1,0 +1,30 @@
+MAKE DIRECTORY instances
+
+WRITE schema.json UNTIL EOF
+{
+  "$schema": "http://json-schema.org/draft-04/schema#",
+  "title": "Test",
+  "description": "Test schema",
+  "properties": {
+    "foo": {
+      "type": "string"
+    }
+  }
+}
+EOF
+
+WRITE instances/instance_1.json UNTIL EOF
+{ "foo": "bar" }
+EOF
+
+// Other input error
+RUN validate schema.json instances --extension .yaml STDIN /dev/null IN . INTO result_0.txt EXPECTING 6
+
+REPLACE $CWD WITH '[CWD]' IN result_0.txt
+
+WRITE expected_0.txt UNTIL EOF
+2> error: No input files found
+2>   at file path [CWD]/instances
+EOF
+
+COMPARE result_0.txt AGAINST expected_0.txt

@@ -180,6 +180,11 @@ public:
       : std::runtime_error{message} {}
 };
 
+class NoInputFilesError : public std::runtime_error {
+public:
+  NoInputFilesError() : std::runtime_error{"No input files found"} {}
+};
+
 class InvalidJobsError : public std::runtime_error {
 public:
   InvalidJobsError()
@@ -987,6 +992,10 @@ inline auto try_catch(const sourcemeta::core::Options &options,
     print_exception(is_json, error);
     return EXIT_OTHER_INPUT_ERROR;
   } catch (const LockParseError &error) {
+    const auto is_json{options.contains("json")};
+    print_exception(is_json, error);
+    return EXIT_OTHER_INPUT_ERROR;
+  } catch (const sourcemeta::core::FileError<NoInputFilesError> &error) {
     const auto is_json{options.contains("json")};
     print_exception(is_json, error);
     return EXIT_OTHER_INPUT_ERROR;
