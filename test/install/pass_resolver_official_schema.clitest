@@ -35,8 +35,6 @@ CHECKSUM SHA256 project/vendor/schema.json AS HASH
 
 COPY project/jsonschema.lock.json TO checked_lock.json
 REPLACE $CWD_URI WITH '[CWD_URI]' IN checked_lock.json
-REPLACE $CWD WITH '[CWD]' IN checked_lock.json
-
 WRITE expected_lock.json UNTIL EOF
 {
   "version": 1,
@@ -57,8 +55,6 @@ COMPARE checked_lock.json AGAINST expected_lock.json
 RUN validate $CWD/project/vendor/schema.json $CWD/source/schema.json STDIN /dev/null IN . INTO result_1.txt EXPECTING 0
 
 REPLACE $CWD_URI WITH '[CWD_URI]' IN result_1.txt
-REPLACE $CWD WITH '[CWD]' IN result_1.txt
-
 WRITE expected_1.txt UNTIL EOF
 2> 1 validated, 1 passed, 0 failed
 EOF

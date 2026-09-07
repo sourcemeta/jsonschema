@@ -56,8 +56,6 @@ REPLACE '[CWD_URI]' WITH $CWD_URI IN project/jsonschema.json
 RUN install --json STDIN /dev/null IN project INTO result_1.txt EXPECTING 0
 
 REPLACE $CWD_URI WITH '[CWD_URI]' IN result_1.txt
-REPLACE $CWD WITH '[CWD]' IN result_1.txt
-
 WRITE expected_1.txt UNTIL EOF
 1> {
 1>   "events": [
@@ -97,8 +95,6 @@ CHECKSUM SHA256 project/vendor/a.json AS HASH_A
 
 COPY project/jsonschema.lock.json TO checked_lock.json
 REPLACE $CWD_URI WITH '[CWD_URI]' IN checked_lock.json
-REPLACE $CWD WITH '[CWD]' IN checked_lock.json
-
 WRITE expected_lock.json UNTIL EOF
 {
   "version": 1,

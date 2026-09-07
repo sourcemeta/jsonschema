@@ -19,8 +19,6 @@ EOF
 // Metaschema validation failure
 RUN metaschema schemas --json STDIN /dev/null IN . INTO result.txt EXPECTING 2
 
-REPLACE $CWD WITH '[CWD]' IN result.txt
-
 WRITE expected.txt UNTIL EOF
 1> {
 1>   "valid": true
@@ -65,8 +63,8 @@ WRITE expected.txt UNTIL EOF
 1>     }
 1>   ]
 1> }
-2> [CWD]/schemas/schema_1.json
-2> [CWD]/schemas/schema_2.json
+2> schemas/schema_1.json
+2> schemas/schema_2.json
 EOF
 
 COMPARE result.txt AGAINST expected.txt

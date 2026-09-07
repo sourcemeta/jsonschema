@@ -30,8 +30,6 @@ COMPARE result_0.txt AGAINST expected_0.txt
 
 COPY project/jsonschema.json TO checked_config.json
 REPLACE $CWD_URI WITH '[CWD_URI]' IN checked_config.json
-REPLACE $CWD WITH '[CWD]' IN checked_config.json
-
 WRITE expected_config.json UNTIL EOF
 {
   "path": "./schemas",

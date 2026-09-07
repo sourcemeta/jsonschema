@@ -22,8 +22,6 @@ EOF
 RUN compile schema.json --resolve metaschema.json STDIN /dev/null IN . INTO result.txt EXPECTING 0
 
 REPLACE $CWD_URI WITH '[CWD_URI]' IN result.txt
-REPLACE $CWD WITH '[CWD]' IN result.txt
-
 WRITE expected.txt UNTIL EOF
 1> [
 1>   7,

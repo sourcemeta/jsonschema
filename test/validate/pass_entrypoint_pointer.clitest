@@ -17,11 +17,9 @@ EOF
 
 RUN validate schema.json instance.json --entrypoint /\$$defs/PositiveInt --verbose STDIN /dev/null IN . INTO result_0.txt EXPECTING 0
 
-REPLACE $CWD WITH '[CWD]' IN result_0.txt
-
 WRITE expected_0.txt UNTIL EOF
-2> ok: [CWD]/instance.json
-2>   matches [CWD]/schema.json
+2> ok: instance.json
+2>   matches schema.json
 2>
 2> 1 validated, 1 passed, 0 failed
 EOF

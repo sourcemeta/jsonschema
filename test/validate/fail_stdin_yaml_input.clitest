@@ -29,8 +29,6 @@ COMPARE result_0.txt AGAINST expected_0.txt
 RUN validate schema.json - --json STDIN stdin_input IN . INTO result_1.txt EXPECTING 2
 
 REPLACE $CWD_URI WITH '[CWD_URI]' IN result_1.txt
-REPLACE $CWD WITH '[CWD]' IN result_1.txt
-
 WRITE expected_1.txt UNTIL EOF
 1> {
 1>   "valid": false,

@@ -29,8 +29,6 @@ EOF
 RUN validate schema.json instances --json STDIN /dev/null IN . INTO result_0.txt EXPECTING 2
 
 REPLACE $CWD_URI WITH '[CWD_URI]' IN result_0.txt
-REPLACE $CWD WITH '[CWD]' IN result_0.txt
-
 WRITE expected_0.txt UNTIL EOF
 1> {
 1>   "valid": false,
@@ -51,7 +49,7 @@ WRITE expected_0.txt UNTIL EOF
 1>     }
 1>   ]
 1> }
-2> [CWD]/instances/instance_1.json
+2> instances/instance_1.json
 2> warning: Stopped at first failure, pass --continue/-c to keep going
 EOF
 

@@ -22,8 +22,6 @@ EOF
 
 RUN validate schema.json instances --fast --json STDIN /dev/null IN . INTO result.txt EXPECTING 0
 
-REPLACE $CWD WITH '[CWD]' IN result.txt
-
 WRITE expected.txt UNTIL EOF
 1> {
 1>   "valid": true
@@ -31,8 +29,8 @@ WRITE expected.txt UNTIL EOF
 1> {
 1>   "valid": true
 1> }
-2> [CWD]/instances/instance_1.json
-2> [CWD]/instances/instance_2.json
+2> instances/instance_1.json
+2> instances/instance_2.json
 EOF
 
 COMPARE result.txt AGAINST expected.txt

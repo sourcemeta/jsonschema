@@ -45,8 +45,6 @@ COPY project/jsonschema.lock.json TO lock_before.json
 RUN install --frozen STDIN /dev/null IN project INTO result_1.txt EXPECTING 2
 
 REPLACE $CWD_URI WITH '[CWD_URI]' IN result_1.txt
-REPLACE $CWD WITH '[CWD]' IN result_1.txt
-
 WRITE expected_1.txt UNTIL EOF
 2> Untracked      : file:///tmp/fake/new.json
 2> Orphaned       : [CWD_URI]/source/schema.json
@@ -58,8 +56,6 @@ COMPARE result_1.txt AGAINST expected_1.txt
 RUN install --frozen --json STDIN /dev/null IN project INTO result_2.txt EXPECTING 2
 
 REPLACE $CWD_URI WITH '[CWD_URI]' IN result_2.txt
-REPLACE $CWD WITH '[CWD]' IN result_2.txt
-
 WRITE expected_2.txt UNTIL EOF
 1> {
 1>   "events": [

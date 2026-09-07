@@ -30,8 +30,6 @@ COMPARE result_0.txt AGAINST expected_0.txt
 
 COPY project/jsonschema.json TO checked_file_1.txt
 REPLACE $CWD_URI WITH '[CWD_URI]' IN checked_file_1.txt
-REPLACE $CWD WITH '[CWD]' IN checked_file_1.txt
-
 WRITE expected_file_1.txt UNTIL EOF
 {
   "dependencies": {
@@ -44,8 +42,6 @@ COMPARE checked_file_1.txt AGAINST expected_file_1.txt
 
 COPY vendor/user.json TO checked_file_2.txt
 REPLACE $CWD_URI WITH '[CWD_URI]' IN checked_file_2.txt
-REPLACE $CWD WITH '[CWD]' IN checked_file_2.txt
-
 WRITE expected_file_2.txt UNTIL EOF
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",

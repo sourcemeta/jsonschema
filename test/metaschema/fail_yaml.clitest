@@ -6,10 +6,8 @@ EOF
 // Metaschema validation failure
 RUN metaschema schema.yaml STDIN /dev/null IN . INTO result.txt EXPECTING 2
 
-REPLACE $CWD WITH '[CWD]' IN result.txt
-
 WRITE expected.txt UNTIL EOF
-2> fail: [CWD]/schema.yaml
+2> fail: schema.yaml
 2> error: Schema validation failure
 2>   The integer value 1 was expected to equal one of the following values: "array", "boolean", "integer", "null", "number", "object", and "string"
 2>     at instance location "/type" (line 2, column 1)

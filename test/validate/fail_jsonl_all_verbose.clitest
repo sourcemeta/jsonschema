@@ -20,7 +20,7 @@ REPLACE $CWD WITH '[CWD]' IN result_0.txt
 
 WRITE expected_0.txt UNTIL EOF
 2> Interpreting input as JSONL: [CWD]/instance.jsonl
-2> fail: [CWD]/instance.jsonl (entry #1)
+2> fail: instance.jsonl (entry #1)
 2>
 2> {
 2>   "foo": 1

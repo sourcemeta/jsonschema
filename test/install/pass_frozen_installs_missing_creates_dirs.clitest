@@ -51,8 +51,6 @@ COMPARE project/jsonschema.lock.json AGAINST lock_before.json
 
 COPY project/vendor/deep/nested/schema.json TO checked_file_3.txt
 REPLACE $CWD_URI WITH '[CWD_URI]' IN checked_file_3.txt
-REPLACE $CWD WITH '[CWD]' IN checked_file_3.txt
-
 WRITE expected_file_3.txt UNTIL EOF
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
