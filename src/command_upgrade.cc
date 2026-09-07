@@ -112,18 +112,18 @@ auto assert_upgradable(
           const sourcemeta::blaze::SchemaReferenceType, const std::string_view,
           const sourcemeta::blaze::SchemaFrame::Location &location) -> void {
         switch (location.base_dialect) {
-          case sourcemeta::blaze::SchemaBaseDialect::JSON_Schema_2020_12:
-          case sourcemeta::blaze::SchemaBaseDialect::JSON_Schema_2020_12_Hyper:
-          case sourcemeta::blaze::SchemaBaseDialect::JSON_Schema_2019_09:
-          case sourcemeta::blaze::SchemaBaseDialect::JSON_Schema_2019_09_Hyper:
-          case sourcemeta::blaze::SchemaBaseDialect::JSON_Schema_Draft_7:
-          case sourcemeta::blaze::SchemaBaseDialect::JSON_Schema_Draft_7_Hyper:
-          case sourcemeta::blaze::SchemaBaseDialect::JSON_Schema_Draft_6:
-          case sourcemeta::blaze::SchemaBaseDialect::JSON_Schema_Draft_6_Hyper:
-          case sourcemeta::blaze::SchemaBaseDialect::JSON_Schema_Draft_4:
-          case sourcemeta::blaze::SchemaBaseDialect::JSON_Schema_Draft_4_Hyper:
-          case sourcemeta::blaze::SchemaBaseDialect::JSON_Schema_Draft_3:
-          case sourcemeta::blaze::SchemaBaseDialect::JSON_Schema_Draft_3_Hyper:
+          case sourcemeta::blaze::SchemaBaseDialect::JSON_SCHEMA_2020_12:
+          case sourcemeta::blaze::SchemaBaseDialect::JSON_SCHEMA_2020_12_HYPER:
+          case sourcemeta::blaze::SchemaBaseDialect::JSON_SCHEMA_2019_09:
+          case sourcemeta::blaze::SchemaBaseDialect::JSON_SCHEMA_2019_09_HYPER:
+          case sourcemeta::blaze::SchemaBaseDialect::JSON_SCHEMA_DRAFT_7:
+          case sourcemeta::blaze::SchemaBaseDialect::JSON_SCHEMA_DRAFT_7_HYPER:
+          case sourcemeta::blaze::SchemaBaseDialect::JSON_SCHEMA_DRAFT_6:
+          case sourcemeta::blaze::SchemaBaseDialect::JSON_SCHEMA_DRAFT_6_HYPER:
+          case sourcemeta::blaze::SchemaBaseDialect::JSON_SCHEMA_DRAFT_4:
+          case sourcemeta::blaze::SchemaBaseDialect::JSON_SCHEMA_DRAFT_4_HYPER:
+          case sourcemeta::blaze::SchemaBaseDialect::JSON_SCHEMA_DRAFT_3:
+          case sourcemeta::blaze::SchemaBaseDialect::JSON_SCHEMA_DRAFT_3_HYPER:
             return;
           default:
             break;

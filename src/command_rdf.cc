@@ -32,10 +32,10 @@ auto assert_annotations_support(
   const auto root_location{frame.root_location()};
   assert(root_location.has_value());
   switch (root_location.value().get().base_dialect) {
-    case sourcemeta::blaze::SchemaBaseDialect::JSON_Schema_2020_12:
-    case sourcemeta::blaze::SchemaBaseDialect::JSON_Schema_2020_12_Hyper:
-    case sourcemeta::blaze::SchemaBaseDialect::JSON_Schema_2019_09:
-    case sourcemeta::blaze::SchemaBaseDialect::JSON_Schema_2019_09_Hyper:
+    case sourcemeta::blaze::SchemaBaseDialect::JSON_SCHEMA_2020_12:
+    case sourcemeta::blaze::SchemaBaseDialect::JSON_SCHEMA_2020_12_HYPER:
+    case sourcemeta::blaze::SchemaBaseDialect::JSON_SCHEMA_2019_09:
+    case sourcemeta::blaze::SchemaBaseDialect::JSON_SCHEMA_2019_09_HYPER:
       return;
     default:
       throw sourcemeta::jsonschema::UnsupportedDialectRdfError{
