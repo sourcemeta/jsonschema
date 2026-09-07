@@ -51,6 +51,7 @@ EOF
   > "$TMP/output.txt" 2>&1
 
 cat << 'EOF' > "$TMP/expected.txt"
+1 validated, 1 passed, 0 failed
 EOF
 
 diff "$TMP/output.txt" "$TMP/expected.txt"

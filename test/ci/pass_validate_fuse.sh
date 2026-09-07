@@ -40,6 +40,8 @@ bindfs --no-allow-other "$TMP" "$FUSE_MOUNT"
 cat << EOF > "$TMP/expected.txt"
 ok: $(realpath "$FUSE_MOUNT")/instance.json
   matches $(realpath "$FUSE_MOUNT")/level1/level2/level3/schema.json
+
+1 validated, 1 passed, 0 failed
 EOF
 
 diff "$TMP/output.txt" "$TMP/expected.txt"
