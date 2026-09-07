@@ -544,10 +544,13 @@ inline auto stdin_path_string(const std::filesystem::path &path)
   return sourcemeta::core::weakly_canonical(path).generic_string();
 }
 
-// Per instance output names paths the way the user did, while error output
-// keeps canonicalising through `stdin_path_string`. The input must already be
-// canonical, so that this stays a lexical comparison that we can afford to do
-// once per instance
+// Per instance output names paths relative to the working directory, while
+// error output stays absolute through `stdin_path_string`. Both the input and
+// the base are canonical, so a path reached through a symlink displays its
+// target rather than the argument. That is what keeps a symlinked working
+// directory resolving correctly, as `current_path()` is already resolved.
+// Requiring a canonical input also keeps this a lexical comparison that we can
+// afford once per instance
 inline auto relative_path_string(const std::filesystem::path &canonical)
     -> std::string {
   if (canonical == stdin_path()) {
@@ -555,9 +558,9 @@ inline auto relative_path_string(const std::filesystem::path &canonical)
   }
 
   // The working directory cannot change while a command runs
-  static const auto base{
+  static const auto WORKING_DIRECTORY{
       sourcemeta::core::weakly_canonical(std::filesystem::current_path())};
-  const auto result{canonical.lexically_relative(base)};
+  const auto result{canonical.lexically_relative(WORKING_DIRECTORY)};
   if (result.empty()) {
     return canonical.generic_string();
   }
