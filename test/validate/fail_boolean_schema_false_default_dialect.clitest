@@ -14,6 +14,8 @@ REPLACE $CWD WITH '[CWD]' IN result_0.txt
 WRITE expected_0.txt UNTIL EOF
 2> fail: [CWD]/instance.json
 2> error: Schema validation failure
+2>
+2> 1 validated, 0 passed, 1 failed
 EOF
 
 COMPARE result_0.txt AGAINST expected_0.txt

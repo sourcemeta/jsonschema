@@ -38,6 +38,8 @@ WRITE expected_0.txt UNTIL EOF
 2>     at evaluate path "/properties"
 2> ok: [CWD]/instances/instance_2.json
 2>   matches [CWD]/schema.json
+2>
+2> 2 validated, 1 passed, 1 failed
 EOF
 
 COMPARE result_0.txt AGAINST expected_0.txt

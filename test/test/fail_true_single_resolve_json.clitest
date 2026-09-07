@@ -19,7 +19,8 @@ WRITE test.json UNTIL EOF
 }
 EOF
 
-WRITE silent.txt UNTIL EOF
+WRITE summary.txt UNTIL EOF
+2> 1 validated, 1 passed, 0 failed
 EOF
 
 // Test assertion failure
@@ -29,7 +30,7 @@ EXTRACT STDOUT FROM result.txt INTO report.json
 
 RUN validate $CTRF_SCHEMA report.json STDIN /dev/null IN . INTO validated.txt EXPECTING 0
 
-COMPARE validated.txt AGAINST silent.txt
+COMPARE validated.txt AGAINST summary.txt
 
 REPLACE $VERSION WITH '[VERSION]' IN result.txt
 DROP LINES CONTAINING '"duration":' IN result.txt
