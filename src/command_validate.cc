@@ -360,7 +360,7 @@ auto sourcemeta::jsonschema::validate(const sourcemeta::core::Options &options)
 
   if (benchmark && instance_arguments.size() > 1) {
     throw OptionConflictError{
-        "The `--benchmark/-b` option is only allowed given a single instance"};
+        "The `--benchmark/-b` option is only allowed given a single file"};
   }
 
   if (instance_arguments.empty()) {
@@ -371,7 +371,7 @@ auto sourcemeta::jsonschema::validate(const sourcemeta::core::Options &options)
 
     if (benchmark) {
       throw OptionConflictError{"The `--benchmark/-b` option is only allowed "
-                                "given a single instance"};
+                                "given a single file"};
     }
 
     const auto entries{for_each_json({}, options, InputRequirement::NonEmpty)};
@@ -404,7 +404,7 @@ auto sourcemeta::jsonschema::validate(const sourcemeta::core::Options &options)
       if (benchmark && instance_path_view != "-" &&
           std::filesystem::is_directory(instance_path)) {
         throw OptionConflictError{"The `--benchmark/-b` option is only allowed "
-                                  "given a single instance"};
+                                  "given a single file"};
       }
 
       if (instance_path_view == "-" ||

@@ -47,8 +47,8 @@ Commands:
 
        Validate one or more instances against the given schema.
 
-       The --trace/-t and --benchmark/-b options are only allowed given a
-       single instance.
+       The --trace/-t option is only allowed given a single instance, and
+       --benchmark/-b given a single file, which may be a JSONL dataset.
 
        By default, schemas are validated in exhaustive mode, which results in
        better error messages, at the expense of speed. The --fast/-f option

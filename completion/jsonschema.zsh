@@ -52,7 +52,7 @@ _jsonschema() {
         validate)
           _arguments \
             ${global_options[@]} \
-            '(--benchmark -b)'{--benchmark,-b}'[Enable benchmarking mode (single instance only)]' \
+            '(--benchmark -b)'{--benchmark,-b}'[Enable benchmarking mode (single file only)]' \
             '(--loop -l)'{--loop,-l}'[Number of loop iterations]:iterations:' \
             '(--extension -e)'{--extension,-e}'[Specify file extension]:extension:_jsonschema_extensions' \
             '(--ignore -i)'{--ignore,-i}'[Ignore schemas or directories]:path:_files' \
