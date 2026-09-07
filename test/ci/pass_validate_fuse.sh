@@ -35,7 +35,8 @@ EOF
 
 bindfs --no-allow-other "$TMP" "$FUSE_MOUNT"
 
-"$1" validate --verbose "$FUSE_MOUNT/level1/level2/level3/schema.json" "$FUSE_MOUNT/instance.json" 2> "$TMP/output.txt"
+"$1" validate --verbose "$FUSE_MOUNT/level1/level2/level3/schema.json" \
+  "$FUSE_MOUNT/instance.json" > "$TMP/output.txt" 2>&1
 
 cat << EOF > "$TMP/expected.txt"
 ok: $(realpath "$FUSE_MOUNT")/instance.json
