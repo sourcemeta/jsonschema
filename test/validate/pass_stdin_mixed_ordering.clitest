@@ -21,11 +21,8 @@ RUN validate schema.json instance1.json - instance2.json --verbose STDIN stdin_i
 
 WRITE expected_0.txt UNTIL EOF
 2> ok: instance1.json
-2>   matches schema.json
 2> ok: tag:sourcemeta.com,2026:jsonschema/stdin
-2>   matches schema.json
 2> ok: instance2.json
-2>   matches schema.json
 2>
 2> 3 validated, 3 passed, 0 failed
 EOF

@@ -32,7 +32,6 @@ RUN validate schema.json instance.json --resolve metaschema.json --verbose STDIN
 
 WRITE expected_0.txt UNTIL EOF
 2> ok: instance.json
-2>   matches schema.json
 2>
 2> 1 validated, 1 passed, 0 failed
 EOF

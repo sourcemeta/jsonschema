@@ -30,9 +30,7 @@ RUN validate schema.json instances --extension .data.json --verbose STDIN /dev/n
 WRITE expected_0.txt UNTIL EOF
 2> Using extension: .data.json
 2> ok: instances/instance_1.data.json
-2>   matches schema.json
 2> ok: instances/instance_2.data.json
-2>   matches schema.json
 2>
 2> 2 validated, 2 passed, 0 failed
 EOF
