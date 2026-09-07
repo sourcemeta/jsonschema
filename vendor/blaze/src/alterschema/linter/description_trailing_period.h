@@ -18,21 +18,21 @@ public:
             const sourcemeta::blaze::SchemaResolver &, const bool) const
       -> SchemaTransformRule::Result override {
     ONLY_CONTINUE_IF(vocabularies.contains_any(
-        {SchemaVocabularies::Known::JSON_Schema_2020_12_Meta_Data,
-         SchemaVocabularies::Known::JSON_Schema_2019_09_Meta_Data,
-         SchemaVocabularies::Known::JSON_Schema_Draft_7,
-         SchemaVocabularies::Known::JSON_Schema_Draft_6,
-         SchemaVocabularies::Known::JSON_Schema_Draft_4,
-         SchemaVocabularies::Known::JSON_Schema_Draft_3,
-         SchemaVocabularies::Known::JSON_Schema_Draft_3_Hyper,
-         SchemaVocabularies::Known::JSON_Schema_Draft_2,
-         SchemaVocabularies::Known::JSON_Schema_Draft_1}));
+        {SchemaVocabularies::Known::JSON_SCHEMA_2020_12_META_DATA,
+         SchemaVocabularies::Known::JSON_SCHEMA_2019_09_META_DATA,
+         SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_7,
+         SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_6,
+         SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_4,
+         SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_3,
+         SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_3_HYPER,
+         SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_2,
+         SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_1}));
     ONLY_CONTINUE_IF(schema.is_object());
     ONLY_CONTINUE_IF(schema.defines("description"));
     ONLY_CONTINUE_IF(schema.at("description").is_string());
     const auto &description{schema.at("description").to_string()};
     ONLY_CONTINUE_IF(!description.empty() && description.back() == '.');
-    return APPLIES_TO_KEYWORDS("description");
+    return applies_to_keywords("description");
   }
 
   auto transform(JSON &schema, const Result &) const -> void override {

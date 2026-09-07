@@ -19,11 +19,11 @@ public:
       -> SchemaTransformRule::Result override {
     ONLY_CONTINUE_IF(
         vocabularies.contains_any(
-            {SchemaVocabularies::Known::JSON_Schema_2020_12_Validation,
-             SchemaVocabularies::Known::JSON_Schema_2019_09_Validation,
-             SchemaVocabularies::Known::JSON_Schema_Draft_7,
-             SchemaVocabularies::Known::JSON_Schema_Draft_6,
-             SchemaVocabularies::Known::JSON_Schema_Draft_4}) &&
+            {SchemaVocabularies::Known::JSON_SCHEMA_2020_12_VALIDATION,
+             SchemaVocabularies::Known::JSON_SCHEMA_2019_09_VALIDATION,
+             SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_7,
+             SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_6,
+             SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_4}) &&
         schema.is_object());
 
     const auto *min_properties{schema.try_at("minProperties")};
@@ -33,7 +33,7 @@ public:
                      std::cmp_greater_equal(required->size(),
                                             static_cast<std::uint64_t>(
                                                 min_properties->to_integer())));
-    return APPLIES_TO_KEYWORDS("minProperties", "required");
+    return applies_to_keywords("minProperties", "required");
   }
 
   auto transform(JSON &schema, const Result &) const -> void override {

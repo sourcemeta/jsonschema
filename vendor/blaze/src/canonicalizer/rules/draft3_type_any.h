@@ -12,7 +12,7 @@ public:
             const sourcemeta::blaze::SchemaWalker &,
             const sourcemeta::blaze::SchemaResolver &) const -> bool override {
     ONLY_CONTINUE_IF(
-        vocabularies.contains(SchemaVocabularies::Known::JSON_Schema_Draft_3) &&
+        vocabularies.contains(SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_3) &&
         schema.is_object());
 
     const auto *type{schema.try_at("type")};
@@ -33,7 +33,7 @@ public:
           }
           if (element.size() == 1) {
             const auto *element_type{element.try_at("type")};
-            if (element_type && element_type->is_string() &&
+            if ((element_type != nullptr) && element_type->is_string() &&
                 element_type->to_string() == "any") {
               return true;
             }

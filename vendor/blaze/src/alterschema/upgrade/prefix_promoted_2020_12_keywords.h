@@ -15,7 +15,7 @@ public:
             const sourcemeta::blaze::SchemaResolver &, const bool) const
       -> SchemaTransformRule::Result override {
     ONLY_CONTINUE_IF(vocabularies.contains(
-                         SchemaVocabularies::Known::JSON_Schema_2019_09_Core) &&
+                         SchemaVocabularies::Known::JSON_SCHEMA_2019_09_CORE) &&
                      schema.is_object());
 
     return schema.defines_any({"prefixItems", "$dynamicAnchor", "$dynamicRef"});
@@ -58,7 +58,7 @@ public:
   }
 
 private:
-  // NOLINTNEXTLINE(bugprone-throwing-static-initialization)
+  // NOLINTNEXTLINE(cert-err58-cpp,bugprone-throwing-static-initialization)
   static inline const std::array<std::string_view, 3> KEYWORDS{
       {"prefixItems", "$dynamicAnchor", "$dynamicRef"}};
 

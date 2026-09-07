@@ -7,6 +7,7 @@
 
 #include <sourcemeta/core/jsonpointer.h>
 
+#include <cstdint>     // std::uint64_t
 #include <exception>   // std::exception
 #include <string>      // std::string
 #include <string_view> // std::string_view
@@ -219,6 +220,27 @@ public:
 private:
   std::string identifier_;
   const char *message_;
+};
+
+/// @ingroup foundation
+/// An error that represents a schema that needs more frame locations than the
+/// caller was willing to spend on analysing it
+class SOURCEMETA_BLAZE_FOUNDATION_EXPORT SchemaFrameLimitError
+    : public std::exception {
+public:
+  SchemaFrameLimitError(const std::uint64_t limit) : limit_{limit} {}
+
+  [[nodiscard]] auto what() const noexcept -> const char * override {
+    return "The schema exceeds the maximum number of frame locations";
+  }
+
+  /// The maximum number of locations that framing was allowed to register
+  [[nodiscard]] auto limit() const noexcept -> std::uint64_t {
+    return this->limit_;
+  }
+
+private:
+  std::uint64_t limit_;
 };
 
 /// @ingroup foundation

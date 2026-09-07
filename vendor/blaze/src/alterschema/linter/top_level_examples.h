@@ -19,16 +19,15 @@ public:
       -> SchemaTransformRule::Result override {
     ONLY_CONTINUE_IF(location.pointer.empty());
     ONLY_CONTINUE_IF(vocabularies.contains_any(
-        {SchemaVocabularies::Known::JSON_Schema_2020_12_Meta_Data,
-         SchemaVocabularies::Known::JSON_Schema_2019_09_Meta_Data,
-         SchemaVocabularies::Known::JSON_Schema_Draft_7,
-         SchemaVocabularies::Known::JSON_Schema_Draft_6}));
+        {SchemaVocabularies::Known::JSON_SCHEMA_2020_12_META_DATA,
+         SchemaVocabularies::Known::JSON_SCHEMA_2019_09_META_DATA,
+         SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_7,
+         SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_6}));
     ONLY_CONTINUE_IF(schema.is_object());
     const auto *examples{schema.try_at("examples")};
-    if (examples && examples->is_array() && examples->empty()) {
-      return APPLIES_TO_KEYWORDS("examples");
-    } else {
-      return !examples;
+    if ((examples != nullptr) && examples->is_array() && examples->empty()) {
+      return applies_to_keywords("examples");
     }
+    return examples == nullptr;
   }
 };

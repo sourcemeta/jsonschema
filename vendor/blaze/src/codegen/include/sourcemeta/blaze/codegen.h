@@ -141,7 +141,7 @@ auto default_compiler(const sourcemeta::core::JSON &schema,
 
 /// @ingroup codegen
 SOURCEMETA_BLAZE_CODEGEN_EXPORT
-auto compile(const sourcemeta::core::JSON &schema,
+auto compile(const sourcemeta::core::JSON &input,
              const sourcemeta::blaze::SchemaWalker &walker,
              const sourcemeta::blaze::SchemaResolver &resolver,
              const CodegenCompiler &compiler,

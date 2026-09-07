@@ -2,7 +2,7 @@
 #define SOURCEMETA_BLAZE_CANONICALIZER_HELPERS_H_
 
 // TODO: Move upstream
-inline auto IS_IN_PLACE_APPLICATOR(const SchemaKeywordType type) -> bool {
+inline auto is_in_place_applicator(const SchemaKeywordType type) -> bool {
   return type == SchemaKeywordType::ApplicatorValueOrElementsInPlace ||
          type == SchemaKeywordType::ApplicatorMembersInPlaceSome ||
          type == SchemaKeywordType::ApplicatorElementsInPlace ||
@@ -23,17 +23,17 @@ inline auto IS_IN_PLACE_APPLICATOR(const SchemaKeywordType type) -> bool {
 // may contain subschemas or `any`, in which case the parsed set is an
 // under-approximation that cannot be trusted. Later dialects do not give
 // such forms any meaning, so the parsed set stands
-inline auto IS_KNOWN_TYPE_FORM(const sourcemeta::core::JSON &type,
+inline auto is_known_type_form(const sourcemeta::core::JSON &type,
                                const SchemaVocabularies &vocabularies) -> bool {
   if (!vocabularies.contains_any(
-          {SchemaVocabularies::Known::JSON_Schema_Draft_0,
-           SchemaVocabularies::Known::JSON_Schema_Draft_0_Hyper,
-           SchemaVocabularies::Known::JSON_Schema_Draft_1,
-           SchemaVocabularies::Known::JSON_Schema_Draft_1_Hyper,
-           SchemaVocabularies::Known::JSON_Schema_Draft_2,
-           SchemaVocabularies::Known::JSON_Schema_Draft_2_Hyper,
-           SchemaVocabularies::Known::JSON_Schema_Draft_3,
-           SchemaVocabularies::Known::JSON_Schema_Draft_3_Hyper})) {
+          {SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_0,
+           SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_0_HYPER,
+           SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_1,
+           SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_1_HYPER,
+           SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_2,
+           SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_2_HYPER,
+           SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_3,
+           SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_3_HYPER})) {
     return true;
   }
   if (type.is_string()) {
@@ -50,19 +50,19 @@ inline auto IS_KNOWN_TYPE_FORM(const sourcemeta::core::JSON &type,
 // The schema that no instance can ever satisfy. Draft 3 and Draft 4 have no
 // boolean schemas, so each of them has to spell it out with the negation
 // keyword it offers, applied to the schema that every instance satisfies
-inline auto UNSATISFIABLE_SCHEMA(const SchemaVocabularies &vocabularies)
+inline auto unsatisfiable_schema(const SchemaVocabularies &vocabularies)
     -> sourcemeta::core::JSON {
   if (vocabularies.contains_any(
-          {SchemaVocabularies::Known::JSON_Schema_Draft_4,
-           SchemaVocabularies::Known::JSON_Schema_Draft_4_Hyper})) {
+          {SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_4,
+           SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_4_HYPER})) {
     auto result{sourcemeta::core::JSON::make_object()};
     result.assign("not", sourcemeta::core::JSON::make_object());
     return result;
   }
 
   if (vocabularies.contains_any(
-          {SchemaVocabularies::Known::JSON_Schema_Draft_3,
-           SchemaVocabularies::Known::JSON_Schema_Draft_3_Hyper})) {
+          {SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_3,
+           SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_3_HYPER})) {
     auto branches{sourcemeta::core::JSON::make_array()};
     branches.push_back(sourcemeta::core::JSON::make_object());
     auto result{sourcemeta::core::JSON::make_object()};
@@ -74,12 +74,12 @@ inline auto UNSATISFIABLE_SCHEMA(const SchemaVocabularies &vocabularies)
   // keyword takes type names rather than schemas, so the name to rule out is
   // the wildcard that every instance answers to
   if (vocabularies.contains_any(
-          {SchemaVocabularies::Known::JSON_Schema_Draft_0,
-           SchemaVocabularies::Known::JSON_Schema_Draft_0_Hyper,
-           SchemaVocabularies::Known::JSON_Schema_Draft_1,
-           SchemaVocabularies::Known::JSON_Schema_Draft_1_Hyper,
-           SchemaVocabularies::Known::JSON_Schema_Draft_2,
-           SchemaVocabularies::Known::JSON_Schema_Draft_2_Hyper})) {
+          {SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_0,
+           SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_0_HYPER,
+           SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_1,
+           SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_1_HYPER,
+           SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_2,
+           SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_2_HYPER})) {
     auto types{sourcemeta::core::JSON::make_array()};
     types.push_back(sourcemeta::core::JSON{"any"});
     auto result{sourcemeta::core::JSON::make_object()};
@@ -95,7 +95,7 @@ inline auto UNSATISFIABLE_SCHEMA(const SchemaVocabularies &vocabularies)
 // caller is left to reset the frame, but an object both can and must. Rewrite
 // it in place rather than replacing it outright, so that the dialect the frame
 // still points to stays where it is
-inline auto INTO_UNSATISFIABLE(sourcemeta::core::JSON &schema,
+inline auto into_unsatisfiable(sourcemeta::core::JSON &schema,
                                const sourcemeta::core::JSON &unsatisfiable)
     -> void {
   if (!unsatisfiable.is_object() || !schema.is_object()) {
@@ -120,7 +120,7 @@ inline auto INTO_UNSATISFIABLE(sourcemeta::core::JSON &schema,
 }
 
 template <typename TraversePredicate, typename MatchCallback>
-auto WALK_UP(const sourcemeta::core::JSON &root, const SchemaFrame &frame,
+auto walk_up(const sourcemeta::core::JSON &root, const SchemaFrame &frame,
              const SchemaFrame::Location &location, const SchemaWalker &walker,
              const SchemaResolver &resolver,
              const TraversePredicate &should_continue,
@@ -158,7 +158,7 @@ auto WALK_UP(const sourcemeta::core::JSON &root, const SchemaFrame &frame,
 }
 
 template <typename MatchCallback>
-auto WALK_UP_IN_PLACE_APPLICATORS(const sourcemeta::core::JSON &root,
+auto walk_up_in_place_applicators(const sourcemeta::core::JSON &root,
                                   const SchemaFrame &frame,
                                   const SchemaFrame::Location &location,
                                   const SchemaWalker &walker,
@@ -166,8 +166,8 @@ auto WALK_UP_IN_PLACE_APPLICATORS(const sourcemeta::core::JSON &root,
                                   const MatchCallback &matches)
     -> std::optional<
         std::reference_wrapper<const sourcemeta::core::WeakPointer>> {
-  return WALK_UP(root, frame, location, walker, resolver,
-                 IS_IN_PLACE_APPLICATOR, matches);
+  return walk_up(root, frame, location, walker, resolver,
+                 is_in_place_applicator, matches);
 }
 
 #define ONLY_CONTINUE_IF(condition)                                            \

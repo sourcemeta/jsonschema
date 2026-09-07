@@ -9,7 +9,8 @@ auto value_from_json(const sourcemeta::core::JSON &wrapper)
   if (!wrapper.is_array() || wrapper.array_size() == 0 ||
       !wrapper.at(0).is_integer()) {
     return std::nullopt;
-  } else if (wrapper.array_size() == 1) {
+  }
+  if (wrapper.array_size() == 1) {
     return sourcemeta::blaze::ValueNone{};
   }
 

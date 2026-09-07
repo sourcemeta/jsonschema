@@ -14,23 +14,23 @@ public:
       -> bool override {
     ONLY_CONTINUE_IF(schema.is_object());
     ONLY_CONTINUE_IF(vocabularies.contains_any(
-        {SchemaVocabularies::Known::JSON_Schema_2020_12_Validation,
-         SchemaVocabularies::Known::JSON_Schema_2019_09_Validation,
-         SchemaVocabularies::Known::JSON_Schema_Draft_7,
-         SchemaVocabularies::Known::JSON_Schema_Draft_6,
-         SchemaVocabularies::Known::JSON_Schema_Draft_4,
-         SchemaVocabularies::Known::JSON_Schema_Draft_3,
-         SchemaVocabularies::Known::JSON_Schema_Draft_2,
-         SchemaVocabularies::Known::JSON_Schema_Draft_1,
-         SchemaVocabularies::Known::JSON_Schema_Draft_0}));
+        {SchemaVocabularies::Known::JSON_SCHEMA_2020_12_VALIDATION,
+         SchemaVocabularies::Known::JSON_SCHEMA_2019_09_VALIDATION,
+         SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_7,
+         SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_6,
+         SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_4,
+         SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_3,
+         SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_2,
+         SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_1,
+         SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_0}));
     ONLY_CONTINUE_IF(!schema.defines("type"));
     ONLY_CONTINUE_IF(!schema.defines("enum"));
     ONLY_CONTINUE_IF(
         !vocabularies.contains_any(
-            {SchemaVocabularies::Known::JSON_Schema_2020_12_Validation,
-             SchemaVocabularies::Known::JSON_Schema_2019_09_Validation,
-             SchemaVocabularies::Known::JSON_Schema_Draft_7,
-             SchemaVocabularies::Known::JSON_Schema_Draft_6}) ||
+            {SchemaVocabularies::Known::JSON_SCHEMA_2020_12_VALIDATION,
+             SchemaVocabularies::Known::JSON_SCHEMA_2019_09_VALIDATION,
+             SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_7,
+             SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_6}) ||
         !schema.defines("const"));
 
     for (const auto &entry : schema.as_object()) {
@@ -38,16 +38,16 @@ public:
       ONLY_CONTINUE_IF(keyword_type != SchemaKeywordType::Reference);
       ONLY_CONTINUE_IF(keyword_type ==
                            SchemaKeywordType::ApplicatorValueInPlaceOther ||
-                       !IS_IN_PLACE_APPLICATOR(keyword_type));
+                       !is_in_place_applicator(keyword_type));
     }
 
     // Walk up through in-place applicators excluding `allOf`. In `allOf` the
     // parent's type already constrains all branches (a conjunction), and other
     // rules may want to lift type out of conjunctions
-    const auto ancestor{WALK_UP(
+    const auto ancestor{walk_up(
         root, frame, location, walker, resolver,
         [](const SchemaKeywordType keyword_type) -> bool {
-          return IS_IN_PLACE_APPLICATOR(keyword_type) &&
+          return is_in_place_applicator(keyword_type) &&
                  keyword_type != SchemaKeywordType::ApplicatorElementsInPlace;
         },
         [](const sourcemeta::core::JSON &ancestor_schema,
@@ -72,12 +72,12 @@ public:
     auto walk_pointer{location.pointer};
     auto walk_parent{location.parent};
     while (walk_parent.has_value()) {
-      const auto &wp{walk_parent.value()};
-      const auto walk_relative{walk_pointer.resolve_from(wp)};
+      const auto &walk_parent_pointer{walk_parent.value()};
+      const auto walk_relative{walk_pointer.resolve_from(walk_parent_pointer)};
       if (walk_relative.empty() || !walk_relative.at(0).is_property()) {
         break;
       }
-      const auto walk_entry{frame.traverse(wp)};
+      const auto walk_entry{frame.traverse(walk_parent_pointer)};
       if (!walk_entry.has_value()) {
         break;
       }
@@ -86,19 +86,20 @@ public:
       const auto walk_keyword_type{
           walker(walk_relative.at(0).to_property(), walk_vocabularies).type};
 
-      if (!IS_IN_PLACE_APPLICATOR(walk_keyword_type)) {
+      if (!is_in_place_applicator(walk_keyword_type)) {
         break;
       }
 
       if (walk_keyword_type == SchemaKeywordType::ApplicatorElementsInPlace &&
           walk_relative.size() >= 2 && walk_relative.at(1).is_index()) {
         const auto branch_index{walk_relative.at(1).to_index()};
-        const auto &allof_parent{sourcemeta::core::get(root, wp)};
+        const auto &allof_parent{
+            sourcemeta::core::get(root, walk_parent_pointer)};
         const auto &keyword_name{walk_relative.at(0).to_property()};
         const auto *branches{allof_parent.is_object()
                                  ? allof_parent.try_at(keyword_name)
                                  : nullptr};
-        if (branches && branches->is_array()) {
+        if ((branches != nullptr) && branches->is_array()) {
           for (std::size_t index = 0; index < branches->size(); ++index) {
             if (index == branch_index) {
               continue;
@@ -108,12 +109,12 @@ public:
               continue;
             }
             const auto *sibling_type{sibling.try_at("type")};
-            if (sibling_type && sibling_type->is_string()) {
+            if ((sibling_type != nullptr) && sibling_type->is_string()) {
               this->inherited_type_ = *sibling_type;
               return true;
             }
             const auto *sibling_enum{sibling.try_at("enum")};
-            if (sibling_enum && sibling_enum->is_array() &&
+            if ((sibling_enum != nullptr) && sibling_enum->is_array() &&
                 !sibling_enum->empty()) {
               const auto inferred{infer_type_from_enum(*sibling_enum)};
               if (!inferred.empty()) {
@@ -122,7 +123,7 @@ public:
               }
             }
             const auto *sibling_ref{sibling.try_at("$ref")};
-            if (sibling_ref && sibling_ref->is_string()) {
+            if ((sibling_ref != nullptr) && sibling_ref->is_string()) {
               const auto ref_target{frame.traverse(sibling_ref->to_string())};
               if (ref_target.has_value()) {
                 const auto &ref_schema{sourcemeta::core::get(
@@ -130,7 +131,7 @@ public:
                 const auto *ref_type{ref_schema.is_object()
                                          ? ref_schema.try_at("type")
                                          : nullptr};
-                if (ref_type && ref_type->is_string()) {
+                if ((ref_type != nullptr) && ref_type->is_string()) {
                   this->inherited_type_ = *ref_type;
                   return true;
                 }
@@ -140,7 +141,7 @@ public:
         }
       }
 
-      walk_pointer = wp;
+      walk_pointer = walk_parent_pointer;
       walk_parent = walk_entry.value().get().parent;
     }
 

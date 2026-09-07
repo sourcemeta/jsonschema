@@ -14,15 +14,15 @@ public:
             const sourcemeta::blaze::SchemaResolver &) const -> bool override {
     ONLY_CONTINUE_IF(
         vocabularies.contains_any(
-            {SchemaVocabularies::Known::JSON_Schema_Draft_0,
-             SchemaVocabularies::Known::JSON_Schema_Draft_1,
-             SchemaVocabularies::Known::JSON_Schema_Draft_2,
-             SchemaVocabularies::Known::JSON_Schema_Draft_3,
-             SchemaVocabularies::Known::JSON_Schema_Draft_4,
-             SchemaVocabularies::Known::JSON_Schema_Draft_6,
-             SchemaVocabularies::Known::JSON_Schema_Draft_7,
-             SchemaVocabularies::Known::JSON_Schema_2019_09_Validation,
-             SchemaVocabularies::Known::JSON_Schema_2020_12_Validation}) &&
+            {SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_0,
+             SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_1,
+             SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_2,
+             SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_3,
+             SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_4,
+             SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_6,
+             SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_7,
+             SchemaVocabularies::Known::JSON_SCHEMA_2019_09_VALIDATION,
+             SchemaVocabularies::Known::JSON_SCHEMA_2020_12_VALIDATION}) &&
         schema.is_object());
 
     const auto *type{schema.try_at("type")};
@@ -35,10 +35,10 @@ public:
     ONLY_CONTINUE_IF(declared_types.any());
     const bool integer_matches_integral{
         vocabularies.contains_any(
-            {SchemaVocabularies::Known::JSON_Schema_Draft_6,
-             SchemaVocabularies::Known::JSON_Schema_Draft_7,
-             SchemaVocabularies::Known::JSON_Schema_2019_09_Validation,
-             SchemaVocabularies::Known::JSON_Schema_2020_12_Validation}) &&
+            {SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_6,
+             SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_7,
+             SchemaVocabularies::Known::JSON_SCHEMA_2019_09_VALIDATION,
+             SchemaVocabularies::Known::JSON_SCHEMA_2020_12_VALIDATION}) &&
         declared_types.test(
             std::to_underlying(sourcemeta::core::JSON::Type::Integer))};
     ONLY_CONTINUE_IF(std::ranges::none_of(
@@ -47,12 +47,12 @@ public:
           return declared_types.test(std::to_underlying(value.type())) ||
                  (integer_matches_integral && value.is_integral());
         }));
-    this->unsatisfiable_ = UNSATISFIABLE_SCHEMA(vocabularies);
+    this->unsatisfiable_ = unsatisfiable_schema(vocabularies);
     return true;
   }
 
   auto transform(sourcemeta::core::JSON &schema) const -> void override {
-    INTO_UNSATISFIABLE(schema, this->unsatisfiable_);
+    into_unsatisfiable(schema, this->unsatisfiable_);
   }
 
 private:

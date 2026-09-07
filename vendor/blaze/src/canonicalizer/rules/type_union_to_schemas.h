@@ -12,10 +12,10 @@ public:
             const sourcemeta::blaze::SchemaWalker &,
             const sourcemeta::blaze::SchemaResolver &) const -> bool override {
     ONLY_CONTINUE_IF(vocabularies.contains_any(
-                         {SchemaVocabularies::Known::JSON_Schema_Draft_0,
-                          SchemaVocabularies::Known::JSON_Schema_Draft_1,
-                          SchemaVocabularies::Known::JSON_Schema_Draft_2,
-                          SchemaVocabularies::Known::JSON_Schema_Draft_3}) &&
+                         {SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_0,
+                          SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_1,
+                          SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_2,
+                          SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_3}) &&
                      schema.is_object());
 
     const auto *type{schema.try_at("type")};

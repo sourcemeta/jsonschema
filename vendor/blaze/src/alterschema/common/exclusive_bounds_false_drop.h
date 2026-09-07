@@ -18,9 +18,9 @@ public:
             const sourcemeta::blaze::SchemaResolver &, const bool) const
       -> SchemaTransformRule::Result override {
     ONLY_CONTINUE_IF(vocabularies.contains_any(
-                         {SchemaVocabularies::Known::JSON_Schema_Draft_3,
-                          SchemaVocabularies::Known::JSON_Schema_Draft_3_Hyper,
-                          SchemaVocabularies::Known::JSON_Schema_Draft_4}) &&
+                         {SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_3,
+                          SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_3_HYPER,
+                          SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_4}) &&
                      schema.is_object());
 
     const auto *type{schema.try_at("type")};
@@ -30,18 +30,18 @@ public:
 
     std::vector<Pointer> locations;
     const auto *exclusive_min{schema.try_at("exclusiveMinimum")};
-    if (exclusive_min && exclusive_min->is_boolean() &&
+    if ((exclusive_min != nullptr) && exclusive_min->is_boolean() &&
         !exclusive_min->to_boolean()) {
       locations.push_back(Pointer{"exclusiveMinimum"});
     }
     const auto *exclusive_max{schema.try_at("exclusiveMaximum")};
-    if (exclusive_max && exclusive_max->is_boolean() &&
+    if ((exclusive_max != nullptr) && exclusive_max->is_boolean() &&
         !exclusive_max->to_boolean()) {
       locations.push_back(Pointer{"exclusiveMaximum"});
     }
 
     ONLY_CONTINUE_IF(!locations.empty());
-    return APPLIES_TO_POINTERS(std::move(locations));
+    return applies_to_pointers(std::move(locations));
   }
 
   auto transform(JSON &schema, const Result &result) const -> void override {

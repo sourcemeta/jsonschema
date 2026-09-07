@@ -20,10 +20,10 @@ public:
     static const JSON::String KEYWORD{"anyOf"};
     ONLY_CONTINUE_IF(
         vocabularies.contains_any(
-            {SchemaVocabularies::Known::JSON_Schema_2020_12_Applicator,
-             SchemaVocabularies::Known::JSON_Schema_2019_09_Applicator,
-             SchemaVocabularies::Known::JSON_Schema_Draft_7,
-             SchemaVocabularies::Known::JSON_Schema_Draft_6}) &&
+            {SchemaVocabularies::Known::JSON_SCHEMA_2020_12_APPLICATOR,
+             SchemaVocabularies::Known::JSON_SCHEMA_2019_09_APPLICATOR,
+             SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_7,
+             SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_6}) &&
         schema.is_object() && schema.defines(KEYWORD) &&
         schema.at(KEYWORD).is_array() &&
         schema.at(KEYWORD).contains(JSON{false}));
@@ -43,7 +43,7 @@ public:
     }
 
     ONLY_CONTINUE_IF(has_non_false);
-    return APPLIES_TO_POINTERS(std::move(false_locations));
+    return applies_to_pointers(std::move(false_locations));
   }
 
   auto transform(JSON &schema, const Result &result) const -> void override {

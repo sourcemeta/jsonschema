@@ -1,43 +1,47 @@
 if(NOT Mimalloc_FOUND)
-  # This module runs before the top-level project sets up its install
-  # locations, so the interface that installed consumers see would otherwise
-  # be built out of empty directory variables
-  include(GNUInstallDirs)
-
   set(MIMALLOC_DIR "${PROJECT_SOURCE_DIR}/vendor/mimalloc")
   set(MIMALLOC_SOURCE_DIR "${MIMALLOC_DIR}/src")
-  set(MIMALLOC_PUBLIC_HEADERS
-    "${MIMALLOC_DIR}/include/mimalloc.h"
-    "${MIMALLOC_DIR}/include/mimalloc-new-delete.h"
-    "${MIMALLOC_DIR}/include/mimalloc-override.h"
-    "${MIMALLOC_DIR}/include/mimalloc-stats.h")
 
-  set(MIMALLOC_SOURCES
-    "${MIMALLOC_SOURCE_DIR}/alloc.c"
-    "${MIMALLOC_SOURCE_DIR}/alloc-aligned.c"
-    "${MIMALLOC_SOURCE_DIR}/alloc-posix.c"
-    "${MIMALLOC_SOURCE_DIR}/arena.c"
-    "${MIMALLOC_SOURCE_DIR}/arena-meta.c"
-    "${MIMALLOC_SOURCE_DIR}/bitmap.c"
-    "${MIMALLOC_SOURCE_DIR}/heap.c"
-    "${MIMALLOC_SOURCE_DIR}/init.c"
-    "${MIMALLOC_SOURCE_DIR}/libc.c"
-    "${MIMALLOC_SOURCE_DIR}/options.c"
-    "${MIMALLOC_SOURCE_DIR}/os.c"
-    "${MIMALLOC_SOURCE_DIR}/page.c"
-    "${MIMALLOC_SOURCE_DIR}/page-map.c"
-    "${MIMALLOC_SOURCE_DIR}/prim/prim.c"
-    "${MIMALLOC_SOURCE_DIR}/random.c"
-    "${MIMALLOC_SOURCE_DIR}/stats.c"
-    "${MIMALLOC_SOURCE_DIR}/theap.c"
-    "${MIMALLOC_SOURCE_DIR}/threadlocal.c")
-
-  if(SOURCEMETA_OS_MACOS)
-    list(APPEND MIMALLOC_SOURCES
-      "${MIMALLOC_SOURCE_DIR}/prim/osx/alloc-override-zone.c")
+  if(BUILD_SHARED_LIBS)
+    # A shared library carries every object it was built from, so the entry
+    # points that nothing refers to by name are there either way
+    set(MIMALLOC_SOURCES
+      "${MIMALLOC_SOURCE_DIR}/alloc.c"
+      "${MIMALLOC_SOURCE_DIR}/alloc-aligned.c"
+      "${MIMALLOC_SOURCE_DIR}/alloc-posix.c"
+      "${MIMALLOC_SOURCE_DIR}/arena.c"
+      "${MIMALLOC_SOURCE_DIR}/arena-meta.c"
+      "${MIMALLOC_SOURCE_DIR}/bitmap.c"
+      "${MIMALLOC_SOURCE_DIR}/heap.c"
+      "${MIMALLOC_SOURCE_DIR}/init.c"
+      "${MIMALLOC_SOURCE_DIR}/libc.c"
+      "${MIMALLOC_SOURCE_DIR}/options.c"
+      "${MIMALLOC_SOURCE_DIR}/os.c"
+      "${MIMALLOC_SOURCE_DIR}/page.c"
+      "${MIMALLOC_SOURCE_DIR}/page-map.c"
+      "${MIMALLOC_SOURCE_DIR}/prim/prim.c"
+      "${MIMALLOC_SOURCE_DIR}/random.c"
+      "${MIMALLOC_SOURCE_DIR}/stats.c"
+      "${MIMALLOC_SOURCE_DIR}/theap.c"
+      "${MIMALLOC_SOURCE_DIR}/threadlocal.c")
+    if(SOURCEMETA_OS_MACOS)
+      list(APPEND MIMALLOC_SOURCES
+        "${MIMALLOC_SOURCE_DIR}/prim/osx/alloc-override-zone.c")
+    endif()
+  else()
+    # This library ships one source that includes every other, precisely so
+    # that a program takes all of the allocator or none of it. An archive
+    # hands a linker its members one at a time, which would keep the entry
+    # points that a program refers to by name and drop the ones nothing does,
+    # such as the registration that this platform's allocation path goes
+    # through. The two entry point sets that this platform's shared builds
+    # rely on cannot share a translation unit, so this applies here only
+    set(MIMALLOC_SOURCES "${MIMALLOC_SOURCE_DIR}/static.c")
   endif()
 
-  add_library(mimalloc ${MIMALLOC_SOURCES})
+  # Merged into the library that carries it, so that no archive, no header and
+  # no CMake package of our own build of it reaches an installed consumer
+  add_library(mimalloc OBJECT ${MIMALLOC_SOURCES})
   sourcemeta_add_default_options(PRIVATE mimalloc)
 
   # Link the resolved thread library rather than the imported target, as the
@@ -54,8 +58,7 @@ if(NOT Mimalloc_FOUND)
   endif()
 
   target_include_directories(mimalloc PUBLIC
-    "$<BUILD_INTERFACE:${MIMALLOC_DIR}/include>"
-    "$<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>")
+    "$<BUILD_INTERFACE:${MIMALLOC_DIR}/include>")
 
   # Define the standard allocation entry points, so that every allocation
   # in the program goes through this library rather than through the
@@ -115,53 +118,7 @@ if(NOT Mimalloc_FOUND)
     target_compile_options(mimalloc PRIVATE -Wno-comma)
   endif()
 
-  set_target_properties(mimalloc
-    PROPERTIES
-      OUTPUT_NAME mimalloc
-      PUBLIC_HEADER "${MIMALLOC_PUBLIC_HEADERS}"
-      EXPORT_NAME mimalloc)
-
-  # Nothing refers to the entry points that replace the standard allocator by
-  # name, so a linker that only pulls in the archive members it needs would
-  # leave the program running on the allocator it was trying to replace
-  add_library(mimalloc_interface INTERFACE)
-  if(BUILD_SHARED_LIBS)
-    target_link_libraries(mimalloc_interface INTERFACE mimalloc)
-  else()
-    target_link_libraries(mimalloc_interface INTERFACE
-      "$<LINK_LIBRARY:WHOLE_ARCHIVE,$<TARGET_NAME:mimalloc>>")
-  endif()
-
-  set_target_properties(mimalloc_interface
-    PROPERTIES EXPORT_NAME Mimalloc)
-
-  add_library(Mimalloc::Mimalloc ALIAS mimalloc_interface)
-
-  if(SOURCEMETA_CORE_INSTALL)
-    install(TARGETS mimalloc mimalloc_interface
-      EXPORT mimalloc
-      PUBLIC_HEADER DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}"
-        COMPONENT sourcemeta_core_dev
-      RUNTIME DESTINATION "${CMAKE_INSTALL_BINDIR}"
-        COMPONENT sourcemeta_core
-      LIBRARY DESTINATION "${CMAKE_INSTALL_LIBDIR}"
-        COMPONENT sourcemeta_core
-        NAMELINK_COMPONENT sourcemeta_core_dev
-      ARCHIVE DESTINATION "${CMAKE_INSTALL_LIBDIR}"
-        COMPONENT sourcemeta_core_dev)
-    install(EXPORT mimalloc
-      DESTINATION "${CMAKE_INSTALL_LIBDIR}/cmake/mimalloc"
-      NAMESPACE Mimalloc::
-      COMPONENT sourcemeta_core_dev)
-
-    file(WRITE ${CMAKE_CURRENT_BINARY_DIR}/mimalloc-config.cmake
-      "include(\"\${CMAKE_CURRENT_LIST_DIR}/mimalloc.cmake\")\n"
-      "check_required_components(\"mimalloc\")\n")
-    install(FILES
-      "${CMAKE_CURRENT_BINARY_DIR}/mimalloc-config.cmake"
-      DESTINATION "${CMAKE_INSTALL_LIBDIR}/cmake/mimalloc"
-      COMPONENT sourcemeta_core_dev)
-  endif()
+  add_library(Mimalloc::Mimalloc ALIAS mimalloc)
 
   set(Mimalloc_FOUND ON)
 endif()

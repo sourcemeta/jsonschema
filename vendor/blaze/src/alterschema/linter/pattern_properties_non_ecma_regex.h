@@ -19,16 +19,16 @@ public:
             const sourcemeta::blaze::SchemaResolver &, const bool) const
       -> SchemaTransformRule::Result override {
     ONLY_CONTINUE_IF(vocabularies.contains_any(
-        {SchemaVocabularies::Known::JSON_Schema_2020_12_Applicator,
-         SchemaVocabularies::Known::JSON_Schema_2019_09_Applicator,
-         SchemaVocabularies::Known::JSON_Schema_Draft_7,
-         SchemaVocabularies::Known::JSON_Schema_Draft_7_Hyper,
-         SchemaVocabularies::Known::JSON_Schema_Draft_6,
-         SchemaVocabularies::Known::JSON_Schema_Draft_6_Hyper,
-         SchemaVocabularies::Known::JSON_Schema_Draft_4,
-         SchemaVocabularies::Known::JSON_Schema_Draft_4_Hyper,
-         SchemaVocabularies::Known::JSON_Schema_Draft_3,
-         SchemaVocabularies::Known::JSON_Schema_Draft_3_Hyper}));
+        {SchemaVocabularies::Known::JSON_SCHEMA_2020_12_APPLICATOR,
+         SchemaVocabularies::Known::JSON_SCHEMA_2019_09_APPLICATOR,
+         SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_7,
+         SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_7_HYPER,
+         SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_6,
+         SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_6_HYPER,
+         SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_4,
+         SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_4_HYPER,
+         SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_3,
+         SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_3_HYPER}));
     ONLY_CONTINUE_IF(schema.is_object());
 
     const auto *pattern_properties{schema.try_at("patternProperties")};
@@ -43,6 +43,6 @@ public:
     }
 
     ONLY_CONTINUE_IF(!offenders.empty());
-    return APPLIES_TO_POINTERS(std::move(offenders));
+    return applies_to_pointers(std::move(offenders));
   }
 };

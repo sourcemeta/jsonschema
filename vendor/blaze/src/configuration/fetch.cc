@@ -163,7 +163,7 @@ auto Configuration::fetch(Lock &lock, const FetchCallback &fetcher,
                           const sourcemeta::blaze::SchemaResolver &resolver,
                           const ReadCallback &reader,
                           const WriteCallback &writer,
-                          const FetchEvent::Callback &callback,
+                          const FetchEvent::Callback &on_event,
                           const FetchMode mode,
                           [[maybe_unused]] std::size_t concurrency) const
     -> void {
@@ -191,7 +191,7 @@ auto Configuration::fetch(Lock &lock, const FetchCallback &fetcher,
     if (should_fetch) {
       sourcemeta::core::JSON schema{sourcemeta::core::JSON::make_object()};
       const auto result{fetch_and_write(
-          dependency_uri, dependency_path, fetcher, resolver, writer, callback,
+          dependency_uri, dependency_path, fetcher, resolver, writer, on_event,
           this->default_dialect, current_index, dependency_count, schema)};
 
       switch (result) {
@@ -204,7 +204,7 @@ auto Configuration::fetch(Lock &lock, const FetchCallback &fetcher,
 
       sourcemeta::core::JSON::String written_hash;
       const auto verify_result{verify_written_schema(
-          dependency_uri, dependency_path, reader, callback, current_index,
+          dependency_uri, dependency_path, reader, on_event, current_index,
           dependency_count, written_hash)};
 
       switch (verify_result) {
@@ -217,7 +217,7 @@ auto Configuration::fetch(Lock &lock, const FetchCallback &fetcher,
 
       lock.emplace(dependency_uri, dependency_path, written_hash);
     } else {
-      if (!emit_event(callback, FetchEvent::Type::UpToDate, dependency_uri,
+      if (!emit_event(on_event, FetchEvent::Type::UpToDate, dependency_uri,
                       dependency_path, current_index, dependency_count, {},
                       nullptr, true)) {
         return;
@@ -231,7 +231,7 @@ auto Configuration::fetch(Lock &lock, const FetchCallback &fetcher,
   for (const auto &[lock_uri, lock_entry] : lock) {
     if (!this->dependencies.contains(lock_uri)) {
       orphaned_uris.push_back(lock_uri);
-      if (!emit_event(callback, FetchEvent::Type::Orphaned, lock_uri,
+      if (!emit_event(on_event, FetchEvent::Type::Orphaned, lock_uri,
                       lock_entry.path, 0, 0, {}, nullptr, true)) {
         return;
       }
@@ -247,7 +247,7 @@ auto Configuration::fetch(const Lock &lock, const FetchCallback &fetcher,
                           const sourcemeta::blaze::SchemaResolver &resolver,
                           const ReadCallback &reader,
                           const WriteCallback &writer,
-                          const FetchEvent::Callback &callback,
+                          const FetchEvent::Callback &on_event,
                           const bool dry_run,
                           [[maybe_unused]] std::size_t concurrency) const
     -> void {
@@ -260,7 +260,7 @@ auto Configuration::fetch(const Lock &lock, const FetchCallback &fetcher,
         lock.check(dependency_uri, dependency_path, reader)};
     switch (entry_status) {
       case Lock::Entry::Status::Untracked:
-        if (!emit_event(callback, FetchEvent::Type::Untracked, dependency_uri,
+        if (!emit_event(on_event, FetchEvent::Type::Untracked, dependency_uri,
                         dependency_path, current_index, dependency_count, {},
                         nullptr, true)) {
           return;
@@ -269,7 +269,7 @@ auto Configuration::fetch(const Lock &lock, const FetchCallback &fetcher,
 
       case Lock::Entry::Status::FileMissing: {
         if (dry_run) {
-          if (!emit_event(callback, FetchEvent::Type::FileMissing,
+          if (!emit_event(on_event, FetchEvent::Type::FileMissing,
                           dependency_uri, dependency_path, current_index,
                           dependency_count, {}, nullptr, true)) {
             return;
@@ -278,7 +278,7 @@ auto Configuration::fetch(const Lock &lock, const FetchCallback &fetcher,
           sourcemeta::core::JSON schema{sourcemeta::core::JSON::make_object()};
           const auto result{
               fetch_and_write(dependency_uri, dependency_path, fetcher,
-                              resolver, writer, callback, this->default_dialect,
+                              resolver, writer, on_event, this->default_dialect,
                               current_index, dependency_count, schema)};
 
           switch (result) {
@@ -291,7 +291,7 @@ auto Configuration::fetch(const Lock &lock, const FetchCallback &fetcher,
 
           sourcemeta::core::JSON::String written_hash;
           const auto verify_result{verify_written_schema(
-              dependency_uri, dependency_path, reader, callback, current_index,
+              dependency_uri, dependency_path, reader, on_event, current_index,
               dependency_count, written_hash)};
 
           switch (verify_result) {
@@ -305,7 +305,7 @@ auto Configuration::fetch(const Lock &lock, const FetchCallback &fetcher,
           assert(lock.at(dependency_uri).has_value());
           const auto &lock_entry{lock.at(dependency_uri)->get()};
           if (written_hash != lock_entry.hash) {
-            emit_event(callback, FetchEvent::Type::Error, dependency_uri,
+            emit_event(on_event, FetchEvent::Type::Error, dependency_uri,
                        dependency_path, current_index, dependency_count,
                        "Written file hash does not match lock file");
             return;
@@ -315,13 +315,13 @@ auto Configuration::fetch(const Lock &lock, const FetchCallback &fetcher,
       }
 
       case Lock::Entry::Status::Mismatched:
-        if (!emit_event(callback, FetchEvent::Type::Mismatched, dependency_uri,
+        if (!emit_event(on_event, FetchEvent::Type::Mismatched, dependency_uri,
                         dependency_path, current_index, dependency_count, {},
                         nullptr, true)) {
           return;
         }
         if (!dry_run) {
-          emit_event(callback, FetchEvent::Type::Error, dependency_uri,
+          emit_event(on_event, FetchEvent::Type::Error, dependency_uri,
                      dependency_path, current_index, dependency_count,
                      "File hash does not match lock file in frozen mode");
           return;
@@ -329,13 +329,13 @@ auto Configuration::fetch(const Lock &lock, const FetchCallback &fetcher,
         break;
 
       case Lock::Entry::Status::PathMismatch:
-        if (!emit_event(callback, FetchEvent::Type::PathMismatch,
+        if (!emit_event(on_event, FetchEvent::Type::PathMismatch,
                         dependency_uri, dependency_path, current_index,
                         dependency_count, {}, nullptr, true)) {
           return;
         }
         if (!dry_run) {
-          emit_event(callback, FetchEvent::Type::Error, dependency_uri,
+          emit_event(on_event, FetchEvent::Type::Error, dependency_uri,
                      dependency_path, current_index, dependency_count,
                      "Configured path does not match lock file in frozen mode");
           return;
@@ -343,7 +343,7 @@ auto Configuration::fetch(const Lock &lock, const FetchCallback &fetcher,
         break;
 
       case Lock::Entry::Status::UpToDate:
-        if (!emit_event(callback, FetchEvent::Type::UpToDate, dependency_uri,
+        if (!emit_event(on_event, FetchEvent::Type::UpToDate, dependency_uri,
                         dependency_path, current_index, dependency_count, {},
                         nullptr, true)) {
           return;
@@ -356,7 +356,7 @@ auto Configuration::fetch(const Lock &lock, const FetchCallback &fetcher,
 
   for (const auto &[lock_uri, lock_entry] : lock) {
     if (!this->dependencies.contains(lock_uri)) {
-      if (!emit_event(callback, FetchEvent::Type::Orphaned, lock_uri,
+      if (!emit_event(on_event, FetchEvent::Type::Orphaned, lock_uri,
                       lock_entry.path, 0, 0, {}, nullptr, true)) {
         return;
       }

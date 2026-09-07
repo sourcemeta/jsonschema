@@ -21,8 +21,8 @@ public:
     static const JSON::String KEYWORD{"disallow"};
     ONLY_CONTINUE_IF(
         vocabularies.contains_any(
-            {SchemaVocabularies::Known::JSON_Schema_Draft_3,
-             SchemaVocabularies::Known::JSON_Schema_Draft_3_Hyper}) &&
+            {SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_3,
+             SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_3_HYPER}) &&
         schema.is_object());
 
     const auto *disallow{schema.try_at(KEYWORD)};
@@ -65,7 +65,7 @@ public:
     keyword_pointer.push_back(std::cref(KEYWORD));
     ONLY_CONTINUE_IF(!frame.has_references_through(keyword_pointer));
 
-    return APPLIES_TO_POINTERS(std::move(locations));
+    return applies_to_pointers(std::move(locations));
   }
 
   auto transform(JSON &schema, const Result &result) const -> void override {
@@ -116,7 +116,7 @@ private:
       return result;
     }
     const auto *entry_type{entry.try_at("type")};
-    if (!entry_type) {
+    if (entry_type == nullptr) {
       return result;
     }
     if (entry_type->is_string()) {

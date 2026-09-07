@@ -23,23 +23,23 @@ public:
   using hash_type = sourcemeta::core::JSON::Object::hash_type;
   using value_type = std::pair<string_type, hash_type>;
   using underlying_type = std::vector<value_type>;
-  using size_type = typename underlying_type::size_type;
-  using difference_type = typename underlying_type::difference_type;
-  using const_iterator = typename underlying_type::const_iterator;
+  using size_type = underlying_type::size_type;
+  using difference_type = underlying_type::difference_type;
+  using const_iterator = underlying_type::const_iterator;
 
-  [[nodiscard]] inline auto contains(const string_type &value,
-                                     const hash_type hash) const -> bool {
-    if (this->hasher.is_perfect(hash)) {
+  [[nodiscard]] auto contains(const string_type &value,
+                              const hash_type hash) const -> bool {
+    if (this->hasher_.is_perfect(hash)) {
       // A perfect hash captures the key bytes but not its length, so two keys
       // that only differ in trailing length hash the same and the size is
       // confirmed too
-      for (const auto &entry : this->data) {
+      for (const auto &entry : this->data_) {
         if (entry.second == hash && entry.first.size() == value.size()) {
           return true;
         }
       }
     } else {
-      for (const auto &entry : this->data) {
+      for (const auto &entry : this->data_) {
         if (entry.second == hash && entry.first == value) {
           return true;
         }
@@ -48,58 +48,56 @@ public:
 
     return false;
   }
-  [[nodiscard]] inline auto contains(const string_type &value) const -> bool {
-    return this->contains(value, this->hasher(value));
+  [[nodiscard]] auto contains(const string_type &value) const -> bool {
+    return this->contains(value, this->hasher_(value));
   }
 
-  [[nodiscard]] inline auto at(const size_type index) const noexcept
+  [[nodiscard]] auto at(const size_type index) const noexcept
       -> const value_type & {
-    return this->data[index];
+    return this->data_[index];
   }
 
-  inline auto insert(const string_type &value) -> void {
-    const auto hash{this->hasher(value)};
+  auto insert(const string_type &value) -> void {
+    const auto hash{this->hasher_(value)};
     if (!this->contains(value, hash)) {
-      this->data.emplace_back(value, hash);
-      std::ranges::sort(this->data,
+      this->data_.emplace_back(value, hash);
+      std::ranges::sort(this->data_,
                         [](const auto &left, const auto &right) -> bool {
                           return left.first < right.first;
                         });
     }
   }
-  inline auto insert(string_type &&value) -> void {
-    const auto hash{this->hasher(value)};
+  auto insert(string_type &&value) -> void {
+    const auto hash{this->hasher_(value)};
     if (!this->contains(value, hash)) {
-      this->data.emplace_back(std::move(value), hash);
-      std::ranges::sort(this->data,
+      this->data_.emplace_back(std::move(value), hash);
+      std::ranges::sort(this->data_,
                         [](const auto &left, const auto &right) -> bool {
                           return left.first < right.first;
                         });
     }
   }
 
-  [[nodiscard]] inline auto empty() const noexcept -> bool {
-    return this->data.empty();
+  [[nodiscard]] auto empty() const noexcept -> bool {
+    return this->data_.empty();
   }
-  [[nodiscard]] inline auto size() const noexcept -> size_type {
-    return this->data.size();
+  [[nodiscard]] auto size() const noexcept -> size_type {
+    return this->data_.size();
   }
 
-  [[nodiscard]] inline auto begin() const -> const_iterator {
-    return this->data.begin();
+  [[nodiscard]] auto begin() const -> const_iterator {
+    return this->data_.begin();
   }
-  [[nodiscard]] inline auto end() const -> const_iterator {
-    return this->data.end();
+  [[nodiscard]] auto end() const -> const_iterator { return this->data_.end(); }
+  [[nodiscard]] auto cbegin() const -> const_iterator {
+    return this->data_.cbegin();
   }
-  [[nodiscard]] inline auto cbegin() const -> const_iterator {
-    return this->data.cbegin();
-  }
-  [[nodiscard]] inline auto cend() const -> const_iterator {
-    return this->data.cend();
+  [[nodiscard]] auto cend() const -> const_iterator {
+    return this->data_.cend();
   }
 
   [[nodiscard]] auto to_json() const -> sourcemeta::core::JSON {
-    return sourcemeta::core::to_json(this->data, [](const auto &item) -> auto {
+    return sourcemeta::core::to_json(this->data_, [](const auto &item) -> auto {
       return sourcemeta::core::to_json(item.first);
     });
   }
@@ -131,11 +129,11 @@ private:
 #if defined(_MSC_VER)
 #pragma warning(disable : 4251 4275)
 #endif
-  underlying_type data;
+  underlying_type data_;
 #if defined(_MSC_VER)
 #pragma warning(default : 4251 4275)
 #endif
-  sourcemeta::core::PropertyHashJSON<string_type> hasher;
+  sourcemeta::core::PropertyHashJSON<string_type> hasher_;
 };
 
 } // namespace sourcemeta::blaze

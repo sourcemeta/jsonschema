@@ -19,16 +19,16 @@ public:
       -> SchemaTransformRule::Result override {
     ONLY_CONTINUE_IF(
         vocabularies.contains_any(
-            {SchemaVocabularies::Known::JSON_Schema_2020_12_Validation,
-             SchemaVocabularies::Known::JSON_Schema_2019_09_Validation,
-             SchemaVocabularies::Known::JSON_Schema_Draft_7,
-             SchemaVocabularies::Known::JSON_Schema_Draft_6,
-             SchemaVocabularies::Known::JSON_Schema_Draft_4,
-             SchemaVocabularies::Known::JSON_Schema_Draft_3,
-             SchemaVocabularies::Known::JSON_Schema_Draft_2,
-             SchemaVocabularies::Known::JSON_Schema_Draft_2_Hyper,
-             SchemaVocabularies::Known::JSON_Schema_Draft_1,
-             SchemaVocabularies::Known::JSON_Schema_Draft_1_Hyper}) &&
+            {SchemaVocabularies::Known::JSON_SCHEMA_2020_12_VALIDATION,
+             SchemaVocabularies::Known::JSON_SCHEMA_2019_09_VALIDATION,
+             SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_7,
+             SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_6,
+             SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_4,
+             SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_3,
+             SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_2,
+             SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_2_HYPER,
+             SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_1,
+             SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_1_HYPER}) &&
         schema.is_object() && !schema.defines("type"));
 
     const auto *enum_value{schema.try_at("enum")};
@@ -42,8 +42,8 @@ public:
     ONLY_CONTINUE_IF(enum_types.any());
 
     const bool is_draft3{vocabularies.contains_any(
-        {SchemaVocabularies::Known::JSON_Schema_Draft_3,
-         SchemaVocabularies::Known::JSON_Schema_Draft_3_Hyper})};
+        {SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_3,
+         SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_3_HYPER})};
 
     std::vector<Pointer> positions;
     for (const auto &entry : schema.as_object()) {
@@ -67,7 +67,7 @@ public:
 
     ONLY_CONTINUE_IF(!positions.empty());
 
-    return APPLIES_TO_POINTERS(std::move(positions));
+    return applies_to_pointers(std::move(positions));
   }
 
   auto transform(JSON &schema, const Result &result) const -> void override {

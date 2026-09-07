@@ -2,7 +2,9 @@
 #include "crypto_kdf.h"
 
 #define WIN32_LEAN_AND_MEAN
+#ifndef NOMINMAX
 #define NOMINMAX
+#endif
 #include <windows.h> // ULONG, PUCHAR
 
 #include <bcrypt.h> // BCrypt*, BCRYPT_*
@@ -63,8 +65,8 @@ auto derive(const sourcemeta::core::KDFHash hash, const std::string_view secret,
   BCRYPT_ALG_HANDLE algorithm{nullptr};
   // The key derivation provider is absent before Windows 10 version 1803, and
   // a caller falls back to composing the derivation from HMAC
-  if (!BCRYPT_SUCCESS(BCryptOpenAlgorithmProvider(
-          &algorithm, BCRYPT_HKDF_ALGORITHM, nullptr, 0))) {
+  if (!BCRYPT_SUCCESS(BCryptOpenAlgorithmProvider(&algorithm, BCRYPT_KDF_HKDF,
+                                                  nullptr, 0))) {
     return false;
   }
 

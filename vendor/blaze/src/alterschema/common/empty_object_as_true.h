@@ -18,11 +18,11 @@ public:
             const sourcemeta::blaze::SchemaResolver &, const bool) const
       -> SchemaTransformRule::Result override {
     ONLY_CONTINUE_IF(vocabularies.contains_any(
-                         {SchemaVocabularies::Known::JSON_Schema_2020_12_Core,
-                          SchemaVocabularies::Known::JSON_Schema_2019_09_Core,
-                          SchemaVocabularies::Known::JSON_Schema_Draft_7,
-                          SchemaVocabularies::Known::JSON_Schema_Draft_6,
-                          SchemaVocabularies::Known::JSON_Schema_Draft_4}) &&
+                         {SchemaVocabularies::Known::JSON_SCHEMA_2020_12_CORE,
+                          SchemaVocabularies::Known::JSON_SCHEMA_2019_09_CORE,
+                          SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_7,
+                          SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_6,
+                          SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_4}) &&
                      schema.is_object() && schema.empty());
     return true;
   }

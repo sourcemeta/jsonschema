@@ -13,7 +13,7 @@ public:
             const sourcemeta::blaze::SchemaWalker &,
             const sourcemeta::blaze::SchemaResolver &) const -> bool override {
     ONLY_CONTINUE_IF(vocabularies.contains(
-                         SchemaVocabularies::Known::JSON_Schema_2019_09_Core) &&
+                         SchemaVocabularies::Known::JSON_SCHEMA_2019_09_CORE) &&
                      schema.is_object());
 
     const auto *recursive_anchor{schema.try_at("$recursiveAnchor")};

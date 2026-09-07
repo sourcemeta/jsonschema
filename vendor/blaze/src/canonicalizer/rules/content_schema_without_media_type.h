@@ -1,6 +1,6 @@
 class ContentSchemaWithoutMediaType final : public SchemaTransformRule {
 private:
-  // NOLINTNEXTLINE(bugprone-throwing-static-initialization)
+  // NOLINTNEXTLINE(cert-err58-cpp,bugprone-throwing-static-initialization)
   static inline const std::string KEYWORD{"contentSchema"};
 
 public:
@@ -18,8 +18,8 @@ public:
             const sourcemeta::blaze::SchemaResolver &) const -> bool override {
     ONLY_CONTINUE_IF(
         vocabularies.contains_any(
-            {SchemaVocabularies::Known::JSON_Schema_2020_12_Content,
-             SchemaVocabularies::Known::JSON_Schema_2019_09_Content}) &&
+            {SchemaVocabularies::Known::JSON_SCHEMA_2020_12_CONTENT,
+             SchemaVocabularies::Known::JSON_SCHEMA_2019_09_CONTENT}) &&
         schema.is_object() && schema.defines(KEYWORD) &&
         !schema.defines("contentMediaType"));
     ONLY_CONTINUE_IF(!frame.has_references_through(

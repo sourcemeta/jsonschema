@@ -23,7 +23,7 @@ public:
     const auto dialect{declared_dialect(schema)};
     ONLY_CONTINUE_IF(!dialect.empty());
     ONLY_CONTINUE_IF(dialect != location.dialect);
-    return APPLIES_TO_KEYWORDS("$schema");
+    return applies_to_keywords("$schema");
   }
 
   auto transform(JSON &schema, const Result &) const -> void override {

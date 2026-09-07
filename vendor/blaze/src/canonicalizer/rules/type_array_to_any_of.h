@@ -14,17 +14,17 @@ public:
 
     ONLY_CONTINUE_IF(
         ((vocabularies.contains(
-              SchemaVocabularies::Known::JSON_Schema_2020_12_Validation) &&
+              SchemaVocabularies::Known::JSON_SCHEMA_2020_12_VALIDATION) &&
           vocabularies.contains(
-              SchemaVocabularies::Known::JSON_Schema_2020_12_Applicator)) ||
+              SchemaVocabularies::Known::JSON_SCHEMA_2020_12_APPLICATOR)) ||
          (vocabularies.contains(
-              SchemaVocabularies::Known::JSON_Schema_2019_09_Validation) &&
+              SchemaVocabularies::Known::JSON_SCHEMA_2019_09_VALIDATION) &&
           vocabularies.contains(
-              SchemaVocabularies::Known::JSON_Schema_2019_09_Applicator)) ||
+              SchemaVocabularies::Known::JSON_SCHEMA_2019_09_APPLICATOR)) ||
          vocabularies.contains_any(
-             {SchemaVocabularies::Known::JSON_Schema_Draft_7,
-              SchemaVocabularies::Known::JSON_Schema_Draft_6,
-              SchemaVocabularies::Known::JSON_Schema_Draft_4})) &&
+             {SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_7,
+              SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_6,
+              SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_4})) &&
         schema.is_object());
 
     const auto *type{schema.try_at("type")};
@@ -40,8 +40,8 @@ public:
       const auto &metadata{walker(entry.first, vocabularies)};
       if (metadata.instances.any() &&
           !(vocabularies.contains_any(
-                {SchemaVocabularies::Known::JSON_Schema_2020_12_Unevaluated,
-                 SchemaVocabularies::Known::JSON_Schema_2019_09_Applicator}) &&
+                {SchemaVocabularies::Known::JSON_SCHEMA_2020_12_UNEVALUATED,
+                 SchemaVocabularies::Known::JSON_SCHEMA_2019_09_APPLICATOR}) &&
             (entry.first == "unevaluatedProperties" ||
              entry.first == "unevaluatedItems"))) {
         this->keyword_instances_[entry.first] = metadata.instances;
@@ -76,8 +76,8 @@ public:
       schema.erase(keyword);
     }
 
-    static const std::string anyof_keyword{"anyOf"};
-    static const std::string allof_keyword{"allOf"};
+    static const std::string ANYOF_KEYWORD{"anyOf"};
+    static const std::string ALLOF_KEYWORD{"allOf"};
     if (schema.defines("anyOf")) {
       auto first_branch{sourcemeta::core::JSON::make_object()};
       first_branch.assign("anyOf", schema.at("anyOf"));
@@ -90,19 +90,19 @@ public:
         schema.at("allOf").push_back(std::move(first_branch));
         schema.at("allOf").push_back(std::move(second_branch));
         schema.erase("type");
-        this->disjunctors_prefix_ = {allof_keyword, allof_index, anyof_keyword};
+        this->disjunctors_prefix_ = {ALLOF_KEYWORD, allof_index, ANYOF_KEYWORD};
       } else {
         auto allof_wrapper{sourcemeta::core::JSON::make_array()};
         allof_wrapper.push_back(std::move(first_branch));
         allof_wrapper.push_back(std::move(second_branch));
         schema.at("type").into(std::move(allof_wrapper));
         schema.rename("type", "allOf");
-        this->disjunctors_prefix_ = {allof_keyword, 1, anyof_keyword};
+        this->disjunctors_prefix_ = {ALLOF_KEYWORD, 1, ANYOF_KEYWORD};
       }
     } else {
       schema.at("type").into(std::move(disjunctors));
       schema.rename("type", "anyOf");
-      this->disjunctors_prefix_ = {anyof_keyword};
+      this->disjunctors_prefix_ = {ANYOF_KEYWORD};
     }
   }
 

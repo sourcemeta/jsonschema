@@ -101,19 +101,18 @@ auto compiler_2020_12_core_dynamicref(const Context &context,
     return {make(sourcemeta::blaze::InstructionIndex::ControlDynamicAnchorJump,
                  context, schema_context, dynamic_context,
                  std::string{reference.fragment().value()})};
-  } else {
-    const auto base_resource{reference.recompose_without_fragment()};
-    assert(base_resource.has_value());
-
-    // If the dynamic reference has a static component, we need to make sure we
-    // append such static part as a resource before we begin the lookup
-    return {make_with_resource(
-        sourcemeta::blaze::InstructionIndex::ControlDynamicAnchorJump, context,
-        schema_context, dynamic_context,
-        // TODO: The amount of possible anchors is known at compile time.
-        // We could convert it into integers like we do for resources
-        std::string{reference.fragment().value()}, base_resource.value())};
   }
+  const auto base_resource{reference.recompose_without_fragment()};
+  assert(base_resource.has_value());
+
+  // If the dynamic reference has a static component, we need to make sure we
+  // append such static part as a resource before we begin the lookup
+  return {make_with_resource(
+      sourcemeta::blaze::InstructionIndex::ControlDynamicAnchorJump, context,
+      schema_context, dynamic_context,
+      // TODO: The amount of possible anchors is known at compile time.
+      // We could convert it into integers like we do for resources
+      std::string{reference.fragment().value()}, base_resource.value())};
 }
 
 } // namespace internal

@@ -14,19 +14,19 @@ public:
             const sourcemeta::blaze::SchemaResolver &) const -> bool override {
     ONLY_CONTINUE_IF(
         vocabularies.contains_any(
-            {SchemaVocabularies::Known::JSON_Schema_Draft_7,
-             SchemaVocabularies::Known::JSON_Schema_Draft_6,
-             SchemaVocabularies::Known::JSON_Schema_Draft_4,
-             SchemaVocabularies::Known::JSON_Schema_Draft_3,
-             SchemaVocabularies::Known::JSON_Schema_Draft_3_Hyper}) &&
+            {SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_7,
+             SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_6,
+             SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_4,
+             SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_3,
+             SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_3_HYPER}) &&
         schema.is_object());
 
     const auto *dependencies{schema.try_at("dependencies")};
     ONLY_CONTINUE_IF(dependencies && dependencies->is_object());
 
     const bool is_draft_3{vocabularies.contains_any(
-        {SchemaVocabularies::Known::JSON_Schema_Draft_3,
-         SchemaVocabularies::Known::JSON_Schema_Draft_3_Hyper})};
+        {SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_3,
+         SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_3_HYPER})};
 
     if (is_draft_3) {
       const auto *properties{schema.try_at("properties")};
@@ -128,7 +128,8 @@ private:
           continue;
         }
         const auto *required{entry.second.try_at("required")};
-        if (required && required->is_boolean() && required->to_boolean()) {
+        if ((required != nullptr) && required->is_boolean() &&
+            required->to_boolean()) {
           snapshot.push_back(entry.first);
         }
       }
@@ -162,7 +163,8 @@ private:
           } else if (schema.at("properties").at(dependency_name).is_object()) {
             auto &existing{schema.at("properties").at(dependency_name)};
             const auto *current_required{existing.try_at("required")};
-            if (!current_required || !current_required->is_boolean() ||
+            if ((current_required == nullptr) ||
+                !current_required->is_boolean() ||
                 !current_required->to_boolean()) {
               existing.assign("required", sourcemeta::core::JSON{true});
               match = true;
@@ -179,6 +181,5 @@ private:
     }
   }
 
-private:
   mutable std::vector<sourcemeta::core::Pointer> locations_;
 };

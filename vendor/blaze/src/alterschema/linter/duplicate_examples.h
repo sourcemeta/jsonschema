@@ -18,15 +18,15 @@ public:
       -> SchemaTransformRule::Result override {
     ONLY_CONTINUE_IF(
         vocabularies.contains_any(
-            {SchemaVocabularies::Known::JSON_Schema_2020_12_Meta_Data,
-             SchemaVocabularies::Known::JSON_Schema_2019_09_Meta_Data,
-             SchemaVocabularies::Known::JSON_Schema_Draft_7,
-             SchemaVocabularies::Known::JSON_Schema_Draft_6}) &&
+            {SchemaVocabularies::Known::JSON_SCHEMA_2020_12_META_DATA,
+             SchemaVocabularies::Known::JSON_SCHEMA_2019_09_META_DATA,
+             SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_7,
+             SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_6}) &&
         schema.is_object());
 
     const auto *examples{schema.try_at("examples")};
     ONLY_CONTINUE_IF(examples && examples->is_array() && !examples->unique());
-    return APPLIES_TO_KEYWORDS("examples");
+    return applies_to_keywords("examples");
   }
 
   auto transform(JSON &schema, const Result &) const -> void override {

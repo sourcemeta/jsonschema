@@ -376,6 +376,15 @@ public:
       return {std::move(quotient), std::move(remainder)};
     }
 
+    // A zero divisor defines no quotient, and the divisions below would either
+    // divide by that zero word or read past the divisor
+    if (divisor.is_zero()) {
+      BigCoefficient quotient{1};
+      quotient.words[0] = 0;
+      quotient.length = 1;
+      return {std::move(quotient), this->clone()};
+    }
+
     if (divisor.length == 1) {
       BigCoefficient quotient{this->length};
       quotient.length = this->length;

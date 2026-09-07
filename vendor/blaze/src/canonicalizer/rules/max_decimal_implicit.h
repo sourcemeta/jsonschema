@@ -12,8 +12,8 @@ public:
             const sourcemeta::blaze::SchemaWalker &,
             const sourcemeta::blaze::SchemaResolver &) const -> bool override {
     ONLY_CONTINUE_IF(vocabularies.contains_any(
-                         {SchemaVocabularies::Known::JSON_Schema_Draft_0,
-                          SchemaVocabularies::Known::JSON_Schema_Draft_1}) &&
+                         {SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_0,
+                          SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_1}) &&
                      schema.is_object() && !schema.defines("maxDecimal"));
 
     const auto *type{schema.try_at("type")};

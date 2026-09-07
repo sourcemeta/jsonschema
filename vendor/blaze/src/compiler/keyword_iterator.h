@@ -48,10 +48,10 @@ inline auto schema_keyword_priority(const std::string_view keyword,
 /// Iterate over the top-level keywords of a schema in evaluation order
 class SchemaKeywordIterator {
 private:
-  using internal = typename std::vector<KeywordEntry>;
+  using internal = std::vector<KeywordEntry>;
 
 public:
-  using const_iterator = typename internal::const_iterator;
+  using const_iterator = internal::const_iterator;
   SchemaKeywordIterator(const sourcemeta::core::JSON &schema,
                         const SchemaWalker &walker,
                         const SchemaVocabularies &vocabularies);
@@ -61,7 +61,7 @@ public:
   [[nodiscard]] auto cend() const -> const_iterator;
 
 private:
-  internal entries{};
+  internal entries_{};
 };
 
 // TODO: This iterator is not very efficient. It traverses once on
@@ -81,12 +81,12 @@ inline SchemaKeywordIterator::SchemaKeywordIterator(
     sourcemeta::core::WeakPointer entry_pointer;
     entry_pointer.push_back(std::cref(entry.first));
     KeywordEntry keyword_entry{.pointer = std::move(entry_pointer)};
-    this->entries.push_back(std::move(keyword_entry));
+    this->entries_.push_back(std::move(keyword_entry));
   }
 
   // Sort keywords based on priority for correct evaluation
   std::ranges::sort(
-      this->entries,
+      this->entries_,
       [&vocabularies, &walker](const auto &left, const auto &right) -> bool {
         // These cannot be empty or indexes, as we created
         // the entries array from a JSON object
@@ -104,23 +104,22 @@ inline SchemaKeywordIterator::SchemaKeywordIterator(
         // writing tests on the iterator output.
         if (left_priority != right_priority) {
           return left_priority < right_priority;
-        } else {
-          return left.pointer < right.pointer;
         }
+        return left.pointer < right.pointer;
       });
 }
 
 inline auto SchemaKeywordIterator::begin() const -> const_iterator {
-  return this->entries.begin();
+  return this->entries_.begin();
 }
 inline auto SchemaKeywordIterator::end() const -> const_iterator {
-  return this->entries.end();
+  return this->entries_.end();
 }
 inline auto SchemaKeywordIterator::cbegin() const -> const_iterator {
-  return this->entries.cbegin();
+  return this->entries_.cbegin();
 }
 inline auto SchemaKeywordIterator::cend() const -> const_iterator {
-  return this->entries.cend();
+  return this->entries_.cend();
 }
 
 } // namespace sourcemeta::blaze

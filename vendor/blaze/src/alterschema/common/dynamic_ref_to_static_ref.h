@@ -1,8 +1,8 @@
 class DynamicRefToStaticRef final : public SchemaTransformRule {
 private:
-  // NOLINTNEXTLINE(bugprone-throwing-static-initialization)
+  // NOLINTNEXTLINE(cert-err58-cpp,bugprone-throwing-static-initialization)
   static inline const std::string KEYWORD_DYNAMIC_REF{"$dynamicRef"};
-  // NOLINTNEXTLINE(bugprone-throwing-static-initialization)
+  // NOLINTNEXTLINE(cert-err58-cpp,bugprone-throwing-static-initialization)
   static inline const std::string KEYWORD_RECURSIVE_REF{"$recursiveRef"};
 
 public:
@@ -26,7 +26,7 @@ public:
     ONLY_CONTINUE_IF(schema.is_object() && !schema.defines("$ref"));
 
     if (vocabularies.contains(
-            SchemaVocabularies::Known::JSON_Schema_2020_12_Core) &&
+            SchemaVocabularies::Known::JSON_SCHEMA_2020_12_CORE) &&
         schema.defines("$dynamicRef")) {
       auto reference_pointer{location.pointer};
       reference_pointer.push_back(std::cref(KEYWORD_DYNAMIC_REF));
@@ -70,11 +70,11 @@ public:
       }
 
       this->keyword_ = &KEYWORD_DYNAMIC_REF;
-      return APPLIES_TO_KEYWORDS("$dynamicRef");
+      return applies_to_keywords("$dynamicRef");
     }
 
     if (vocabularies.contains(
-            SchemaVocabularies::Known::JSON_Schema_2019_09_Core) &&
+            SchemaVocabularies::Known::JSON_SCHEMA_2019_09_CORE) &&
         schema.defines("$recursiveRef")) {
       auto reference_pointer{location.pointer};
       reference_pointer.push_back(std::cref(KEYWORD_RECURSIVE_REF));
@@ -106,7 +106,7 @@ public:
       }
 
       this->keyword_ = &KEYWORD_RECURSIVE_REF;
-      return APPLIES_TO_KEYWORDS("$recursiveRef");
+      return applies_to_keywords("$recursiveRef");
     }
 
     return false;

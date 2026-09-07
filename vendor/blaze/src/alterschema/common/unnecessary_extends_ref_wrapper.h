@@ -17,8 +17,8 @@ public:
             const sourcemeta::blaze::SchemaResolver &, const bool) const
       -> SchemaTransformRule::Result override {
     ONLY_CONTINUE_IF(vocabularies.contains_any(
-        {SchemaVocabularies::Known::JSON_Schema_Draft_3,
-         SchemaVocabularies::Known::JSON_Schema_Draft_3_Hyper}));
+        {SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_3,
+         SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_3_HYPER}));
     ONLY_CONTINUE_IF(schema.is_object() && schema.size() == 1);
     const auto *extends{schema.try_at("extends")};
     ONLY_CONTINUE_IF(extends);
@@ -28,7 +28,7 @@ public:
     // subschema only declares `extends`
     if (extends->is_object()) {
       ONLY_CONTINUE_IF(extends->size() == 1 && extends->defines("$ref"));
-      return APPLIES_TO_POINTERS({{"extends", "$ref"}});
+      return applies_to_pointers({{"extends", "$ref"}});
     }
 
     if (extends->is_array()) {
@@ -36,7 +36,7 @@ public:
       const auto &branch{extends->at(0)};
       ONLY_CONTINUE_IF(branch.is_object());
       ONLY_CONTINUE_IF(branch.size() == 1 && branch.defines("$ref"));
-      return APPLIES_TO_POINTERS({{"extends", 0, "$ref"}});
+      return applies_to_pointers({{"extends", 0, "$ref"}});
     }
 
     return false;

@@ -30,44 +30,44 @@ namespace sourcemeta::blaze {
 struct SOURCEMETA_BLAZE_FOUNDATION_EXPORT SchemaVocabularies {
   enum class Known : std::uint8_t {
     // Pre-vocabulary dialects (treated as vocabularies)
-    JSON_Schema_Draft_0 = 0,
-    JSON_Schema_Draft_0_Hyper = 1,
-    JSON_Schema_Draft_1 = 2,
-    JSON_Schema_Draft_1_Hyper = 3,
-    JSON_Schema_Draft_2 = 4,
-    JSON_Schema_Draft_2_Hyper = 5,
-    JSON_Schema_Draft_3 = 6,
-    JSON_Schema_Draft_3_Hyper = 7,
-    JSON_Schema_Draft_4 = 8,
-    JSON_Schema_Draft_4_Hyper = 9,
-    JSON_Schema_Draft_6 = 10,
-    JSON_Schema_Draft_6_Hyper = 11,
-    JSON_Schema_Draft_7 = 12,
-    JSON_Schema_Draft_7_Hyper = 13,
+    JSON_SCHEMA_DRAFT_0 = 0,
+    JSON_SCHEMA_DRAFT_0_HYPER = 1,
+    JSON_SCHEMA_DRAFT_1 = 2,
+    JSON_SCHEMA_DRAFT_1_HYPER = 3,
+    JSON_SCHEMA_DRAFT_2 = 4,
+    JSON_SCHEMA_DRAFT_2_HYPER = 5,
+    JSON_SCHEMA_DRAFT_3 = 6,
+    JSON_SCHEMA_DRAFT_3_HYPER = 7,
+    JSON_SCHEMA_DRAFT_4 = 8,
+    JSON_SCHEMA_DRAFT_4_HYPER = 9,
+    JSON_SCHEMA_DRAFT_6 = 10,
+    JSON_SCHEMA_DRAFT_6_HYPER = 11,
+    JSON_SCHEMA_DRAFT_7 = 12,
+    JSON_SCHEMA_DRAFT_7_HYPER = 13,
     // 2019-09 vocabularies
-    JSON_Schema_2019_09_Core = 14,
-    JSON_Schema_2019_09_Applicator = 15,
-    JSON_Schema_2019_09_Validation = 16,
-    JSON_Schema_2019_09_Meta_Data = 17,
-    JSON_Schema_2019_09_Format = 18,
-    JSON_Schema_2019_09_Content = 19,
-    JSON_Schema_2019_09_Hyper_Schema = 20,
+    JSON_SCHEMA_2019_09_CORE = 14,
+    JSON_SCHEMA_2019_09_APPLICATOR = 15,
+    JSON_SCHEMA_2019_09_VALIDATION = 16,
+    JSON_SCHEMA_2019_09_META_DATA = 17,
+    JSON_SCHEMA_2019_09_FORMAT = 18,
+    JSON_SCHEMA_2019_09_CONTENT = 19,
+    JSON_SCHEMA_2019_09_HYPER_SCHEMA = 20,
     // 2020-12 vocabularies
-    JSON_Schema_2020_12_Core = 21,
-    JSON_Schema_2020_12_Applicator = 22,
-    JSON_Schema_2020_12_Unevaluated = 23,
-    JSON_Schema_2020_12_Validation = 24,
-    JSON_Schema_2020_12_Meta_Data = 25,
-    JSON_Schema_2020_12_Format_Annotation = 26,
-    JSON_Schema_2020_12_Format_Assertion = 27,
-    JSON_Schema_2020_12_Content = 28,
+    JSON_SCHEMA_2020_12_CORE = 21,
+    JSON_SCHEMA_2020_12_APPLICATOR = 22,
+    JSON_SCHEMA_2020_12_UNEVALUATED = 23,
+    JSON_SCHEMA_2020_12_VALIDATION = 24,
+    JSON_SCHEMA_2020_12_META_DATA = 25,
+    JSON_SCHEMA_2020_12_FORMAT_ANNOTATION = 26,
+    JSON_SCHEMA_2020_12_FORMAT_ASSERTION = 27,
+    JSON_SCHEMA_2020_12_CONTENT = 28,
     // OpenAPI
     // https://spec.openapis.org/oas/v3.1.0.html#fixed-fields-19
-    OpenAPI_3_1_Base = 29,
+    OPENAPI_3_1_BASE = 29,
     // https://spec.openapis.org/oas/v3.2.0.html#base-vocabulary
-    OpenAPI_3_2_Base = 30,
+    OPENAPI_3_2_BASE = 30,
     // Sourcemeta
-    Sourcemeta_Extension_V1 = 31
+    SOURCEMETA_EXTENSION_V1 = 31
   };
 
   // NOTE: Must be kept in sync with the Known enum above
@@ -139,15 +139,15 @@ public:
   template <typename Callback>
   auto for_each(const Callback &callback) const -> void {
     for (std::size_t index = 0; index < KNOWN_VOCABULARY_COUNT; ++index) {
-      if (this->required_known[index]) {
+      if (this->required_known_[index]) {
         callback(URI{static_cast<Known>(index)}, true);
-      } else if (this->optional_known[index]) {
+      } else if (this->optional_known_[index]) {
         callback(URI{static_cast<Known>(index)}, false);
       }
     }
 
-    if (this->unknown.has_value()) {
-      for (const auto &[uri, required] : this->unknown.value()) {
+    if (this->unknown_.has_value()) {
+      for (const auto &[uri, required] : this->unknown_.value()) {
         callback(URI{uri}, required);
       }
     }
@@ -165,11 +165,11 @@ private:
 #pragma warning(push)
 #pragma warning(disable : 4251)
 #endif
-  std::bitset<KNOWN_VOCABULARY_COUNT> required_known{};
-  std::bitset<KNOWN_VOCABULARY_COUNT> optional_known{};
+  std::bitset<KNOWN_VOCABULARY_COUNT> required_known_{};
+  std::bitset<KNOWN_VOCABULARY_COUNT> optional_known_{};
   // Lazily initialized only when unknown (non-official) vocabularies are used
   std::optional<std::unordered_map<sourcemeta::core::JSON::String, bool>>
-      unknown{std::nullopt};
+      unknown_{std::nullopt};
 #ifdef _MSC_VER
 #pragma warning(pop)
 #endif

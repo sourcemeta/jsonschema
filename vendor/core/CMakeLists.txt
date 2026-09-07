@@ -3,6 +3,7 @@ project(core VERSION 0.0.0 LANGUAGES C CXX ASM_MASM DESCRIPTION "Sourcemeta Core
 list(APPEND CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake")
 
 # Options
+option(SOURCEMETA_CORE_LANG_ALLOCATOR "Build the Sourcemeta Core language allocator library" ON)
 option(SOURCEMETA_CORE_LANG_PREPROCESSOR "Build the Sourcemeta Core language preprocessor library" ON)
 option(SOURCEMETA_CORE_LANG_IO "Build the Sourcemeta Core language I/O library" ON)
 option(SOURCEMETA_CORE_LANG_PROCESS "Build the Sourcemeta Core language Process library" ON)
@@ -71,14 +72,6 @@ elseif(SOURCEMETA_CORE_UNDEFINED_SANITIZER)
   sourcemeta_sanitizer(TYPE undefined)
 endif()
 
-if((SOURCEMETA_OS_LINUX OR SOURCEMETA_OS_MACOS)
-   AND NOT SOURCEMETA_CORE_ADDRESS_SANITIZER
-   AND NOT SOURCEMETA_CORE_UNDEFINED_SANITIZER
-   AND NOT SOURCEMETA_CORE_USE_SYSTEM_ALLOCATOR)
-  message(STATUS "Using the mimalloc allocator")
-  find_package(Mimalloc REQUIRED)
-endif()
-
 # TODO: Turn this into a re-usable utility CMake function
 if(SOURCEMETA_CORE_INSTALL)
   include(GNUInstallDirs)
@@ -95,6 +88,23 @@ if(SOURCEMETA_CORE_INSTALL)
     "${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME}-config.cmake"
     DESTINATION "${CMAKE_INSTALL_LIBDIR}/cmake/${PROJECT_NAME}"
     COMPONENT sourcemeta_${PROJECT_NAME}_dev)
+endif()
+
+# Every executable in this build links this one, so it comes first
+if(SOURCEMETA_CORE_LANG_ALLOCATOR)
+  if((SOURCEMETA_OS_LINUX OR SOURCEMETA_OS_MACOS)
+     AND NOT SOURCEMETA_CORE_ADDRESS_SANITIZER
+     AND NOT SOURCEMETA_CORE_UNDEFINED_SANITIZER
+     AND NOT SOURCEMETA_CORE_USE_SYSTEM_ALLOCATOR)
+    message(STATUS "Using the mimalloc allocator")
+    find_package(Mimalloc REQUIRED)
+  endif()
+  add_subdirectory(src/lang/allocator)
+else()
+  # A previous configuration of this same directory may have recorded a library
+  # that this one does not define, which every executable would then try to
+  # link by name
+  unset(SOURCEMETA_CORE_ALLOCATOR_TARGET CACHE)
 endif()
 
 if(SOURCEMETA_CORE_LANG_PREPROCESSOR)
@@ -288,6 +298,10 @@ endif()
 
 if(SOURCEMETA_CORE_TESTS)
   enable_testing()
+
+  if(SOURCEMETA_CORE_LANG_ALLOCATOR)
+    add_subdirectory(test/allocator)
+  endif()
 
   if(SOURCEMETA_CORE_LANG_IO)
     add_subdirectory(test/io)

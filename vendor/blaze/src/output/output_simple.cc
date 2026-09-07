@@ -31,17 +31,17 @@ auto SimpleOutput::mask_kind(const Instruction &step) noexcept -> MaskKind {
 }
 
 auto SimpleOutput::begin() const -> const_iterator {
-  return this->output.begin();
+  return this->output_.begin();
 }
 
-auto SimpleOutput::end() const -> const_iterator { return this->output.end(); }
+auto SimpleOutput::end() const -> const_iterator { return this->output_.end(); }
 
 auto SimpleOutput::cbegin() const -> const_iterator {
-  return this->output.cbegin();
+  return this->output_.cbegin();
 }
 
 auto SimpleOutput::cend() const -> const_iterator {
-  return this->output.cend();
+  return this->output_.cend();
 }
 
 auto SimpleOutput::operator()(
@@ -60,16 +60,16 @@ auto SimpleOutput::operator()(
     if (type == EvaluationType::Pre) {
       const auto kind{mask_kind(step)};
       if (kind != MaskKind::None) {
-        this->mask.push_back({.evaluate_path = evaluate_path,
-                              .instance_location = instance_location,
-                              .kind = kind,
-                              .annotations_mark = this->annotations_.size(),
-                              .buffered_traces = {}});
+        this->mask_.push_back({.evaluate_path = evaluate_path,
+                               .instance_location = instance_location,
+                               .kind = kind,
+                               .annotations_mark = this->annotations_.size(),
+                               .buffered_traces = {}});
       }
-    } else if (type == EvaluationType::Post && !this->mask.empty() &&
-               this->mask.back().evaluate_path == evaluate_path &&
-               this->mask.back().instance_location == instance_location) {
-      this->mask.pop_back();
+    } else if (type == EvaluationType::Post && !this->mask_.empty() &&
+               this->mask_.back().evaluate_path == evaluate_path &&
+               this->mask_.back().instance_location == instance_location) {
+      this->mask_.pop_back();
     }
 
     return;
@@ -98,32 +98,32 @@ auto SimpleOutput::operator()(
     // To ease the output
     const auto kind{mask_kind(step)};
     if (kind != MaskKind::None) {
-      this->mask.push_back({.evaluate_path = evaluate_path,
-                            .instance_location = instance_location,
-                            .kind = kind,
-                            .annotations_mark = this->annotations_.size(),
-                            .buffered_traces = {}});
+      this->mask_.push_back({.evaluate_path = evaluate_path,
+                             .instance_location = instance_location,
+                             .kind = kind,
+                             .annotations_mark = this->annotations_.size(),
+                             .buffered_traces = {}});
     }
   } else if (type == EvaluationType::Post) {
     const auto mask_it{std::ranges::find_if(
-        this->mask, [&](const MaskEntry &mask_entry) -> bool {
+        this->mask_, [&](const MaskEntry &mask_entry) -> bool {
           return mask_entry.evaluate_path == evaluate_path &&
                  mask_entry.instance_location == instance_location;
         })};
-    if (mask_it != this->mask.end()) {
+    if (mask_it != this->mask_.end()) {
       // Present unexpected traces only when needed
       if (!result && mask_it->kind != MaskKind::Subschema) {
 #ifdef __cpp_lib_containers_ranges
-        this->output.append_range(std::move(mask_it->buffered_traces));
+        this->output_.append_range(std::move(mask_it->buffered_traces));
 #else
-        this->output.insert(
-            this->output.end(),
+        this->output_.insert(
+            this->output_.end(),
             std::make_move_iterator(mask_it->buffered_traces.begin()),
             std::make_move_iterator(mask_it->buffered_traces.end()));
 #endif
       }
 
-      this->mask.erase(mask_it);
+      this->mask_.erase(mask_it);
     }
   }
 
@@ -141,7 +141,7 @@ auto SimpleOutput::operator()(
     // be absorbed, so the overall result is bound to be false, in which
     // case no annotations may be reported at all
     const MaskEntry *unit{nullptr};
-    for (const auto &mask_entry : std::views::reverse(this->mask)) {
+    for (const auto &mask_entry : std::views::reverse(this->mask_)) {
       if (evaluate_path.starts_with(mask_entry.evaluate_path) &&
           instance_location.starts_with(mask_entry.instance_location)) {
         unit = &mask_entry;
@@ -149,7 +149,7 @@ auto SimpleOutput::operator()(
       }
     }
 
-    if (unit) {
+    if (unit != nullptr) {
       auto evaluate_prefix_size{unit->evaluate_path.size()};
       auto instance_prefix_size{unit->instance_location.size()};
       switch (unit->kind) {
@@ -192,22 +192,21 @@ auto SimpleOutput::operator()(
 
   if (step.type == InstructionIndex::LogicalCondition) {
     return;
-  } else {
-    for (auto &mask_entry : this->mask) {
-      if (evaluate_path.starts_with(mask_entry.evaluate_path)) {
-        mask_entry.buffered_traces.push_back(
-            {.message = describe(result, step, evaluate_path, instance_location,
-                                 this->instance_, annotation),
-             .instance_location = instance_location,
-             .evaluate_path = std::move(effective_evaluate_path),
-             .schema_location = step_metadata.keyword_location});
+  }
+  for (auto &mask_entry : this->mask_) {
+    if (evaluate_path.starts_with(mask_entry.evaluate_path)) {
+      mask_entry.buffered_traces.push_back(
+          {.message = describe(result, step, evaluate_path, instance_location,
+                               this->instance_, annotation),
+           .instance_location = instance_location,
+           .evaluate_path = std::move(effective_evaluate_path),
+           .schema_location = step_metadata.keyword_location});
 
-        return;
-      }
+      return;
     }
   }
 
-  this->output.push_back(
+  this->output_.push_back(
       {.message = describe(result, step, evaluate_path, instance_location,
                            this->instance_, annotation),
        .instance_location = instance_location,

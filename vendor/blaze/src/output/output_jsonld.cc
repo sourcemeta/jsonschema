@@ -1463,7 +1463,8 @@ auto resolve(const sourcemeta::core::JSON &instance,
           location, sourcemeta::blaze::JSONLDFacet::Datatype,
           "A JSON-LD datatype cannot be assigned more than one value",
           datatype);
-    } else if (datatype.winner != nullptr) {
+    }
+    if (datatype.winner != nullptr) {
       facts.datatype = datatype.winner->value->to_string();
       facts.datatype_origin = datatype.winner->origin;
     }
@@ -1474,7 +1475,8 @@ auto resolve(const sourcemeta::core::JSON &instance,
           location, sourcemeta::blaze::JSONLDFacet::Language,
           "A JSON-LD language cannot be assigned more than one value",
           language);
-    } else if (language.winner != nullptr) {
+    }
+    if (language.winner != nullptr) {
       facts.language = language.winner->value->to_string();
       facts.language_origin = language.winner->origin;
     }
@@ -1485,7 +1487,8 @@ auto resolve(const sourcemeta::core::JSON &instance,
           location, sourcemeta::blaze::JSONLDFacet::Direction,
           "A JSON-LD direction cannot be assigned more than one value",
           direction);
-    } else if (direction.winner != nullptr) {
+    }
+    if (direction.winner != nullptr) {
       facts.direction = parse_direction(*direction.winner->value);
       facts.direction_origin = direction.winner->origin;
     }
@@ -1497,7 +1500,8 @@ auto resolve(const sourcemeta::core::JSON &instance,
           "A JSON-LD JSON literal flag cannot be assigned more than one "
           "value",
           json);
-    } else if (json.winner != nullptr) {
+    }
+    if (json.winner != nullptr) {
       facts.json = true;
       facts.json_origin = json.winner->origin;
     }
@@ -1507,7 +1511,8 @@ auto resolve(const sourcemeta::core::JSON &instance,
       return conflict_error(
           location, sourcemeta::blaze::JSONLDFacet::Graph,
           "A JSON-LD graph flag cannot be assigned more than one value", graph);
-    } else if (graph.winner != nullptr) {
+    }
+    if (graph.winner != nullptr) {
       facts.graph = true;
       facts.graph_origin = graph.winner->origin;
     }
@@ -1518,7 +1523,8 @@ auto resolve(const sourcemeta::core::JSON &instance,
           location, sourcemeta::blaze::JSONLDFacet::Container,
           "A JSON-LD container cannot be assigned more than one value",
           container);
-    } else if (container.winner != nullptr) {
+    }
+    if (container.winner != nullptr) {
       facts.container = parse_container(*container.winner->value);
       facts.container_origin = container.winner->origin;
     }
@@ -1529,7 +1535,8 @@ auto resolve(const sourcemeta::core::JSON &instance,
           location, sourcemeta::blaze::JSONLDFacet::Self,
           "A JSON-LD self identity cannot be assigned more than one value",
           self);
-    } else if (self.winner != nullptr) {
+    }
+    if (self.winner != nullptr) {
       facts.self = self.winner->value->to_string();
       facts.self_origin = self.winner->origin;
     }
@@ -1540,7 +1547,8 @@ auto resolve(const sourcemeta::core::JSON &instance,
           location, sourcemeta::blaze::JSONLDFacet::ValuePredicate,
           "A JSON-LD value predicate cannot be assigned more than one value",
           value_predicate);
-    } else if (value_predicate.winner != nullptr) {
+    }
+    if (value_predicate.winner != nullptr) {
       auto &promotion{promotion_facts(facts)};
       promotion.value = value_predicate.winner->value->to_string();
       promotion.value_origin = value_predicate.winner->origin;

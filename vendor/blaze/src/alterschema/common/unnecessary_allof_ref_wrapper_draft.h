@@ -17,9 +17,9 @@ public:
             const sourcemeta::blaze::SchemaResolver &, const bool) const
       -> SchemaTransformRule::Result override {
     ONLY_CONTINUE_IF(vocabularies.contains_any(
-        {SchemaVocabularies::Known::JSON_Schema_Draft_7,
-         SchemaVocabularies::Known::JSON_Schema_Draft_6,
-         SchemaVocabularies::Known::JSON_Schema_Draft_4}));
+        {SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_7,
+         SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_6,
+         SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_4}));
     ONLY_CONTINUE_IF(schema.is_object() && schema.size() == 1);
     const auto *all_of{schema.try_at("allOf")};
     ONLY_CONTINUE_IF(all_of && all_of->is_array());
@@ -32,7 +32,7 @@ public:
     ONLY_CONTINUE_IF(entry.is_object());
     ONLY_CONTINUE_IF(entry.size() == 1 && entry.defines("$ref"));
 
-    return APPLIES_TO_POINTERS({{"allOf", 0, "$ref"}});
+    return applies_to_pointers({{"allOf", 0, "$ref"}});
   }
 
   auto transform(JSON &schema, const Result &) const -> void override {

@@ -58,9 +58,8 @@ auto Configuration::find(const std::filesystem::path &path)
     auto parent = current.parent_path();
     if (parent == current) {
       break;
-    } else {
-      current = parent;
     }
+    current = parent;
   }
 
   return std::nullopt;

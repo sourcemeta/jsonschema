@@ -17,15 +17,15 @@ public:
             const sourcemeta::blaze::SchemaResolver &, const bool) const
       -> SchemaTransformRule::Result override {
     ONLY_CONTINUE_IF(vocabularies.contains_any(
-        {SchemaVocabularies::Known::JSON_Schema_2020_12_Meta_Data,
-         SchemaVocabularies::Known::JSON_Schema_2019_09_Meta_Data,
-         SchemaVocabularies::Known::JSON_Schema_Draft_7}));
+        {SchemaVocabularies::Known::JSON_SCHEMA_2020_12_META_DATA,
+         SchemaVocabularies::Known::JSON_SCHEMA_2019_09_META_DATA,
+         SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_7}));
     ONLY_CONTINUE_IF(schema.is_object());
     const auto *read_only{schema.try_at("readOnly")};
     const auto *write_only{schema.try_at("writeOnly")};
     ONLY_CONTINUE_IF(read_only && write_only);
     ONLY_CONTINUE_IF(read_only->is_boolean() && write_only->is_boolean());
     ONLY_CONTINUE_IF(read_only->to_boolean() && write_only->to_boolean());
-    return APPLIES_TO_KEYWORDS("readOnly", "writeOnly");
+    return applies_to_keywords("readOnly", "writeOnly");
   }
 };

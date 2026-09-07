@@ -1,6 +1,6 @@
 class UnknownLocalRef final : public SchemaTransformRule {
 private:
-  // NOLINTNEXTLINE(bugprone-throwing-static-initialization)
+  // NOLINTNEXTLINE(cert-err58-cpp,bugprone-throwing-static-initialization)
   static inline const std::string KEYWORD{"$ref"};
 
 public:
@@ -15,18 +15,18 @@ public:
                                const SchemaWalker &,
                                const SchemaResolver &) const -> bool override {
     ONLY_CONTINUE_IF(vocabularies.contains_any(
-        {SchemaVocabularies::Known::JSON_Schema_2020_12_Core,
-         SchemaVocabularies::Known::JSON_Schema_2019_09_Core,
+        {SchemaVocabularies::Known::JSON_SCHEMA_2020_12_CORE,
+         SchemaVocabularies::Known::JSON_SCHEMA_2019_09_CORE,
          // In sourcemeta::core::JSON Schema Draft 7 and older, `$ref` overrides
          // siblings. However, we do not need to worry about this case here, as
          // if the
          // `$ref` points to an unknown local location, the entire schema is
          // invalid anyway. We just help at least making the schema valid
-         SchemaVocabularies::Known::JSON_Schema_Draft_7,
-         SchemaVocabularies::Known::JSON_Schema_Draft_6,
-         SchemaVocabularies::Known::JSON_Schema_Draft_4,
-         SchemaVocabularies::Known::JSON_Schema_Draft_3,
-         SchemaVocabularies::Known::JSON_Schema_Draft_3_Hyper}));
+         SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_7,
+         SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_6,
+         SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_4,
+         SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_3,
+         SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_3_HYPER}));
     ONLY_CONTINUE_IF(schema.is_object() && schema.defines(KEYWORD) &&
                      schema.at(KEYWORD).is_string());
 

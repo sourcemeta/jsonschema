@@ -19,18 +19,18 @@ public:
       -> SchemaTransformRule::Result override {
     using Known = SchemaVocabularies::Known;
     ONLY_CONTINUE_IF(
-        vocabularies.contains_any({Known::JSON_Schema_2020_12_Meta_Data,
-                                   Known::JSON_Schema_2019_09_Meta_Data,
-                                   Known::JSON_Schema_Draft_7,
-                                   Known::JSON_Schema_Draft_6}) &&
+        vocabularies.contains_any({Known::JSON_SCHEMA_2020_12_META_DATA,
+                                   Known::JSON_SCHEMA_2019_09_META_DATA,
+                                   Known::JSON_SCHEMA_DRAFT_7,
+                                   Known::JSON_SCHEMA_DRAFT_6}) &&
         schema.is_object());
 
     const auto *examples{schema.try_at("examples")};
     ONLY_CONTINUE_IF(examples && examples->is_array() && !examples->empty());
 
-    if (vocabularies.contains_any({Known::JSON_Schema_Draft_7,
-                                   Known::JSON_Schema_Draft_6,
-                                   Known::JSON_Schema_Draft_4})) {
+    if (vocabularies.contains_any({Known::JSON_SCHEMA_DRAFT_7,
+                                   Known::JSON_SCHEMA_DRAFT_6,
+                                   Known::JSON_SCHEMA_DRAFT_4})) {
       ONLY_CONTINUE_IF(!schema.defines("$ref"));
     }
 

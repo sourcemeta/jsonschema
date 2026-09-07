@@ -33,6 +33,11 @@ target_link_libraries(sourcemeta_core_test_main
 set_target_properties(sourcemeta_core_test_main
   PROPERTIES EXPORT_NAME core::test_main)
 
+# We don't want consumers to be bothered with this
+if(PROJECT_IS_TOP_LEVEL)
+  sourcemeta_clang_tidy_attempt_enable(TARGET sourcemeta_core_test_main)
+endif()
+
 if(SOURCEMETA_CORE_INSTALL)
   include(GNUInstallDirs)
   install(TARGETS sourcemeta_core_test_main

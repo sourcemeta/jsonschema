@@ -14,8 +14,8 @@ public:
             const sourcemeta::blaze::SchemaResolver &) const -> bool override {
     ONLY_CONTINUE_IF(
         vocabularies.contains_any(
-            {SchemaVocabularies::Known::JSON_Schema_Draft_3,
-             SchemaVocabularies::Known::JSON_Schema_Draft_3_Hyper}) &&
+            {SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_3,
+             SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_3_HYPER}) &&
         schema.is_object());
 
     const auto *type{schema.try_at("type")};
@@ -178,12 +178,12 @@ private:
     }
 
     const auto *type{branch.try_at("type")};
-    if (type && (type->is_string() || type->is_array())) {
+    if ((type != nullptr) && (type->is_string() || type->is_array())) {
       return parse_schema_type(*type);
     }
 
     const auto *enum_value{branch.try_at("enum")};
-    if (enum_value && enum_value->is_array()) {
+    if ((enum_value != nullptr) && enum_value->is_array()) {
       sourcemeta::core::JSON::TypeSet result;
       for (const auto &value : enum_value->as_array()) {
         result.set(std::to_underlying(value.type()));

@@ -19,17 +19,17 @@ public:
       -> SchemaTransformRule::Result override {
     ONLY_CONTINUE_IF(
         vocabularies.contains_any(
-            {SchemaVocabularies::Known::JSON_Schema_2020_12_Validation,
-             SchemaVocabularies::Known::JSON_Schema_2019_09_Validation,
-             SchemaVocabularies::Known::JSON_Schema_Draft_7,
-             SchemaVocabularies::Known::JSON_Schema_Draft_6}) &&
+            {SchemaVocabularies::Known::JSON_SCHEMA_2020_12_VALIDATION,
+             SchemaVocabularies::Known::JSON_SCHEMA_2019_09_VALIDATION,
+             SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_7,
+             SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_6}) &&
         schema.is_object());
 
     const auto *maximum{schema.try_at("maximum")};
     ONLY_CONTINUE_IF(maximum && maximum->is_number());
     const auto *exclusive_maximum{schema.try_at("exclusiveMaximum")};
     ONLY_CONTINUE_IF(exclusive_maximum && exclusive_maximum->is_number());
-    return APPLIES_TO_KEYWORDS("exclusiveMaximum", "maximum");
+    return applies_to_keywords("exclusiveMaximum", "maximum");
   }
 
   auto transform(JSON &schema, const Result &) const -> void override {

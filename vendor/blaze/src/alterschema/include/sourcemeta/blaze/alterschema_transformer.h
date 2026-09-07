@@ -54,7 +54,7 @@ public:
 
   /// The result of evaluating a rule
   struct Result {
-    Result(const bool applies_) : applies{applies_} {}
+    Result(const bool outcome) : applies{outcome} {}
     Result(const sourcemeta::core::Pointer &pointer)
         : applies{true}, locations{pointer} {
       assert(this->locations.size() == 1);
@@ -76,10 +76,10 @@ public:
 #endif
     }
 
-    Result(std::vector<sourcemeta::core::Pointer> &&locations_,
-           sourcemeta::core::JSON::String &&description_)
-        : applies{true}, locations{std::move(locations_)},
-          description{std::move(description_)} {}
+    Result(std::vector<sourcemeta::core::Pointer> &&pointers,
+           sourcemeta::core::JSON::String &&message)
+        : applies{true}, locations{std::move(pointers)},
+          description{std::move(message)} {}
 
     bool applies;
     std::vector<sourcemeta::core::Pointer> locations;
@@ -162,7 +162,7 @@ public:
     static_assert(
         std::is_same_v<typename T::mutates, std::true_type> ||
         std::is_same_v<typename T::reframe_after_transform, std::false_type>);
-    auto &entry{this->rules.emplace_back(
+    auto &entry{this->rules_.emplace_back(
         std::make_unique<T>(std::forward<Args>(args)...),
         std::is_same_v<typename T::mutates, std::true_type>,
         std::is_same_v<typename T::reframe_after_transform, std::true_type>)};
@@ -200,15 +200,15 @@ public:
         const bool is_metaschema = false) const
       -> std::pair<bool, std::uint8_t>;
 
-  [[nodiscard]] auto begin() const -> auto { return this->rules.cbegin(); }
-  [[nodiscard]] auto end() const -> auto { return this->rules.cend(); }
+  [[nodiscard]] auto begin() const -> auto { return this->rules_.cbegin(); }
+  [[nodiscard]] auto end() const -> auto { return this->rules_.cend(); }
 
 private:
 #if defined(_MSC_VER)
 #pragma warning(disable : 4251)
 #endif
   std::vector<std::tuple<std::unique_ptr<SchemaTransformRule>, bool, bool>>
-      rules;
+      rules_;
 #if defined(_MSC_VER)
 #pragma warning(default : 4251)
 #endif

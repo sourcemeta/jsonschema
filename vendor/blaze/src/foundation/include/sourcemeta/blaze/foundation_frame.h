@@ -17,6 +17,7 @@
 #include <cstdint>    // std::uint8_t
 #include <deque>      // std::deque
 #include <functional> // std::reference_wrapper
+#include <limits>     // std::numeric_limits
 #include <map>        // std::map
 #include <memory>     // std::unique_ptr
 #include <optional>   // std::optional
@@ -150,12 +151,24 @@ public:
   /// `default_dialect`, as a location that has no dialect of its own reports
   /// the default back as a view into what the caller passed. In contrast,
   /// `default_id` is copied, so it does not need to outlive this call
-  SchemaFrame(const Mode mode, const sourcemeta::core::JSON &root,
-              const SchemaWalker &walker, const SchemaResolver &resolver,
-              std::string_view default_dialect = "",
-              std::string_view default_id = "",
-              IdentifierMode identifier_mode = IdentifierMode::Additional,
-              const Paths &paths = {sourcemeta::core::EMPTY_WEAK_POINTER});
+  ///
+  /// Framing a schema that declares nested identifiers registers a location
+  /// per enclosing base, so what an untrusted schema costs to analyse grows
+  /// faster than the schema itself does. Pass `max_locations` to bound that,
+  /// throwing sourcemeta::blaze::SchemaFrameLimitError rather than analysing
+  /// past it. What the limit buys depends on the mode, as
+  /// sourcemeta::blaze::SchemaFrame::Mode::Pointers locates every JSON Pointer
+  /// of the document rather than only the schemas of it. Note this bounds what
+  /// framing registers rather than every last thing it does, as walking the
+  /// document costs something even where nothing comes of it. Bounding the
+  /// size of the document remains the caller's to do
+  SchemaFrame(
+      const Mode mode, const sourcemeta::core::JSON &root,
+      const SchemaWalker &walker, const SchemaResolver &resolver,
+      std::string_view default_dialect = "", std::string_view default_id = "",
+      IdentifierMode identifier_mode = IdentifierMode::Additional,
+      const Paths &paths = {sourcemeta::core::EMPTY_WEAK_POINTER},
+      std::uint64_t max_locations = std::numeric_limits<std::uint64_t>::max());
 
   /// Get a specific reference entry by type and pointer
   [[nodiscard]] auto

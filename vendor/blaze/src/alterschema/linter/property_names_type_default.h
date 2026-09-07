@@ -19,10 +19,10 @@ public:
       -> SchemaTransformRule::Result override {
     ONLY_CONTINUE_IF(
         vocabularies.contains_any(
-            {SchemaVocabularies::Known::JSON_Schema_2020_12_Applicator,
-             SchemaVocabularies::Known::JSON_Schema_2019_09_Applicator,
-             SchemaVocabularies::Known::JSON_Schema_Draft_7,
-             SchemaVocabularies::Known::JSON_Schema_Draft_6}) &&
+            {SchemaVocabularies::Known::JSON_SCHEMA_2020_12_APPLICATOR,
+             SchemaVocabularies::Known::JSON_SCHEMA_2019_09_APPLICATOR,
+             SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_7,
+             SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_6}) &&
         schema.is_object());
 
     const auto *property_names{schema.try_at("propertyNames")};
@@ -36,7 +36,7 @@ public:
                                 return item.is_string() &&
                                        item.to_string() == "string";
                               }))));
-    return APPLIES_TO_POINTERS({{"propertyNames", "type"}});
+    return applies_to_pointers({{"propertyNames", "type"}});
   }
 
   auto transform(JSON &schema, const Result &) const -> void override {

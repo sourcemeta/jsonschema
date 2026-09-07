@@ -19,14 +19,14 @@ namespace sourcemeta::blaze {
 static constexpr std::string_view NAME_PATTERN{"^[a-z0-9_/]+$"};
 
 static auto validate_name(const std::string_view name) -> void {
-  static const auto pattern{sourcemeta::core::to_regex(NAME_PATTERN)};
-  assert(pattern.has_value());
+  static const auto PATTERN{sourcemeta::core::to_regex(NAME_PATTERN)};
+  assert(PATTERN.has_value());
   if (name.empty()) [[unlikely]] {
     throw SchemaRuleInvalidNameError(name,
                                      "The schema rule name must not be empty");
   }
 
-  if (!sourcemeta::core::matches(pattern.value(), name)) [[unlikely]] {
+  if (!sourcemeta::core::matches(PATTERN.value(), name)) [[unlikely]] {
     throw SchemaRuleInvalidNamePatternError(name, NAME_PATTERN);
   }
 }
@@ -101,9 +101,8 @@ auto SchemaRule::condition(
 
     return {{sourcemeta::core::to_pointer(output.cbegin()->instance_location)},
             std::string{output.cbegin()->message}};
-  } else {
-    return true;
   }
+  return true;
 }
 
 } // namespace sourcemeta::blaze

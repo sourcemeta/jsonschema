@@ -21,16 +21,16 @@ public:
     // only supports Draft 3 and later
     ONLY_CONTINUE_IF(
         vocabularies.contains_any(
-            {Known::JSON_Schema_2020_12_Meta_Data,
-             Known::JSON_Schema_2019_09_Meta_Data, Known::JSON_Schema_Draft_7,
-             Known::JSON_Schema_Draft_6, Known::JSON_Schema_Draft_4,
-             Known::JSON_Schema_Draft_3, Known::JSON_Schema_Draft_3_Hyper}) &&
+            {Known::JSON_SCHEMA_2020_12_META_DATA,
+             Known::JSON_SCHEMA_2019_09_META_DATA, Known::JSON_SCHEMA_DRAFT_7,
+             Known::JSON_SCHEMA_DRAFT_6, Known::JSON_SCHEMA_DRAFT_4,
+             Known::JSON_SCHEMA_DRAFT_3, Known::JSON_SCHEMA_DRAFT_3_HYPER}) &&
         schema.is_object() && schema.defines("default"));
 
     if (vocabularies.contains_any(
-            {Known::JSON_Schema_Draft_7, Known::JSON_Schema_Draft_6,
-             Known::JSON_Schema_Draft_4, Known::JSON_Schema_Draft_3,
-             Known::JSON_Schema_Draft_3_Hyper})) {
+            {Known::JSON_SCHEMA_DRAFT_7, Known::JSON_SCHEMA_DRAFT_6,
+             Known::JSON_SCHEMA_DRAFT_4, Known::JSON_SCHEMA_DRAFT_3,
+             Known::JSON_SCHEMA_DRAFT_3_HYPER})) {
       ONLY_CONTINUE_IF(!schema.defines("$ref"));
     }
 

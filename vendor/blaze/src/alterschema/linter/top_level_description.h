@@ -19,21 +19,21 @@ public:
       -> SchemaTransformRule::Result override {
     ONLY_CONTINUE_IF(location.pointer.empty());
     ONLY_CONTINUE_IF(vocabularies.contains_any(
-        {SchemaVocabularies::Known::JSON_Schema_2020_12_Meta_Data,
-         SchemaVocabularies::Known::JSON_Schema_2019_09_Meta_Data,
-         SchemaVocabularies::Known::JSON_Schema_Draft_7,
-         SchemaVocabularies::Known::JSON_Schema_Draft_6,
-         SchemaVocabularies::Known::JSON_Schema_Draft_4,
-         SchemaVocabularies::Known::JSON_Schema_Draft_3,
-         SchemaVocabularies::Known::JSON_Schema_Draft_3_Hyper,
-         SchemaVocabularies::Known::JSON_Schema_Draft_2,
-         SchemaVocabularies::Known::JSON_Schema_Draft_1}));
+        {SchemaVocabularies::Known::JSON_SCHEMA_2020_12_META_DATA,
+         SchemaVocabularies::Known::JSON_SCHEMA_2019_09_META_DATA,
+         SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_7,
+         SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_6,
+         SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_4,
+         SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_3,
+         SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_3_HYPER,
+         SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_2,
+         SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_1}));
     ONLY_CONTINUE_IF(schema.is_object());
     const auto *description{schema.try_at("description")};
-    if (description && description->is_string() && description->empty()) {
-      return APPLIES_TO_KEYWORDS("description");
-    } else {
-      return !description;
+    if ((description != nullptr) && description->is_string() &&
+        description->empty()) {
+      return applies_to_keywords("description");
     }
+    return description == nullptr;
   }
 };

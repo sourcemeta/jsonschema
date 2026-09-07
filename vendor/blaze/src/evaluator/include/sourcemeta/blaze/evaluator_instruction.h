@@ -125,7 +125,7 @@ enum class InstructionIndex : std::uint8_t {
 
 /// @ingroup evaluator
 // NOLINTNEXTLINE(modernize-avoid-c-arrays)
-constexpr std::string_view InstructionNames[] = {
+constexpr std::string_view INSTRUCTION_NAMES[] = {
     "AssertionFail",
     "AssertionDefines",
     "AssertionDefinesStrict",

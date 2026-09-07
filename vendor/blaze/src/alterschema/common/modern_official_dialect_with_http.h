@@ -19,10 +19,10 @@ public:
       -> SchemaTransformRule::Result override {
     using sourcemeta::blaze::SchemaBaseDialect;
     ONLY_CONTINUE_IF(
-        location.base_dialect == SchemaBaseDialect::JSON_Schema_2020_12 ||
-        location.base_dialect == SchemaBaseDialect::JSON_Schema_2020_12_Hyper ||
-        location.base_dialect == SchemaBaseDialect::JSON_Schema_2019_09 ||
-        location.base_dialect == SchemaBaseDialect::JSON_Schema_2019_09_Hyper);
+        location.base_dialect == SchemaBaseDialect::JSON_SCHEMA_2020_12 ||
+        location.base_dialect == SchemaBaseDialect::JSON_SCHEMA_2020_12_HYPER ||
+        location.base_dialect == SchemaBaseDialect::JSON_SCHEMA_2019_09 ||
+        location.base_dialect == SchemaBaseDialect::JSON_SCHEMA_2019_09_HYPER);
     ONLY_CONTINUE_IF(schema.is_object());
     const auto *schema_keyword{schema.try_at("$schema")};
     ONLY_CONTINUE_IF(schema_keyword && schema_keyword->is_string());
@@ -37,7 +37,7 @@ public:
         dialect == "http://json-schema.org/draft/2019-09/schema#" ||
         dialect == "http://json-schema.org/draft/2019-09/hyper-schema" ||
         dialect == "http://json-schema.org/draft/2019-09/hyper-schema#");
-    return APPLIES_TO_KEYWORDS("$schema");
+    return applies_to_keywords("$schema");
   }
 
   auto transform(sourcemeta::core::JSON &schema, const Result &) const

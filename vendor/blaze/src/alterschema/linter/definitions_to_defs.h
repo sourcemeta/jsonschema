@@ -18,11 +18,11 @@ public:
       -> SchemaTransformRule::Result override {
     ONLY_CONTINUE_IF(
         vocabularies.contains_any(
-            {SchemaVocabularies::Known::JSON_Schema_2020_12_Core,
-             SchemaVocabularies::Known::JSON_Schema_2019_09_Core}) &&
+            {SchemaVocabularies::Known::JSON_SCHEMA_2020_12_CORE,
+             SchemaVocabularies::Known::JSON_SCHEMA_2019_09_CORE}) &&
         schema.is_object() && schema.defines("definitions") &&
         !schema.defines("$defs"));
-    return APPLIES_TO_KEYWORDS("definitions");
+    return applies_to_keywords("definitions");
   }
 
   auto transform(JSON &schema, const Result &) const -> void override {

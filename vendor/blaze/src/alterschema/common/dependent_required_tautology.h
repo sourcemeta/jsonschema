@@ -20,8 +20,8 @@ public:
       -> SchemaTransformRule::Result override {
     ONLY_CONTINUE_IF(
         vocabularies.contains_any(
-            {SchemaVocabularies::Known::JSON_Schema_2020_12_Validation,
-             SchemaVocabularies::Known::JSON_Schema_2019_09_Validation}) &&
+            {SchemaVocabularies::Known::JSON_SCHEMA_2020_12_VALIDATION,
+             SchemaVocabularies::Known::JSON_SCHEMA_2019_09_VALIDATION}) &&
         schema.is_object());
 
     const auto *dependent_required{schema.try_at("dependentRequired")};
@@ -35,7 +35,7 @@ public:
                       return element.is_string() &&
                              dependent_required->defines(element.to_string());
                     }));
-    return APPLIES_TO_KEYWORDS("dependentRequired", "required");
+    return applies_to_keywords("dependentRequired", "required");
   }
 
   auto transform(JSON &schema, const Result &) const -> void override {

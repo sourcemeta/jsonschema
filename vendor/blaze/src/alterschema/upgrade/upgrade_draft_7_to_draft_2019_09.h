@@ -16,7 +16,7 @@ public:
     this->metaschema_synthesis_pending_ = false;
 
     ONLY_CONTINUE_IF(
-        vocabularies.contains(SchemaVocabularies::Known::JSON_Schema_Draft_7) &&
+        vocabularies.contains(SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_7) &&
         schema.is_object());
 
     const bool needs_dialect_transition{
@@ -105,26 +105,26 @@ private:
   static constexpr std::string_view VOCAB_2019_09_CONTENT_URL{
       "https://json-schema.org/draft/2019-09/vocab/content"};
 
-  // NOLINTNEXTLINE(bugprone-throwing-static-initialization)
+  // NOLINTNEXTLINE(cert-err58-cpp,bugprone-throwing-static-initialization)
   static inline const std::array<std::string_view, 12> SHADOW_EXEMPT_KEYWORDS{
       {"$schema", "$id", "title", "description", "default", "examples",
        "$comment", "readOnly", "writeOnly", "deprecated", "contentMediaType",
        "contentEncoding"}};
 
   static inline const std::array<std::string_view, 13>
-      // NOLINTNEXTLINE(bugprone-throwing-static-initialization)
+      // NOLINTNEXTLINE(cert-err58-cpp,bugprone-throwing-static-initialization)
       PROMOTED_2019_09_KEYWORDS{{"$anchor", "$recursiveAnchor", "$recursiveRef",
                                  "$vocabulary", "$defs", "dependentSchemas",
                                  "dependentRequired", "unevaluatedItems",
                                  "unevaluatedProperties", "maxContains",
                                  "minContains", "contentSchema", "deprecated"}};
 
-  // NOLINTNEXTLINE(bugprone-throwing-static-initialization)
+  // NOLINTNEXTLINE(cert-err58-cpp,bugprone-throwing-static-initialization)
   static inline const std::array<std::string_view, 8> PROMOTED_DRAFT_7_KEYWORDS{
       {"$comment", "if", "then", "else", "readOnly", "writeOnly",
        "contentMediaType", "contentEncoding"}};
 
-  // NOLINTNEXTLINE(bugprone-throwing-static-initialization)
+  // NOLINTNEXTLINE(cert-err58-cpp,bugprone-throwing-static-initialization)
   static inline const std::array<std::string_view, 4> PROMOTED_DRAFT_6_KEYWORDS{
       {"const", "contains", "propertyNames", "examples"}};
 

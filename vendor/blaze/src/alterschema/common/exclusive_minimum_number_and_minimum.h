@@ -19,17 +19,17 @@ public:
       -> SchemaTransformRule::Result override {
     ONLY_CONTINUE_IF(
         vocabularies.contains_any(
-            {SchemaVocabularies::Known::JSON_Schema_2020_12_Validation,
-             SchemaVocabularies::Known::JSON_Schema_2019_09_Validation,
-             SchemaVocabularies::Known::JSON_Schema_Draft_7,
-             SchemaVocabularies::Known::JSON_Schema_Draft_6}) &&
+            {SchemaVocabularies::Known::JSON_SCHEMA_2020_12_VALIDATION,
+             SchemaVocabularies::Known::JSON_SCHEMA_2019_09_VALIDATION,
+             SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_7,
+             SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_6}) &&
         schema.is_object());
 
     const auto *minimum{schema.try_at("minimum")};
     ONLY_CONTINUE_IF(minimum && minimum->is_number());
     const auto *exclusive_minimum{schema.try_at("exclusiveMinimum")};
     ONLY_CONTINUE_IF(exclusive_minimum && exclusive_minimum->is_number());
-    return APPLIES_TO_KEYWORDS("exclusiveMinimum", "minimum");
+    return applies_to_keywords("exclusiveMinimum", "minimum");
   }
 
   auto transform(JSON &schema, const Result &) const -> void override {

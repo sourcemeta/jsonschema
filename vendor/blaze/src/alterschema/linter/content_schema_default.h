@@ -1,6 +1,6 @@
 class ContentSchemaDefault final : public SchemaTransformRule {
 private:
-  // NOLINTNEXTLINE(bugprone-throwing-static-initialization)
+  // NOLINTNEXTLINE(cert-err58-cpp,bugprone-throwing-static-initialization)
   static inline const std::string KEYWORD{"contentSchema"};
 
 public:
@@ -23,14 +23,14 @@ public:
       -> SchemaTransformRule::Result override {
     ONLY_CONTINUE_IF(
         vocabularies.contains_any(
-            {SchemaVocabularies::Known::JSON_Schema_2020_12_Content,
-             SchemaVocabularies::Known::JSON_Schema_2019_09_Content}) &&
+            {SchemaVocabularies::Known::JSON_SCHEMA_2020_12_CONTENT,
+             SchemaVocabularies::Known::JSON_SCHEMA_2019_09_CONTENT}) &&
         schema.is_object() && schema.defines(KEYWORD) &&
         ((schema.at(KEYWORD).is_boolean() && schema.at(KEYWORD).to_boolean()) ||
          (schema.at(KEYWORD).is_object() && schema.at(KEYWORD).empty())));
     ONLY_CONTINUE_IF(!frame.has_references_through(
         location.pointer, WeakPointer::Token{std::cref(KEYWORD)}));
-    return APPLIES_TO_KEYWORDS(KEYWORD);
+    return applies_to_keywords(KEYWORD);
   }
 
   auto transform(JSON &schema, const Result &) const -> void override {

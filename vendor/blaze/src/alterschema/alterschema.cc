@@ -30,20 +30,20 @@ namespace sourcemeta::blaze {
 using namespace sourcemeta::core;
 
 template <typename... Args>
-auto APPLIES_TO_KEYWORDS(Args &&...args) -> SchemaTransformRule::Result {
+auto applies_to_keywords(Args &&...args) -> SchemaTransformRule::Result {
   std::vector<Pointer> result;
   result.reserve(sizeof...(args));
   (result.push_back(Pointer{std::forward<Args>(args)}), ...);
   return result;
 }
 
-inline auto APPLIES_TO_POINTERS(std::vector<Pointer> &&keywords)
+inline auto applies_to_pointers(std::vector<Pointer> &&keywords)
     -> SchemaTransformRule::Result {
   return {std::move(keywords)};
 }
 
 // TODO: Move upstream
-inline auto IS_IN_PLACE_APPLICATOR(const SchemaKeywordType type) -> bool {
+inline auto is_in_place_applicator(const SchemaKeywordType type) -> bool {
   return type == SchemaKeywordType::ApplicatorValueOrElementsInPlace ||
          type == SchemaKeywordType::ApplicatorMembersInPlaceSome ||
          type == SchemaKeywordType::ApplicatorElementsInPlace ||
@@ -59,17 +59,17 @@ inline auto IS_IN_PLACE_APPLICATOR(const SchemaKeywordType type) -> bool {
 // may contain subschemas or `any`, in which case the parsed set is an
 // under-approximation that cannot be trusted. Later dialects do not give
 // such forms any meaning, so the parsed set stands
-inline auto IS_KNOWN_TYPE_FORM(const JSON &type,
+inline auto is_known_type_form(const JSON &type,
                                const SchemaVocabularies &vocabularies) -> bool {
   if (!vocabularies.contains_any(
-          {SchemaVocabularies::Known::JSON_Schema_Draft_0,
-           SchemaVocabularies::Known::JSON_Schema_Draft_0_Hyper,
-           SchemaVocabularies::Known::JSON_Schema_Draft_1,
-           SchemaVocabularies::Known::JSON_Schema_Draft_1_Hyper,
-           SchemaVocabularies::Known::JSON_Schema_Draft_2,
-           SchemaVocabularies::Known::JSON_Schema_Draft_2_Hyper,
-           SchemaVocabularies::Known::JSON_Schema_Draft_3,
-           SchemaVocabularies::Known::JSON_Schema_Draft_3_Hyper})) {
+          {SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_0,
+           SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_0_HYPER,
+           SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_1,
+           SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_1_HYPER,
+           SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_2,
+           SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_2_HYPER,
+           SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_3,
+           SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_3_HYPER})) {
     return true;
   }
   if (type.is_string()) {
@@ -89,7 +89,7 @@ inline auto IS_KNOWN_TYPE_FORM(const JSON &type,
 // true, or nullopt if no match was found or the traversal predicate stopped
 // the walk.
 template <typename TraversePredicate, typename MatchCallback>
-auto WALK_UP(const JSON &root, const SchemaFrame &frame,
+auto walk_up(const JSON &root, const SchemaFrame &frame,
              const SchemaFrame::Location &location, const SchemaWalker &walker,
              const SchemaResolver &resolver,
              const TraversePredicate &should_continue,
@@ -125,14 +125,14 @@ auto WALK_UP(const JSON &root, const SchemaFrame &frame,
 }
 
 template <typename MatchCallback>
-auto WALK_UP_IN_PLACE_APPLICATORS(const JSON &root, const SchemaFrame &frame,
+auto walk_up_in_place_applicators(const JSON &root, const SchemaFrame &frame,
                                   const SchemaFrame::Location &location,
                                   const SchemaWalker &walker,
                                   const SchemaResolver &resolver,
                                   const MatchCallback &matches)
     -> std::optional<std::reference_wrapper<const WeakPointer>> {
-  return WALK_UP(root, frame, location, walker, resolver,
-                 IS_IN_PLACE_APPLICATOR, matches);
+  return walk_up(root, frame, location, walker, resolver,
+                 is_in_place_applicator, matches);
 }
 
 #define ONLY_CONTINUE_IF(condition)                                            \

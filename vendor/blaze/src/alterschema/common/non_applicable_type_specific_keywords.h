@@ -21,33 +21,34 @@ public:
     const auto *type_value{schema.try_at("type")};
     auto current_types{
         vocabularies.contains_any(
-            {SchemaVocabularies::Known::JSON_Schema_2020_12_Validation,
-             SchemaVocabularies::Known::JSON_Schema_2019_09_Validation,
-             SchemaVocabularies::Known::JSON_Schema_Draft_7,
-             SchemaVocabularies::Known::JSON_Schema_Draft_6,
-             SchemaVocabularies::Known::JSON_Schema_Draft_4,
-             SchemaVocabularies::Known::JSON_Schema_Draft_3,
-             SchemaVocabularies::Known::JSON_Schema_Draft_2,
-             SchemaVocabularies::Known::JSON_Schema_Draft_2_Hyper,
-             SchemaVocabularies::Known::JSON_Schema_Draft_1,
-             SchemaVocabularies::Known::JSON_Schema_Draft_1_Hyper,
-             SchemaVocabularies::Known::JSON_Schema_Draft_0,
-             SchemaVocabularies::Known::JSON_Schema_Draft_0_Hyper}) &&
-                type_value && IS_KNOWN_TYPE_FORM(*type_value, vocabularies)
+            {SchemaVocabularies::Known::JSON_SCHEMA_2020_12_VALIDATION,
+             SchemaVocabularies::Known::JSON_SCHEMA_2019_09_VALIDATION,
+             SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_7,
+             SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_6,
+             SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_4,
+             SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_3,
+             SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_2,
+             SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_2_HYPER,
+             SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_1,
+             SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_1_HYPER,
+             SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_0,
+             SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_0_HYPER}) &&
+                (type_value != nullptr) &&
+                is_known_type_form(*type_value, vocabularies)
             ? parse_schema_type(*type_value)
             : sourcemeta::core::JSON::TypeSet{}};
 
     if (vocabularies.contains_any(
-            {SchemaVocabularies::Known::JSON_Schema_2020_12_Validation,
-             SchemaVocabularies::Known::JSON_Schema_2019_09_Validation,
-             SchemaVocabularies::Known::JSON_Schema_Draft_7,
-             SchemaVocabularies::Known::JSON_Schema_Draft_6,
-             SchemaVocabularies::Known::JSON_Schema_Draft_4,
-             SchemaVocabularies::Known::JSON_Schema_Draft_3,
-             SchemaVocabularies::Known::JSON_Schema_Draft_2,
-             SchemaVocabularies::Known::JSON_Schema_Draft_1})) {
+            {SchemaVocabularies::Known::JSON_SCHEMA_2020_12_VALIDATION,
+             SchemaVocabularies::Known::JSON_SCHEMA_2019_09_VALIDATION,
+             SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_7,
+             SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_6,
+             SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_4,
+             SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_3,
+             SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_2,
+             SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_1})) {
       const auto *enum_value{schema.try_at("enum")};
-      if (enum_value && enum_value->is_array()) {
+      if ((enum_value != nullptr) && enum_value->is_array()) {
         for (const auto &entry : enum_value->as_array()) {
           current_types.set(std::to_underlying(entry.type()));
         }
@@ -55,12 +56,12 @@ public:
     }
 
     if (vocabularies.contains_any(
-            {SchemaVocabularies::Known::JSON_Schema_2020_12_Validation,
-             SchemaVocabularies::Known::JSON_Schema_2019_09_Validation,
-             SchemaVocabularies::Known::JSON_Schema_Draft_7,
-             SchemaVocabularies::Known::JSON_Schema_Draft_6})) {
+            {SchemaVocabularies::Known::JSON_SCHEMA_2020_12_VALIDATION,
+             SchemaVocabularies::Known::JSON_SCHEMA_2019_09_VALIDATION,
+             SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_7,
+             SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_6})) {
       const auto *const_value{schema.try_at("const")};
-      if (const_value) {
+      if (const_value != nullptr) {
         current_types.set(std::to_underlying(const_value->type()));
       }
     }
@@ -80,28 +81,28 @@ public:
 
       if (entry.first == "required" &&
           vocabularies.contains_any(
-              {SchemaVocabularies::Known::JSON_Schema_Draft_3,
-               SchemaVocabularies::Known::JSON_Schema_Draft_3_Hyper})) {
+              {SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_3,
+               SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_3_HYPER})) {
         continue;
       }
 
       if (entry.first == "maxDecimal" &&
           vocabularies.contains_any(
-              {SchemaVocabularies::Known::JSON_Schema_Draft_0,
-               SchemaVocabularies::Known::JSON_Schema_Draft_0_Hyper,
-               SchemaVocabularies::Known::JSON_Schema_Draft_1,
-               SchemaVocabularies::Known::JSON_Schema_Draft_1_Hyper})) {
+              {SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_0,
+               SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_0_HYPER,
+               SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_1,
+               SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_1_HYPER})) {
         continue;
       }
 
       if (entry.first == "optional" &&
           vocabularies.contains_any(
-              {SchemaVocabularies::Known::JSON_Schema_Draft_0,
-               SchemaVocabularies::Known::JSON_Schema_Draft_0_Hyper,
-               SchemaVocabularies::Known::JSON_Schema_Draft_1,
-               SchemaVocabularies::Known::JSON_Schema_Draft_1_Hyper,
-               SchemaVocabularies::Known::JSON_Schema_Draft_2,
-               SchemaVocabularies::Known::JSON_Schema_Draft_2_Hyper})) {
+              {SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_0,
+               SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_0_HYPER,
+               SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_1,
+               SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_1_HYPER,
+               SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_2,
+               SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_2_HYPER})) {
         continue;
       }
 
@@ -119,7 +120,7 @@ public:
     }
 
     ONLY_CONTINUE_IF(!positions.empty());
-    return APPLIES_TO_POINTERS(std::move(positions));
+    return applies_to_pointers(std::move(positions));
   }
 
   auto transform(JSON &schema, const Result &result) const -> void override {

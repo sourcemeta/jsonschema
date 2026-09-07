@@ -67,6 +67,5 @@ public:
 private:
   mutable std::unordered_map<std::string, std::string> renames_;
 
-private:
   mutable std::vector<sourcemeta::core::Pointer> locations_;
 };

@@ -37,8 +37,8 @@ auto booleans_are_schemas(
     const sourcemeta::blaze::SchemaVocabularies &vocabularies) -> bool {
   using Known = sourcemeta::blaze::SchemaVocabularies::Known;
   return !vocabularies.contains_any(
-      {Known::JSON_Schema_Draft_3, Known::JSON_Schema_Draft_3_Hyper,
-       Known::JSON_Schema_Draft_4, Known::JSON_Schema_Draft_4_Hyper});
+      {Known::JSON_SCHEMA_DRAFT_3, Known::JSON_SCHEMA_DRAFT_3_HYPER,
+       Known::JSON_SCHEMA_DRAFT_4, Known::JSON_SCHEMA_DRAFT_4_HYPER});
 }
 
 // Draft 4 and earlier spell these as flags on a sibling bound rather than as
@@ -47,8 +47,8 @@ auto exclusive_bounds_need_a_sibling(
     const sourcemeta::blaze::SchemaVocabularies &vocabularies) -> bool {
   using Known = sourcemeta::blaze::SchemaVocabularies::Known;
   return vocabularies.contains_any(
-      {Known::JSON_Schema_Draft_3, Known::JSON_Schema_Draft_3_Hyper,
-       Known::JSON_Schema_Draft_4, Known::JSON_Schema_Draft_4_Hyper});
+      {Known::JSON_SCHEMA_DRAFT_3, Known::JSON_SCHEMA_DRAFT_3_HYPER,
+       Known::JSON_SCHEMA_DRAFT_4, Known::JSON_SCHEMA_DRAFT_4_HYPER});
 }
 
 auto is_schema(const sourcemeta::core::JSON &value, const bool allow_boolean)
@@ -95,31 +95,36 @@ auto keyword_shape_error(
         keyword == "$comment" || keyword == "format" ||
         keyword == "contentEncoding" || keyword == "contentMediaType") {
       return value.is_string() ? nullptr : EXPECTED_STRING;
-    } else if (keyword == "uniqueItems" || keyword == "deprecated" ||
-               keyword == "readOnly" || keyword == "writeOnly") {
+    }
+    if (keyword == "uniqueItems" || keyword == "deprecated" ||
+        keyword == "readOnly" || keyword == "writeOnly") {
       return value.is_boolean() ? nullptr : EXPECTED_BOOLEAN;
-    } else if (keyword == "examples") {
+    }
+    if (keyword == "examples") {
       return value.is_array() ? nullptr : EXPECTED_ARRAY;
-    } else if (keyword == "maxContains" || keyword == "minContains") {
+    }
+    if (keyword == "maxContains" || keyword == "minContains") {
       // These only exist from 2019-09 onwards, where a number whose fractional
       // part is zero counts as an integer
       return (value.is_integral() && value.is_positive())
                  ? nullptr
                  : EXPECTED_NON_NEGATIVE_INTEGER;
-    } else if (keyword == "exclusiveMaximum" || keyword == "exclusiveMinimum") {
+    }
+    if (keyword == "exclusiveMaximum" || keyword == "exclusiveMinimum") {
       return (vocabularies.contains_any(
-                  {SchemaVocabularies::Known::JSON_Schema_Draft_3,
-                   SchemaVocabularies::Known::JSON_Schema_Draft_3_Hyper,
-                   SchemaVocabularies::Known::JSON_Schema_Draft_4,
-                   SchemaVocabularies::Known::JSON_Schema_Draft_4_Hyper})
+                  {SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_3,
+                   SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_3_HYPER,
+                   SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_4,
+                   SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_4_HYPER})
                   ? (value.is_boolean() ? nullptr : EXPECTED_BOOLEAN)
                   : (value.is_number() ? nullptr : EXPECTED_NUMBER));
-    } else if ((keyword == "$defs" || keyword == "definitions") &&
-               // The walker treats these as containers in every dialect, but
-               // no meta-schema before Draft 4 defines either of them
-               !vocabularies.contains_any(
-                   {SchemaVocabularies::Known::JSON_Schema_Draft_3,
-                    SchemaVocabularies::Known::JSON_Schema_Draft_3_Hyper})) {
+    }
+    if ((keyword == "$defs" || keyword == "definitions") &&
+        // The walker treats these as containers in every dialect, but
+        // no meta-schema before Draft 4 defines either of them
+        !vocabularies.contains_any(
+            {SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_3,
+             SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_3_HYPER})) {
       return (value.is_object() &&
               std::ranges::all_of(value.as_object(),
                                   [allow_boolean](const auto &entry) -> bool {
@@ -135,8 +140,8 @@ auto keyword_shape_error(
   // a list on the object, so the shape it asks for is a different one
   if (keyword == "required" &&
       vocabularies.contains_any(
-          {SchemaVocabularies::Known::JSON_Schema_Draft_3,
-           SchemaVocabularies::Known::JSON_Schema_Draft_3_Hyper})) {
+          {SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_3,
+           SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_3_HYPER})) {
     return value.is_boolean() ? nullptr : EXPECTED_BOOLEAN;
   }
 
@@ -200,6 +205,30 @@ auto keyword_shape_error(
   }
 }
 
+// Compiling a subschema recurses back into itself through the keyword
+// handlers, so what bounds that recursion has to survive across those calls.
+// A guard that throws never incremented, and so never decrements either
+class DepthGuard {
+public:
+  DepthGuard(std::uint64_t &depth, const std::uint64_t limit) : depth_{depth} {
+    if (this->depth_ >= limit) [[unlikely]] {
+      throw sourcemeta::blaze::CompilerDepthLimitError{limit};
+    }
+
+    this->depth_ += 1;
+  }
+
+  ~DepthGuard() { this->depth_ -= 1; }
+
+  DepthGuard(const DepthGuard &) = delete;
+  auto operator=(const DepthGuard &) -> DepthGuard & = delete;
+  DepthGuard(DepthGuard &&) = delete;
+  auto operator=(DepthGuard &&) -> DepthGuard & = delete;
+
+private:
+  std::uint64_t &depth_;
+};
+
 auto compile_subschema(const sourcemeta::blaze::Context &context,
                        const sourcemeta::blaze::SchemaContext &schema_context,
                        const sourcemeta::blaze::DynamicContext &dynamic_context)
@@ -207,6 +236,7 @@ auto compile_subschema(const sourcemeta::blaze::Context &context,
   using namespace sourcemeta::blaze;
   assert((schema_context.schema.is_object() ||
           schema_context.schema.is_boolean()));
+  const DepthGuard depth_guard{context.depth, context.tweaks.max_depth};
 
   // A boolean in a keyword position is settled by the keyword's own contract,
   // which the shape check below applies. What is left is the root of a schema
@@ -224,15 +254,14 @@ auto compile_subschema(const sourcemeta::blaze::Context &context,
   if (schema_context.schema.is_boolean()) {
     if (schema_context.schema.to_boolean()) {
       return {};
-    } else {
-      return {make(
-          sourcemeta::blaze::InstructionIndex::AssertionFail, context,
-          schema_context,
-          {.keyword = KEYWORD_EMPTY,
-           .base_schema_location = dynamic_context.base_schema_location,
-           .base_instance_location = dynamic_context.base_instance_location},
-          ValueNone{})};
     }
+    return {
+        make(sourcemeta::blaze::InstructionIndex::AssertionFail, context,
+             schema_context,
+             {.keyword = KEYWORD_EMPTY,
+              .base_schema_location = dynamic_context.base_schema_location,
+              .base_instance_location = dynamic_context.base_instance_location},
+             ValueNone{})};
   }
 
   Instructions steps;
@@ -273,7 +302,7 @@ auto compile_subschema(const sourcemeta::blaze::Context &context,
           "This keyword was expected to accompany the bound it applies to");
     }
 
-    if (shape_error) [[unlikely]] {
+    if (shape_error != nullptr) [[unlikely]] {
       throw sourcemeta::blaze::CompilerError(
           schema_context.base,
           absolute_schema_location(
@@ -373,7 +402,7 @@ auto schema_frame_populate_target_types(
 
   std::unordered_map<std::string_view, const sourcemeta::core::WeakPointer *>
       destination_pointers;
-  for (const auto &[destination, _] : target_types) {
+  for (const auto &[destination, context] : target_types) {
     const auto destination_location{frame.traverse(destination)};
     if (destination_location.has_value()) {
       destination_pointers.emplace(destination,
@@ -619,7 +648,8 @@ auto compile(const sourcemeta::core::JSON &schema,
   auto unevaluated{
       sourcemeta::blaze::unevaluated(schema, frame, walker, resolver)};
 
-  std::vector<InstructionExtra> instruction_extra;
+  std::uint64_t compilation_depth{0};
+  InstructionExtras instruction_extra{effective_tweaks.max_instructions};
   std::vector<SchemaVocabularies::URI> instruction_vocabularies;
   const Context context{.root = schema,
                         .frame = frame,
@@ -633,6 +663,7 @@ auto compile(const sourcemeta::core::JSON &schema,
                         .unevaluated = std::move(unevaluated),
                         .tweaks = effective_tweaks,
                         .targets = std::move(targets_map),
+                        .depth = compilation_depth,
                         .extra = instruction_extra,
                         .vocabularies = instruction_vocabularies};
 
@@ -757,7 +788,7 @@ auto compile(const sourcemeta::core::JSON &schema,
           .track = track,
           .targets = std::move(compiled_targets),
           .labels = std::move(labels_map),
-          .extra = std::move(instruction_extra),
+          .extra = std::move(instruction_extra).release(),
           .vocabularies = std::move(template_vocabularies)};
 }
 
@@ -768,7 +799,8 @@ auto compile(const sourcemeta::core::JSON &schema,
              const std::string_view default_dialect,
              const std::string_view default_id,
              const std::string_view entrypoint,
-             const std::optional<Tweaks> &tweaks) -> Template {
+             const std::optional<Tweaks> &tweaks,
+             const std::uint64_t max_locations) -> Template {
   assert((schema.is_object() || schema.is_boolean()));
 
   // Make sure the input schema is bundled, otherwise we won't be able to
@@ -776,7 +808,8 @@ auto compile(const sourcemeta::core::JSON &schema,
   // can determine vocabularies through the resolver
   const sourcemeta::core::JSON result{sourcemeta::blaze::bundle(
       schema, walker, resolver, sourcemeta::blaze::BundleMode::References,
-      default_dialect, default_id)};
+      default_dialect, default_id, std::nullopt,
+      {sourcemeta::core::EMPTY_WEAK_POINTER}, max_locations)};
 
   sourcemeta::blaze::SchemaFrame frame{
       sourcemeta::blaze::SchemaFrame::Mode::References,
@@ -784,7 +817,10 @@ auto compile(const sourcemeta::core::JSON &schema,
       walker,
       resolver,
       default_dialect,
-      default_id};
+      default_id,
+      sourcemeta::blaze::SchemaFrame::IdentifierMode::Additional,
+      {sourcemeta::core::EMPTY_WEAK_POINTER},
+      max_locations};
   return compile(result, walker, resolver, compiler, frame,
                  entrypoint.empty() ? frame.root() : entrypoint, mode, tweaks);
 }

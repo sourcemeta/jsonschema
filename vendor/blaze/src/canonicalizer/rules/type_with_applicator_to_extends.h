@@ -13,19 +13,22 @@ public:
             const sourcemeta::blaze::SchemaWalker &,
             const sourcemeta::blaze::SchemaResolver &) const -> bool override {
     ONLY_CONTINUE_IF(vocabularies.contains_any(
-                         {SchemaVocabularies::Known::JSON_Schema_Draft_0,
-                          SchemaVocabularies::Known::JSON_Schema_Draft_1,
-                          SchemaVocabularies::Known::JSON_Schema_Draft_2,
-                          SchemaVocabularies::Known::JSON_Schema_Draft_3}) &&
+                         {SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_0,
+                          SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_1,
+                          SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_2,
+                          SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_3}) &&
                      schema.is_object());
 
     const auto *extends_value{schema.try_at("extends")};
-    const bool has_extends{extends_value && extends_value->is_array()};
+    const bool has_extends{(extends_value != nullptr) &&
+                           extends_value->is_array()};
     const auto *disallow_value{schema.try_at("disallow")};
-    const bool has_disallow{disallow_value && disallow_value->is_array()};
+    const bool has_disallow{(disallow_value != nullptr) &&
+                            disallow_value->is_array()};
     const auto *type_value{schema.try_at("type")};
-    const bool has_type_array{type_value && type_value->is_array()};
-    const bool has_type{type_value && type_value->is_string()};
+    const bool has_type_array{(type_value != nullptr) &&
+                              type_value->is_array()};
+    const bool has_type{(type_value != nullptr) && type_value->is_string()};
     const bool has_enum{schema.defines("enum")};
     const unsigned int applicator_count{(has_extends ? 1U : 0U) +
                                         (has_disallow ? 1U : 0U) +
@@ -98,7 +101,7 @@ public:
     }
 
     const auto &keyword{relative.at(0).to_property()};
-    static const sourcemeta::core::JSON::String extends_keyword{"extends"};
+    static const sourcemeta::core::JSON::String EXTENDS_KEYWORD{"extends"};
 
     for (const auto &typed_keyword : this->typed_keywords_) {
       if (typed_keyword == keyword) {
@@ -106,7 +109,7 @@ public:
         const std::size_t typed_index{
             static_cast<std::size_t>(std::popcount(this->applicator_indices_))};
         const sourcemeta::core::Pointer new_prefix{
-            current.concat({extends_keyword, typed_index, keyword})};
+            current.concat({EXTENDS_KEYWORD, typed_index, keyword})};
         return target.rebase(old_prefix, new_prefix);
       }
     }
@@ -116,10 +119,10 @@ public:
       if (keyword == applicator) {
         const sourcemeta::core::Pointer old_prefix{current.concat(keyword)};
         const sourcemeta::core::Pointer new_prefix{
-            current.concat({extends_keyword, index, keyword})};
+            current.concat({EXTENDS_KEYWORD, index, keyword})};
         return target.rebase(old_prefix, new_prefix);
       }
-      if (this->applicator_indices_ & applicator_bit(applicator)) {
+      if ((this->applicator_indices_ & applicator_bit(applicator)) != 0) {
         index++;
       }
     }
@@ -133,12 +136,15 @@ private:
 
   static constexpr auto applicator_bit(std::string_view keyword)
       -> std::uint8_t {
-    if (keyword == "extends")
+    if (keyword == "extends") {
       return 1;
-    if (keyword == "disallow")
+    }
+    if (keyword == "disallow") {
       return 2;
-    if (keyword == "type")
+    }
+    if (keyword == "type") {
       return 4;
+    }
     return 0;
   }
 

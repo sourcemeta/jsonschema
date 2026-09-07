@@ -1,6 +1,6 @@
 class NonApplicableAdditionalItems final : public SchemaTransformRule {
 private:
-  // NOLINTNEXTLINE(bugprone-throwing-static-initialization)
+  // NOLINTNEXTLINE(cert-err58-cpp,bugprone-throwing-static-initialization)
   static inline const std::string KEYWORD{"additionalItems"};
 
 public:
@@ -18,19 +18,21 @@ public:
             const sourcemeta::blaze::SchemaResolver &) const -> bool override {
     ONLY_CONTINUE_IF(
         vocabularies.contains_any(
-            {SchemaVocabularies::Known::JSON_Schema_2019_09_Applicator,
-             SchemaVocabularies::Known::JSON_Schema_Draft_7,
-             SchemaVocabularies::Known::JSON_Schema_Draft_6,
-             SchemaVocabularies::Known::JSON_Schema_Draft_4,
-             SchemaVocabularies::Known::JSON_Schema_Draft_3,
-             SchemaVocabularies::Known::JSON_Schema_Draft_3_Hyper}) &&
+            {SchemaVocabularies::Known::JSON_SCHEMA_2019_09_APPLICATOR,
+             SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_7,
+             SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_6,
+             SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_4,
+             SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_3,
+             SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_3_HYPER}) &&
         schema.is_object() && schema.defines(KEYWORD));
     ONLY_CONTINUE_IF(!frame.has_references_through(
         location.pointer,
         sourcemeta::core::WeakPointer::Token{std::cref(KEYWORD)}));
 
     const auto *items{schema.try_at("items")};
-    return (items && (items->is_object() || items->is_boolean())) || !items;
+    return ((items != nullptr) &&
+            (items->is_object() || items->is_boolean())) ||
+           (items == nullptr);
   }
 
   auto transform(sourcemeta::core::JSON &schema) const -> void override {
