@@ -14,15 +14,15 @@ public:
             const sourcemeta::blaze::SchemaResolver &) const -> bool override {
     ONLY_CONTINUE_IF(
         vocabularies.contains_any(
-            {SchemaVocabularies::Known::JSON_Schema_Draft_0,
-             SchemaVocabularies::Known::JSON_Schema_Draft_1,
-             SchemaVocabularies::Known::JSON_Schema_Draft_2,
-             SchemaVocabularies::Known::JSON_Schema_Draft_3,
-             SchemaVocabularies::Known::JSON_Schema_Draft_4,
-             SchemaVocabularies::Known::JSON_Schema_Draft_6,
-             SchemaVocabularies::Known::JSON_Schema_Draft_7,
-             SchemaVocabularies::Known::JSON_Schema_2019_09_Validation,
-             SchemaVocabularies::Known::JSON_Schema_2020_12_Validation}) &&
+            {SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_0,
+             SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_1,
+             SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_2,
+             SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_3,
+             SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_4,
+             SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_6,
+             SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_7,
+             SchemaVocabularies::Known::JSON_SCHEMA_2019_09_VALIDATION,
+             SchemaVocabularies::Known::JSON_SCHEMA_2020_12_VALIDATION}) &&
         schema.is_object() && !schema.defines("type"));
 
     const auto *enum_value{schema.try_at("enum")};
@@ -31,15 +31,15 @@ public:
     this->keywords_.clear();
     this->wrap_keywords_.clear();
     this->is_pre_draft4_ = vocabularies.contains_any(
-        {SchemaVocabularies::Known::JSON_Schema_Draft_0,
-         SchemaVocabularies::Known::JSON_Schema_Draft_1,
-         SchemaVocabularies::Known::JSON_Schema_Draft_2,
-         SchemaVocabularies::Known::JSON_Schema_Draft_3});
+        {SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_0,
+         SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_1,
+         SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_2,
+         SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_3});
     this->has_if_group_ =
         vocabularies.contains_any(
-            {SchemaVocabularies::Known::JSON_Schema_Draft_7,
-             SchemaVocabularies::Known::JSON_Schema_2019_09_Applicator,
-             SchemaVocabularies::Known::JSON_Schema_2020_12_Applicator}) &&
+            {SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_7,
+             SchemaVocabularies::Known::JSON_SCHEMA_2019_09_APPLICATOR,
+             SchemaVocabularies::Known::JSON_SCHEMA_2020_12_APPLICATOR}) &&
         schema.defines("if");
     for (const auto &entry : schema.as_object()) {
       if (entry.first == "enum") {
@@ -66,19 +66,19 @@ public:
       // `enum` could make redundant
       if (entry.first == "required" &&
           vocabularies.contains_any(
-              {SchemaVocabularies::Known::JSON_Schema_Draft_3,
-               SchemaVocabularies::Known::JSON_Schema_Draft_3_Hyper})) {
+              {SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_3,
+               SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_3_HYPER})) {
         continue;
       }
 
       if (entry.first == "optional" &&
           vocabularies.contains_any(
-              {SchemaVocabularies::Known::JSON_Schema_Draft_0,
-               SchemaVocabularies::Known::JSON_Schema_Draft_0_Hyper,
-               SchemaVocabularies::Known::JSON_Schema_Draft_1,
-               SchemaVocabularies::Known::JSON_Schema_Draft_1_Hyper,
-               SchemaVocabularies::Known::JSON_Schema_Draft_2,
-               SchemaVocabularies::Known::JSON_Schema_Draft_2_Hyper})) {
+              {SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_0,
+               SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_0_HYPER,
+               SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_1,
+               SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_1_HYPER,
+               SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_2,
+               SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_2_HYPER})) {
         continue;
       }
 
@@ -145,7 +145,8 @@ public:
     schema.erase("enum");
     new_allof.push_back(std::move(enum_branch));
 
-    const auto wrapper_keyword{this->is_pre_draft4_ ? "extends" : "allOf"};
+    const auto *const wrapper_keyword{this->is_pre_draft4_ ? "extends"
+                                                           : "allOf"};
     schema.assign(wrapper_keyword, std::move(new_allof));
   }
 

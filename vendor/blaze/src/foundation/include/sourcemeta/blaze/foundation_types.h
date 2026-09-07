@@ -47,21 +47,21 @@ enum class SchemaReferenceType : std::uint8_t { Static, Dynamic };
 /// @ingroup foundation
 /// All the known JSON Schema base dialects
 enum class SchemaBaseDialect : std::uint8_t {
-  JSON_Schema_2020_12,
-  JSON_Schema_2020_12_Hyper,
-  JSON_Schema_2019_09,
-  JSON_Schema_2019_09_Hyper,
-  JSON_Schema_Draft_7,
-  JSON_Schema_Draft_7_Hyper,
-  JSON_Schema_Draft_6,
-  JSON_Schema_Draft_6_Hyper,
-  JSON_Schema_Draft_4,
-  JSON_Schema_Draft_4_Hyper,
-  JSON_Schema_Draft_3,
-  JSON_Schema_Draft_3_Hyper,
-  JSON_Schema_Draft_2_Hyper,
-  JSON_Schema_Draft_1_Hyper,
-  JSON_Schema_Draft_0_Hyper
+  JSON_SCHEMA_2020_12,
+  JSON_SCHEMA_2020_12_HYPER,
+  JSON_SCHEMA_2019_09,
+  JSON_SCHEMA_2019_09_HYPER,
+  JSON_SCHEMA_DRAFT_7,
+  JSON_SCHEMA_DRAFT_7_HYPER,
+  JSON_SCHEMA_DRAFT_6,
+  JSON_SCHEMA_DRAFT_6_HYPER,
+  JSON_SCHEMA_DRAFT_4,
+  JSON_SCHEMA_DRAFT_4_HYPER,
+  JSON_SCHEMA_DRAFT_3,
+  JSON_SCHEMA_DRAFT_3_HYPER,
+  JSON_SCHEMA_DRAFT_2_HYPER,
+  JSON_SCHEMA_DRAFT_1_HYPER,
+  JSON_SCHEMA_DRAFT_0_HYPER
 };
 
 /// @ingroup foundation
@@ -211,13 +211,15 @@ struct SchemaWalkerResult {
   ~SchemaWalkerResult() = default;
 
   constexpr SchemaWalkerResult(
-      SchemaKeywordType type_,
-      std::optional<SchemaVocabularies::URIView> vocabulary_,
-      std::span<const std::string_view> dependencies_,
-      std::span<const std::string_view> order_dependencies_,
-      sourcemeta::core::JSON::TypeSet instances_)
-      : type{type_}, vocabulary{vocabulary_}, dependencies{dependencies_},
-        order_dependencies{order_dependencies_}, instances{instances_} {}
+      SchemaKeywordType keyword_type,
+      std::optional<SchemaVocabularies::URIView> keyword_vocabulary,
+      std::span<const std::string_view> keyword_dependencies,
+      std::span<const std::string_view> keyword_order_dependencies,
+      sourcemeta::core::JSON::TypeSet keyword_instances)
+      : type{keyword_type}, vocabulary{keyword_vocabulary},
+        dependencies{keyword_dependencies},
+        order_dependencies{keyword_order_dependencies},
+        instances{keyword_instances} {}
 };
 
 /// @ingroup foundation

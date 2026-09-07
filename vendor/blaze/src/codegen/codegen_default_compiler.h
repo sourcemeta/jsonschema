@@ -273,7 +273,7 @@ auto handle_array(const sourcemeta::core::JSON &schema,
                            "writeOnly",      "examples"});
 
   if (vocabularies.contains(
-          SchemaVocabularies::Known::JSON_Schema_2020_12_Applicator) &&
+          SchemaVocabularies::Known::JSON_SCHEMA_2020_12_APPLICATOR) &&
       subschema.defines("prefixItems")) {
     const auto &prefix_items{subschema.at("prefixItems")};
     if (!prefix_items.is_array()) {
@@ -318,11 +318,11 @@ auto handle_array(const sourcemeta::core::JSON &schema,
   }
 
   if (vocabularies.contains_any(
-          {SchemaVocabularies::Known::JSON_Schema_2019_09_Applicator,
-           SchemaVocabularies::Known::JSON_Schema_Draft_7,
-           SchemaVocabularies::Known::JSON_Schema_Draft_6,
-           SchemaVocabularies::Known::JSON_Schema_Draft_4,
-           SchemaVocabularies::Known::JSON_Schema_Draft_3}) &&
+          {SchemaVocabularies::Known::JSON_SCHEMA_2019_09_APPLICATOR,
+           SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_7,
+           SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_6,
+           SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_4,
+           SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_3}) &&
       subschema.defines("items") && subschema.at("items").is_array()) {
     const auto &items_array{subschema.at("items")};
 
@@ -405,7 +405,8 @@ auto handle_enum(const sourcemeta::core::JSON &schema,
         {.pointer = sourcemeta::core::to_pointer(location.pointer),
          .symbol = symbol(frame, location)},
         CodegenIRScalarType::Null};
-  } else if (enum_json.size() == 2) {
+  }
+  if (enum_json.size() == 2) {
     const auto &first{enum_json.at(0)};
     const auto &second{enum_json.at(1)};
     if ((first.is_boolean() && second.is_boolean()) &&
@@ -728,25 +729,25 @@ auto default_compiler(const sourcemeta::core::JSON &schema,
   assert(!vocabularies.empty());
 
   // Be strict with vocabulary support
-  static const std::unordered_set<SchemaVocabularies::URI> supported{
-      SchemaVocabularies::Known::JSON_Schema_2020_12_Core,
-      SchemaVocabularies::Known::JSON_Schema_2020_12_Applicator,
-      SchemaVocabularies::Known::JSON_Schema_2020_12_Validation,
-      SchemaVocabularies::Known::JSON_Schema_2020_12_Unevaluated,
-      SchemaVocabularies::Known::JSON_Schema_2020_12_Content,
-      SchemaVocabularies::Known::JSON_Schema_2020_12_Meta_Data,
-      SchemaVocabularies::Known::JSON_Schema_2020_12_Format_Annotation,
-      SchemaVocabularies::Known::JSON_Schema_2020_12_Format_Assertion,
-      SchemaVocabularies::Known::JSON_Schema_2019_09_Core,
-      SchemaVocabularies::Known::JSON_Schema_2019_09_Applicator,
-      SchemaVocabularies::Known::JSON_Schema_2019_09_Validation,
-      SchemaVocabularies::Known::JSON_Schema_2019_09_Content,
-      SchemaVocabularies::Known::JSON_Schema_2019_09_Meta_Data,
-      SchemaVocabularies::Known::JSON_Schema_2019_09_Format,
-      SchemaVocabularies::Known::JSON_Schema_Draft_7,
-      SchemaVocabularies::Known::JSON_Schema_Draft_6,
-      SchemaVocabularies::Known::JSON_Schema_Draft_4};
-  vocabularies.throw_if_any_unsupported(supported,
+  static const std::unordered_set<SchemaVocabularies::URI> SUPPORTED{
+      SchemaVocabularies::Known::JSON_SCHEMA_2020_12_CORE,
+      SchemaVocabularies::Known::JSON_SCHEMA_2020_12_APPLICATOR,
+      SchemaVocabularies::Known::JSON_SCHEMA_2020_12_VALIDATION,
+      SchemaVocabularies::Known::JSON_SCHEMA_2020_12_UNEVALUATED,
+      SchemaVocabularies::Known::JSON_SCHEMA_2020_12_CONTENT,
+      SchemaVocabularies::Known::JSON_SCHEMA_2020_12_META_DATA,
+      SchemaVocabularies::Known::JSON_SCHEMA_2020_12_FORMAT_ANNOTATION,
+      SchemaVocabularies::Known::JSON_SCHEMA_2020_12_FORMAT_ASSERTION,
+      SchemaVocabularies::Known::JSON_SCHEMA_2019_09_CORE,
+      SchemaVocabularies::Known::JSON_SCHEMA_2019_09_APPLICATOR,
+      SchemaVocabularies::Known::JSON_SCHEMA_2019_09_VALIDATION,
+      SchemaVocabularies::Known::JSON_SCHEMA_2019_09_CONTENT,
+      SchemaVocabularies::Known::JSON_SCHEMA_2019_09_META_DATA,
+      SchemaVocabularies::Known::JSON_SCHEMA_2019_09_FORMAT,
+      SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_7,
+      SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_6,
+      SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_4};
+  vocabularies.throw_if_any_unsupported(SUPPORTED,
                                         "Unsupported required vocabulary");
 
   // The canonicaliser ensures that every subschema schema is only in one of the
@@ -756,11 +757,11 @@ auto default_compiler(const sourcemeta::core::JSON &schema,
     if (subschema.to_boolean()) {
       return handle_any(schema, frame, location, vocabularies, resolver,
                         subschema);
-    } else {
-      return handle_impossible(schema, frame, location, vocabularies, resolver,
-                               subschema);
     }
-  } else if (subschema.defines("type")) {
+    return handle_impossible(schema, frame, location, vocabularies, resolver,
+                             subschema);
+  }
+  if (subschema.defines("type")) {
     const auto &type_value{subschema.at("type")};
     if (!type_value.is_string()) {
       throw CodegenUnsupportedKeywordValueError(
@@ -773,52 +774,62 @@ auto default_compiler(const sourcemeta::core::JSON &schema,
     if (type_string == "string") {
       return handle_string(schema, frame, location, vocabularies, resolver,
                            subschema);
-    } else if (type_string == "object") {
+    }
+    if (type_string == "object") {
       return handle_object(schema, frame, location, vocabularies, resolver,
                            subschema);
-    } else if (type_string == "integer") {
+    }
+    if (type_string == "integer") {
       return handle_integer(schema, frame, location, vocabularies, resolver,
                             subschema);
-    } else if (type_string == "number") {
+    }
+    if (type_string == "number") {
       return handle_number(schema, frame, location, vocabularies, resolver,
                            subschema);
-    } else if (type_string == "array") {
+    }
+    if (type_string == "array") {
       return handle_array(schema, frame, location, vocabularies, resolver,
                           subschema);
-    } else {
-      throw CodegenUnsupportedKeywordValueError(
-          schema, location.pointer, "type", "Unsupported type value");
     }
-  } else if (subschema.defines("enum")) {
+    throw CodegenUnsupportedKeywordValueError(schema, location.pointer, "type",
+                                              "Unsupported type value");
+  }
+  if (subschema.defines("enum")) {
     return handle_enum(schema, frame, location, vocabularies, resolver,
                        subschema);
-  } else if (subschema.defines("anyOf")) {
+  }
+  if (subschema.defines("anyOf")) {
     return handle_anyof(schema, frame, location, vocabularies, resolver,
                         subschema);
     // This is usually a good enough approximation. We usually can't check that
     // the other types DO NOT match, but that is in a way a validation concern
-  } else if (subschema.defines("oneOf")) {
+  }
+  if (subschema.defines("oneOf")) {
     return handle_oneof(schema, frame, location, vocabularies, resolver,
                         subschema);
-  } else if (subschema.defines("allOf")) {
+  }
+  if (subschema.defines("allOf")) {
     return handle_allof(schema, frame, location, vocabularies, resolver,
                         subschema);
-  } else if (subschema.defines("$dynamicRef")) {
+  }
+  if (subschema.defines("$dynamicRef")) {
     return handle_dynamic_ref(schema, frame, location, vocabularies, resolver,
                               subschema);
-  } else if (subschema.defines("$ref")) {
+  }
+  if (subschema.defines("$ref")) {
     return handle_ref(schema, frame, location, vocabularies, resolver,
                       subschema);
-  } else if (subschema.defines("if")) {
+  }
+  if (subschema.defines("if")) {
     return handle_if_then_else(schema, frame, location, vocabularies, resolver,
                                subschema);
-  } else if (subschema.defines("not")) {
+  }
+  if (subschema.defines("not")) {
     throw CodegenUnsupportedKeywordError(schema, location.pointer, "not",
                                          "Unsupported keyword in subschema");
-  } else {
-    throw CodegenUnexpectedSchemaError(schema, location.pointer,
-                                       "Unsupported schema");
   }
+  throw CodegenUnexpectedSchemaError(schema, location.pointer,
+                                     "Unsupported schema");
 }
 
 } // namespace sourcemeta::blaze

@@ -19,8 +19,9 @@
 
 #include <sourcemeta/blaze/foundation.h>
 
-#include <cstdint>     // std::uint8_t
+#include <cstdint>     // std::uint8_t, std::uint64_t
 #include <functional>  // std::function
+#include <limits>      // std::numeric_limits
 #include <optional>    // std::optional, std::nullopt
 #include <string_view> // std::string_view
 
@@ -88,14 +89,21 @@ enum class BundleMode : std::uint8_t {
 ///     // Do something with the information
 ///   });
 /// ```
+///
+/// How many schemas this ends up analysing follows from what the resolver
+/// hands back rather than from the schema the caller passed in, so pass
+/// `max_locations` to bound it. Every frame that this constructs spends from
+/// that one limit, throwing sourcemeta::blaze::SchemaFrameLimitError once it
+/// runs out. See sourcemeta::blaze::SchemaFrame for what the unit counts and
+/// what it leaves to the caller
 SOURCEMETA_BLAZE_BUNDLE_EXPORT
-auto dependencies(const sourcemeta::core::JSON &schema,
-                  const SchemaWalker &walker, const SchemaResolver &resolver,
-                  const DependencyCallback &callback,
-                  std::string_view default_dialect = "",
-                  std::string_view default_id = "",
-                  const SchemaFrame::Paths &paths = {
-                      sourcemeta::core::EMPTY_WEAK_POINTER}) -> void;
+auto dependencies(
+    const sourcemeta::core::JSON &schema, const SchemaWalker &walker,
+    const SchemaResolver &resolver, const DependencyCallback &callback,
+    std::string_view default_dialect = "", std::string_view default_id = "",
+    const SchemaFrame::Paths &paths = {sourcemeta::core::EMPTY_WEAK_POINTER},
+    std::uint64_t max_locations = std::numeric_limits<std::uint64_t>::max())
+    -> void;
 
 /// @ingroup bundle
 ///
@@ -148,15 +156,25 @@ auto dependencies(const sourcemeta::core::JSON &schema,
 ///
 /// assert(document == expected);
 /// ```
+///
+/// How many schemas this ends up embedding follows from what the resolver
+/// hands back rather than from the schema the caller passed in, so pass
+/// `max_locations` to bound it. Every frame that bundling constructs spends
+/// from that one limit, throwing sourcemeta::blaze::SchemaFrameLimitError once
+/// it runs out, which bounds how many remote schemas this embeds and how deep
+/// it recurses along with how much framing it does. Note that a remote is
+/// copied out of the resolver before anything charges for it, so the limit
+/// bounds how many oversized schemas get copied rather than whether one does
 SOURCEMETA_BLAZE_BUNDLE_EXPORT
-auto bundle(sourcemeta::core::JSON &schema, const SchemaWalker &walker,
-            const SchemaResolver &resolver, const BundleMode mode,
-            std::string_view default_dialect = "",
-            std::string_view default_id = "",
-            const std::optional<sourcemeta::core::Pointer> &default_container =
-                std::nullopt,
-            const SchemaFrame::Paths &paths = {
-                sourcemeta::core::EMPTY_WEAK_POINTER}) -> void;
+auto bundle(
+    sourcemeta::core::JSON &schema, const SchemaWalker &walker,
+    const SchemaResolver &resolver, const BundleMode mode,
+    std::string_view default_dialect = "", std::string_view default_id = "",
+    const std::optional<sourcemeta::core::Pointer> &default_container =
+        std::nullopt,
+    const SchemaFrame::Paths &paths = {sourcemeta::core::EMPTY_WEAK_POINTER},
+    std::uint64_t max_locations = std::numeric_limits<std::uint64_t>::max())
+    -> void;
 
 /// @ingroup bundle
 ///
@@ -211,6 +229,10 @@ auto bundle(sourcemeta::core::JSON &schema, const SchemaWalker &walker,
 ///
 /// assert(result == expected);
 /// ```
+///
+/// As with the mutating overload, pass `max_locations` to bound how much
+/// analysis an untrusted schema and whatever the resolver hands back for it
+/// may cost
 SOURCEMETA_BLAZE_BUNDLE_EXPORT
 auto bundle(
     const sourcemeta::core::JSON &schema, const SchemaWalker &walker,
@@ -218,7 +240,8 @@ auto bundle(
     std::string_view default_dialect = "", std::string_view default_id = "",
     const std::optional<sourcemeta::core::Pointer> &default_container =
         std::nullopt,
-    const SchemaFrame::Paths &paths = {sourcemeta::core::EMPTY_WEAK_POINTER})
+    const SchemaFrame::Paths &paths = {sourcemeta::core::EMPTY_WEAK_POINTER},
+    std::uint64_t max_locations = std::numeric_limits<std::uint64_t>::max())
     -> sourcemeta::core::JSON;
 
 } // namespace sourcemeta::blaze

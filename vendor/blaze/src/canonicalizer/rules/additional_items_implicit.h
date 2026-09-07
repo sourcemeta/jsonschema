@@ -13,10 +13,10 @@ public:
             const sourcemeta::blaze::SchemaWalker &,
             const sourcemeta::blaze::SchemaResolver &) const -> bool override {
     ONLY_CONTINUE_IF(vocabularies.contains_any(
-                         {SchemaVocabularies::Known::JSON_Schema_Draft_3,
-                          SchemaVocabularies::Known::JSON_Schema_Draft_4,
-                          SchemaVocabularies::Known::JSON_Schema_Draft_6,
-                          SchemaVocabularies::Known::JSON_Schema_Draft_7}) &&
+                         {SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_3,
+                          SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_4,
+                          SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_6,
+                          SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_7}) &&
                      schema.is_object());
 
     const auto *type{schema.try_at("type")};
@@ -25,7 +25,7 @@ public:
     ONLY_CONTINUE_IF(items && items->is_array() &&
                      !schema.defines("additionalItems"));
     this->is_draft3_ =
-        vocabularies.contains(SchemaVocabularies::Known::JSON_Schema_Draft_3);
+        vocabularies.contains(SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_3);
     return true;
   }
 

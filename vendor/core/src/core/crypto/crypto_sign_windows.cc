@@ -6,7 +6,9 @@
 #include "crypto_pkcs8.h"
 
 #define WIN32_LEAN_AND_MEAN
+#ifndef NOMINMAX
 #define NOMINMAX
+#endif
 #include <windows.h> // ULONG, LPCWSTR
 
 #include <bcrypt.h> // BCrypt*, BCRYPT_*

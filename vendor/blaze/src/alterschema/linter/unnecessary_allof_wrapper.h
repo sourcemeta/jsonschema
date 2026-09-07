@@ -1,6 +1,6 @@
 class UnnecessaryAllOfWrapper final : public SchemaTransformRule {
 private:
-  // NOLINTNEXTLINE(bugprone-throwing-static-initialization)
+  // NOLINTNEXTLINE(cert-err58-cpp,bugprone-throwing-static-initialization)
   static inline const std::string KEYWORD{"allOf"};
 
 public:
@@ -18,11 +18,11 @@ public:
             const SchemaResolver &, const bool) const
       -> SchemaTransformRule::Result override {
     ONLY_CONTINUE_IF(vocabularies.contains_any(
-        {SchemaVocabularies::Known::JSON_Schema_2020_12_Applicator,
-         SchemaVocabularies::Known::JSON_Schema_2019_09_Applicator,
-         SchemaVocabularies::Known::JSON_Schema_Draft_7,
-         SchemaVocabularies::Known::JSON_Schema_Draft_6,
-         SchemaVocabularies::Known::JSON_Schema_Draft_4}));
+        {SchemaVocabularies::Known::JSON_SCHEMA_2020_12_APPLICATOR,
+         SchemaVocabularies::Known::JSON_SCHEMA_2019_09_APPLICATOR,
+         SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_7,
+         SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_6,
+         SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_4}));
     ONLY_CONTINUE_IF(schema.is_object());
 
     const auto *all_of_value{schema.try_at(KEYWORD)};
@@ -49,8 +49,8 @@ public:
       if ((entry.first == "unevaluatedProperties" ||
            entry.first == "unevaluatedItems") &&
           vocabularies.contains_any(
-              {SchemaVocabularies::Known::JSON_Schema_2020_12_Unevaluated,
-               SchemaVocabularies::Known::JSON_Schema_2019_09_Applicator})) {
+              {SchemaVocabularies::Known::JSON_SCHEMA_2020_12_UNEVALUATED,
+               SchemaVocabularies::Known::JSON_SCHEMA_2019_09_APPLICATOR})) {
         continue;
       }
 
@@ -62,13 +62,13 @@ public:
 
     const auto *parent_type_value{schema.try_at("type")};
     const JSON::TypeSet parent_types{
-        parent_type_value &&
+        (parent_type_value != nullptr) &&
                 vocabularies.contains_any(
-                    {SchemaVocabularies::Known::JSON_Schema_2020_12_Validation,
-                     SchemaVocabularies::Known::JSON_Schema_2019_09_Validation,
-                     SchemaVocabularies::Known::JSON_Schema_Draft_7,
-                     SchemaVocabularies::Known::JSON_Schema_Draft_6,
-                     SchemaVocabularies::Known::JSON_Schema_Draft_4})
+                    {SchemaVocabularies::Known::JSON_SCHEMA_2020_12_VALIDATION,
+                     SchemaVocabularies::Known::JSON_SCHEMA_2019_09_VALIDATION,
+                     SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_7,
+                     SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_6,
+                     SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_4})
             ? parse_schema_type(*parent_type_value)
             : JSON::TypeSet{}};
 
@@ -99,8 +99,8 @@ public:
       }
 
       if (vocabularies.contains_any(
-              {SchemaVocabularies::Known::JSON_Schema_2020_12_Unevaluated,
-               SchemaVocabularies::Known::JSON_Schema_2019_09_Applicator}) &&
+              {SchemaVocabularies::Known::JSON_SCHEMA_2020_12_UNEVALUATED,
+               SchemaVocabularies::Known::JSON_SCHEMA_2019_09_APPLICATOR}) &&
           (entry.defines("unevaluatedProperties") ||
            entry.defines("unevaluatedItems"))) {
         continue;
@@ -142,9 +142,9 @@ public:
         elevated.emplace(keyword);
 
         if (!(vocabularies.contains_any(
-                  {SchemaVocabularies::Known::JSON_Schema_2020_12_Unevaluated,
+                  {SchemaVocabularies::Known::JSON_SCHEMA_2020_12_UNEVALUATED,
                    SchemaVocabularies::Known::
-                       JSON_Schema_2019_09_Applicator}) &&
+                       JSON_SCHEMA_2019_09_APPLICATOR}) &&
               (keyword == "unevaluatedProperties" ||
                keyword == "unevaluatedItems"))) {
           for (const auto &dependency : metadata.dependencies) {
@@ -184,7 +184,7 @@ public:
     }
 
     ONLY_CONTINUE_IF(!locations.empty());
-    return APPLIES_TO_POINTERS(std::move(locations));
+    return applies_to_pointers(std::move(locations));
   }
 
   auto transform(JSON &schema, const Result &result) const -> void override {
@@ -218,20 +218,20 @@ private:
                                   const SchemaVocabularies &vocabularies) const
       -> bool {
     if (vocabularies.contains_any(
-            {SchemaVocabularies::Known::JSON_Schema_2020_12_Core,
-             SchemaVocabularies::Known::JSON_Schema_2019_09_Core})) {
+            {SchemaVocabularies::Known::JSON_SCHEMA_2020_12_CORE,
+             SchemaVocabularies::Known::JSON_SCHEMA_2019_09_CORE})) {
       if (entry.defines("$id") || entry.defines("$anchor")) {
         return false;
       }
 
       if (vocabularies.contains(
-              SchemaVocabularies::Known::JSON_Schema_2020_12_Core) &&
+              SchemaVocabularies::Known::JSON_SCHEMA_2020_12_CORE) &&
           entry.defines("$dynamicAnchor")) {
         return false;
       }
 
       if (vocabularies.contains(
-              SchemaVocabularies::Known::JSON_Schema_2019_09_Core) &&
+              SchemaVocabularies::Known::JSON_SCHEMA_2019_09_CORE) &&
           entry.defines("$recursiveAnchor") &&
           entry.at("$recursiveAnchor").is_boolean() &&
           entry.at("$recursiveAnchor").to_boolean()) {
@@ -242,12 +242,12 @@ private:
     }
 
     if (vocabularies.contains_any(
-            {SchemaVocabularies::Known::JSON_Schema_Draft_7,
-             SchemaVocabularies::Known::JSON_Schema_Draft_6})) {
+            {SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_7,
+             SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_6})) {
       return !entry.defines("$id");
     }
 
-    if (vocabularies.contains(SchemaVocabularies::Known::JSON_Schema_Draft_4)) {
+    if (vocabularies.contains(SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_4)) {
       return !entry.defines("id");
     }
 

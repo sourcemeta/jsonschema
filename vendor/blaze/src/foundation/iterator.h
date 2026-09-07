@@ -46,15 +46,15 @@ resolve_dialect_at(const sourcemeta::core::JSON &subschema,
                                         allow_dialect_override)};
   const auto override_active{
       local != sourcemeta::blaze::dialect(subschema, inherited_dialect, false)};
-  auto id{sourcemeta::blaze::identify(subschema, resolver, local, "",
-                                      allow_dialect_override)};
-  if (id.empty() && local != inherited_dialect && !override_active) {
-    id = sourcemeta::blaze::identify(subschema, inherited_base);
-    if (!id.empty()) {
+  auto identifier{sourcemeta::blaze::identify(subschema, resolver, local, "",
+                                              allow_dialect_override)};
+  if (identifier.empty() && local != inherited_dialect && !override_active) {
+    identifier = sourcemeta::blaze::identify(subschema, inherited_base);
+    if (!identifier.empty()) {
       local = inherited_dialect;
     }
   }
-  if (!override_active && level > 0 && id.empty()) {
+  if (!override_active && level > 0 && identifier.empty()) {
     return {.dialect = inherited_dialect,
             .base_dialect = inherited_base,
             .override_active = false};
@@ -209,7 +209,7 @@ walk(const std::optional<sourcemeta::core::WeakPointer> &root_parent,
         subschema.defines("$ref") &&
         sourcemeta::blaze::ref_overrides_adjacent_keywords(
             current_base_dialect)};
-    for (auto &pair : subschema.as_object()) {
+    for (const auto &pair : subschema.as_object()) {
       const auto &keyword_info{walker(pair.first, vocabularies)};
 
       // Ignore the current keyword sibling to `$ref in Draft 7 and older in
@@ -352,7 +352,7 @@ walk(const std::optional<sourcemeta::core::WeakPointer> &root_parent,
         case sourcemeta::blaze::SchemaKeywordType::
             ApplicatorMembersTraversePropertyStatic:
           if (pair.second.is_object()) {
-            for (auto &subpair : pair.second.as_object()) {
+            for (const auto &subpair : pair.second.as_object()) {
               sourcemeta::core::WeakPointer new_pointer{pointer};
               new_pointer.push_back(std::cref(pair.first));
               new_pointer.push_back(std::cref(subpair.first));
@@ -367,7 +367,7 @@ walk(const std::optional<sourcemeta::core::WeakPointer> &root_parent,
         case sourcemeta::blaze::SchemaKeywordType::
             ApplicatorMembersTraversePropertyRegex:
           if (pair.second.is_object()) {
-            for (auto &subpair : pair.second.as_object()) {
+            for (const auto &subpair : pair.second.as_object()) {
               sourcemeta::core::WeakPointer new_pointer{pointer};
               new_pointer.push_back(std::cref(pair.first));
               new_pointer.push_back(std::cref(subpair.first));
@@ -381,7 +381,7 @@ walk(const std::optional<sourcemeta::core::WeakPointer> &root_parent,
 
         case sourcemeta::blaze::SchemaKeywordType::ApplicatorMembersInPlaceSome:
           if (pair.second.is_object()) {
-            for (auto &subpair : pair.second.as_object()) {
+            for (const auto &subpair : pair.second.as_object()) {
               sourcemeta::core::WeakPointer new_pointer{pointer};
               new_pointer.push_back(std::cref(pair.first));
               new_pointer.push_back(std::cref(subpair.first));
@@ -395,7 +395,7 @@ walk(const std::optional<sourcemeta::core::WeakPointer> &root_parent,
 
         case sourcemeta::blaze::SchemaKeywordType::LocationMembers:
           if (pair.second.is_object()) {
-            for (auto &subpair : pair.second.as_object()) {
+            for (const auto &subpair : pair.second.as_object()) {
               sourcemeta::core::WeakPointer new_pointer{pointer};
               new_pointer.push_back(std::cref(pair.first));
               new_pointer.push_back(std::cref(subpair.first));
@@ -470,11 +470,11 @@ walk(const std::optional<sourcemeta::core::WeakPointer> &root_parent,
 /// Iterate over every subschema of a schema, including the schema itself
 class SchemaIterator {
 private:
-  using internal = typename std::vector<SubschemaEntry>;
+  using internal = std::vector<SubschemaEntry>;
 
 public:
-  using const_iterator = typename internal::const_iterator;
-  SchemaIterator(const sourcemeta::core::JSON &input,
+  using const_iterator = internal::const_iterator;
+  SchemaIterator(const sourcemeta::core::JSON &schema,
                  const SchemaWalker &walker, const SchemaResolver &resolver,
                  std::string_view default_dialect = "");
   [[nodiscard]] auto begin() const -> const_iterator;
@@ -483,7 +483,7 @@ public:
   [[nodiscard]] auto cend() const -> const_iterator;
 
 private:
-  internal subschemas{};
+  internal subschemas_{};
 };
 
 // TODO: This iterator is not very efficient. It traverses once on
@@ -510,27 +510,27 @@ inline SchemaIterator::SchemaIterator(
                          .subschema = schema,
                          .orphan = false,
                          .property_name = false};
-    this->subschemas.push_back(std::move(entry));
+    this->subschemas_.push_back(std::move(entry));
   } else {
     const auto resolved_base_dialect{
         sourcemeta::blaze::base_dialect(schema, resolver, resolved_dialect)};
     assert(resolved_base_dialect.has_value());
-    walk(std::nullopt, pointer, this->subschemas, schema, walker, resolver,
+    walk(std::nullopt, pointer, this->subschemas_, schema, walker, resolver,
          resolved_dialect, resolved_base_dialect.value(), 0, false, false);
   }
 }
 
 inline auto SchemaIterator::begin() const -> const_iterator {
-  return this->subschemas.begin();
+  return this->subschemas_.begin();
 }
 inline auto SchemaIterator::end() const -> const_iterator {
-  return this->subschemas.end();
+  return this->subschemas_.end();
 }
 inline auto SchemaIterator::cbegin() const -> const_iterator {
-  return this->subschemas.cbegin();
+  return this->subschemas_.cbegin();
 }
 inline auto SchemaIterator::cend() const -> const_iterator {
-  return this->subschemas.cend();
+  return this->subschemas_.cend();
 }
 
 } // namespace sourcemeta::blaze

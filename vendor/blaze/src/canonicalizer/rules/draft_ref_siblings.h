@@ -12,14 +12,14 @@ public:
             const sourcemeta::blaze::SchemaWalker &walker,
             const sourcemeta::blaze::SchemaResolver &) const -> bool override {
     ONLY_CONTINUE_IF(vocabularies.contains_any(
-        {SchemaVocabularies::Known::JSON_Schema_Draft_7,
-         SchemaVocabularies::Known::JSON_Schema_Draft_6,
-         SchemaVocabularies::Known::JSON_Schema_Draft_4,
-         SchemaVocabularies::Known::JSON_Schema_Draft_3,
-         SchemaVocabularies::Known::JSON_Schema_Draft_3_Hyper,
-         SchemaVocabularies::Known::JSON_Schema_Draft_2,
-         SchemaVocabularies::Known::JSON_Schema_Draft_1,
-         SchemaVocabularies::Known::JSON_Schema_Draft_0}));
+        {SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_7,
+         SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_6,
+         SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_4,
+         SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_3,
+         SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_3_HYPER,
+         SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_2,
+         SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_1,
+         SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_0}));
     ONLY_CONTINUE_IF(schema.is_object() && schema.defines("$ref"));
 
     std::vector<sourcemeta::core::Pointer> locations;
@@ -31,9 +31,8 @@ public:
           // with an error about not knowing the dialect
           entry.first == "$schema") {
         continue;
-      } else {
-        locations.push_back(sourcemeta::core::Pointer{entry.first});
       }
+      locations.push_back(sourcemeta::core::Pointer{entry.first});
     }
 
     ONLY_CONTINUE_IF(!locations.empty());

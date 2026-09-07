@@ -18,13 +18,13 @@ public:
       -> SchemaTransformRule::Result override {
     ONLY_CONTINUE_IF(
         vocabularies.contains_any(
-            {SchemaVocabularies::Known::JSON_Schema_Draft_3,
-             SchemaVocabularies::Known::JSON_Schema_Draft_3_Hyper}) &&
+            {SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_3,
+             SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_3_HYPER}) &&
         schema.is_object());
 
     const auto *disallow{schema.try_at("disallow")};
     ONLY_CONTINUE_IF(disallow && disallow->is_array() && disallow->empty());
-    return APPLIES_TO_KEYWORDS("disallow");
+    return applies_to_keywords("disallow");
   }
 
   auto transform(JSON &schema, const Result &) const -> void override {

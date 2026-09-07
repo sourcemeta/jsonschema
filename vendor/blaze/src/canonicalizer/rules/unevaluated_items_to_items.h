@@ -14,8 +14,8 @@ public:
             const sourcemeta::blaze::SchemaResolver &) const -> bool override {
     ONLY_CONTINUE_IF(
         vocabularies.contains_any(
-            {SchemaVocabularies::Known::JSON_Schema_2020_12_Unevaluated,
-             SchemaVocabularies::Known::JSON_Schema_2019_09_Applicator}) &&
+            {SchemaVocabularies::Known::JSON_SCHEMA_2020_12_UNEVALUATED,
+             SchemaVocabularies::Known::JSON_SCHEMA_2019_09_APPLICATOR}) &&
         schema.is_object() && schema.defines("unevaluatedItems"));
 
     for (const auto &entry : schema.as_object()) {

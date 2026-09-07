@@ -31,6 +31,13 @@ function(sourcemeta_executable)
   add_executable("${TARGET_NAME}" ${SOURCEMETA_EXECUTABLE_SOURCES})
   sourcemeta_add_default_options(PRIVATE ${TARGET_NAME})
 
+  # Linking the library that carries the allocator is what puts it in place,
+  # as the standard allocation entry points it defines are the ones this
+  # program already calls
+  if(SOURCEMETA_CORE_ALLOCATOR_TARGET)
+    target_link_libraries("${TARGET_NAME}" PRIVATE ${SOURCEMETA_CORE_ALLOCATOR_TARGET})
+  endif()
+
   # See https://best.openssf.org/Compiler-Hardening-Guides/Compiler-Options-Hardening-Guide-for-C-and-C++.html
   # PIE linker flags for ASLR support. The compile-time -fPIE is already
   # enabled globally via CMAKE_POSITION_INDEPENDENT_CODE in defaults.cmake.

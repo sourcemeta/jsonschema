@@ -19,19 +19,19 @@ public:
       -> SchemaTransformRule::Result override {
     ONLY_CONTINUE_IF(
         vocabularies.contains_any(
-            {SchemaVocabularies::Known::JSON_Schema_2020_12_Applicator,
-             SchemaVocabularies::Known::JSON_Schema_2019_09_Applicator,
-             SchemaVocabularies::Known::JSON_Schema_Draft_7,
-             SchemaVocabularies::Known::JSON_Schema_Draft_6,
-             SchemaVocabularies::Known::JSON_Schema_Draft_4,
-             SchemaVocabularies::Known::JSON_Schema_Draft_3,
-             SchemaVocabularies::Known::JSON_Schema_Draft_3_Hyper}) &&
+            {SchemaVocabularies::Known::JSON_SCHEMA_2020_12_APPLICATOR,
+             SchemaVocabularies::Known::JSON_SCHEMA_2019_09_APPLICATOR,
+             SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_7,
+             SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_6,
+             SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_4,
+             SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_3,
+             SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_3_HYPER}) &&
         schema.is_object());
 
     const auto *pattern_properties{schema.try_at("patternProperties")};
     ONLY_CONTINUE_IF(pattern_properties && pattern_properties->is_object() &&
                      pattern_properties->empty());
-    return APPLIES_TO_KEYWORDS("patternProperties");
+    return applies_to_keywords("patternProperties");
   }
 
   auto transform(JSON &schema, const Result &) const -> void override {

@@ -19,15 +19,15 @@ public:
       -> SchemaTransformRule::Result override {
     ONLY_CONTINUE_IF(
         vocabularies.contains_any(
-            {SchemaVocabularies::Known::JSON_Schema_2020_12_Validation,
-             SchemaVocabularies::Known::JSON_Schema_2019_09_Validation,
-             SchemaVocabularies::Known::JSON_Schema_Draft_7,
-             SchemaVocabularies::Known::JSON_Schema_Draft_6,
-             SchemaVocabularies::Known::JSON_Schema_Draft_4,
-             SchemaVocabularies::Known::JSON_Schema_Draft_3,
-             SchemaVocabularies::Known::JSON_Schema_Draft_3_Hyper,
-             SchemaVocabularies::Known::JSON_Schema_Draft_2,
-             SchemaVocabularies::Known::JSON_Schema_Draft_1}) &&
+            {SchemaVocabularies::Known::JSON_SCHEMA_2020_12_VALIDATION,
+             SchemaVocabularies::Known::JSON_SCHEMA_2019_09_VALIDATION,
+             SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_7,
+             SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_6,
+             SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_4,
+             SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_3,
+             SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_3_HYPER,
+             SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_2,
+             SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_1}) &&
         schema.is_object());
 
     const auto *type{schema.try_at("type")};
@@ -36,7 +36,7 @@ public:
     const auto *minimum{schema.try_at("minimum")};
     ONLY_CONTINUE_IF(minimum && minimum->is_number() &&
                      !minimum->is_integral());
-    return APPLIES_TO_KEYWORDS("minimum");
+    return applies_to_keywords("minimum");
   }
 
   auto transform(JSON &schema, const Result &) const -> void override {

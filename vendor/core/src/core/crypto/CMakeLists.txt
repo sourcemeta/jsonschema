@@ -171,6 +171,13 @@ elseif(WIN32)
     crypto_eddsa.h
     crypto_windows.h crypto_aes_kw_loop.h
     crypto_bignum.h crypto_ecc.h crypto_shake256.h crypto_pkcs8.h)
+
+  # The raw secret agreement and the key derivation provider are declared from
+  # Windows 10 version 1803 onwards, and the headers hide both unless the
+  # targeted system version says so, which MinGW otherwise defaults far below
+  target_compile_definitions(sourcemeta_core_crypto
+    PRIVATE _WIN32_WINNT=0x0A00 NTDDI_VERSION=0x0A000005)
+
   target_link_libraries(sourcemeta_core_crypto PRIVATE bcrypt)
 else()
   message(WARNING "Building the reference cryptography backend, instead of the "

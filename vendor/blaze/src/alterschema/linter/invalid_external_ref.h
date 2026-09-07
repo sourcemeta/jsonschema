@@ -16,13 +16,13 @@ public:
       -> SchemaTransformRule::Result override {
     ONLY_CONTINUE_IF(!frame.standalone());
     ONLY_CONTINUE_IF(vocabularies.contains_any(
-        {SchemaVocabularies::Known::JSON_Schema_2020_12_Core,
-         SchemaVocabularies::Known::JSON_Schema_2019_09_Core,
-         SchemaVocabularies::Known::JSON_Schema_Draft_7,
-         SchemaVocabularies::Known::JSON_Schema_Draft_6,
-         SchemaVocabularies::Known::JSON_Schema_Draft_4,
-         SchemaVocabularies::Known::JSON_Schema_Draft_3,
-         SchemaVocabularies::Known::JSON_Schema_Draft_3_Hyper}));
+        {SchemaVocabularies::Known::JSON_SCHEMA_2020_12_CORE,
+         SchemaVocabularies::Known::JSON_SCHEMA_2019_09_CORE,
+         SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_7,
+         SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_6,
+         SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_4,
+         SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_3,
+         SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_3_HYPER}));
     ONLY_CONTINUE_IF(schema.is_object() && schema.defines(KEYWORD) &&
                      schema.at(KEYWORD).is_string());
 
@@ -56,13 +56,13 @@ public:
     const auto cached{this->resolver_cache_.find(base_key)};
     if (cached != this->resolver_cache_.end()) {
       if (!cached->second.has_value()) {
-        return APPLIES_TO_KEYWORDS(KEYWORD);
+        return applies_to_keywords(KEYWORD);
       }
 
       if (has_fragment) {
         return this->is_fragment_invalid(reference_entry->get(), cached->second,
                                          base_key, walker, resolver, location)
-                   ? APPLIES_TO_KEYWORDS(KEYWORD)
+                   ? applies_to_keywords(KEYWORD)
                    : false;
       }
 
@@ -75,16 +75,16 @@ public:
       owned = std::move(remote).to_owned();
     }
 
-    const auto &[entry,
-                 _]{this->resolver_cache_.emplace(base_key, std::move(owned))};
+    const auto &[entry, inserted]{
+        this->resolver_cache_.emplace(base_key, std::move(owned))};
     if (!entry->second.has_value()) {
-      return APPLIES_TO_KEYWORDS(KEYWORD);
+      return applies_to_keywords(KEYWORD);
     }
 
     if (has_fragment) {
       return this->is_fragment_invalid(reference_entry->get(), entry->second,
                                        base_key, walker, resolver, location)
-                 ? APPLIES_TO_KEYWORDS(KEYWORD)
+                 ? applies_to_keywords(KEYWORD)
                  : false;
     }
 
@@ -92,7 +92,7 @@ public:
   }
 
 private:
-  // NOLINTNEXTLINE(bugprone-throwing-static-initialization)
+  // NOLINTNEXTLINE(cert-err58-cpp,bugprone-throwing-static-initialization)
   static inline const std::string KEYWORD{"$ref"};
   mutable std::unordered_map<JSON::String, std::optional<JSON>> resolver_cache_;
   mutable std::unordered_map<JSON::String, std::unique_ptr<SchemaFrame>>

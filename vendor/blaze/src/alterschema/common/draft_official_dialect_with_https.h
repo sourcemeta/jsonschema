@@ -19,17 +19,17 @@ public:
       -> SchemaTransformRule::Result override {
     using sourcemeta::blaze::SchemaBaseDialect;
     ONLY_CONTINUE_IF(
-        location.base_dialect == SchemaBaseDialect::JSON_Schema_Draft_7 ||
-        location.base_dialect == SchemaBaseDialect::JSON_Schema_Draft_7_Hyper ||
-        location.base_dialect == SchemaBaseDialect::JSON_Schema_Draft_6 ||
-        location.base_dialect == SchemaBaseDialect::JSON_Schema_Draft_6_Hyper ||
-        location.base_dialect == SchemaBaseDialect::JSON_Schema_Draft_4 ||
-        location.base_dialect == SchemaBaseDialect::JSON_Schema_Draft_4_Hyper ||
-        location.base_dialect == SchemaBaseDialect::JSON_Schema_Draft_3 ||
-        location.base_dialect == SchemaBaseDialect::JSON_Schema_Draft_3_Hyper ||
-        location.base_dialect == SchemaBaseDialect::JSON_Schema_Draft_2_Hyper ||
-        location.base_dialect == SchemaBaseDialect::JSON_Schema_Draft_1_Hyper ||
-        location.base_dialect == SchemaBaseDialect::JSON_Schema_Draft_0_Hyper);
+        location.base_dialect == SchemaBaseDialect::JSON_SCHEMA_DRAFT_7 ||
+        location.base_dialect == SchemaBaseDialect::JSON_SCHEMA_DRAFT_7_HYPER ||
+        location.base_dialect == SchemaBaseDialect::JSON_SCHEMA_DRAFT_6 ||
+        location.base_dialect == SchemaBaseDialect::JSON_SCHEMA_DRAFT_6_HYPER ||
+        location.base_dialect == SchemaBaseDialect::JSON_SCHEMA_DRAFT_4 ||
+        location.base_dialect == SchemaBaseDialect::JSON_SCHEMA_DRAFT_4_HYPER ||
+        location.base_dialect == SchemaBaseDialect::JSON_SCHEMA_DRAFT_3 ||
+        location.base_dialect == SchemaBaseDialect::JSON_SCHEMA_DRAFT_3_HYPER ||
+        location.base_dialect == SchemaBaseDialect::JSON_SCHEMA_DRAFT_2_HYPER ||
+        location.base_dialect == SchemaBaseDialect::JSON_SCHEMA_DRAFT_1_HYPER ||
+        location.base_dialect == SchemaBaseDialect::JSON_SCHEMA_DRAFT_0_HYPER);
     ONLY_CONTINUE_IF(schema.is_object());
     const auto *schema_keyword{schema.try_at("$schema")};
     ONLY_CONTINUE_IF(schema_keyword && schema_keyword->is_string());
@@ -64,7 +64,7 @@ public:
         dialect == "https://json-schema.org/draft-00/schema#" ||
         dialect == "https://json-schema.org/draft-00/hyper-schema" ||
         dialect == "https://json-schema.org/draft-00/hyper-schema#");
-    return APPLIES_TO_KEYWORDS("$schema");
+    return applies_to_keywords("$schema");
   }
 
   auto transform(sourcemeta::core::JSON &schema, const Result &) const

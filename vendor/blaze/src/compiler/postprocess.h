@@ -102,7 +102,7 @@ inline auto convert_to_property_type_assertions(Instructions &instructions)
 }
 
 inline auto duplicate_metadata(Instruction &instruction,
-                               std::vector<InstructionExtra> &extra) -> void {
+                               InstructionExtras &extra) -> void {
   const auto new_index{extra.size()};
   auto source_extra{extra[instruction.extra_index]};
   extra.push_back(std::move(source_extra));
@@ -135,8 +135,7 @@ inline auto is_pass_through_instruction(const InstructionIndex type) noexcept
 // conditional's parent, and the children of pass-through instructions.
 // Condition children and ordinary nested children stay relative to their
 // parent instruction and must be left alone
-inline auto rebase_anchored(Instruction &instruction,
-                            std::vector<InstructionExtra> &extra,
+inline auto rebase_anchored(Instruction &instruction, InstructionExtras &extra,
                             const sourcemeta::core::Pointer &schema_prefix)
     -> void {
   extra[instruction.extra_index].relative_schema_location =
@@ -156,8 +155,7 @@ inline auto rebase_anchored(Instruction &instruction,
   }
 }
 
-inline auto rebase(Instruction &instruction,
-                   std::vector<InstructionExtra> &extra,
+inline auto rebase(Instruction &instruction, InstructionExtras &extra,
                    const sourcemeta::core::Pointer &schema_prefix,
                    const sourcemeta::core::Pointer &instance_prefix) -> void {
   instruction.relative_instance_location =
@@ -184,9 +182,8 @@ inline auto collect_statistics(const Instructions &instructions,
   }
 }
 
-inline auto
-instruction_parent_location(const Instruction &instruction,
-                            const std::vector<InstructionExtra> &extra)
+inline auto instruction_parent_location(const Instruction &instruction,
+                                        const InstructionExtras &extra)
     -> std::optional<std::pair<sourcemeta::core::Pointer, std::string>> {
   const auto &metadata{extra[instruction.extra_index]};
   if (metadata.relative_schema_location.empty()) {
@@ -206,7 +203,7 @@ instruction_parent_location(const Instruction &instruction,
 }
 
 inline auto fuse_numeric_bounds(Instructions &instructions,
-                                std::vector<InstructionExtra> &extra) -> bool {
+                                InstructionExtras &extra) -> bool {
   for (std::size_t type_index = 0; type_index < instructions.size();
        ++type_index) {
     const auto &type_instruction{instructions[type_index]};
@@ -301,14 +298,12 @@ inline auto fuse_numeric_bounds(Instructions &instructions,
   return false;
 }
 
-inline auto
-transform_instruction(Instruction &instruction, Instructions &output,
-                      std::vector<InstructionExtra> &extra,
-                      const std::vector<Instructions> &targets,
-                      const std::vector<TargetStatistics> &statistics,
-                      TargetStatistics &current_stats, const Tweaks &tweaks,
-                      const bool uses_dynamic_scopes, const bool positional)
-    -> bool {
+inline auto transform_instruction(
+    Instruction &instruction, Instructions &output, InstructionExtras &extra,
+    const std::vector<Instructions> &targets,
+    const std::vector<TargetStatistics> &statistics,
+    TargetStatistics &current_stats, const Tweaks &tweaks,
+    const bool uses_dynamic_scopes, const bool positional) -> bool {
   // A positional owner pairs each child with an entry of its own data by
   // index, and inlining a jump expands one child into many, which would
   // re-pair the rest
@@ -519,9 +514,8 @@ transform_instruction(Instruction &instruction, Instructions &output,
 }
 
 inline auto postprocess(std::vector<Instructions> &targets,
-                        std::vector<InstructionExtra> &extra,
-                        const Tweaks &tweaks, const bool uses_dynamic_scopes)
-    -> void {
+                        InstructionExtras &extra, const Tweaks &tweaks,
+                        const bool uses_dynamic_scopes) -> void {
   std::vector<TargetStatistics> statistics;
   statistics.reserve(targets.size());
   for (const auto &target : targets) {
@@ -700,8 +694,9 @@ inline auto postprocess(std::vector<Instructions> &targets,
 
           if (transform_instruction(instruction, result, extra, targets,
                                     statistics, current_stats, tweaks,
-                                    uses_dynamic_scopes, positional))
+                                    uses_dynamic_scopes, positional)) {
             changed = true;
+          }
 
           if (positional) {
             if (result.size() == result_size) {

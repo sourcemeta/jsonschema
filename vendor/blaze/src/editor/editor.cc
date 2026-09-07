@@ -41,16 +41,16 @@ auto top_dynamic_anchor_location(
 
     // If we are at the top of the schema and it declares the dynamic anchor, we
     // should use that
-  } else if (anchor.has_value()) {
+  }
+  if (anchor.has_value()) {
     return std::cref(anchor.value().get().pointer);
 
     // Otherwise, if we are at the top and the dynamic anchor is not there, use
     // the default we have so far
-  } else {
-    const auto default_location{frame.traverse(default_uri)};
-    assert(default_location.has_value());
-    return std::cref(default_location.value().get().pointer);
   }
+  const auto default_location{frame.traverse(default_uri)};
+  assert(default_location.has_value());
+  return std::cref(default_location.value().get().pointer);
 }
 
 } // namespace
@@ -182,10 +182,10 @@ auto for_editor(sourcemeta::core::JSON &schema,
                .add_schema_declaration = add_schema,
                .erase_2020_12_keywords =
                    vocabularies.contains(sourcemeta::blaze::SchemaVocabularies::
-                                             Known::JSON_Schema_2020_12_Core),
+                                             Known::JSON_SCHEMA_2020_12_CORE),
                .erase_2019_09_keywords =
                    vocabularies.contains(sourcemeta::blaze::SchemaVocabularies::
-                                             Known::JSON_Schema_2019_09_Core)});
+                                             Known::JSON_SCHEMA_2019_09_CORE)});
         });
   }
 

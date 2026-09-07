@@ -18,11 +18,11 @@ namespace sourcemeta::blaze {
 
 // Static keyword strings for use in DynamicContext references
 static const sourcemeta::core::JSON::String KEYWORD_EMPTY{};
-// NOLINTBEGIN(bugprone-throwing-static-initialization)
+// NOLINTBEGIN(cert-err58-cpp,bugprone-throwing-static-initialization)
 static const sourcemeta::core::JSON::String KEYWORD_PROPERTIES{"properties"};
 static const sourcemeta::core::JSON::String KEYWORD_THEN{"then"};
 static const sourcemeta::core::JSON::String KEYWORD_ELSE{"else"};
-// NOLINTEND(bugprone-throwing-static-initialization)
+// NOLINTEND(cert-err58-cpp,bugprone-throwing-static-initialization)
 
 // Helper to create a single-element WeakPointer from a property name reference
 inline auto make_weak_pointer(const std::string &property)
@@ -400,13 +400,12 @@ inline auto defines_nested_subschemas(const Context &context,
 // TODO: Get rid of this given the new Core regex optimisations
 inline auto pattern_as_prefix(const std::string &pattern)
     -> std::optional<std::string> {
-  static const std::regex starts_with_regex{R"(^\^([a-zA-Z0-9-_/]+)$)"};
+  static const std::regex STARTS_WITH_REGEX{R"(^\^([a-zA-Z0-9-_/]+)$)"};
   std::smatch matches;
-  if (std::regex_match(pattern, matches, starts_with_regex)) {
+  if (std::regex_match(pattern, matches, STARTS_WITH_REGEX)) {
     return matches[1].str();
-  } else {
-    return std::nullopt;
   }
+  return std::nullopt;
 }
 
 inline auto find_adjacent(const Context &context,
@@ -427,10 +426,10 @@ inline auto find_adjacent(const Context &context,
   // TODO: Do something similar with `allOf`
 
   // Attempt to statically follow references
-  static const std::string ref_keyword{"$ref"};
+  static const std::string REF_KEYWORD{"$ref"};
   if (schema_context.schema.defines("$ref")) {
     const auto reference_type{sourcemeta::blaze::SchemaReferenceType::Static};
-    const auto origin{current.concat(make_weak_pointer(ref_keyword))};
+    const auto origin{current.concat(make_weak_pointer(REF_KEYWORD))};
     assert(context.frame.reference(reference_type, origin).has_value());
     const auto &reference{
         context.frame.reference(reference_type, origin).value().get()};
@@ -480,8 +479,8 @@ inline auto recursive_template_size(const Instructions &steps) -> std::size_t {
 }
 
 inline auto make_property(const ValueString &property) -> ValueProperty {
-  static const sourcemeta::core::PropertyHashJSON<ValueString> hasher;
-  return {property, hasher(property)};
+  static const sourcemeta::core::PropertyHashJSON<ValueString> HASHER;
+  return {property, HASHER(property)};
 }
 
 inline auto requires_evaluation(const Context &context,
@@ -557,13 +556,13 @@ inline auto required_properties(const SchemaContext &schema_context)
     -> ValueStringSet {
   using Known = sourcemeta::blaze::SchemaVocabularies::Known;
   const auto imports_validation_vocabulary{
-      schema_context.vocabularies.contains(Known::JSON_Schema_Draft_4) ||
-      schema_context.vocabularies.contains(Known::JSON_Schema_Draft_6) ||
-      schema_context.vocabularies.contains(Known::JSON_Schema_Draft_7) ||
+      schema_context.vocabularies.contains(Known::JSON_SCHEMA_DRAFT_4) ||
+      schema_context.vocabularies.contains(Known::JSON_SCHEMA_DRAFT_6) ||
+      schema_context.vocabularies.contains(Known::JSON_SCHEMA_DRAFT_7) ||
       schema_context.vocabularies.contains(
-          Known::JSON_Schema_2019_09_Validation) ||
+          Known::JSON_SCHEMA_2019_09_VALIDATION) ||
       schema_context.vocabularies.contains(
-          Known::JSON_Schema_2020_12_Validation)};
+          Known::JSON_SCHEMA_2020_12_VALIDATION)};
 
   ValueStringSet result;
 
@@ -580,8 +579,8 @@ inline auto required_properties(const SchemaContext &schema_context)
   }
 
   const auto imports_draft3_vocabulary{
-      schema_context.vocabularies.contains(Known::JSON_Schema_Draft_3) ||
-      schema_context.vocabularies.contains(Known::JSON_Schema_Draft_3_Hyper)};
+      schema_context.vocabularies.contains(Known::JSON_SCHEMA_DRAFT_3) ||
+      schema_context.vocabularies.contains(Known::JSON_SCHEMA_DRAFT_3_HYPER)};
 
   if (imports_draft3_vocabulary && schema_context.schema.is_object() &&
       schema_context.schema.defines("properties") &&

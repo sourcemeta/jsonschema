@@ -108,17 +108,17 @@ public:
   /// const auto result{evaluator.validate(schema_template, instance)};
   /// assert(result);
   /// ```
-  inline auto validate(const Template &schema,
-                       const sourcemeta::core::JSON &instance) -> bool {
+  auto validate(const Template &schema, const sourcemeta::core::JSON &instance)
+      -> bool {
     assert(this->evaluate_path.empty());
     assert(this->instance_location.empty());
     assert(this->resources.empty());
 
     if (schema.track && schema.dynamic) [[unlikely]] {
-      this->evaluated_.clear();
+      this->evaluated.clear();
       return this->evaluate_impl<true, true, false>(schema, instance, nullptr);
     } else if (schema.track) [[unlikely]] {
-      this->evaluated_.clear();
+      this->evaluated.clear();
       return this->evaluate_impl<true, false, false>(schema, instance, nullptr);
     } else if (schema.dynamic) [[unlikely]] {
       return this->evaluate_impl<false, true, false>(schema, instance, nullptr);
@@ -188,13 +188,12 @@ public:
   ///
   /// assert(result);
   /// ```
-  inline auto validate(const Template &schema,
-                       const sourcemeta::core::JSON &instance,
-                       const Callback &callback) -> bool {
+  auto validate(const Template &schema, const sourcemeta::core::JSON &instance,
+                const Callback &callback) -> bool {
     assert(this->evaluate_path.empty());
     assert(this->instance_location.empty());
     assert(this->resources.empty());
-    this->evaluated_.clear();
+    this->evaluated.clear();
     return this->evaluate_impl<true, true, true>(schema, instance, &callback);
   }
 
@@ -204,10 +203,10 @@ public:
                      const sourcemeta::core::JSON &instance,
                      const Callback *callback) -> bool;
 
-  // NOLINTBEGIN(cppcoreguidelines-avoid-non-const-global-variables,bugprone-throwing-static-initialization)
-  static inline const sourcemeta::core::JSON null{nullptr};
-  static inline const sourcemeta::core::JSON empty_string{""};
-  // NOLINTEND(cppcoreguidelines-avoid-non-const-global-variables,bugprone-throwing-static-initialization)
+  // NOLINTBEGIN(cppcoreguidelines-avoid-non-const-global-variables,cert-err58-cpp,bugprone-throwing-static-initialization)
+  static inline const sourcemeta::core::JSON NULL_VALUE{nullptr};
+  static inline const sourcemeta::core::JSON EMPTY_STRING{""};
+  // NOLINTEND(cppcoreguidelines-avoid-non-const-global-variables,cert-err58-cpp,bugprone-throwing-static-initialization)
 
   // Compute a hash that fits within the IEEE 754 double-precision safe
   // integer range (2^53 - 1), ensuring the serialized template labels
@@ -215,28 +214,28 @@ public:
   [[nodiscard]] static auto hash(const std::size_t resource,
                                  const std::string_view fragment) noexcept
       -> std::size_t {
-    constexpr std::size_t mask{(1ULL << 53) - 1};
-    std::size_t result{14695981039346656037ULL & mask};
+    constexpr std::size_t MASK{(1ULL << 53) - 1};
+    std::size_t result{14695981039346656037ULL & MASK};
     for (const auto byte : fragment) {
       result ^= static_cast<std::size_t>(static_cast<unsigned char>(byte));
-      result = (result * 1099511628211ULL) & mask;
+      result = (result * 1099511628211ULL) & MASK;
     }
 
-    return (resource + result) & mask;
+    return (resource + result) & MASK;
   }
 
   auto evaluate(const sourcemeta::core::JSON *target) -> void {
     Evaluation mark{.instance = target,
                     .evaluate_path = this->evaluate_path,
                     .skip = false};
-    this->evaluated_.push_back(std::move(mark));
+    this->evaluated.push_back(std::move(mark));
   }
 
   [[nodiscard]] auto is_evaluated(const sourcemeta::core::JSON *target) const
       -> bool {
     // NOLINTNEXTLINE(modernize-loop-convert)
-    for (auto iterator = this->evaluated_.rbegin();
-         iterator != this->evaluated_.rend(); ++iterator) {
+    for (auto iterator = this->evaluated.rbegin();
+         iterator != this->evaluated.rend(); ++iterator) {
       if (target == iterator->instance && !iterator->skip &&
           iterator->evaluate_path.starts_with_initial(this->evaluate_path)) {
         return true;
@@ -247,7 +246,7 @@ public:
   }
 
   auto unevaluate() -> void {
-    for (auto &entry : this->evaluated_) {
+    for (auto &entry : this->evaluated) {
       if (!entry.skip && entry.evaluate_path.starts_with(this->evaluate_path)) {
         entry.skip = true;
       }
@@ -260,12 +259,12 @@ public:
   // only ever appended, never inserted earlier, so everything a branch adds
   // sits past the recorded length and nothing from outside it can be lost
   [[nodiscard]] auto checkpoint() const -> std::size_t {
-    return this->evaluated_.size();
+    return this->evaluated.size();
   }
 
   auto rewind(const std::size_t checkpoint) -> void {
-    assert(checkpoint <= this->evaluated_.size());
-    this->evaluated_.resize(checkpoint);
+    assert(checkpoint <= this->evaluated.size());
+    this->evaluated.resize(checkpoint);
   }
 
 #if defined(_MSC_VER)
@@ -281,7 +280,7 @@ public:
     bool skip;
   };
 
-  std::vector<Evaluation> evaluated_;
+  std::vector<Evaluation> evaluated;
 #if defined(_MSC_VER)
 #pragma warning(default : 4251 4275)
 #endif

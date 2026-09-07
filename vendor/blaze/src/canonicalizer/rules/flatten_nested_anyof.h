@@ -14,11 +14,11 @@ public:
     static const sourcemeta::core::JSON::String KEYWORD{"anyOf"};
     ONLY_CONTINUE_IF(
         vocabularies.contains_any(
-            {SchemaVocabularies::Known::JSON_Schema_2020_12_Applicator,
-             SchemaVocabularies::Known::JSON_Schema_2019_09_Applicator,
-             SchemaVocabularies::Known::JSON_Schema_Draft_7,
-             SchemaVocabularies::Known::JSON_Schema_Draft_6,
-             SchemaVocabularies::Known::JSON_Schema_Draft_4}) &&
+            {SchemaVocabularies::Known::JSON_SCHEMA_2020_12_APPLICATOR,
+             SchemaVocabularies::Known::JSON_SCHEMA_2019_09_APPLICATOR,
+             SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_7,
+             SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_6,
+             SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_4}) &&
         schema.is_object() && schema.defines(KEYWORD) &&
         schema.at(KEYWORD).is_array());
 
@@ -50,8 +50,8 @@ public:
     for (std::size_t index = 0; index < original.size(); ++index) {
       if (flatten_cursor < this->flatten_indices_.size() &&
           this->flatten_indices_[flatten_cursor] == index) {
-        this->collect_leaves_(original.at(index), KEYWORD, index, result,
-                              new_index);
+        this->collect_leaves(original.at(index), KEYWORD, index, result,
+                             new_index);
         ++flatten_cursor;
       } else {
         this->index_mapping_.emplace_back(index, std::nullopt, new_index);
@@ -96,17 +96,17 @@ public:
   }
 
 private:
-  auto collect_leaves_(const sourcemeta::core::JSON &node,
-                       const sourcemeta::core::JSON::String &keyword,
-                       std::size_t outer_index, sourcemeta::core::JSON &result,
-                       std::size_t &new_index) const -> void {
+  auto collect_leaves(const sourcemeta::core::JSON &node,
+                      const sourcemeta::core::JSON::String &keyword,
+                      std::size_t outer_index, sourcemeta::core::JSON &result,
+                      std::size_t &new_index) const -> void {
     const auto &inner{node.at(keyword)};
     for (std::size_t inner_index = 0; inner_index < inner.size();
          ++inner_index) {
       const auto &child{inner.at(inner_index)};
       if (child.is_object() && child.size() == 1 && child.defines(keyword) &&
           child.at(keyword).is_array()) {
-        this->collect_leaves_(child, keyword, outer_index, result, new_index);
+        this->collect_leaves(child, keyword, outer_index, result, new_index);
       } else {
         this->index_mapping_.emplace_back(outer_index, inner_index, new_index);
         result.push_back(child);

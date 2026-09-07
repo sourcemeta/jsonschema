@@ -17,8 +17,8 @@ public:
             const sourcemeta::blaze::SchemaResolver &, const bool) const
       -> SchemaTransformRule::Result override {
     ONLY_CONTINUE_IF(vocabularies.contains_any(
-        {SchemaVocabularies::Known::JSON_Schema_2020_12_Applicator,
-         SchemaVocabularies::Known::JSON_Schema_2019_09_Applicator}));
+        {SchemaVocabularies::Known::JSON_SCHEMA_2020_12_APPLICATOR,
+         SchemaVocabularies::Known::JSON_SCHEMA_2019_09_APPLICATOR}));
     ONLY_CONTINUE_IF(schema.is_object());
 
     const auto *all_of_value{schema.try_at("allOf")};
@@ -47,7 +47,7 @@ public:
     }
 
     ONLY_CONTINUE_IF(!locations.empty());
-    return APPLIES_TO_POINTERS(std::move(locations));
+    return applies_to_pointers(std::move(locations));
   }
 
   auto transform(JSON &schema, const Result &result) const -> void override {

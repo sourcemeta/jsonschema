@@ -13,22 +13,22 @@ public:
             const sourcemeta::blaze::SchemaResolver &) const -> bool override {
     const bool any_of_dialect{
         vocabularies.contains_any(
-            {SchemaVocabularies::Known::JSON_Schema_Draft_4,
-             SchemaVocabularies::Known::JSON_Schema_Draft_6,
-             SchemaVocabularies::Known::JSON_Schema_Draft_7}) ||
+            {SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_4,
+             SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_6,
+             SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_7}) ||
         (vocabularies.contains(
-             SchemaVocabularies::Known::JSON_Schema_2019_09_Validation) &&
+             SchemaVocabularies::Known::JSON_SCHEMA_2019_09_VALIDATION) &&
          vocabularies.contains(
-             SchemaVocabularies::Known::JSON_Schema_2019_09_Applicator)) ||
+             SchemaVocabularies::Known::JSON_SCHEMA_2019_09_APPLICATOR)) ||
         (vocabularies.contains(
-             SchemaVocabularies::Known::JSON_Schema_2020_12_Validation) &&
+             SchemaVocabularies::Known::JSON_SCHEMA_2020_12_VALIDATION) &&
          vocabularies.contains(
-             SchemaVocabularies::Known::JSON_Schema_2020_12_Applicator))};
+             SchemaVocabularies::Known::JSON_SCHEMA_2020_12_APPLICATOR))};
     const bool type_union_dialect{vocabularies.contains_any(
-        {SchemaVocabularies::Known::JSON_Schema_Draft_0,
-         SchemaVocabularies::Known::JSON_Schema_Draft_1,
-         SchemaVocabularies::Known::JSON_Schema_Draft_2,
-         SchemaVocabularies::Known::JSON_Schema_Draft_3})};
+        {SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_0,
+         SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_1,
+         SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_2,
+         SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_3})};
     ONLY_CONTINUE_IF((any_of_dialect || type_union_dialect) &&
                      schema.is_object());
 

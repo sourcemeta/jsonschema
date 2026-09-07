@@ -20,11 +20,11 @@ public:
     static const JSON::String KEYWORD{"oneOf"};
     ONLY_CONTINUE_IF(
         vocabularies.contains_any(
-            {SchemaVocabularies::Known::JSON_Schema_2020_12_Applicator,
-             SchemaVocabularies::Known::JSON_Schema_2019_09_Applicator,
-             SchemaVocabularies::Known::JSON_Schema_Draft_7,
-             SchemaVocabularies::Known::JSON_Schema_Draft_6,
-             SchemaVocabularies::Known::JSON_Schema_Draft_4}) &&
+            {SchemaVocabularies::Known::JSON_SCHEMA_2020_12_APPLICATOR,
+             SchemaVocabularies::Known::JSON_SCHEMA_2019_09_APPLICATOR,
+             SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_7,
+             SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_6,
+             SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_4}) &&
         schema.is_object());
 
     const auto *oneof_value{schema.try_at(KEYWORD)};
@@ -32,19 +32,19 @@ public:
                      oneof_value->size() > 1);
 
     const auto has_validation_vocabulary{vocabularies.contains_any(
-        {SchemaVocabularies::Known::JSON_Schema_2020_12_Validation,
-         SchemaVocabularies::Known::JSON_Schema_2019_09_Validation,
-         SchemaVocabularies::Known::JSON_Schema_Draft_7,
-         SchemaVocabularies::Known::JSON_Schema_Draft_6,
-         SchemaVocabularies::Known::JSON_Schema_Draft_4,
-         SchemaVocabularies::Known::JSON_Schema_Draft_2,
-         SchemaVocabularies::Known::JSON_Schema_Draft_1})};
+        {SchemaVocabularies::Known::JSON_SCHEMA_2020_12_VALIDATION,
+         SchemaVocabularies::Known::JSON_SCHEMA_2019_09_VALIDATION,
+         SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_7,
+         SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_6,
+         SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_4,
+         SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_2,
+         SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_1})};
 
     const auto has_const_vocabulary{vocabularies.contains_any(
-        {SchemaVocabularies::Known::JSON_Schema_2020_12_Validation,
-         SchemaVocabularies::Known::JSON_Schema_2019_09_Validation,
-         SchemaVocabularies::Known::JSON_Schema_Draft_7,
-         SchemaVocabularies::Known::JSON_Schema_Draft_6})};
+        {SchemaVocabularies::Known::JSON_SCHEMA_2020_12_VALIDATION,
+         SchemaVocabularies::Known::JSON_SCHEMA_2019_09_VALIDATION,
+         SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_7,
+         SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_6})};
 
     std::vector<JSON::TypeSet> type_sets;
     type_sets.reserve(oneof_value->size());
@@ -57,17 +57,17 @@ public:
                                                    : nullptr};
       const auto *enum_value{has_validation_vocabulary ? branch.try_at("enum")
                                                        : nullptr};
-      const auto has_enum{enum_value && enum_value->is_array()};
+      const auto has_enum{(enum_value != nullptr) && enum_value->is_array()};
 
-      if (type_value) {
+      if (type_value != nullptr) {
         const auto branch_types{parse_schema_type(*type_value)};
         ONLY_CONTINUE_IF(branch_types.any());
         type_sets.push_back(branch_types);
-      } else if (const_value && !has_enum) {
+      } else if ((const_value != nullptr) && !has_enum) {
         JSON::TypeSet branch_types;
         branch_types.set(std::to_underlying(const_value->type()));
         type_sets.push_back(branch_types);
-      } else if (has_enum && !const_value) {
+      } else if (has_enum && (const_value == nullptr)) {
         JSON::TypeSet branch_types;
         for (const auto &item : enum_value->as_array()) {
           branch_types.set(std::to_underlying(item.type()));
@@ -84,7 +84,7 @@ public:
       }
     }
 
-    return APPLIES_TO_KEYWORDS(KEYWORD);
+    return applies_to_keywords(KEYWORD);
   }
 
   auto transform(JSON &schema, const Result &) const -> void override {

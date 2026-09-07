@@ -15,8 +15,8 @@ public:
       -> bool override {
     ONLY_CONTINUE_IF(
         vocabularies.contains_any(
-            {SchemaVocabularies::Known::JSON_Schema_2019_09_Applicator,
-             SchemaVocabularies::Known::JSON_Schema_2020_12_Applicator}) &&
+            {SchemaVocabularies::Known::JSON_SCHEMA_2019_09_APPLICATOR,
+             SchemaVocabularies::Known::JSON_SCHEMA_2020_12_APPLICATOR}) &&
         schema.is_object());
 
     const auto *type{schema.try_at("type")};
@@ -28,14 +28,14 @@ public:
       ONLY_CONTINUE_IF(!schema.defines("minContains") &&
                        !schema.defines("maxContains"));
       ONLY_CONTINUE_IF(
-          !WALK_UP_IN_PLACE_APPLICATORS(
+          !walk_up_in_place_applicators(
                root, frame, location, walker, resolver,
                [](const sourcemeta::core::JSON &ancestor,
                   const SchemaVocabularies &ancestor_vocabularies) -> bool {
                  return ancestor.defines("unevaluatedItems") &&
                         ancestor_vocabularies.contains(
                             SchemaVocabularies::Known::
-                                JSON_Schema_2020_12_Unevaluated);
+                                JSON_SCHEMA_2020_12_UNEVALUATED);
                })
                .has_value());
     }

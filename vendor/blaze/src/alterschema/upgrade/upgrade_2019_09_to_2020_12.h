@@ -15,7 +15,7 @@ public:
             const sourcemeta::blaze::SchemaResolver &resolver, const bool) const
       -> SchemaTransformRule::Result override {
     ONLY_CONTINUE_IF(vocabularies.contains(
-                         SchemaVocabularies::Known::JSON_Schema_2019_09_Core) &&
+                         SchemaVocabularies::Known::JSON_SCHEMA_2019_09_CORE) &&
                      schema.is_object());
 
     const bool is_resource_scope{
@@ -196,7 +196,7 @@ private:
       "https://json-schema.org/draft/2020-12/vocab/unevaluated"};
 
   static inline const std::unordered_map<std::string, std::string>
-      // NOLINTNEXTLINE(bugprone-throwing-static-initialization)
+      // NOLINTNEXTLINE(cert-err58-cpp,bugprone-throwing-static-initialization)
       VOCAB_URI_MAP_2019_09_TO_2020_12{
           {"https://json-schema.org/draft/2019-09/vocab/core",
            "https://json-schema.org/draft/2020-12/vocab/core"},

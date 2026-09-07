@@ -247,15 +247,15 @@ private:
 #if defined(_MSC_VER)
 #pragma warning(disable : 4251)
 #endif
-  std::vector<Template> schemas_fast;
-  std::vector<std::optional<Template>> schemas_exhaustive;
-  SchemaResolver schema_resolver;
-  SchemaWalker walker;
-  Compiler compiler;
-  sourcemeta::core::JSON::String default_dialect;
-  sourcemeta::core::JSON::String default_id;
-  std::optional<Tweaks> tweaks_fast;
-  std::optional<Tweaks> tweaks_exhaustive;
+  std::vector<Template> schemas_fast_;
+  std::vector<std::optional<Template>> schemas_exhaustive_;
+  SchemaResolver schema_resolver_;
+  SchemaWalker walker_;
+  Compiler compiler_;
+  sourcemeta::core::JSON::String default_dialect_;
+  sourcemeta::core::JSON::String default_id_;
+  std::optional<Tweaks> tweaks_fast_;
+  std::optional<Tweaks> tweaks_exhaustive_;
 #if defined(_MSC_VER)
 #pragma warning(default : 4251)
 #endif

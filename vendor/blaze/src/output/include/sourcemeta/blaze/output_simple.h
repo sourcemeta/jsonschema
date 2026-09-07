@@ -98,8 +98,8 @@ public:
                   const sourcemeta::core::WeakPointer &instance_location,
                   const sourcemeta::core::JSON &annotation) -> void;
 
-  using container_type = typename std::vector<Entry>;
-  using const_iterator = typename container_type::const_iterator;
+  using container_type = std::vector<Entry>;
+  using const_iterator = container_type::const_iterator;
   [[nodiscard]] auto begin() const -> const_iterator;
   [[nodiscard]] auto end() const -> const_iterator;
   [[nodiscard]] auto cbegin() const -> const_iterator;
@@ -109,10 +109,10 @@ public:
   /// take ownership of the trace without copying when the output is no longer
   /// needed
   [[nodiscard]] auto release() && -> container_type {
-    auto result{std::move(this->output)};
+    auto result{std::move(this->output_)};
     // A moved-from container is left in a valid but unspecified state, so
     // clear it to honor the documented empty postcondition portably
-    this->output.clear();
+    this->output_.clear();
     return result;
   }
 
@@ -151,8 +151,8 @@ private:
 
   const sourcemeta::core::JSON &instance_;
   const sourcemeta::core::WeakPointer base_;
-  container_type output;
-  std::vector<MaskEntry> mask;
+  container_type output_;
+  std::vector<MaskEntry> mask_;
   std::vector<AnnotationEntry> annotations_;
 #if defined(_MSC_VER)
 #pragma warning(default : 4251)

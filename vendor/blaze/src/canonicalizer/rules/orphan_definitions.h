@@ -15,13 +15,13 @@ public:
     ONLY_CONTINUE_IF(schema.is_object());
     const bool has_modern_core{
         vocabularies.contains(
-            SchemaVocabularies::Known::JSON_Schema_2020_12_Core) ||
+            SchemaVocabularies::Known::JSON_SCHEMA_2020_12_CORE) ||
         vocabularies.contains(
-            SchemaVocabularies::Known::JSON_Schema_2019_09_Core)};
+            SchemaVocabularies::Known::JSON_SCHEMA_2019_09_CORE)};
     const bool has_draft_definitions{
-        vocabularies.contains(SchemaVocabularies::Known::JSON_Schema_Draft_7) ||
-        vocabularies.contains(SchemaVocabularies::Known::JSON_Schema_Draft_6) ||
-        vocabularies.contains(SchemaVocabularies::Known::JSON_Schema_Draft_4)};
+        vocabularies.contains(SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_7) ||
+        vocabularies.contains(SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_6) ||
+        vocabularies.contains(SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_4)};
     const bool has_defs{has_modern_core && schema.defines("$defs")};
     const bool has_definitions{(has_modern_core || has_draft_definitions) &&
                                schema.defines("definitions")};
@@ -51,12 +51,12 @@ public:
     }
 
     const auto *defs{schema.try_at("$defs")};
-    if (defs && defs->empty()) {
+    if ((defs != nullptr) && defs->empty()) {
       schema.erase("$defs");
     }
 
     const auto *definitions{schema.try_at("definitions")};
-    if (definitions && definitions->empty()) {
+    if ((definitions != nullptr) && definitions->empty()) {
       schema.erase("definitions");
     }
   }
@@ -131,6 +131,5 @@ private:
     }
   }
 
-private:
   mutable std::vector<sourcemeta::core::Pointer> locations_;
 };

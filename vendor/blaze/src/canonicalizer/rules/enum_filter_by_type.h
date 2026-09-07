@@ -13,15 +13,15 @@ public:
             const sourcemeta::blaze::SchemaResolver &) const -> bool override {
     ONLY_CONTINUE_IF(
         vocabularies.contains_any(
-            {SchemaVocabularies::Known::JSON_Schema_Draft_0,
-             SchemaVocabularies::Known::JSON_Schema_Draft_1,
-             SchemaVocabularies::Known::JSON_Schema_Draft_2,
-             SchemaVocabularies::Known::JSON_Schema_Draft_3,
-             SchemaVocabularies::Known::JSON_Schema_Draft_4,
-             SchemaVocabularies::Known::JSON_Schema_Draft_6,
-             SchemaVocabularies::Known::JSON_Schema_Draft_7,
-             SchemaVocabularies::Known::JSON_Schema_2019_09_Validation,
-             SchemaVocabularies::Known::JSON_Schema_2020_12_Validation}) &&
+            {SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_0,
+             SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_1,
+             SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_2,
+             SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_3,
+             SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_4,
+             SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_6,
+             SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_7,
+             SchemaVocabularies::Known::JSON_SCHEMA_2019_09_VALIDATION,
+             SchemaVocabularies::Known::JSON_SCHEMA_2020_12_VALIDATION}) &&
         schema.is_object());
 
     const auto *type{schema.try_at("type")};
@@ -34,10 +34,10 @@ public:
     ONLY_CONTINUE_IF(declared_types.any());
     const bool integer_matches_integral{
         vocabularies.contains_any(
-            {SchemaVocabularies::Known::JSON_Schema_Draft_6,
-             SchemaVocabularies::Known::JSON_Schema_Draft_7,
-             SchemaVocabularies::Known::JSON_Schema_2019_09_Validation,
-             SchemaVocabularies::Known::JSON_Schema_2020_12_Validation}) &&
+            {SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_6,
+             SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_7,
+             SchemaVocabularies::Known::JSON_SCHEMA_2019_09_VALIDATION,
+             SchemaVocabularies::Known::JSON_SCHEMA_2020_12_VALIDATION}) &&
         declared_types.test(
             std::to_underlying(sourcemeta::core::JSON::Type::Integer))};
 

@@ -50,9 +50,9 @@ private:
 #pragma warning(disable : 4251)
 #endif
   // NOLINTNEXTLINE(cppcoreguidelines-avoid-const-or-ref-data-members)
-  std::ostream &output;
-  std::string_view prefix;
-  std::map<std::string, sourcemeta::core::Pointer> cache;
+  std::ostream &output_;
+  std::string_view prefix_;
+  std::map<std::string, sourcemeta::core::Pointer> cache_;
 #if defined(_MSC_VER)
 #pragma warning(default : 4251)
 #endif

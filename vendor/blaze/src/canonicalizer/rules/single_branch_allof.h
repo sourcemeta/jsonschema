@@ -14,19 +14,19 @@ public:
     static const sourcemeta::core::JSON::String KEYWORD{"allOf"};
     ONLY_CONTINUE_IF(
         vocabularies.contains_any(
-            {SchemaVocabularies::Known::JSON_Schema_2020_12_Applicator,
-             SchemaVocabularies::Known::JSON_Schema_2019_09_Applicator,
-             SchemaVocabularies::Known::JSON_Schema_Draft_7,
-             SchemaVocabularies::Known::JSON_Schema_Draft_6,
-             SchemaVocabularies::Known::JSON_Schema_Draft_4}) &&
+            {SchemaVocabularies::Known::JSON_SCHEMA_2020_12_APPLICATOR,
+             SchemaVocabularies::Known::JSON_SCHEMA_2019_09_APPLICATOR,
+             SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_7,
+             SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_6,
+             SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_4}) &&
         schema.is_object());
 
     const auto *all_of{schema.try_at(KEYWORD)};
     ONLY_CONTINUE_IF(all_of && all_of->is_array() && all_of->size() == 1);
     ONLY_CONTINUE_IF(
         !(vocabularies.contains_any(
-              {SchemaVocabularies::Known::JSON_Schema_2020_12_Unevaluated,
-               SchemaVocabularies::Known::JSON_Schema_2019_09_Applicator}) &&
+              {SchemaVocabularies::Known::JSON_SCHEMA_2020_12_UNEVALUATED,
+               SchemaVocabularies::Known::JSON_SCHEMA_2019_09_APPLICATOR}) &&
           (schema.defines("unevaluatedProperties") ||
            schema.defines("unevaluatedItems"))));
     ONLY_CONTINUE_IF(!frame.has_references_through(

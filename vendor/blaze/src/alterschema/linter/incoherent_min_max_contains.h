@@ -19,8 +19,8 @@ public:
       -> SchemaTransformRule::Result override {
     ONLY_CONTINUE_IF(
         vocabularies.contains_any(
-            {SchemaVocabularies::Known::JSON_Schema_2020_12_Validation,
-             SchemaVocabularies::Known::JSON_Schema_2019_09_Validation}) &&
+            {SchemaVocabularies::Known::JSON_SCHEMA_2020_12_VALIDATION,
+             SchemaVocabularies::Known::JSON_SCHEMA_2019_09_VALIDATION}) &&
         schema.is_object() && schema.defines("contains"));
 
     const auto *min_contains{schema.try_at("minContains")};
@@ -28,6 +28,6 @@ public:
     const auto *max_contains{schema.try_at("maxContains")};
     ONLY_CONTINUE_IF(max_contains && max_contains->is_integer() &&
                      min_contains->to_integer() > max_contains->to_integer());
-    return APPLIES_TO_KEYWORDS("minContains", "maxContains");
+    return applies_to_keywords("minContains", "maxContains");
   }
 };

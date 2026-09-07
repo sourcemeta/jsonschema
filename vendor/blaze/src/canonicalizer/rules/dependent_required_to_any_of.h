@@ -14,8 +14,8 @@ public:
             const sourcemeta::blaze::SchemaResolver &) const -> bool override {
     ONLY_CONTINUE_IF(
         vocabularies.contains_any(
-            {SchemaVocabularies::Known::JSON_Schema_2019_09_Validation,
-             SchemaVocabularies::Known::JSON_Schema_2020_12_Validation}) &&
+            {SchemaVocabularies::Known::JSON_SCHEMA_2019_09_VALIDATION,
+             SchemaVocabularies::Known::JSON_SCHEMA_2020_12_VALIDATION}) &&
         schema.is_object());
 
     const auto *dependent_required{schema.try_at("dependentRequired")};
@@ -27,8 +27,8 @@ public:
         [](const auto &entry) -> auto { return entry.second.is_array(); }));
 
     if (!vocabularies.contains_any(
-            {SchemaVocabularies::Known::JSON_Schema_2019_09_Applicator,
-             SchemaVocabularies::Known::JSON_Schema_2020_12_Applicator})) {
+            {SchemaVocabularies::Known::JSON_SCHEMA_2019_09_APPLICATOR,
+             SchemaVocabularies::Known::JSON_SCHEMA_2020_12_APPLICATOR})) {
       throw SchemaError(
           "Cannot canonicalise `dependentRequired` without the Applicator "
           "vocabulary");

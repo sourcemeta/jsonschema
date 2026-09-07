@@ -15,7 +15,7 @@ public:
             const sourcemeta::blaze::SchemaResolver &, const bool) const
       -> SchemaTransformRule::Result override {
     ONLY_CONTINUE_IF(
-        vocabularies.contains(SchemaVocabularies::Known::JSON_Schema_Draft_6) &&
+        vocabularies.contains(SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_6) &&
         schema.is_object());
 
     for (const auto &keyword : KEYWORDS) {
@@ -64,7 +64,7 @@ public:
   }
 
 private:
-  // NOLINTNEXTLINE(bugprone-throwing-static-initialization)
+  // NOLINTNEXTLINE(cert-err58-cpp,bugprone-throwing-static-initialization)
   static inline const std::array<std::string_view, 8> KEYWORDS{
       {"$comment", "if", "then", "else", "readOnly", "writeOnly",
        "contentMediaType", "contentEncoding"}};

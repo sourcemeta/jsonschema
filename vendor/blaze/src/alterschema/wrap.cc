@@ -69,12 +69,12 @@ auto wrap(const sourcemeta::core::JSON &schema, const SchemaFrame &frame,
   SchemaFrame declared_frame{SchemaFrame::Mode::Root, copy, walker, resolver,
                              location.dialect};
   const std::string_view maybe_id{declared_frame.root()};
-  const auto id{maybe_id.empty() ? WRAPPER_IDENTIFIER : maybe_id};
+  const auto identifier{maybe_id.empty() ? WRAPPER_IDENTIFIER : maybe_id};
 
-  sourcemeta::core::URI uri{id};
+  sourcemeta::core::URI uri{identifier};
 
   try {
-    schema_reidentify(copy, id, resolver, location.dialect);
+    schema_reidentify(copy, identifier, resolver, location.dialect);
 
     // Otherwise we will get an error with the `WRAPPER_IDENTIFIER`, which will
     // be confusing to end users

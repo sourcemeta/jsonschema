@@ -19,8 +19,8 @@ public:
     static const JSON::String KEYWORD{"extends"};
     ONLY_CONTINUE_IF(
         vocabularies.contains_any(
-            {SchemaVocabularies::Known::JSON_Schema_Draft_3,
-             SchemaVocabularies::Known::JSON_Schema_Draft_3_Hyper}) &&
+            {SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_3,
+             SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_3_HYPER}) &&
         schema.is_object());
 
     const auto *extends{schema.try_at(KEYWORD)};
@@ -31,7 +31,7 @@ public:
     ONLY_CONTINUE_IF(!frame.has_references_through(keyword_pointer));
 
     if (is_empty_schema(*extends)) {
-      return APPLIES_TO_POINTERS({Pointer{KEYWORD}});
+      return applies_to_pointers({Pointer{KEYWORD}});
     }
 
     if (extends->is_array() && !extends->empty()) {
@@ -42,7 +42,7 @@ public:
         }
       }
       ONLY_CONTINUE_IF(!locations.empty());
-      return APPLIES_TO_POINTERS(std::move(locations));
+      return applies_to_pointers(std::move(locations));
     }
 
     return false;

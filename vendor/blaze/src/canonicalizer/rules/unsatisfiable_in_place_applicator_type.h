@@ -14,17 +14,17 @@ public:
             const sourcemeta::blaze::SchemaResolver &) const -> bool override {
     ONLY_CONTINUE_IF(schema.is_object() && schema.defines("type"));
     ONLY_CONTINUE_IF(vocabularies.contains_any(
-        {SchemaVocabularies::Known::JSON_Schema_2020_12_Validation,
-         SchemaVocabularies::Known::JSON_Schema_2019_09_Validation,
-         SchemaVocabularies::Known::JSON_Schema_Draft_7,
-         SchemaVocabularies::Known::JSON_Schema_Draft_6,
-         SchemaVocabularies::Known::JSON_Schema_Draft_4,
-         SchemaVocabularies::Known::JSON_Schema_Draft_3,
-         SchemaVocabularies::Known::JSON_Schema_Draft_3_Hyper,
-         SchemaVocabularies::Known::JSON_Schema_Draft_2,
-         SchemaVocabularies::Known::JSON_Schema_Draft_1,
-         SchemaVocabularies::Known::JSON_Schema_Draft_0}));
-    ONLY_CONTINUE_IF(IS_KNOWN_TYPE_FORM(schema.at("type"), vocabularies));
+        {SchemaVocabularies::Known::JSON_SCHEMA_2020_12_VALIDATION,
+         SchemaVocabularies::Known::JSON_SCHEMA_2019_09_VALIDATION,
+         SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_7,
+         SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_6,
+         SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_4,
+         SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_3,
+         SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_3_HYPER,
+         SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_2,
+         SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_1,
+         SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_0}));
+    ONLY_CONTINUE_IF(is_known_type_form(schema.at("type"), vocabularies));
     const auto parent_types{parse_schema_type(schema.at("type"))};
     ONLY_CONTINUE_IF(parent_types.any());
 
@@ -47,7 +47,8 @@ public:
             continue;
           }
           const auto *branch_type{branch.try_at("type")};
-          if (!branch_type || !IS_KNOWN_TYPE_FORM(*branch_type, vocabularies)) {
+          if ((branch_type == nullptr) ||
+              !is_known_type_form(*branch_type, vocabularies)) {
             continue;
           }
 
@@ -64,7 +65,8 @@ public:
           continue;
         }
         const auto *branch_type{entry.second.try_at("type")};
-        if (!branch_type || !IS_KNOWN_TYPE_FORM(*branch_type, vocabularies)) {
+        if ((branch_type == nullptr) ||
+            !is_known_type_form(*branch_type, vocabularies)) {
           continue;
         }
 
@@ -77,7 +79,7 @@ public:
 
     ONLY_CONTINUE_IF(!locations.empty());
     this->locations_ = std::move(locations);
-    this->unsatisfiable_ = UNSATISFIABLE_SCHEMA(vocabularies);
+    this->unsatisfiable_ = unsatisfiable_schema(vocabularies);
     return true;
   }
 
@@ -86,11 +88,11 @@ public:
       if (location.size() == 2) {
         const auto &keyword{location.at(0).to_property()};
         const auto index{location.at(1).to_index()};
-        INTO_UNSATISFIABLE(schema.at(keyword).at(index), this->unsatisfiable_);
+        into_unsatisfiable(schema.at(keyword).at(index), this->unsatisfiable_);
       } else {
         assert(location.size() == 1);
         const auto &keyword{location.at(0).to_property()};
-        INTO_UNSATISFIABLE(schema.at(keyword), this->unsatisfiable_);
+        into_unsatisfiable(schema.at(keyword), this->unsatisfiable_);
       }
     }
   }

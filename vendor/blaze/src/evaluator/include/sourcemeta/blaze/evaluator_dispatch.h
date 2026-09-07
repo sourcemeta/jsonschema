@@ -1,6 +1,7 @@
 #ifndef SOURCEMETA_BLAZE_EVALUATOR_DISPATCH_H_
 #define SOURCEMETA_BLAZE_EVALUATOR_DISPATCH_H_
 
+// NOLINTNEXTLINE(misc-header-include-cycle)
 #include <sourcemeta/blaze/evaluator.h>
 
 #include <sourcemeta/core/crypto.h>
@@ -43,7 +44,7 @@
                         context.schema->extra[instruction.extra_index],        \
                         context.evaluator->evaluate_path,                      \
                         context.evaluator->instance_location,                  \
-                        Evaluator::null);                                      \
+                        Evaluator::NULL_VALUE);                                \
   }
 
 #define EVALUATE_POP()                                                         \
@@ -52,7 +53,7 @@
                         context.schema->extra[instruction.extra_index],        \
                         context.evaluator->evaluate_path,                      \
                         context.evaluator->instance_location,                  \
-                        Evaluator::null);                                      \
+                        Evaluator::NULL_VALUE);                                \
   }                                                                            \
   if constexpr (Track) {                                                       \
     context.evaluator->evaluate_path.pop_back(                                 \
@@ -134,7 +135,7 @@
                         context.schema->extra[instruction.extra_index],        \
                         context.evaluator->evaluate_path,                      \
                         context.evaluator->instance_location,                  \
-                        Evaluator::null);                                      \
+                        Evaluator::NULL_VALUE);                                \
   }                                                                            \
   bool result{true};
 
@@ -152,7 +153,7 @@
                         context.schema->extra[instruction.extra_index],        \
                         context.evaluator->evaluate_path,                      \
                         context.evaluator->instance_location,                  \
-                        Evaluator::null);                                      \
+                        Evaluator::NULL_VALUE);                                \
   }                                                                            \
   return result;
 
@@ -168,7 +169,7 @@
     (*context.callback)(EvaluationType::Pre, true, instruction,                \
                         context.schema->extra[instruction.extra_index],        \
                         context.evaluator->evaluate_path, destination,         \
-                        Evaluator::null);                                      \
+                        Evaluator::NULL_VALUE);                                \
     (*context.callback)(EvaluationType::Post, true, instruction,               \
                         context.schema->extra[instruction.extra_index],        \
                         context.evaluator->evaluate_path, destination,         \
@@ -194,8 +195,8 @@ constexpr auto DEPTH_LIMIT{300};
 
 inline auto resolve_target(const JSON::String *property_target,
                            const JSON &instance) noexcept -> const JSON & {
-  if (property_target) [[unlikely]] {
-    return Evaluator::empty_string;
+  if (property_target != nullptr) [[unlikely]] {
+    return Evaluator::EMPTY_STRING;
   }
 
   // NOLINTNEXTLINE(bugprone-return-const-ref-from-parameter)
@@ -217,7 +218,7 @@ inline auto
 resolve_string_target(const JSON::String *property_target, const JSON &instance,
                       const Pointer &relative_instance_location) noexcept
     -> const JSON::String * {
-  if (property_target) [[unlikely]] {
+  if (property_target != nullptr) [[unlikely]] {
     return property_target;
   }
 
@@ -301,6 +302,9 @@ inline auto evaluate_instruction_with_property(
 // Forward declarations
 INSTRUCTION_DIRECT_COPY(LoopItemsIntegerBounded, ValueIntegerBounds);
 
+// These handlers take their names from the instructions they implement, which
+// `InstructionIndex` spells the same way and trace output emits verbatim
+// NOLINTBEGIN(readability-identifier-naming)
 INSTRUCTION_HANDLER(AssertionFail) {
   EVALUATE_BEGIN_NO_PRECONDITION(AssertionFail);
   EVALUATE_END(AssertionFail);
@@ -1059,7 +1063,7 @@ INSTRUCTION_HANDLER(AssertionObjectPropertiesSimple) {
   assert(value.size() >= instruction.children.size());
   assert(value.size() <= 32);
   static constexpr sourcemeta::core::PropertyHashJSON<ValueString>
-      property_hasher;
+      PROPERTY_HASHER;
   const auto &object{target.as_object()};
   const auto schema_size{value.size()};
   std::uint32_t seen{0};
@@ -1073,7 +1077,7 @@ INSTRUCTION_HANDLER(AssertionObjectPropertiesSimple) {
       // A perfect hash captures the key bytes but not its length, so its size
       // is confirmed rather than trusting the hash match alone
       if (schema_hash == instance_hash &&
-          (property_hasher.is_perfect(instance_hash)
+          (PROPERTY_HASHER.is_perfect(instance_hash)
                ? instance_entry.first.size() ==
                      std::get<0>(value[schema_index]).size()
                : instance_entry.first == std::get<0>(value[schema_index]))) {
@@ -2251,7 +2255,7 @@ INSTRUCTION_HANDLER(LoopKeys) {
     }
 
     for (const auto &child : instruction.children) {
-      if (!EVALUATE_RECURSE_ON_PROPERTY_NAME(child, Evaluator::null,
+      if (!EVALUATE_RECURSE_ON_PROPERTY_NAME(child, Evaluator::NULL_VALUE,
                                              entry.first)) [[unlikely]] {
         result = false;
 
@@ -2655,9 +2659,8 @@ INSTRUCTION_HANDLER(LoopItemsPropertiesExactlyTypeStrictHash3) {
          value_3.hash == value.second.first[0].first &&
          value_3.first.size() == value.second.first[0].second.size())) {
       continue;
-    } else {
-      EVALUATE_END(LoopItemsPropertiesExactlyTypeStrictHash3);
     }
+    EVALUATE_END(LoopItemsPropertiesExactlyTypeStrictHash3);
   }
 
   result = true;
@@ -2811,6 +2814,7 @@ INSTRUCTION_HANDLER(LoopContains) {
 
   EVALUATE_END(LoopContains);
 }
+// NOLINTEND(readability-identifier-naming)
 
 #undef INSTRUCTION_HANDLER
 
@@ -2822,7 +2826,7 @@ using DispatchHandler = bool (*)(
 template <bool Track, bool Dynamic, bool HasCallback>
 // Must have same order as InstructionIndex
 // NOLINTNEXTLINE(modernize-avoid-c-arrays)
-static constexpr DispatchHandler<Track, Dynamic, HasCallback> handlers[101] = {
+static constexpr DispatchHandler<Track, Dynamic, HasCallback> HANDLERS[101] = {
     AssertionFail,
     AssertionDefines,
     AssertionDefinesStrict,
@@ -2937,7 +2941,7 @@ evaluate_instruction(const sourcemeta::blaze::Instruction &instruction,
                           "likely due to infinite recursion");
   }
 
-  return handlers<Track, Dynamic, HasCallback>[std::to_underlying(
+  return HANDLERS<Track, Dynamic, HasCallback>[std::to_underlying(
       instruction.type)](instruction, instance, depth, context);
 }
 
@@ -2954,7 +2958,7 @@ inline auto evaluate_instruction_without_callback(
   DispatchContext<false, Dynamic, false> plain_context{
       context.schema, context.callback, context.evaluator,
       context.property_target};
-  return handlers<false, Dynamic, false>[std::to_underlying(instruction.type)](
+  return HANDLERS<false, Dynamic, false>[std::to_underlying(instruction.type)](
       instruction, instance, depth, plain_context);
 }
 

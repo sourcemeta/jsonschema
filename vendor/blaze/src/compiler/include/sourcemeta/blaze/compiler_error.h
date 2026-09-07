@@ -8,6 +8,7 @@
 #include <sourcemeta/core/jsonpointer.h>
 #include <sourcemeta/core/uri.h>
 
+#include <cstdint>     // std::uint64_t
 #include <exception>   // std::exception
 #include <string>      // std::string
 #include <string_view> // std::string_view
@@ -124,6 +125,48 @@ public:
 private:
   std::string identifier_;
   sourcemeta::core::Pointer schema_location_;
+};
+
+/// @ingroup foundation
+/// An error that represents a schema that compiles into more instructions than
+/// the caller was willing to spend on it
+class SOURCEMETA_BLAZE_COMPILER_EXPORT CompilerInstructionLimitError
+    : public std::exception {
+public:
+  CompilerInstructionLimitError(const std::uint64_t limit) : limit_{limit} {}
+
+  [[nodiscard]] auto what() const noexcept -> const char * override {
+    return "The schema exceeds the maximum number of compiled instructions";
+  }
+
+  /// The maximum number of instructions that compilation was allowed to make
+  [[nodiscard]] auto limit() const noexcept -> std::uint64_t {
+    return this->limit_;
+  }
+
+private:
+  std::uint64_t limit_;
+};
+
+/// @ingroup foundation
+/// An error that represents a schema that nests deeper than the caller was
+/// willing to descend into
+class SOURCEMETA_BLAZE_COMPILER_EXPORT CompilerDepthLimitError
+    : public std::exception {
+public:
+  CompilerDepthLimitError(const std::uint64_t limit) : limit_{limit} {}
+
+  [[nodiscard]] auto what() const noexcept -> const char * override {
+    return "The schema exceeds the maximum compilation depth";
+  }
+
+  /// The deepest that compilation was allowed to descend
+  [[nodiscard]] auto limit() const noexcept -> std::uint64_t {
+    return this->limit_;
+  }
+
+private:
+  std::uint64_t limit_;
 };
 
 /// @ingroup foundation

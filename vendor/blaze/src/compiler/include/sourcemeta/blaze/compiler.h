@@ -16,8 +16,9 @@
 #include <sourcemeta/core/uri.h>
 
 #include <cstddef>       // std::size_t
-#include <cstdint>       // std::uint8_t
+#include <cstdint>       // std::uint8_t, std::uint64_t
 #include <functional>    // std::function
+#include <limits>        // std::numeric_limits
 #include <map>           // std::map
 #include <optional>      // std::optional, std::nullopt
 #include <string>        // std::string
@@ -88,6 +89,57 @@ enum class Mode : std::uint8_t {
 };
 
 /// @ingroup compiler
+/// An accumulator for instruction metadata that refuses to grow past a limit.
+/// Compilation makes one entry here for every instruction it makes, including
+/// the ones it goes on to throw away and the copies that inlining leaves
+/// behind, so what this holds is what compiling the schema cost
+class SOURCEMETA_BLAZE_COMPILER_EXPORT InstructionExtras {
+public:
+  explicit InstructionExtras(const std::uint64_t limit) : limit_{limit} {}
+
+  /// Make room for another instruction, throwing once out of room
+  auto push_back(InstructionExtra &&entry) -> void {
+    if (this->entries_.size() >= this->limit_) [[unlikely]] {
+      throw CompilerInstructionLimitError{this->limit_};
+    }
+
+    this->entries_.push_back(std::move(entry));
+  }
+
+  [[nodiscard]] auto size() const noexcept -> std::size_t {
+    return this->entries_.size();
+  }
+
+  [[nodiscard]] auto operator[](const std::size_t index) const noexcept
+      -> const InstructionExtra & {
+    return this->entries_[index];
+  }
+
+  [[nodiscard]] auto operator[](const std::size_t index) noexcept
+      -> InstructionExtra & {
+    return this->entries_[index];
+  }
+
+  /// Hand the accumulated entries over to the template that will own them
+  [[nodiscard]] auto release() && -> std::vector<InstructionExtra> {
+    return std::move(this->entries_);
+  }
+
+private:
+// Exporting symbols that depends on the standard C++ library is considered
+// safe.
+// https://learn.microsoft.com/en-us/cpp/error-messages/compiler-warnings/compiler-warning-level-2-c4275?view=msvc-170&redirectedfrom=MSDN
+#if defined(_MSC_VER)
+#pragma warning(disable : 4251 4275)
+#endif
+  std::vector<InstructionExtra> entries_;
+#if defined(_MSC_VER)
+#pragma warning(default : 4251 4275)
+#endif
+  std::uint64_t limit_;
+};
+
+/// @ingroup compiler
 /// Advanced knobs that you can tweak for higher control and optimisations
 struct Tweaks {
   /// Always unroll `properties` in a logical AND operation
@@ -103,6 +155,16 @@ struct Tweaks {
   /// mode and none in fast mode
   std::optional<std::unordered_set<sourcemeta::core::JSON::StringView>>
       annotations{};
+  /// How many instructions compilation may make before it gives up and
+  /// throws. A schema compiles every target it can be entered through, and
+  /// inlining copies what it inlines, so what an untrusted schema costs to
+  /// compile grows faster than the schema itself does
+  std::uint64_t max_instructions{std::numeric_limits<std::uint64_t>::max()};
+  /// How deep compilation may descend into a schema before it gives up and
+  /// throws. Compiling a subschema recurses back into itself through the
+  /// keyword handlers, so without this a schema nested deeply enough runs the
+  /// stack out rather than reporting anything the caller can catch
+  std::uint64_t max_depth{std::numeric_limits<std::uint64_t>::max()};
 };
 
 /// @ingroup compiler
@@ -138,8 +200,10 @@ struct Context {
                             std::string_view, bool>,
                  std::pair<std::size_t, const sourcemeta::core::WeakPointer *>>
       targets;
+  /// How deep into the schema compilation currently is
+  std::uint64_t &depth;
   /// Accumulator for instruction extra data during compilation
-  std::vector<InstructionExtra> &extra;
+  InstructionExtras &extra;
   /// Accumulator for the vocabularies that instructions refer to
   std::vector<SchemaVocabularies::URI> &vocabularies;
   // NOLINTEND(cppcoreguidelines-avoid-const-or-ref-data-members)
@@ -176,6 +240,12 @@ auto SOURCEMETA_BLAZE_COMPILER_EXPORT default_schema_compiler(
 ///
 /// // Evaluate or encode
 /// ```
+///
+/// This overload bundles and frames the schema before compiling it, and
+/// neither of those is bounded by the compiler tweaks. Pass `max_locations`
+/// to bound them instead. Bundling and framing each get this budget rather
+/// than sharing one, so the preamble costs at most twice it. The overload
+/// that takes a frame does neither, and so takes no such limit
 auto SOURCEMETA_BLAZE_COMPILER_EXPORT
 compile(const sourcemeta::core::JSON &schema,
         const sourcemeta::blaze::SchemaWalker &walker,
@@ -184,7 +254,9 @@ compile(const sourcemeta::core::JSON &schema,
         const std::string_view default_dialect = "",
         const std::string_view default_id = "",
         const std::string_view entrypoint = "",
-        const std::optional<Tweaks> &tweaks = std::nullopt) -> Template;
+        const std::optional<Tweaks> &tweaks = std::nullopt,
+        std::uint64_t max_locations = std::numeric_limits<std::uint64_t>::max())
+    -> Template;
 
 /// @ingroup compiler
 ///

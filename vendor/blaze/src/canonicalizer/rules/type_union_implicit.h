@@ -14,29 +14,29 @@ public:
       -> bool override {
     ONLY_CONTINUE_IF(schema.is_object() && !schema.empty());
     ONLY_CONTINUE_IF(!vocabularies.contains_any(
-                         {SchemaVocabularies::Known::JSON_Schema_Draft_0,
-                          SchemaVocabularies::Known::JSON_Schema_Draft_1,
-                          SchemaVocabularies::Known::JSON_Schema_Draft_2,
-                          SchemaVocabularies::Known::JSON_Schema_Draft_3}) ||
+                         {SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_0,
+                          SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_1,
+                          SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_2,
+                          SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_3}) ||
                      !schema.defines("disallow"));
     ONLY_CONTINUE_IF(vocabularies.contains_any(
-        {SchemaVocabularies::Known::JSON_Schema_2020_12_Validation,
-         SchemaVocabularies::Known::JSON_Schema_2019_09_Validation,
-         SchemaVocabularies::Known::JSON_Schema_Draft_7,
-         SchemaVocabularies::Known::JSON_Schema_Draft_6,
-         SchemaVocabularies::Known::JSON_Schema_Draft_4,
-         SchemaVocabularies::Known::JSON_Schema_Draft_3,
-         SchemaVocabularies::Known::JSON_Schema_Draft_2,
-         SchemaVocabularies::Known::JSON_Schema_Draft_1,
-         SchemaVocabularies::Known::JSON_Schema_Draft_0}));
+        {SchemaVocabularies::Known::JSON_SCHEMA_2020_12_VALIDATION,
+         SchemaVocabularies::Known::JSON_SCHEMA_2019_09_VALIDATION,
+         SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_7,
+         SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_6,
+         SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_4,
+         SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_3,
+         SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_2,
+         SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_1,
+         SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_0}));
     ONLY_CONTINUE_IF(!schema.defines("type"));
     ONLY_CONTINUE_IF(!schema.defines("enum"));
     ONLY_CONTINUE_IF(
         !vocabularies.contains_any(
-            {SchemaVocabularies::Known::JSON_Schema_2020_12_Validation,
-             SchemaVocabularies::Known::JSON_Schema_2019_09_Validation,
-             SchemaVocabularies::Known::JSON_Schema_Draft_7,
-             SchemaVocabularies::Known::JSON_Schema_Draft_6}) ||
+            {SchemaVocabularies::Known::JSON_SCHEMA_2020_12_VALIDATION,
+             SchemaVocabularies::Known::JSON_SCHEMA_2019_09_VALIDATION,
+             SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_7,
+             SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_6}) ||
         !schema.defines("const"));
 
     for (const auto &entry : schema.as_object()) {
@@ -47,7 +47,7 @@ public:
           // Applicators like `contentSchema` applies to decoded content, not
           // the current instance
           keyword_type == SchemaKeywordType::ApplicatorValueInPlaceOther ||
-          !IS_IN_PLACE_APPLICATOR(keyword_type));
+          !is_in_place_applicator(keyword_type));
     }
 
     ONLY_CONTINUE_IF(!this->allof_sibling_constrains_type(root, frame, location,
@@ -81,12 +81,12 @@ private:
     auto walk_pointer{location.pointer};
     auto walk_parent{location.parent};
     while (walk_parent.has_value()) {
-      const auto &wp{walk_parent.value()};
-      const auto walk_relative{walk_pointer.resolve_from(wp)};
+      const auto &walk_parent_pointer{walk_parent.value()};
+      const auto walk_relative{walk_pointer.resolve_from(walk_parent_pointer)};
       if (walk_relative.empty() || !walk_relative.at(0).is_property()) {
         break;
       }
-      const auto walk_entry{frame.traverse(wp)};
+      const auto walk_entry{frame.traverse(walk_parent_pointer)};
       if (!walk_entry.has_value()) {
         break;
       }
@@ -95,19 +95,20 @@ private:
       const auto walk_keyword_type{
           walker(walk_relative.at(0).to_property(), walk_vocabularies).type};
 
-      if (!IS_IN_PLACE_APPLICATOR(walk_keyword_type)) {
+      if (!is_in_place_applicator(walk_keyword_type)) {
         break;
       }
 
       if (walk_keyword_type == SchemaKeywordType::ApplicatorElementsInPlace &&
           walk_relative.size() >= 2 && walk_relative.at(1).is_index()) {
         const auto branch_index{walk_relative.at(1).to_index()};
-        const auto &allof_parent{sourcemeta::core::get(root, wp)};
+        const auto &allof_parent{
+            sourcemeta::core::get(root, walk_parent_pointer)};
         const auto &keyword_name{walk_relative.at(0).to_property()};
         const auto *branches{allof_parent.is_object()
                                  ? allof_parent.try_at(keyword_name)
                                  : nullptr};
-        if (branches && branches->is_array()) {
+        if ((branches != nullptr) && branches->is_array()) {
           for (std::size_t index = 0; index < branches->size(); ++index) {
             if (index == branch_index) {
               continue;
@@ -122,7 +123,7 @@ private:
             }
 
             const auto *sibling_enum{sibling.try_at("enum")};
-            if (sibling_enum && sibling_enum->is_array() &&
+            if ((sibling_enum != nullptr) && sibling_enum->is_array() &&
                 !sibling_enum->empty()) {
               return true;
             }
@@ -130,7 +131,7 @@ private:
         }
       }
 
-      walk_pointer = wp;
+      walk_pointer = walk_parent_pointer;
       walk_parent = walk_entry.value().get().parent;
     }
     return false;

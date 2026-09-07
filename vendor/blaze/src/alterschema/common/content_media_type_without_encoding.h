@@ -19,12 +19,12 @@ public:
       -> SchemaTransformRule::Result override {
     ONLY_CONTINUE_IF(
         vocabularies.contains_any(
-            {SchemaVocabularies::Known::JSON_Schema_2020_12_Content,
-             SchemaVocabularies::Known::JSON_Schema_2019_09_Content,
-             SchemaVocabularies::Known::JSON_Schema_Draft_7}) &&
+            {SchemaVocabularies::Known::JSON_SCHEMA_2020_12_CONTENT,
+             SchemaVocabularies::Known::JSON_SCHEMA_2019_09_CONTENT,
+             SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_7}) &&
         schema.is_object() && schema.defines("contentMediaType") &&
         !schema.defines("contentEncoding"));
-    return APPLIES_TO_KEYWORDS("contentMediaType");
+    return applies_to_keywords("contentMediaType");
   }
 
   auto transform(JSON &schema, const Result &) const -> void override {

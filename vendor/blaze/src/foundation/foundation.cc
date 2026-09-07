@@ -13,35 +13,35 @@
 auto sourcemeta::blaze::base_dialect_uri(const SchemaBaseDialect base_dialect)
     -> std::string_view {
   switch (base_dialect) {
-    case SchemaBaseDialect::JSON_Schema_2020_12:
+    case SchemaBaseDialect::JSON_SCHEMA_2020_12:
       return "https://json-schema.org/draft/2020-12/schema";
-    case SchemaBaseDialect::JSON_Schema_2020_12_Hyper:
+    case SchemaBaseDialect::JSON_SCHEMA_2020_12_HYPER:
       return "https://json-schema.org/draft/2020-12/hyper-schema";
-    case SchemaBaseDialect::JSON_Schema_2019_09:
+    case SchemaBaseDialect::JSON_SCHEMA_2019_09:
       return "https://json-schema.org/draft/2019-09/schema";
-    case SchemaBaseDialect::JSON_Schema_2019_09_Hyper:
+    case SchemaBaseDialect::JSON_SCHEMA_2019_09_HYPER:
       return "https://json-schema.org/draft/2019-09/hyper-schema";
-    case SchemaBaseDialect::JSON_Schema_Draft_7:
+    case SchemaBaseDialect::JSON_SCHEMA_DRAFT_7:
       return "http://json-schema.org/draft-07/schema#";
-    case SchemaBaseDialect::JSON_Schema_Draft_7_Hyper:
+    case SchemaBaseDialect::JSON_SCHEMA_DRAFT_7_HYPER:
       return "http://json-schema.org/draft-07/hyper-schema#";
-    case SchemaBaseDialect::JSON_Schema_Draft_6:
+    case SchemaBaseDialect::JSON_SCHEMA_DRAFT_6:
       return "http://json-schema.org/draft-06/schema#";
-    case SchemaBaseDialect::JSON_Schema_Draft_6_Hyper:
+    case SchemaBaseDialect::JSON_SCHEMA_DRAFT_6_HYPER:
       return "http://json-schema.org/draft-06/hyper-schema#";
-    case SchemaBaseDialect::JSON_Schema_Draft_4:
+    case SchemaBaseDialect::JSON_SCHEMA_DRAFT_4:
       return "http://json-schema.org/draft-04/schema#";
-    case SchemaBaseDialect::JSON_Schema_Draft_4_Hyper:
+    case SchemaBaseDialect::JSON_SCHEMA_DRAFT_4_HYPER:
       return "http://json-schema.org/draft-04/hyper-schema#";
-    case SchemaBaseDialect::JSON_Schema_Draft_3:
+    case SchemaBaseDialect::JSON_SCHEMA_DRAFT_3:
       return "http://json-schema.org/draft-03/schema#";
-    case SchemaBaseDialect::JSON_Schema_Draft_3_Hyper:
+    case SchemaBaseDialect::JSON_SCHEMA_DRAFT_3_HYPER:
       return "http://json-schema.org/draft-03/hyper-schema#";
-    case SchemaBaseDialect::JSON_Schema_Draft_2_Hyper:
+    case SchemaBaseDialect::JSON_SCHEMA_DRAFT_2_HYPER:
       return "http://json-schema.org/draft-02/hyper-schema#";
-    case SchemaBaseDialect::JSON_Schema_Draft_1_Hyper:
+    case SchemaBaseDialect::JSON_SCHEMA_DRAFT_1_HYPER:
       return "http://json-schema.org/draft-01/hyper-schema#";
-    case SchemaBaseDialect::JSON_Schema_Draft_0_Hyper:
+    case SchemaBaseDialect::JSON_SCHEMA_DRAFT_0_HYPER:
       return "http://json-schema.org/draft-00/hyper-schema#";
   }
 
@@ -59,53 +59,63 @@ auto sourcemeta::blaze::to_base_dialect(const std::string_view base_dialect)
     -> std::optional<SchemaBaseDialect> {
   if (base_dialect == "https://json-schema.org/draft/2020-12/schema" ||
       base_dialect == "http://json-schema.org/draft/2020-12/schema") {
-    return SchemaBaseDialect::JSON_Schema_2020_12;
-  } else if (base_dialect ==
-                 "https://json-schema.org/draft/2020-12/hyper-schema" ||
-             base_dialect ==
-                 "http://json-schema.org/draft/2020-12/hyper-schema") {
-    return SchemaBaseDialect::JSON_Schema_2020_12_Hyper;
-  } else if (base_dialect == "https://json-schema.org/draft/2019-09/schema" ||
-             base_dialect == "http://json-schema.org/draft/2019-09/schema") {
-    return SchemaBaseDialect::JSON_Schema_2019_09;
-  } else if (base_dialect ==
-                 "https://json-schema.org/draft/2019-09/hyper-schema" ||
-             base_dialect ==
-                 "http://json-schema.org/draft/2019-09/hyper-schema") {
-    return SchemaBaseDialect::JSON_Schema_2019_09_Hyper;
-  } else if (base_dialect == "http://json-schema.org/draft-07/schema#" ||
-             base_dialect == "https://json-schema.org/draft-07/schema#") {
-    return SchemaBaseDialect::JSON_Schema_Draft_7;
-  } else if (base_dialect == "http://json-schema.org/draft-07/hyper-schema#" ||
-             base_dialect == "https://json-schema.org/draft-07/hyper-schema#") {
-    return SchemaBaseDialect::JSON_Schema_Draft_7_Hyper;
-  } else if (base_dialect == "http://json-schema.org/draft-06/schema#" ||
-             base_dialect == "https://json-schema.org/draft-06/schema#") {
-    return SchemaBaseDialect::JSON_Schema_Draft_6;
-  } else if (base_dialect == "http://json-schema.org/draft-06/hyper-schema#" ||
-             base_dialect == "https://json-schema.org/draft-06/hyper-schema#") {
-    return SchemaBaseDialect::JSON_Schema_Draft_6_Hyper;
-  } else if (base_dialect == "http://json-schema.org/draft-04/schema#" ||
-             base_dialect == "https://json-schema.org/draft-04/schema#") {
-    return SchemaBaseDialect::JSON_Schema_Draft_4;
-  } else if (base_dialect == "http://json-schema.org/draft-04/hyper-schema#" ||
-             base_dialect == "https://json-schema.org/draft-04/hyper-schema#") {
-    return SchemaBaseDialect::JSON_Schema_Draft_4_Hyper;
-  } else if (base_dialect == "http://json-schema.org/draft-03/schema#" ||
-             base_dialect == "https://json-schema.org/draft-03/schema#") {
-    return SchemaBaseDialect::JSON_Schema_Draft_3;
-  } else if (base_dialect == "http://json-schema.org/draft-03/hyper-schema#" ||
-             base_dialect == "https://json-schema.org/draft-03/hyper-schema#") {
-    return SchemaBaseDialect::JSON_Schema_Draft_3_Hyper;
-  } else if (base_dialect == "http://json-schema.org/draft-02/hyper-schema#" ||
-             base_dialect == "https://json-schema.org/draft-02/hyper-schema#") {
-    return SchemaBaseDialect::JSON_Schema_Draft_2_Hyper;
-  } else if (base_dialect == "http://json-schema.org/draft-01/hyper-schema#" ||
-             base_dialect == "https://json-schema.org/draft-01/hyper-schema#") {
-    return SchemaBaseDialect::JSON_Schema_Draft_1_Hyper;
-  } else if (base_dialect == "http://json-schema.org/draft-00/hyper-schema#" ||
-             base_dialect == "https://json-schema.org/draft-00/hyper-schema#") {
-    return SchemaBaseDialect::JSON_Schema_Draft_0_Hyper;
+    return SchemaBaseDialect::JSON_SCHEMA_2020_12;
+  }
+  if (base_dialect == "https://json-schema.org/draft/2020-12/hyper-schema" ||
+      base_dialect == "http://json-schema.org/draft/2020-12/hyper-schema") {
+    return SchemaBaseDialect::JSON_SCHEMA_2020_12_HYPER;
+  }
+  if (base_dialect == "https://json-schema.org/draft/2019-09/schema" ||
+      base_dialect == "http://json-schema.org/draft/2019-09/schema") {
+    return SchemaBaseDialect::JSON_SCHEMA_2019_09;
+  }
+  if (base_dialect == "https://json-schema.org/draft/2019-09/hyper-schema" ||
+      base_dialect == "http://json-schema.org/draft/2019-09/hyper-schema") {
+    return SchemaBaseDialect::JSON_SCHEMA_2019_09_HYPER;
+  }
+  if (base_dialect == "http://json-schema.org/draft-07/schema#" ||
+      base_dialect == "https://json-schema.org/draft-07/schema#") {
+    return SchemaBaseDialect::JSON_SCHEMA_DRAFT_7;
+  }
+  if (base_dialect == "http://json-schema.org/draft-07/hyper-schema#" ||
+      base_dialect == "https://json-schema.org/draft-07/hyper-schema#") {
+    return SchemaBaseDialect::JSON_SCHEMA_DRAFT_7_HYPER;
+  }
+  if (base_dialect == "http://json-schema.org/draft-06/schema#" ||
+      base_dialect == "https://json-schema.org/draft-06/schema#") {
+    return SchemaBaseDialect::JSON_SCHEMA_DRAFT_6;
+  }
+  if (base_dialect == "http://json-schema.org/draft-06/hyper-schema#" ||
+      base_dialect == "https://json-schema.org/draft-06/hyper-schema#") {
+    return SchemaBaseDialect::JSON_SCHEMA_DRAFT_6_HYPER;
+  }
+  if (base_dialect == "http://json-schema.org/draft-04/schema#" ||
+      base_dialect == "https://json-schema.org/draft-04/schema#") {
+    return SchemaBaseDialect::JSON_SCHEMA_DRAFT_4;
+  }
+  if (base_dialect == "http://json-schema.org/draft-04/hyper-schema#" ||
+      base_dialect == "https://json-schema.org/draft-04/hyper-schema#") {
+    return SchemaBaseDialect::JSON_SCHEMA_DRAFT_4_HYPER;
+  }
+  if (base_dialect == "http://json-schema.org/draft-03/schema#" ||
+      base_dialect == "https://json-schema.org/draft-03/schema#") {
+    return SchemaBaseDialect::JSON_SCHEMA_DRAFT_3;
+  }
+  if (base_dialect == "http://json-schema.org/draft-03/hyper-schema#" ||
+      base_dialect == "https://json-schema.org/draft-03/hyper-schema#") {
+    return SchemaBaseDialect::JSON_SCHEMA_DRAFT_3_HYPER;
+  }
+  if (base_dialect == "http://json-schema.org/draft-02/hyper-schema#" ||
+      base_dialect == "https://json-schema.org/draft-02/hyper-schema#") {
+    return SchemaBaseDialect::JSON_SCHEMA_DRAFT_2_HYPER;
+  }
+  if (base_dialect == "http://json-schema.org/draft-01/hyper-schema#" ||
+      base_dialect == "https://json-schema.org/draft-01/hyper-schema#") {
+    return SchemaBaseDialect::JSON_SCHEMA_DRAFT_1_HYPER;
+  }
+  if (base_dialect == "http://json-schema.org/draft-00/hyper-schema#" ||
+      base_dialect == "https://json-schema.org/draft-00/hyper-schema#") {
+    return SchemaBaseDialect::JSON_SCHEMA_DRAFT_0_HYPER;
   }
 
   return std::nullopt;
@@ -160,14 +170,14 @@ auto sourcemeta::blaze::identify(const sourcemeta::core::JSON &schema,
   // See
   // https://json-schema.org/draft-07/draft-handrews-json-schema-01#rfc.section.8.3
   if (schema.defines("$ref") &&
-      (base_dialect == SchemaBaseDialect::JSON_Schema_Draft_7 ||
-       base_dialect == SchemaBaseDialect::JSON_Schema_Draft_7_Hyper ||
-       base_dialect == SchemaBaseDialect::JSON_Schema_Draft_6 ||
-       base_dialect == SchemaBaseDialect::JSON_Schema_Draft_6_Hyper ||
-       base_dialect == SchemaBaseDialect::JSON_Schema_Draft_4 ||
-       base_dialect == SchemaBaseDialect::JSON_Schema_Draft_4_Hyper ||
-       base_dialect == SchemaBaseDialect::JSON_Schema_Draft_3 ||
-       base_dialect == SchemaBaseDialect::JSON_Schema_Draft_3_Hyper)) {
+      (base_dialect == SchemaBaseDialect::JSON_SCHEMA_DRAFT_7 ||
+       base_dialect == SchemaBaseDialect::JSON_SCHEMA_DRAFT_7_HYPER ||
+       base_dialect == SchemaBaseDialect::JSON_SCHEMA_DRAFT_6 ||
+       base_dialect == SchemaBaseDialect::JSON_SCHEMA_DRAFT_6_HYPER ||
+       base_dialect == SchemaBaseDialect::JSON_SCHEMA_DRAFT_4 ||
+       base_dialect == SchemaBaseDialect::JSON_SCHEMA_DRAFT_4_HYPER ||
+       base_dialect == SchemaBaseDialect::JSON_SCHEMA_DRAFT_3 ||
+       base_dialect == SchemaBaseDialect::JSON_SCHEMA_DRAFT_3_HYPER)) {
     return default_id;
   }
 
@@ -227,7 +237,7 @@ auto sourcemeta::blaze::dialect(const sourcemeta::core::JSON &schema,
   if (allow_dialect_override && schema.is_object()) {
     const auto *override_value{
         schema.try_at("x-sourcemeta-dialect-override-subschema")};
-    if (override_value && override_value->is_string() &&
+    if ((override_value != nullptr) && override_value->is_string() &&
         !override_value->to_string().empty()) {
       return override_value->to_string();
     }
@@ -267,7 +277,7 @@ auto sourcemeta::blaze::metaschema_try_embedded(
 
   const auto candidate{
       sourcemeta::blaze::embedded_metaschema_candidate(schema, identifier)};
-  if (!candidate.first) {
+  if (candidate.first == nullptr) {
     return nullptr;
   }
 
@@ -297,7 +307,7 @@ auto sourcemeta::blaze::metaschema_try_embedded(
     }
 
     const auto *metaschema_dialect{current->try_at("$schema")};
-    if (!metaschema_dialect || !metaschema_dialect->is_string()) {
+    if ((metaschema_dialect == nullptr) || !metaschema_dialect->is_string()) {
       throw sourcemeta::blaze::SchemaUnknownBaseDialectError();
     }
 
@@ -311,7 +321,7 @@ auto sourcemeta::blaze::metaschema_try_embedded(
     if (sourcemeta::core::URI::is_uri(dialect_uri)) {
       const auto next{sourcemeta::blaze::embedded_metaschema_candidate(
           schema, dialect_uri)};
-      if (next.first) {
+      if (next.first != nullptr) {
         links.push_back({.schema = next.first,
                          .identifier = dialect_uri,
                          .container = next.second});
@@ -377,7 +387,7 @@ base_dialect_with_visited(const sourcemeta::core::JSON &schema,
   // the exact meta-schema it is described by
   const auto *embedded{sourcemeta::blaze::metaschema_try_embedded(
       document, effective_dialect, resolver)};
-  if (embedded) {
+  if (embedded != nullptr) {
     const std::string_view embedded_dialect{sourcemeta::blaze::dialect(
         *embedded, effective_dialect, allow_dialect_override)};
     if (embedded_dialect == effective_dialect) {
@@ -404,10 +414,9 @@ base_dialect_with_visited(const sourcemeta::core::JSON &schema,
     if (effective_dialect_uri.is_relative()) {
       throw sourcemeta::blaze::SchemaRelativeMetaschemaResolutionError(
           effective_dialect);
-    } else {
-      throw sourcemeta::blaze::SchemaResolutionError(
-          effective_dialect, "Could not resolve the metaschema of the schema");
     }
+    throw sourcemeta::blaze::SchemaResolutionError(
+        effective_dialect, "Could not resolve the metaschema of the schema");
   }
 
   // If the metaschema declares the same dialect (self-descriptive), and it's
@@ -440,15 +449,15 @@ auto core_vocabulary_known(
   using sourcemeta::blaze::SchemaBaseDialect;
   using sourcemeta::blaze::SchemaVocabularies;
   switch (base_dialect) {
-    case SchemaBaseDialect::JSON_Schema_2020_12:
-    case SchemaBaseDialect::JSON_Schema_2020_12_Hyper:
-      return SchemaVocabularies::Known::JSON_Schema_2020_12_Core;
-    case SchemaBaseDialect::JSON_Schema_2019_09:
-    case SchemaBaseDialect::JSON_Schema_2019_09_Hyper:
-      return SchemaVocabularies::Known::JSON_Schema_2019_09_Core;
+    case SchemaBaseDialect::JSON_SCHEMA_2020_12:
+    case SchemaBaseDialect::JSON_SCHEMA_2020_12_HYPER:
+      return SchemaVocabularies::Known::JSON_SCHEMA_2020_12_CORE;
+    case SchemaBaseDialect::JSON_SCHEMA_2019_09:
+    case SchemaBaseDialect::JSON_SCHEMA_2019_09_HYPER:
+      return SchemaVocabularies::Known::JSON_SCHEMA_2019_09_CORE;
     default:
       assert(false);
-      return SchemaVocabularies::Known::JSON_Schema_2020_12_Core;
+      return SchemaVocabularies::Known::JSON_SCHEMA_2020_12_CORE;
   }
 }
 
@@ -456,46 +465,46 @@ auto dialect_to_known(const std::string_view dialect)
     -> std::optional<sourcemeta::blaze::SchemaVocabularies::Known> {
   using sourcemeta::blaze::SchemaVocabularies;
   if (dialect == "http://json-schema.org/draft-07/schema#") {
-    return SchemaVocabularies::Known::JSON_Schema_Draft_7;
+    return SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_7;
   }
   if (dialect == "http://json-schema.org/draft-07/hyper-schema#") {
-    return SchemaVocabularies::Known::JSON_Schema_Draft_7_Hyper;
+    return SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_7_HYPER;
   }
   if (dialect == "http://json-schema.org/draft-06/schema#") {
-    return SchemaVocabularies::Known::JSON_Schema_Draft_6;
+    return SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_6;
   }
   if (dialect == "http://json-schema.org/draft-06/hyper-schema#") {
-    return SchemaVocabularies::Known::JSON_Schema_Draft_6_Hyper;
+    return SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_6_HYPER;
   }
   if (dialect == "http://json-schema.org/draft-04/schema#") {
-    return SchemaVocabularies::Known::JSON_Schema_Draft_4;
+    return SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_4;
   }
   if (dialect == "http://json-schema.org/draft-04/hyper-schema#") {
-    return SchemaVocabularies::Known::JSON_Schema_Draft_4_Hyper;
+    return SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_4_HYPER;
   }
   if (dialect == "http://json-schema.org/draft-03/schema#") {
-    return SchemaVocabularies::Known::JSON_Schema_Draft_3;
+    return SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_3;
   }
   if (dialect == "http://json-schema.org/draft-03/hyper-schema#") {
-    return SchemaVocabularies::Known::JSON_Schema_Draft_3_Hyper;
+    return SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_3_HYPER;
   }
   if (dialect == "http://json-schema.org/draft-02/schema#") {
-    return SchemaVocabularies::Known::JSON_Schema_Draft_2;
+    return SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_2;
   }
   if (dialect == "http://json-schema.org/draft-02/hyper-schema#") {
-    return SchemaVocabularies::Known::JSON_Schema_Draft_2_Hyper;
+    return SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_2_HYPER;
   }
   if (dialect == "http://json-schema.org/draft-01/schema#") {
-    return SchemaVocabularies::Known::JSON_Schema_Draft_1;
+    return SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_1;
   }
   if (dialect == "http://json-schema.org/draft-01/hyper-schema#") {
-    return SchemaVocabularies::Known::JSON_Schema_Draft_1_Hyper;
+    return SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_1_HYPER;
   }
   if (dialect == "http://json-schema.org/draft-00/schema#") {
-    return SchemaVocabularies::Known::JSON_Schema_Draft_0;
+    return SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_0;
   }
   if (dialect == "http://json-schema.org/draft-00/hyper-schema#") {
-    return SchemaVocabularies::Known::JSON_Schema_Draft_0_Hyper;
+    return SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_0_HYPER;
   }
   return std::nullopt;
 }
@@ -505,31 +514,31 @@ auto base_dialect_to_known(const sourcemeta::blaze::SchemaBaseDialect dialect)
   using sourcemeta::blaze::SchemaBaseDialect;
   using sourcemeta::blaze::SchemaVocabularies;
   switch (dialect) {
-    case SchemaBaseDialect::JSON_Schema_Draft_7:
-      return SchemaVocabularies::Known::JSON_Schema_Draft_7;
-    case SchemaBaseDialect::JSON_Schema_Draft_7_Hyper:
-      return SchemaVocabularies::Known::JSON_Schema_Draft_7_Hyper;
-    case SchemaBaseDialect::JSON_Schema_Draft_6:
-      return SchemaVocabularies::Known::JSON_Schema_Draft_6;
-    case SchemaBaseDialect::JSON_Schema_Draft_6_Hyper:
-      return SchemaVocabularies::Known::JSON_Schema_Draft_6_Hyper;
-    case SchemaBaseDialect::JSON_Schema_Draft_4:
-      return SchemaVocabularies::Known::JSON_Schema_Draft_4;
-    case SchemaBaseDialect::JSON_Schema_Draft_4_Hyper:
-      return SchemaVocabularies::Known::JSON_Schema_Draft_4_Hyper;
-    case SchemaBaseDialect::JSON_Schema_Draft_3:
-      return SchemaVocabularies::Known::JSON_Schema_Draft_3;
-    case SchemaBaseDialect::JSON_Schema_Draft_3_Hyper:
-      return SchemaVocabularies::Known::JSON_Schema_Draft_3_Hyper;
-    case SchemaBaseDialect::JSON_Schema_Draft_2_Hyper:
-      return SchemaVocabularies::Known::JSON_Schema_Draft_2_Hyper;
-    case SchemaBaseDialect::JSON_Schema_Draft_1_Hyper:
-      return SchemaVocabularies::Known::JSON_Schema_Draft_1_Hyper;
-    case SchemaBaseDialect::JSON_Schema_Draft_0_Hyper:
-      return SchemaVocabularies::Known::JSON_Schema_Draft_0_Hyper;
+    case SchemaBaseDialect::JSON_SCHEMA_DRAFT_7:
+      return SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_7;
+    case SchemaBaseDialect::JSON_SCHEMA_DRAFT_7_HYPER:
+      return SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_7_HYPER;
+    case SchemaBaseDialect::JSON_SCHEMA_DRAFT_6:
+      return SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_6;
+    case SchemaBaseDialect::JSON_SCHEMA_DRAFT_6_HYPER:
+      return SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_6_HYPER;
+    case SchemaBaseDialect::JSON_SCHEMA_DRAFT_4:
+      return SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_4;
+    case SchemaBaseDialect::JSON_SCHEMA_DRAFT_4_HYPER:
+      return SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_4_HYPER;
+    case SchemaBaseDialect::JSON_SCHEMA_DRAFT_3:
+      return SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_3;
+    case SchemaBaseDialect::JSON_SCHEMA_DRAFT_3_HYPER:
+      return SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_3_HYPER;
+    case SchemaBaseDialect::JSON_SCHEMA_DRAFT_2_HYPER:
+      return SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_2_HYPER;
+    case SchemaBaseDialect::JSON_SCHEMA_DRAFT_1_HYPER:
+      return SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_1_HYPER;
+    case SchemaBaseDialect::JSON_SCHEMA_DRAFT_0_HYPER:
+      return SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_0_HYPER;
     default:
       assert(false);
-      return SchemaVocabularies::Known::JSON_Schema_Draft_7;
+      return SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_7;
   }
 }
 
@@ -537,17 +546,17 @@ auto is_pre_vocabulary_base_dialect(
     const sourcemeta::blaze::SchemaBaseDialect base_dialect) -> bool {
   using sourcemeta::blaze::SchemaBaseDialect;
   switch (base_dialect) {
-    case SchemaBaseDialect::JSON_Schema_Draft_7:
-    case SchemaBaseDialect::JSON_Schema_Draft_7_Hyper:
-    case SchemaBaseDialect::JSON_Schema_Draft_6:
-    case SchemaBaseDialect::JSON_Schema_Draft_6_Hyper:
-    case SchemaBaseDialect::JSON_Schema_Draft_4:
-    case SchemaBaseDialect::JSON_Schema_Draft_4_Hyper:
-    case SchemaBaseDialect::JSON_Schema_Draft_3:
-    case SchemaBaseDialect::JSON_Schema_Draft_3_Hyper:
-    case SchemaBaseDialect::JSON_Schema_Draft_2_Hyper:
-    case SchemaBaseDialect::JSON_Schema_Draft_1_Hyper:
-    case SchemaBaseDialect::JSON_Schema_Draft_0_Hyper:
+    case SchemaBaseDialect::JSON_SCHEMA_DRAFT_7:
+    case SchemaBaseDialect::JSON_SCHEMA_DRAFT_7_HYPER:
+    case SchemaBaseDialect::JSON_SCHEMA_DRAFT_6:
+    case SchemaBaseDialect::JSON_SCHEMA_DRAFT_6_HYPER:
+    case SchemaBaseDialect::JSON_SCHEMA_DRAFT_4:
+    case SchemaBaseDialect::JSON_SCHEMA_DRAFT_4_HYPER:
+    case SchemaBaseDialect::JSON_SCHEMA_DRAFT_3:
+    case SchemaBaseDialect::JSON_SCHEMA_DRAFT_3_HYPER:
+    case SchemaBaseDialect::JSON_SCHEMA_DRAFT_2_HYPER:
+    case SchemaBaseDialect::JSON_SCHEMA_DRAFT_1_HYPER:
+    case SchemaBaseDialect::JSON_SCHEMA_DRAFT_0_HYPER:
       return true;
     default:
       return false;
@@ -558,13 +567,13 @@ auto parse_vocabularies(const sourcemeta::core::JSON &schema,
                         const sourcemeta::blaze::SchemaBaseDialect base_dialect)
     -> std::optional<sourcemeta::blaze::SchemaVocabularies> {
   if (base_dialect !=
-          sourcemeta::blaze::SchemaBaseDialect::JSON_Schema_2020_12 &&
+          sourcemeta::blaze::SchemaBaseDialect::JSON_SCHEMA_2020_12 &&
       base_dialect !=
-          sourcemeta::blaze::SchemaBaseDialect::JSON_Schema_2020_12_Hyper &&
+          sourcemeta::blaze::SchemaBaseDialect::JSON_SCHEMA_2020_12_HYPER &&
       base_dialect !=
-          sourcemeta::blaze::SchemaBaseDialect::JSON_Schema_2019_09 &&
+          sourcemeta::blaze::SchemaBaseDialect::JSON_SCHEMA_2019_09 &&
       base_dialect !=
-          sourcemeta::blaze::SchemaBaseDialect::JSON_Schema_2019_09_Hyper) {
+          sourcemeta::blaze::SchemaBaseDialect::JSON_SCHEMA_2019_09_HYPER) {
     return std::nullopt;
   }
 
@@ -573,7 +582,7 @@ auto parse_vocabularies(const sourcemeta::core::JSON &schema,
   }
 
   const auto *vocabulary_entry{schema.try_at("$vocabulary")};
-  if (!vocabulary_entry) {
+  if (vocabulary_entry == nullptr) {
     return std::nullopt;
   }
 
@@ -638,24 +647,25 @@ auto sourcemeta::blaze::vocabularies(const SchemaResolver &resolver,
   // As a performance optimization shortcut
   if (base_dialect_string == dialect ||
       to_base_dialect(dialect) == base_dialect) {
-    if (base_dialect == SchemaBaseDialect::JSON_Schema_2020_12) {
+    if (base_dialect == SchemaBaseDialect::JSON_SCHEMA_2020_12) {
       return SchemaVocabularies{
-          {SchemaVocabularies::Known::JSON_Schema_2020_12_Core, true},
-          {SchemaVocabularies::Known::JSON_Schema_2020_12_Applicator, true},
-          {SchemaVocabularies::Known::JSON_Schema_2020_12_Unevaluated, true},
-          {SchemaVocabularies::Known::JSON_Schema_2020_12_Validation, true},
-          {SchemaVocabularies::Known::JSON_Schema_2020_12_Meta_Data, true},
-          {SchemaVocabularies::Known::JSON_Schema_2020_12_Format_Annotation,
+          {SchemaVocabularies::Known::JSON_SCHEMA_2020_12_CORE, true},
+          {SchemaVocabularies::Known::JSON_SCHEMA_2020_12_APPLICATOR, true},
+          {SchemaVocabularies::Known::JSON_SCHEMA_2020_12_UNEVALUATED, true},
+          {SchemaVocabularies::Known::JSON_SCHEMA_2020_12_VALIDATION, true},
+          {SchemaVocabularies::Known::JSON_SCHEMA_2020_12_META_DATA, true},
+          {SchemaVocabularies::Known::JSON_SCHEMA_2020_12_FORMAT_ANNOTATION,
            true},
-          {SchemaVocabularies::Known::JSON_Schema_2020_12_Content, true}};
-    } else if (base_dialect == SchemaBaseDialect::JSON_Schema_2019_09) {
+          {SchemaVocabularies::Known::JSON_SCHEMA_2020_12_CONTENT, true}};
+    }
+    if (base_dialect == SchemaBaseDialect::JSON_SCHEMA_2019_09) {
       return SchemaVocabularies{
-          {SchemaVocabularies::Known::JSON_Schema_2019_09_Core, true},
-          {SchemaVocabularies::Known::JSON_Schema_2019_09_Applicator, true},
-          {SchemaVocabularies::Known::JSON_Schema_2019_09_Validation, true},
-          {SchemaVocabularies::Known::JSON_Schema_2019_09_Meta_Data, true},
-          {SchemaVocabularies::Known::JSON_Schema_2019_09_Format, false},
-          {SchemaVocabularies::Known::JSON_Schema_2019_09_Content, true}};
+          {SchemaVocabularies::Known::JSON_SCHEMA_2019_09_CORE, true},
+          {SchemaVocabularies::Known::JSON_SCHEMA_2019_09_APPLICATOR, true},
+          {SchemaVocabularies::Known::JSON_SCHEMA_2019_09_VALIDATION, true},
+          {SchemaVocabularies::Known::JSON_SCHEMA_2019_09_META_DATA, true},
+          {SchemaVocabularies::Known::JSON_SCHEMA_2019_09_FORMAT, false},
+          {SchemaVocabularies::Known::JSON_SCHEMA_2019_09_CONTENT, true}};
     }
   }
 
@@ -720,12 +730,12 @@ auto sourcemeta::blaze::vocabularies(const SchemaResolver &resolver,
   if (!result.contains(core)) {
     throw sourcemeta::blaze::SchemaError(
         "The core vocabulary must always be present");
-  } else {
-    const auto core_status{result.get(core)};
-    if (core_status.has_value() && !core_status.value()) {
-      throw sourcemeta::blaze::SchemaError(
-          "The core vocabulary must always be required");
-    }
+  }
+
+  const auto core_status{result.get(core)};
+  if (core_status.has_value() && !core_status.value()) {
+    throw sourcemeta::blaze::SchemaError(
+        "The core vocabulary must always be required");
   }
 
   return result;

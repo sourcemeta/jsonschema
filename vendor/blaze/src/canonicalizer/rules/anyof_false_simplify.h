@@ -14,10 +14,10 @@ public:
     static const sourcemeta::core::JSON::String KEYWORD{"anyOf"};
     ONLY_CONTINUE_IF(
         vocabularies.contains_any(
-            {SchemaVocabularies::Known::JSON_Schema_2020_12_Applicator,
-             SchemaVocabularies::Known::JSON_Schema_2019_09_Applicator,
-             SchemaVocabularies::Known::JSON_Schema_Draft_7,
-             SchemaVocabularies::Known::JSON_Schema_Draft_6}) &&
+            {SchemaVocabularies::Known::JSON_SCHEMA_2020_12_APPLICATOR,
+             SchemaVocabularies::Known::JSON_SCHEMA_2019_09_APPLICATOR,
+             SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_7,
+             SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_6}) &&
         schema.is_object() && !schema.defines("not"));
 
     const auto *any_of{schema.try_at(KEYWORD)};

@@ -15,7 +15,7 @@ public:
             const sourcemeta::blaze::SchemaResolver &, const bool) const
       -> SchemaTransformRule::Result override {
     ONLY_CONTINUE_IF(
-        vocabularies.contains(SchemaVocabularies::Known::JSON_Schema_Draft_4) &&
+        vocabularies.contains(SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_4) &&
         schema.is_object());
 
     const bool is_resource_scope =
@@ -119,13 +119,13 @@ public:
   }
 
 private:
-  // NOLINTNEXTLINE(bugprone-throwing-static-initialization)
+  // NOLINTNEXTLINE(cert-err58-cpp,bugprone-throwing-static-initialization)
   static inline const std::string DRAFT_4_URL{
       "http://json-schema.org/draft-04/schema#"};
-  // NOLINTNEXTLINE(bugprone-throwing-static-initialization)
+  // NOLINTNEXTLINE(cert-err58-cpp,bugprone-throwing-static-initialization)
   static inline const std::string DRAFT_6_URL{
       "http://json-schema.org/draft-06/schema#"};
-  // NOLINTNEXTLINE(bugprone-throwing-static-initialization)
+  // NOLINTNEXTLINE(cert-err58-cpp,bugprone-throwing-static-initialization)
   static inline const std::array<std::string_view, 4> PROMOTED_KEYWORDS{
       {"const", "contains", "propertyNames", "examples"}};
 

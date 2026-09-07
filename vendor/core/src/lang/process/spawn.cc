@@ -19,7 +19,9 @@
 #if defined(_WIN32) && !defined(__MSYS__) && !defined(__CYGWIN__) &&           \
     !defined(__MINGW32__) && !defined(__MINGW64__)
 #define WIN32_LEAN_AND_MEAN
+#ifndef NOMINMAX
 #define NOMINMAX
+#endif
 #include <sourcemeta/core/text.h>
 
 #include <algorithm>  // std::sort

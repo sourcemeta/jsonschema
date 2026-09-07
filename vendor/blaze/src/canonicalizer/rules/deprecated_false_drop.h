@@ -13,8 +13,8 @@ public:
             const sourcemeta::blaze::SchemaResolver &) const -> bool override {
     ONLY_CONTINUE_IF(
         vocabularies.contains_any(
-            {SchemaVocabularies::Known::JSON_Schema_2019_09_Meta_Data,
-             SchemaVocabularies::Known::JSON_Schema_2020_12_Meta_Data}) &&
+            {SchemaVocabularies::Known::JSON_SCHEMA_2019_09_META_DATA,
+             SchemaVocabularies::Known::JSON_SCHEMA_2020_12_META_DATA}) &&
         schema.is_object());
 
     const auto *deprecated{schema.try_at("deprecated")};

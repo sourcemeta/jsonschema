@@ -19,17 +19,17 @@ public:
       -> SchemaTransformRule::Result override {
     ONLY_CONTINUE_IF(
         ((vocabularies.contains(
-              SchemaVocabularies::Known::JSON_Schema_2020_12_Validation) &&
+              SchemaVocabularies::Known::JSON_SCHEMA_2020_12_VALIDATION) &&
           vocabularies.contains(
-              SchemaVocabularies::Known::JSON_Schema_2020_12_Applicator)) ||
+              SchemaVocabularies::Known::JSON_SCHEMA_2020_12_APPLICATOR)) ||
          (vocabularies.contains(
-              SchemaVocabularies::Known::JSON_Schema_2019_09_Validation) &&
+              SchemaVocabularies::Known::JSON_SCHEMA_2019_09_VALIDATION) &&
           vocabularies.contains(
-              SchemaVocabularies::Known::JSON_Schema_2019_09_Applicator)) ||
+              SchemaVocabularies::Known::JSON_SCHEMA_2019_09_APPLICATOR)) ||
          vocabularies.contains_any(
-             {SchemaVocabularies::Known::JSON_Schema_Draft_7,
-              SchemaVocabularies::Known::JSON_Schema_Draft_6,
-              SchemaVocabularies::Known::JSON_Schema_Draft_4})) &&
+             {SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_7,
+              SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_6,
+              SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_4})) &&
         schema.is_object());
 
     const auto *required{schema.try_at("required")};
@@ -45,7 +45,7 @@ public:
     for (const auto &property : required->as_array()) {
       if (property.is_string() &&
           !this->defined_in_properties_sibling(schema, property.to_string()) &&
-          !WALK_UP_IN_PLACE_APPLICATORS(
+          !walk_up_in_place_applicators(
                root, frame, location, walker, resolver,
                [&](const JSON &ancestor, const SchemaVocabularies &) -> bool {
                  return this->defined_in_properties_sibling(
@@ -59,7 +59,7 @@ public:
     }
 
     ONLY_CONTINUE_IF(!locations.empty());
-    return APPLIES_TO_POINTERS(std::move(locations));
+    return applies_to_pointers(std::move(locations));
   }
 
   auto transform(JSON &schema, const Result &result) const -> void override {
@@ -78,7 +78,7 @@ private:
                                 const JSON::String &property) const -> bool {
     assert(schema.is_object());
     const auto *properties{schema.try_at("properties")};
-    return properties && properties->is_object() &&
+    return (properties != nullptr) && properties->is_object() &&
            properties->defines(property);
   };
 };

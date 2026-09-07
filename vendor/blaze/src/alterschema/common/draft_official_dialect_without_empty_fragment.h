@@ -36,7 +36,7 @@ public:
         dialect == "http://json-schema.org/draft-01/hyper-schema" ||
         dialect == "http://json-schema.org/draft-00/schema" ||
         dialect == "http://json-schema.org/draft-00/hyper-schema");
-    return APPLIES_TO_KEYWORDS("$schema");
+    return applies_to_keywords("$schema");
   }
 
   auto transform(sourcemeta::core::JSON &schema, const Result &) const

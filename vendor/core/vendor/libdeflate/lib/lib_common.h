@@ -13,12 +13,19 @@
 #  error "lib_common.h must always be included before libdeflate.h"
 #endif
 
+/*
+ * A build that compiles this library into a larger one does not want its
+ * symbols marked for export, as they would then leave whatever binary it
+ * ends up in.  Such a build can say so by defining this itself.
+ */
+#ifndef LIBDEFLATE_EXPORT_SYM
 #if defined(LIBDEFLATE_DLL) && (defined(_WIN32) || defined(__CYGWIN__))
 #  define LIBDEFLATE_EXPORT_SYM  __declspec(dllexport)
 #elif defined(__GNUC__)
 #  define LIBDEFLATE_EXPORT_SYM  __attribute__((visibility("default")))
 #else
 #  define LIBDEFLATE_EXPORT_SYM
+#endif
 #endif
 
 /*

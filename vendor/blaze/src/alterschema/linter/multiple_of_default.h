@@ -18,11 +18,11 @@ public:
       -> SchemaTransformRule::Result override {
     ONLY_CONTINUE_IF(
         vocabularies.contains_any(
-            {SchemaVocabularies::Known::JSON_Schema_2020_12_Validation,
-             SchemaVocabularies::Known::JSON_Schema_2019_09_Validation,
-             SchemaVocabularies::Known::JSON_Schema_Draft_7,
-             SchemaVocabularies::Known::JSON_Schema_Draft_6,
-             SchemaVocabularies::Known::JSON_Schema_Draft_4}) &&
+            {SchemaVocabularies::Known::JSON_SCHEMA_2020_12_VALIDATION,
+             SchemaVocabularies::Known::JSON_SCHEMA_2019_09_VALIDATION,
+             SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_7,
+             SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_6,
+             SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_4}) &&
         schema.is_object());
 
     const auto *type{schema.try_at("type")};
@@ -36,7 +36,7 @@ public:
          (multiple_of->is_real() && multiple_of->to_real() == 1.0) ||
          (multiple_of->is_decimal() &&
           multiple_of->to_decimal() == sourcemeta::core::Decimal{1})));
-    return APPLIES_TO_KEYWORDS("multipleOf");
+    return applies_to_keywords("multipleOf");
   }
 
   auto transform(JSON &schema, const Result &) const -> void override {

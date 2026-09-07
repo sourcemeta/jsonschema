@@ -56,22 +56,22 @@ auto vocabulary_uri(const SchemaVocabularies::URI &vocabulary)
 inline auto id_keyword(const SchemaBaseDialect base_dialect)
     -> std::string_view {
   switch (base_dialect) {
-    case SchemaBaseDialect::JSON_Schema_2020_12:
-    case SchemaBaseDialect::JSON_Schema_2020_12_Hyper:
-    case SchemaBaseDialect::JSON_Schema_2019_09:
-    case SchemaBaseDialect::JSON_Schema_2019_09_Hyper:
-    case SchemaBaseDialect::JSON_Schema_Draft_7:
-    case SchemaBaseDialect::JSON_Schema_Draft_7_Hyper:
-    case SchemaBaseDialect::JSON_Schema_Draft_6:
-    case SchemaBaseDialect::JSON_Schema_Draft_6_Hyper:
+    case SchemaBaseDialect::JSON_SCHEMA_2020_12:
+    case SchemaBaseDialect::JSON_SCHEMA_2020_12_HYPER:
+    case SchemaBaseDialect::JSON_SCHEMA_2019_09:
+    case SchemaBaseDialect::JSON_SCHEMA_2019_09_HYPER:
+    case SchemaBaseDialect::JSON_SCHEMA_DRAFT_7:
+    case SchemaBaseDialect::JSON_SCHEMA_DRAFT_7_HYPER:
+    case SchemaBaseDialect::JSON_SCHEMA_DRAFT_6:
+    case SchemaBaseDialect::JSON_SCHEMA_DRAFT_6_HYPER:
       return "$id";
-    case SchemaBaseDialect::JSON_Schema_Draft_4:
-    case SchemaBaseDialect::JSON_Schema_Draft_4_Hyper:
-    case SchemaBaseDialect::JSON_Schema_Draft_3:
-    case SchemaBaseDialect::JSON_Schema_Draft_3_Hyper:
-    case SchemaBaseDialect::JSON_Schema_Draft_2_Hyper:
-    case SchemaBaseDialect::JSON_Schema_Draft_1_Hyper:
-    case SchemaBaseDialect::JSON_Schema_Draft_0_Hyper:
+    case SchemaBaseDialect::JSON_SCHEMA_DRAFT_4:
+    case SchemaBaseDialect::JSON_SCHEMA_DRAFT_4_HYPER:
+    case SchemaBaseDialect::JSON_SCHEMA_DRAFT_3:
+    case SchemaBaseDialect::JSON_SCHEMA_DRAFT_3_HYPER:
+    case SchemaBaseDialect::JSON_SCHEMA_DRAFT_2_HYPER:
+    case SchemaBaseDialect::JSON_SCHEMA_DRAFT_1_HYPER:
+    case SchemaBaseDialect::JSON_SCHEMA_DRAFT_0_HYPER:
       return "id";
   }
 
@@ -82,23 +82,23 @@ inline auto id_keyword(const SchemaBaseDialect base_dialect)
 inline auto definitions_keyword(const SchemaBaseDialect base_dialect)
     -> std::string_view {
   switch (base_dialect) {
-    case SchemaBaseDialect::JSON_Schema_2020_12:
-    case SchemaBaseDialect::JSON_Schema_2020_12_Hyper:
-    case SchemaBaseDialect::JSON_Schema_2019_09:
-    case SchemaBaseDialect::JSON_Schema_2019_09_Hyper:
+    case SchemaBaseDialect::JSON_SCHEMA_2020_12:
+    case SchemaBaseDialect::JSON_SCHEMA_2020_12_HYPER:
+    case SchemaBaseDialect::JSON_SCHEMA_2019_09:
+    case SchemaBaseDialect::JSON_SCHEMA_2019_09_HYPER:
       return "$defs";
-    case SchemaBaseDialect::JSON_Schema_Draft_7:
-    case SchemaBaseDialect::JSON_Schema_Draft_7_Hyper:
-    case SchemaBaseDialect::JSON_Schema_Draft_6:
-    case SchemaBaseDialect::JSON_Schema_Draft_6_Hyper:
-    case SchemaBaseDialect::JSON_Schema_Draft_4:
-    case SchemaBaseDialect::JSON_Schema_Draft_4_Hyper:
-    case SchemaBaseDialect::JSON_Schema_Draft_3:
-    case SchemaBaseDialect::JSON_Schema_Draft_3_Hyper:
+    case SchemaBaseDialect::JSON_SCHEMA_DRAFT_7:
+    case SchemaBaseDialect::JSON_SCHEMA_DRAFT_7_HYPER:
+    case SchemaBaseDialect::JSON_SCHEMA_DRAFT_6:
+    case SchemaBaseDialect::JSON_SCHEMA_DRAFT_6_HYPER:
+    case SchemaBaseDialect::JSON_SCHEMA_DRAFT_4:
+    case SchemaBaseDialect::JSON_SCHEMA_DRAFT_4_HYPER:
+    case SchemaBaseDialect::JSON_SCHEMA_DRAFT_3:
+    case SchemaBaseDialect::JSON_SCHEMA_DRAFT_3_HYPER:
       return "definitions";
-    case SchemaBaseDialect::JSON_Schema_Draft_2_Hyper:
-    case SchemaBaseDialect::JSON_Schema_Draft_1_Hyper:
-    case SchemaBaseDialect::JSON_Schema_Draft_0_Hyper:
+    case SchemaBaseDialect::JSON_SCHEMA_DRAFT_2_HYPER:
+    case SchemaBaseDialect::JSON_SCHEMA_DRAFT_1_HYPER:
+    case SchemaBaseDialect::JSON_SCHEMA_DRAFT_0_HYPER:
       return "";
   }
 
@@ -112,17 +112,17 @@ inline auto definitions_keyword(const SchemaBaseDialect base_dialect)
 inline auto
 ref_overrides_adjacent_keywords(const SchemaBaseDialect base_dialect) -> bool {
   switch (base_dialect) {
-    case SchemaBaseDialect::JSON_Schema_Draft_7:
-    case SchemaBaseDialect::JSON_Schema_Draft_7_Hyper:
-    case SchemaBaseDialect::JSON_Schema_Draft_6:
-    case SchemaBaseDialect::JSON_Schema_Draft_6_Hyper:
-    case SchemaBaseDialect::JSON_Schema_Draft_4:
-    case SchemaBaseDialect::JSON_Schema_Draft_4_Hyper:
-    case SchemaBaseDialect::JSON_Schema_Draft_3:
-    case SchemaBaseDialect::JSON_Schema_Draft_3_Hyper:
-    case SchemaBaseDialect::JSON_Schema_Draft_2_Hyper:
-    case SchemaBaseDialect::JSON_Schema_Draft_1_Hyper:
-    case SchemaBaseDialect::JSON_Schema_Draft_0_Hyper:
+    case SchemaBaseDialect::JSON_SCHEMA_DRAFT_7:
+    case SchemaBaseDialect::JSON_SCHEMA_DRAFT_7_HYPER:
+    case SchemaBaseDialect::JSON_SCHEMA_DRAFT_6:
+    case SchemaBaseDialect::JSON_SCHEMA_DRAFT_6_HYPER:
+    case SchemaBaseDialect::JSON_SCHEMA_DRAFT_4:
+    case SchemaBaseDialect::JSON_SCHEMA_DRAFT_4_HYPER:
+    case SchemaBaseDialect::JSON_SCHEMA_DRAFT_3:
+    case SchemaBaseDialect::JSON_SCHEMA_DRAFT_3_HYPER:
+    case SchemaBaseDialect::JSON_SCHEMA_DRAFT_2_HYPER:
+    case SchemaBaseDialect::JSON_SCHEMA_DRAFT_1_HYPER:
+    case SchemaBaseDialect::JSON_SCHEMA_DRAFT_0_HYPER:
       return true;
     default:
       return false;
@@ -135,7 +135,7 @@ inline auto embedded_metaschema_identifier_matches(
     const std::optional<sourcemeta::core::JSON::String> &canonical) -> bool {
   const auto *value{
       candidate.try_at(sourcemeta::core::JSON::StringView{keyword})};
-  if (!value || !value->is_string()) {
+  if ((value == nullptr) || !value->is_string()) {
     return false;
   }
 
@@ -189,13 +189,14 @@ embedded_metaschema_candidate(const sourcemeta::core::JSON &document,
 
   for (const auto *const container : {"$defs", "definitions"}) {
     const auto *entries{document.try_at(container)};
-    if (!entries || !entries->is_object()) {
+    if ((entries == nullptr) || !entries->is_object()) {
       continue;
     }
 
     const auto *direct{
         entries->try_at(sourcemeta::core::JSON::StringView{identifier})};
-    if (direct && embedded_metaschema_matches(*direct, identifier, canonical)) {
+    if ((direct != nullptr) &&
+        embedded_metaschema_matches(*direct, identifier, canonical)) {
       return {direct, container};
     }
 
@@ -217,10 +218,10 @@ inline auto embedded_metaschema_link_valid(const sourcemeta::core::JSON &link,
   // In 2019-09 and 2020-12, `definitions` is still supported
   // for backwards compatibility
   switch (base_dialect) {
-    case SchemaBaseDialect::JSON_Schema_2020_12:
-    case SchemaBaseDialect::JSON_Schema_2020_12_Hyper:
-    case SchemaBaseDialect::JSON_Schema_2019_09:
-    case SchemaBaseDialect::JSON_Schema_2019_09_Hyper:
+    case SchemaBaseDialect::JSON_SCHEMA_2020_12:
+    case SchemaBaseDialect::JSON_SCHEMA_2020_12_HYPER:
+    case SchemaBaseDialect::JSON_SCHEMA_2019_09:
+    case SchemaBaseDialect::JSON_SCHEMA_2019_09_HYPER:
       if (container != "$defs" && container != "definitions") {
         return false;
       }

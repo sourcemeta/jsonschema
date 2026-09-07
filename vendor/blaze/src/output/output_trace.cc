@@ -18,7 +18,7 @@ auto TraceOutput::operator()(
     const sourcemeta::core::WeakPointer &instance_location,
     const sourcemeta::core::JSON &annotation) -> void {
 
-  const auto short_step_name{InstructionNames[std::to_underlying(step.type)]};
+  const auto short_step_name{INSTRUCTION_NAMES[std::to_underlying(step.type)]};
 
   if (is_annotation(step.type) && type == EvaluationType::Pre) {
     return;

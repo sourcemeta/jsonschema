@@ -27,19 +27,19 @@ auto evaluate_test_case(sourcemeta::blaze::Evaluator &evaluator,
             .valid = true,
             .rdf = std::move(expansion),
             .rdf_error = std::nullopt};
-  } else if (std::holds_alternative<sourcemeta::blaze::JSONLDResolutionError>(
-                 promotion)) {
+  }
+  if (std::holds_alternative<sourcemeta::blaze::JSONLDResolutionError>(
+          promotion)) {
     return {.passed = false,
             .valid = true,
             .rdf = std::nullopt,
             .rdf_error = std::get<sourcemeta::blaze::JSONLDResolutionError>(
                 std::move(promotion))};
-  } else {
-    return {.passed = false,
-            .valid = false,
-            .rdf = std::nullopt,
-            .rdf_error = std::nullopt};
   }
+  return {.passed = false,
+          .valid = false,
+          .rdf = std::nullopt,
+          .rdf_error = std::nullopt};
 }
 
 } // namespace

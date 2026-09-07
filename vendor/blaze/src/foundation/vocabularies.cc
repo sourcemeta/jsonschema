@@ -15,64 +15,64 @@
 // Ordered from most recent/common to oldest for faster short-circuiting
 #define SOURCEMETA_VOCABULARIES_X(X)                                           \
   /* 2020-12 vocabularies (most recent/common) */                              \
-  X(JSON_Schema_2020_12_Core,                                                  \
+  X(JSON_SCHEMA_2020_12_CORE,                                                  \
     "https://json-schema.org/draft/2020-12/vocab/core")                        \
-  X(JSON_Schema_2020_12_Applicator,                                            \
+  X(JSON_SCHEMA_2020_12_APPLICATOR,                                            \
     "https://json-schema.org/draft/2020-12/vocab/applicator")                  \
-  X(JSON_Schema_2020_12_Unevaluated,                                           \
+  X(JSON_SCHEMA_2020_12_UNEVALUATED,                                           \
     "https://json-schema.org/draft/2020-12/vocab/unevaluated")                 \
-  X(JSON_Schema_2020_12_Validation,                                            \
+  X(JSON_SCHEMA_2020_12_VALIDATION,                                            \
     "https://json-schema.org/draft/2020-12/vocab/validation")                  \
-  X(JSON_Schema_2020_12_Meta_Data,                                             \
+  X(JSON_SCHEMA_2020_12_META_DATA,                                             \
     "https://json-schema.org/draft/2020-12/vocab/meta-data")                   \
-  X(JSON_Schema_2020_12_Format_Annotation,                                     \
+  X(JSON_SCHEMA_2020_12_FORMAT_ANNOTATION,                                     \
     "https://json-schema.org/draft/2020-12/vocab/format-annotation")           \
-  X(JSON_Schema_2020_12_Format_Assertion,                                      \
+  X(JSON_SCHEMA_2020_12_FORMAT_ASSERTION,                                      \
     "https://json-schema.org/draft/2020-12/vocab/format-assertion")            \
-  X(JSON_Schema_2020_12_Content,                                               \
+  X(JSON_SCHEMA_2020_12_CONTENT,                                               \
     "https://json-schema.org/draft/2020-12/vocab/content")                     \
   /* 2019-09 vocabularies */                                                   \
-  X(JSON_Schema_2019_09_Core,                                                  \
+  X(JSON_SCHEMA_2019_09_CORE,                                                  \
     "https://json-schema.org/draft/2019-09/vocab/core")                        \
-  X(JSON_Schema_2019_09_Applicator,                                            \
+  X(JSON_SCHEMA_2019_09_APPLICATOR,                                            \
     "https://json-schema.org/draft/2019-09/vocab/applicator")                  \
-  X(JSON_Schema_2019_09_Validation,                                            \
+  X(JSON_SCHEMA_2019_09_VALIDATION,                                            \
     "https://json-schema.org/draft/2019-09/vocab/validation")                  \
-  X(JSON_Schema_2019_09_Meta_Data,                                             \
+  X(JSON_SCHEMA_2019_09_META_DATA,                                             \
     "https://json-schema.org/draft/2019-09/vocab/meta-data")                   \
-  X(JSON_Schema_2019_09_Format,                                                \
+  X(JSON_SCHEMA_2019_09_FORMAT,                                                \
     "https://json-schema.org/draft/2019-09/vocab/format")                      \
-  X(JSON_Schema_2019_09_Content,                                               \
+  X(JSON_SCHEMA_2019_09_CONTENT,                                               \
     "https://json-schema.org/draft/2019-09/vocab/content")                     \
-  X(JSON_Schema_2019_09_Hyper_Schema,                                          \
+  X(JSON_SCHEMA_2019_09_HYPER_SCHEMA,                                          \
     "https://json-schema.org/draft/2019-09/vocab/hyper-schema")                \
   /* Pre-vocabulary dialects (least common, checked last) */                   \
-  X(JSON_Schema_Draft_7, "http://json-schema.org/draft-07/schema#")            \
-  X(JSON_Schema_Draft_7_Hyper,                                                 \
+  X(JSON_SCHEMA_DRAFT_7, "http://json-schema.org/draft-07/schema#")            \
+  X(JSON_SCHEMA_DRAFT_7_HYPER,                                                 \
     "http://json-schema.org/draft-07/hyper-schema#")                           \
-  X(JSON_Schema_Draft_6, "http://json-schema.org/draft-06/schema#")            \
-  X(JSON_Schema_Draft_6_Hyper,                                                 \
+  X(JSON_SCHEMA_DRAFT_6, "http://json-schema.org/draft-06/schema#")            \
+  X(JSON_SCHEMA_DRAFT_6_HYPER,                                                 \
     "http://json-schema.org/draft-06/hyper-schema#")                           \
-  X(JSON_Schema_Draft_4, "http://json-schema.org/draft-04/schema#")            \
-  X(JSON_Schema_Draft_4_Hyper,                                                 \
+  X(JSON_SCHEMA_DRAFT_4, "http://json-schema.org/draft-04/schema#")            \
+  X(JSON_SCHEMA_DRAFT_4_HYPER,                                                 \
     "http://json-schema.org/draft-04/hyper-schema#")                           \
-  X(JSON_Schema_Draft_3, "http://json-schema.org/draft-03/schema#")            \
-  X(JSON_Schema_Draft_3_Hyper,                                                 \
+  X(JSON_SCHEMA_DRAFT_3, "http://json-schema.org/draft-03/schema#")            \
+  X(JSON_SCHEMA_DRAFT_3_HYPER,                                                 \
     "http://json-schema.org/draft-03/hyper-schema#")                           \
-  X(JSON_Schema_Draft_2, "http://json-schema.org/draft-02/schema#")            \
-  X(JSON_Schema_Draft_2_Hyper,                                                 \
+  X(JSON_SCHEMA_DRAFT_2, "http://json-schema.org/draft-02/schema#")            \
+  X(JSON_SCHEMA_DRAFT_2_HYPER,                                                 \
     "http://json-schema.org/draft-02/hyper-schema#")                           \
-  X(JSON_Schema_Draft_1, "http://json-schema.org/draft-01/schema#")            \
-  X(JSON_Schema_Draft_1_Hyper,                                                 \
+  X(JSON_SCHEMA_DRAFT_1, "http://json-schema.org/draft-01/schema#")            \
+  X(JSON_SCHEMA_DRAFT_1_HYPER,                                                 \
     "http://json-schema.org/draft-01/hyper-schema#")                           \
-  X(JSON_Schema_Draft_0, "http://json-schema.org/draft-00/schema#")            \
-  X(JSON_Schema_Draft_0_Hyper,                                                 \
+  X(JSON_SCHEMA_DRAFT_0, "http://json-schema.org/draft-00/schema#")            \
+  X(JSON_SCHEMA_DRAFT_0_HYPER,                                                 \
     "http://json-schema.org/draft-00/hyper-schema#")                           \
   /* OpenAPI vocabularies */                                                   \
-  X(OpenAPI_3_1_Base, "https://spec.openapis.org/oas/3.1/vocab/base")          \
-  X(OpenAPI_3_2_Base, "https://spec.openapis.org/oas/3.2/vocab/base")          \
+  X(OPENAPI_3_1_BASE, "https://spec.openapis.org/oas/3.1/vocab/base")          \
+  X(OPENAPI_3_2_BASE, "https://spec.openapis.org/oas/3.2/vocab/base")          \
   /* Sourcemeta vocabularies */                                                \
-  X(Sourcemeta_Extension_V1, "tag:sourcemeta.com,2026:extension/v1")
+  X(SOURCEMETA_EXTENSION_V1, "tag:sourcemeta.com,2026:extension/v1")
 
 namespace {
 auto uri_to_known_vocabulary(const std::string_view uri)
@@ -111,8 +111,8 @@ sourcemeta::blaze::SchemaVocabularies::SchemaVocabularies(
 // NOLINTNEXTLINE(bugprone-exception-escape)
 auto sourcemeta::blaze::SchemaVocabularies::contains(
     const sourcemeta::core::JSON::String &uri) const noexcept -> bool {
-  if (this->unknown.has_value()) {
-    if (this->unknown->contains(uri)) {
+  if (this->unknown_.has_value()) {
+    if (this->unknown_->contains(uri)) {
       return true;
     }
   }
@@ -133,7 +133,7 @@ auto sourcemeta::blaze::SchemaVocabularies::contains(
     Known vocabulary) const noexcept -> bool {
   const auto index = std::to_underlying(vocabulary);
   // Use [] operator instead of test() to avoid exceptions in noexcept function
-  return this->required_known[index] || this->optional_known[index];
+  return this->required_known_[index] || this->optional_known_[index];
 }
 
 auto sourcemeta::blaze::SchemaVocabularies::contains_any(
@@ -156,10 +156,10 @@ auto sourcemeta::blaze::SchemaVocabularies::insert(
   if (maybe_known.has_value()) {
     this->insert(maybe_known.value(), required);
   } else {
-    if (!this->unknown.has_value()) {
-      this->unknown.emplace();
+    if (!this->unknown_.has_value()) {
+      this->unknown_.emplace();
     }
-    this->unknown->insert({uri, required});
+    this->unknown_->insert({uri, required});
   }
 }
 
@@ -168,23 +168,23 @@ auto sourcemeta::blaze::SchemaVocabularies::insert(Known vocabulary,
     -> void {
   const auto index = std::to_underlying(vocabulary);
   if (required) {
-    this->required_known[index] = true;
-    this->optional_known[index] = false;
+    this->required_known_[index] = true;
+    this->optional_known_[index] = false;
   } else {
-    this->optional_known[index] = true;
-    this->required_known[index] = false;
+    this->optional_known_[index] = true;
+    this->required_known_[index] = false;
   }
   // Verify invariant: vocabulary cannot be both required and optional
-  assert((this->required_known & this->optional_known).none());
+  assert((this->required_known_ & this->optional_known_).none());
 }
 
 // NOLINTNEXTLINE(bugprone-exception-escape)
 auto sourcemeta::blaze::SchemaVocabularies::get(
     const sourcemeta::core::JSON::String &uri) const noexcept
     -> std::optional<bool> {
-  if (this->unknown.has_value()) {
-    const auto iterator{this->unknown->find(uri)};
-    if (iterator != this->unknown->end()) {
+  if (this->unknown_.has_value()) {
+    const auto iterator{this->unknown_->find(uri)};
+    if (iterator != this->unknown_->end()) {
       return iterator->second;
     }
   }
@@ -205,11 +205,11 @@ auto sourcemeta::blaze::SchemaVocabularies::get(Known vocabulary) const noexcept
     -> std::optional<bool> {
   const auto index = std::to_underlying(vocabulary);
   // Use [] operator instead of test() to avoid exceptions in noexcept function
-  assert(!this->required_known[index] || !this->optional_known[index]);
-  if (this->required_known[index]) {
+  assert(!this->required_known_[index] || !this->optional_known_[index]);
+  if (this->required_known_[index]) {
     return true;
   }
-  if (this->optional_known[index]) {
+  if (this->optional_known_[index]) {
     return false;
   }
   return std::nullopt;
@@ -217,18 +217,18 @@ auto sourcemeta::blaze::SchemaVocabularies::get(Known vocabulary) const noexcept
 
 auto sourcemeta::blaze::SchemaVocabularies::size() const noexcept
     -> std::size_t {
-  return (this->required_known | this->optional_known).count() +
-         (this->unknown.has_value() ? this->unknown->size() : 0);
+  return (this->required_known_ | this->optional_known_).count() +
+         (this->unknown_.has_value() ? this->unknown_->size() : 0);
 }
 
 auto sourcemeta::blaze::SchemaVocabularies::empty() const noexcept -> bool {
-  return this->required_known.none() && this->optional_known.none() &&
+  return this->required_known_.none() && this->optional_known_.none() &&
          !this->has_unknown();
 }
 
 auto sourcemeta::blaze::SchemaVocabularies::has_unknown() const noexcept
     -> bool {
-  return this->unknown.has_value() && !this->unknown->empty();
+  return this->unknown_.has_value() && !this->unknown_->empty();
 }
 
 auto sourcemeta::blaze::operator<<(std::ostream &stream,
@@ -257,11 +257,10 @@ auto sourcemeta::blaze::vocabulary_uri(SchemaVocabularies::Known vocabulary)
 auto sourcemeta::blaze::vocabulary_uri(
     const SchemaVocabularies::URI &vocabulary) -> std::string_view {
   const auto *known{std::get_if<SchemaVocabularies::Known>(&vocabulary)};
-  if (known) {
+  if (known != nullptr) {
     return vocabulary_uri(*known);
-  } else {
-    return *std::get_if<sourcemeta::core::JSON::String>(&vocabulary);
   }
+  return *std::get_if<sourcemeta::core::JSON::String>(&vocabulary);
 }
 
 auto sourcemeta::blaze::operator<<(std::ostream &stream,
@@ -274,7 +273,7 @@ auto sourcemeta::blaze::SchemaVocabularies::throw_if_any_unsupported(
     const std::unordered_set<URI> &supported, const char *message) const
     -> void {
   for (std::size_t index = 0; index < KNOWN_VOCABULARY_COUNT; ++index) {
-    if (!this->required_known[index]) {
+    if (!this->required_known_[index]) {
       continue;
     }
 
@@ -298,8 +297,8 @@ auto sourcemeta::blaze::SchemaVocabularies::throw_if_any_unsupported(
     throw SchemaVocabularyError(uri, message);
   }
 
-  if (this->unknown.has_value()) {
-    for (const auto &[uri, required] : *this->unknown) {
+  if (this->unknown_.has_value()) {
+    for (const auto &[uri, required] : *this->unknown_) {
       if (!required || supported.contains(uri)) {
         continue;
       }

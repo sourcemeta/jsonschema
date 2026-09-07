@@ -23,7 +23,7 @@ inline auto wrap_identifier(const std::string_view identifier)
   return result;
 }
 
-inline auto TEST_ERROR_IF(
+inline auto test_error_if(
     bool condition, const sourcemeta::core::PointerPositionTracker &tracker,
     const sourcemeta::core::Pointer &pointer, const char *message) -> void {
   if (condition) [[unlikely]] {
@@ -46,49 +46,49 @@ auto TestCase::parse(
     const sourcemeta::core::Pointer &location,
     const sourcemeta::core::PointerPositionTracker::Position &position)
     -> TestCase {
-  TEST_ERROR_IF(!test_case_json.is_object(), tracker, location,
+  test_error_if(!test_case_json.is_object(), tracker, location,
                 "Test case documents must be objects");
-  TEST_ERROR_IF(!test_case_json.defines("data") &&
+  test_error_if(!test_case_json.defines("data") &&
                     !test_case_json.defines("dataPath"),
                 tracker, location,
                 "Test case documents must contain a `data` or `dataPath` "
                 "property");
-  TEST_ERROR_IF(test_case_json.defines("data") &&
+  test_error_if(test_case_json.defines("data") &&
                     test_case_json.defines("dataPath"),
                 tracker, location,
                 "Test case documents must contain either a `data` or "
                 "`dataPath` property, but not both");
-  TEST_ERROR_IF(test_case_json.defines("dataPath") &&
+  test_error_if(test_case_json.defines("dataPath") &&
                     !test_case_json.at("dataPath").is_string(),
                 tracker, location.concat("dataPath"),
                 "Test case documents must set the `dataPath` property to a "
                 "string");
-  TEST_ERROR_IF(test_case_json.defines("description") &&
+  test_error_if(test_case_json.defines("description") &&
                     !test_case_json.at("description").is_string(),
                 tracker, location.concat("description"),
                 "If you set a test case description, it must be a string");
-  TEST_ERROR_IF(!test_case_json.defines("valid"), tracker, location,
+  test_error_if(!test_case_json.defines("valid"), tracker, location,
                 "Test case documents must contain a `valid` property");
-  TEST_ERROR_IF(!test_case_json.at("valid").is_boolean(), tracker,
+  test_error_if(!test_case_json.at("valid").is_boolean(), tracker,
                 location.concat("valid"),
                 "The test case document `valid` property must be a boolean");
-  TEST_ERROR_IF(test_case_json.defines("rdf") &&
+  test_error_if(test_case_json.defines("rdf") &&
                     test_case_json.defines("rdfPath"),
                 tracker, location,
                 "Test case documents may contain either an `rdf` or "
                 "`rdfPath` property, but not both");
-  TEST_ERROR_IF(test_case_json.defines("rdfPath") &&
+  test_error_if(test_case_json.defines("rdfPath") &&
                     !test_case_json.at("rdfPath").is_string(),
                 tracker, location.concat("rdfPath"),
                 "Test case documents must set the `rdfPath` property to a "
                 "string");
-  TEST_ERROR_IF(
+  test_error_if(
       (test_case_json.defines("rdf") || test_case_json.defines("rdfPath")) &&
           !test_case_json.at("valid").to_boolean(),
       tracker, location,
       "Test case documents may only set the `rdf` or `rdfPath` "
       "property when the `valid` property is set to true");
-  TEST_ERROR_IF(test_case_json.defines("rdf") &&
+  test_error_if(test_case_json.defines("rdf") &&
                     !test_case_json.at("rdf").is_array(),
                 tracker, location.concat("rdf"),
                 "Test case documents must set the `rdf` property to an "
@@ -106,7 +106,7 @@ auto TestCase::parse(
     const std::filesystem::path rdf_path{sourcemeta::core::weakly_canonical(
         base_path / test_case_json.at("rdfPath").to_string())};
     rdf = sourcemeta::core::read_yaml_or_json(rdf_path);
-    TEST_ERROR_IF(!rdf.value().is_array(), tracker, location.concat("rdfPath"),
+    test_error_if(!rdf.value().is_array(), tracker, location.concat("rdfPath"),
                   "The document referenced by the test case `rdfPath` "
                   "property must be an array");
   }
@@ -120,19 +120,17 @@ auto TestCase::parse(
                     .rdf = std::move(rdf),
                     .tracker = std::move(data_tracker),
                     .position = position};
-  } else {
-    const std::filesystem::path data_path{sourcemeta::core::weakly_canonical(
-        base_path / test_case_json.at("dataPath").to_string())};
-    sourcemeta::core::JSON data{nullptr};
-    sourcemeta::core::read_yaml_or_json(data_path, data,
-                                        std::ref(data_tracker));
-    return TestCase{.description = std::move(description),
-                    .valid = test_case_json.at("valid").to_boolean(),
-                    .data = std::move(data),
-                    .rdf = std::move(rdf),
-                    .tracker = std::move(data_tracker),
-                    .position = position};
   }
+  const std::filesystem::path data_path{sourcemeta::core::weakly_canonical(
+      base_path / test_case_json.at("dataPath").to_string())};
+  sourcemeta::core::JSON data{nullptr};
+  sourcemeta::core::read_yaml_or_json(data_path, data, std::ref(data_tracker));
+  return TestCase{.description = std::move(description),
+                  .valid = test_case_json.at("valid").to_boolean(),
+                  .data = std::move(data),
+                  .rdf = std::move(rdf),
+                  .tracker = std::move(data_tracker),
+                  .position = position};
 }
 
 auto TestSuite::parse(const sourcemeta::core::JSON &document,
@@ -145,20 +143,20 @@ auto TestSuite::parse(const sourcemeta::core::JSON &document,
                       const std::string_view default_id,
                       const std::optional<Tweaks> &tweaks) -> TestSuite {
   assert(std::filesystem::is_directory(base_path));
-  TEST_ERROR_IF(!document.is_object(), tracker, sourcemeta::core::EMPTY_POINTER,
+  test_error_if(!document.is_object(), tracker, sourcemeta::core::EMPTY_POINTER,
                 "The test document must be an object");
-  TEST_ERROR_IF(!document.defines("target"), tracker,
+  test_error_if(!document.defines("target"), tracker,
                 sourcemeta::core::EMPTY_POINTER,
                 "The test document must contain a `target` property");
-  TEST_ERROR_IF(!document.at("target").is_string() &&
+  test_error_if(!document.at("target").is_string() &&
                     !document.at("target").is_array(),
                 tracker, sourcemeta::core::Pointer{"target"},
                 "The test document `target` property must be a URI or an "
                 "array of URIs");
-  TEST_ERROR_IF(!document.defines("tests"), tracker,
+  test_error_if(!document.defines("tests"), tracker,
                 sourcemeta::core::EMPTY_POINTER,
                 "The test document must contain a `tests` property");
-  TEST_ERROR_IF(!document.at("tests").is_array(), tracker,
+  test_error_if(!document.at("tests").is_array(), tracker,
                 sourcemeta::core::Pointer{"tests"},
                 "The test document `tests` property must be an array");
 
@@ -173,7 +171,7 @@ auto TestSuite::parse(const sourcemeta::core::JSON &document,
     schema_uri.canonicalize();
     test_suite.targets.push_back(schema_uri.recompose());
   } else {
-    TEST_ERROR_IF(document.at("target").empty(), tracker,
+    test_error_if(document.at("target").empty(), tracker,
                   sourcemeta::core::Pointer{"target"},
                   "The test document `target` array must contain at least "
                   "one URI");
@@ -181,7 +179,7 @@ auto TestSuite::parse(const sourcemeta::core::JSON &document,
     std::size_t target_index{0};
     for (const auto &target_entry : document.at("target").as_array()) {
       const sourcemeta::core::Pointer target_location{"target", target_index};
-      TEST_ERROR_IF(!target_entry.is_string(), tracker, target_location,
+      test_error_if(!target_entry.is_string(), tracker, target_location,
                     "Each entry in the test document `target` array must be "
                     "a URI");
       sourcemeta::core::URI schema_uri{target_entry.to_string()};
@@ -208,33 +206,33 @@ auto TestSuite::parse(const sourcemeta::core::JSON &document,
         return test_case.rdf.has_value();
       })};
 
-  test_suite.tweaks_fast = tweaks;
-  test_suite.tweaks_exhaustive = tweaks;
+  test_suite.tweaks_fast_ = tweaks;
+  test_suite.tweaks_exhaustive_ = tweaks;
   if (with_rdf) {
-    if (!test_suite.tweaks_fast.has_value()) {
-      test_suite.tweaks_fast.emplace();
+    if (!test_suite.tweaks_fast_.has_value()) {
+      test_suite.tweaks_fast_.emplace();
     }
 
-    if (!test_suite.tweaks_fast.value().annotations.has_value()) {
-      test_suite.tweaks_fast.value().annotations.emplace();
+    if (!test_suite.tweaks_fast_.value().annotations.has_value()) {
+      test_suite.tweaks_fast_.value().annotations.emplace();
     }
 
-    test_suite.tweaks_fast.value().annotations.value().insert(
+    test_suite.tweaks_fast_.value().annotations.value().insert(
         JSONLD_KEYWORDS.cbegin(), JSONLD_KEYWORDS.cend());
   }
 
-  test_suite.schema_resolver = schema_resolver;
-  test_suite.walker = walker;
-  test_suite.compiler = compiler;
-  test_suite.default_dialect = default_dialect;
-  test_suite.default_id = default_id;
+  test_suite.schema_resolver_ = schema_resolver;
+  test_suite.walker_ = walker;
+  test_suite.compiler_ = compiler;
+  test_suite.default_dialect_ = default_dialect;
+  test_suite.default_id_ = default_id;
 
-  test_suite.schemas_fast.reserve(test_suite.targets.size());
-  test_suite.schemas_exhaustive.resize(test_suite.targets.size());
+  test_suite.schemas_fast_.reserve(test_suite.targets.size());
+  test_suite.schemas_exhaustive_.resize(test_suite.targets.size());
 
   for (std::size_t target_index = 0; target_index < test_suite.targets.size();
        ++target_index) {
-    test_suite.schemas_fast.push_back(
+    test_suite.schemas_fast_.push_back(
         test_suite.compile_target(target_index, Mode::FastValidation));
   }
 
@@ -246,11 +244,11 @@ auto TestSuite::compile_target(const std::size_t target_index,
   const auto &target{this->targets[target_index]};
 
   try {
-    return compile(wrap_identifier(target), this->walker, this->schema_resolver,
-                   this->compiler, mode, this->default_dialect,
-                   this->default_id, "",
-                   mode == Mode::FastValidation ? this->tweaks_fast
-                                                : this->tweaks_exhaustive);
+    return compile(wrap_identifier(target), this->walker_,
+                   this->schema_resolver_, this->compiler_, mode,
+                   this->default_dialect_, this->default_id_, "",
+                   mode == Mode::FastValidation ? this->tweaks_fast_
+                                                : this->tweaks_exhaustive_);
   } catch (const sourcemeta::blaze::SchemaReferenceError &error) {
     if (error.location() == sourcemeta::core::Pointer{"$ref"} &&
         error.identifier() == target) {
@@ -263,13 +261,13 @@ auto TestSuite::compile_target(const std::size_t target_index,
 }
 
 auto TestSuite::fast(const std::size_t target_index) const -> const Template & {
-  assert(target_index < this->schemas_fast.size());
-  return this->schemas_fast[target_index];
+  assert(target_index < this->schemas_fast_.size());
+  return this->schemas_fast_[target_index];
 }
 
 auto TestSuite::exhaustive(const std::size_t target_index) -> const Template & {
-  assert(target_index < this->schemas_exhaustive.size());
-  auto &schema_exhaustive{this->schemas_exhaustive[target_index]};
+  assert(target_index < this->schemas_exhaustive_.size());
+  auto &schema_exhaustive{this->schemas_exhaustive_[target_index]};
   if (!schema_exhaustive.has_value()) {
     schema_exhaustive = this->compile_target(target_index, Mode::Exhaustive);
   }

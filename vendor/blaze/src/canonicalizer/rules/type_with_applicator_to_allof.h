@@ -14,11 +14,11 @@ public:
             const sourcemeta::blaze::SchemaResolver &) const -> bool override {
     ONLY_CONTINUE_IF(
         vocabularies.contains_any(
-            {SchemaVocabularies::Known::JSON_Schema_Draft_4,
-             SchemaVocabularies::Known::JSON_Schema_Draft_6,
-             SchemaVocabularies::Known::JSON_Schema_Draft_7,
-             SchemaVocabularies::Known::JSON_Schema_2019_09_Applicator,
-             SchemaVocabularies::Known::JSON_Schema_2020_12_Applicator}) &&
+            {SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_4,
+             SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_6,
+             SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_7,
+             SchemaVocabularies::Known::JSON_SCHEMA_2019_09_APPLICATOR,
+             SchemaVocabularies::Known::JSON_SCHEMA_2020_12_APPLICATOR}) &&
         schema.is_object());
 
     const bool has_not{schema.defines("not")};
@@ -27,28 +27,28 @@ public:
     const bool has_oneof{schema.defines("oneOf")};
     const bool has_if{
         vocabularies.contains_any(
-            {SchemaVocabularies::Known::JSON_Schema_Draft_7,
-             SchemaVocabularies::Known::JSON_Schema_2019_09_Applicator,
-             SchemaVocabularies::Known::JSON_Schema_2020_12_Applicator}) &&
+            {SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_7,
+             SchemaVocabularies::Known::JSON_SCHEMA_2019_09_APPLICATOR,
+             SchemaVocabularies::Known::JSON_SCHEMA_2020_12_APPLICATOR}) &&
         schema.defines("if")};
     this->has_if_then_else_ = has_if;
     const auto *type_value{schema.try_at("type")};
-    const bool has_type{type_value && type_value->is_string()};
+    const bool has_type{(type_value != nullptr) && type_value->is_string()};
     const bool has_enum{schema.defines("enum")};
     const bool is_modern{
         vocabularies.contains(
-            SchemaVocabularies::Known::JSON_Schema_2019_09_Core) ||
+            SchemaVocabularies::Known::JSON_SCHEMA_2019_09_CORE) ||
         vocabularies.contains(
-            SchemaVocabularies::Known::JSON_Schema_2020_12_Core)};
+            SchemaVocabularies::Known::JSON_SCHEMA_2020_12_CORE)};
     const bool has_ref{!is_modern && schema.defines("$ref")};
     this->has_modern_ref_ = is_modern && schema.defines("$ref");
     this->has_dynamic_ref_ =
         vocabularies.contains(
-            SchemaVocabularies::Known::JSON_Schema_2020_12_Core) &&
+            SchemaVocabularies::Known::JSON_SCHEMA_2020_12_CORE) &&
         schema.defines("$dynamicRef");
     this->has_recursive_ref_ =
         vocabularies.contains(
-            SchemaVocabularies::Known::JSON_Schema_2019_09_Core) &&
+            SchemaVocabularies::Known::JSON_SCHEMA_2019_09_CORE) &&
         schema.defines("$recursiveRef");
     const unsigned int applicator_count{
         (has_not ? 1U : 0U) + (has_anyof ? 1U : 0U) + (has_allof ? 1U : 0U) +
@@ -84,8 +84,8 @@ public:
 
     this->has_unevaluated_ =
         vocabularies.contains_any(
-            {SchemaVocabularies::Known::JSON_Schema_2020_12_Unevaluated,
-             SchemaVocabularies::Known::JSON_Schema_2019_09_Applicator}) &&
+            {SchemaVocabularies::Known::JSON_SCHEMA_2020_12_UNEVALUATED,
+             SchemaVocabularies::Known::JSON_SCHEMA_2019_09_APPLICATOR}) &&
         (schema.defines("unevaluatedProperties") ||
          schema.defines("unevaluatedItems"));
     bool has_orphaned_typed_keywords{false};
@@ -292,7 +292,7 @@ public:
         if (!schema.defines(applicator)) {
           continue;
         }
-        if (this->applicators_with_refs_ & applicator_bit(applicator)) {
+        if ((this->applicators_with_refs_ & applicator_bit(applicator)) != 0) {
           continue;
         }
         auto branch{sourcemeta::core::JSON::make_object()};
@@ -437,25 +437,24 @@ public:
     }
 
     const auto &keyword{relative.at(0).to_property()};
-    static const sourcemeta::core::JSON::String allof_keyword{"allOf"};
+    static const sourcemeta::core::JSON::String ALLOF_KEYWORD{"allOf"};
 
     for (const auto &typed_kw : this->typed_keywords_) {
       if (typed_kw == keyword) {
         const sourcemeta::core::Pointer old_prefix{current.concat(keyword)};
         if (this->strategy_ == Strategy::SafeExtract) {
           const sourcemeta::core::Pointer new_prefix{current.concat(
-              {allof_keyword, this->typed_branch_index_, keyword})};
-          return target.rebase(old_prefix, new_prefix);
-        } else {
-          const std::size_t typed_index{(this->has_modern_ref_ ? 1U : 0U) +
-                                        (this->has_dynamic_ref_ ? 1U : 0U) +
-                                        (this->has_recursive_ref_ ? 1U : 0U) +
-                                        static_cast<std::size_t>(std::popcount(
-                                            this->applicator_indices_))};
-          const sourcemeta::core::Pointer new_prefix{
-              current.concat({allof_keyword, typed_index, keyword})};
+              {ALLOF_KEYWORD, this->typed_branch_index_, keyword})};
           return target.rebase(old_prefix, new_prefix);
         }
+        const std::size_t typed_index{
+            (this->has_modern_ref_ ? 1U : 0U) +
+            (this->has_dynamic_ref_ ? 1U : 0U) +
+            (this->has_recursive_ref_ ? 1U : 0U) +
+            static_cast<std::size_t>(std::popcount(this->applicator_indices_))};
+        const sourcemeta::core::Pointer new_prefix{
+            current.concat({ALLOF_KEYWORD, typed_index, keyword})};
+        return target.rebase(old_prefix, new_prefix);
       }
     }
 
@@ -477,10 +476,10 @@ public:
              (keyword == "then" || keyword == "else"))) {
           const sourcemeta::core::Pointer old_prefix{current.concat(keyword)};
           const sourcemeta::core::Pointer new_prefix{
-              current.concat({allof_keyword, index, keyword})};
+              current.concat({ALLOF_KEYWORD, index, keyword})};
           return target.rebase(old_prefix, new_prefix);
         }
-        if (this->applicator_indices_ & applicator_bit(applicator)) {
+        if ((this->applicator_indices_ & applicator_bit(applicator)) != 0) {
           index++;
         }
       }
@@ -497,16 +496,21 @@ private:
 
   static constexpr auto applicator_bit(std::string_view keyword)
       -> std::uint8_t {
-    if (keyword == "not")
+    if (keyword == "not") {
       return 1;
-    if (keyword == "anyOf")
+    }
+    if (keyword == "anyOf") {
       return 2;
-    if (keyword == "allOf")
+    }
+    if (keyword == "allOf") {
       return 4;
-    if (keyword == "oneOf")
+    }
+    if (keyword == "oneOf") {
       return 8;
-    if (keyword == "if" || keyword == "then" || keyword == "else")
+    }
+    if (keyword == "if" || keyword == "then" || keyword == "else") {
       return 16;
+    }
     return 0;
   }
 

@@ -8,10 +8,10 @@ using namespace sourcemeta::core;
 using namespace sourcemeta::blaze;
 using Known = SchemaVocabularies::Known;
 
-// NOLINTBEGIN(bugprone-throwing-static-initialization)
-static const std::string UNEVALUATED_PROPERTIES{"unevaluatedProperties"};
-static const std::string UNEVALUATED_ITEMS{"unevaluatedItems"};
-// NOLINTEND(bugprone-throwing-static-initialization)
+// NOLINTBEGIN(cert-err58-cpp,bugprone-throwing-static-initialization)
+const std::string UNEVALUATED_PROPERTIES{"unevaluatedProperties"};
+const std::string UNEVALUATED_ITEMS{"unevaluatedItems"};
+// NOLINTEND(cert-err58-cpp,bugprone-throwing-static-initialization)
 
 auto find_adjacent_dependencies(
     const JSON::String &current, const JSON &schema, const SchemaFrame &frame,
@@ -29,10 +29,11 @@ auto find_adjacent_dependencies(
   for (const auto &property : subschema.as_object()) {
     if (property.first == current && entry.pointer == root.pointer) {
       continue;
-    } else if (keywords.contains(property.first)) {
+    }
+    if (keywords.contains(property.first)) {
       // In 2019-09, `additionalItems` takes no effect without `items`
       if (subschema_vocabularies.contains(
-              Known::JSON_Schema_2019_09_Applicator) &&
+              Known::JSON_SCHEMA_2019_09_APPLICATOR) &&
           property.first == "additionalItems" && !subschema.defines("items")) {
         continue;
       }
@@ -220,11 +221,11 @@ auto unevaluated(const JSON &schema, const SchemaFrame &frame,
     // each of them
     if (has_unevaluated_properties) {
       if ((subschema_vocabularies.contains(
-               Known::JSON_Schema_2020_12_Unevaluated) &&
+               Known::JSON_SCHEMA_2020_12_UNEVALUATED) &&
            subschema_vocabularies.contains(
-               Known::JSON_Schema_2020_12_Applicator)) ||
+               Known::JSON_SCHEMA_2020_12_APPLICATOR)) ||
           subschema_vocabularies.contains(
-              Known::JSON_Schema_2019_09_Applicator)) {
+              Known::JSON_SCHEMA_2019_09_APPLICATOR)) {
         SchemaUnevaluatedEntry unevaluated;
         find_adjacent_dependencies(
             "unevaluatedProperties", schema, frame, walker, resolver,
@@ -239,9 +240,9 @@ auto unevaluated(const JSON &schema, const SchemaFrame &frame,
     if (has_unevaluated_items) {
       SchemaUnevaluatedEntry unevaluated;
       if (subschema_vocabularies.contains(
-              Known::JSON_Schema_2020_12_Unevaluated) &&
+              Known::JSON_SCHEMA_2020_12_UNEVALUATED) &&
           subschema_vocabularies.contains(
-              Known::JSON_Schema_2020_12_Applicator)) {
+              Known::JSON_SCHEMA_2020_12_APPLICATOR)) {
         find_adjacent_dependencies(
             "unevaluatedItems", schema, frame, walker, resolver,
             {"prefixItems", "items", "contains", "unevaluatedItems"}, location,
@@ -249,7 +250,7 @@ auto unevaluated(const JSON &schema, const SchemaFrame &frame,
         register_under_all_bases(result, frame, location, UNEVALUATED_ITEMS,
                                  unevaluated);
       } else if (subschema_vocabularies.contains(
-                     Known::JSON_Schema_2019_09_Applicator)) {
+                     Known::JSON_SCHEMA_2019_09_APPLICATOR)) {
         find_adjacent_dependencies(
             "unevaluatedItems", schema, frame, walker, resolver,
             {"items", "additionalItems", "unevaluatedItems"}, location,

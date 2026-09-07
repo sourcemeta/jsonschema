@@ -43,7 +43,8 @@ public:
       const auto *required{schema.try_at("required")};
       schema.assign(
           "minProperties",
-          sourcemeta::core::JSON{required && is_property_name_array(*required)
+          sourcemeta::core::JSON{(required != nullptr) &&
+                                         is_property_name_array(*required)
                                      ? required->size()
                                      : 0});
     }
@@ -97,65 +98,65 @@ private:
     this->add_pattern_properties_ =
         !schema.defines("patternProperties") &&
         vocabularies.contains_any(
-            {SchemaVocabularies::Known::JSON_Schema_Draft_3,
-             SchemaVocabularies::Known::JSON_Schema_Draft_4,
-             SchemaVocabularies::Known::JSON_Schema_Draft_6,
-             SchemaVocabularies::Known::JSON_Schema_Draft_7,
-             SchemaVocabularies::Known::JSON_Schema_2019_09_Applicator,
-             SchemaVocabularies::Known::JSON_Schema_2020_12_Applicator});
+            {SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_3,
+             SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_4,
+             SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_6,
+             SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_7,
+             SchemaVocabularies::Known::JSON_SCHEMA_2019_09_APPLICATOR,
+             SchemaVocabularies::Known::JSON_SCHEMA_2020_12_APPLICATOR});
 
     this->add_property_names_ =
         !schema.defines("propertyNames") &&
         vocabularies.contains_any(
-            {SchemaVocabularies::Known::JSON_Schema_Draft_6,
-             SchemaVocabularies::Known::JSON_Schema_Draft_7,
-             SchemaVocabularies::Known::JSON_Schema_2019_09_Applicator,
-             SchemaVocabularies::Known::JSON_Schema_2020_12_Applicator});
+            {SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_6,
+             SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_7,
+             SchemaVocabularies::Known::JSON_SCHEMA_2019_09_APPLICATOR,
+             SchemaVocabularies::Known::JSON_SCHEMA_2020_12_APPLICATOR});
 
     this->add_min_properties_ =
         !schema.defines("minProperties") &&
         vocabularies.contains_any(
-            {SchemaVocabularies::Known::JSON_Schema_2020_12_Validation,
-             SchemaVocabularies::Known::JSON_Schema_2019_09_Validation,
-             SchemaVocabularies::Known::JSON_Schema_Draft_7,
-             SchemaVocabularies::Known::JSON_Schema_Draft_6,
-             SchemaVocabularies::Known::JSON_Schema_Draft_4});
+            {SchemaVocabularies::Known::JSON_SCHEMA_2020_12_VALIDATION,
+             SchemaVocabularies::Known::JSON_SCHEMA_2019_09_VALIDATION,
+             SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_7,
+             SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_6,
+             SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_4});
 
     this->add_properties_ =
         !schema.defines("properties") &&
         ((vocabularies.contains(
-              SchemaVocabularies::Known::JSON_Schema_2020_12_Validation) &&
+              SchemaVocabularies::Known::JSON_SCHEMA_2020_12_VALIDATION) &&
           vocabularies.contains(
-              SchemaVocabularies::Known::JSON_Schema_2020_12_Applicator)) ||
+              SchemaVocabularies::Known::JSON_SCHEMA_2020_12_APPLICATOR)) ||
          (vocabularies.contains(
-              SchemaVocabularies::Known::JSON_Schema_2019_09_Validation) &&
+              SchemaVocabularies::Known::JSON_SCHEMA_2019_09_VALIDATION) &&
           vocabularies.contains(
-              SchemaVocabularies::Known::JSON_Schema_2019_09_Applicator)) ||
+              SchemaVocabularies::Known::JSON_SCHEMA_2019_09_APPLICATOR)) ||
          vocabularies.contains_any(
-             {SchemaVocabularies::Known::JSON_Schema_Draft_7,
-              SchemaVocabularies::Known::JSON_Schema_Draft_6,
-              SchemaVocabularies::Known::JSON_Schema_Draft_4,
-              SchemaVocabularies::Known::JSON_Schema_Draft_3,
-              SchemaVocabularies::Known::JSON_Schema_Draft_2,
-              SchemaVocabularies::Known::JSON_Schema_Draft_1,
-              SchemaVocabularies::Known::JSON_Schema_Draft_0}));
+             {SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_7,
+              SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_6,
+              SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_4,
+              SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_3,
+              SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_2,
+              SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_1,
+              SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_0}));
 
     const bool is_legacy{vocabularies.contains_any(
-        {SchemaVocabularies::Known::JSON_Schema_Draft_0,
-         SchemaVocabularies::Known::JSON_Schema_Draft_1,
-         SchemaVocabularies::Known::JSON_Schema_Draft_2,
-         SchemaVocabularies::Known::JSON_Schema_Draft_3,
-         SchemaVocabularies::Known::JSON_Schema_Draft_4,
-         SchemaVocabularies::Known::JSON_Schema_Draft_6,
-         SchemaVocabularies::Known::JSON_Schema_Draft_7})};
+        {SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_0,
+         SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_1,
+         SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_2,
+         SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_3,
+         SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_4,
+         SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_6,
+         SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_7})};
 
     this->add_additional_properties_ =
         is_legacy && !schema.defines("additionalProperties");
     this->additional_properties_as_object_ = vocabularies.contains_any(
-        {SchemaVocabularies::Known::JSON_Schema_Draft_0,
-         SchemaVocabularies::Known::JSON_Schema_Draft_1,
-         SchemaVocabularies::Known::JSON_Schema_Draft_2,
-         SchemaVocabularies::Known::JSON_Schema_Draft_3});
+        {SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_0,
+         SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_1,
+         SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_2,
+         SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_3});
 
     this->has_work_ = this->add_pattern_properties_ ||
                       this->add_property_names_ || this->add_min_properties_ ||
@@ -167,36 +168,36 @@ private:
               const sourcemeta::blaze::SchemaVocabularies &vocabularies) const
       -> void {
     if (!vocabularies.contains_any(
-            {SchemaVocabularies::Known::JSON_Schema_Draft_0,
-             SchemaVocabularies::Known::JSON_Schema_Draft_1,
-             SchemaVocabularies::Known::JSON_Schema_Draft_2,
-             SchemaVocabularies::Known::JSON_Schema_Draft_3,
-             SchemaVocabularies::Known::JSON_Schema_Draft_4,
-             SchemaVocabularies::Known::JSON_Schema_Draft_6,
-             SchemaVocabularies::Known::JSON_Schema_Draft_7,
-             SchemaVocabularies::Known::JSON_Schema_2019_09_Applicator,
-             SchemaVocabularies::Known::JSON_Schema_2020_12_Applicator})) {
+            {SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_0,
+             SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_1,
+             SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_2,
+             SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_3,
+             SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_4,
+             SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_6,
+             SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_7,
+             SchemaVocabularies::Known::JSON_SCHEMA_2019_09_APPLICATOR,
+             SchemaVocabularies::Known::JSON_SCHEMA_2020_12_APPLICATOR})) {
       return;
     }
 
     const bool is_modern{vocabularies.contains_any(
-        {SchemaVocabularies::Known::JSON_Schema_2019_09_Applicator,
-         SchemaVocabularies::Known::JSON_Schema_2020_12_Applicator})};
+        {SchemaVocabularies::Known::JSON_SCHEMA_2019_09_APPLICATOR,
+         SchemaVocabularies::Known::JSON_SCHEMA_2020_12_APPLICATOR})};
     // `items` takes a schema, and no dialect before Draft 6 has boolean
     // schemas to offer it. `additionalProperties` is different: every dialect
     // that has it accepts a boolean there
     const bool without_boolean_schemas{vocabularies.contains_any(
-        {SchemaVocabularies::Known::JSON_Schema_Draft_0,
-         SchemaVocabularies::Known::JSON_Schema_Draft_1,
-         SchemaVocabularies::Known::JSON_Schema_Draft_2,
-         SchemaVocabularies::Known::JSON_Schema_Draft_3,
-         SchemaVocabularies::Known::JSON_Schema_Draft_4})};
+        {SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_0,
+         SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_1,
+         SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_2,
+         SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_3,
+         SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_4})};
 
     this->add_unique_items_ =
         !schema.defines("uniqueItems") &&
         !vocabularies.contains_any(
-            {SchemaVocabularies::Known::JSON_Schema_Draft_0,
-             SchemaVocabularies::Known::JSON_Schema_Draft_1});
+            {SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_0,
+             SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_1});
 
     this->add_items_ = !is_modern && !schema.defines("items");
     this->items_as_object_ = without_boolean_schemas;

@@ -101,8 +101,8 @@ auto integral_reals_are_integers(
     const sourcemeta::blaze::SchemaVocabularies &vocabularies) -> bool {
   using Known = sourcemeta::blaze::SchemaVocabularies::Known;
   return !vocabularies.contains_any(
-      {Known::JSON_Schema_Draft_3, Known::JSON_Schema_Draft_3_Hyper,
-       Known::JSON_Schema_Draft_4, Known::JSON_Schema_Draft_4_Hyper});
+      {Known::JSON_SCHEMA_DRAFT_3, Known::JSON_SCHEMA_DRAFT_3_HYPER,
+       Known::JSON_SCHEMA_DRAFT_4, Known::JSON_SCHEMA_DRAFT_4_HYPER});
 }
 
 // Draft 6 introduced boolean schemas. Draft 4 and earlier have none, and the
@@ -112,8 +112,8 @@ auto booleans_are_schemas(
     const sourcemeta::blaze::SchemaVocabularies &vocabularies) -> bool {
   using Known = sourcemeta::blaze::SchemaVocabularies::Known;
   return !vocabularies.contains_any(
-      {Known::JSON_Schema_Draft_3, Known::JSON_Schema_Draft_3_Hyper,
-       Known::JSON_Schema_Draft_4, Known::JSON_Schema_Draft_4_Hyper});
+      {Known::JSON_SCHEMA_DRAFT_3, Known::JSON_SCHEMA_DRAFT_3_HYPER,
+       Known::JSON_SCHEMA_DRAFT_4, Known::JSON_SCHEMA_DRAFT_4_HYPER});
 }
 
 auto is_schema(const sourcemeta::core::JSON &value, const bool allow_boolean)
@@ -228,16 +228,17 @@ compile_properties(const sourcemeta::blaze::Context &context,
                      relative_schema_location_size(
                          context,
                          right.second.at(right_direct_enumeration.value()));
-            } else if (left_direct_enumeration.has_value()) {
+            }
+            if (left_direct_enumeration.has_value()) {
               return true;
-            } else if (right_direct_enumeration.has_value()) {
+            }
+            if (right_direct_enumeration.has_value()) {
               return false;
             }
 
             return left.first < right.first;
-          } else {
-            return left_size < right_size;
           }
+          return left_size < right_size;
         });
   }
 
@@ -304,15 +305,16 @@ auto compile_required_assertions(const Context &context,
 
   if (properties_set.empty()) {
     return {};
-  } else if (properties_set.size() > 1) {
+  }
+  if (properties_set.size() > 1) {
     if (is_closed_properties_required(schema_context.schema, properties_set)) {
       if (context.mode == Mode::FastValidation && assume_object) {
-        static const std::string properties_keyword{"properties"};
+        static const std::string PROPERTIES_KEYWORD{"properties"};
         // `SchemaContext::relative_pointer` is a reference, so the concatenated
         // pointer must outlive `new_schema_context`
         const auto properties_pointer{
             schema_context.relative_pointer.initial().concat(
-                sourcemeta::blaze::make_weak_pointer(properties_keyword))};
+                sourcemeta::blaze::make_weak_pointer(PROPERTIES_KEYWORD))};
         const SchemaContext new_schema_context{
             .relative_pointer = properties_pointer,
             .schema = schema_context.schema,
@@ -371,30 +373,28 @@ auto compile_required_assertions(const Context &context,
             sourcemeta::blaze::InstructionIndex::AssertionDefinesExactlyStrict,
             context, schema_context, dynamic_context,
             std::move(properties_set))};
-      } else {
-        return {
-            make(sourcemeta::blaze::InstructionIndex::AssertionDefinesExactly,
-                 context, schema_context, dynamic_context,
-                 std::move(properties_set))};
       }
-    } else if (assume_object) {
-      return {make(
-          sourcemeta::blaze::InstructionIndex::AssertionDefinesAllStrict,
-          context, schema_context, dynamic_context, std::move(properties_set))};
-    } else {
-      return {make(sourcemeta::blaze::InstructionIndex::AssertionDefinesAll,
+      return {make(sourcemeta::blaze::InstructionIndex::AssertionDefinesExactly,
                    context, schema_context, dynamic_context,
                    std::move(properties_set))};
     }
-  } else if (assume_object) {
+    if (assume_object) {
+      return {make(
+          sourcemeta::blaze::InstructionIndex::AssertionDefinesAllStrict,
+          context, schema_context, dynamic_context, std::move(properties_set))};
+    }
+    return {make(sourcemeta::blaze::InstructionIndex::AssertionDefinesAll,
+                 context, schema_context, dynamic_context,
+                 std::move(properties_set))};
+  }
+  if (assume_object) {
     return {make(sourcemeta::blaze::InstructionIndex::AssertionDefinesStrict,
                  context, schema_context, dynamic_context,
                  make_property(properties_set.begin()->first))};
-  } else {
-    return {make(sourcemeta::blaze::InstructionIndex::AssertionDefines, context,
-                 schema_context, dynamic_context,
-                 make_property(properties_set.begin()->first))};
   }
+  return {make(sourcemeta::blaze::InstructionIndex::AssertionDefines, context,
+               schema_context, dynamic_context,
+               make_property(properties_set.begin()->first))};
 }
 
 auto compiler_draft3_core_ref(const Context &context,
@@ -433,20 +433,20 @@ auto properties_as_loop(const Context &context,
   using Known = sourcemeta::blaze::SchemaVocabularies::Known;
   const auto size{properties.size()};
   const auto imports_validation_vocabulary =
-      schema_context.vocabularies.contains(Known::JSON_Schema_Draft_4) ||
-      schema_context.vocabularies.contains(Known::JSON_Schema_Draft_6) ||
-      schema_context.vocabularies.contains(Known::JSON_Schema_Draft_7) ||
+      schema_context.vocabularies.contains(Known::JSON_SCHEMA_DRAFT_4) ||
+      schema_context.vocabularies.contains(Known::JSON_SCHEMA_DRAFT_6) ||
+      schema_context.vocabularies.contains(Known::JSON_SCHEMA_DRAFT_7) ||
       schema_context.vocabularies.contains(
-          Known::JSON_Schema_2019_09_Validation) ||
+          Known::JSON_SCHEMA_2019_09_VALIDATION) ||
       schema_context.vocabularies.contains(
-          Known::JSON_Schema_2020_12_Validation);
+          Known::JSON_SCHEMA_2020_12_VALIDATION);
   const auto imports_const =
-      schema_context.vocabularies.contains(Known::JSON_Schema_Draft_6) ||
-      schema_context.vocabularies.contains(Known::JSON_Schema_Draft_7) ||
+      schema_context.vocabularies.contains(Known::JSON_SCHEMA_DRAFT_6) ||
+      schema_context.vocabularies.contains(Known::JSON_SCHEMA_DRAFT_7) ||
       schema_context.vocabularies.contains(
-          Known::JSON_Schema_2019_09_Validation) ||
+          Known::JSON_SCHEMA_2019_09_VALIDATION) ||
       schema_context.vocabularies.contains(
-          Known::JSON_Schema_2020_12_Validation);
+          Known::JSON_SCHEMA_2020_12_VALIDATION);
   ValueStringSet required;
   for (const auto &entry : required_properties(schema_context)) {
     // Only count the required property if its indeed in "properties"
@@ -1120,13 +1120,13 @@ auto compiler_draft3_applicator_properties_with_options(
     }
 
     return children;
-  } else if (children.empty()) {
-    return {};
-  } else {
-    return {make(sourcemeta::blaze::InstructionIndex::LogicalWhenType, context,
-                 schema_context, dynamic_context,
-                 sourcemeta::core::JSON::Type::Object, std::move(children))};
   }
+  if (children.empty()) {
+    return {};
+  }
+  return {make(sourcemeta::blaze::InstructionIndex::LogicalWhenType, context,
+               schema_context, dynamic_context,
+               sourcemeta::core::JSON::Type::Object, std::move(children))};
 }
 
 auto compiler_draft3_applicator_properties(
@@ -1138,8 +1138,8 @@ auto compiler_draft3_applicator_properties(
 
   using Known = sourcemeta::blaze::SchemaVocabularies::Known;
   const auto is_draft3{
-      schema_context.vocabularies.contains(Known::JSON_Schema_Draft_3) ||
-      schema_context.vocabularies.contains(Known::JSON_Schema_Draft_3_Hyper)};
+      schema_context.vocabularies.contains(Known::JSON_SCHEMA_DRAFT_3) ||
+      schema_context.vocabularies.contains(Known::JSON_SCHEMA_DRAFT_3_HYPER)};
   if (!is_draft3) {
     return property_instructions;
   }
@@ -1186,7 +1186,7 @@ auto compiler_draft3_applicator_patternproperties_with_options(
 
   // To guarantee ordering
   std::vector<std::string> patterns;
-  for (auto &entry :
+  for (const auto &entry :
        schema_context.schema.at(dynamic_context.keyword).as_object()) {
     patterns.push_back(entry.first);
   }
@@ -1350,14 +1350,14 @@ auto compiler_draft3_applicator_additionalproperties_with_options(
       if (maybe_prefix.has_value()) {
         filter_prefixes.push_back(maybe_prefix.value());
       } else {
-        static const std::string pattern_properties_keyword{
+        static const std::string PATTERN_PROPERTIES_KEYWORD{
             "patternProperties"};
         filter_regexes.push_back(
             {.first =
                  parse_regex(entry.first, context, schema_context.base,
                              schema_context.relative_pointer.initial().concat(
                                  sourcemeta::blaze::make_weak_pointer(
-                                     pattern_properties_keyword))),
+                                     PATTERN_PROPERTIES_KEYWORD))),
              .second = entry.first});
       }
     }
@@ -1441,7 +1441,8 @@ auto compiler_draft3_applicator_additionalproperties_with_options(
                                      std::move(filter_prefixes),
                                      std::move(filter_regexes)},
                  std::move(children))};
-  } else if (track_evaluation) {
+  }
+  if (track_evaluation) {
     // An unconditional marker records this instance as evaluated whatever its
     // type, so when this schema is applied to a non-object, such as a
     // conditional branch evaluated against an array, it would wrongly mark that
@@ -1450,16 +1451,16 @@ auto compiler_draft3_applicator_additionalproperties_with_options(
     return {make(sourcemeta::blaze::InstructionIndex::LoopPropertiesEvaluate,
                  context, schema_context, dynamic_context, ValueNone{},
                  std::move(children))};
-  } else if (children.size() == 1 &&
-             children.front().type == InstructionIndex::AssertionFail) {
+  }
+  if (children.size() == 1 &&
+      children.front().type == InstructionIndex::AssertionFail) {
     return {make(sourcemeta::blaze::InstructionIndex::AssertionObjectSizeLess,
                  context, schema_context, dynamic_context,
                  ValueUnsignedInteger{1})};
-  } else {
-    return {make(sourcemeta::blaze::InstructionIndex::LoopProperties, context,
-                 schema_context, dynamic_context, ValueNone{},
-                 std::move(children))};
   }
+  return {make(sourcemeta::blaze::InstructionIndex::LoopProperties, context,
+               schema_context, dynamic_context, ValueNone{},
+               std::move(children))};
 }
 
 auto compiler_draft3_applicator_additionalproperties(
@@ -1514,7 +1515,7 @@ auto compiler_draft3_applicator_items_array(
   // whereas every dialect after it asks for at least one
   using Known = sourcemeta::blaze::SchemaVocabularies::Known;
   const auto allows_empty{schema_context.vocabularies.contains_any(
-      {Known::JSON_Schema_Draft_3, Known::JSON_Schema_Draft_3_Hyper})};
+      {Known::JSON_SCHEMA_DRAFT_3, Known::JSON_SCHEMA_DRAFT_3_HYPER})};
   const auto &items{schema_context.schema.at(dynamic_context.keyword)};
   if ((items.empty() && !allows_empty) ||
       !all_are_schemas(items,
@@ -1597,11 +1598,10 @@ auto compiler_draft3_applicator_items_array(
         make(sourcemeta::blaze::InstructionIndex::AssertionArrayPrefixEvaluate,
              context, schema_context, dynamic_context, ValueNone{},
              std::move(children))};
-  } else {
-    return {make(sourcemeta::blaze::InstructionIndex::AssertionArrayPrefix,
-                 context, schema_context, dynamic_context, ValueNone{},
-                 std::move(children))};
   }
+  return {make(sourcemeta::blaze::InstructionIndex::AssertionArrayPrefix,
+               context, schema_context, dynamic_context, ValueNone{},
+               std::move(children))};
 }
 
 auto is_number_type_check(const Instruction &instruction) -> bool {
@@ -1658,7 +1658,7 @@ auto compiler_draft3_applicator_items_with_options(
   if (schema_context.schema.at(dynamic_context.keyword).is_array()) {
     using Known = sourcemeta::blaze::SchemaVocabularies::Known;
     const auto allows_empty{schema_context.vocabularies.contains_any(
-        {Known::JSON_Schema_Draft_3, Known::JSON_Schema_Draft_3_Hyper})};
+        {Known::JSON_SCHEMA_DRAFT_3, Known::JSON_SCHEMA_DRAFT_3_HYPER})};
     const auto &entries{schema_context.schema.at(dynamic_context.keyword)};
     if ((entries.empty() && !allows_empty) ||
         !all_are_schemas(entries,
@@ -1748,17 +1748,19 @@ auto compiler_draft3_applicator_items_with_options(
         return {make(sourcemeta::blaze::InstructionIndex::LoopItemsTypeStrict,
                      context, schema_context, dynamic_context,
                      children.front().value)};
-      } else if (children.front().type == InstructionIndex::AssertionType) {
+      }
+      if (children.front().type == InstructionIndex::AssertionType) {
         return {make(sourcemeta::blaze::InstructionIndex::LoopItemsType,
                      context, schema_context, dynamic_context,
                      children.front().value)};
-      } else if (children.front().type ==
-                 InstructionIndex::AssertionTypeStrictAny) {
+      }
+      if (children.front().type == InstructionIndex::AssertionTypeStrictAny) {
         return {make(
             sourcemeta::blaze::InstructionIndex::LoopItemsTypeStrictAny,
             context, schema_context, dynamic_context, children.front().value)};
-      } else if (children.front().type ==
-                 InstructionIndex::LoopPropertiesExactlyTypeStrictHash) {
+      }
+      if (children.front().type ==
+          InstructionIndex::LoopPropertiesExactlyTypeStrictHash) {
         auto value_copy = children.front().value;
         auto current{make(sourcemeta::blaze::InstructionIndex::LoopItems,
                           context, schema_context, dynamic_context, ValueNone{},
@@ -1913,10 +1915,10 @@ auto compiler_draft3_validation_enum(const Context &context,
 
   using Known = sourcemeta::blaze::SchemaVocabularies::Known;
   if (schema_context.vocabularies.contains_any(
-          {Known::JSON_Schema_Draft_7, Known::JSON_Schema_Draft_7_Hyper,
-           Known::JSON_Schema_Draft_6, Known::JSON_Schema_Draft_6_Hyper,
-           Known::JSON_Schema_Draft_4, Known::JSON_Schema_Draft_4_Hyper,
-           Known::JSON_Schema_Draft_3, Known::JSON_Schema_Draft_3_Hyper}) &&
+          {Known::JSON_SCHEMA_DRAFT_7, Known::JSON_SCHEMA_DRAFT_7_HYPER,
+           Known::JSON_SCHEMA_DRAFT_6, Known::JSON_SCHEMA_DRAFT_6_HYPER,
+           Known::JSON_SCHEMA_DRAFT_4, Known::JSON_SCHEMA_DRAFT_4_HYPER,
+           Known::JSON_SCHEMA_DRAFT_3, Known::JSON_SCHEMA_DRAFT_3_HYPER}) &&
       (schema_context.schema.at(dynamic_context.keyword).empty() ||
        !schema_context.schema.at(dynamic_context.keyword).unique())) {
     throw sourcemeta::blaze::CompilerError(
@@ -2004,7 +2006,7 @@ auto compiler_draft3_validation_maxlength(const Context &context,
   // around it, which it also asks to be non-negative
   using Known = sourcemeta::blaze::SchemaVocabularies::Known;
   if (!schema_context.vocabularies.contains_any(
-          {Known::JSON_Schema_Draft_3, Known::JSON_Schema_Draft_3_Hyper}) &&
+          {Known::JSON_SCHEMA_DRAFT_3, Known::JSON_SCHEMA_DRAFT_3_HYPER}) &&
       !schema_context.schema.at(dynamic_context.keyword).is_positive()) {
     throw sourcemeta::blaze::CompilerError(
         schema_context.base, absolute_schema_location(context, schema_context),
@@ -2207,12 +2209,11 @@ auto compiler_draft3_validation_maximum(const Context &context,
                  schema_context, dynamic_context,
                  sourcemeta::core::JSON{
                      schema_context.schema.at(dynamic_context.keyword)})};
-  } else {
-    return {make(sourcemeta::blaze::InstructionIndex::AssertionLessEqual,
-                 context, schema_context, dynamic_context,
-                 sourcemeta::core::JSON{
-                     schema_context.schema.at(dynamic_context.keyword)})};
   }
+  return {make(sourcemeta::blaze::InstructionIndex::AssertionLessEqual, context,
+               schema_context, dynamic_context,
+               sourcemeta::core::JSON{
+                   schema_context.schema.at(dynamic_context.keyword)})};
 }
 
 auto compiler_draft3_validation_minimum(const Context &context,
@@ -2243,12 +2244,11 @@ auto compiler_draft3_validation_minimum(const Context &context,
                  schema_context, dynamic_context,
                  sourcemeta::core::JSON{
                      schema_context.schema.at(dynamic_context.keyword)})};
-  } else {
-    return {make(sourcemeta::blaze::InstructionIndex::AssertionGreaterEqual,
-                 context, schema_context, dynamic_context,
-                 sourcemeta::core::JSON{
-                     schema_context.schema.at(dynamic_context.keyword)})};
   }
+  return {make(sourcemeta::blaze::InstructionIndex::AssertionGreaterEqual,
+               context, schema_context, dynamic_context,
+               sourcemeta::core::JSON{
+                   schema_context.schema.at(dynamic_context.keyword)})};
 }
 
 auto compiler_draft3_validation_type(const Context &context,
@@ -2259,8 +2259,8 @@ auto compiler_draft3_validation_type(const Context &context,
 
   using Known = sourcemeta::blaze::SchemaVocabularies::Known;
   const auto is_draft3{
-      schema_context.vocabularies.contains(Known::JSON_Schema_Draft_3) ||
-      schema_context.vocabularies.contains(Known::JSON_Schema_Draft_3_Hyper)};
+      schema_context.vocabularies.contains(Known::JSON_SCHEMA_DRAFT_3) ||
+      schema_context.vocabularies.contains(Known::JSON_SCHEMA_DRAFT_3_HYPER)};
 
   if (is_draft3) {
     if (value.is_string() && value.to_string() == "any") {
@@ -2381,7 +2381,8 @@ auto compiler_draft3_validation_type(const Context &context,
       return {make(sourcemeta::blaze::InstructionIndex::AssertionTypeStrict,
                    context, schema_context, dynamic_context,
                    sourcemeta::core::JSON::Type::Null)};
-    } else if (type == "boolean") {
+    }
+    if (type == "boolean") {
       if (context.mode == Mode::FastValidation &&
           schema_context.schema.defines("enum") &&
           schema_context.schema.at("enum").is_array() &&
@@ -2395,7 +2396,8 @@ auto compiler_draft3_validation_type(const Context &context,
       return {make(sourcemeta::blaze::InstructionIndex::AssertionTypeStrict,
                    context, schema_context, dynamic_context,
                    sourcemeta::core::JSON::Type::Boolean)};
-    } else if (type == "object") {
+    }
+    if (type == "object") {
       if (!is_draft3) {
         const auto minimum{unsigned_integer_property(schema_context.schema,
                                                      "minProperties", 0)};
@@ -2414,7 +2416,8 @@ auto compiler_draft3_validation_type(const Context &context,
                 sourcemeta::blaze::InstructionIndex::AssertionTypeObjectUpper,
                 context, schema_context, dynamic_context,
                 ValueUnsignedInteger{maximum.value()})};
-          } else if (minimum > 0 || maximum.has_value()) {
+          }
+          if (minimum > 0 || maximum.has_value()) {
             return {make(
                 sourcemeta::blaze::InstructionIndex::AssertionTypeObjectBounded,
                 context, schema_context, dynamic_context,
@@ -2446,7 +2449,8 @@ auto compiler_draft3_validation_type(const Context &context,
       return {make(sourcemeta::blaze::InstructionIndex::AssertionTypeStrict,
                    context, schema_context, dynamic_context,
                    sourcemeta::core::JSON::Type::Object)};
-    } else if (type == "array") {
+    }
+    if (type == "array") {
       const auto minimum{
           unsigned_integer_property(schema_context.schema, "minItems", 0)};
       const auto maximum{
@@ -2463,7 +2467,8 @@ auto compiler_draft3_validation_type(const Context &context,
               make(sourcemeta::blaze::InstructionIndex::AssertionTypeArrayUpper,
                    context, schema_context, dynamic_context,
                    ValueUnsignedInteger{maximum.value()})};
-        } else if (minimum > 0 || maximum.has_value()) {
+        }
+        if (minimum > 0 || maximum.has_value()) {
           return {make(
               sourcemeta::blaze::InstructionIndex::AssertionTypeArrayBounded,
               context, schema_context, dynamic_context,
@@ -2484,7 +2489,8 @@ auto compiler_draft3_validation_type(const Context &context,
       return {make(sourcemeta::blaze::InstructionIndex::AssertionTypeStrict,
                    context, schema_context, dynamic_context,
                    sourcemeta::core::JSON::Type::Array)};
-    } else if (type == "number") {
+    }
+    if (type == "number") {
       if (context.mode == Mode::FastValidation &&
           schema_context.schema.defines("enum") &&
           schema_context.schema.at("enum").is_array() &&
@@ -2501,7 +2507,8 @@ auto compiler_draft3_validation_type(const Context &context,
       types.set(std::to_underlying(sourcemeta::core::JSON::Type::Decimal));
       return {make(sourcemeta::blaze::InstructionIndex::AssertionTypeStrictAny,
                    context, schema_context, dynamic_context, types)};
-    } else if (type == "integer") {
+    }
+    if (type == "integer") {
       if (context.mode == Mode::FastValidation &&
           schema_context.schema.defines("enum") &&
           schema_context.schema.at("enum").is_array() &&
@@ -2515,7 +2522,8 @@ auto compiler_draft3_validation_type(const Context &context,
       return {make(sourcemeta::blaze::InstructionIndex::AssertionTypeStrict,
                    context, schema_context, dynamic_context,
                    sourcemeta::core::JSON::Type::Integer)};
-    } else if (type == "string") {
+    }
+    if (type == "string") {
       const auto minimum{
           unsigned_integer_property(schema_context.schema, "minLength", 0)};
       const auto maximum{
@@ -2532,7 +2540,8 @@ auto compiler_draft3_validation_type(const Context &context,
               sourcemeta::blaze::InstructionIndex::AssertionTypeStringUpper,
               context, schema_context, dynamic_context,
               ValueUnsignedInteger{maximum.value()})};
-        } else if (minimum > 0 || maximum.has_value()) {
+        }
+        if (minimum > 0 || maximum.has_value()) {
           return {make(
               sourcemeta::blaze::InstructionIndex::AssertionTypeStringBounded,
               context, schema_context, dynamic_context,
@@ -2553,61 +2562,66 @@ auto compiler_draft3_validation_type(const Context &context,
       return {make(sourcemeta::blaze::InstructionIndex::AssertionTypeStrict,
                    context, schema_context, dynamic_context,
                    sourcemeta::core::JSON::Type::String)};
-    } else if (is_draft3) {
+    }
+    if (is_draft3) {
       // Draft 3 puts no enumeration on `type`, so any name at all satisfies
       // the meta-schema, and one we do not know constrains nothing
       return {};
-    } else {
-      throw sourcemeta::blaze::CompilerError(
-          schema_context.base,
-          absolute_schema_location(context, schema_context),
-          EXPECTED_TYPE_NAMES);
     }
-  } else if (value.is_array() && value.size() == 1 &&
-             value.front().is_string()) {
+    throw sourcemeta::blaze::CompilerError(
+        schema_context.base, absolute_schema_location(context, schema_context),
+        EXPECTED_TYPE_NAMES);
+  }
+  if (value.is_array() && value.size() == 1 && value.front().is_string()) {
     const auto &type{value.front().to_string()};
     if (type == "null") {
       return {make(sourcemeta::blaze::InstructionIndex::AssertionTypeStrict,
                    context, schema_context, dynamic_context,
                    sourcemeta::core::JSON::Type::Null)};
-    } else if (type == "boolean") {
+    }
+    if (type == "boolean") {
       return {make(sourcemeta::blaze::InstructionIndex::AssertionTypeStrict,
                    context, schema_context, dynamic_context,
                    sourcemeta::core::JSON::Type::Boolean)};
-    } else if (type == "object") {
+    }
+    if (type == "object") {
       return {make(sourcemeta::blaze::InstructionIndex::AssertionTypeStrict,
                    context, schema_context, dynamic_context,
                    sourcemeta::core::JSON::Type::Object)};
-    } else if (type == "array") {
+    }
+    if (type == "array") {
       return {make(sourcemeta::blaze::InstructionIndex::AssertionTypeStrict,
                    context, schema_context, dynamic_context,
                    sourcemeta::core::JSON::Type::Array)};
-    } else if (type == "number") {
+    }
+    if (type == "number") {
       ValueTypes types{};
       types.set(std::to_underlying(sourcemeta::core::JSON::Type::Real));
       types.set(std::to_underlying(sourcemeta::core::JSON::Type::Integer));
       types.set(std::to_underlying(sourcemeta::core::JSON::Type::Decimal));
       return {make(sourcemeta::blaze::InstructionIndex::AssertionTypeStrictAny,
                    context, schema_context, dynamic_context, types)};
-    } else if (type == "integer") {
+    }
+    if (type == "integer") {
       return {make(sourcemeta::blaze::InstructionIndex::AssertionTypeStrict,
                    context, schema_context, dynamic_context,
                    sourcemeta::core::JSON::Type::Integer)};
-    } else if (type == "string") {
+    }
+    if (type == "string") {
       return {make(sourcemeta::blaze::InstructionIndex::AssertionTypeStrict,
                    context, schema_context, dynamic_context,
                    sourcemeta::core::JSON::Type::String)};
-    } else if (is_draft3) {
+    }
+    if (is_draft3) {
       // Draft 3 puts no enumeration on `type`, so any name at all satisfies
       // the meta-schema, and one we do not know constrains nothing
       return {};
-    } else {
-      throw sourcemeta::blaze::CompilerError(
-          schema_context.base,
-          absolute_schema_location(context, schema_context),
-          EXPECTED_TYPE_NAMES);
     }
-  } else if (value.is_array()) {
+    throw sourcemeta::blaze::CompilerError(
+        schema_context.base, absolute_schema_location(context, schema_context),
+        EXPECTED_TYPE_NAMES);
+  }
+  if (value.is_array()) {
     // Draft 4 asks for a non-empty array of unique type names, whereas Draft 3
     // also admits a subschema as an alternative and tolerates an empty union
     if (!value.unique() || (!is_draft3 && value.empty()) ||
@@ -2855,8 +2869,8 @@ auto compiler_draft3_applicator_dependencies(
 
   using Known = sourcemeta::blaze::SchemaVocabularies::Known;
   const auto is_draft3{
-      schema_context.vocabularies.contains(Known::JSON_Schema_Draft_3) ||
-      schema_context.vocabularies.contains(Known::JSON_Schema_Draft_3_Hyper)};
+      schema_context.vocabularies.contains(Known::JSON_SCHEMA_DRAFT_3) ||
+      schema_context.vocabularies.contains(Known::JSON_SCHEMA_DRAFT_3_HYPER)};
 
   // Every member must be a schema or a list of property names, plus a single
   // property name in Draft 3. A member that is none of those makes the keyword
@@ -2968,15 +2982,15 @@ auto compiler_draft3_validation_format(const Context &context,
                                        const DynamicContext &dynamic_context,
                                        const Instructions &) -> Instructions {
   using Known = sourcemeta::blaze::SchemaVocabularies::Known;
-  static constexpr auto unsupported_dialect_message{
+  static constexpr auto UNSUPPORTED_DIALECT_MESSAGE{
       "The format assertion tweak not supported in this dialect"};
 
   const auto is_2019_09_format{
-      schema_context.vocabularies.contains(Known::JSON_Schema_2019_09_Format)};
+      schema_context.vocabularies.contains(Known::JSON_SCHEMA_2019_09_FORMAT)};
   const auto is_2020_12_format_annotation{schema_context.vocabularies.contains(
-      Known::JSON_Schema_2020_12_Format_Annotation)};
+      Known::JSON_SCHEMA_2020_12_FORMAT_ANNOTATION)};
   const auto is_2020_12_format_assertion{schema_context.vocabularies.contains(
-      Known::JSON_Schema_2020_12_Format_Assertion)};
+      Known::JSON_SCHEMA_2020_12_FORMAT_ASSERTION)};
 
   const auto force_assertion{
       schema_context.schema.is_object() &&
@@ -3085,17 +3099,17 @@ auto compiler_draft3_validation_format(const Context &context,
   ValueStringType type;
 
   const auto is_draft3{
-      schema_context.vocabularies.contains(Known::JSON_Schema_Draft_3) ||
-      schema_context.vocabularies.contains(Known::JSON_Schema_Draft_3_Hyper)};
+      schema_context.vocabularies.contains(Known::JSON_SCHEMA_DRAFT_3) ||
+      schema_context.vocabularies.contains(Known::JSON_SCHEMA_DRAFT_3_HYPER)};
   const auto is_draft4{
-      schema_context.vocabularies.contains(Known::JSON_Schema_Draft_4) ||
-      schema_context.vocabularies.contains(Known::JSON_Schema_Draft_4_Hyper)};
+      schema_context.vocabularies.contains(Known::JSON_SCHEMA_DRAFT_4) ||
+      schema_context.vocabularies.contains(Known::JSON_SCHEMA_DRAFT_4_HYPER)};
   const auto is_draft6{
-      schema_context.vocabularies.contains(Known::JSON_Schema_Draft_6) ||
-      schema_context.vocabularies.contains(Known::JSON_Schema_Draft_6_Hyper)};
+      schema_context.vocabularies.contains(Known::JSON_SCHEMA_DRAFT_6) ||
+      schema_context.vocabularies.contains(Known::JSON_SCHEMA_DRAFT_6_HYPER)};
   const auto is_draft7{
-      schema_context.vocabularies.contains(Known::JSON_Schema_Draft_7) ||
-      schema_context.vocabularies.contains(Known::JSON_Schema_Draft_7_Hyper)};
+      schema_context.vocabularies.contains(Known::JSON_SCHEMA_DRAFT_7) ||
+      schema_context.vocabularies.contains(Known::JSON_SCHEMA_DRAFT_7_HYPER)};
 
   if (is_draft7) {
     if (name == "date-time") {
@@ -3205,7 +3219,7 @@ auto compiler_draft3_validation_format(const Context &context,
   } else {
     throw sourcemeta::blaze::CompilerError(
         schema_context.base, absolute_schema_location(context, schema_context),
-        unsupported_dialect_message);
+        UNSUPPORTED_DIALECT_MESSAGE);
   }
 
   return {make(sourcemeta::blaze::InstructionIndex::AssertionStringType,

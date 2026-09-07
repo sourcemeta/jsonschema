@@ -18,53 +18,53 @@ public:
             const sourcemeta::blaze::SchemaResolver &, const bool) const
       -> SchemaTransformRule::Result override {
     ONLY_CONTINUE_IF(vocabularies.contains_any(
-        {SchemaVocabularies::Known::JSON_Schema_2020_12_Core,
-         SchemaVocabularies::Known::JSON_Schema_2019_09_Core,
-         SchemaVocabularies::Known::JSON_Schema_Draft_7,
-         SchemaVocabularies::Known::JSON_Schema_Draft_6,
-         SchemaVocabularies::Known::JSON_Schema_Draft_4}));
+        {SchemaVocabularies::Known::JSON_SCHEMA_2020_12_CORE,
+         SchemaVocabularies::Known::JSON_SCHEMA_2019_09_CORE,
+         SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_7,
+         SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_6,
+         SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_4}));
     ONLY_CONTINUE_IF(schema.is_object());
 
     std::vector<Pointer> offenders;
 
     if (vocabularies.contains_any(
-            {SchemaVocabularies::Known::JSON_Schema_2020_12_Core,
-             SchemaVocabularies::Known::JSON_Schema_2019_09_Core})) {
+            {SchemaVocabularies::Known::JSON_SCHEMA_2020_12_CORE,
+             SchemaVocabularies::Known::JSON_SCHEMA_2019_09_CORE})) {
       this->check_anchor_keyword(schema, ANCHOR, offenders);
     }
 
     if (vocabularies.contains_any(
-            {SchemaVocabularies::Known::JSON_Schema_2020_12_Core})) {
+            {SchemaVocabularies::Known::JSON_SCHEMA_2020_12_CORE})) {
       this->check_anchor_keyword(schema, DYNAMIC_ANCHOR, offenders);
     }
 
     if (vocabularies.contains_any(
-            {SchemaVocabularies::Known::JSON_Schema_Draft_7,
-             SchemaVocabularies::Known::JSON_Schema_Draft_6,
-             SchemaVocabularies::Known::JSON_Schema_Draft_4})) {
+            {SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_7,
+             SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_6,
+             SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_4})) {
       const auto &id_keyword{
           vocabularies.contains_any(
-              {SchemaVocabularies::Known::JSON_Schema_Draft_4})
+              {SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_4})
               ? ID_DRAFT_4
               : ID_MODERN};
       this->check_id_fragment(schema, id_keyword, offenders);
     }
 
     ONLY_CONTINUE_IF(!offenders.empty());
-    return APPLIES_TO_POINTERS(std::move(offenders));
+    return applies_to_pointers(std::move(offenders));
   }
 
 private:
-  // NOLINTNEXTLINE(bugprone-throwing-static-initialization)
+  // NOLINTNEXTLINE(cert-err58-cpp,bugprone-throwing-static-initialization)
   static inline const sourcemeta::core::JSON::String ANCHOR{"$anchor"};
-  // NOLINTNEXTLINE(bugprone-throwing-static-initialization)
+  // NOLINTNEXTLINE(cert-err58-cpp,bugprone-throwing-static-initialization)
   static inline const sourcemeta::core::JSON::String DYNAMIC_ANCHOR{
       "$dynamicAnchor"};
-  // NOLINTNEXTLINE(bugprone-throwing-static-initialization)
+  // NOLINTNEXTLINE(cert-err58-cpp,bugprone-throwing-static-initialization)
   static inline const sourcemeta::core::JSON::String ID_MODERN{"$id"};
-  // NOLINTNEXTLINE(bugprone-throwing-static-initialization)
+  // NOLINTNEXTLINE(cert-err58-cpp,bugprone-throwing-static-initialization)
   static inline const sourcemeta::core::JSON::String ID_DRAFT_4{"id"};
-  // NOLINTNEXTLINE(bugprone-throwing-static-initialization)
+  // NOLINTNEXTLINE(cert-err58-cpp,bugprone-throwing-static-initialization)
   static inline const Regex SAFE_ANCHOR_PATTERN{
       to_regex("^[A-Za-z][A-Za-z0-9_.-]*$").value()};
 

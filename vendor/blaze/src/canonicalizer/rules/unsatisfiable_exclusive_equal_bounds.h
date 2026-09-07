@@ -13,8 +13,8 @@ public:
             const sourcemeta::blaze::SchemaWalker &,
             const sourcemeta::blaze::SchemaResolver &) const -> bool override {
     ONLY_CONTINUE_IF(vocabularies.contains_any(
-                         {SchemaVocabularies::Known::JSON_Schema_Draft_3,
-                          SchemaVocabularies::Known::JSON_Schema_Draft_4}) &&
+                         {SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_3,
+                          SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_4}) &&
                      schema.is_object());
 
     const auto *type{schema.try_at("type")};
@@ -27,20 +27,20 @@ public:
     ONLY_CONTINUE_IF(maximum && maximum->is_number() && *minimum == *maximum);
 
     const auto *exclusive_minimum{schema.try_at("exclusiveMinimum")};
-    const bool exclusive_min{exclusive_minimum &&
+    const bool exclusive_min{(exclusive_minimum != nullptr) &&
                              exclusive_minimum->is_boolean() &&
                              exclusive_minimum->to_boolean()};
     const auto *exclusive_maximum{schema.try_at("exclusiveMaximum")};
-    const bool exclusive_max{exclusive_maximum &&
+    const bool exclusive_max{(exclusive_maximum != nullptr) &&
                              exclusive_maximum->is_boolean() &&
                              exclusive_maximum->to_boolean()};
     ONLY_CONTINUE_IF(exclusive_min || exclusive_max);
-    this->unsatisfiable_ = UNSATISFIABLE_SCHEMA(vocabularies);
+    this->unsatisfiable_ = unsatisfiable_schema(vocabularies);
     return true;
   }
 
   auto transform(sourcemeta::core::JSON &schema) const -> void override {
-    INTO_UNSATISFIABLE(schema, this->unsatisfiable_);
+    into_unsatisfiable(schema, this->unsatisfiable_);
   }
 
 private:

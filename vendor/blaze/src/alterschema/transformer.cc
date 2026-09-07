@@ -74,7 +74,7 @@ auto check_rules(
             frame.vocabularies(location, resolver)};
 
         bool subschema_failed{false};
-        for (const auto &[rule, mutates, _] : rules) {
+        for (const auto &[rule, mutates, reframe_after_transform] : rules) {
           if (non_mutating_only && mutates) {
             continue;
           }
@@ -178,7 +178,7 @@ auto SchemaTransformer::check(const core::JSON &schema,
       default_dialect,
       default_id,
       sourcemeta::blaze::SchemaFrame::IdentifierMode::Fallback};
-  return check_rules(schema, frame, this->rules, walker, resolver, callback,
+  return check_rules(schema, frame, this->rules_, walker, resolver, callback,
                      exclude_keyword, false, is_metaschema);
 }
 
@@ -191,7 +191,7 @@ auto SchemaTransformer::apply(core::JSON &schema,
                               const core::JSON::String &exclude_keyword,
                               const bool is_metaschema) const
     -> std::pair<bool, std::uint8_t> {
-  assert(!this->rules.empty());
+  assert(!this->rules_.empty());
   std::unordered_set<std::tuple<core::Pointer, std::string_view, core::JSON>,
                      ProcessedRuleHasher>
       processed_rules;
@@ -238,7 +238,7 @@ auto SchemaTransformer::apply(core::JSON &schema,
               frame->vocabularies(location, resolver)};
 
           for (const auto &[rule, mutates, reframe_after_transform] :
-               this->rules) {
+               this->rules_) {
             if (!mutates) {
               continue;
             }
@@ -399,12 +399,12 @@ auto SchemaTransformer::apply(core::JSON &schema,
     return {true, static_cast<std::uint8_t>(100)};
   }
 
-  return check_rules(schema, *frame, this->rules, walker, resolver, callback,
+  return check_rules(schema, *frame, this->rules_, walker, resolver, callback,
                      exclude_keyword, true, is_metaschema);
 }
 
 auto SchemaTransformer::remove(const std::string_view name) -> bool {
-  return std::erase_if(this->rules, [&name](const auto &entry) -> auto {
+  return std::erase_if(this->rules_, [&name](const auto &entry) -> auto {
            return std::get<0>(entry)->name() == name;
          }) > 0;
 }

@@ -10,7 +10,9 @@
 
 #if defined(_WIN32) || defined(__CYGWIN__)
 #define WIN32_LEAN_AND_MEAN
+#ifndef NOMINMAX
 #define NOMINMAX
+#endif
 #include <limits>    // std::numeric_limits
 #include <windows.h> // MultiByteToWideChar, WideCharToMultiByte, CP_UTF8
 #endif

@@ -1,6 +1,6 @@
 class UnnecessaryExtendsWrapper final : public SchemaTransformRule {
 private:
-  // NOLINTNEXTLINE(bugprone-throwing-static-initialization)
+  // NOLINTNEXTLINE(cert-err58-cpp,bugprone-throwing-static-initialization)
   static inline const std::string KEYWORD{"extends"};
 
 public:
@@ -18,8 +18,8 @@ public:
             const SchemaResolver &, const bool) const
       -> SchemaTransformRule::Result override {
     ONLY_CONTINUE_IF(vocabularies.contains_any(
-        {SchemaVocabularies::Known::JSON_Schema_Draft_3,
-         SchemaVocabularies::Known::JSON_Schema_Draft_3_Hyper}));
+        {SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_3,
+         SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_3_HYPER}));
     ONLY_CONTINUE_IF(schema.is_object());
 
     const auto *extends_value{schema.try_at(KEYWORD)};
@@ -36,8 +36,8 @@ public:
 
     const auto *parent_type_value{schema.try_at("type")};
     const JSON::TypeSet parent_types{
-        parent_type_value &&
-                IS_KNOWN_TYPE_FORM(*parent_type_value, vocabularies)
+        (parent_type_value != nullptr) &&
+                is_known_type_form(*parent_type_value, vocabularies)
             ? parse_schema_type(*parent_type_value)
             : JSON::TypeSet{}};
 
@@ -107,7 +107,7 @@ public:
     }
 
     ONLY_CONTINUE_IF(!locations.empty());
-    return APPLIES_TO_POINTERS(std::move(locations));
+    return applies_to_pointers(std::move(locations));
   }
 
   auto transform(JSON &schema, const Result &result) const -> void override {

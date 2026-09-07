@@ -117,9 +117,8 @@ auto keyword_rank(const sourcemeta::core::JSON::String &keyword,
   const auto match{rank.find(keyword)};
   if (match != rank.cend()) {
     return match->second;
-  } else {
-    return otherwise;
   }
+  return otherwise;
 }
 
 auto keyword_compare(const sourcemeta::core::JSON::String &left,
@@ -129,9 +128,8 @@ auto keyword_compare(const sourcemeta::core::JSON::String &left,
   const auto right_rank{keyword_rank(right, DEFAULT)};
   if (left_rank == right_rank) {
     return left < right;
-  } else {
-    return left_rank < right_rank;
   }
+  return left_rank < right_rank;
 }
 
 } // namespace

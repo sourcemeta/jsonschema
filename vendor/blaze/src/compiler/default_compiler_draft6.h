@@ -67,7 +67,8 @@ auto compiler_draft6_validation_type(const Context &context,
       return {make(sourcemeta::blaze::InstructionIndex::AssertionTypeStrict,
                    context, schema_context, dynamic_context,
                    sourcemeta::core::JSON::Type::Null)};
-    } else if (type == "boolean") {
+    }
+    if (type == "boolean") {
       if (context.mode == Mode::FastValidation &&
           schema_context.schema.defines("enum") &&
           schema_context.schema.at("enum").is_array() &&
@@ -86,7 +87,8 @@ auto compiler_draft6_validation_type(const Context &context,
       return {make(sourcemeta::blaze::InstructionIndex::AssertionTypeStrict,
                    context, schema_context, dynamic_context,
                    sourcemeta::core::JSON::Type::Boolean)};
-    } else if (type == "object") {
+    }
+    if (type == "object") {
       const auto minimum{
           unsigned_integer_property(schema_context.schema, "minProperties", 0)};
       const auto maximum{
@@ -103,7 +105,8 @@ auto compiler_draft6_validation_type(const Context &context,
               sourcemeta::blaze::InstructionIndex::AssertionTypeObjectUpper,
               context, schema_context, dynamic_context,
               ValueUnsignedInteger{maximum.value()})};
-        } else if (minimum > 0 || maximum.has_value()) {
+        }
+        if (minimum > 0 || maximum.has_value()) {
           return {make(
               sourcemeta::blaze::InstructionIndex::AssertionTypeObjectBounded,
               context, schema_context, dynamic_context,
@@ -139,7 +142,8 @@ auto compiler_draft6_validation_type(const Context &context,
       return {make(sourcemeta::blaze::InstructionIndex::AssertionTypeStrict,
                    context, schema_context, dynamic_context,
                    sourcemeta::core::JSON::Type::Object)};
-    } else if (type == "array") {
+    }
+    if (type == "array") {
       const auto minimum{
           unsigned_integer_property(schema_context.schema, "minItems", 0)};
       const auto maximum{
@@ -177,7 +181,8 @@ auto compiler_draft6_validation_type(const Context &context,
               make(sourcemeta::blaze::InstructionIndex::AssertionTypeArrayUpper,
                    context, schema_context, dynamic_context,
                    ValueUnsignedInteger{maximum.value()})};
-        } else if (minimum > 0 || maximum.has_value()) {
+        }
+        if (minimum > 0 || maximum.has_value()) {
           return {make(
               sourcemeta::blaze::InstructionIndex::AssertionTypeArrayBounded,
               context, schema_context, dynamic_context,
@@ -203,7 +208,8 @@ auto compiler_draft6_validation_type(const Context &context,
       return {make(sourcemeta::blaze::InstructionIndex::AssertionTypeStrict,
                    context, schema_context, dynamic_context,
                    sourcemeta::core::JSON::Type::Array)};
-    } else if (type == "number") {
+    }
+    if (type == "number") {
       if (context.mode == Mode::FastValidation &&
           schema_context.schema.defines("enum") &&
           schema_context.schema.at("enum").is_array() &&
@@ -225,7 +231,8 @@ auto compiler_draft6_validation_type(const Context &context,
       types.set(std::to_underlying(sourcemeta::core::JSON::Type::Decimal));
       return {make(sourcemeta::blaze::InstructionIndex::AssertionTypeStrictAny,
                    context, schema_context, dynamic_context, types)};
-    } else if (type == "integer") {
+    }
+    if (type == "integer") {
       if (context.mode == Mode::FastValidation &&
           schema_context.schema.defines("enum") &&
           schema_context.schema.at("enum").is_array() &&
@@ -244,7 +251,8 @@ auto compiler_draft6_validation_type(const Context &context,
       return {make(sourcemeta::blaze::InstructionIndex::AssertionType, context,
                    schema_context, dynamic_context,
                    sourcemeta::core::JSON::Type::Integer)};
-    } else if (type == "string") {
+    }
+    if (type == "string") {
       const auto minimum{
           unsigned_integer_property(schema_context.schema, "minLength", 0)};
       const auto maximum{
@@ -261,7 +269,8 @@ auto compiler_draft6_validation_type(const Context &context,
               sourcemeta::blaze::InstructionIndex::AssertionTypeStringUpper,
               context, schema_context, dynamic_context,
               ValueUnsignedInteger{maximum.value()})};
-        } else if (minimum > 0 || maximum.has_value()) {
+        }
+        if (minimum > 0 || maximum.has_value()) {
           return {make(
               sourcemeta::blaze::InstructionIndex::AssertionTypeStringBounded,
               context, schema_context, dynamic_context,
@@ -287,57 +296,59 @@ auto compiler_draft6_validation_type(const Context &context,
       return {make(sourcemeta::blaze::InstructionIndex::AssertionTypeStrict,
                    context, schema_context, dynamic_context,
                    sourcemeta::core::JSON::Type::String)};
-    } else {
-      throw sourcemeta::blaze::CompilerError(
-          schema_context.base,
-          absolute_schema_location(context, schema_context),
-          EXPECTED_TYPE_NAMES);
     }
-  } else if (schema_context.schema.at(dynamic_context.keyword).is_array() &&
-             schema_context.schema.at(dynamic_context.keyword).size() == 1 &&
-             schema_context.schema.at(dynamic_context.keyword)
-                 .front()
-                 .is_string()) {
+    throw sourcemeta::blaze::CompilerError(
+        schema_context.base, absolute_schema_location(context, schema_context),
+        EXPECTED_TYPE_NAMES);
+  }
+  if (schema_context.schema.at(dynamic_context.keyword).is_array() &&
+      schema_context.schema.at(dynamic_context.keyword).size() == 1 &&
+      schema_context.schema.at(dynamic_context.keyword).front().is_string()) {
     const auto &type{
         schema_context.schema.at(dynamic_context.keyword).front().to_string()};
     if (type == "null") {
       return {make(sourcemeta::blaze::InstructionIndex::AssertionTypeStrict,
                    context, schema_context, dynamic_context,
                    sourcemeta::core::JSON::Type::Null)};
-    } else if (type == "boolean") {
+    }
+    if (type == "boolean") {
       return {make(sourcemeta::blaze::InstructionIndex::AssertionTypeStrict,
                    context, schema_context, dynamic_context,
                    sourcemeta::core::JSON::Type::Boolean)};
-    } else if (type == "object") {
+    }
+    if (type == "object") {
       return {make(sourcemeta::blaze::InstructionIndex::AssertionTypeStrict,
                    context, schema_context, dynamic_context,
                    sourcemeta::core::JSON::Type::Object)};
-    } else if (type == "array") {
+    }
+    if (type == "array") {
       return {make(sourcemeta::blaze::InstructionIndex::AssertionTypeStrict,
                    context, schema_context, dynamic_context,
                    sourcemeta::core::JSON::Type::Array)};
-    } else if (type == "number") {
+    }
+    if (type == "number") {
       ValueTypes types{};
       types.set(std::to_underlying(sourcemeta::core::JSON::Type::Real));
       types.set(std::to_underlying(sourcemeta::core::JSON::Type::Integer));
       types.set(std::to_underlying(sourcemeta::core::JSON::Type::Decimal));
       return {make(sourcemeta::blaze::InstructionIndex::AssertionTypeStrictAny,
                    context, schema_context, dynamic_context, types)};
-    } else if (type == "integer") {
+    }
+    if (type == "integer") {
       return {make(sourcemeta::blaze::InstructionIndex::AssertionType, context,
                    schema_context, dynamic_context,
                    sourcemeta::core::JSON::Type::Integer)};
-    } else if (type == "string") {
+    }
+    if (type == "string") {
       return {make(sourcemeta::blaze::InstructionIndex::AssertionTypeStrict,
                    context, schema_context, dynamic_context,
                    sourcemeta::core::JSON::Type::String)};
-    } else {
-      throw sourcemeta::blaze::CompilerError(
-          schema_context.base,
-          absolute_schema_location(context, schema_context),
-          EXPECTED_TYPE_NAMES);
     }
-  } else if (schema_context.schema.at(dynamic_context.keyword).is_array()) {
+    throw sourcemeta::blaze::CompilerError(
+        schema_context.base, absolute_schema_location(context, schema_context),
+        EXPECTED_TYPE_NAMES);
+  }
+  if (schema_context.schema.at(dynamic_context.keyword).is_array()) {
     // The meta-schema asks for a non-empty array of unique type names, and a
     // union that does not satisfy that is not a constraint at all
     if (schema_context.schema.at(dynamic_context.keyword).empty() ||

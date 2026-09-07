@@ -23,7 +23,7 @@ auto compiler_draft4_validation_required(const Context &context,
   // Draft 4 alone asks that `required` name at least one property
   using Known = sourcemeta::blaze::SchemaVocabularies::Known;
   const auto allows_empty{!schema_context.vocabularies.contains_any(
-      {Known::JSON_Schema_Draft_4, Known::JSON_Schema_Draft_4_Hyper})};
+      {Known::JSON_SCHEMA_DRAFT_4, Known::JSON_SCHEMA_DRAFT_4_HYPER})};
   if (!is_string_array(schema_context.schema.at(dynamic_context.keyword)) ||
       (!allows_empty &&
        schema_context.schema.at(dynamic_context.keyword).empty())) {
@@ -65,26 +65,25 @@ auto compiler_draft4_applicator_allof(const Context &context,
     }
 
     return children;
-  } else {
-    for (std::uint64_t index = 0;
-         index < schema_context.schema.at(dynamic_context.keyword).size();
-         index++) {
-      for (auto &&step : compile(
-               context, schema_context, relative_dynamic_context(),
-               {static_cast<sourcemeta::core::Pointer::Token::Index>(index)})) {
-        children.push_back(std::move(step));
-      }
-    }
-
-    // Every branch imposed no constraints, so neither does the conjunction
-    if (children.empty()) {
-      return {};
-    }
-
-    return {make(sourcemeta::blaze::InstructionIndex::LogicalAnd, context,
-                 schema_context, dynamic_context, ValueNone{},
-                 std::move(children))};
   }
+  for (std::uint64_t index = 0;
+       index < schema_context.schema.at(dynamic_context.keyword).size();
+       index++) {
+    for (auto &&step : compile(
+             context, schema_context, relative_dynamic_context(),
+             {static_cast<sourcemeta::core::Pointer::Token::Index>(index)})) {
+      children.push_back(std::move(step));
+    }
+  }
+
+  // Every branch imposed no constraints, so neither does the conjunction
+  if (children.empty()) {
+    return {};
+  }
+
+  return {make(sourcemeta::blaze::InstructionIndex::LogicalAnd, context,
+               schema_context, dynamic_context, ValueNone{},
+               std::move(children))};
 }
 
 auto compiler_draft4_applicator_anyof(const Context &context,
@@ -141,18 +140,17 @@ auto compiler_draft4_applicator_anyof(const Context &context,
     if (popcount > 1) {
       return {make(sourcemeta::blaze::InstructionIndex::AssertionTypeStrictAny,
                    context, schema_context, dynamic_context, types)};
-    } else {
-      std::uint8_t type_index{0};
-      for (std::uint8_t bit{0}; bit < 8; bit++) {
-        if (types.test(bit)) {
-          type_index = bit;
-          break;
-        }
-      }
-      return {make(sourcemeta::blaze::InstructionIndex::AssertionTypeStrict,
-                   context, schema_context, dynamic_context,
-                   static_cast<ValueType>(type_index))};
     }
+    std::uint8_t type_index{0};
+    for (std::uint8_t bit{0}; bit < 8; bit++) {
+      if (types.test(bit)) {
+        type_index = bit;
+        break;
+      }
+    }
+    return {make(sourcemeta::blaze::InstructionIndex::AssertionTypeStrict,
+                 context, schema_context, dynamic_context,
+                 static_cast<ValueType>(type_index))};
   }
 
   const auto requires_exhaustive{context.mode == Mode::Exhaustive ||
@@ -223,11 +221,10 @@ auto compiler_draft4_applicator_not(const Context &context,
     return {make(sourcemeta::blaze::InstructionIndex::LogicalNotEvaluate,
                  context, schema_context, dynamic_context, ValueNone{},
                  std::move(children))};
-  } else {
-    return {make(sourcemeta::blaze::InstructionIndex::LogicalNot, context,
-                 schema_context, dynamic_context, ValueNone{},
-                 std::move(children))};
   }
+  return {make(sourcemeta::blaze::InstructionIndex::LogicalNot, context,
+               schema_context, dynamic_context, ValueNone{},
+               std::move(children))};
 }
 
 auto compiler_draft4_validation_maxproperties(

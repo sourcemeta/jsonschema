@@ -213,6 +213,12 @@ inline auto bignum_reduce(Bignum &value, const Bignum &modulus) noexcept
 
   const auto divisor_words{modulus.size};
 
+  // A zero modulus defines no residue to reduce into, and the division below
+  // reads the top two divisor words
+  if (divisor_words == 0) {
+    return;
+  }
+
   // A single-word divisor folds the value down word by word
   if (divisor_words == 1) {
     const auto divisor{modulus.words[0]};

@@ -1,4 +1,4 @@
-// NOLINTNEXTLINE(bugprone-throwing-static-initialization)
+// NOLINTNEXTLINE(cert-err58-cpp,bugprone-throwing-static-initialization)
 static const std::string DIALECT_OVERRIDE_KEYWORD{
     "x-sourcemeta-dialect-override-subschema"};
 

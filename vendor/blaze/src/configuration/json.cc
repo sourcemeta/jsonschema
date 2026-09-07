@@ -57,8 +57,8 @@ auto Configuration::to_json() const -> sourcemeta::core::JSON {
                   sourcemeta::core::JSON{this->default_dialect.value()});
   }
 
-  static const Configuration defaults;
-  if (!this->extension.empty() && this->extension != defaults.extension) {
+  static const Configuration DEFAULTS;
+  if (!this->extension.empty() && this->extension != DEFAULTS.extension) {
     auto extension_array{sourcemeta::core::JSON::make_array()};
     // Sort for deterministic output
     std::vector<std::string> sorted_extensions{this->extension.cbegin(),

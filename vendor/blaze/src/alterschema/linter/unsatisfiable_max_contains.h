@@ -20,8 +20,8 @@ public:
       -> SchemaTransformRule::Result override {
     ONLY_CONTINUE_IF(
         vocabularies.contains_any(
-            {SchemaVocabularies::Known::JSON_Schema_2020_12_Validation,
-             SchemaVocabularies::Known::JSON_Schema_2019_09_Validation}) &&
+            {SchemaVocabularies::Known::JSON_SCHEMA_2020_12_VALIDATION,
+             SchemaVocabularies::Known::JSON_SCHEMA_2019_09_VALIDATION}) &&
         schema.is_object());
 
     const auto *max_contains{schema.try_at("maxContains")};
@@ -29,7 +29,7 @@ public:
     const auto *max_items{schema.try_at("maxItems")};
     ONLY_CONTINUE_IF(max_items && max_items->is_integer() &&
                      max_contains->to_integer() >= max_items->to_integer());
-    return APPLIES_TO_KEYWORDS("maxContains", "maxItems");
+    return applies_to_keywords("maxContains", "maxItems");
   }
 
   auto transform(JSON &schema, const Result &) const -> void override {

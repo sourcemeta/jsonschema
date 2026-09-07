@@ -19,8 +19,8 @@ public:
       -> SchemaTransformRule::Result override {
     ONLY_CONTINUE_IF(
         vocabularies.contains_any(
-            {SchemaVocabularies::Known::JSON_Schema_Draft_3,
-             SchemaVocabularies::Known::JSON_Schema_Draft_3_Hyper}) &&
+            {SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_3,
+             SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_3_HYPER}) &&
         schema.is_object());
 
     const auto *type{schema.try_at("type")};
@@ -34,7 +34,7 @@ public:
          (divisible_by->is_real() && divisible_by->to_real() == 1.0) ||
          (divisible_by->is_decimal() &&
           divisible_by->to_decimal() == sourcemeta::core::Decimal{1})));
-    return APPLIES_TO_KEYWORDS("divisibleBy");
+    return applies_to_keywords("divisibleBy");
   }
 
   auto transform(JSON &schema, const Result &) const -> void override {

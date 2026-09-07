@@ -32,7 +32,7 @@ public:
       return false;
     }
 
-    return APPLIES_TO_KEYWORDS("format");
+    return applies_to_keywords("format");
   }
 
   auto transform(sourcemeta::core::JSON &schema, const Result &) const
@@ -50,44 +50,44 @@ private:
       -> const std::unordered_set<std::string_view> * {
     using Known = sourcemeta::blaze::SchemaVocabularies::Known;
     if (vocabularies.contains_any(
-            {Known::JSON_Schema_Draft_3, Known::JSON_Schema_Draft_3_Hyper})) {
+            {Known::JSON_SCHEMA_DRAFT_3, Known::JSON_SCHEMA_DRAFT_3_HYPER})) {
       return &DRAFT_3_FORMATS;
     }
     if (vocabularies.contains_any(
-            {Known::JSON_Schema_Draft_4, Known::JSON_Schema_Draft_4_Hyper})) {
+            {Known::JSON_SCHEMA_DRAFT_4, Known::JSON_SCHEMA_DRAFT_4_HYPER})) {
       return &DRAFT_4_FORMATS;
     }
     if (vocabularies.contains_any(
-            {Known::JSON_Schema_Draft_6, Known::JSON_Schema_Draft_6_Hyper})) {
+            {Known::JSON_SCHEMA_DRAFT_6, Known::JSON_SCHEMA_DRAFT_6_HYPER})) {
       return &DRAFT_6_FORMATS;
     }
     if (vocabularies.contains_any(
-            {Known::JSON_Schema_Draft_7, Known::JSON_Schema_Draft_7_Hyper})) {
+            {Known::JSON_SCHEMA_DRAFT_7, Known::JSON_SCHEMA_DRAFT_7_HYPER})) {
       return &DRAFT_7_FORMATS;
     }
-    if (vocabularies.contains(Known::JSON_Schema_2019_09_Format)) {
+    if (vocabularies.contains(Known::JSON_SCHEMA_2019_09_FORMAT)) {
       return &DRAFT_2019_09_FORMATS;
     }
-    if (vocabularies.contains(Known::JSON_Schema_2020_12_Format_Annotation) ||
-        vocabularies.contains(Known::JSON_Schema_2020_12_Format_Assertion)) {
+    if (vocabularies.contains(Known::JSON_SCHEMA_2020_12_FORMAT_ANNOTATION) ||
+        vocabularies.contains(Known::JSON_SCHEMA_2020_12_FORMAT_ASSERTION)) {
       return &DRAFT_2020_12_FORMATS;
     }
     return nullptr;
   }
 
-  // NOLINTNEXTLINE(bugprone-throwing-static-initialization)
+  // NOLINTNEXTLINE(cert-err58-cpp,bugprone-throwing-static-initialization)
   static inline const std::unordered_set<std::string_view> DRAFT_3_FORMATS{
       "date-time",  "date",  "time",     "utc-millisec", "regex",
       "color",      "style", "phone",    "uri",          "email",
       "ip-address", "ipv6",  "host-name"};
-  // NOLINTNEXTLINE(bugprone-throwing-static-initialization)
+  // NOLINTNEXTLINE(cert-err58-cpp,bugprone-throwing-static-initialization)
   static inline const std::unordered_set<std::string_view> DRAFT_4_FORMATS{
       "date-time", "email", "hostname", "ipv4", "ipv6", "uri"};
-  // NOLINTNEXTLINE(bugprone-throwing-static-initialization)
+  // NOLINTNEXTLINE(cert-err58-cpp,bugprone-throwing-static-initialization)
   static inline const std::unordered_set<std::string_view> DRAFT_6_FORMATS{
       "date-time", "email",         "hostname",     "ipv4",        "ipv6",
       "uri",       "uri-reference", "uri-template", "json-pointer"};
-  // NOLINTNEXTLINE(bugprone-throwing-static-initialization)
+  // NOLINTNEXTLINE(cert-err58-cpp,bugprone-throwing-static-initialization)
   static inline const std::unordered_set<std::string_view> DRAFT_7_FORMATS{
       "date-time",     "date",         "time",          "email",
       "idn-email",     "hostname",     "idn-hostname",  "ipv4",
@@ -95,7 +95,7 @@ private:
       "iri-reference", "uri-template", "json-pointer",  "relative-json-pointer",
       "regex"};
   static inline const std::unordered_set<std::string_view>
-      // NOLINTNEXTLINE(bugprone-throwing-static-initialization)
+      // NOLINTNEXTLINE(cert-err58-cpp,bugprone-throwing-static-initialization)
       DRAFT_2019_09_FORMATS{
           "date-time",    "date",          "time",
           "duration",     "email",         "idn-email",
@@ -105,7 +105,7 @@ private:
           "uri-template", "json-pointer",  "relative-json-pointer",
           "regex"};
   static inline const std::unordered_set<std::string_view>
-      // NOLINTNEXTLINE(bugprone-throwing-static-initialization)
+      // NOLINTNEXTLINE(cert-err58-cpp,bugprone-throwing-static-initialization)
       DRAFT_2020_12_FORMATS{
           "date-time",    "date",          "time",
           "duration",     "email",         "idn-email",

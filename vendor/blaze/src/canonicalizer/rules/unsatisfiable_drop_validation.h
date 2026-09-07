@@ -14,27 +14,28 @@ public:
             const sourcemeta::blaze::SchemaResolver &) const -> bool override {
     ONLY_CONTINUE_IF(
         vocabularies.contains_any(
-            {SchemaVocabularies::Known::JSON_Schema_2020_12_Applicator,
-             SchemaVocabularies::Known::JSON_Schema_2019_09_Applicator,
-             SchemaVocabularies::Known::JSON_Schema_Draft_7,
-             SchemaVocabularies::Known::JSON_Schema_Draft_6,
-             SchemaVocabularies::Known::JSON_Schema_Draft_3,
-             SchemaVocabularies::Known::JSON_Schema_Draft_3_Hyper}) &&
+            {SchemaVocabularies::Known::JSON_SCHEMA_2020_12_APPLICATOR,
+             SchemaVocabularies::Known::JSON_SCHEMA_2019_09_APPLICATOR,
+             SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_7,
+             SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_6,
+             SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_3,
+             SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_3_HYPER}) &&
         schema.is_object());
 
     const bool is_draft_3{vocabularies.contains_any(
-        {SchemaVocabularies::Known::JSON_Schema_Draft_3,
-         SchemaVocabularies::Known::JSON_Schema_Draft_3_Hyper})};
+        {SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_3,
+         SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_3_HYPER})};
 
     std::string_view trigger_keyword;
     if (is_draft_3) {
       const auto *disallow_value{schema.try_at("disallow")};
-      if (disallow_value && is_disallow_tautology(*disallow_value)) {
+      if ((disallow_value != nullptr) &&
+          is_disallow_tautology(*disallow_value)) {
         trigger_keyword = "disallow";
       }
     } else {
       const auto *not_value{schema.try_at("not")};
-      if (not_value && is_empty_schema(*not_value)) {
+      if ((not_value != nullptr) && is_empty_schema(*not_value)) {
         trigger_keyword = "not";
       }
     }
@@ -121,6 +122,5 @@ private:
     }
   }
 
-private:
   mutable std::vector<sourcemeta::core::Pointer> locations_;
 };

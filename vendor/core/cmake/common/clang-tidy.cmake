@@ -126,6 +126,12 @@ function(sourcemeta_clang_tidy_attempt_enable)
   # file rather than replacing it, so the group composes with whatever the file
   # enables
   set(TARGET_CLANG_TIDY "${SOURCEMETA_CXX_CLANG_TIDY}")
+
+  # This tool bundles a newer compiler than the ones this project builds with,
+  # and reports a counter macro that third-party headers have long relied on as
+  # a feature of a language revision that is yet to be released
+  list(APPEND TARGET_CLANG_TIDY "--extra-arg=-Wno-c2y-extensions")
+
   if(SOURCEMETA_CORE_CLANG_TIDY_ANALYZER)
     list(APPEND TARGET_CLANG_TIDY "--checks=clang-analyzer-*")
   endif()

@@ -13,8 +13,8 @@ public:
             const sourcemeta::blaze::SchemaWalker &,
             const sourcemeta::blaze::SchemaResolver &) const -> bool override {
     ONLY_CONTINUE_IF(vocabularies.contains_any(
-                         {SchemaVocabularies::Known::JSON_Schema_Draft_3,
-                          SchemaVocabularies::Known::JSON_Schema_Draft_4}) &&
+                         {SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_3,
+                          SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_4}) &&
                      schema.is_object());
 
     const auto *type{schema.try_at("type")};
