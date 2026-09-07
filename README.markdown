@@ -164,7 +164,7 @@ Where `X.Y.Z` is replaced with the desired version. For example:
   uses: actions/checkout@v4
 
 - name: Install the JSON Schema CLI
-  uses: sourcemeta/jsonschema@v16.9.0
+  uses: sourcemeta/jsonschema@v16.10.0
 
 # Then use as usual
 - run: jsonschema fmt path/to/schemas --check
