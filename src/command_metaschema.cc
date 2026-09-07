@@ -10,6 +10,7 @@
 
 #include <cassert>     // assert
 #include <iostream>    // std::cout, std::cerr
+#include <iterator>    // std::next
 #include <map>         // std::map
 #include <sstream>     // std::ostringstream
 #include <string>      // std::string
@@ -54,13 +55,18 @@ auto sourcemeta::jsonschema::metaschema(
   validate_http_headers(options);
   const auto trace{options.contains("trace")};
   const auto json_output{options.contains("json")};
+  const auto continue_on_error{options.contains("continue")};
 
   ValidationSummary summary;
   sourcemeta::blaze::Evaluator evaluator;
 
   std::map<std::string, sourcemeta::blaze::Template> cache;
 
-  for (const auto &entry : for_each_json(options, InputRequirement::NonEmpty)) {
+  const auto entries{for_each_json(options, InputRequirement::NonEmpty)};
+  for (auto iterator{entries.cbegin()}; iterator != entries.cend();
+       ++iterator) {
+    const auto &entry{*iterator};
+    const auto failures_before{summary.failed};
     summary.validated += 1;
     if (!entry.second.is_object() && !entry.second.is_boolean()) {
       throw NotSchemaError{entry.from_stdin ? stdin_path()
@@ -199,10 +205,20 @@ auto sourcemeta::jsonschema::metaschema(
           sourcemeta::blaze::SchemaAnchorCollisionError>(entry.resolution_base,
                                                          error);
     }
+
+    if (summary.failed > failures_before && !continue_on_error) {
+      summary.stopped = std::next(iterator) != entries.cend();
+      break;
+    }
   }
 
   if (!json_output && !trace) {
     print_summary(summary, options, std::cerr);
+  }
+
+  if (summary.stopped) {
+    LOG_WARNING()
+        << "Stopped at first failure, pass --continue/-c to keep going\n";
   }
 
   if (summary.failed > 0) {

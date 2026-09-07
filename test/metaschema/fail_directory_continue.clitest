@@ -1,0 +1,35 @@
+MAKE DIRECTORY schemas
+
+WRITE schemas/schema_1.json UNTIL EOF
+{
+  "$schema": "http://json-schema.org/draft-04/schema#",
+  "minimum": "foo"
+}
+EOF
+
+WRITE schemas/schema_2.json UNTIL EOF
+{
+  "$schema": "http://json-schema.org/draft-04/schema#",
+  "minimum": 1
+}
+EOF
+
+// Validation failure
+RUN metaschema schemas --continue --verbose STDIN /dev/null IN . INTO result_0.txt EXPECTING 2
+
+WRITE expected_0.txt UNTIL EOF
+2> fail: schemas/schema_1.json
+2> error: Schema validation failure
+2>   The value was expected to be of type number but it was of type string
+2>     at instance location "/minimum" (line 3, column 3)
+2>     at evaluate path "/properties/minimum/type"
+2>   The object value was expected to validate against the 33 defined properties subschemas
+2>     at instance location "" (line 1, column 1)
+2>     at evaluate path "/properties"
+2> ok: schemas/schema_2.json
+2>   matches http://json-schema.org/draft-04/schema#
+2>
+2> 2 validated, 1 passed, 1 failed
+EOF
+
+COMPARE result_0.txt AGAINST expected_0.txt

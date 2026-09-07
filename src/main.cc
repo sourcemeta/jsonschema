@@ -60,7 +60,7 @@ Commands:
 
    metaschema [schemas-or-directories...] [--extension/-e <extension>]
               [--ignore/-i <schemas-or-directories>] [--trace/-t]
-              [--format-assertion/-F]
+              [--continue/-c] [--format-assertion/-F]
 
        Validate that a schema or a set of schemas are valid with respect
        to their metaschemas.
@@ -227,6 +227,7 @@ auto jsonschema_main(const std::string &program, const std::string &command,
   if (command == "metaschema") {
     app.flag("trace", {"t"});
     app.flag("format-assertion", {"F"});
+    app.flag("continue", {"c"});
     app.option("extension", {"e"});
     app.option("ignore", {"i"});
     app.parse(argc, argv, {.skip = 1});

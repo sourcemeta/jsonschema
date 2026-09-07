@@ -112,7 +112,7 @@ _jsonschema() {
       fi
       ;;
     metaschema)
-      local options="--extension -e --ignore -i --trace -t"
+      local options="--extension -e --ignore -i --trace -t --continue -c"
       if [[ ${current} == -* ]]
       then
         COMPREPLY=( $(compgen -W "${options} ${global_options}" -- "${current}") )
