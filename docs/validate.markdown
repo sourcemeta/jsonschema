@@ -46,6 +46,11 @@ code 2.
 > during validation. No additional options are needed.
 
 > [!NOTE]
+> The `--trace`/`-t` and `--benchmark`/`-b` options are only allowed given a
+> single instance, as neither output carries a per instance header that would
+> tell you which instance a line belongs to.
+
+> [!NOTE]
 > Annotations are reported through the `--json`/`-j` output and through the
 > `--trace`/`-t` option. Neither reports them when the `--fast`/`-f` option is
 > passed, as fast mode does not collect annotations.

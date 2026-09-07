@@ -47,6 +47,9 @@ Commands:
 
        Validate one or more instances against the given schema.
 
+       The --trace/-t and --benchmark/-b options are only allowed given a
+       single instance.
+
        By default, schemas are validated in exhaustive mode, which results in
        better error messages, at the expense of speed. The --fast/-f option
        makes the schema compiler optimise for speed, at the expense of error
@@ -63,7 +66,8 @@ Commands:
               [--continue/-c] [--format-assertion/-F]
 
        Validate that a schema or a set of schemas are valid with respect
-       to their metaschemas.
+       to their metaschemas. The --trace/-t option is only allowed given a
+       single schema.
 
    compile <schema.json|.yaml> [--extension/-e <extension>]
            [--ignore/-i <schemas-or-directories>] [--fast/-f] [--minify/-m]

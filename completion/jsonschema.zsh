@@ -52,11 +52,11 @@ _jsonschema() {
         validate)
           _arguments \
             ${global_options[@]} \
-            '(--benchmark -b)'{--benchmark,-b}'[Enable benchmarking mode]' \
+            '(--benchmark -b)'{--benchmark,-b}'[Enable benchmarking mode (single instance only)]' \
             '(--loop -l)'{--loop,-l}'[Number of loop iterations]:iterations:' \
             '(--extension -e)'{--extension,-e}'[Specify file extension]:extension:_jsonschema_extensions' \
             '(--ignore -i)'{--ignore,-i}'[Ignore schemas or directories]:path:_files' \
-            '(--trace -t)'{--trace,-t}'[Enable trace output]' \
+            '(--trace -t)'{--trace,-t}'[Enable trace output (single instance only)]' \
             '(--fast -f)'{--fast,-f}'[Optimise for speed]' \
             '(--template -m)'{--template,-m}'[Use pre-compiled schema template]:template file:_files -g "*.json"' \
             '1:schema file:_files -g "*.json *.yaml *.yml"' \
@@ -67,7 +67,7 @@ _jsonschema() {
             ${global_options[@]} \
             '(--extension -e)'{--extension,-e}'[Specify file extension]:extension:_jsonschema_extensions' \
             '(--ignore -i)'{--ignore,-i}'[Ignore schemas or directories]:path:_files' \
-            '(--trace -t)'{--trace,-t}'[Enable trace output]' \
+            '(--trace -t)'{--trace,-t}'[Enable trace output (single schema only)]' \
             '(--continue -c)'{--continue,-c}'[Report every failing schema]' \
             '*:schema file:_files -g "*.json *.yaml *.yml"'
           ;;
