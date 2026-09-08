@@ -1,0 +1,58 @@
+// Several keys that denote the same canonical URI collapse into a single
+// mapping, and the one the user already wrote in canonical form is the one
+// that takes effect, whichever order the keys appear in
+
+WRITE schema.json UNTIL EOF
+{
+  "id": "https://example.com",
+  "$schema": "http://json-schema.org/draft-04/schema#",
+  "title": "Test",
+  "description": "Test schema",
+  "properties": {
+    "foo": { "$ref": "other" }
+  }
+}
+EOF
+
+WRITE remote.json UNTIL EOF
+{
+  "id": "https://example.com/nested/integer",
+  "$schema": "http://json-schema.org/draft-04/schema#",
+  "type": "integer"
+}
+EOF
+
+WRITE alternative.json UNTIL EOF
+{
+  "id": "https://example.com/nested/string",
+  "$schema": "http://json-schema.org/draft-04/schema#",
+  "type": "string"
+}
+EOF
+
+WRITE jsonschema.json UNTIL EOF
+{
+  "resolve": {
+    "HTTPS://Example.com/other": "https://example.com/nested/string",
+    "https://example.com/other": "https://example.com/nested/integer",
+    "https://example.com/elsewhere/../other#": "https://example.com/nested/string"
+  }
+}
+EOF
+
+WRITE instance.json UNTIL EOF
+{ "foo": 1 }
+EOF
+
+RUN validate schema.json instance.json --resolve remote.json --resolve alternative.json --verbose STDIN /dev/null IN . INTO result_0.txt EXPECTING 0
+
+WRITE expected_0.txt UNTIL EOF
+2> Using extension: .json
+2> Using extension: .yaml
+2> Using extension: .yml
+2> ok: instance.json
+2>
+2> 1 validated, 1 passed, 0 failed
+EOF
+
+COMPARE result_0.txt AGAINST expected_0.txt

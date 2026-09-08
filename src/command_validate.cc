@@ -146,96 +146,102 @@ auto process_entry(const sourcemeta::jsonschema::InputJSON &entry,
                    bool fast_mode, bool json_output, bool continue_on_error,
                    const sourcemeta::core::Options &options,
                    sourcemeta::jsonschema::ValidationSummary &summary) -> bool {
-  sourcemeta::blaze::SimpleOutput output{entry.second};
-  sourcemeta::blaze::TraceOutput trace_output{
-      schema_template,
-      sourcemeta::jsonschema::trace_callback(entry.positions, std::cout)};
-  bool subresult{true};
-  summary.validated += 1;
-  if (benchmark) {
-    subresult = run_loop(
-        evaluator, schema_template, entry.second,
-        sourcemeta::jsonschema::relative_path_string(entry.resolution_base),
-        entry.multidocument ? static_cast<std::int64_t>(entry.index + 1)
-                            : static_cast<std::int64_t>(-1),
-        benchmark_loop);
-    if (!subresult) {
-      summary.failed += 1;
+  try {
+    sourcemeta::blaze::SimpleOutput output{entry.second};
+    sourcemeta::blaze::TraceOutput trace_output{
+        schema_template,
+        sourcemeta::jsonschema::trace_callback(entry.positions, std::cout)};
+    bool subresult{true};
+    summary.validated += 1;
+    if (benchmark) {
+      subresult = run_loop(
+          evaluator, schema_template, entry.second,
+          sourcemeta::jsonschema::relative_path_string(entry.resolution_base),
+          entry.multidocument ? static_cast<std::int64_t>(entry.index + 1)
+                              : static_cast<std::int64_t>(-1),
+          benchmark_loop);
+      if (!subresult) {
+        summary.failed += 1;
+      }
+    } else if (trace) {
+      subresult = evaluator.validate(schema_template, entry.second,
+                                     std::ref(trace_output));
+    } else if (fast_mode) {
+      subresult = evaluator.validate(schema_template, entry.second);
+    } else if (!json_output) {
+      subresult =
+          evaluator.validate(schema_template, entry.second, std::ref(output));
     }
-  } else if (trace) {
-    subresult = evaluator.validate(schema_template, entry.second,
-                                   std::ref(trace_output));
-  } else if (fast_mode) {
-    subresult = evaluator.validate(schema_template, entry.second);
-  } else if (!json_output) {
-    subresult =
-        evaluator.validate(schema_template, entry.second, std::ref(output));
-  }
 
-  if (benchmark) {
-    return subresult || continue_on_error;
-  }
+    if (benchmark) {
+      return subresult || continue_on_error;
+    }
 
-  if (trace) {
-    if (!subresult) {
-      summary.failed += 1;
-    }
-  } else if (json_output) {
-    if (!entry.multidocument) {
-      std::cerr << sourcemeta::jsonschema::relative_path_string(
-                       entry.resolution_base)
-                << "\n";
-    }
-    const auto suboutput{sourcemeta::blaze::standard(
-        evaluator, schema_template, entry.second,
-        fast_mode ? sourcemeta::blaze::StandardOutput::Flag
-                  : sourcemeta::blaze::StandardOutput::Basic,
-        entry.positions)};
-    assert(suboutput.is_object());
-    assert(suboutput.defines("valid"));
-    assert(suboutput.at("valid").is_boolean());
-    sourcemeta::core::prettify(suboutput, std::cout);
-    std::cout << "\n";
-    if (!suboutput.at("valid").to_boolean()) {
+    if (trace) {
+      if (!subresult) {
+        summary.failed += 1;
+      }
+    } else if (json_output) {
+      if (!entry.multidocument) {
+        std::cerr << sourcemeta::jsonschema::relative_path_string(
+                         entry.resolution_base)
+                  << "\n";
+      }
+      const auto suboutput{sourcemeta::blaze::standard(
+          evaluator, schema_template, entry.second,
+          fast_mode ? sourcemeta::blaze::StandardOutput::Flag
+                    : sourcemeta::blaze::StandardOutput::Basic,
+          entry.positions)};
+      assert(suboutput.is_object());
+      assert(suboutput.defines("valid"));
+      assert(suboutput.at("valid").is_boolean());
+      sourcemeta::core::prettify(suboutput, std::cout);
+      std::cout << "\n";
+      if (!suboutput.at("valid").to_boolean()) {
+        summary.failed += 1;
+        if (!continue_on_error) {
+          return false;
+        }
+      }
+    } else if (subresult) {
+      if (continue_on_error && entry.multidocument && summary.failed > 0) {
+        sourcemeta::jsonschema::LOG_VERBOSE(options) << "\n";
+      }
+      sourcemeta::jsonschema::LOG_VERBOSE(options)
+          << "ok: "
+          << sourcemeta::jsonschema::relative_path_string(
+                 entry.resolution_base);
+      if (entry.multidocument) {
+        sourcemeta::jsonschema::LOG_VERBOSE(options)
+            << " (entry #" << entry.index + 1 << ")";
+      }
+      sourcemeta::jsonschema::LOG_VERBOSE(options) << "\n";
+    } else {
+      if (continue_on_error && entry.multidocument && summary.failed > 0) {
+        std::cerr << "\n";
+      }
+      std::cerr << "fail: "
+                << sourcemeta::jsonschema::relative_path_string(
+                       entry.resolution_base);
+      if (entry.multidocument) {
+        std::cerr << " (entry #" << entry.index + 1 << ")\n\n";
+        sourcemeta::core::prettify(entry.second, std::cerr);
+        std::cerr << "\n\n";
+      } else {
+        std::cerr << "\n";
+      }
+      sourcemeta::jsonschema::print(output, entry.positions, std::cerr);
       summary.failed += 1;
       if (!continue_on_error) {
         return false;
       }
     }
-  } else if (subresult) {
-    if (continue_on_error && entry.multidocument && summary.failed > 0) {
-      sourcemeta::jsonschema::LOG_VERBOSE(options) << "\n";
-    }
-    sourcemeta::jsonschema::LOG_VERBOSE(options)
-        << "ok: "
-        << sourcemeta::jsonschema::relative_path_string(entry.resolution_base);
-    if (entry.multidocument) {
-      sourcemeta::jsonschema::LOG_VERBOSE(options)
-          << " (entry #" << entry.index + 1 << ")";
-    }
-    sourcemeta::jsonschema::LOG_VERBOSE(options) << "\n";
-  } else {
-    if (continue_on_error && entry.multidocument && summary.failed > 0) {
-      std::cerr << "\n";
-    }
-    std::cerr << "fail: "
-              << sourcemeta::jsonschema::relative_path_string(
-                     entry.resolution_base);
-    if (entry.multidocument) {
-      std::cerr << " (entry #" << entry.index + 1 << ")\n\n";
-      sourcemeta::core::prettify(entry.second, std::cerr);
-      std::cerr << "\n\n";
-    } else {
-      std::cerr << "\n";
-    }
-    sourcemeta::jsonschema::print(output, entry.positions, std::cerr);
-    summary.failed += 1;
-    if (!continue_on_error) {
-      return false;
-    }
-  }
 
-  return true;
+    return true;
+  } catch (const sourcemeta::blaze::EvaluationError &error) {
+    throw sourcemeta::core::FileError<sourcemeta::blaze::EvaluationError>(
+        entry.resolution_base, error.what());
+  }
 }
 
 } // namespace
@@ -424,69 +430,75 @@ auto sourcemeta::jsonschema::validate(const sourcemeta::core::Options &options)
           }
         }
       } else {
-        const auto instance_display_path{
-            sourcemeta::core::weakly_canonical(instance_path)};
-        sourcemeta::core::PointerPositionTracker tracker;
-        auto property_storage = std::make_shared<std::deque<std::string>>();
-        const bool track_positions{(!fast_mode && !benchmark) || trace};
-        const auto instance{[&]() -> sourcemeta::core::JSON {
-          if (track_positions) {
-            sourcemeta::core::JSON document{sourcemeta::core::JSON{nullptr}};
-            auto callback = make_position_callback(tracker, property_storage);
-            sourcemeta::core::read_yaml_or_json(instance_path, document,
-                                                callback);
-            return document;
+        try {
+          const auto instance_display_path{
+              sourcemeta::core::weakly_canonical(instance_path)};
+          sourcemeta::core::PointerPositionTracker tracker;
+          auto property_storage = std::make_shared<std::deque<std::string>>();
+          const bool track_positions{(!fast_mode && !benchmark) || trace};
+          const auto instance{[&]() -> sourcemeta::core::JSON {
+            if (track_positions) {
+              sourcemeta::core::JSON document{sourcemeta::core::JSON{nullptr}};
+              auto callback = make_position_callback(tracker, property_storage);
+              sourcemeta::core::read_yaml_or_json(instance_path, document,
+                                                  callback);
+              return document;
+            }
+            return sourcemeta::core::read_yaml_or_json(instance_path);
+          }()};
+          summary.validated += 1;
+          sourcemeta::blaze::SimpleOutput output{instance};
+          sourcemeta::blaze::TraceOutput trace_output{
+              schema_template, trace_callback(tracker, std::cout)};
+          bool subresult{true};
+          if (benchmark) {
+            subresult = run_loop(evaluator, schema_template, instance,
+                                 relative_path_string(instance_display_path),
+                                 static_cast<std::int64_t>(-1), benchmark_loop);
+          } else if (trace) {
+            subresult = evaluator.validate(schema_template, instance,
+                                           std::ref(trace_output));
+          } else if (fast_mode) {
+            subresult = evaluator.validate(schema_template, instance);
+          } else if (!json_output) {
+            subresult =
+                evaluator.validate(schema_template, instance, std::ref(output));
           }
-          return sourcemeta::core::read_yaml_or_json(instance_path);
-        }()};
-        summary.validated += 1;
-        sourcemeta::blaze::SimpleOutput output{instance};
-        sourcemeta::blaze::TraceOutput trace_output{
-            schema_template, trace_callback(tracker, std::cout)};
-        bool subresult{true};
-        if (benchmark) {
-          subresult = run_loop(evaluator, schema_template, instance,
-                               relative_path_string(instance_display_path),
-                               static_cast<std::int64_t>(-1), benchmark_loop);
-        } else if (trace) {
-          subresult = evaluator.validate(schema_template, instance,
-                                         std::ref(trace_output));
-        } else if (fast_mode) {
-          subresult = evaluator.validate(schema_template, instance);
-        } else if (!json_output) {
-          subresult =
-              evaluator.validate(schema_template, instance, std::ref(output));
-        }
 
-        if (trace) {
-          if (!subresult) {
-            summary.failed += 1;
-          }
-        } else if (json_output) {
-          const auto suboutput{sourcemeta::blaze::standard(
-              evaluator, schema_template, instance,
-              fast_mode ? sourcemeta::blaze::StandardOutput::Flag
-                        : sourcemeta::blaze::StandardOutput::Basic,
-              tracker)};
-          assert(suboutput.is_object());
-          assert(suboutput.defines("valid"));
-          assert(suboutput.at("valid").is_boolean());
-          if (!suboutput.at("valid").to_boolean()) {
+          if (trace) {
+            if (!subresult) {
+              summary.failed += 1;
+            }
+          } else if (json_output) {
+            const auto suboutput{sourcemeta::blaze::standard(
+                evaluator, schema_template, instance,
+                fast_mode ? sourcemeta::blaze::StandardOutput::Flag
+                          : sourcemeta::blaze::StandardOutput::Basic,
+                tracker)};
+            assert(suboutput.is_object());
+            assert(suboutput.defines("valid"));
+            assert(suboutput.at("valid").is_boolean());
+            if (!suboutput.at("valid").to_boolean()) {
+              summary.failed += 1;
+              proceed = continue_on_error;
+            }
+
+            sourcemeta::core::prettify(suboutput, std::cout);
+            std::cout << "\n";
+          } else if (subresult) {
+            LOG_VERBOSE(options)
+                << "ok: " << relative_path_string(instance_display_path)
+                << "\n";
+          } else {
+            std::cerr << "fail: " << relative_path_string(instance_display_path)
+                      << "\n";
+            print(output, tracker, std::cerr);
             summary.failed += 1;
             proceed = continue_on_error;
           }
-
-          sourcemeta::core::prettify(suboutput, std::cout);
-          std::cout << "\n";
-        } else if (subresult) {
-          LOG_VERBOSE(options)
-              << "ok: " << relative_path_string(instance_display_path) << "\n";
-        } else {
-          std::cerr << "fail: " << relative_path_string(instance_display_path)
-                    << "\n";
-          print(output, tracker, std::cerr);
-          summary.failed += 1;
-          proceed = continue_on_error;
+        } catch (const sourcemeta::blaze::EvaluationError &error) {
+          throw sourcemeta::core::FileError<sourcemeta::blaze::EvaluationError>(
+              instance_path, error.what());
         }
       }
 

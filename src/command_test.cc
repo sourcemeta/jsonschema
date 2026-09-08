@@ -199,104 +199,113 @@ auto run_suite_as_text(const sourcemeta::core::Options &options,
                        const sourcemeta::jsonschema::InputJSON &entry,
                        const bool verbose, std::ostream &stream)
     -> sourcemeta::blaze::TestSuite::Result {
-  const auto configuration_path{sourcemeta::jsonschema::find_configuration(
-      options, entry.resolution_base)};
-  const auto &configuration{
-      sourcemeta::jsonschema::read_configuration(options, configuration_path)};
-  const auto dialect{
-      sourcemeta::jsonschema::default_dialect(options, configuration)};
-  const auto &schema_resolver{sourcemeta::jsonschema::resolver(
-      options, options.contains("http"), dialect, configuration)};
+  try {
+    const auto configuration_path{sourcemeta::jsonschema::find_configuration(
+        options, entry.resolution_base)};
+    const auto &configuration{sourcemeta::jsonschema::read_configuration(
+        options, configuration_path)};
+    const auto dialect{
+        sourcemeta::jsonschema::default_dialect(options, configuration)};
+    const auto &schema_resolver{sourcemeta::jsonschema::resolver(
+        options, options.contains("http"), dialect, configuration)};
 
-  auto test_suite{parse_test_suite(
-      entry, schema_resolver, dialect,
-      sourcemeta::jsonschema::format_assertion_tweaks(options))};
+    auto test_suite{parse_test_suite(
+        entry, schema_resolver, dialect,
+        sourcemeta::jsonschema::format_assertion_tweaks(options))};
 
-  stream << entry.first << ":";
+    stream << entry.first << ":";
 
-  const auto multi_target{test_suite.targets.size() > 1};
-  std::optional<sourcemeta::core::JSON::String> last_target_header;
+    const auto multi_target{test_suite.targets.size() > 1};
+    std::optional<sourcemeta::core::JSON::String> last_target_header;
 
-  const auto suite_result{test_suite.run(
-      [&](const sourcemeta::core::JSON::String &target, std::size_t index,
-          std::size_t total, const sourcemeta::blaze::TestCase &test_case,
-          const sourcemeta::blaze::TestOutcome &outcome,
-          sourcemeta::blaze::TestTimestamp, sourcemeta::blaze::TestTimestamp) {
-        if (verbose && index == 1) {
-          stream << "\n";
-        }
+    const auto suite_result{test_suite.run(
+        [&](const sourcemeta::core::JSON::String &target, std::size_t index,
+            std::size_t total, const sourcemeta::blaze::TestCase &test_case,
+            const sourcemeta::blaze::TestOutcome &outcome,
+            sourcemeta::blaze::TestTimestamp,
+            sourcemeta::blaze::TestTimestamp) {
+          if (verbose && index == 1) {
+            stream << "\n";
+          }
 
-        const auto *const entry_indent{multi_target ? "    " : "  "};
+          const auto *const entry_indent{multi_target ? "    " : "  "};
 
-        const auto &description{test_case.description.empty()
-                                    ? "<no description>"
-                                    : test_case.description};
+          const auto &description{test_case.description.empty()
+                                      ? "<no description>"
+                                      : test_case.description};
 
-        if (outcome.passed) {
-          if (verbose) {
+          if (outcome.passed) {
+            if (verbose) {
+              emit_target_header(multi_target, target, last_target_header,
+                                 stream);
+              stream << entry_indent << index << "/" << total << " PASS "
+                     << description << "\n";
+            }
+          } else if (!test_case.valid && outcome.valid) {
+            if (!verbose) {
+              stream << "\n";
+            }
             emit_target_header(multi_target, target, last_target_header,
                                stream);
-            stream << entry_indent << index << "/" << total << " PASS "
-                   << description << "\n";
-          }
-        } else if (!test_case.valid && outcome.valid) {
-          if (!verbose) {
-            stream << "\n";
-          }
-          emit_target_header(multi_target, target, last_target_header, stream);
-          stream << entry_indent << index << "/" << total << " FAIL "
-                 << description << "\n\n"
-                 << "error: Passed but was expected to fail\n";
+            stream << entry_indent << index << "/" << total << " FAIL "
+                   << description << "\n\n"
+                   << "error: Passed but was expected to fail\n";
 
-          if (index != total && verbose) {
-            stream << "\n";
-          }
-        } else if (!outcome.valid) {
-          const std::string ref{"$ref"};
-          sourcemeta::blaze::SimpleOutput output{test_case.data,
-                                                 {std::cref(ref)}};
-          const auto target_index{static_cast<std::size_t>(
-              std::distance(test_suite.targets.cbegin(),
-                            std::find(test_suite.targets.cbegin(),
-                                      test_suite.targets.cend(), target)))};
-          test_suite.evaluator.validate(test_suite.exhaustive(target_index),
-                                        test_case.data, std::ref(output));
+            if (index != total && verbose) {
+              stream << "\n";
+            }
+          } else if (!outcome.valid) {
+            const std::string ref{"$ref"};
+            sourcemeta::blaze::SimpleOutput output{test_case.data,
+                                                   {std::cref(ref)}};
+            const auto target_index{static_cast<std::size_t>(
+                std::distance(test_suite.targets.cbegin(),
+                              std::find(test_suite.targets.cbegin(),
+                                        test_suite.targets.cend(), target)))};
+            test_suite.evaluator.validate(test_suite.exhaustive(target_index),
+                                          test_case.data, std::ref(output));
 
-          if (!verbose) {
-            stream << "\n";
-          }
-          emit_target_header(multi_target, target, last_target_header, stream);
-          stream << entry_indent << index << "/" << total << " FAIL "
-                 << description << "\n\n";
-          sourcemeta::jsonschema::print(output, test_case.tracker, stream);
+            if (!verbose) {
+              stream << "\n";
+            }
+            emit_target_header(multi_target, target, last_target_header,
+                               stream);
+            stream << entry_indent << index << "/" << total << " FAIL "
+                   << description << "\n\n";
+            sourcemeta::jsonschema::print(output, test_case.tracker, stream);
 
-          if (index != total && verbose) {
-            stream << "\n";
-          }
-        } else {
-          if (!verbose) {
-            stream << "\n";
-          }
-          emit_target_header(multi_target, target, last_target_header, stream);
-          stream << entry_indent << index << "/" << total << " FAIL "
-                 << description << "\n\n";
-          print_rdf_failure(entry, (index - 1) % test_suite.tests.size(),
-                            outcome, stream);
+            if (index != total && verbose) {
+              stream << "\n";
+            }
+          } else {
+            if (!verbose) {
+              stream << "\n";
+            }
+            emit_target_header(multi_target, target, last_target_header,
+                               stream);
+            stream << entry_indent << index << "/" << total << " FAIL "
+                   << description << "\n\n";
+            print_rdf_failure(entry, (index - 1) % test_suite.tests.size(),
+                              outcome, stream);
 
-          if (index != total && verbose) {
-            stream << "\n";
+            if (index != total && verbose) {
+              stream << "\n";
+            }
           }
-        }
-      })};
+        })};
 
-  if (suite_result.total == 0) {
-    stream << " NO TESTS\n";
-  } else if (!verbose && suite_result.passed == suite_result.total) {
-    stream << " PASS " << suite_result.passed << "/" << suite_result.total
-           << "\n";
+    if (suite_result.total == 0) {
+      stream << " NO TESTS\n";
+    } else if (!verbose && suite_result.passed == suite_result.total) {
+      stream << " PASS " << suite_result.passed << "/" << suite_result.total
+             << "\n";
+    }
+
+    return suite_result;
+  } catch (const sourcemeta::blaze::EvaluationError &error) {
+    throw sourcemeta::core::FileError<sourcemeta::blaze::EvaluationError>(
+        entry.resolution_base, error.what());
   }
-
-  return suite_result;
 }
 
 auto report_as_text(const sourcemeta::core::Options &options,
@@ -396,92 +405,99 @@ struct CtrfSuiteReport {
 auto run_suite_as_ctrf(const sourcemeta::core::Options &options,
                        const sourcemeta::jsonschema::InputJSON &entry,
                        CtrfSuiteReport &report) -> void {
-  const auto configuration_path{sourcemeta::jsonschema::find_configuration(
-      options, entry.resolution_base)};
-  const auto &configuration{
-      sourcemeta::jsonschema::read_configuration(options, configuration_path)};
-  const auto dialect{
-      sourcemeta::jsonschema::default_dialect(options, configuration)};
-  const auto &schema_resolver{sourcemeta::jsonschema::resolver(
-      options, options.contains("http"), dialect, configuration)};
+  try {
+    const auto configuration_path{sourcemeta::jsonschema::find_configuration(
+        options, entry.resolution_base)};
+    const auto &configuration{sourcemeta::jsonschema::read_configuration(
+        options, configuration_path)};
+    const auto dialect{
+        sourcemeta::jsonschema::default_dialect(options, configuration)};
+    const auto &schema_resolver{sourcemeta::jsonschema::resolver(
+        options, options.contains("http"), dialect, configuration)};
 
-  auto test_suite{parse_test_suite(
-      entry, schema_resolver, dialect,
-      sourcemeta::jsonschema::format_assertion_tweaks(options))};
+    auto test_suite{parse_test_suite(
+        entry, schema_resolver, dialect,
+        sourcemeta::jsonschema::format_assertion_tweaks(options))};
 
-  const auto file_path{entry.first};
+    const auto file_path{entry.first};
 
-  const auto suite_result{test_suite.run(
-      [&](const sourcemeta::core::JSON::String &target, std::size_t index,
-          std::size_t, const sourcemeta::blaze::TestCase &test_case,
-          const sourcemeta::blaze::TestOutcome &outcome,
-          sourcemeta::blaze::TestTimestamp start,
-          sourcemeta::blaze::TestTimestamp end) {
-        auto test_object{sourcemeta::core::JSON::make_object()};
+    const auto suite_result{test_suite.run(
+        [&](const sourcemeta::core::JSON::String &target, std::size_t index,
+            std::size_t, const sourcemeta::blaze::TestCase &test_case,
+            const sourcemeta::blaze::TestOutcome &outcome,
+            sourcemeta::blaze::TestTimestamp start,
+            sourcemeta::blaze::TestTimestamp end) {
+          auto test_object{sourcemeta::core::JSON::make_object()};
 
-        const auto &name{test_case.description.empty() ? "<no description>"
-                                                       : test_case.description};
-        test_object.assign("name", sourcemeta::core::JSON{name});
+          const auto &name{test_case.description.empty()
+                               ? "<no description>"
+                               : test_case.description};
+          test_object.assign("name", sourcemeta::core::JSON{name});
 
-        test_object.assign("status", sourcemeta::core::JSON{
-                                         outcome.passed ? "passed" : "failed"});
+          test_object.assign(
+              "status",
+              sourcemeta::core::JSON{outcome.passed ? "passed" : "failed"});
 
-        test_object.assign("duration",
-                           sourcemeta::core::JSON{duration_ms(start, end)});
-        auto suite{sourcemeta::core::JSON::make_array()};
-        suite.push_back(sourcemeta::core::JSON{target});
-        test_object.assign("suite", std::move(suite));
-        test_object.assign("type", sourcemeta::core::JSON{"unit"});
-        test_object.assign("filePath", sourcemeta::core::JSON{file_path});
+          test_object.assign("duration",
+                             sourcemeta::core::JSON{duration_ms(start, end)});
+          auto suite{sourcemeta::core::JSON::make_array()};
+          suite.push_back(sourcemeta::core::JSON{target});
+          test_object.assign("suite", std::move(suite));
+          test_object.assign("type", sourcemeta::core::JSON{"unit"});
+          test_object.assign("filePath", sourcemeta::core::JSON{file_path});
 
-        const auto [test_line, test_column, test_end_line, test_end_column] =
-            test_case.position;
-        test_object.assign("line", sourcemeta::core::JSON{
-                                       static_cast<std::int64_t>(test_line)});
-        test_object.assign(
-            "retries", sourcemeta::core::JSON{static_cast<std::int64_t>(0)});
-        test_object.assign("flaky", sourcemeta::core::JSON{false});
-        std::ostringstream thread_id_stream;
-        thread_id_stream << std::this_thread::get_id();
-        test_object.assign("threadId",
-                           sourcemeta::core::JSON{thread_id_stream.str()});
+          const auto [test_line, test_column, test_end_line, test_end_column] =
+              test_case.position;
+          test_object.assign("line", sourcemeta::core::JSON{
+                                         static_cast<std::int64_t>(test_line)});
+          test_object.assign(
+              "retries", sourcemeta::core::JSON{static_cast<std::int64_t>(0)});
+          test_object.assign("flaky", sourcemeta::core::JSON{false});
+          std::ostringstream thread_id_stream;
+          thread_id_stream << std::this_thread::get_id();
+          test_object.assign("threadId",
+                             sourcemeta::core::JSON{thread_id_stream.str()});
 
-        if (!outcome.passed) {
-          if (!test_case.valid && outcome.valid) {
-            test_object.assign("message",
-                               sourcemeta::core::JSON{"Passed but was "
-                                                      "expected to fail"});
-          } else if (!outcome.valid) {
-            std::ostringstream trace_stream;
-            const std::string ref{"$ref"};
-            sourcemeta::blaze::SimpleOutput output{test_case.data,
-                                                   {std::cref(ref)}};
-            const auto target_index{static_cast<std::size_t>(
-                std::distance(test_suite.targets.cbegin(),
-                              std::find(test_suite.targets.cbegin(),
-                                        test_suite.targets.cend(), target)))};
-            test_suite.evaluator.validate(test_suite.exhaustive(target_index),
-                                          test_case.data, std::ref(output));
-            sourcemeta::jsonschema::print(output, test_case.tracker,
-                                          trace_stream);
-            test_object.assign("trace",
-                               sourcemeta::core::JSON{trace_stream.str()});
-          } else {
-            std::ostringstream trace_stream;
-            print_rdf_failure(entry, (index - 1) % test_suite.tests.size(),
-                              outcome, trace_stream);
-            test_object.assign("trace",
-                               sourcemeta::core::JSON{trace_stream.str()});
+          if (!outcome.passed) {
+            if (!test_case.valid && outcome.valid) {
+              test_object.assign("message",
+                                 sourcemeta::core::JSON{"Passed but was "
+                                                        "expected to fail"});
+            } else if (!outcome.valid) {
+              std::ostringstream trace_stream;
+              const std::string ref{"$ref"};
+              sourcemeta::blaze::SimpleOutput output{test_case.data,
+                                                     {std::cref(ref)}};
+              const auto target_index{static_cast<std::size_t>(
+                  std::distance(test_suite.targets.cbegin(),
+                                std::find(test_suite.targets.cbegin(),
+                                          test_suite.targets.cend(), target)))};
+              test_suite.evaluator.validate(test_suite.exhaustive(target_index),
+                                            test_case.data, std::ref(output));
+              sourcemeta::jsonschema::print(output, test_case.tracker,
+                                            trace_stream);
+              test_object.assign("trace",
+                                 sourcemeta::core::JSON{trace_stream.str()});
+            } else {
+              std::ostringstream trace_stream;
+              print_rdf_failure(entry, (index - 1) % test_suite.tests.size(),
+                                outcome, trace_stream);
+              test_object.assign("trace",
+                                 sourcemeta::core::JSON{trace_stream.str()});
+            }
           }
-        }
 
-        report.tests.push_back(std::move(test_object));
-      })};
+          report.tests.push_back(std::move(test_object));
+        })};
 
-  report.passed = suite_result.passed;
-  report.total = suite_result.total;
-  report.start = suite_result.start;
-  report.end = suite_result.end;
+    report.passed = suite_result.passed;
+    report.total = suite_result.total;
+    report.start = suite_result.start;
+    report.end = suite_result.end;
+  } catch (const sourcemeta::blaze::EvaluationError &error) {
+    throw sourcemeta::core::FileError<sourcemeta::blaze::EvaluationError>(
+        entry.resolution_base, error.what());
+  }
 }
 
 auto report_as_ctrf(const sourcemeta::core::Options &options,

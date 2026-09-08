@@ -1,0 +1,41 @@
+// A schema that recurses through every array element hits the evaluator depth
+// limit on a deep enough instance. That is reported against the instance file
+// rather than as an internal failure
+
+WRITE schema.json UNTIL EOF
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.com/recursive",
+  "items": { "$ref": "#" }
+}
+EOF
+
+WRITE instance.json UNTIL EOF
+[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[1]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]
+EOF
+
+// Not supported
+RUN validate schema.json instance.json STDIN /dev/null IN . INTO result_0.txt EXPECTING 3
+
+REPLACE $CWD WITH '[CWD]' IN result_0.txt
+
+WRITE expected_0.txt UNTIL EOF
+2> error: The evaluation path depth limit was reached likely due to infinite recursion
+2>   at file path [CWD]/instance.json
+EOF
+
+COMPARE result_0.txt AGAINST expected_0.txt
+
+// Not supported
+RUN validate schema.json instance.json --json STDIN /dev/null IN . INTO result_1.txt EXPECTING 3
+
+REPLACE $CWD WITH '[CWD]' IN result_1.txt
+
+WRITE expected_1.txt UNTIL EOF
+1> {
+1>   "error": "The evaluation path depth limit was reached likely due to infinite recursion",
+1>   "filePath": "[CWD]/instance.json"
+1> }
+EOF
+
+COMPARE result_1.txt AGAINST expected_1.txt

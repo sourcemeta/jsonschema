@@ -1,0 +1,37 @@
+// A schema that recurses through every array element hits the evaluator depth
+// limit on a deep enough test case. That is reported against the test file
+// rather than as an internal failure
+
+WRITE schema.json UNTIL EOF
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.com/recursive",
+  "items": { "$ref": "#" }
+}
+EOF
+
+WRITE test.json UNTIL EOF
+{
+  "target": "https://example.com/recursive",
+  "tests": [
+    {
+      "description": "Deeply nested",
+      "valid": true,
+      "data": [[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[1]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]
+    }
+  ]
+}
+EOF
+
+// Not supported
+RUN test test.json --resolve schema.json STDIN /dev/null IN . INTO result_0.txt EXPECTING 3
+
+REPLACE $CWD WITH '[CWD]' IN result_0.txt
+
+WRITE expected_0.txt UNTIL EOF
+1> [CWD]/test.json:
+2> error: The evaluation path depth limit was reached likely due to infinite recursion
+2>   at file path [CWD]/test.json
+EOF
+
+COMPARE result_0.txt AGAINST expected_0.txt
