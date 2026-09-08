@@ -1,5 +1,5 @@
-// A resolve key written with an empty fragment must behave like one without,
-// as the identifier being looked up has already had the fragment dropped
+// A resolve key written with an empty fragment denotes the same schema as one
+// written without it
 
 MAKE DIRECTORY source
 
@@ -32,7 +32,7 @@ WRITE project/jsonschema.json UNTIL EOF
 }
 EOF
 
-REPLACE '\[CWD_URI\]' WITH $CWD_URI IN project/jsonschema.json
+REPLACE '[CWD_URI]' WITH $CWD_URI IN project/jsonschema.json
 
 RUN install STDIN /dev/null IN project INTO result_0.txt EXPECTING 0
 
@@ -82,6 +82,6 @@ WRITE expected_lock.json UNTIL EOF
 }
 EOF
 
-REPLACE '\[HASH\]' WITH $HASH IN expected_lock.json
+REPLACE '[HASH]' WITH $HASH IN expected_lock.json
 
 COMPARE checked_lock.json AGAINST expected_lock.json

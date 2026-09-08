@@ -2,16 +2,17 @@
 #include <sourcemeta/core/io.h>
 #include <sourcemeta/core/json.h>
 
-#include <array>       // std::to_array
-#include <cassert>     // assert
-#include <cstdint>     // std::uint8_t
-#include <filesystem>  // std::filesystem
-#include <iostream>    // std::cerr, std::cout
-#include <optional>    // std::optional
-#include <ostream>     // std::ostream
-#include <string>      // std::string
-#include <string_view> // std::string_view
-#include <utility>     // std::move, std::to_underlying
+#include <array>         // std::to_array
+#include <cassert>       // assert
+#include <cstdint>       // std::uint8_t
+#include <filesystem>    // std::filesystem
+#include <iostream>      // std::cerr, std::cout
+#include <optional>      // std::optional
+#include <ostream>       // std::ostream
+#include <string>        // std::string
+#include <string_view>   // std::string_view
+#include <unordered_map> // std::unordered_map
+#include <utility>       // std::move, std::to_underlying
 
 #include "command.h"
 #include "configuration.h"
@@ -50,14 +51,15 @@ auto dependency_fetch(const sourcemeta::core::Options &options,
       configuration_path, uri, "Could not resolve schema");
 }
 
-auto dependency_resolve(const sourcemeta::core::Options &options,
-                        const sourcemeta::blaze::Configuration &configuration,
-                        std::string_view identifier)
-    -> sourcemeta::blaze::SchemaResolverResult {
+auto dependency_resolve(
+    const sourcemeta::core::Options &options,
+    const sourcemeta::blaze::Configuration &configuration,
+    const std::unordered_map<std::string, std::string> &canonical_resolve,
+    std::string_view identifier) -> sourcemeta::blaze::SchemaResolverResult {
   const std::string string_identifier{identifier};
 
-  const auto mapped{sourcemeta::jsonschema::resolve_map_uri(configuration,
-                                                            string_identifier)};
+  const auto mapped{sourcemeta::jsonschema::resolve_map_uri(
+      canonical_resolve, configuration.base_path, string_identifier)};
   if (mapped.has_value()) {
     try {
       auto result{
@@ -459,10 +461,15 @@ auto sourcemeta::jsonschema::install(const sourcemeta::core::Options &options)
         return dependency_fetch(options, configuration_path.value(), uri);
       }};
 
+  const auto canonical_resolve{
+      sourcemeta::jsonschema::canonical_resolve_map(configuration.resolve)};
+
   const sourcemeta::blaze::SchemaResolver resolver{
-      [&options, &configuration](std::string_view identifier)
+      [&options, &configuration,
+       &canonical_resolve](std::string_view identifier)
           -> sourcemeta::blaze::SchemaResolverResult {
-        return dependency_resolve(options, configuration, identifier);
+        return dependency_resolve(options, configuration, canonical_resolve,
+                                  identifier);
       }};
 
   int error_exit_code{0};

@@ -20,14 +20,15 @@
 #include <cstddef> // std::size_t
 #include <cstdint> // std::uint8_t
 #include <exception> // std::exception_ptr, std::current_exception, std::rethrow_exception
-#include <filesystem>  // std::filesystem
-#include <functional>  // std::function, std::ref
-#include <iostream>    // std::cerr
-#include <map>         // std::map
-#include <optional>    // std::optional
-#include <string>      // std::string
-#include <string_view> // std::string_view
-#include <thread>      // std::this_thread::sleep_for
+#include <filesystem>    // std::filesystem
+#include <functional>    // std::function, std::ref
+#include <iostream>      // std::cerr
+#include <map>           // std::map
+#include <optional>      // std::optional
+#include <string>        // std::string
+#include <string_view>   // std::string_view
+#include <thread>        // std::this_thread::sleep_for
+#include <unordered_map> // std::unordered_map
 #include <utility> // std::pair, std::piecewise_construct, std::forward_as_tuple, std::move
 #include <vector> // std::vector
 
@@ -35,16 +36,56 @@ namespace sourcemeta::jsonschema {
 
 static constexpr std::uint8_t HTTP_MAXIMUM_RETRIES{3};
 
+// A key that is not a valid URI cannot denote a schema identifier, but it must
+// not render the rest of the map unusable either, so it stays as the user
+// wrote it
+static inline auto canonical_resolve_key(const std::string_view key)
+    -> std::string {
+  try {
+    return sourcemeta::core::URI::canonicalize(key);
+  } catch (const sourcemeta::core::URIParseError &) {
+    return std::string{key};
+  }
+}
+
+// The `.json` extension is not a URI concern, so this single alternative is
+// tried by hand, and always after the identifier itself, so that a map holding
+// both spellings is unambiguous
+static inline auto resolve_alternative(const std::string &identifier)
+    -> std::string {
+  return identifier.ends_with(".json")
+             ? identifier.substr(0, identifier.size() - 5)
+             : identifier + ".json";
+}
+
 // Keys are canonicalized once, up front, rather than on every lookup, which
-// would make resolution linear in the size of the map for each reference
+// would make resolution linear in the size of the map for each reference. When
+// several keys canonicalize to the same URI, the one the user already wrote in
+// canonical form wins, and otherwise the first in lexicographic order, so that
+// the winner never depends on hash iteration order
+// TODO: Move this to Blaze's configuration parser, alongside where the values
+// of the `resolve` object are already canonicalized. Doing it there would let
+// a key that is not a valid URI, and a set of keys that collapse into the same
+// canonical URI, be reported as a `ConfigurationParseError` pointing at the
+// offending property rather than quietly tolerated, and would spare every
+// consumer of a configuration from repeating the work
 static inline auto canonical_resolve_map(
     const std::unordered_map<std::string, std::string> &resolve_map)
     -> std::unordered_map<std::string, std::string> {
+  const std::map<std::string_view, std::string_view> sorted{
+      resolve_map.cbegin(), resolve_map.cend()};
+
   std::unordered_map<std::string, std::string> result;
-  result.reserve(resolve_map.size());
-  for (const auto &entry : resolve_map) {
-    result.emplace(sourcemeta::core::URI::canonicalize(entry.first),
-                   entry.second);
+  result.reserve(sorted.size());
+  for (const auto &entry : sorted) {
+    auto canonical{canonical_resolve_key(entry.first)};
+    const auto is_canonical{canonical == entry.first};
+    const auto match{result.find(canonical)};
+    if (match == result.cend()) {
+      result.emplace(std::move(canonical), entry.second);
+    } else if (is_canonical) {
+      match->second = entry.second;
+    }
   }
 
   return result;
@@ -54,20 +95,39 @@ static inline auto find_resolve_match(
     const std::unordered_map<std::string, std::string> &resolve_map,
     const std::string &identifier)
     -> std::unordered_map<std::string, std::string>::const_iterator {
-  // Comparing canonical URIs lets a key match however the user spelled it.
-  // Canonicalization drops an empty fragment, lowercases the scheme and
-  // resolves dot segments, all per RFC 3986. The `.json` extension is not a URI
-  // concern, so that one alternative is still tried by hand, and only after the
-  // identifier itself, so that a map holding both spellings is unambiguous
-  const auto canonical{sourcemeta::core::URI::canonicalize(identifier)};
-  const auto match{resolve_map.find(canonical)};
+  if (resolve_map.empty()) {
+    return resolve_map.cend();
+  }
+
+  // Keys are stored canonicalized, so an identifier spelled the way its key is
+  // matches without parsing a URI at all
+  auto match{resolve_map.find(identifier)};
   if (match != resolve_map.cend()) {
     return match;
   }
 
-  return resolve_map.find(canonical.ends_with(".json")
-                              ? canonical.substr(0, canonical.size() - 5)
-                              : canonical + ".json");
+  match = resolve_map.find(resolve_alternative(identifier));
+  if (match != resolve_map.cend()) {
+    return match;
+  }
+
+  // Comparing canonical URIs is what lets a key match however the user spelled
+  // it. Canonicalization lowercases the scheme and the host, drops an empty
+  // fragment and a default port, resolves dot segments, and normalises
+  // percent-encoding, all per RFC 3986. An identifier that no URI can express
+  // canonicalizes to itself here, and so falls through as unresolved rather
+  // than aborting the command
+  const auto canonical{canonical_resolve_key(identifier)};
+  if (canonical == identifier) {
+    return resolve_map.cend();
+  }
+
+  match = resolve_map.find(canonical);
+  if (match != resolve_map.cend()) {
+    return match;
+  }
+
+  return resolve_map.find(resolve_alternative(canonical));
 }
 
 static inline auto
@@ -80,13 +140,6 @@ resolve_map_uri(const std::unordered_map<std::string, std::string> &resolve_map,
   }
 
   return resolve_relative_uri(match->second, base_path);
-}
-
-static inline auto
-resolve_map_uri(const sourcemeta::blaze::Configuration &configuration,
-                const std::string &identifier) -> std::optional<std::string> {
-  return resolve_map_uri(canonical_resolve_map(configuration.resolve),
-                         configuration.base_path, identifier);
 }
 
 static constexpr std::string_view HTTP_HEADER_EXAMPLE{
