@@ -4,6 +4,7 @@
 #include <sourcemeta/blaze/alterschema.h>
 #include <sourcemeta/blaze/codegen.h>
 #include <sourcemeta/blaze/configuration.h>
+#include <sourcemeta/blaze/evaluator.h>
 #include <sourcemeta/blaze/foundation.h>
 #include <sourcemeta/blaze/test.h>
 #include <sourcemeta/core/error.h>
@@ -1349,6 +1350,11 @@ inline auto try_catch(const sourcemeta::core::Options &options,
     const auto is_json{options.contains("json")};
     print_exception(is_json, error);
     return EXIT_SCHEMA_INPUT_ERROR;
+  } catch (const sourcemeta::core::FileError<sourcemeta::blaze::EvaluationError>
+               &error) {
+    const auto is_json{options.contains("json")};
+    print_exception(is_json, error);
+    return EXIT_NOT_SUPPORTED;
   } catch (const sourcemeta::core::FileError<
            sourcemeta::blaze::CodegenUnsupportedKeywordError> &error) {
     const auto is_json{options.contains("json")};
@@ -1467,6 +1473,11 @@ inline auto try_catch(const sourcemeta::core::Options &options,
     return EXIT_NOT_SUPPORTED;
 
     // Standard library handlers
+  } catch (const sourcemeta::core::FileError<
+           sourcemeta::core::IOReadOutOfBoundsError> &error) {
+    const auto is_json{options.contains("json")};
+    print_exception(is_json, error);
+    return EXIT_OTHER_INPUT_ERROR;
   } catch (const sourcemeta::core::IOFileNotFoundError &error) {
     const auto is_json{options.contains("json")};
     print_exception(is_json, error);

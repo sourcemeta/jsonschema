@@ -67,27 +67,32 @@ auto sourcemeta::jsonschema::decode(const sourcemeta::core::Options &options)
   output_stream.exceptions(std::ios_base::badbit);
   sourcemeta::jsonbinpack::Decoder decoder{input_stream};
 
-  if (output.extension() == ".jsonl") {
-    LOG_VERBOSE(options) << "Interpreting input as JSONL: "
-                         << sourcemeta::core::weakly_canonical(
-                                options.positional().front())
-                                .generic_string()
-                         << "\n";
+  try {
+    if (output.extension() == ".jsonl") {
+      LOG_VERBOSE(options) << "Interpreting input as JSONL: "
+                           << sourcemeta::core::weakly_canonical(
+                                  options.positional().front())
+                                  .generic_string()
+                           << "\n";
 
-    std::size_t count{0};
-    while (has_data(input_stream)) {
-      LOG_VERBOSE(options) << "Decoding entry #" << count << "\n";
-      auto document{decoder.read(encoding)};
-      if (count > 0) {
-        output_stream << "\n";
+      std::size_t count{0};
+      while (has_data(input_stream)) {
+        LOG_VERBOSE(options) << "Decoding entry #" << count << "\n";
+        auto document{decoder.read(encoding)};
+        if (count > 0) {
+          output_stream << "\n";
+        }
+
+        sourcemeta::core::prettify(document, output_stream);
+        count += 1;
       }
-
+    } else {
+      auto document{decoder.read(encoding)};
       sourcemeta::core::prettify(document, output_stream);
-      count += 1;
     }
-  } else {
-    auto document{decoder.read(encoding)};
-    sourcemeta::core::prettify(document, output_stream);
+  } catch (const sourcemeta::core::IOReadOutOfBoundsError &) {
+    throw sourcemeta::core::FileError<sourcemeta::core::IOReadOutOfBoundsError>(
+        options.positional().front());
   }
 
   output_stream << "\n";

@@ -1,0 +1,25 @@
+// A schema file whose contents are neither an object nor a boolean cannot be
+// formatted, and is reported against that file
+
+WRITE schema.json UNTIL EOF
+[ 1, 2 ]
+EOF
+
+// Schema input error
+RUN fmt schema.json STDIN /dev/null IN . INTO result_0.txt EXPECTING 4
+
+REPLACE $CWD WITH '[CWD]' IN result_0.txt
+
+WRITE expected_0.txt UNTIL EOF
+2> error: The schema file you provided does not represent a valid JSON Schema
+2>   at file path [CWD]/schema.json
+EOF
+
+COMPARE result_0.txt AGAINST expected_0.txt
+
+// Schema input error
+RUN fmt --check schema.json STDIN /dev/null IN . INTO result_1.txt EXPECTING 4
+
+REPLACE $CWD WITH '[CWD]' IN result_1.txt
+
+COMPARE result_1.txt AGAINST expected_0.txt

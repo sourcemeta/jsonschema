@@ -401,6 +401,10 @@ auto sourcemeta::jsonschema::lint(const sourcemeta::core::Options &options)
             entry.resolution_base};
       }
 
+      if (!entry.second.is_object() && !entry.second.is_boolean()) {
+        throw NotSchemaError{entry.resolution_base};
+      }
+
       auto copy = entry.second;
       bool printed_progress{false};
 
@@ -606,6 +610,10 @@ auto sourcemeta::jsonschema::lint(const sourcemeta::core::Options &options)
       const auto dialect{default_dialect(options, configuration)};
       const auto &custom_resolver{
           resolver(options, options.contains("http"), dialect, configuration)};
+      if (!entry.second.is_object() && !entry.second.is_boolean()) {
+        throw NotSchemaError{entry.resolution_base};
+      }
+
       LOG_VERBOSE(options) << "Linting: " << entry.first << "\n";
 
       bool printed_progress{false};
