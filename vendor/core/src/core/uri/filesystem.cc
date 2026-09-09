@@ -89,8 +89,11 @@ auto URI::to_path() const -> std::filesystem::path {
 }
 
 auto URI::from_path(const std::filesystem::path &path) -> URI {
+  // Not every standard library recognises the leading pair of separators as a
+  // UNC root name, and those that do not collapse it while normalizing, so the
+  // form is detected on the path as it was given
+  const auto is_unc = path.string().starts_with("\\\\");
   auto normalized = path.lexically_normal().string();
-  const auto is_unc = normalized.starts_with("\\\\");
   const auto is_windows_absolute =
       normalized.size() >= 2 && normalized[1] == ':';
 

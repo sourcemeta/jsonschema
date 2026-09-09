@@ -15,6 +15,7 @@ sourcemeta_library(NAMESPACE sourcemeta PROJECT core NAME http
           negotiate_encoding.cc from_date.cc format_link.cc format_vary.cc
           field_list.cc
           accept_includes_all.cc content_type_matches.cc parse_bearer.cc
+          parse_media_type.cc match_media_range.cc
           cache_control_max_age.cc serialize_cookie.cc aws_sigv4.cc
           serialize_challenge.cc parse_challenges.cc
           serialize_cache_control.cc

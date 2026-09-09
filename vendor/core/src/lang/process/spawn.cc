@@ -16,8 +16,7 @@
 #include <utility>          // std::move
 #include <vector>           // std::vector
 
-#if defined(_WIN32) && !defined(__MSYS__) && !defined(__CYGWIN__) &&           \
-    !defined(__MINGW32__) && !defined(__MINGW64__)
+#if defined(_WIN32) && !defined(__MSYS__) && !defined(__CYGWIN__)
 #define WIN32_LEAN_AND_MEAN
 #ifndef NOMINMAX
 #define NOMINMAX
@@ -49,8 +48,7 @@ constexpr std::size_t TRANSFER_BUFFER_SIZE{16384};
 
 } // namespace
 
-#if defined(_WIN32) && !defined(__MSYS__) && !defined(__CYGWIN__) &&           \
-    !defined(__MINGW32__) && !defined(__MINGW64__)
+#if defined(_WIN32) && !defined(__MSYS__) && !defined(__CYGWIN__)
 
 namespace {
 
@@ -496,8 +494,7 @@ auto execute(const std::string &program,
 
   sourcemeta::core::ProcessOutput result;
 
-#if defined(_WIN32) && !defined(__MSYS__) && !defined(__CYGWIN__) &&           \
-    !defined(__MINGW32__) && !defined(__MINGW64__)
+#if defined(_WIN32) && !defined(__MSYS__) && !defined(__CYGWIN__)
   Handle input_read;
   Handle input_write;
   Handle output_read;
@@ -699,8 +696,7 @@ auto execute(const std::string &program,
     throw ProcessSpawnError{program, arguments};
   }
 
-#if defined(__MSYS__) || defined(__CYGWIN__) || defined(__MINGW32__) ||        \
-    defined(__MINGW64__)
+#if defined(__MSYS__) || defined(__CYGWIN__)
   // These platforms lack a child-directory file action, so we change the
   // process-wide working directory around the spawn and restore it afterwards
   // This races with any concurrent thread that observes or mutates the current
@@ -733,8 +729,7 @@ auto execute(const std::string &program,
   posix_spawn_file_actions_destroy(&file_actions);
   posix_spawnattr_destroy(&attributes);
 
-#if defined(__MSYS__) || defined(__CYGWIN__) || defined(__MINGW32__) ||        \
-    defined(__MINGW64__)
+#if defined(__MSYS__) || defined(__CYGWIN__)
   std::filesystem::current_path(original_directory);
 #endif
 

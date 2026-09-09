@@ -4,8 +4,7 @@
 #include <cstdint>  // std::int64_t, std::uint64_t
 #include <optional> // std::optional
 
-#if defined(_WIN32) && !defined(__MSYS__) && !defined(__CYGWIN__) &&           \
-    !defined(__MINGW32__) && !defined(__MINGW64__)
+#if defined(_WIN32) && !defined(__MSYS__) && !defined(__CYGWIN__)
 #ifndef WIN32_LEAN_AND_MEAN
 #define WIN32_LEAN_AND_MEAN
 #endif
@@ -40,8 +39,7 @@
 #include <unistd.h>       // read, close, sysconf, _SC_CLK_TCK, _SC_PAGESIZE
 #endif
 
-#if defined(_WIN32) && !defined(__MSYS__) && !defined(__CYGWIN__) &&           \
-    !defined(__MINGW32__) && !defined(__MINGW64__)
+#if defined(_WIN32) && !defined(__MSYS__) && !defined(__CYGWIN__)
 
 namespace {
 

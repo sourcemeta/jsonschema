@@ -1127,6 +1127,15 @@ inline auto clitest_command_run(const CLITestCommand &command) -> void {
   const auto path_value{clitest_inherited("PATH").value_or(std::string{})};
   child.insert_or_assign("PATH", path_value);
 
+  // Coverage instrumentation names the file a program writes its profile into
+  // through the environment, and a program that cannot see that name drops one
+  // into whatever directory it happens to run in, which here is the sandbox a
+  // script is entitled to make assertions about
+  const auto profile_value{clitest_inherited("LLVM_PROFILE_FILE")};
+  if (profile_value.has_value()) {
+    child.insert_or_assign("LLVM_PROFILE_FILE", profile_value.value());
+  }
+
 #if defined(_WIN32)
   // Reserved up front, as the map holds views into these and a reallocation
   // would move a short string along with the storage it lives inside

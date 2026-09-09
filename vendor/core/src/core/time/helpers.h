@@ -87,6 +87,20 @@ inline auto format_four_digit_year(const int year) -> std::string {
   return digits;
 }
 
+// RFC 9110 §5.6.7 defines the asctime day as "date3 = month SP ( 2DIGIT / ( SP
+// 1DIGIT ))", a space padded field of a fixed width. The "%e" conversion that
+// renders it is absent from the C89 runtime that some Windows toolchains link
+// against, where it expands to nothing and shortens the output, so the field is
+// built explicitly
+inline auto format_space_padded_day(const int day) -> std::string {
+  std::string digits{std::to_string(day)};
+  if (digits.size() < 2) {
+    digits.insert(std::size_t{0}, 2 - digits.size(), ' ');
+  }
+
+  return digits;
+}
+
 // RFC 9110 §5.6.7: "HTTP-date is case sensitive". The standard library's
 // std::get_time matches day and month names case-insensitively on some
 // implementations, so the exact spelling is verified against the parsed index

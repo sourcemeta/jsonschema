@@ -5,6 +5,10 @@ namespace sourcemeta::core::internal {
 template <typename CharT>
 static constexpr CharT TOKEN_JSONL_LINE_FEED{'\u000A'};
 
+// RFC 7464 Section 2.1: "RS = %x1E; "record separator" (RS), see RFC 20"
+template <typename CharT>
+static constexpr CharT TOKEN_JSONL_RECORD_SEPARATOR{'\u001E'};
+
 // Whitespace is any sequence of one or more of the following code points:
 // character tabulation (U+0009), line feed (U+000A), carriage return (U+000D),
 // and space (U+0020).

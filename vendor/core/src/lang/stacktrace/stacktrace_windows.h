@@ -15,8 +15,6 @@
 #include <mutex>     // std::mutex, std::lock_guard
 #include <process.h> // _getpid
 
-#pragma comment(lib, "dbghelp.lib")
-
 namespace {
 
 constexpr USHORT maximum_frames{128};

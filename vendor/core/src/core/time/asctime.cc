@@ -13,9 +13,11 @@
 #include <string_view> // std::string_view
 
 namespace {
-// The year is rendered separately so it is always four digits (RFC 9110
-// §5.6.7: "year = 4DIGIT"), which "%Y" does not guarantee for a year below 1000
-constexpr auto FORMAT_ASCTIME_OUTPUT_BEFORE_YEAR{"%a %b %e %H:%M:%S "};
+// The day and the year are rendered separately so each keeps the fixed width
+// that RFC 9110 §5.6.7 requires, which "%e" and "%Y" do not guarantee on every
+// runtime
+constexpr auto FORMAT_ASCTIME_OUTPUT_BEFORE_DAY{"%a %b "};
+constexpr auto FORMAT_ASCTIME_OUTPUT_AFTER_DAY{" %H:%M:%S "};
 constexpr auto FORMAT_ASCTIME_NORMALISED_INPUT{"%a %b %d %H:%M:%S %Y"};
 } // namespace
 
@@ -26,7 +28,9 @@ auto to_asctime(const std::chrono::system_clock::time_point time)
   const auto parts{time_point_to_broken_down(time)};
   std::ostringstream stream;
   stream.imbue(std::locale::classic());
-  stream << std::put_time(&parts, FORMAT_ASCTIME_OUTPUT_BEFORE_YEAR)
+  stream << std::put_time(&parts, FORMAT_ASCTIME_OUTPUT_BEFORE_DAY)
+         << format_space_padded_day(parts.tm_mday)
+         << std::put_time(&parts, FORMAT_ASCTIME_OUTPUT_AFTER_DAY)
          << format_four_digit_year(parts.tm_year + 1900);
   return stream.str();
 }

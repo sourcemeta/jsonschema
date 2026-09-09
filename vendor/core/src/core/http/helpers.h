@@ -20,6 +20,20 @@ inline auto http_subview(const std::string_view value, const std::size_t offset,
   return std::string_view{value.data() + offset, length};
 }
 
+// RFC 9110 §8.3.1: "media-type = type "/" subtype parameters", where both
+// "type = token" and "subtype = token", which rules out the comments and
+// folding whitespace that the MIME grammar of RFC 2045 §5.1 admits
+inline auto http_is_media_type(const std::string_view value) noexcept -> bool {
+  const auto slash{value.find('/')};
+  if (slash == std::string_view::npos) {
+    return false;
+  }
+
+  return http_is_token(http_subview(value, 0, slash)) &&
+         http_is_token(
+             http_subview(value, slash + 1, value.size() - slash - 1));
+}
+
 inline auto http_media_specificity(const std::string_view range,
                                    const std::string_view candidate) noexcept
     -> std::uint8_t {
