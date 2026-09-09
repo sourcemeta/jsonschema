@@ -31,6 +31,15 @@
 /// @brief An implementation of HTTP-protocol parsing, formatting, and
 /// validation primitives per RFC 9110.
 ///
+/// Media types live in this module rather than in a MIME one because HTTP
+/// defines its own grammar for them. RFC 9110 §8.3.1 builds a media type from
+/// the HTTP token of §5.6.2, while the MIME grammar of RFC 2045 §5.1 admits
+/// curly braces, and a MIME header field further admits the comments and
+/// folding whitespace that HTTP has no equivalent of. RFC 9112 Appendix B.1
+/// states that "HTTP is not a MIME-compliant protocol". Only the registration
+/// vocabulary of RFC 6838, the structured syntax suffix among it, is common to
+/// both.
+///
 /// This functionality is included as follows:
 ///
 /// ```cpp
@@ -103,6 +112,70 @@ SOURCEMETA_CORE_HTTP_EXPORT
 auto http_content_type_matches(const std::string_view content_type_header,
                                const std::string_view media_type) noexcept
     -> bool;
+
+/// @ingroup http
+/// The parts of a media type per RFC 9110 §8.3.1, as views borrowed from the
+/// input.
+struct HTTPMediaType {
+  /// The type, such as `application`
+  std::string_view type{};
+  /// The subtype, such as `geo+json`
+  std::string_view subtype{};
+  /// The structured syntax suffix per RFC 6838 §4.2, carrying the leading `+`
+  /// that the IANA registry names it by, such as `+json`. Empty when the
+  /// subtype has none
+  std::string_view suffix{};
+  /// The parameters that follow the type, starting at the first `;`
+  std::string_view parameters{};
+};
+
+/// @ingroup http
+/// Parse a media type into its parts per RFC 9110 §8.3.1, splitting off any
+/// structured syntax suffix per RFC 6838 §4.2. Returns no value when the input
+/// is not well-formed, including when its parameters do not follow RFC 9110
+/// §5.6.6. A media range such as `text/*` parses the same way. For
+/// example:
+///
+/// ```cpp
+/// #include <sourcemeta/core/http.h>
+/// #include <cassert>
+///
+/// const auto result{
+///     sourcemeta::core::http_parse_media_type("application/geo+json")};
+/// assert(result.has_value());
+/// assert(result.value().type == "application");
+/// assert(result.value().subtype == "geo+json");
+/// assert(result.value().suffix == "+json");
+/// ```
+SOURCEMETA_CORE_HTTP_EXPORT
+auto http_parse_media_type(const std::string_view media_type)
+    -> std::optional<HTTPMediaType>;
+
+/// @ingroup http
+/// Pick the most specific media range that a media type matches per RFC 9110
+/// §12.5.1, where an exact type beats a subtype wildcard, which in turn beats
+/// a full wildcard, and a range that pins a parameter the media type also
+/// carries is more specific still. A weight on a range is not a media type
+/// parameter and takes no part in matching. Selection looks only at the type
+/// and the parameters it is given, so neither side has to be well-formed
+/// beyond its type. Returns an empty value when none match. The returned view
+/// borrows from `ranges`. For example:
+///
+/// ```cpp
+/// #include <sourcemeta/core/http.h>
+/// #include <array>
+/// #include <cassert>
+/// #include <string_view>
+///
+/// const std::array<std::string_view, 2> ranges{{"text/*", "text/plain"}};
+/// const auto best{
+///     sourcemeta::core::http_match_media_range("text/plain", ranges)};
+/// assert(best == "text/plain");
+/// ```
+SOURCEMETA_CORE_HTTP_EXPORT
+auto http_match_media_range(const std::string_view media_type,
+                            std::span<const std::string_view> ranges) noexcept
+    -> std::string_view;
 
 /// @ingroup http
 /// Pick the best language-tag candidate against an `Accept-Language` header

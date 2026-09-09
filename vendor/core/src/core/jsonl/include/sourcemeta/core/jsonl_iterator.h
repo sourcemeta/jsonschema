@@ -16,12 +16,24 @@
 namespace sourcemeta::core {
 
 /// @ingroup jsonl
+/// The framing that delimits the JSON values of a stream
+enum class JSONLFraming : std::uint8_t {
+  /// Every value is terminated by a line feed, as in JSON Lines and NDJSON
+  LineFeed,
+  /// Every value is introduced by a record separator (U+001E) and terminated
+  /// by a line feed, as in RFC 7464 JSON text sequences
+  RecordSeparator
+};
+
+/// @ingroup jsonl
 /// A forward iterator to parse JSON documents out of a JSON Lines stream. Blank
 /// and whitespace-only lines are skipped rather than treated as errors.
 class SOURCEMETA_CORE_JSONL_EXPORT ConstJSONLIterator {
 public:
-  /// Construct an iterator over the JSON documents in a stream.
-  ConstJSONLIterator(std::basic_istream<JSON::Char, JSON::CharTraits> *stream);
+  /// Construct an iterator over the JSON documents in a stream, optionally
+  /// selecting the framing that delimits them.
+  ConstJSONLIterator(std::basic_istream<JSON::Char, JSON::CharTraits> *stream,
+                     JSONLFraming framing = JSONLFraming::LineFeed);
   ~ConstJSONLIterator();
   using iterator_category = std::forward_iterator_tag;
   using difference_type = std::ptrdiff_t;
@@ -40,7 +52,11 @@ public:
 private:
   std::uint64_t line_{0};
   std::uint64_t column_{0};
+  JSONLFraming framing_{JSONLFraming::LineFeed};
+  bool at_sequence_start_{true};
   auto parse_next() -> JSON;
+  auto parse_next_line() -> JSON;
+  auto parse_next_record() -> JSON;
   std::basic_istream<JSON::Char, JSON::CharTraits> *data_{};
 
 // Exporting symbols that depends on the standard C++ library is considered

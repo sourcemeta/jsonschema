@@ -97,7 +97,7 @@ endif()
 # Every translation unit must be compiled with LTO flags for the linker
 # to perform cross-module optimization effectively.
 if(CMAKE_BUILD_TYPE STREQUAL "Release")
-  if(SOURCEMETA_COMPILER_GCC AND NOT BUILD_SHARED_LIBS)
+  if(SOURCEMETA_COMPILER_GCC AND NOT BUILD_SHARED_LIBS AND NOT MINGW)
     message(STATUS "Enabling Fat LTO")
     add_compile_options(-flto -ffat-lto-objects)
     add_link_options(-flto)
@@ -109,6 +109,15 @@ if(CMAKE_BUILD_TYPE STREQUAL "Release")
     add_compile_options(-flto=full)
     add_link_options(-flto=full)
   endif()
+endif()
+
+# The compiler runtime that MinGW links against by default sits next to the
+# toolchain and is found through the PATH, so a program that runs with a reduced
+# environment cannot start at all. Linking it in keeps every program this build
+# produces self-contained. Shared libraries keep it dynamic, as a private copy
+# inside each one would not interoperate across their boundaries
+if(MINGW)
+  add_link_options("$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,EXECUTABLE>:-static>")
 endif()
 
 # Turn on POSIX.1-2008 compatibility on MSYS2

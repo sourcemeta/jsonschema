@@ -1,8 +1,7 @@
 #ifndef SOURCEMETA_CORE_PROCESS_COMMAND_LINE_H_
 #define SOURCEMETA_CORE_PROCESS_COMMAND_LINE_H_
 
-#if defined(_WIN32) && !defined(__MSYS__) && !defined(__CYGWIN__) &&           \
-    !defined(__MINGW32__) && !defined(__MINGW64__)
+#if defined(_WIN32) && !defined(__MSYS__) && !defined(__CYGWIN__)
 
 #include <cstddef>     // std::size_t
 #include <string>      // std::string

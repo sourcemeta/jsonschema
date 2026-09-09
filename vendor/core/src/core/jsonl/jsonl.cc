@@ -13,8 +13,9 @@ struct JSONL::Internal {
 };
 
 JSONL::JSONL(std::basic_istream<JSON::Char, JSON::CharTraits> &input,
-             const Mode mode)
-    : stream_{&input}, internal_{std::make_unique<Internal>()} {
+             const Mode mode, const JSONLFraming framing)
+    : stream_{&input}, framing_{framing},
+      internal_{std::make_unique<Internal>()} {
   if (mode == Mode::GZIP) {
     this->internal_->streambuf = std::make_unique<GZIPStreamBuffer>(input);
     this->internal_->decompressed_stream =
@@ -26,9 +27,13 @@ JSONL::JSONL(std::basic_istream<JSON::Char, JSON::CharTraits> &input,
 
 JSONL::~JSONL() = default;
 
-auto JSONL::begin() -> JSONL::const_iterator { return {this->stream_}; }
+auto JSONL::begin() -> JSONL::const_iterator {
+  return {this->stream_, this->framing_};
+}
 auto JSONL::end() -> JSONL::const_iterator { return {nullptr}; }
-auto JSONL::cbegin() -> JSONL::const_iterator { return {this->stream_}; }
+auto JSONL::cbegin() -> JSONL::const_iterator {
+  return {this->stream_, this->framing_};
+}
 auto JSONL::cend() -> JSONL::const_iterator { return {nullptr}; }
 
 } // namespace sourcemeta::core

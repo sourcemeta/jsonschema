@@ -47,6 +47,7 @@ option(SOURCEMETA_CORE_HTML "Build the Sourcemeta Core HTML library" ON)
 option(SOURCEMETA_CORE_CSS "Build the Sourcemeta Core CSS library" ON)
 option(SOURCEMETA_CORE_MARKDOWN "Build the Sourcemeta Core Markdown library" ON)
 option(SOURCEMETA_CORE_DIFF "Build the Sourcemeta Core Diff library" ON)
+option(SOURCEMETA_CORE_TERMINAL "Build the Sourcemeta Core Terminal library" ON)
 option(SOURCEMETA_CORE_TESTS "Build the Sourcemeta Core tests" OFF)
 option(SOURCEMETA_CORE_TESTS_CI "Build the Sourcemeta Core CI tests" OFF)
 option(SOURCEMETA_CORE_BENCHMARK "Build the Sourcemeta Core benchmarks" OFF)
@@ -278,6 +279,10 @@ if(SOURCEMETA_CORE_DIFF)
   add_subdirectory(src/core/diff)
 endif()
 
+if(SOURCEMETA_CORE_TERMINAL)
+  add_subdirectory(src/core/terminal)
+endif()
+
 if(SOURCEMETA_CORE_DOCS)
   sourcemeta_target_doxygen(CONFIG "${PROJECT_SOURCE_DIR}/doxygen/Doxyfile.in"
     OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/website")
@@ -463,6 +468,10 @@ if(SOURCEMETA_CORE_TESTS)
 
   if(SOURCEMETA_CORE_DIFF)
     add_subdirectory(test/diff)
+  endif()
+
+  if(SOURCEMETA_CORE_TERMINAL)
+    add_subdirectory(test/terminal)
   endif()
 
   if(PROJECT_IS_TOP_LEVEL)

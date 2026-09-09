@@ -1032,6 +1032,143 @@ public:
     return true;
   }
 
+  /// Percent-encode an "application/x-www-form-urlencoded" component (WHATWG
+  /// URL Section 5.2), appending the encoded bytes to the output. Only the
+  /// ASCII alphanumerics and "*", "-", "." and "_" pass through, a space
+  /// becomes "+", and everything else is percent-encoded. Besides a
+  /// `std::string` the sink can be a wiping string for a secret such as a
+  /// client credential. The output must not alias the input. For example:
+  ///
+  /// ```cpp
+  /// #include <sourcemeta/core/uri.h>
+  /// #include <cassert>
+  /// #include <string>
+  ///
+  /// std::string output;
+  /// sourcemeta::core::URI::escape_form("a b/c", output);
+  /// assert(output == "a+b%2Fc");
+  /// ```
+  template <typename Output>
+  static auto escape_form(const std::string_view input, Output &output)
+      -> void {
+    output.reserve(output.size() + (input.size() * 3));
+    for (const auto character : input) {
+      const auto byte{static_cast<unsigned char>(character)};
+      // WHATWG URL Section 5.2 percent-encodes with the space as plus flag set
+      if (byte == ' ') {
+        output.push_back('+');
+        continue;
+      }
+
+      // WHATWG URL Section 1.3: "The application/x-www-form-urlencoded
+      // percent-encode set contains all code points, except the ASCII
+      // alphanumeric, U+002A (*), U+002D (-), U+002E (.), and U+005F (_)"
+      if (is_alphanum(character) || byte == '*' || byte == '-' || byte == '.' ||
+          byte == '_') {
+        output.push_back(character);
+        continue;
+      }
+
+      // RFC 3986 Section 2.1: percent-encode with uppercase hexadecimal
+      const auto high{static_cast<unsigned char>((byte >> 4U) & 0x0FU)};
+      const auto low{static_cast<unsigned char>(byte & 0x0FU)};
+      output.push_back('%');
+      output.push_back(
+          static_cast<char>(high < 10 ? '0' + high : 'A' + high - 10));
+      output.push_back(
+          static_cast<char>(low < 10 ? '0' + low : 'A' + low - 10));
+    }
+  }
+
+  /// Append a percent-encoded name and value pair to an
+  /// "application/x-www-form-urlencoded" body under construction (WHATWG URL
+  /// Section 5.2), joining it to any preceding pair. The sink holds the body
+  /// being built and must not alias the name or value. For example:
+  ///
+  /// ```cpp
+  /// #include <sourcemeta/core/uri.h>
+  /// #include <cassert>
+  /// #include <string>
+  ///
+  /// std::string body;
+  /// sourcemeta::core::URI::append_form_parameter(body, "grant_type",
+  ///                                              "client_credentials");
+  /// sourcemeta::core::URI::append_form_parameter(body, "scope",
+  ///                                              "read write");
+  /// assert(body == "grant_type=client_credentials&scope=read+write");
+  /// ```
+  template <typename Output>
+  static auto append_form_parameter(Output &sink, const std::string_view name,
+                                    const std::string_view value) -> void {
+    // WHATWG URL Section 5.2: "If output is not the empty string, then append
+    // U+0026 (&) to output"
+    if (!sink.empty()) {
+      sink.push_back('&');
+    }
+
+    URI::escape_form(name, sink);
+    sink.push_back('=');
+    URI::escape_form(value, sink);
+  }
+
+  /// Decode an "application/x-www-form-urlencoded" body into its name and
+  /// value pairs (WHATWG URL Section 5.1), appending them to a container in
+  /// the order they appear and keeping repeats. Decoding produces bytes the
+  /// input does not carry, so the pairs own their characters rather than
+  /// borrow them. Each "+" becomes a space and each percent escape becomes its
+  /// octet, while a "%" that is not followed by two hexadecimal digits is kept
+  /// as it appears. For example:
+  ///
+  /// ```cpp
+  /// #include <sourcemeta/core/uri.h>
+  /// #include <cassert>
+  /// #include <string>
+  /// #include <utility>
+  /// #include <vector>
+  ///
+  /// std::vector<std::pair<std::string, std::string>> parameters;
+  /// sourcemeta::core::URI::parse_form("a=1&b=x+y", parameters);
+  /// assert(parameters.size() == 2);
+  /// assert(parameters.at(1).first == "b");
+  /// assert(parameters.at(1).second == "x y");
+  /// ```
+  template <typename Container>
+    requires requires(Container container, Container::value_type entry) {
+      container.emplace_back();
+      entry.first.push_back('\0');
+      entry.second.push_back('\0');
+    }
+  static auto parse_form(const std::string_view input, Container &output)
+      -> void {
+    std::size_t position{0};
+    while (position <= input.size()) {
+      const auto separator{input.find('&', position)};
+      const auto end{separator == std::string_view::npos ? input.size()
+                                                         : separator};
+      const auto sequence{input.substr(position, end - position)};
+      position = end + 1;
+
+      // WHATWG URL Section 5.1: "If bytes is the empty byte sequence, then
+      // continue"
+      if (sequence.empty()) {
+        continue;
+      }
+
+      // WHATWG URL Section 5.1: "If bytes contains a 0x3D (=), then let name
+      // be the bytes from the start of bytes up to but excluding its first
+      // 0x3D (=), and let value be the bytes, if any, after the first 0x3D
+      // (=) up to the end of bytes"
+      const auto equals{sequence.find('=')};
+      auto &entry{output.emplace_back()};
+      if (equals == std::string_view::npos) {
+        URI::decode_form_component(sequence, entry.first);
+      } else {
+        URI::decode_form_component(sequence.substr(0, equals), entry.first);
+        URI::decode_form_component(sequence.substr(equals + 1), entry.second);
+      }
+    }
+  }
+
   /// Remove the "." and ".." segments from a URI path per RFC 3986 Section
   /// 5.2.4, preserving leading ".." segments in a relative path. For example:
   ///
@@ -1188,6 +1325,38 @@ public:
 
 private:
   auto parse(std::string_view input) -> void;
+
+  // WHATWG URL Section 5.1: "Replace any 0x2B (+) in name and value with 0x20
+  // (SP)" and then percent-decode, which Section 1.3 defines to append a "%"
+  // that is not followed by two hexadecimal digits as it appears rather than
+  // to fail
+  template <typename Output>
+  static auto decode_form_component(const std::string_view input,
+                                    Output &output) -> void {
+    output.reserve(output.size() + input.size());
+    for (std::size_t position = 0; position < input.size();) {
+      const auto character{input[position]};
+      if (character == '+') {
+        output.push_back(' ');
+        position += 1;
+        continue;
+      }
+
+      if (character == '%' && position + 2 < input.size()) {
+        const auto high{hex_digit_value(input[position + 1])};
+        const auto low{high < 0 ? static_cast<std::int8_t>(-1)
+                                : hex_digit_value(input[position + 2])};
+        if (low >= 0) {
+          output.push_back(static_cast<char>((high << 4) | low));
+          position += 3;
+          continue;
+        }
+      }
+
+      output.push_back(character);
+      position += 1;
+    }
+  }
 
 // Exporting symbols that depends on the standard C++ library is considered
 // safe.
