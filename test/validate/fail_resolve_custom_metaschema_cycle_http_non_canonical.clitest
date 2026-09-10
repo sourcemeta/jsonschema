@@ -1,8 +1,9 @@
-// Two custom meta-schemas that describe each other can never be imported.
-// The import must detect that no pass makes progress and terminate with a
-// file-anchored diagnostic instead of retrying forever. Which of the two
-// symmetric cycle participants gets blamed is deliberately not pinned, so
-// the identifier and file below are normalized before comparing
+// A locally supplied identifier must be shielded from remote fetching however
+// the document happens to spell it. This is the fixture of
+// `fail_resolve_custom_metaschema_cycle_http` with one `$id` written in a
+// non-canonical but equivalent form, uppercased and carrying the default
+// port, while the reference to it stays canonical. The run must still
+// terminate with the local resolution diagnostic and no network round trip.
 
 WRITE schema.json UNTIL EOF
 {
@@ -26,7 +27,7 @@ EOF
 WRITE meta-y.json UNTIL EOF
 {
   "$schema": "https://example.com/meta-x",
-  "$id": "https://example.com/meta-y",
+  "$id": "HTTPS://EXAMPLE.COM:443/meta-y",
   "$vocabulary": {
     "https://json-schema.org/draft/2020-12/vocab/core": true,
     "https://json-schema.org/draft/2020-12/vocab/applicator": true,
@@ -40,7 +41,7 @@ WRITE instance.json UNTIL EOF
 EOF
 
 // Schema input error
-RUN validate schema.json instance.json --resolve meta-x.json --resolve meta-y.json STDIN /dev/null IN . INTO result_0.txt EXPECTING 4
+RUN validate schema.json instance.json --http --resolve meta-x.json --resolve meta-y.json STDIN /dev/null IN . INTO result_0.txt EXPECTING 4
 
 REPLACE $CWD WITH '[CWD]' IN result_0.txt
 REPLACE 'https://example.com/meta-x' WITH '[STUCK]' IN result_0.txt
@@ -59,7 +60,7 @@ EOF
 COMPARE result_0.txt AGAINST expected_0.txt
 
 // Schema input error
-RUN validate schema.json instance.json --resolve meta-x.json --resolve meta-y.json --json STDIN /dev/null IN . INTO result_1.txt EXPECTING 4
+RUN validate schema.json instance.json --http --resolve meta-x.json --resolve meta-y.json --json STDIN /dev/null IN . INTO result_1.txt EXPECTING 4
 
 REPLACE $CWD WITH '[CWD]' IN result_1.txt
 REPLACE 'https://example.com/meta-x' WITH '[STUCK]' IN result_1.txt
