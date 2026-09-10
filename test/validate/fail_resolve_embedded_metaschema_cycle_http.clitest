@@ -1,0 +1,92 @@
+// Two `--resolve` documents that each embed the other's required custom
+// meta-schema under `$defs` can never be imported: `doc-a`'s `$schema` names
+// an identifier declared inside `doc-b`, and the other way around. Every
+// identifier involved is declared by a pending local input, including the
+// embedded ones, so enabling `--http` must not turn the stuck import into a
+// network request: the run terminates with the local resolution diagnostic
+// and no network round trip. Which of the two symmetric participants gets
+// blamed is deliberately not pinned, so the identifier and file below are
+// normalized before comparing
+
+WRITE schema.json UNTIL EOF
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "string"
+}
+EOF
+
+WRITE doc-a.json UNTIL EOF
+{
+  "$schema": "https://example.com/embedded-meta-b",
+  "$id": "https://example.com/doc-a",
+  "$defs": {
+    "meta": {
+      "$id": "https://example.com/embedded-meta-a",
+      "$vocabulary": {
+        "https://json-schema.org/draft/2020-12/vocab/core": true,
+        "https://json-schema.org/draft/2020-12/vocab/applicator": true,
+        "https://json-schema.org/draft/2020-12/vocab/validation": true
+      }
+    }
+  }
+}
+EOF
+
+WRITE doc-b.json UNTIL EOF
+{
+  "$schema": "https://example.com/embedded-meta-a",
+  "$id": "https://example.com/doc-b",
+  "$defs": {
+    "meta": {
+      "$id": "https://example.com/embedded-meta-b",
+      "$vocabulary": {
+        "https://json-schema.org/draft/2020-12/vocab/core": true,
+        "https://json-schema.org/draft/2020-12/vocab/applicator": true,
+        "https://json-schema.org/draft/2020-12/vocab/validation": true
+      }
+    }
+  }
+}
+EOF
+
+WRITE instance.json UNTIL EOF
+"hello"
+EOF
+
+// Schema input error
+RUN validate schema.json instance.json --http --resolve doc-a.json --resolve doc-b.json STDIN /dev/null IN . INTO result_0.txt EXPECTING 4
+
+REPLACE $CWD WITH '[CWD]' IN result_0.txt
+REPLACE 'https://example.com/embedded-meta-a' WITH '[STUCK]' IN result_0.txt
+REPLACE 'https://example.com/embedded-meta-b' WITH '[STUCK]' IN result_0.txt
+REPLACE '[CWD]/doc-a.json' WITH '[INPUT]' IN result_0.txt
+REPLACE '[CWD]/doc-b.json' WITH '[INPUT]' IN result_0.txt
+
+WRITE expected_0.txt UNTIL EOF
+2> error: Could not resolve the metaschema of the schema
+2>   at identifier [STUCK]
+2>   at file path [INPUT]
+2>
+2> This is likely because you forgot to import such schema using `--resolve/-r`
+EOF
+
+COMPARE result_0.txt AGAINST expected_0.txt
+
+// Schema input error
+RUN validate schema.json instance.json --http --resolve doc-a.json --resolve doc-b.json --json STDIN /dev/null IN . INTO result_1.txt EXPECTING 4
+
+REPLACE $CWD WITH '[CWD]' IN result_1.txt
+REPLACE 'https://example.com/embedded-meta-a' WITH '[STUCK]' IN result_1.txt
+REPLACE 'https://example.com/embedded-meta-b' WITH '[STUCK]' IN result_1.txt
+REPLACE '[CWD]/doc-a.json' WITH '[INPUT]' IN result_1.txt
+REPLACE '[CWD]/doc-b.json' WITH '[INPUT]' IN result_1.txt
+
+WRITE expected_1.txt UNTIL EOF
+1> {
+1>   "error": "Could not resolve the metaschema of the schema",
+1>   "identifier": "[STUCK]",
+1>   "filePath": "[INPUT]"
+1> }
+EOF
+
+COMPARE result_1.txt AGAINST expected_1.txt
