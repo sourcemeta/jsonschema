@@ -1,0 +1,81 @@
+// A chain of custom meta-schemas whose ultimate meta-schema is genuinely
+// missing must terminate with the original file-anchored diagnostic instead
+// of retrying forever. No entry can ever import: the leaf waits on `meta-c`,
+// `meta-c` waits on `meta-b`, and `meta-b` waits on a meta-schema that is
+// never supplied. The reported failure is the first entry's, which blames
+// the intermediate `meta-c` rather than the genuinely absent `meta-a`. That
+// is the documented behavior when several entries remain stuck: the error is
+// exactly what a single-pass import would have produced.
+
+WRITE schema.json UNTIL EOF
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "string"
+}
+EOF
+
+WRITE leaf.json UNTIL EOF
+{
+  "$schema": "https://example.com/meta-c",
+  "$id": "https://example.com/leaf",
+  "type": "string"
+}
+EOF
+
+WRITE meta-c.json UNTIL EOF
+{
+  "$schema": "https://example.com/meta-b",
+  "$id": "https://example.com/meta-c",
+  "$vocabulary": {
+    "https://json-schema.org/draft/2020-12/vocab/core": true,
+    "https://json-schema.org/draft/2020-12/vocab/applicator": true,
+    "https://json-schema.org/draft/2020-12/vocab/validation": true
+  }
+}
+EOF
+
+WRITE meta-b.json UNTIL EOF
+{
+  "$schema": "https://example.com/absent-meta-a",
+  "$id": "https://example.com/meta-b",
+  "$vocabulary": {
+    "https://json-schema.org/draft/2020-12/vocab/core": true,
+    "https://json-schema.org/draft/2020-12/vocab/applicator": true,
+    "https://json-schema.org/draft/2020-12/vocab/validation": true
+  }
+}
+EOF
+
+WRITE instance.json UNTIL EOF
+"hello"
+EOF
+
+// Schema input error
+RUN validate schema.json instance.json --resolve leaf.json --resolve meta-c.json --resolve meta-b.json STDIN /dev/null IN . INTO result_0.txt EXPECTING 4
+
+REPLACE $CWD WITH '[CWD]' IN result_0.txt
+
+WRITE expected_0.txt UNTIL EOF
+2> error: Could not resolve the metaschema of the schema
+2>   at identifier https://example.com/meta-c
+2>   at file path [CWD]/leaf.json
+2>
+2> This is likely because you forgot to import such schema using `--resolve/-r`
+EOF
+
+COMPARE result_0.txt AGAINST expected_0.txt
+
+// Schema input error
+RUN validate schema.json instance.json --resolve leaf.json --resolve meta-c.json --resolve meta-b.json --json STDIN /dev/null IN . INTO result_1.txt EXPECTING 4
+
+REPLACE $CWD WITH '[CWD]' IN result_1.txt
+
+WRITE expected_1.txt UNTIL EOF
+1> {
+1>   "error": "Could not resolve the metaschema of the schema",
+1>   "identifier": "https://example.com/meta-c",
+1>   "filePath": "[CWD]/leaf.json"
+1> }
+EOF
+
+COMPARE result_1.txt AGAINST expected_1.txt

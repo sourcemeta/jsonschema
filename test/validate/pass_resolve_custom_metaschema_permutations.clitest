@@ -1,0 +1,107 @@
+// Import order must not matter for any permutation of a chain of custom
+// meta-schemas. The reversed order is the worst case, forcing a pass per
+// entry, but every other permutation must behave identically: same result,
+// same output, no dependence on how the user happened to list the files.
+
+WRITE schema.json UNTIL EOF
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$ref": "https://example.com/leaf"
+}
+EOF
+
+WRITE meta-a.json UNTIL EOF
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.com/meta-a",
+  "$vocabulary": {
+    "https://json-schema.org/draft/2020-12/vocab/core": true,
+    "https://json-schema.org/draft/2020-12/vocab/applicator": true,
+    "https://json-schema.org/draft/2020-12/vocab/validation": true
+  }
+}
+EOF
+
+WRITE meta-b.json UNTIL EOF
+{
+  "$schema": "https://example.com/meta-a",
+  "$id": "https://example.com/meta-b",
+  "$vocabulary": {
+    "https://json-schema.org/draft/2020-12/vocab/core": true,
+    "https://json-schema.org/draft/2020-12/vocab/applicator": true,
+    "https://json-schema.org/draft/2020-12/vocab/validation": true
+  }
+}
+EOF
+
+WRITE leaf.json UNTIL EOF
+{
+  "$schema": "https://example.com/meta-b",
+  "$id": "https://example.com/leaf",
+  "type": "string"
+}
+EOF
+
+WRITE instance.json UNTIL EOF
+"hello"
+EOF
+
+RUN validate schema.json instance.json --resolve leaf.json --resolve meta-b.json --resolve meta-a.json --verbose STDIN /dev/null IN . INTO result_0.txt EXPECTING 0
+
+WRITE expected_0.txt UNTIL EOF
+2> ok: instance.json
+2>
+2> 1 validated, 1 passed, 0 failed
+EOF
+
+COMPARE result_0.txt AGAINST expected_0.txt
+
+RUN validate schema.json instance.json --resolve leaf.json --resolve meta-a.json --resolve meta-b.json --verbose STDIN /dev/null IN . INTO result_1.txt EXPECTING 0
+
+WRITE expected_1.txt UNTIL EOF
+2> ok: instance.json
+2>
+2> 1 validated, 1 passed, 0 failed
+EOF
+
+COMPARE result_1.txt AGAINST expected_1.txt
+
+RUN validate schema.json instance.json --resolve meta-b.json --resolve leaf.json --resolve meta-a.json --verbose STDIN /dev/null IN . INTO result_2.txt EXPECTING 0
+
+WRITE expected_2.txt UNTIL EOF
+2> ok: instance.json
+2>
+2> 1 validated, 1 passed, 0 failed
+EOF
+
+COMPARE result_2.txt AGAINST expected_2.txt
+
+RUN validate schema.json instance.json --resolve meta-b.json --resolve meta-a.json --resolve leaf.json --verbose STDIN /dev/null IN . INTO result_3.txt EXPECTING 0
+
+WRITE expected_3.txt UNTIL EOF
+2> ok: instance.json
+2>
+2> 1 validated, 1 passed, 0 failed
+EOF
+
+COMPARE result_3.txt AGAINST expected_3.txt
+
+RUN validate schema.json instance.json --resolve meta-a.json --resolve leaf.json --resolve meta-b.json --verbose STDIN /dev/null IN . INTO result_4.txt EXPECTING 0
+
+WRITE expected_4.txt UNTIL EOF
+2> ok: instance.json
+2>
+2> 1 validated, 1 passed, 0 failed
+EOF
+
+COMPARE result_4.txt AGAINST expected_4.txt
+
+RUN validate schema.json instance.json --resolve meta-a.json --resolve meta-b.json --resolve leaf.json --verbose STDIN /dev/null IN . INTO result_5.txt EXPECTING 0
+
+WRITE expected_5.txt UNTIL EOF
+2> ok: instance.json
+2>
+2> 1 validated, 1 passed, 0 failed
+EOF
+
+COMPARE result_5.txt AGAINST expected_5.txt

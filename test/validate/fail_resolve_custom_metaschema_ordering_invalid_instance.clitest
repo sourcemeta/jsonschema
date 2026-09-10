@@ -1,0 +1,54 @@
+// A schema imported before its custom meta-schema must keep enforcing its
+// constraints once the import succeeds. This is the reversed-order fixture
+// of `pass_resolve_custom_metaschema_ordering_reversed` with an instance
+// that violates the deferred schema, proving the retry imported the real
+// schema rather than merely making resolution succeed.
+
+WRITE schema.json UNTIL EOF
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$ref": "https://example.com/my-schema"
+}
+EOF
+
+WRITE zz-meta.json UNTIL EOF
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.com/my-meta",
+  "$vocabulary": {
+    "https://json-schema.org/draft/2020-12/vocab/core": true,
+    "https://json-schema.org/draft/2020-12/vocab/applicator": true,
+    "https://json-schema.org/draft/2020-12/vocab/validation": true
+  }
+}
+EOF
+
+WRITE aa-schema.json UNTIL EOF
+{
+  "$schema": "https://example.com/my-meta",
+  "$id": "https://example.com/my-schema",
+  "type": "string"
+}
+EOF
+
+WRITE instance.json UNTIL EOF
+123
+EOF
+
+// Validation failure
+RUN validate schema.json instance.json --resolve aa-schema.json --resolve zz-meta.json STDIN /dev/null IN . INTO result_0.txt EXPECTING 2
+
+WRITE expected_0.txt UNTIL EOF
+2> fail: instance.json
+2> error: Schema validation failure
+2>   The value was expected to be of type string but it was of type integer
+2>     at instance location "" (line 1, column 1)
+2>     at evaluate path "/$ref/type"
+2>   The integer value was expected to validate against the referenced schema
+2>     at instance location "" (line 1, column 1)
+2>     at evaluate path "/$ref"
+2>
+2> 1 validated, 0 passed, 1 failed
+EOF
+
+COMPARE result_0.txt AGAINST expected_0.txt
