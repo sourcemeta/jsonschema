@@ -372,7 +372,13 @@ public:
       // be another one of the schemas that the user is importing. Rather than
       // forcing the user to declare their files in dependency order, keep
       // retrying the ones that cannot resolve yet for as long as every pass
-      // manages to import at least one more schema
+      // manages to import at least one more schema. Keep remote fetching
+      // disabled while the locally provided schemas can make progress, so
+      // that a schema imported before the local file that declares its
+      // meta-schema resolves against that local file instead of triggering
+      // a network fetch for it
+      const auto allow_remote{this->remote_};
+      this->remote_ = false;
       while (!pending.empty()) {
         std::vector<std::size_t> deferred;
         std::exception_ptr failure;
@@ -400,11 +406,19 @@ public:
         // one we report might be waiting on another stuck entry rather than
         // on the schema that is genuinely missing
         if (deferred.size() == pending.size()) {
-          std::rethrow_exception(failure);
+          // Before giving up, let the remaining entries try their remote
+          // fallback when the user enabled it
+          if (allow_remote && !this->remote_) {
+            this->remote_ = true;
+          } else {
+            std::rethrow_exception(failure);
+          }
         }
 
         pending = std::move(deferred);
       }
+
+      this->remote_ = allow_remote;
     }
 
     if (this->configuration_.has_value()) {

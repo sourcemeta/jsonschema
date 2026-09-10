@@ -1,0 +1,62 @@
+// A genuinely missing custom meta-schema must still terminate with the
+// original file-anchored diagnostic, even though another `--resolve` entry
+// imports fine. The importable entry is listed second, so the run defers the
+// stuck schema, makes progress on the other entry, and only then detects
+// that no further pass can make progress.
+
+WRITE schema.json UNTIL EOF
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "string"
+}
+EOF
+
+WRITE stuck-schema.json UNTIL EOF
+{
+  "$schema": "https://example.com/absent-meta",
+  "$id": "https://example.com/stuck-schema",
+  "type": "string"
+}
+EOF
+
+WRITE ok-schema.json UNTIL EOF
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.com/ok-schema",
+  "type": "string"
+}
+EOF
+
+WRITE instance.json UNTIL EOF
+"hello"
+EOF
+
+// Schema input error
+RUN validate schema.json instance.json --resolve stuck-schema.json --resolve ok-schema.json STDIN /dev/null IN . INTO result_0.txt EXPECTING 4
+
+REPLACE $CWD WITH '[CWD]' IN result_0.txt
+
+WRITE expected_0.txt UNTIL EOF
+2> error: Could not resolve the metaschema of the schema
+2>   at identifier https://example.com/absent-meta
+2>   at file path [CWD]/stuck-schema.json
+2>
+2> This is likely because you forgot to import such schema using `--resolve/-r`
+EOF
+
+COMPARE result_0.txt AGAINST expected_0.txt
+
+// Schema input error
+RUN validate schema.json instance.json --resolve stuck-schema.json --resolve ok-schema.json --json STDIN /dev/null IN . INTO result_1.txt EXPECTING 4
+
+REPLACE $CWD WITH '[CWD]' IN result_1.txt
+
+WRITE expected_1.txt UNTIL EOF
+1> {
+1>   "error": "Could not resolve the metaschema of the schema",
+1>   "identifier": "https://example.com/absent-meta",
+1>   "filePath": "[CWD]/stuck-schema.json"
+1> }
+EOF
+
+COMPARE result_1.txt AGAINST expected_1.txt

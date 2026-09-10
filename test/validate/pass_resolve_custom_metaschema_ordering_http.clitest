@@ -1,0 +1,48 @@
+// Locally provided schemas must take precedence over remote fetching. This
+// is the reversed-order fixture of
+// `pass_resolve_custom_metaschema_ordering_reversed` with `--http` enabled:
+// the meta-schema is supplied locally one argument after the schema that
+// needs it, so the import must defer and use the local file rather than
+// issuing a network request for its identifier. The run succeeds without
+// any network round trip, so the outcome does not depend on network state.
+
+WRITE schema.json UNTIL EOF
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$ref": "https://example.com/my-schema"
+}
+EOF
+
+WRITE zz-meta.json UNTIL EOF
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.com/my-meta",
+  "$vocabulary": {
+    "https://json-schema.org/draft/2020-12/vocab/core": true,
+    "https://json-schema.org/draft/2020-12/vocab/applicator": true,
+    "https://json-schema.org/draft/2020-12/vocab/validation": true
+  }
+}
+EOF
+
+WRITE aa-schema.json UNTIL EOF
+{
+  "$schema": "https://example.com/my-meta",
+  "$id": "https://example.com/my-schema",
+  "type": "string"
+}
+EOF
+
+WRITE instance.json UNTIL EOF
+"hello"
+EOF
+
+RUN validate schema.json instance.json --http --resolve aa-schema.json --resolve zz-meta.json --verbose STDIN /dev/null IN . INTO result_0.txt EXPECTING 0
+
+WRITE expected_0.txt UNTIL EOF
+2> ok: instance.json
+2>
+2> 1 validated, 1 passed, 0 failed
+EOF
+
+COMPARE result_0.txt AGAINST expected_0.txt
