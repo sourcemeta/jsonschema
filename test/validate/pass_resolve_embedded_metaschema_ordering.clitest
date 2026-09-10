@@ -1,0 +1,63 @@
+// A custom meta-schema declared as an embedded resource inside another
+// `--resolve` document must be usable by an entry listed before its
+// containing document. The leaf's `$schema` points at an identifier that
+// only exists under the later container's `$defs`, so the import must
+// discover embedded resources rather than only top-level identifiers. The
+// `--http` run must behave identically without any network round trip,
+// since every identifier involved is supplied locally.
+
+WRITE schema.json UNTIL EOF
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$ref": "https://example.com/leaf"
+}
+EOF
+
+WRITE leaf.json UNTIL EOF
+{
+  "$schema": "https://example.com/embedded-meta",
+  "$id": "https://example.com/leaf",
+  "type": "string"
+}
+EOF
+
+WRITE container.json UNTIL EOF
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.com/container",
+  "$defs": {
+    "meta": {
+      "$id": "https://example.com/embedded-meta",
+      "$vocabulary": {
+        "https://json-schema.org/draft/2020-12/vocab/core": true,
+        "https://json-schema.org/draft/2020-12/vocab/applicator": true,
+        "https://json-schema.org/draft/2020-12/vocab/validation": true
+      }
+    }
+  }
+}
+EOF
+
+WRITE instance.json UNTIL EOF
+"hello"
+EOF
+
+RUN validate schema.json instance.json --resolve leaf.json --resolve container.json --verbose STDIN /dev/null IN . INTO result_0.txt EXPECTING 0
+
+WRITE expected_0.txt UNTIL EOF
+2> ok: instance.json
+2>
+2> 1 validated, 1 passed, 0 failed
+EOF
+
+COMPARE result_0.txt AGAINST expected_0.txt
+
+RUN validate schema.json instance.json --http --resolve leaf.json --resolve container.json --verbose STDIN /dev/null IN . INTO result_1.txt EXPECTING 0
+
+WRITE expected_1.txt UNTIL EOF
+2> ok: instance.json
+2>
+2> 1 validated, 1 passed, 0 failed
+EOF
+
+COMPARE result_1.txt AGAINST expected_1.txt

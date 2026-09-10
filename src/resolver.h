@@ -29,6 +29,7 @@
 #include <string_view>   // std::string_view
 #include <thread>        // std::this_thread::sleep_for
 #include <unordered_map> // std::unordered_map
+#include <unordered_set> // std::unordered_set
 #include <utility> // std::pair, std::piecewise_construct, std::forward_as_tuple, std::move
 #include <vector> // std::vector
 
@@ -348,6 +349,31 @@ anonymous_base_dialect(const sourcemeta::core::JSON &schema,
   }
 }
 
+// Framing a schema is what reveals the identifiers it declares, but framing
+// needs its meta-schema resolved first, which is precisely what the caller
+// cannot do yet. Scan for identifiers syntactically instead, erring on the
+// side of collecting too many, as the only cost of a false positive is
+// declining to fetch an identifier over the network
+static inline auto
+collect_identifiers(const sourcemeta::core::JSON &document,
+                    std::unordered_set<std::string> &accumulator) -> void {
+  if (document.is_object()) {
+    for (const auto &keyword : {"$id", "id"}) {
+      if (document.defines(keyword) && document.at(keyword).is_string()) {
+        accumulator.insert(document.at(keyword).to_string());
+      }
+    }
+
+    for (const auto &entry : document.as_object()) {
+      collect_identifiers(entry.second, accumulator);
+    }
+  } else if (document.is_array()) {
+    for (const auto &element : document.as_array()) {
+      collect_identifiers(element, accumulator);
+    }
+  }
+}
+
 class CustomResolver {
 public:
   CustomResolver(
@@ -378,6 +404,19 @@ public:
       // meta-schema resolves against that local file instead of triggering
       // a network fetch for it
       const auto allow_remote{this->remote_};
+
+      // Once remote fetching does come back on, it must still never shadow a
+      // schema that the user supplied locally, so remember every identifier
+      // these entries can contribute. Entries that do get imported are found
+      // among the imported schemas before this ever comes into play
+      if (allow_remote) {
+        for (const auto &entry : entries) {
+          collect_identifiers(entry.second, this->pending_identifiers_);
+          this->pending_identifiers_.insert(
+              sourcemeta::jsonschema::default_id(entry));
+        }
+      }
+
       this->remote_ = false;
       while (!pending.empty()) {
         std::vector<std::size_t> deferred;
@@ -418,6 +457,7 @@ public:
         pending = std::move(deferred);
       }
 
+      this->pending_identifiers_.clear();
       this->remote_ = allow_remote;
     }
 
@@ -539,6 +579,10 @@ public:
       return match->second;
     }
 
+    if (this->remote_ && this->pending_identifiers_.contains(target)) {
+      return std::nullopt;
+    }
+
     auto fetched{fetch_schema(this->options_, target, this->remote_)};
     if (!fetched.has_value()) {
       return fetched;
@@ -651,6 +695,7 @@ private:
   const std::optional<sourcemeta::blaze::Configuration> configuration_;
   const std::unordered_map<std::string, std::string> canonical_resolve_;
   bool remote_{false};
+  std::unordered_set<std::string> pending_identifiers_{};
 };
 
 inline auto
