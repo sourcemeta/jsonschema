@@ -360,7 +360,8 @@ collect_identifiers(const sourcemeta::core::JSON &document,
   if (document.is_object()) {
     for (const auto &keyword : {"$id", "id"}) {
       if (document.defines(keyword) && document.at(keyword).is_string()) {
-        accumulator.insert(document.at(keyword).to_string());
+        accumulator.insert(
+            canonical_resolve_key(document.at(keyword).to_string()));
       }
     }
 
@@ -372,6 +373,21 @@ collect_identifiers(const sourcemeta::core::JSON &document,
       collect_identifiers(element, accumulator);
     }
   }
+}
+
+// Identifiers are stored canonicalized, as whoever asks for one may well have
+// resolved it against a base URI first and so spell it differently than the
+// document that declares it. Trying the identifier as given before parsing it
+// as a URI keeps the common case free, exactly as `find_resolve_match` does
+static inline auto
+declares_identifier(const std::unordered_set<std::string> &identifiers,
+                    const std::string &identifier) -> bool {
+  if (identifiers.contains(identifier)) {
+    return true;
+  }
+
+  const auto canonical{canonical_resolve_key(identifier)};
+  return canonical != identifier && identifiers.contains(canonical);
 }
 
 class CustomResolver {
@@ -413,7 +429,7 @@ public:
         for (const auto &entry : entries) {
           collect_identifiers(entry.second, this->pending_identifiers_);
           this->pending_identifiers_.insert(
-              sourcemeta::jsonschema::default_id(entry));
+              canonical_resolve_key(sourcemeta::jsonschema::default_id(entry)));
         }
       }
 
@@ -579,7 +595,8 @@ public:
       return match->second;
     }
 
-    if (this->remote_ && this->pending_identifiers_.contains(target)) {
+    if (this->remote_ &&
+        declares_identifier(this->pending_identifiers_, target)) {
       return std::nullopt;
     }
 
