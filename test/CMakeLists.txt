@@ -585,6 +585,8 @@ add_jsonschema_test(test/fail_tests_empty_jobs_json)
 add_jsonschema_test(test/fail_multi_jobs_parse_error_json)
 add_jsonschema_test(test/pass_jobs_verbose)
 add_jsonschema_test(test/pass_bundled_metaschema)
+add_jsonschema_test(test/fail_trace)
+add_jsonschema_test(test/fail_trace_json)
 
 # Bundle
 add_jsonschema_test(bundle/pass_into_resolve_directory)

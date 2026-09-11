@@ -208,6 +208,7 @@ auto run_suite_as_text(const sourcemeta::core::Options &options,
         sourcemeta::jsonschema::default_dialect(options, configuration)};
     const auto &schema_resolver{sourcemeta::jsonschema::resolver(
         options, options.contains("http"), dialect, configuration)};
+    const auto trace{options.contains("trace")};
 
     auto test_suite{parse_test_suite(
         entry, schema_resolver, dialect,
@@ -273,6 +274,17 @@ auto run_suite_as_text(const sourcemeta::core::Options &options,
             stream << entry_indent << index << "/" << total << " FAIL "
                    << description << "\n\n";
             sourcemeta::jsonschema::print(output, test_case.tracker, stream);
+
+            if (trace) {
+              stream << "\n";
+              sourcemeta::blaze::TraceOutput trace_output{
+                  test_suite.exhaustive(target_index),
+                  sourcemeta::jsonschema::trace_callback(test_case.tracker,
+                                                         stream)};
+              test_suite.evaluator.validate(test_suite.exhaustive(target_index),
+                                            test_case.data,
+                                            std::ref(trace_output));
+            }
 
             if (index != total && verbose) {
               stream << "\n";
@@ -629,6 +641,11 @@ auto report_as_ctrf(const sourcemeta::core::Options &options,
 auto sourcemeta::jsonschema::test(const sourcemeta::core::Options &options)
     -> void {
   validate_http_headers(options);
+  if (options.contains("trace") && options.contains("json")) {
+    throw OptionConflictError{
+        "The `--trace/-t` and `--json/-j` options are mutually exclusive"};
+  }
+
   const auto jobs{parse_jobs(options)};
   LOG_VERBOSE(options) << "Using parallelism: " << jobs << "\n";
   if (options.contains("json")) {

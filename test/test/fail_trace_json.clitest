@@ -1,0 +1,30 @@
+WRITE schema.json UNTIL EOF
+{
+  "id": "https://example.com",
+  "$schema": "http://json-schema.org/draft-04/schema#",
+  "type": "string"
+}
+EOF
+
+WRITE test.json UNTIL EOF
+{
+  "target": "https://example.com",
+  "tests": [
+    {
+      "valid": true,
+      "data": "foo"
+    }
+  ]
+}
+EOF
+
+// Invalid CLI arguments
+RUN test test.json --resolve schema.json --trace --json STDIN /dev/null IN . INTO result_0.txt EXPECTING 5
+
+WRITE expected_0.txt UNTIL EOF
+1> {
+1>   "error": "The `--trace/-t` and `--json/-j` options are mutually exclusive"
+1> }
+EOF
+
+COMPARE result_0.txt AGAINST expected_0.txt

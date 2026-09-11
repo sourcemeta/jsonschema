@@ -1,0 +1,57 @@
+WRITE schema.json UNTIL EOF
+{
+  "id": "https://example.com",
+  "$schema": "http://json-schema.org/draft-04/schema#",
+  "type": "string"
+}
+EOF
+
+WRITE test.json UNTIL EOF
+{
+  "target": "https://example.com",
+  "tests": [
+    {
+      "description": "First test fails",
+      "valid": true,
+      "data": 1
+    }
+  ]
+}
+EOF
+
+// Validation failure
+RUN test test.json --resolve schema.json --trace STDIN /dev/null IN . INTO result_0.txt EXPECTING 2
+
+REPLACE $CWD WITH '[CWD]' IN result_0.txt
+
+WRITE expected_0.txt UNTIL EOF
+1> [CWD]/test.json:
+1>   1/1 FAIL First test fails
+1>
+1> error: Schema validation failure
+1>   The value was expected to be of type string but it was of type integer
+1>     at instance location ""
+1>     at evaluate path "/type"
+1>
+1> -> (push) "/$ref" (ControlJump)
+1>    at instance location ""
+1>    at keyword location "#/$ref"
+1>    at vocabulary "https://json-schema.org/draft/2020-12/vocab/core"
+1>
+1> -> (push) "/$ref/type" (AssertionTypeStrict)
+1>    at instance location ""
+1>    at keyword location "https://example.com#/type"
+1>    at vocabulary "http://json-schema.org/draft-04/schema#"
+1>
+1> <- (fail) "/$ref/type" (AssertionTypeStrict)
+1>    at instance location ""
+1>    at keyword location "https://example.com#/type"
+1>    at vocabulary "http://json-schema.org/draft-04/schema#"
+1>
+1> <- (fail) "/$ref" (ControlJump)
+1>    at instance location ""
+1>    at keyword location "#/$ref"
+1>    at vocabulary "https://json-schema.org/draft/2020-12/vocab/core"
+EOF
+
+COMPARE result_0.txt AGAINST expected_0.txt
