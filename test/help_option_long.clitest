@@ -73,10 +73,11 @@ WRITE expected.txt UNTIL EOF
 1>
 1>    test [schemas-or-directories...] [--extension/-e <extension>]
 1>         [--ignore/-i <schemas-or-directories>] [--format-assertion/-F]
-1>         [--jobs/-J <count>]
+1>         [--jobs/-J <count>] [--trace/-t]
 1>
 1>        Run a set of unit tests against a schema.
 1>        Pass --json/-j to output results in CTRF format (https://ctrf.io).
+1>        Pass --trace/-t to print the evaluation trace of every failing test.
 1>
 1>    fmt [schemas-or-directories...] [--check/-c] [--extension/-e <extension>]
 1>        [--ignore/-i <schemas-or-directories>] [--keep-ordering/-k]

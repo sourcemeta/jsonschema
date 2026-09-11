@@ -80,10 +80,11 @@ Commands:
 
    test [schemas-or-directories...] [--extension/-e <extension>]
         [--ignore/-i <schemas-or-directories>] [--format-assertion/-F]
-        [--jobs/-J <count>]
+        [--jobs/-J <count>] [--trace/-t]
 
        Run a set of unit tests against a schema.
        Pass --json/-j to output results in CTRF format (https://ctrf.io).
+       Pass --trace/-t to print the evaluation trace of every failing test.
 
    fmt [schemas-or-directories...] [--check/-c] [--extension/-e <extension>]
        [--ignore/-i <schemas-or-directories>] [--keep-ordering/-k]
@@ -252,6 +253,7 @@ auto jsonschema_main(const std::string &program, const std::string &command,
 
   if (command == "test") {
     app.flag("format-assertion", {"F"});
+    app.flag("trace", {"t"});
     app.option("extension", {"e"});
     app.option("ignore", {"i"});
     app.option("jobs", {"J"});
