@@ -1,11 +1,13 @@
-// A locally supplied embedded identifier must be shielded from remote fetching
-// even when it is written relative to its containing document. Two
-// `--resolve` documents each embed, under a relative `$id`, the custom
-// meta-schema that the other one requires, so neither can ever be imported.
-// The run must terminate with the local resolution diagnostic and no network
-// round trip. Which of the two symmetric participants gets blamed is
-// deliberately not pinned, so the identifier and file below are normalized
-// before comparing
+// A locally supplied embedded identifier written relative to its container
+// must be shielded from remote fetching whichever of `$id` or `id` identifies
+// that container, even when the container carries the other keyword too with
+// an unrelated value. Two `--resolve` documents each embed, under a relative
+// identifier, the custom meta-schema that the other one requires, so neither
+// can ever be imported. `doc-a` is identified by `$id` next to an `id`
+// pointing elsewhere, and `doc-b` the other way around. The run must terminate
+// with the local resolution diagnostic and no network round trip. Which of the
+// two symmetric participants gets blamed is deliberately not pinned, so the
+// identifier and file below are normalized before comparing
 
 ENV SOURCEMETA_CORE_CURL_SO $CWD/does-not-exist.so
 
@@ -20,6 +22,7 @@ WRITE doc-a.json UNTIL EOF
 {
   "$schema": "https://example.com/nested/embedded-meta-b",
   "$id": "https://example.com/nested/doc-a",
+  "id": "https://example.com/elsewhere/doc-a",
   "$defs": {
     "meta": {
       "$id": "embedded-meta-a",
@@ -36,10 +39,11 @@ EOF
 WRITE doc-b.json UNTIL EOF
 {
   "$schema": "https://example.com/nested/embedded-meta-a",
-  "$id": "https://example.com/nested/doc-b",
-  "$defs": {
+  "id": "https://example.com/nested/doc-b",
+  "$id": "https://example.com/elsewhere/doc-b",
+  "definitions": {
     "meta": {
-      "$id": "embedded-meta-b",
+      "id": "embedded-meta-b",
       "$vocabulary": {
         "https://json-schema.org/draft/2020-12/vocab/core": true,
         "https://json-schema.org/draft/2020-12/vocab/applicator": true,

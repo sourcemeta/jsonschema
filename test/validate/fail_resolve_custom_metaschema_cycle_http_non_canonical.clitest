@@ -1,9 +1,10 @@
 // A locally supplied identifier must be shielded from remote fetching however
-// the document happens to spell it. This is the fixture of
-// `fail_resolve_custom_metaschema_cycle_http` with one `$id` written in a
-// non-canonical but equivalent form, uppercased and carrying the default
-// port, while the reference to it stays canonical. The run must still
-// terminate with the local resolution diagnostic and no network round trip.
+// the document happens to spell it. Two `--resolve` meta-schemas each declare
+// the other as their meta-schema, so neither can ever be imported, and one of
+// them writes its `$id` in a non-canonical but equivalent form, uppercased and
+// carrying the default port, while the reference to it stays canonical. The
+// run must terminate with the local resolution diagnostic and no network round
+// trip.
 
 ENV SOURCEMETA_CORE_CURL_SO $CWD/does-not-exist.so
 

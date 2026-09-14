@@ -349,6 +349,28 @@ anonymous_base_dialect(const sourcemeta::core::JSON &schema,
   }
 }
 
+static inline auto
+collect_identifier(const sourcemeta::core::JSON &document,
+                   const sourcemeta::core::JSON::String &keyword,
+                   const sourcemeta::core::URI &base,
+                   std::unordered_set<std::string> &accumulator)
+    -> std::optional<sourcemeta::core::URI> {
+  if (!document.defines(keyword) || !document.at(keyword).is_string()) {
+    return std::nullopt;
+  }
+
+  const auto &identifier{document.at(keyword).to_string()};
+  try {
+    sourcemeta::core::URI resolved{identifier};
+    resolved.resolve_from(base).canonicalize();
+    accumulator.insert(resolved.recompose());
+    return resolved;
+  } catch (const sourcemeta::core::URIParseError &) {
+    accumulator.insert(identifier);
+    return std::nullopt;
+  }
+}
+
 // Framing a schema is what reveals the identifiers it declares, but framing
 // needs its meta-schema resolved first, which is precisely what the caller
 // cannot do yet. Scan for identifiers syntactically instead, erring on the
@@ -359,25 +381,26 @@ collect_identifiers(const sourcemeta::core::JSON &document,
                     const sourcemeta::core::URI &base,
                     std::unordered_set<std::string> &accumulator) -> void {
   if (document.is_object()) {
-    std::optional<sourcemeta::core::URI> resource_base;
-    for (const auto &keyword : {"$id", "id"}) {
-      if (document.defines(keyword) && document.at(keyword).is_string()) {
-        const auto &identifier{document.at(keyword).to_string()};
-        try {
-          sourcemeta::core::URI resolved{identifier};
-          resolved.resolve_from(base).canonicalize();
-          accumulator.insert(resolved.recompose());
-          resource_base = std::move(resolved);
-        } catch (const sourcemeta::core::URIParseError &) {
-          accumulator.insert(identifier);
-        }
-      }
-    }
+    const auto modern_base{
+        collect_identifier(document, "$id", base, accumulator)};
+    const auto legacy_base{
+        collect_identifier(document, "id", base, accumulator)};
 
-    const auto &children_base{resource_base.has_value() ? resource_base.value()
-                                                        : base};
+    const auto &children_base{
+        modern_base.has_value()
+            ? modern_base.value()
+            : (legacy_base.has_value() ? legacy_base.value() : base)};
     for (const auto &entry : document.as_object()) {
       collect_identifiers(entry.second, children_base, accumulator);
+    }
+
+    // Only one of the two keywords identifies the resource, but which one
+    // depends on a dialect that is not known yet, so descend with both
+    if (modern_base.has_value() && legacy_base.has_value() &&
+        modern_base.value() != legacy_base.value()) {
+      for (const auto &entry : document.as_object()) {
+        collect_identifiers(entry.second, legacy_base.value(), accumulator);
+      }
     }
   } else if (document.is_array()) {
     for (const auto &element : document.as_array()) {
