@@ -350,23 +350,36 @@ anonymous_base_dialect(const sourcemeta::core::JSON &schema,
 }
 
 static inline auto
-collect_identifier(const sourcemeta::core::JSON &document,
-                   const sourcemeta::core::JSON::String &keyword,
+find_identifier(const sourcemeta::core::JSON &document,
+                const sourcemeta::core::JSON::String &preferred,
+                const sourcemeta::core::JSON::String &fallback)
+    -> const sourcemeta::core::JSON * {
+  const auto *identifier{document.try_at(preferred)};
+  if (identifier != nullptr && identifier->is_string()) {
+    return identifier;
+  }
+
+  identifier = document.try_at(fallback);
+  return identifier != nullptr && identifier->is_string() ? identifier
+                                                          : nullptr;
+}
+
+static inline auto
+resolve_identifier(const sourcemeta::core::JSON *identifier,
                    const sourcemeta::core::URI &base,
                    std::unordered_set<std::string> &accumulator)
     -> std::optional<sourcemeta::core::URI> {
-  if (!document.defines(keyword) || !document.at(keyword).is_string()) {
+  if (identifier == nullptr) {
     return std::nullopt;
   }
 
-  const auto &identifier{document.at(keyword).to_string()};
   try {
-    sourcemeta::core::URI resolved{identifier};
+    sourcemeta::core::URI resolved{identifier->to_string()};
     resolved.resolve_from(base).canonicalize();
     accumulator.insert(resolved.recompose());
     return resolved;
   } catch (const sourcemeta::core::URIParseError &) {
-    accumulator.insert(identifier);
+    accumulator.insert(identifier->to_string());
     return std::nullopt;
   }
 }
@@ -375,36 +388,45 @@ collect_identifier(const sourcemeta::core::JSON &document,
 // needs its meta-schema resolved first, which is precisely what the caller
 // cannot do yet. Scan for identifiers syntactically instead, erring on the
 // side of collecting too many, as the only cost of a false positive is
-// declining to fetch an identifier over the network
+// declining to fetch an identifier over the network. Only one of `$id` and
+// `id` identifies a resource, and which one depends on a dialect that is not
+// known yet either, so follow one chain of bases preferring each keyword, as
+// branching on every resource that declares both takes exponential time
 static inline auto
 collect_identifiers(const sourcemeta::core::JSON &document,
-                    const sourcemeta::core::URI &base,
+                    const sourcemeta::core::URI &modern_base,
+                    const sourcemeta::core::URI &legacy_base,
                     std::unordered_set<std::string> &accumulator) -> void {
   if (document.is_object()) {
-    const auto modern_base{
-        collect_identifier(document, "$id", base, accumulator)};
-    const auto legacy_base{
-        collect_identifier(document, "id", base, accumulator)};
+    const auto *modern_identifier{find_identifier(document, "$id", "id")};
+    const auto *legacy_identifier{find_identifier(document, "id", "$id")};
+    const auto modern_resolved{
+        resolve_identifier(modern_identifier, modern_base, accumulator)};
 
-    const auto &children_base{
-        modern_base.has_value()
-            ? modern_base.value()
-            : (legacy_base.has_value() ? legacy_base.value() : base)};
+    // Chains that have not diverged would resolve the same identifier against
+    // the same base
+    const auto converged{&modern_base == &legacy_base &&
+                         modern_identifier == legacy_identifier};
+    const auto legacy_resolved{
+        converged
+            ? std::optional<sourcemeta::core::URI>{}
+            : resolve_identifier(legacy_identifier, legacy_base, accumulator)};
+
+    const auto &children_modern_base{
+        modern_resolved.has_value() ? modern_resolved.value() : modern_base};
+    const auto &children_legacy_base{
+        converged || (legacy_resolved.has_value() &&
+                      legacy_resolved == modern_resolved)
+            ? children_modern_base
+            : (legacy_resolved.has_value() ? legacy_resolved.value()
+                                           : legacy_base)};
     for (const auto &entry : document.as_object()) {
-      collect_identifiers(entry.second, children_base, accumulator);
-    }
-
-    // Only one of the two keywords identifies the resource, but which one
-    // depends on a dialect that is not known yet, so descend with both
-    if (modern_base.has_value() && legacy_base.has_value() &&
-        modern_base.value() != legacy_base.value()) {
-      for (const auto &entry : document.as_object()) {
-        collect_identifiers(entry.second, legacy_base.value(), accumulator);
-      }
+      collect_identifiers(entry.second, children_modern_base,
+                          children_legacy_base, accumulator);
     }
   } else if (document.is_array()) {
     for (const auto &element : document.as_array()) {
-      collect_identifiers(element, base, accumulator);
+      collect_identifiers(element, modern_base, legacy_base, accumulator);
     }
   }
 }
@@ -464,7 +486,8 @@ public:
           sourcemeta::core::URI base{sourcemeta::jsonschema::default_id(entry)};
           base.canonicalize();
           this->pending_identifiers_.insert(base.recompose());
-          collect_identifiers(entry.second, base, this->pending_identifiers_);
+          collect_identifiers(entry.second, base, base,
+                              this->pending_identifiers_);
         }
       }
 
