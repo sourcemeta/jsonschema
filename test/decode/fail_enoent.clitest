@@ -1,0 +1,28 @@
+// A nonexistent input file is reported the same way every other command
+// reports it, not as a bogus "truncated document" error
+
+// Other input error
+RUN decode document.binpack decoded.json STDIN /dev/null IN . INTO result_0.txt EXPECTING 6
+
+REPLACE $CWD WITH '[CWD]' IN result_0.txt
+
+WRITE expected_0.txt UNTIL EOF
+2> error: No such file or directory
+2>   at file path [CWD]/document.binpack
+EOF
+
+COMPARE result_0.txt AGAINST expected_0.txt
+
+// Other input error
+RUN decode document.binpack decoded.json --json STDIN /dev/null IN . INTO result_1.txt EXPECTING 6
+
+REPLACE $CWD WITH '[CWD]' IN result_1.txt
+
+WRITE expected_1.txt UNTIL EOF
+1> {
+1>   "error": "No such file or directory",
+1>   "filePath": "[CWD]/document.binpack"
+1> }
+EOF
+
+COMPARE result_1.txt AGAINST expected_1.txt

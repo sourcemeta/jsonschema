@@ -5,7 +5,6 @@
 #include <sourcemeta/jsonbinpack/compiler.h>
 #include <sourcemeta/jsonbinpack/runtime.h>
 
-#include <cassert>    // assert
 #include <filesystem> // std::filesystem
 #include <fstream>    // std::ifstream
 
@@ -55,11 +54,7 @@ auto sourcemeta::jsonschema::decode(const sourcemeta::core::Options &options)
                                    custom_resolver);
   const auto encoding{sourcemeta::jsonbinpack::load(schema)};
 
-  std::ifstream input_stream{
-      sourcemeta::core::weakly_canonical(options.positional().front()),
-      std::ios::binary};
-  assert(!input_stream.fail());
-  assert(input_stream.is_open());
+  auto input_stream{sourcemeta::core::read_file(options.positional().front())};
 
   const std::filesystem::path output{options.positional().at(1)};
   std::ofstream output_stream(sourcemeta::core::weakly_canonical(output),
