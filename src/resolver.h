@@ -349,28 +349,100 @@ anonymous_base_dialect(const sourcemeta::core::JSON &schema,
   }
 }
 
+enum class IdentifierKeyword : std::uint8_t { Unknown, Modern, Legacy };
+
+// Every official meta-schema identifies itself using the keyword that its own
+// dialect relies on, which reveals that keyword without framing anything
+static inline auto identifier_keyword(const std::string_view dialect)
+    -> IdentifierKeyword {
+  const auto metaschema{sourcemeta::blaze::schema_resolver(dialect)};
+  if (!metaschema.has_value()) {
+    return IdentifierKeyword::Unknown;
+  }
+
+  if (metaschema.value().defines("$id")) {
+    return IdentifierKeyword::Modern;
+  }
+
+  if (metaschema.value().defines("id")) {
+    return IdentifierKeyword::Legacy;
+  }
+
+  return IdentifierKeyword::Unknown;
+}
+
+static inline auto
+resolve_identifier(const sourcemeta::core::JSON &document,
+                   const sourcemeta::core::JSON::String &keyword,
+                   const sourcemeta::core::URI &base,
+                   std::unordered_set<std::string> &accumulator)
+    -> std::optional<sourcemeta::core::URI> {
+  const auto *identifier{document.try_at(keyword)};
+  if (identifier == nullptr || !identifier->is_string()) {
+    return std::nullopt;
+  }
+
+  try {
+    sourcemeta::core::URI resolved{identifier->to_string()};
+    resolved.resolve_from(base).canonicalize();
+    accumulator.insert(resolved.recompose());
+    return resolved;
+  } catch (const sourcemeta::core::URIParseError &) {
+    accumulator.insert(identifier->to_string());
+    return std::nullopt;
+  }
+}
+
 // Framing a schema is what reveals the identifiers it declares, but framing
 // needs its meta-schema resolved first, which is precisely what the caller
 // cannot do yet. Scan for identifiers syntactically instead, erring on the
 // side of collecting too many, as the only cost of a false positive is
-// declining to fetch an identifier over the network
+// declining to fetch an identifier over the network. Only one of `$id` and
+// `id` identifies a resource, and which one depends on the dialect. Follow a
+// chain of bases for each keyword, as branching on every resource that
+// declares both takes exponential time. Where an official dialect is in
+// effect, both chains resolve its keyword, so that a resource switching
+// dialects still resolves against its parent whichever keyword identified it
 static inline auto
 collect_identifiers(const sourcemeta::core::JSON &document,
+                    const sourcemeta::core::URI &modern_base,
+                    const sourcemeta::core::URI &legacy_base,
+                    const IdentifierKeyword keyword,
                     std::unordered_set<std::string> &accumulator) -> void {
   if (document.is_object()) {
-    for (const auto &keyword : {"$id", "id"}) {
-      if (document.defines(keyword) && document.at(keyword).is_string()) {
-        accumulator.insert(
-            canonical_resolve_key(document.at(keyword).to_string()));
-      }
-    }
+    const auto *dialect{document.try_at("$schema")};
+    const auto effective_keyword{dialect != nullptr && dialect->is_string()
+                                     ? identifier_keyword(dialect->to_string())
+                                     : keyword};
+    const auto modern_resolved{resolve_identifier(
+        document, effective_keyword == IdentifierKeyword::Legacy ? "id" : "$id",
+        modern_base, accumulator)};
 
+    // Chains that share a base and follow the same keyword resolve alike
+    const auto shared{effective_keyword != IdentifierKeyword::Unknown &&
+                      &modern_base == &legacy_base};
+    const auto legacy_resolved{
+        shared
+            ? std::optional<sourcemeta::core::URI>{}
+            : resolve_identifier(
+                  document,
+                  effective_keyword == IdentifierKeyword::Modern ? "$id" : "id",
+                  legacy_base, accumulator)};
+
+    const auto &children_modern_base{
+        modern_resolved.has_value() ? modern_resolved.value() : modern_base};
+    const auto &children_legacy_base{shared ? children_modern_base
+                                            : (legacy_resolved.has_value()
+                                                   ? legacy_resolved.value()
+                                                   : legacy_base)};
     for (const auto &entry : document.as_object()) {
-      collect_identifiers(entry.second, accumulator);
+      collect_identifiers(entry.second, children_modern_base,
+                          children_legacy_base, effective_keyword, accumulator);
     }
   } else if (document.is_array()) {
     for (const auto &element : document.as_array()) {
-      collect_identifiers(element, accumulator);
+      collect_identifiers(element, modern_base, legacy_base, keyword,
+                          accumulator);
     }
   }
 }
@@ -426,10 +498,13 @@ public:
       // these entries can contribute. Entries that do get imported are found
       // among the imported schemas before this ever comes into play
       if (allow_remote) {
+        const auto default_keyword{identifier_keyword(default_dialect)};
         for (const auto &entry : entries) {
-          collect_identifiers(entry.second, this->pending_identifiers_);
-          this->pending_identifiers_.insert(
-              canonical_resolve_key(sourcemeta::jsonschema::default_id(entry)));
+          sourcemeta::core::URI base{sourcemeta::jsonschema::default_id(entry)};
+          base.canonicalize();
+          this->pending_identifiers_.insert(base.recompose());
+          collect_identifiers(entry.second, base, base, default_keyword,
+                              this->pending_identifiers_);
         }
       }
 

@@ -5,6 +5,8 @@
 // identifier the user already supplied: the run terminates with the same
 // file-anchored resolution diagnostic and no network round trip.
 
+ENV SOURCEMETA_CORE_CURL_SO $CWD/does-not-exist.so
+
 WRITE schema.json UNTIL EOF
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",

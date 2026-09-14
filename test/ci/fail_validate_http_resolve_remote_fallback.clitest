@@ -1,0 +1,111 @@
+// Keeping the identifiers of local `--resolve` inputs away from the network
+// must not disable `--http` for anything else. The cURL library cannot be
+// loaded, so the error below proves that a network request was attempted, both
+// for a meta-schema that no local input declares while the local imports cannot
+// complete on their own, and for a reference once every local import succeeded
+
+ENV SOURCEMETA_CORE_CURL_SO $CWD/does-not-exist.so
+
+WRITE schema.json UNTIL EOF
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "string"
+}
+EOF
+
+WRITE orphan.json UNTIL EOF
+{
+  "$schema": "https://example.com/genuinely-remote-meta",
+  "$id": "https://example.com/orphan",
+  "type": "string"
+}
+EOF
+
+WRITE local-meta.json UNTIL EOF
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.com/local-meta",
+  "$vocabulary": {
+    "https://json-schema.org/draft/2020-12/vocab/core": true,
+    "https://json-schema.org/draft/2020-12/vocab/applicator": true,
+    "https://json-schema.org/draft/2020-12/vocab/validation": true
+  }
+}
+EOF
+
+WRITE uses-local.json UNTIL EOF
+{
+  "$schema": "https://example.com/local-meta",
+  "$id": "https://example.com/uses-local",
+  "type": "string"
+}
+EOF
+
+WRITE remote-ref.json UNTIL EOF
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$ref": "https://example.com/genuinely-remote-target"
+}
+EOF
+
+WRITE instance.json UNTIL EOF
+"hello"
+EOF
+
+// Not supported
+RUN validate schema.json instance.json --http --resolve orphan.json --resolve local-meta.json STDIN /dev/null IN . INTO result_0.txt EXPECTING 3
+
+REPLACE $CWD WITH '[CWD]' IN result_0.txt
+
+WRITE expected_0.txt UNTIL EOF
+2> error: Could not load the cURL library from the configured path
+2>   with environment variable SOURCEMETA_CORE_CURL_SO
+2>   with paths
+2>   - [CWD]/does-not-exist.so
+EOF
+
+COMPARE result_0.txt AGAINST expected_0.txt
+
+// Not supported
+RUN validate schema.json instance.json --http --resolve orphan.json --resolve local-meta.json --json STDIN /dev/null IN . INTO result_1.txt EXPECTING 3
+
+REPLACE $CWD WITH '[CWD]' IN result_1.txt
+
+WRITE expected_1.txt UNTIL EOF
+1> {
+1>   "error": "Could not load the cURL library from the configured path",
+1>   "environmentVariable": "SOURCEMETA_CORE_CURL_SO",
+1>   "paths": [ "[CWD]/does-not-exist.so" ]
+1> }
+EOF
+
+COMPARE result_1.txt AGAINST expected_1.txt
+
+// Not supported
+RUN validate remote-ref.json instance.json --http --resolve uses-local.json --resolve local-meta.json STDIN /dev/null IN . INTO result_2.txt EXPECTING 3
+
+REPLACE $CWD WITH '[CWD]' IN result_2.txt
+
+WRITE expected_2.txt UNTIL EOF
+2> error: Could not load the cURL library from the configured path
+2>   with environment variable SOURCEMETA_CORE_CURL_SO
+2>   with paths
+2>   - [CWD]/does-not-exist.so
+EOF
+
+COMPARE result_2.txt AGAINST expected_2.txt
+
+// Not supported
+RUN validate remote-ref.json instance.json --http --resolve uses-local.json --resolve local-meta.json --json STDIN /dev/null IN . INTO result_3.txt EXPECTING 3
+
+REPLACE $CWD WITH '[CWD]' IN result_3.txt
+
+WRITE expected_3.txt UNTIL EOF
+1> {
+1>   "error": "Could not load the cURL library from the configured path",
+1>   "environmentVariable": "SOURCEMETA_CORE_CURL_SO",
+1>   "paths": [ "[CWD]/does-not-exist.so" ]
+1> }
+EOF
+
+COMPARE result_3.txt AGAINST expected_3.txt

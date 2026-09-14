@@ -1,10 +1,10 @@
-// Locally provided schemas must take precedence over remote fetching. This
-// is the reversed-order fixture of
-// `pass_resolve_custom_metaschema_ordering_reversed` with `--http` enabled:
-// the meta-schema is supplied locally one argument after the schema that
-// needs it, so the import must defer and use the local file rather than
-// issuing a network request for its identifier. The run succeeds without
-// any network round trip, so the outcome does not depend on network state.
+// Locally provided schemas must take precedence over remote fetching. With
+// `--http` enabled, the meta-schema is supplied locally one argument after the
+// schema that needs it, so the import must use the local file rather than
+// issuing a network request for its identifier. The run succeeds without any
+// network round trip, so the outcome does not depend on network state.
+
+ENV SOURCEMETA_CORE_CURL_SO $CWD/does-not-exist.so
 
 WRITE schema.json UNTIL EOF
 {
