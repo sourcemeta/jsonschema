@@ -350,26 +350,13 @@ anonymous_base_dialect(const sourcemeta::core::JSON &schema,
 }
 
 static inline auto
-find_identifier(const sourcemeta::core::JSON &document,
-                const sourcemeta::core::JSON::String &preferred,
-                const sourcemeta::core::JSON::String &fallback)
-    -> const sourcemeta::core::JSON * {
-  const auto *identifier{document.try_at(preferred)};
-  if (identifier != nullptr && identifier->is_string()) {
-    return identifier;
-  }
-
-  identifier = document.try_at(fallback);
-  return identifier != nullptr && identifier->is_string() ? identifier
-                                                          : nullptr;
-}
-
-static inline auto
-resolve_identifier(const sourcemeta::core::JSON *identifier,
+resolve_identifier(const sourcemeta::core::JSON &document,
+                   const sourcemeta::core::JSON::String &keyword,
                    const sourcemeta::core::URI &base,
                    std::unordered_set<std::string> &accumulator)
     -> std::optional<sourcemeta::core::URI> {
-  if (identifier == nullptr) {
+  const auto *identifier{document.try_at(keyword)};
+  if (identifier == nullptr || !identifier->is_string()) {
     return std::nullopt;
   }
 
@@ -390,7 +377,7 @@ resolve_identifier(const sourcemeta::core::JSON *identifier,
 // side of collecting too many, as the only cost of a false positive is
 // declining to fetch an identifier over the network. Only one of `$id` and
 // `id` identifies a resource, and which one depends on a dialect that is not
-// known yet either, so follow one chain of bases preferring each keyword, as
+// known yet either, so follow a separate chain of bases for each keyword, as
 // branching on every resource that declares both takes exponential time
 static inline auto
 collect_identifiers(const sourcemeta::core::JSON &document,
@@ -398,28 +385,14 @@ collect_identifiers(const sourcemeta::core::JSON &document,
                     const sourcemeta::core::URI &legacy_base,
                     std::unordered_set<std::string> &accumulator) -> void {
   if (document.is_object()) {
-    const auto *modern_identifier{find_identifier(document, "$id", "id")};
-    const auto *legacy_identifier{find_identifier(document, "id", "$id")};
     const auto modern_resolved{
-        resolve_identifier(modern_identifier, modern_base, accumulator)};
-
-    // Chains that have not diverged would resolve the same identifier against
-    // the same base
-    const auto converged{&modern_base == &legacy_base &&
-                         modern_identifier == legacy_identifier};
+        resolve_identifier(document, "$id", modern_base, accumulator)};
     const auto legacy_resolved{
-        converged
-            ? std::optional<sourcemeta::core::URI>{}
-            : resolve_identifier(legacy_identifier, legacy_base, accumulator)};
-
+        resolve_identifier(document, "id", legacy_base, accumulator)};
     const auto &children_modern_base{
         modern_resolved.has_value() ? modern_resolved.value() : modern_base};
     const auto &children_legacy_base{
-        converged || (legacy_resolved.has_value() &&
-                      legacy_resolved == modern_resolved)
-            ? children_modern_base
-            : (legacy_resolved.has_value() ? legacy_resolved.value()
-                                           : legacy_base)};
+        legacy_resolved.has_value() ? legacy_resolved.value() : legacy_base};
     for (const auto &entry : document.as_object()) {
       collect_identifiers(entry.second, children_modern_base,
                           children_legacy_base, accumulator);
