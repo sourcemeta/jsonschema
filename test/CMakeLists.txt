@@ -1196,6 +1196,7 @@ add_jsonschema_test(decode/pass_schema_less)
 add_jsonschema_test(decode/pass_schema_less_jsonl)
 add_jsonschema_test(decode/pass_schema_less_jsonl_verbose)
 add_jsonschema_test(decode/fail_no_document)
+add_jsonschema_test(decode/fail_enoent)
 add_jsonschema_test(decode/fail_truncated_document)
 add_jsonschema_test(decode/fail_no_output)
 
