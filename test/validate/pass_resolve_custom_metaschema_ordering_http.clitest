@@ -6,6 +6,8 @@
 // issuing a network request for its identifier. The run succeeds without
 // any network round trip, so the outcome does not depend on network state.
 
+ENV SOURCEMETA_CORE_CURL_SO $CWD/does-not-exist.so
+
 WRITE schema.json UNTIL EOF
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",

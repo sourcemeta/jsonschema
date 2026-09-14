@@ -1,12 +1,12 @@
-// Two `--resolve` documents that each embed the other's required custom
-// meta-schema under `$defs` can never be imported: `doc-a`'s `$schema` names
-// an identifier declared inside `doc-b`, and the other way around. Every
-// identifier involved is declared by a pending local input, including the
-// embedded ones, so enabling `--http` must not turn the stuck import into a
-// network request: the run terminates with the local resolution diagnostic
-// and no network round trip. Which of the two symmetric participants gets
-// blamed is deliberately not pinned, so the identifier and file below are
-// normalized before comparing
+// A locally supplied embedded identifier must be shielded from remote fetching
+// even when it is written relative to its containing document. This is the
+// fixture of `fail_resolve_embedded_metaschema_cycle_http` with the embedded
+// `$id` values written as relative references that only resolve to the
+// meta-schema identifiers the other document requires against the `$id` of
+// their container. The run must still terminate with the local resolution
+// diagnostic and no network round trip. Which of the two symmetric
+// participants gets blamed is deliberately not pinned, so the identifier and
+// file below are normalized before comparing
 
 ENV SOURCEMETA_CORE_CURL_SO $CWD/does-not-exist.so
 
@@ -19,11 +19,11 @@ EOF
 
 WRITE doc-a.json UNTIL EOF
 {
-  "$schema": "https://example.com/embedded-meta-b",
-  "$id": "https://example.com/doc-a",
+  "$schema": "https://example.com/nested/embedded-meta-b",
+  "$id": "https://example.com/nested/doc-a",
   "$defs": {
     "meta": {
-      "$id": "https://example.com/embedded-meta-a",
+      "$id": "embedded-meta-a",
       "$vocabulary": {
         "https://json-schema.org/draft/2020-12/vocab/core": true,
         "https://json-schema.org/draft/2020-12/vocab/applicator": true,
@@ -36,11 +36,11 @@ EOF
 
 WRITE doc-b.json UNTIL EOF
 {
-  "$schema": "https://example.com/embedded-meta-a",
-  "$id": "https://example.com/doc-b",
+  "$schema": "https://example.com/nested/embedded-meta-a",
+  "$id": "https://example.com/nested/doc-b",
   "$defs": {
     "meta": {
-      "$id": "https://example.com/embedded-meta-b",
+      "$id": "embedded-meta-b",
       "$vocabulary": {
         "https://json-schema.org/draft/2020-12/vocab/core": true,
         "https://json-schema.org/draft/2020-12/vocab/applicator": true,
@@ -59,8 +59,8 @@ EOF
 RUN validate schema.json instance.json --http --resolve doc-a.json --resolve doc-b.json STDIN /dev/null IN . INTO result_0.txt EXPECTING 4
 
 REPLACE $CWD WITH '[CWD]' IN result_0.txt
-REPLACE 'https://example.com/embedded-meta-a' WITH '[STUCK]' IN result_0.txt
-REPLACE 'https://example.com/embedded-meta-b' WITH '[STUCK]' IN result_0.txt
+REPLACE 'https://example.com/nested/embedded-meta-a' WITH '[STUCK]' IN result_0.txt
+REPLACE 'https://example.com/nested/embedded-meta-b' WITH '[STUCK]' IN result_0.txt
 REPLACE '[CWD]/doc-a.json' WITH '[INPUT]' IN result_0.txt
 REPLACE '[CWD]/doc-b.json' WITH '[INPUT]' IN result_0.txt
 
@@ -78,8 +78,8 @@ COMPARE result_0.txt AGAINST expected_0.txt
 RUN validate schema.json instance.json --http --resolve doc-a.json --resolve doc-b.json --json STDIN /dev/null IN . INTO result_1.txt EXPECTING 4
 
 REPLACE $CWD WITH '[CWD]' IN result_1.txt
-REPLACE 'https://example.com/embedded-meta-a' WITH '[STUCK]' IN result_1.txt
-REPLACE 'https://example.com/embedded-meta-b' WITH '[STUCK]' IN result_1.txt
+REPLACE 'https://example.com/nested/embedded-meta-a' WITH '[STUCK]' IN result_1.txt
+REPLACE 'https://example.com/nested/embedded-meta-b' WITH '[STUCK]' IN result_1.txt
 REPLACE '[CWD]/doc-a.json' WITH '[INPUT]' IN result_1.txt
 REPLACE '[CWD]/doc-b.json' WITH '[INPUT]' IN result_1.txt
 

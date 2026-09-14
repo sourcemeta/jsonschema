@@ -188,6 +188,7 @@ add_jsonschema_test(validate/fail_resolve_duplicate_embedded_identifier)
 add_jsonschema_test(validate/pass_resolve_custom_metaschema_permutations)
 add_jsonschema_test(validate/pass_resolve_embedded_metaschema_ordering)
 add_jsonschema_test(validate/fail_resolve_embedded_metaschema_cycle_http)
+add_jsonschema_test(validate/fail_resolve_embedded_relative_metaschema_cycle_http)
 add_jsonschema_test(validate/fail_resolve_duplicate_identifier_reports_both_files)
 add_jsonschema_test(validate/pass_resolve_duplicate_identifier_identical)
 add_jsonschema_test(validate/fail_resolve_duplicate_identifier_stdin)
@@ -1213,6 +1214,7 @@ add_jsonschema_test_unix_ci(precommit_lint)
 
 if(CMAKE_SYSTEM_NAME STREQUAL "Linux" AND NOT JSONSCHEMA_USE_SYSTEM_CURL)
   add_jsonschema_test_ci(fail_validate_http_missing_curl)
+  add_jsonschema_test_ci(fail_validate_http_resolve_remote_fallback)
 endif()
 
 # TODO: Make this test pass on Linux. It hangs for some reason

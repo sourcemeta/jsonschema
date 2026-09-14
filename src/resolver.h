@@ -356,21 +356,32 @@ anonymous_base_dialect(const sourcemeta::core::JSON &schema,
 // declining to fetch an identifier over the network
 static inline auto
 collect_identifiers(const sourcemeta::core::JSON &document,
+                    const sourcemeta::core::URI &base,
                     std::unordered_set<std::string> &accumulator) -> void {
   if (document.is_object()) {
+    std::optional<sourcemeta::core::URI> resource_base;
     for (const auto &keyword : {"$id", "id"}) {
       if (document.defines(keyword) && document.at(keyword).is_string()) {
-        accumulator.insert(
-            canonical_resolve_key(document.at(keyword).to_string()));
+        const auto &identifier{document.at(keyword).to_string()};
+        try {
+          sourcemeta::core::URI resolved{identifier};
+          resolved.resolve_from(base).canonicalize();
+          accumulator.insert(resolved.recompose());
+          resource_base = std::move(resolved);
+        } catch (const sourcemeta::core::URIParseError &) {
+          accumulator.insert(identifier);
+        }
       }
     }
 
+    const auto &children_base{resource_base.has_value() ? resource_base.value()
+                                                        : base};
     for (const auto &entry : document.as_object()) {
-      collect_identifiers(entry.second, accumulator);
+      collect_identifiers(entry.second, children_base, accumulator);
     }
   } else if (document.is_array()) {
     for (const auto &element : document.as_array()) {
-      collect_identifiers(element, accumulator);
+      collect_identifiers(element, base, accumulator);
     }
   }
 }
@@ -427,9 +438,10 @@ public:
       // among the imported schemas before this ever comes into play
       if (allow_remote) {
         for (const auto &entry : entries) {
-          collect_identifiers(entry.second, this->pending_identifiers_);
-          this->pending_identifiers_.insert(
-              canonical_resolve_key(sourcemeta::jsonschema::default_id(entry)));
+          sourcemeta::core::URI base{sourcemeta::jsonschema::default_id(entry)};
+          base.canonicalize();
+          this->pending_identifiers_.insert(base.recompose());
+          collect_identifiers(entry.second, base, this->pending_identifiers_);
         }
       }
 
