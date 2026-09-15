@@ -740,7 +740,7 @@ private:
   static auto load_word(const std::uint8_t *data) -> std::uint64_t {
     std::uint64_t word{0};
     std::memcpy(&word, data, sizeof(word));
-    if (std::endian::native == std::endian::big) {
+    if constexpr (std::endian::native == std::endian::big) {
       word = std::byteswap(word);
     }
 

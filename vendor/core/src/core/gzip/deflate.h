@@ -89,7 +89,7 @@ public:
 
   auto flush() -> void {
     std::uint64_t word{this->buffer_};
-    if (std::endian::native == std::endian::big) {
+    if constexpr (std::endian::native == std::endian::big) {
       word = std::byteswap(word);
     }
 
@@ -542,7 +542,7 @@ private:
   static auto load_32(const std::uint8_t *data) -> std::uint32_t {
     std::uint32_t word{0};
     std::memcpy(&word, data, sizeof(word));
-    if (std::endian::native == std::endian::big) {
+    if constexpr (std::endian::native == std::endian::big) {
       word = std::byteswap(word);
     }
 
@@ -552,7 +552,7 @@ private:
   static auto load_64(const std::uint8_t *data) -> std::uint64_t {
     std::uint64_t word{0};
     std::memcpy(&word, data, sizeof(word));
-    if (std::endian::native == std::endian::big) {
+    if constexpr (std::endian::native == std::endian::big) {
       word = std::byteswap(word);
     }
 
