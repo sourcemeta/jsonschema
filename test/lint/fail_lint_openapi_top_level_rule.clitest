@@ -1,0 +1,63 @@
+WRITE rule.json UNTIL EOF
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "require_type",
+  "description": "Every schema must declare a type",
+  "required": [ "type" ]
+}
+EOF
+
+WRITE openapi.json UNTIL EOF
+{
+  "openapi": "3.1.1",
+  "info": { "title": "Example", "version": "1.0.0" },
+  "components": {
+    "schemas": {
+      "Order": {
+        "properties": {
+          "id": { "minimum": 1 }
+        }
+      },
+      "Pet": {
+        "type": "string"
+      }
+    }
+  }
+}
+EOF
+
+// Validation failure
+RUN lint --top-level-rule rule.json --only require_type openapi.json STDIN /dev/null IN . INTO result_0.txt EXPECTING 2
+
+WRITE expected_0.txt UNTIL EOF
+1> openapi.json:6:7:
+1>   Every schema must declare a type (require_type)
+1>     at location "/components/schemas/Order"
+1>     The object value was expected to define the property "type"
+EOF
+
+COMPARE result_0.txt AGAINST expected_0.txt
+
+// Validation failure
+RUN lint --top-level-rule rule.json --only require_type --json openapi.json STDIN /dev/null IN . INTO result_1.txt EXPECTING 2
+
+REPLACE $CWD WITH '[CWD]' IN result_1.txt
+
+WRITE expected_1.txt UNTIL EOF
+1> {
+1>   "valid": false,
+1>   "health": 67,
+1>   "errors": [
+1>     {
+1>       "path": "[CWD]/openapi.json",
+1>       "id": "require_type",
+1>       "message": "Every schema must declare a type",
+1>       "description": "The object value was expected to define the property \"type\"",
+1>       "schemaLocation": [ "components", "schemas", "Order" ],
+1>       "position": [ 6, 7, 10, 7 ]
+1>     }
+1>   ]
+1> }
+EOF
+
+COMPARE result_1.txt AGAINST expected_1.txt

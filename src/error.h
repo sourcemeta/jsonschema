@@ -14,6 +14,7 @@
 #include <sourcemeta/core/jsonld.h>
 #include <sourcemeta/core/jsonpointer.h>
 #include <sourcemeta/core/jsonschema.h>
+#include <sourcemeta/core/openapi.h>
 #include <sourcemeta/core/options.h>
 #include <sourcemeta/core/yaml.h>
 
@@ -167,6 +168,13 @@ public:
 
 private:
   std::filesystem::path path_;
+};
+
+class UnsupportedOpenAPIFormatError : public std::runtime_error {
+public:
+  UnsupportedOpenAPIFormatError()
+      : std::runtime_error{
+            "The --format option is not supported for OpenAPI descriptions"} {}
 };
 
 class OptionConflictError : public std::runtime_error {
@@ -1032,6 +1040,11 @@ inline auto try_catch(const sourcemeta::core::Options &options,
     const auto is_json{options.contains("json")};
     print_exception(is_json, error);
     return EXIT_NOT_SUPPORTED;
+  } catch (
+      const sourcemeta::core::FileError<UnsupportedOpenAPIFormatError> &error) {
+    const auto is_json{options.contains("json")};
+    print_exception(is_json, error);
+    return EXIT_NOT_SUPPORTED;
   } catch (const PositionError<UnsupportedDialectUpgradeError> &error) {
     const auto is_json{options.contains("json")};
     print_exception(is_json, error);
@@ -1327,6 +1340,17 @@ inline auto try_catch(const sourcemeta::core::Options &options,
     return EXIT_SCHEMA_INPUT_ERROR;
   } catch (const sourcemeta::core::FileError<
            sourcemeta::core::SchemaAnchorCollisionError> &error) {
+    const auto is_json{options.contains("json")};
+    print_exception(is_json, error);
+    return EXIT_SCHEMA_INPUT_ERROR;
+  } catch (
+      const PositionError<
+          sourcemeta::core::FileError<sourcemeta::core::OpenAPIError>> &error) {
+    const auto is_json{options.contains("json")};
+    print_exception(is_json, error);
+    return EXIT_SCHEMA_INPUT_ERROR;
+  } catch (const sourcemeta::core::FileError<sourcemeta::core::OpenAPIError>
+               &error) {
     const auto is_json{options.contains("json")};
     print_exception(is_json, error);
     return EXIT_SCHEMA_INPUT_ERROR;

@@ -1,0 +1,28 @@
+WRITE openapi.yaml UNTIL EOF
+openapi: "3.1.1"
+info:
+  title: Example
+  version: "1.0.0"
+components:
+  schemas:
+    Pet:
+      title: Pet
+      description: A pet in the store
+      examples: [ dog ]
+      type: string
+      enum: [ dog, cat ]
+EOF
+
+// Validation failure
+RUN lint openapi.yaml STDIN /dev/null IN . INTO result_0.txt EXPECTING 2
+
+WRITE expected_0.txt UNTIL EOF
+1> openapi.yaml:12:7:
+1>   Setting `type` alongside `enum` is considered an anti-pattern, as the enumeration choices already imply their respective types (enum_with_type)
+1>     at location "/components/schemas/Pet/enum"
+1> openapi.yaml:11:7:
+1>   Setting `type` alongside `enum` is considered an anti-pattern, as the enumeration choices already imply their respective types (enum_with_type)
+1>     at location "/components/schemas/Pet/type"
+EOF
+
+COMPARE result_0.txt AGAINST expected_0.txt
