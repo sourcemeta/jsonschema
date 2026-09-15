@@ -8,7 +8,6 @@
 #include <optional>    // std::optional, std::nullopt
 #include <string>      // std::string
 #include <string_view> // std::string_view
-#include <utility>     // std::pair
 
 namespace sourcemeta::core {
 
@@ -144,39 +143,6 @@ inline auto der_unsigned_integer(std::string_view content)
   }
 
   return content;
-}
-
-// Read the modulus and public exponent from a PKCS#1 RSAPublicKey structure
-// (RFC 8017 Appendix A.1.1), a DER SEQUENCE of exactly the two integers, each
-// returned as its minimal big-endian magnitude. Trailing bytes at either level
-// are rejected so the input parses as exactly that structure
-inline auto der_read_rsa_public_key(const std::string_view der)
-    -> std::optional<std::pair<std::string, std::string>> {
-  const auto sequence{der_read(der)};
-  if (!sequence.has_value() || sequence->tag != 0x30 ||
-      !sequence->rest.empty()) {
-    return std::nullopt;
-  }
-
-  const auto modulus{der_read(sequence->content)};
-  if (!modulus.has_value() || modulus->tag != 0x02) {
-    return std::nullopt;
-  }
-
-  const auto exponent{der_read(modulus->rest)};
-  if (!exponent.has_value() || exponent->tag != 0x02 ||
-      !exponent->rest.empty()) {
-    return std::nullopt;
-  }
-
-  const auto modulus_value{der_unsigned_integer(modulus->content)};
-  const auto exponent_value{der_unsigned_integer(exponent->content)};
-  if (!modulus_value.has_value() || !exponent_value.has_value()) {
-    return std::nullopt;
-  }
-
-  return std::pair{std::string{modulus_value.value()},
-                   std::string{exponent_value.value()}};
 }
 
 } // namespace sourcemeta::core

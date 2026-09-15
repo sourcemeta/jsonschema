@@ -2,8 +2,8 @@
 #include <sourcemeta/blaze/alterschema_error.h>
 #include <sourcemeta/blaze/compiler.h>
 #include <sourcemeta/blaze/evaluator.h>
-#include <sourcemeta/blaze/foundation.h>
 #include <sourcemeta/blaze/output.h>
+#include <sourcemeta/core/jsonschema.h>
 
 #include <sourcemeta/core/regex.h>
 
@@ -64,8 +64,8 @@ static auto extract_title(const sourcemeta::core::JSON &schema) -> std::string {
 }
 
 SchemaRule::SchemaRule(const sourcemeta::core::JSON &schema,
-                       const sourcemeta::blaze::SchemaWalker &walker,
-                       const sourcemeta::blaze::SchemaResolver &resolver,
+                       const sourcemeta::core::SchemaWalker &walker,
+                       const sourcemeta::core::SchemaResolver &resolver,
                        const Compiler &compiler,
                        const std::string_view default_dialect,
                        const std::optional<Tweaks> &tweaks, const Scope scope)
@@ -76,13 +76,13 @@ SchemaRule::SchemaRule(const sourcemeta::core::JSON &schema,
 
 auto SchemaRule::condition(
     const sourcemeta::core::JSON &schema, const sourcemeta::core::JSON &,
-    const sourcemeta::blaze::SchemaVocabularies &,
-    const sourcemeta::blaze::SchemaFrame &,
-    const sourcemeta::blaze::SchemaFrame::Location &location,
-    const sourcemeta::blaze::SchemaWalker &,
-    const sourcemeta::blaze::SchemaResolver &, const bool) const
+    const sourcemeta::core::SchemaVocabularies &,
+    const sourcemeta::core::SchemaFrame &,
+    const sourcemeta::core::SchemaFrame::Location &location,
+    const sourcemeta::core::SchemaWalker &,
+    const sourcemeta::core::SchemaResolver &) const
     -> SchemaTransformRule::Result {
-  if (this->scope_ == Scope::TopLevel && !location.pointer.empty()) {
+  if (this->scope_ == Scope::TopLevel && location.parent.has_value()) {
     return false;
   }
 

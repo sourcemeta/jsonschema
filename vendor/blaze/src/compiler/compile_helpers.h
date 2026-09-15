@@ -2,7 +2,7 @@
 #define SOURCEMETA_BLAZE_COMPILER_COMPILE_HELPERS_H_
 
 #include <sourcemeta/blaze/compiler.h>
-#include <sourcemeta/blaze/foundation.h>
+#include <sourcemeta/core/jsonschema.h>
 #include <sourcemeta/core/uri.h>
 
 #include <algorithm>  // std::ranges::find, std::ranges::any_of
@@ -73,9 +73,10 @@ inline auto schema_resource_id(const std::vector<std::string> &resources,
 
 // A walker only views the custom vocabulary URIs it reports, as its table
 // points at static storage, so interning one has to take a copy
-inline auto own(const SchemaVocabularies::URIView &vocabulary)
-    -> SchemaVocabularies::URI {
-  const auto *known{std::get_if<SchemaVocabularies::Known>(&vocabulary)};
+inline auto own(const sourcemeta::core::SchemaVocabularies::URIView &vocabulary)
+    -> sourcemeta::core::SchemaVocabularies::URI {
+  const auto *known{
+      std::get_if<sourcemeta::core::SchemaVocabularies::Known>(&vocabulary)};
   if (known != nullptr) {
     return *known;
   }
@@ -85,12 +86,11 @@ inline auto own(const SchemaVocabularies::URIView &vocabulary)
 
 // Intern the vocabulary that owns a keyword, as an index into
 // Template::vocabularies where zero means the keyword has none
-inline auto
-vocabulary_intern(std::vector<SchemaVocabularies::URI> &vocabularies,
-                  const sourcemeta::blaze::SchemaWalker &walker,
-                  const std::string_view keyword,
-                  const sourcemeta::blaze::SchemaVocabularies &active)
-    -> std::size_t {
+inline auto vocabulary_intern(
+    std::vector<sourcemeta::core::SchemaVocabularies::URI> &vocabularies,
+    const sourcemeta::core::SchemaWalker &walker,
+    const std::string_view keyword,
+    const sourcemeta::core::SchemaVocabularies &active) -> std::size_t {
   const auto &result{walker(keyword, active)};
   if (!result.vocabulary.has_value()) {
     return 0;
@@ -109,14 +109,14 @@ vocabulary_intern(std::vector<SchemaVocabularies::URI> &vocabularies,
                  std::distance(vocabularies.begin(), iterator));
 }
 
-inline auto vocabulary_id(std::vector<SchemaVocabularies::URI> &vocabularies,
-                          const sourcemeta::blaze::SchemaFrame &frame,
-                          const sourcemeta::blaze::SchemaWalker &walker,
-                          const std::string_view keyword,
-                          const sourcemeta::core::WeakPointer &relative_pointer,
-                          const sourcemeta::core::URI &base,
-                          const sourcemeta::blaze::SchemaVocabularies &active)
-    -> std::size_t {
+inline auto vocabulary_id(
+    std::vector<sourcemeta::core::SchemaVocabularies::URI> &vocabularies,
+    const sourcemeta::core::SchemaFrame &frame,
+    const sourcemeta::core::SchemaWalker &walker,
+    const std::string_view keyword,
+    const sourcemeta::core::WeakPointer &relative_pointer,
+    const sourcemeta::core::URI &base,
+    const sourcemeta::core::SchemaVocabularies &active) -> std::size_t {
   if (!keyword.empty()) {
     return vocabulary_intern(vocabularies, walker, keyword, active);
   }
@@ -139,9 +139,9 @@ inline auto vocabulary_id(std::vector<SchemaVocabularies::URI> &vocabularies,
       frame.traverse(to_uri(relative_pointer.initial(), base).recompose())};
   if (!parent.has_value() ||
       (parent.value().get().type !=
-           sourcemeta::blaze::SchemaFrame::LocationType::Subschema &&
+           sourcemeta::core::SchemaFrame::LocationType::Subschema &&
        parent.value().get().type !=
-           sourcemeta::blaze::SchemaFrame::LocationType::Resource)) {
+           sourcemeta::core::SchemaFrame::LocationType::Resource)) {
     return 0;
   }
 
@@ -328,6 +328,17 @@ unsigned_integer_property(const sourcemeta::core::JSON &document,
   return unsigned_integer_property(document, property).value_or(otherwise);
 }
 
+// Whether the frame addresses the document from its top under the given base,
+// which is what the base that the caller framed a wrapper document with does
+inline auto addresses_document_top(const sourcemeta::core::SchemaFrame &frame,
+                                   const sourcemeta::core::JSON::String &base)
+    -> bool {
+  return frame.any_subschema(
+      [&base](const sourcemeta::core::SchemaFrame::Location &location) -> bool {
+        return location.base == base && location.relative_pointer == 0;
+      });
+}
+
 // A schema context only knows where it sits within the schema resource that
 // encloses it, while an error must report where the problem is within the
 // document that the schema came from. Prepending the pointer of that resource
@@ -338,13 +349,15 @@ absolute_schema_location(const Context &context,
                          const sourcemeta::core::URI &base,
                          const sourcemeta::core::WeakPointer &relative_pointer)
     -> sourcemeta::core::Pointer {
+  const auto base_string{base.recompose()};
   const auto resource{context.frame.location(
-      sourcemeta::blaze::SchemaReferenceType::Static, base.recompose())};
-  // Framing is where this base came from, so the resource it names is there.
-  // Were that to stop holding, the relative pointer is all we could report,
-  // and it would silently mean something else, so catch the drift here
-  assert(resource.has_value());
-  if (!resource.has_value()) [[unlikely]] {
+      sourcemeta::core::SchemaReferenceType::Static, base_string)};
+  // A base with no location of its own is the one the caller framed a wrapper
+  // document with, under which every relative pointer starts at the top of
+  // that document. Missing the resource of any other base would silently
+  // report a pointer that means something else, so catch that drift here
+  if (!resource.has_value()) {
+    assert(addresses_document_top(context.frame, base_string));
     return to_pointer(relative_pointer);
   }
 
@@ -365,10 +378,11 @@ absolute_schema_pointer(const Context &context,
                         const sourcemeta::core::URI &base,
                         const sourcemeta::core::WeakPointer &relative_pointer)
     -> sourcemeta::core::WeakPointer {
+  const auto base_string{base.recompose()};
   const auto resource{context.frame.location(
-      sourcemeta::blaze::SchemaReferenceType::Static, base.recompose())};
-  assert(resource.has_value());
-  if (!resource.has_value()) [[unlikely]] {
+      sourcemeta::core::SchemaReferenceType::Static, base_string)};
+  if (!resource.has_value()) {
+    assert(addresses_document_top(context.frame, base_string));
     return relative_pointer;
   }
 
@@ -392,7 +406,7 @@ inline auto defines_nested_subschemas(const Context &context,
     -> bool {
   return context.frame.any_subschema_under(
       absolute_schema_pointer(context, schema_context),
-      [](const sourcemeta::blaze::SchemaFrame::Location &) -> bool {
+      [](const sourcemeta::core::SchemaFrame::Location &) -> bool {
         return true;
       });
 }
@@ -416,8 +430,9 @@ inline auto find_adjacent(const Context &context,
   // A candidate is the subschema that may declare the keyword, paired with the
   // vocabularies in force there, as following a reference can land the search
   // in a resource that speaks a different dialect than the one we started from
-  std::vector<std::pair<sourcemeta::core::WeakPointer,
-                        std::reference_wrapper<const SchemaVocabularies>>>
+  std::vector<std::pair<
+      sourcemeta::core::WeakPointer,
+      std::reference_wrapper<const sourcemeta::core::SchemaVocabularies>>>
       candidates;
   const auto current{
       absolute_schema_pointer(context, schema_context).initial()};
@@ -428,7 +443,7 @@ inline auto find_adjacent(const Context &context,
   // Attempt to statically follow references
   static const std::string REF_KEYWORD{"$ref"};
   if (schema_context.schema.defines("$ref")) {
-    const auto reference_type{sourcemeta::blaze::SchemaReferenceType::Static};
+    const auto reference_type{sourcemeta::core::SchemaReferenceType::Static};
     const auto origin{current.concat(make_weak_pointer(REF_KEYWORD))};
     assert(context.frame.reference(reference_type, origin).has_value());
     const auto &reference{
@@ -520,9 +535,9 @@ inline auto annotations_enabled(const Context &context,
 // TODO: Elevate to Core and test
 
 inline auto
-is_circular(const sourcemeta::blaze::SchemaFrame &frame,
+is_circular(const sourcemeta::core::SchemaFrame &frame,
             const sourcemeta::core::WeakPointer &reference_origin,
-            const sourcemeta::blaze::SchemaFrame::Reference &reference,
+            const sourcemeta::core::SchemaFrame::Reference &reference,
             std::unordered_set<std::string> &visited) -> bool {
   if (visited.contains(reference.destination)) {
     return false;
@@ -542,10 +557,10 @@ is_circular(const sourcemeta::blaze::SchemaFrame &frame,
 
   return frame.any_reference_from(
       destination_pointer,
-      [&](const sourcemeta::blaze::SchemaReferenceType type,
+      [&](const sourcemeta::core::SchemaReferenceType type,
           const sourcemeta::core::WeakPointer &,
-          const sourcemeta::blaze::SchemaFrame::Reference &entry) -> bool {
-        return type == sourcemeta::blaze::SchemaReferenceType::Static &&
+          const sourcemeta::core::SchemaFrame::Reference &entry) -> bool {
+        return type == sourcemeta::core::SchemaReferenceType::Static &&
                is_circular(frame, reference_origin, entry, visited);
       });
 }
@@ -554,7 +569,7 @@ is_circular(const sourcemeta::blaze::SchemaFrame &frame,
 // level
 inline auto required_properties(const SchemaContext &schema_context)
     -> ValueStringSet {
-  using Known = sourcemeta::blaze::SchemaVocabularies::Known;
+  using Known = sourcemeta::core::SchemaVocabularies::Known;
   const auto imports_validation_vocabulary{
       schema_context.vocabularies.contains(Known::JSON_SCHEMA_DRAFT_4) ||
       schema_context.vocabularies.contains(Known::JSON_SCHEMA_DRAFT_6) ||

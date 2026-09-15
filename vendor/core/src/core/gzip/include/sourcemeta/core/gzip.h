@@ -27,7 +27,8 @@ namespace sourcemeta::core {
 
 /// @ingroup gzip
 /// Compress a byte buffer using the GZIP format (RFC 1952). An optional
-/// compression level from 0 to 12 trades speed for ratio. For example:
+/// compression level from 0 to 12 trades speed for ratio, and any other level
+/// throws. For example:
 ///
 /// ```cpp
 /// #include <sourcemeta/core/gzip.h>
@@ -46,7 +47,9 @@ auto SOURCEMETA_CORE_GZIP_EXPORT gzip(const std::uint8_t *input,
 /// bounded by a maximum size (256 MiB by default) so that a highly compressed
 /// input cannot exhaust memory, and decompressing beyond it throws. Every
 /// concatenated member is decoded and any trailing data that does not begin a
-/// new member is ignored, matching gzip(1). For example:
+/// new member is ignored, matching gzip(1). A member starts with the two gzip
+/// identification bytes and must then be valid. Decompression behaves exactly
+/// like the streaming decompression of the stream buffer. For example:
 ///
 /// ```cpp
 /// #include <sourcemeta/core/gzip.h>

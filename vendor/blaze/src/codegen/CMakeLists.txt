@@ -15,7 +15,7 @@ endif()
 target_link_libraries(sourcemeta_blaze_codegen PUBLIC
   sourcemeta::core::json)
 target_link_libraries(sourcemeta_blaze_codegen PUBLIC
-  sourcemeta::blaze::foundation)
+  sourcemeta::core::jsonschema)
 target_link_libraries(sourcemeta_blaze_codegen PRIVATE
   sourcemeta::blaze::bundle)
 target_link_libraries(sourcemeta_blaze_codegen PRIVATE

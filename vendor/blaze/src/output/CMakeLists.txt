@@ -24,7 +24,7 @@ target_link_libraries(sourcemeta_blaze_output PRIVATE
 target_link_libraries(sourcemeta_blaze_output PRIVATE
   sourcemeta::core::text)
 target_link_libraries(sourcemeta_blaze_output PUBLIC
-  sourcemeta::blaze::foundation)
+  sourcemeta::core::jsonschema)
 
 target_link_libraries(sourcemeta_blaze_output PUBLIC
   sourcemeta::blaze::evaluator)

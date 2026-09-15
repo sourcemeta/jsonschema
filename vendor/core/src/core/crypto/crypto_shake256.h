@@ -40,47 +40,56 @@ constexpr auto keccak_rotate_left(const std::uint64_t value,
 
 inline auto keccak_permute(std::array<std::uint64_t, 25> &state) noexcept
     -> void {
+  auto *state_data{state.data()};
+  const auto *pi_lanes{KECCAK_PI_LANES.data()};
+  const auto *rho_offsets{KECCAK_RHO_OFFSETS.data()};
+  const auto *round_constants{KECCAK_ROUND_CONSTANTS.data()};
   for (std::size_t round = 0; round < 24; ++round) {
     // Theta
     std::array<std::uint64_t, 5> column_parity{};
+    auto *column_parity_data{column_parity.data()};
     for (std::size_t column = 0; column < 5; ++column) {
-      column_parity[column] = state[column] ^ state[column + 5] ^
-                              state[column + 10] ^ state[column + 15] ^
-                              state[column + 20];
+      column_parity_data[column] = state_data[column] ^ state_data[column + 5] ^
+                                   state_data[column + 10] ^
+                                   state_data[column + 15] ^
+                                   state_data[column + 20];
     }
 
     for (std::size_t column = 0; column < 5; ++column) {
-      const auto delta{column_parity[(column + 4) % 5] ^
-                       keccak_rotate_left(column_parity[(column + 1) % 5], 1)};
+      const auto delta{
+          column_parity_data[(column + 4) % 5] ^
+          keccak_rotate_left(column_parity_data[(column + 1) % 5], 1)};
       for (std::size_t row = 0; row < 25; row += 5) {
-        state[row + column] ^= delta;
+        state_data[row + column] ^= delta;
       }
     }
 
     // Rho and pi
-    auto current{state[1]};
+    auto current{state_data[1]};
     for (std::size_t index = 0; index < 24; ++index) {
-      const auto lane{KECCAK_PI_LANES[index]};
-      const auto moved{state[lane]};
-      state[lane] = keccak_rotate_left(current, KECCAK_RHO_OFFSETS[index]);
+      const auto lane{pi_lanes[index]};
+      const auto moved{state_data[lane]};
+      state_data[lane] = keccak_rotate_left(current, rho_offsets[index]);
       current = moved;
     }
 
     // Chi
     for (std::size_t row = 0; row < 25; row += 5) {
       std::array<std::uint64_t, 5> plane{};
+      auto *plane_data{plane.data()};
       for (std::size_t column = 0; column < 5; ++column) {
-        plane[column] = state[row + column];
+        plane_data[column] = state_data[row + column];
       }
 
       for (std::size_t column = 0; column < 5; ++column) {
-        state[row + column] = plane[column] ^ (~plane[(column + 1) % 5] &
-                                               plane[(column + 2) % 5]);
+        state_data[row + column] =
+            plane_data[column] ^
+            (~plane_data[(column + 1) % 5] & plane_data[(column + 2) % 5]);
       }
     }
 
     // Iota
-    state[0] ^= KECCAK_ROUND_CONSTANTS[round];
+    state_data[0] ^= round_constants[round];
   }
 }
 
@@ -90,10 +99,11 @@ inline auto shake256(const std::string_view input,
   // The bitrate is 1600 - 2 * 256 = 1088 bits, that is 136 octets
   constexpr std::size_t RATE{136};
   std::array<std::uint64_t, 25> state{};
+  auto *state_data{state.data()};
 
   std::size_t pointer{0};
   for (const auto character : input) {
-    state[pointer / 8] ^=
+    state_data[pointer / 8] ^=
         static_cast<std::uint64_t>(static_cast<std::uint8_t>(character))
         << (8 * (pointer % 8));
     pointer += 1;
@@ -115,7 +125,8 @@ inline auto shake256(const std::string_view input,
   std::size_t squeeze_pointer{0};
   while (output.size() < output_length) {
     output.push_back(static_cast<char>(
-        (state[squeeze_pointer / 8] >> (8 * (squeeze_pointer % 8))) & 0xffU));
+        (state_data[squeeze_pointer / 8] >> (8 * (squeeze_pointer % 8))) &
+        0xffU));
     squeeze_pointer += 1;
     if (squeeze_pointer == RATE) {
       keccak_permute(state);

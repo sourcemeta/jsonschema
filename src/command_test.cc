@@ -110,7 +110,7 @@ auto print_rdf_failure(const sourcemeta::jsonschema::InputJSON &entry,
 }
 
 auto parse_test_suite(const sourcemeta::jsonschema::InputJSON &entry,
-                      const sourcemeta::blaze::SchemaResolver &schema_resolver,
+                      const sourcemeta::core::SchemaResolver &schema_resolver,
                       const std::string_view dialect,
                       const std::optional<sourcemeta::blaze::Tweaks> &tweaks)
     -> sourcemeta::blaze::TestSuite {
@@ -122,7 +122,7 @@ auto parse_test_suite(const sourcemeta::jsonschema::InputJSON &entry,
         // `dataPath` and `rdfPath` entries are opened from it
         entry.from_stdin ? std::filesystem::current_path()
                          : entry.resolution_base.parent_path(),
-        schema_resolver, sourcemeta::blaze::schema_walker,
+        schema_resolver, sourcemeta::core::schema_walker,
         sourcemeta::blaze::default_schema_compiler, dialect, "", tweaks);
   } catch (const sourcemeta::blaze::TestParseError &error) {
     throw sourcemeta::core::FileError<sourcemeta::blaze::TestParseError>{
@@ -143,29 +143,28 @@ auto parse_test_suite(const sourcemeta::jsonschema::InputJSON &entry,
     throw sourcemeta::core::FileError<sourcemeta::blaze::CompilerError>{
         entry.resolution_base, error};
   } catch (
-      const sourcemeta::blaze::SchemaRelativeMetaschemaResolutionError &error) {
+      const sourcemeta::core::SchemaRelativeMetaschemaResolutionError &error) {
     throw sourcemeta::core::FileError<
-        sourcemeta::blaze::SchemaRelativeMetaschemaResolutionError>{
+        sourcemeta::core::SchemaRelativeMetaschemaResolutionError>{
         entry.resolution_base, error};
-  } catch (const sourcemeta::blaze::SchemaResolutionError &error) {
-    throw sourcemeta::core::FileError<sourcemeta::blaze::SchemaResolutionError>{
+  } catch (const sourcemeta::core::SchemaResolutionError &error) {
+    throw sourcemeta::core::FileError<sourcemeta::core::SchemaResolutionError>{
         entry.resolution_base, error};
-  } catch (const sourcemeta::blaze::SchemaUnknownBaseDialectError &) {
+  } catch (const sourcemeta::core::SchemaUnknownBaseDialectError &) {
     throw sourcemeta::core::FileError<
-        sourcemeta::blaze::SchemaUnknownBaseDialectError>{
-        entry.resolution_base};
-  } catch (const sourcemeta::blaze::SchemaVocabularyError &error) {
-    throw sourcemeta::core::FileError<sourcemeta::blaze::SchemaVocabularyError>{
+        sourcemeta::core::SchemaUnknownBaseDialectError>{entry.resolution_base};
+  } catch (const sourcemeta::core::SchemaVocabularyError &error) {
+    throw sourcemeta::core::FileError<sourcemeta::core::SchemaVocabularyError>{
         entry.resolution_base, error.uri(), error.what()};
-  } catch (const sourcemeta::blaze::SchemaUnknownDialectError &) {
+  } catch (const sourcemeta::core::SchemaUnknownDialectError &) {
     throw sourcemeta::core::FileError<
-        sourcemeta::blaze::SchemaUnknownDialectError>{entry.resolution_base};
-  } catch (const sourcemeta::blaze::SchemaAnchorCollisionError &error) {
+        sourcemeta::core::SchemaUnknownDialectError>{entry.resolution_base};
+  } catch (const sourcemeta::core::SchemaAnchorCollisionError &error) {
     // No position, as what compiles here is the schema the document targets
     // while the positions on hand describe the test document itself
     throw sourcemeta::core::FileError<
-        sourcemeta::blaze::SchemaAnchorCollisionError>{entry.resolution_base,
-                                                       error};
+        sourcemeta::core::SchemaAnchorCollisionError>{entry.resolution_base,
+                                                      error};
   }
 }
 

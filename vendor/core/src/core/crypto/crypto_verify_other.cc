@@ -183,9 +183,9 @@ auto to_curve_parameters(const EllipticCurve curve) -> EllipticCurveParameters {
 // of the message digest, truncated to the bit length of the order
 auto digest_to_integer(const SignatureHashFunction hash,
                        const std::string_view message,
-                       const std::size_t order_bits) -> Bignum {
+                       const std::size_t order_bits) -> CurveBignum {
   const auto digest{digest_message(hash, message)};
-  auto value{bignum_from_bytes(digest)};
+  auto value{bignum_from_bytes<CURVE_BIGNUM_CAPACITY>(digest)};
   const auto digest_bits{digest.size() * 8};
   if (digest_bits > order_bits) {
     value = bignum_shift_right(value, digest_bits - order_bits);
@@ -284,8 +284,10 @@ auto verify_ecdsa(const EllipticCurve curve, const SignatureHashFunction hash,
     return false;
   }
 
-  const auto r{bignum_from_bytes(signature.substr(0, field_bytes))};
-  const auto s{bignum_from_bytes(signature.substr(field_bytes))};
+  const auto r{bignum_from_bytes<CURVE_BIGNUM_CAPACITY>(
+      signature.substr(0, field_bytes))};
+  const auto s{
+      bignum_from_bytes<CURVE_BIGNUM_CAPACITY>(signature.substr(field_bytes))};
 
   // FIPS 186-4 Section 6.4.2 step 1: both integers must lie in [1, n - 1]
   if (bignum_is_zero(r) || bignum_compare(r, parameters.order) >= 0 ||
@@ -301,8 +303,8 @@ auto verify_ecdsa(const EllipticCurve curve, const SignatureHashFunction hash,
     return false;
   }
 
-  const auto public_x{bignum_from_bytes(stripped_x)};
-  const auto public_y{bignum_from_bytes(stripped_y)};
+  const auto public_x{bignum_from_bytes<CURVE_BIGNUM_CAPACITY>(stripped_x)};
+  const auto public_y{bignum_from_bytes<CURVE_BIGNUM_CAPACITY>(stripped_y)};
 
   // The public key must be a valid point: coordinates below the field prime and
   // satisfying the curve equation
@@ -321,9 +323,11 @@ auto verify_ecdsa(const EllipticCurve curve, const SignatureHashFunction hash,
 
   const JacobianPoint generator{.x = parameters.generator_x,
                                 .y = parameters.generator_y,
-                                .z = bignum_from_u64(1)};
+                                .z = bignum_from_u64<CURVE_BIGNUM_CAPACITY>(1)};
   const JacobianPoint public_point{
-      .x = public_x, .y = public_y, .z = bignum_from_u64(1)};
+      .x = public_x,
+      .y = public_y,
+      .z = bignum_from_u64<CURVE_BIGNUM_CAPACITY>(1)};
   const auto point{point_double_scalar_multiply(u1, generator, u2, public_point,
                                                 parameters)};
 

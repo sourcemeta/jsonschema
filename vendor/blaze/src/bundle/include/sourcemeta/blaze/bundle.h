@@ -17,7 +17,7 @@
 #include <sourcemeta/core/json.h>
 #include <sourcemeta/core/jsonpointer.h>
 
-#include <sourcemeta/blaze/foundation.h>
+#include <sourcemeta/core/jsonschema.h>
 
 #include <cstdint>     // std::uint8_t, std::uint64_t
 #include <functional>  // std::function
@@ -57,12 +57,12 @@ enum class BundleMode : std::uint8_t {
 ///
 /// ```cpp
 /// #include <sourcemeta/core/json.h>
+/// #include <sourcemeta/core/jsonschema.h>
 /// #include <sourcemeta/blaze/bundle.h>
-/// #include <sourcemeta/blaze/foundation.h>
 ///
 /// // A custom resolver that knows about an additional schema
 /// static auto test_resolver(std::string_view identifier)
-///     -> sourcemeta::blaze::SchemaResolverResult {
+///     -> sourcemeta::core::SchemaResolverResult {
 ///   if (identifier == "https://www.example.com/test") {
 ///     return sourcemeta::core::parse_json(R"JSON({
 ///       "$id": "https://www.example.com/test",
@@ -70,7 +70,7 @@ enum class BundleMode : std::uint8_t {
 ///       "type": "string"
 ///     })JSON");
 ///   } else {
-///     return sourcemeta::blaze::schema_resolver(identifier);
+///     return sourcemeta::core::schema_resolver(identifier);
 ///   }
 /// }
 ///
@@ -81,7 +81,7 @@ enum class BundleMode : std::uint8_t {
 /// })JSON");
 ///
 /// sourcemeta::blaze::dependencies(document,
-///   sourcemeta::blaze::schema_walker, test_resolver,
+///   sourcemeta::core::schema_walker, test_resolver,
 ///   [](const auto &origin,
 ///      const auto &pointer,
 ///      const auto &target,
@@ -93,15 +93,18 @@ enum class BundleMode : std::uint8_t {
 /// How many schemas this ends up analysing follows from what the resolver
 /// hands back rather than from the schema the caller passed in, so pass
 /// `max_locations` to bound it. Every frame that this constructs spends from
-/// that one limit, throwing sourcemeta::blaze::SchemaFrameLimitError once it
-/// runs out. See sourcemeta::blaze::SchemaFrame for what the unit counts and
+/// that one limit, throwing sourcemeta::core::SchemaFrameLimitError once it
+/// runs out. See sourcemeta::core::SchemaFrame for what the unit counts and
 /// what it leaves to the caller
 SOURCEMETA_BLAZE_BUNDLE_EXPORT
 auto dependencies(
-    const sourcemeta::core::JSON &schema, const SchemaWalker &walker,
-    const SchemaResolver &resolver, const DependencyCallback &callback,
-    std::string_view default_dialect = "", std::string_view default_id = "",
-    const SchemaFrame::Paths &paths = {sourcemeta::core::EMPTY_WEAK_POINTER},
+    const sourcemeta::core::JSON &schema,
+    const sourcemeta::core::SchemaWalker &walker,
+    const sourcemeta::core::SchemaResolver &resolver,
+    const DependencyCallback &callback, std::string_view default_dialect = "",
+    std::string_view default_id = "",
+    const sourcemeta::core::SchemaFrame::Paths &paths =
+        {sourcemeta::core::EMPTY_WEAK_POINTER},
     std::uint64_t max_locations = std::numeric_limits<std::uint64_t>::max())
     -> void;
 
@@ -113,13 +116,13 @@ auto dependencies(
 ///
 /// ```cpp
 /// #include <sourcemeta/core/json.h>
+/// #include <sourcemeta/core/jsonschema.h>
 /// #include <sourcemeta/blaze/bundle.h>
-/// #include <sourcemeta/blaze/foundation.h>
 /// #include <cassert>
 ///
 /// // A custom resolver that knows about an additional schema
 /// static auto test_resolver(std::string_view identifier)
-///     -> sourcemeta::blaze::SchemaResolverResult {
+///     -> sourcemeta::core::SchemaResolverResult {
 ///   if (identifier == "https://www.example.com/test") {
 ///     return sourcemeta::core::parse_json(R"JSON({
 ///       "$id": "https://www.example.com/test",
@@ -127,7 +130,7 @@ auto dependencies(
 ///       "type": "string"
 ///     })JSON");
 ///   } else {
-///     return sourcemeta::blaze::schema_resolver(identifier);
+///     return sourcemeta::core::schema_resolver(identifier);
 ///   }
 /// }
 ///
@@ -138,7 +141,7 @@ auto dependencies(
 /// })JSON");
 ///
 /// sourcemeta::blaze::bundle(document,
-///   sourcemeta::blaze::schema_walker, test_resolver,
+///   sourcemeta::core::schema_walker, test_resolver,
 ///   sourcemeta::blaze::BundleMode::NonOfficialMetaschemas);
 ///
 /// const sourcemeta::core::JSON expected =
@@ -157,22 +160,31 @@ auto dependencies(
 /// assert(document == expected);
 /// ```
 ///
+/// Pass `default_base` to state the base URI that the document was retrieved
+/// from, which a relative reference within any of the given `paths` resolves
+/// against. As with sourcemeta::core::SchemaFrame, this does not claim that the
+/// document declares an identifier, so bundling never writes it into the
+/// document
+///
 /// How many schemas this ends up embedding follows from what the resolver
 /// hands back rather than from the schema the caller passed in, so pass
 /// `max_locations` to bound it. Every frame that bundling constructs spends
-/// from that one limit, throwing sourcemeta::blaze::SchemaFrameLimitError once
+/// from that one limit, throwing sourcemeta::core::SchemaFrameLimitError once
 /// it runs out, which bounds how many remote schemas this embeds and how deep
 /// it recurses along with how much framing it does. Note that a remote is
 /// copied out of the resolver before anything charges for it, so the limit
 /// bounds how many oversized schemas get copied rather than whether one does
 SOURCEMETA_BLAZE_BUNDLE_EXPORT
 auto bundle(
-    sourcemeta::core::JSON &schema, const SchemaWalker &walker,
-    const SchemaResolver &resolver, const BundleMode mode,
+    sourcemeta::core::JSON &schema,
+    const sourcemeta::core::SchemaWalker &walker,
+    const sourcemeta::core::SchemaResolver &resolver, const BundleMode mode,
     std::string_view default_dialect = "", std::string_view default_id = "",
     const std::optional<sourcemeta::core::Pointer> &default_container =
         std::nullopt,
-    const SchemaFrame::Paths &paths = {sourcemeta::core::EMPTY_WEAK_POINTER},
+    const sourcemeta::core::SchemaFrame::Paths &paths =
+        {sourcemeta::core::EMPTY_WEAK_POINTER},
+    std::string_view default_base = "",
     std::uint64_t max_locations = std::numeric_limits<std::uint64_t>::max())
     -> void;
 
@@ -185,13 +197,13 @@ auto bundle(
 ///
 /// ```cpp
 /// #include <sourcemeta/core/json.h>
+/// #include <sourcemeta/core/jsonschema.h>
 /// #include <sourcemeta/blaze/bundle.h>
-/// #include <sourcemeta/blaze/foundation.h>
 /// #include <cassert>
 ///
 /// // A custom resolver that knows about an additional schema
 /// static auto test_resolver(std::string_view identifier)
-///     -> sourcemeta::blaze::SchemaResolverResult {
+///     -> sourcemeta::core::SchemaResolverResult {
 ///   if (identifier == "https://www.example.com/test") {
 ///     return sourcemeta::core::parse_json(R"JSON({
 ///       "$id": "https://www.example.com/test",
@@ -199,7 +211,7 @@ auto bundle(
 ///       "type": "string"
 ///     })JSON");
 ///   } else {
-///     return sourcemeta::blaze::schema_resolver(identifier);
+///     return sourcemeta::core::schema_resolver(identifier);
 ///   }
 /// }
 ///
@@ -211,7 +223,7 @@ auto bundle(
 ///
 /// const sourcemeta::core::JSON result =
 ///   sourcemeta::blaze::bundle(document,
-///     sourcemeta::blaze::schema_walker, test_resolver,
+///     sourcemeta::core::schema_walker, test_resolver,
 ///     sourcemeta::blaze::BundleMode::NonOfficialMetaschemas);
 ///
 /// const sourcemeta::core::JSON expected =
@@ -235,12 +247,15 @@ auto bundle(
 /// may cost
 SOURCEMETA_BLAZE_BUNDLE_EXPORT
 auto bundle(
-    const sourcemeta::core::JSON &schema, const SchemaWalker &walker,
-    const SchemaResolver &resolver, const BundleMode mode,
+    const sourcemeta::core::JSON &schema,
+    const sourcemeta::core::SchemaWalker &walker,
+    const sourcemeta::core::SchemaResolver &resolver, const BundleMode mode,
     std::string_view default_dialect = "", std::string_view default_id = "",
     const std::optional<sourcemeta::core::Pointer> &default_container =
         std::nullopt,
-    const SchemaFrame::Paths &paths = {sourcemeta::core::EMPTY_WEAK_POINTER},
+    const sourcemeta::core::SchemaFrame::Paths &paths =
+        {sourcemeta::core::EMPTY_WEAK_POINTER},
+    std::string_view default_base = "",
     std::uint64_t max_locations = std::numeric_limits<std::uint64_t>::max())
     -> sourcemeta::core::JSON;
 

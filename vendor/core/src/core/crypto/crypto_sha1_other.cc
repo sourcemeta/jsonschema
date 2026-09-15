@@ -41,9 +41,10 @@ inline auto sha1_process_block(const unsigned char *block,
     -> void {
   // Decode 16 big-endian 32-bit words from the block
   std::array<std::uint32_t, 80> schedule;
+  auto *schedule_data = schedule.data();
   for (std::uint64_t word_index = 0; word_index < 16u; ++word_index) {
     const std::uint64_t byte_index = word_index * 4u;
-    schedule[word_index] =
+    schedule_data[word_index] =
         (static_cast<std::uint32_t>(block[byte_index]) << 24u) |
         (static_cast<std::uint32_t>(block[byte_index + 1u]) << 16u) |
         (static_cast<std::uint32_t>(block[byte_index + 2u]) << 8u) |
@@ -52,13 +53,14 @@ inline auto sha1_process_block(const unsigned char *block,
 
   // Extend the message schedule (RFC 3174 Section 6.1 step b)
   for (std::uint64_t index = 16u; index < 80u; ++index) {
-    schedule[index] =
-        rotate_left(schedule[index - 3u] ^ schedule[index - 8u] ^
-                        schedule[index - 14u] ^ schedule[index - 16u],
+    schedule_data[index] =
+        rotate_left(schedule_data[index - 3u] ^ schedule_data[index - 8u] ^
+                        schedule_data[index - 14u] ^ schedule_data[index - 16u],
                     1u);
   }
 
   auto working = state;
+  auto *working_data = working.data();
 
   // Compression function (RFC 3174 Section 6.1 step d), with the round
   // constants of RFC 3174 Section 5
@@ -66,31 +68,37 @@ inline auto sha1_process_block(const unsigned char *block,
     std::uint32_t function_value;
     std::uint32_t round_constant;
     if (round_index < 20u) {
-      function_value = choice(working[1], working[2], working[3]);
+      function_value =
+          choice(working_data[1], working_data[2], working_data[3]);
       round_constant = 0x5a827999U;
     } else if (round_index < 40u) {
-      function_value = parity(working[1], working[2], working[3]);
+      function_value =
+          parity(working_data[1], working_data[2], working_data[3]);
       round_constant = 0x6ed9eba1U;
     } else if (round_index < 60u) {
-      function_value = majority(working[1], working[2], working[3]);
+      function_value =
+          majority(working_data[1], working_data[2], working_data[3]);
       round_constant = 0x8f1bbcdcU;
     } else {
-      function_value = parity(working[1], working[2], working[3]);
+      function_value =
+          parity(working_data[1], working_data[2], working_data[3]);
       round_constant = 0xca62c1d6U;
     }
 
-    const auto temporary = rotate_left(working[0], 5u) + function_value +
-                           working[4] + schedule[round_index] + round_constant;
+    const auto temporary = rotate_left(working_data[0], 5u) + function_value +
+                           working_data[4] + schedule_data[round_index] +
+                           round_constant;
 
-    working[4] = working[3];
-    working[3] = working[2];
-    working[2] = rotate_left(working[1], 30u);
-    working[1] = working[0];
-    working[0] = temporary;
+    working_data[4] = working_data[3];
+    working_data[3] = working_data[2];
+    working_data[2] = rotate_left(working_data[1], 30u);
+    working_data[1] = working_data[0];
+    working_data[0] = temporary;
   }
 
+  auto *state_data = state.data();
   for (std::uint64_t index = 0u; index < 5u; ++index) {
-    state[index] += working[index];
+    state_data[index] += working_data[index];
   }
 }
 

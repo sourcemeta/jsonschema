@@ -10,11 +10,11 @@ public:
   [[nodiscard]] auto
   condition(const sourcemeta::core::JSON &schema,
             const sourcemeta::core::JSON &root,
-            const sourcemeta::blaze::SchemaVocabularies &vocabularies,
-            const sourcemeta::blaze::SchemaFrame &frame,
-            const sourcemeta::blaze::SchemaFrame::Location &location,
-            const sourcemeta::blaze::SchemaWalker &walker,
-            const sourcemeta::blaze::SchemaResolver &resolver, const bool) const
+            const sourcemeta::core::SchemaVocabularies &vocabularies,
+            const sourcemeta::core::SchemaFrame &frame,
+            const sourcemeta::core::SchemaFrame::Location &location,
+            const sourcemeta::core::SchemaWalker &walker,
+            const sourcemeta::core::SchemaResolver &resolver) const
       -> SchemaTransformRule::Result override {
     using Known = SchemaVocabularies::Known;
     // Technically, the `default` keyword goes back to Draft 1, but Blaze
@@ -45,7 +45,7 @@ public:
                                   frame, base.value().get(), Mode::Exhaustive);
       } catch (const CompilerReferenceTargetNotSchemaError &) {
         throw;
-      } catch (const sourcemeta::blaze::SchemaVocabularyError &) {
+      } catch (const sourcemeta::core::SchemaVocabularyError &) {
         throw;
       } catch (...) {
         return false;
@@ -72,34 +72,14 @@ public:
       return {{{"default"}}, std::move(message).str()};
     }
 
-    // Deliberately framed without a default identifier, so that the root
-    // comes back empty exactly when the schema declares none of its own
-    sourcemeta::blaze::SchemaFrame declared_frame{
-        sourcemeta::blaze::SchemaFrame::Mode::Root, root, walker, resolver,
-        location.dialect};
-    std::string_view default_id{location.base};
-    if (!declared_frame.root().empty() || default_id.empty()) {
-      default_id = "";
-    }
-
     sourcemeta::core::WeakPointer base;
-    const auto subschema{
-        sourcemeta::blaze::wrap(root, frame, location, walker, resolver, base)};
-    Template schema_template;
-    try {
-      schema_template = compile(subschema, walker, resolver, this->compiler_,
-                                Mode::Exhaustive, location.dialect, default_id);
-    } catch (const CompilerReferenceTargetNotSchemaError &) {
-      throw;
-    } catch (const sourcemeta::blaze::SchemaVocabularyError &) {
-      throw;
-    } catch (...) {
-      return false;
-    }
+    const auto schema_template{compile_non_standalone_subschema(
+        root, frame, location, walker, resolver, this->compiler_, base)};
+    ONLY_CONTINUE_IF(schema_template.has_value());
     SimpleOutput output{instance, base};
     Evaluator evaluator;
-    const auto result{
-        evaluator.validate(schema_template, instance, std::ref(output))};
+    const auto result{evaluator.validate(schema_template.value(), instance,
+                                         std::ref(output))};
     if (result) {
       return false;
     }

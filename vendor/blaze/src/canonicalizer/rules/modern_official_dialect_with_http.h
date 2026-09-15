@@ -7,12 +7,12 @@ public:
   [[nodiscard]] auto
   condition(const sourcemeta::core::JSON &schema,
             const sourcemeta::core::JSON &,
-            const sourcemeta::blaze::SchemaVocabularies &,
-            const sourcemeta::blaze::SchemaFrame &,
-            const sourcemeta::blaze::SchemaFrame::Location &location,
-            const sourcemeta::blaze::SchemaWalker &,
-            const sourcemeta::blaze::SchemaResolver &) const -> bool override {
-    using sourcemeta::blaze::SchemaBaseDialect;
+            const sourcemeta::core::SchemaVocabularies &,
+            const sourcemeta::core::SchemaFrame &,
+            const sourcemeta::core::SchemaFrame::Location &location,
+            const sourcemeta::core::SchemaWalker &,
+            const sourcemeta::core::SchemaResolver &) const -> bool override {
+    using sourcemeta::core::SchemaBaseDialect;
     ONLY_CONTINUE_IF(
         location.base_dialect == SchemaBaseDialect::JSON_SCHEMA_2020_12 ||
         location.base_dialect == SchemaBaseDialect::JSON_SCHEMA_2020_12_HYPER ||

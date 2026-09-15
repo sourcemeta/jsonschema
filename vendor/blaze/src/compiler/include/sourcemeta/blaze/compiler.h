@@ -10,9 +10,9 @@
 
 #include <sourcemeta/blaze/evaluator.h>
 
-#include <sourcemeta/blaze/foundation.h>
 #include <sourcemeta/core/json.h>
 #include <sourcemeta/core/jsonpointer.h>
+#include <sourcemeta/core/jsonschema.h>
 #include <sourcemeta/core/uri.h>
 
 #include <cstddef>       // std::size_t
@@ -44,7 +44,7 @@ struct SchemaContext {
   /// The current subschema
   const sourcemeta::core::JSON &schema;
   /// The schema vocabularies in use
-  const sourcemeta::blaze::SchemaVocabularies &vocabularies;
+  const sourcemeta::core::SchemaVocabularies &vocabularies;
   /// The schema base URI
   const sourcemeta::core::URI &base;
   // NOLINTEND(cppcoreguidelines-avoid-const-or-ref-data-members)
@@ -176,13 +176,13 @@ struct Context {
   /// The root schema resource
   const sourcemeta::core::JSON &root;
   /// The reference frame of the entire schema
-  const sourcemeta::blaze::SchemaFrame &frame;
+  const sourcemeta::core::SchemaFrame &frame;
   /// The set of all schema resources in the schema without duplicates
   const std::vector<std::string> resources;
   /// The schema walker in use
-  const sourcemeta::blaze::SchemaWalker &walker;
+  const sourcemeta::core::SchemaWalker &walker;
   /// The schema resolver in use
-  const sourcemeta::blaze::SchemaResolver &resolver;
+  const sourcemeta::core::SchemaResolver &resolver;
   /// The schema compiler in use
   const Compiler &compiler;
   /// The mode of the schema compiler
@@ -196,16 +196,16 @@ struct Context {
   /// The set of tweaks for the compiler
   const Tweaks tweaks;
   /// All possible reference targets (key includes is_property_name context)
-  const std::map<std::tuple<sourcemeta::blaze::SchemaReferenceType,
-                            std::string_view, bool>,
-                 std::pair<std::size_t, const sourcemeta::core::WeakPointer *>>
+  const std::map<
+      std::tuple<sourcemeta::core::SchemaReferenceType, std::string_view, bool>,
+      std::pair<std::size_t, const sourcemeta::core::WeakPointer *>>
       targets;
   /// How deep into the schema compilation currently is
   std::uint64_t &depth;
   /// Accumulator for instruction extra data during compilation
   InstructionExtras &extra;
   /// Accumulator for the vocabularies that instructions refer to
-  std::vector<SchemaVocabularies::URI> &vocabularies;
+  std::vector<sourcemeta::core::SchemaVocabularies::URI> &vocabularies;
   // NOLINTEND(cppcoreguidelines-avoid-const-or-ref-data-members)
 };
 
@@ -225,7 +225,7 @@ auto SOURCEMETA_BLAZE_COMPILER_EXPORT default_schema_compiler(
 /// #include <sourcemeta/blaze/compiler.h>
 ///
 /// #include <sourcemeta/core/json.h>
-/// #include <sourcemeta/blaze/foundation.h>
+/// #include <sourcemeta/core/jsonschema.h>
 ///
 /// const sourcemeta::core::JSON schema =
 ///     sourcemeta::core::parse_json(R"JSON({
@@ -234,8 +234,8 @@ auto SOURCEMETA_BLAZE_COMPILER_EXPORT default_schema_compiler(
 /// })JSON");
 ///
 /// const auto schema_template{sourcemeta::blaze::compile(
-///     schema, sourcemeta::blaze::schema_walker,
-///     sourcemeta::blaze::schema_resolver,
+///     schema, sourcemeta::core::schema_walker,
+///     sourcemeta::core::schema_resolver,
 ///     sourcemeta::blaze::default_schema_compiler)};
 ///
 /// // Evaluate or encode
@@ -248,8 +248,8 @@ auto SOURCEMETA_BLAZE_COMPILER_EXPORT default_schema_compiler(
 /// that takes a frame does neither, and so takes no such limit
 auto SOURCEMETA_BLAZE_COMPILER_EXPORT
 compile(const sourcemeta::core::JSON &schema,
-        const sourcemeta::blaze::SchemaWalker &walker,
-        const sourcemeta::blaze::SchemaResolver &resolver,
+        const sourcemeta::core::SchemaWalker &walker,
+        const sourcemeta::core::SchemaResolver &resolver,
         const Compiler &compiler, const Mode mode = Mode::FastValidation,
         const std::string_view default_dialect = "",
         const std::string_view default_id = "",
@@ -269,9 +269,9 @@ compile(const sourcemeta::core::JSON &schema,
 /// Don't use this function unless you know what you are doing.
 auto SOURCEMETA_BLAZE_COMPILER_EXPORT compile(
     const sourcemeta::core::JSON &schema,
-    const sourcemeta::blaze::SchemaWalker &walker,
-    const sourcemeta::blaze::SchemaResolver &resolver, const Compiler &compiler,
-    const sourcemeta::blaze::SchemaFrame &frame,
+    const sourcemeta::core::SchemaWalker &walker,
+    const sourcemeta::core::SchemaResolver &resolver, const Compiler &compiler,
+    const sourcemeta::core::SchemaFrame &frame,
     const std::string_view entrypoint, const Mode mode = Mode::FastValidation,
     const std::optional<Tweaks> &tweaks = std::nullopt) -> Template;
 

@@ -1,6 +1,6 @@
 #include <sourcemeta/blaze/editor.h>
 
-#include <sourcemeta/blaze/foundation.h>
+#include <sourcemeta/core/jsonschema.h>
 
 #include "helpers.h"
 
@@ -14,7 +14,7 @@ namespace {
 // massively grow, plus such case is quite uncommon in practice.
 // See https://arxiv.org/abs/2503.11288 for an academic study of this topic
 auto top_dynamic_anchor_location(
-    const sourcemeta::blaze::SchemaFrame &frame,
+    const sourcemeta::core::SchemaFrame &frame,
     const sourcemeta::core::WeakPointer &current,
     const std::string_view fragment,
     const sourcemeta::core::JSON::String &default_uri)
@@ -68,23 +68,23 @@ struct ReferenceChange {
 // Collected information about a subschema to modify
 struct SubschemaChange {
   sourcemeta::core::Pointer pointer;
-  sourcemeta::blaze::SchemaBaseDialect base_dialect;
+  sourcemeta::core::SchemaBaseDialect base_dialect;
   bool add_schema_declaration;
   bool erase_2020_12_keywords;
   bool erase_2019_09_keywords;
 };
 
 auto for_editor(sourcemeta::core::JSON &schema,
-                const sourcemeta::blaze::SchemaWalker &walker,
-                const sourcemeta::blaze::SchemaResolver &resolver,
+                const sourcemeta::core::SchemaWalker &walker,
+                const sourcemeta::core::SchemaResolver &resolver,
                 std::string_view default_dialect) -> void {
   // (1) Frame the schema and collect all changes we need to make
   std::vector<ReferenceChange> reference_changes;
   std::vector<SubschemaChange> subschema_changes;
 
   {
-    sourcemeta::blaze::SchemaFrame frame{
-        sourcemeta::blaze::SchemaFrame::Mode::References, schema, walker,
+    sourcemeta::core::SchemaFrame frame{
+        sourcemeta::core::SchemaFrame::Mode::References, schema, walker,
         resolver, default_dialect};
 
     // Otherwise the input is not bundled
@@ -92,15 +92,14 @@ auto for_editor(sourcemeta::core::JSON &schema,
 
     // Collect reference changes
     frame.for_each_reference(
-        [&](const sourcemeta::blaze::SchemaReferenceType type,
+        [&](const sourcemeta::core::SchemaReferenceType type,
             const sourcemeta::core::WeakPointer &origin,
-            const sourcemeta::blaze::SchemaFrame::Reference &reference)
-            -> void {
+            const sourcemeta::core::SchemaFrame::Reference &reference) -> void {
           assert(!origin.empty());
           assert(origin.back().is_property());
           const auto &keyword{origin.back().to_property()};
 
-          if (type == sourcemeta::blaze::SchemaReferenceType::Dynamic) {
+          if (type == sourcemeta::core::SchemaReferenceType::Dynamic) {
             if (reference.fragment.has_value()) {
               // A reference is a keyword of the subschema that declares it,
               // which is the resource scope the search has to start from
@@ -165,7 +164,7 @@ auto for_editor(sourcemeta::core::JSON &schema,
     // Collect subschema changes
     frame.for_each_subschema(
 
-        [&](const sourcemeta::blaze::SchemaFrame::Location &location) -> void {
+        [&](const sourcemeta::core::SchemaFrame::Location &location) -> void {
           const auto &subschema{
               sourcemeta::core::get(schema, location.pointer)};
           if (subschema.is_boolean()) {
@@ -181,10 +180,10 @@ auto for_editor(sourcemeta::core::JSON &schema,
                .base_dialect = location.base_dialect,
                .add_schema_declaration = add_schema,
                .erase_2020_12_keywords =
-                   vocabularies.contains(sourcemeta::blaze::SchemaVocabularies::
+                   vocabularies.contains(sourcemeta::core::SchemaVocabularies::
                                              Known::JSON_SCHEMA_2020_12_CORE),
                .erase_2019_09_keywords =
-                   vocabularies.contains(sourcemeta::blaze::SchemaVocabularies::
+                   vocabularies.contains(sourcemeta::core::SchemaVocabularies::
                                              Known::JSON_SCHEMA_2019_09_CORE)});
         });
   }

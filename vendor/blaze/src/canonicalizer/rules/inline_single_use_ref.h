@@ -6,11 +6,11 @@ public:
   [[nodiscard]] auto
   condition(const sourcemeta::core::JSON &schema,
             const sourcemeta::core::JSON &root,
-            const sourcemeta::blaze::SchemaVocabularies &vocabularies,
-            const sourcemeta::blaze::SchemaFrame &frame,
-            const sourcemeta::blaze::SchemaFrame::Location &location,
-            const sourcemeta::blaze::SchemaWalker &,
-            const sourcemeta::blaze::SchemaResolver &) const -> bool override {
+            const sourcemeta::core::SchemaVocabularies &vocabularies,
+            const sourcemeta::core::SchemaFrame &frame,
+            const sourcemeta::core::SchemaFrame::Location &location,
+            const sourcemeta::core::SchemaWalker &,
+            const sourcemeta::core::SchemaResolver &) const -> bool override {
     ONLY_CONTINUE_IF(schema.is_object() && schema.size() == 1);
 
     const auto *ref{schema.try_at("$ref")};
@@ -64,10 +64,9 @@ public:
 
     std::size_t ref_count{0};
     frame.for_each_reference(
-        [&](const sourcemeta::blaze::SchemaReferenceType,
+        [&](const sourcemeta::core::SchemaReferenceType,
             const sourcemeta::core::WeakPointer &,
-            const sourcemeta::blaze::SchemaFrame::Reference &reference)
-            -> void {
+            const sourcemeta::core::SchemaFrame::Reference &reference) -> void {
           const auto dest{frame.traverse(reference.destination)};
           if (!dest.has_value()) {
             return;

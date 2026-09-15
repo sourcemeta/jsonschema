@@ -9,4 +9,4 @@ endif()
 target_link_libraries(sourcemeta_blaze_editor PUBLIC
   sourcemeta::core::json)
 target_link_libraries(sourcemeta_blaze_editor PUBLIC
-  sourcemeta::blaze::foundation)
+  sourcemeta::core::jsonschema)

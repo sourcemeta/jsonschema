@@ -29,7 +29,7 @@ target_link_libraries(sourcemeta_jsonbinpack_compiler PUBLIC
 target_link_libraries(sourcemeta_jsonbinpack_compiler PRIVATE
   sourcemeta::core::jsonpointer)
 target_link_libraries(sourcemeta_jsonbinpack_compiler PUBLIC
-  sourcemeta::blaze::foundation)
+  sourcemeta::core::jsonschema)
 target_link_libraries(sourcemeta_jsonbinpack_compiler PRIVATE
   sourcemeta::blaze::alterschema)
 target_link_libraries(sourcemeta_jsonbinpack_compiler PRIVATE

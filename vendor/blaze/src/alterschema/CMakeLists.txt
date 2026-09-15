@@ -113,9 +113,11 @@ if(BLAZE_INSTALL)
 endif()
 
 target_link_libraries(sourcemeta_blaze_alterschema PUBLIC
-  sourcemeta::blaze::foundation)
+  sourcemeta::core::jsonschema)
 target_link_libraries(sourcemeta_blaze_alterschema PUBLIC
   sourcemeta::blaze::compiler)
+target_link_libraries(sourcemeta_blaze_alterschema PRIVATE
+  sourcemeta::blaze::bundle)
 target_link_libraries(sourcemeta_blaze_alterschema PRIVATE
   sourcemeta::blaze::evaluator)
 target_link_libraries(sourcemeta_blaze_alterschema PRIVATE

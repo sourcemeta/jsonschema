@@ -11,11 +11,11 @@ public:
   [[nodiscard]] auto
   condition(const sourcemeta::core::JSON &schema,
             const sourcemeta::core::JSON &,
-            const sourcemeta::blaze::SchemaVocabularies &,
-            const sourcemeta::blaze::SchemaFrame &,
-            const sourcemeta::blaze::SchemaFrame::Location &location,
-            const sourcemeta::blaze::SchemaWalker &,
-            const sourcemeta::blaze::SchemaResolver &, const bool) const
+            const sourcemeta::core::SchemaVocabularies &,
+            const sourcemeta::core::SchemaFrame &,
+            const sourcemeta::core::SchemaFrame::Location &location,
+            const sourcemeta::core::SchemaWalker &,
+            const sourcemeta::core::SchemaResolver &) const
       -> SchemaTransformRule::Result override {
     ONLY_CONTINUE_IF(schema.is_object());
     const auto *schema_keyword{schema.try_at("$schema")};

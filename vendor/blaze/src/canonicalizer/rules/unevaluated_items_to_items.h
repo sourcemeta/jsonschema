@@ -7,11 +7,11 @@ public:
   [[nodiscard]] auto
   condition(const sourcemeta::core::JSON &schema,
             const sourcemeta::core::JSON &,
-            const sourcemeta::blaze::SchemaVocabularies &vocabularies,
-            const sourcemeta::blaze::SchemaFrame &,
-            const sourcemeta::blaze::SchemaFrame::Location &,
-            const sourcemeta::blaze::SchemaWalker &walker,
-            const sourcemeta::blaze::SchemaResolver &) const -> bool override {
+            const sourcemeta::core::SchemaVocabularies &vocabularies,
+            const sourcemeta::core::SchemaFrame &,
+            const sourcemeta::core::SchemaFrame::Location &,
+            const sourcemeta::core::SchemaWalker &walker,
+            const sourcemeta::core::SchemaResolver &) const -> bool override {
     ONLY_CONTINUE_IF(
         vocabularies.contains_any(
             {SchemaVocabularies::Known::JSON_SCHEMA_2020_12_UNEVALUATED,
@@ -24,13 +24,13 @@ public:
       }
       const auto &metadata{walker(entry.first, vocabularies)};
       const auto keyword_type{metadata.type};
-      if (keyword_type != sourcemeta::blaze::SchemaKeywordType::Unknown &&
-          keyword_type != sourcemeta::blaze::SchemaKeywordType::Assertion &&
-          keyword_type != sourcemeta::blaze::SchemaKeywordType::Annotation &&
-          keyword_type != sourcemeta::blaze::SchemaKeywordType::Comment &&
-          keyword_type != sourcemeta::blaze::SchemaKeywordType::Other &&
+      if (keyword_type != sourcemeta::core::SchemaKeywordType::Unknown &&
+          keyword_type != sourcemeta::core::SchemaKeywordType::Assertion &&
+          keyword_type != sourcemeta::core::SchemaKeywordType::Annotation &&
+          keyword_type != sourcemeta::core::SchemaKeywordType::Comment &&
+          keyword_type != sourcemeta::core::SchemaKeywordType::Other &&
           keyword_type !=
-              sourcemeta::blaze::SchemaKeywordType::LocationMembers) {
+              sourcemeta::core::SchemaKeywordType::LocationMembers) {
         return false;
       }
     }

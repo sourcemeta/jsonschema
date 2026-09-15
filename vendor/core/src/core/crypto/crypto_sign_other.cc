@@ -9,6 +9,7 @@
 #include "crypto_other.h"
 #include "crypto_pkcs8.h"
 #include "crypto_random.h"
+#include "crypto_rsa_other.h"
 
 #include <array>       // std::array
 #include <cassert>     // assert
@@ -194,8 +195,8 @@ auto hmac(const SignatureHashFunction hash, const std::string_view key,
 // RFC 6979 Section 2.3.2 bits2int, which is also the FIPS 186-4 Section 6.4
 // truncation of a bit string to the leftmost order-length bits
 auto bits2int(const std::string_view bits, const std::size_t order_bits)
-    -> Bignum {
-  auto value{bignum_from_bytes(bits)};
+    -> CurveBignum {
+  auto value{bignum_from_bytes<CURVE_BIGNUM_CAPACITY>(bits)};
   const auto bit_length{bits.size() * 8};
   if (bit_length > order_bits) {
     value = bignum_shift_right(value, bit_length - order_bits);
@@ -206,7 +207,7 @@ auto bits2int(const std::string_view bits, const std::size_t order_bits)
 
 // RFC 6979 Section 2.3.4 bits2octets, reducing the truncated hash modulo the
 // order and encoding it to the fixed octet width
-auto bits2octets(const std::string_view bits, const Bignum &order,
+auto bits2octets(const std::string_view bits, const CurveBignum &order,
                  const std::size_t order_bits, const std::size_t order_bytes)
     -> std::string {
   auto value{bits2int(bits, order_bits)};
@@ -214,25 +215,19 @@ auto bits2octets(const std::string_view bits, const Bignum &order,
   return bignum_to_bytes(value, order_bytes);
 }
 
-auto sign_rsa(const std::string_view modulus,
-              const std::string_view private_exponent,
+auto sign_rsa(const PrivateKey::Internal &key,
               const std::string_view encoded_message) -> std::string {
-  // The exponent is the secret private key, so the exponentiation runs in
-  // constant time; the exponent copy it consumes is wiped before returning
-  const auto context{barrett_context(bignum_from_bytes(modulus))};
-  auto exponent{bignum_from_bytes(private_exponent)};
-  const SecureBignumScope exponent_scope{exponent};
   auto representative{
-      bignum_mod_exp_ct(bignum_from_bytes(encoded_message), exponent, context)};
+      rsa_private_operation(key, bignum_from_bytes(encoded_message))};
   bignum_normalize(representative);
-  return bignum_to_bytes(representative, modulus.size());
+  return bignum_to_bytes(representative, key.modulus.size());
 }
 
 // The signature for one nonce candidate (FIPS 186-4 Section 6.4.1), returning
 // no value when the candidate must be rejected and a fresh one drawn
-auto ecdsa_signature_for_nonce(const Bignum &nonce,
-                               const Bignum &digest_integer,
-                               const Bignum &private_scalar,
+auto ecdsa_signature_for_nonce(const CurveBignum &nonce,
+                               const CurveBignum &digest_integer,
+                               const CurveBignum &private_scalar,
                                const JacobianPoint &generator,
                                const EllipticCurveParameters &parameters,
                                const std::size_t field_bytes)
@@ -293,11 +288,11 @@ auto sign_ecdsa(const EllipticCurve curve, const SignatureHashFunction hash,
   const auto order_bytes{(order_bits + 7) / 8};
   const auto digest{digest_message(hash, message)};
   const auto digest_integer{bits2int(digest, order_bits)};
-  auto private_scalar{bignum_from_bytes(scalar)};
+  auto private_scalar{bignum_from_bytes<CURVE_BIGNUM_CAPACITY>(scalar)};
   const SecureBignumScope private_scalar_scope{private_scalar};
   const JacobianPoint generator{.x = parameters.generator_x,
                                 .y = parameters.generator_y,
-                                .z = bignum_from_u64(1)};
+                                .z = bignum_from_u64<CURVE_BIGNUM_CAPACITY>(1)};
 
   auto private_octets{bignum_to_bytes(private_scalar, order_bytes)};
   const SecureStringScope private_octets_scope{private_octets};
@@ -361,8 +356,8 @@ auto ec_public_from_scalar(const EllipticCurve curve,
   const auto parameters{to_curve_parameters(curve)};
   const JacobianPoint generator{.x = parameters.generator_x,
                                 .y = parameters.generator_y,
-                                .z = bignum_from_u64(1)};
-  auto scalar_number{bignum_from_bytes(scalar)};
+                                .z = bignum_from_u64<CURVE_BIGNUM_CAPACITY>(1)};
+  auto scalar_number{bignum_from_bytes<CURVE_BIGNUM_CAPACITY>(scalar)};
   const SecureBignumScope scalar_scope{scalar_number};
   // The complete-formula ladder returns a projective point, whose affine
   // coordinates are X / Z and Y / Z, not the Jacobian X / Z^2 and Y / Z^3, so
@@ -370,7 +365,7 @@ auto ec_public_from_scalar(const EllipticCurve curve,
   // path rather than the Jacobian point_to_affine
   const auto product{point_scalar_multiply_constant_time(
       scalar_number, generator, parameters)};
-  const auto field{barrett_context(parameters.prime)};
+  const auto field{curve_field_context(parameters)};
   const auto z_inverse{field_inverse_ct(product.z, field)};
   auto coordinate_x{field_mod_multiply_ct(product.x, z_inverse, field)};
   auto coordinate_y{field_mod_multiply_ct(product.y, z_inverse, field)};
@@ -380,6 +375,51 @@ auto ec_public_from_scalar(const EllipticCurve curve,
           bignum_to_bytes(coordinate_y, parameters.field_bytes)};
 }
 
+// The CRT components of a two-prime RSAPrivateKey (RFC 8017 Appendix A.1.2),
+// viewing the canonical magnitudes that follow the private exponent
+struct RSACRTComponents {
+  std::string_view prime1;
+  std::string_view prime2;
+  std::string_view exponent1;
+  std::string_view exponent2;
+  std::string_view coefficient;
+};
+
+// Read the CRT components that follow the private exponent, returning no value
+// for the multi-prime form (version one), whose private operation needs the
+// further primes, or for components that are not canonical non-negative DER
+// INTEGERs within the key size limit
+auto read_rsa_crt_components(const std::string_view version,
+                             std::string_view rest)
+    -> std::optional<RSACRTComponents> {
+  if (version.size() != 1 || version.front() != '\x00') {
+    return std::nullopt;
+  }
+
+  std::array<std::string_view, 5> components;
+  for (auto &component : components) {
+    const auto element{der_read(rest)};
+    if (!element.has_value() || element->tag != 0x02) {
+      return std::nullopt;
+    }
+
+    const auto magnitude{der_unsigned_integer(element->content)};
+    if (!magnitude.has_value() || magnitude->empty() ||
+        magnitude->size() > MAXIMUM_KEY_BYTES) {
+      return std::nullopt;
+    }
+
+    component = magnitude.value();
+    rest = element->rest;
+  }
+
+  return RSACRTComponents{.prime1 = components[0],
+                          .prime2 = components[1],
+                          .exponent1 = components[2],
+                          .exponent2 = components[3],
+                          .coefficient = components[4]};
+}
+
 } // namespace
 
 PrivateKey::PrivateKey(Internal *internal) noexcept : internal_{internal} {}
@@ -387,6 +427,11 @@ PrivateKey::PrivateKey(Internal *internal) noexcept : internal_{internal} {}
 PrivateKey::~PrivateKey() {
   if (internal_ != nullptr) {
     secure_zero(internal_->private_exponent);
+    secure_zero(internal_->prime1);
+    secure_zero(internal_->prime2);
+    secure_zero(internal_->exponent1);
+    secure_zero(internal_->exponent2);
+    secure_zero(internal_->coefficient);
     secure_zero(internal_->scalar);
     secure_zero(internal_->edwards_seed);
     delete internal_;
@@ -402,6 +447,11 @@ auto PrivateKey::operator=(PrivateKey &&other) noexcept -> PrivateKey & {
   if (this != &other) {
     if (internal_ != nullptr) {
       secure_zero(internal_->private_exponent);
+      secure_zero(internal_->prime1);
+      secure_zero(internal_->prime2);
+      secure_zero(internal_->exponent1);
+      secure_zero(internal_->exponent2);
+      secure_zero(internal_->coefficient);
       secure_zero(internal_->scalar);
       secure_zero(internal_->edwards_seed);
       delete internal_;
@@ -480,11 +530,24 @@ auto make_private_key(const std::string_view pem) -> std::optional<PrivateKey> {
         return std::nullopt;
       }
 
+      // RFC 8017 Appendix A.1.2: the two-prime form carries the CRT components
+      // after the private exponent, which the private operation uses to take
+      // the cheaper path of RFC 8017 Section 5.1.2 step 2.b
+      const auto crt{
+          read_rsa_crt_components(version->content, private_exponent->rest)};
       return PrivateKey{new PrivateKey::Internal{
           .kind = PrivateKey::Type::RSA,
           .modulus = std::string{modulus_value.value()},
           .public_exponent = std::string{public_exponent_value.value()},
           .private_exponent = std::string{private_exponent_value.value()},
+          .prime1 = crt.has_value() ? std::string{crt->prime1} : std::string{},
+          .prime2 = crt.has_value() ? std::string{crt->prime2} : std::string{},
+          .exponent1 =
+              crt.has_value() ? std::string{crt->exponent1} : std::string{},
+          .exponent2 =
+              crt.has_value() ? std::string{crt->exponent2} : std::string{},
+          .coefficient =
+              crt.has_value() ? std::string{crt->coefficient} : std::string{},
           .scalar = {},
           .elliptic_curve = {},
           .edwards_seed = {},
@@ -531,6 +594,11 @@ auto make_private_key(const std::string_view pem) -> std::optional<PrivateKey> {
                                    .modulus = {},
                                    .public_exponent = {},
                                    .private_exponent = {},
+                                   .prime1 = {},
+                                   .prime2 = {},
+                                   .exponent1 = {},
+                                   .exponent2 = {},
+                                   .coefficient = {},
                                    .scalar = padded_scalar,
                                    .elliptic_curve = parsed->curve,
                                    .edwards_seed = {},
@@ -551,6 +619,11 @@ auto make_private_key(const std::string_view pem) -> std::optional<PrivateKey> {
                                    .modulus = {},
                                    .public_exponent = {},
                                    .private_exponent = {},
+                                   .prime1 = {},
+                                   .prime2 = {},
+                                   .exponent1 = {},
+                                   .exponent2 = {},
+                                   .coefficient = {},
                                    .scalar = {},
                                    .elliptic_curve = {},
                                    .edwards_seed = std::string{seed->content},
@@ -598,6 +671,11 @@ auto make_ec_private_key(const EllipticCurve curve,
                                .modulus = {},
                                .public_exponent = {},
                                .private_exponent = {},
+                               .prime1 = {},
+                               .prime2 = {},
+                               .exponent1 = {},
+                               .exponent2 = {},
+                               .coefficient = {},
                                .scalar = std::string{padded_scalar},
                                .elliptic_curve = curve,
                                .edwards_seed = {},
@@ -617,7 +695,7 @@ auto generate_ec_private_key(const EllipticCurve curve)
   // retry rate low even for P-521, whose order fills only 521 of its 528 bits
   std::string scalar(width, '\x00');
   const SecureStringScope scalar_scope{scalar};
-  Bignum scalar_number;
+  CurveBignum scalar_number;
   const SecureBignumScope scalar_number_scope{scalar_number};
   do {
     try {
@@ -630,7 +708,7 @@ auto generate_ec_private_key(const EllipticCurve curve)
     scalar[0] =
         static_cast<char>(static_cast<std::uint8_t>(scalar[0]) &
                           static_cast<std::uint8_t>(0xffu >> excess_bits));
-    scalar_number = bignum_from_bytes(scalar);
+    scalar_number = bignum_from_bytes<CURVE_BIGNUM_CAPACITY>(scalar);
   } while (bignum_is_zero(scalar_number) ||
            bignum_compare(scalar_number, parameters.order) >= 0);
 
@@ -640,6 +718,11 @@ auto generate_ec_private_key(const EllipticCurve curve)
                                .modulus = {},
                                .public_exponent = {},
                                .private_exponent = {},
+                               .prime1 = {},
+                               .prime2 = {},
+                               .exponent1 = {},
+                               .exponent2 = {},
+                               .coefficient = {},
                                .scalar = scalar,
                                .elliptic_curve = curve,
                                .edwards_seed = {},
@@ -659,6 +742,11 @@ auto make_edwards_private_key(const EdwardsCurve curve,
                                              .modulus = {},
                                              .public_exponent = {},
                                              .private_exponent = {},
+                                             .prime1 = {},
+                                             .prime2 = {},
+                                             .exponent1 = {},
+                                             .exponent2 = {},
+                                             .coefficient = {},
                                              .scalar = {},
                                              .elliptic_curve = {},
                                              .edwards_seed = std::string{seed},
@@ -687,8 +775,7 @@ auto rsassa_pkcs1_v15_sign(const PrivateKey &key,
     return std::nullopt;
   }
 
-  return sign_rsa(internal->modulus, internal->private_exponent,
-                  encoded.value());
+  return sign_rsa(*internal, encoded.value());
 }
 
 auto rsassa_pss_sign(const PrivateKey &key, const SignatureHashFunction hash,
@@ -706,8 +793,7 @@ auto rsassa_pss_sign(const PrivateKey &key, const SignatureHashFunction hash,
     return std::nullopt;
   }
 
-  return sign_rsa(internal->modulus, internal->private_exponent,
-                  encoded.value());
+  return sign_rsa(*internal, encoded.value());
 }
 
 auto ecdsa_sign(const PrivateKey &key, const SignatureHashFunction hash,

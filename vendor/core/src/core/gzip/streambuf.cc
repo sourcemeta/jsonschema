@@ -1,151 +1,54 @@
 #include <sourcemeta/core/gzip.h>
 
-#include "bit_reader.h"
-#include "deflate.h"
+#include "inflate.h"
 
-#include <sourcemeta/core/crypto.h>
-
-#include <array>       // std::array
-#include <cstddef>     // std::size_t, std::ptrdiff_t
-#include <cstdint>     // std::uint8_t, std::uint16_t, std::uint32_t
-#include <istream>     // std::istream
-#include <string_view> // std::string_view
+#include <cstddef> // std::size_t
+#include <cstdint> // std::uint8_t
+#include <cstring> // std::memmove
+#include <ios>     // std::streamsize
+#include <istream> // std::istream
+#include <vector>  // std::vector
 
 namespace sourcemeta::core {
 
-static constexpr std::size_t GZIP_BUFFER_SIZE{16384};
+static constexpr std::size_t GZIP_INPUT_BUFFER_SIZE{65536};
+static constexpr std::size_t GZIP_OUTPUT_BUFFER_SIZE{262144};
+// RFC 1951 section 3.2.5 caps the distance of a back-reference
+static constexpr std::size_t GZIP_HISTORY_SIZE{32768};
 
 struct GZIPStreamBuffer::Internal {
   // NOLINTNEXTLINE(cppcoreguidelines-avoid-const-or-ref-data-members)
   std::istream &stream;
-  BitReader reader;
-  DeflateDecoder deflate;
+  InflateDecoder decoder;
+  std::vector<std::uint8_t> input;
+  std::vector<std::uint8_t> output;
+  std::size_t input_next{0};
+  std::size_t input_end{0};
+  std::size_t output_next{0};
+  bool input_final{false};
   bool stream_ended{false};
-  bool any_member_completed{false};
-  bool member_started{false};
-  std::uint32_t member_crc32{0};
-  std::uint32_t member_isize{0};
-  std::array<std::uint8_t, GZIP_BUFFER_SIZE> decompressed_buffer{};
 
   Internal(std::istream &source)
-      : stream{source}, reader{source}, deflate{reader} {}
+      : stream{source}, input(GZIP_INPUT_BUFFER_SIZE),
+        output(GZIP_OUTPUT_BUFFER_SIZE) {}
+
+  // The bytes the decoder already moved into its bit buffer stay in place, as
+  // the decoder may hand them back to the input
+  auto refill() -> void {
+    const auto keep{this->input_next - this->decoder.buffered_input()};
+    std::memmove(this->input.data(), this->input.data() + keep,
+                 this->input_end - keep);
+    this->input_end -= keep;
+    this->input_next -= keep;
+    this->stream.read(
+        reinterpret_cast<char *>(this->input.data() + this->input_end),
+        static_cast<std::streamsize>(GZIP_INPUT_BUFFER_SIZE - this->input_end));
+    this->input_end += static_cast<std::size_t>(this->stream.gcount());
+    if (!this->stream) {
+      this->input_final = true;
+    }
+  }
 };
-
-namespace {
-
-// Accumulates the running CRC-32 over the header bytes that the FHCRC check
-// covers, computing it only when the FHCRC flag is present
-class HeaderChecksum {
-public:
-  HeaderChecksum(const bool track) : track_{track} {}
-
-  auto feed(const std::uint8_t byte) -> void {
-    if (this->track_) {
-      const auto data{static_cast<char>(byte)};
-      this->checksum_ =
-          crc32_update(this->checksum_, std::string_view{&data, 1});
-    }
-  }
-
-  [[nodiscard]] auto low16() const -> std::uint16_t {
-    return static_cast<std::uint16_t>(this->checksum_ & 0xffffU);
-  }
-
-private:
-  bool track_;
-  std::uint32_t checksum_{0};
-};
-
-auto read_header_byte(BitReader &reader, HeaderChecksum &checksum)
-    -> std::uint8_t {
-  const auto byte{reader.read_byte()};
-  checksum.feed(byte);
-  return byte;
-}
-
-auto parse_member_header(BitReader &reader, const std::uint8_t first_byte)
-    -> void {
-  // RFC 1952 section 2.3.1.2: FHCRC covers every header byte up to but not
-  // including the CRC16 itself, so feeding each byte as it is read produces
-  // exactly the right value. The bytes are not retained, removing an
-  // unbounded-memory path through FNAME and FCOMMENT
-
-  // Caller already consumed the ID1 byte and verified it is 0x1f
-  const auto id2{reader.read_byte()};
-  if (id2 != 0x8b) {
-    throw GZIPError{"Invalid gzip magic bytes"};
-  }
-  const auto compression_method{reader.read_byte()};
-  if (compression_method != 8) {
-    throw GZIPError{"Unsupported gzip compression method"};
-  }
-  const auto flag_byte{reader.read_byte()};
-  if ((flag_byte & 0xe0) != 0) {
-    throw GZIPError{"Reserved gzip FLG bits must be zero"};
-  }
-
-  HeaderChecksum checksum{(flag_byte & 0x02) != 0};
-  checksum.feed(first_byte);
-  checksum.feed(id2);
-  checksum.feed(compression_method);
-  checksum.feed(flag_byte);
-
-  // MTIME (4 bytes) + XFL (1 byte) + OS (1 byte) are informational
-  for (std::size_t index = 0; index < 6; ++index) {
-    read_header_byte(reader, checksum);
-  }
-
-  if ((flag_byte & 0x04) != 0) {
-    // FEXTRA
-    const auto xlen_lo{read_header_byte(reader, checksum)};
-    const auto xlen_hi{read_header_byte(reader, checksum)};
-    const auto xlen{static_cast<std::size_t>(xlen_lo) |
-                    (static_cast<std::size_t>(xlen_hi) << 8)};
-    for (std::size_t index = 0; index < xlen; ++index) {
-      read_header_byte(reader, checksum);
-    }
-  }
-
-  if ((flag_byte & 0x08) != 0) {
-    // FNAME (null-terminated)
-    while (read_header_byte(reader, checksum) != 0) {
-    }
-  }
-
-  if ((flag_byte & 0x10) != 0) {
-    // FCOMMENT (null-terminated)
-    while (read_header_byte(reader, checksum) != 0) {
-    }
-  }
-
-  if ((flag_byte & 0x02) != 0) {
-    // FHCRC: low 16 bits of CRC-32 over all preceding header bytes
-    const auto stored_lo{reader.read_byte()};
-    const auto stored_hi{reader.read_byte()};
-    const std::uint16_t stored{static_cast<std::uint16_t>(
-        static_cast<std::uint16_t>(stored_lo) |
-        static_cast<std::uint16_t>(static_cast<std::uint16_t>(stored_hi)
-                                   << 8))};
-    if (stored != checksum.low16()) {
-      throw GZIPError{"FHCRC mismatch"};
-    }
-  }
-}
-
-// Used for members past the first, where gzip(1) tolerates trailing
-// non-member data, so a header that fails to validate is reported as
-// trailing garbage rather than propagated as an error
-auto try_parse_member_header(BitReader &reader, const std::uint8_t first_byte)
-    -> bool {
-  try {
-    parse_member_header(reader, first_byte);
-    return true;
-  } catch (const GZIPError &) {
-    return false;
-  }
-}
-
-} // namespace
 
 GZIPStreamBuffer::GZIPStreamBuffer(std::istream &compressed_stream)
     : internal_{new Internal{compressed_stream}} {}
@@ -156,86 +59,47 @@ auto GZIPStreamBuffer::underflow() -> int_type {
   if ((this->gptr() != nullptr) && this->gptr() < this->egptr()) {
     return traits_type::to_int_type(*this->gptr());
   }
-  if (this->internal_->stream_ended) {
-    return traits_type::eof();
-  }
 
-  while (true) {
-    if (!this->internal_->member_started) {
-      std::uint8_t first_byte{0};
-      if (!this->internal_->reader.try_read_byte(first_byte)) {
-        if (!this->internal_->any_member_completed) {
-          throw GZIPError{"Empty source stream"};
-        }
-        this->internal_->stream_ended = true;
-        return traits_type::eof();
-      }
-      if (this->internal_->any_member_completed) {
-        // gzip(1) silently ignores any trailing data after a complete member
-        // rather than treating it as the start of a new member. Bytes that do
-        // not form a valid member header end the stream without error,
-        // independent of the first byte value
-        if (first_byte != 0x1f ||
-            !try_parse_member_header(this->internal_->reader, first_byte)) {
-          this->internal_->stream_ended = true;
-          return traits_type::eof();
-        }
-      } else {
-        if (first_byte != 0x1f) {
-          throw GZIPError{"Invalid gzip magic bytes"};
-        }
-        parse_member_header(this->internal_->reader, first_byte);
-      }
-
-      this->internal_->deflate.reset();
-      this->internal_->member_started = true;
-      this->internal_->member_crc32 = 0;
-      this->internal_->member_isize = 0;
+  auto &internal{*this->internal_};
+  while (!internal.stream_ended) {
+    if (GZIP_OUTPUT_BUFFER_SIZE - internal.output_next < GZIP_HISTORY_SIZE) {
+      std::memmove(internal.output.data(),
+                   internal.output.data() + internal.output_next -
+                       GZIP_HISTORY_SIZE,
+                   GZIP_HISTORY_SIZE);
+      internal.output_next = GZIP_HISTORY_SIZE;
     }
 
-    const auto produced{this->internal_->deflate.decompress(
-        this->internal_->decompressed_buffer.data(),
-        this->internal_->decompressed_buffer.size())};
+    const auto produced_start{internal.output_next};
+    InflateBuffers buffers{
+        .input_next = internal.input.data() + internal.input_next,
+        .input_end = internal.input.data() + internal.input_end,
+        .input_final = internal.input_final,
+        .output_begin = internal.output.data(),
+        .output_next = internal.output.data() + internal.output_next,
+        .output_end = internal.output.data() + GZIP_OUTPUT_BUFFER_SIZE};
+    const auto status{internal.decoder.decode(buffers)};
+    internal.input_next =
+        static_cast<std::size_t>(buffers.input_next - internal.input.data());
+    internal.output_next =
+        static_cast<std::size_t>(buffers.output_next - internal.output.data());
+    if (status == InflateStatus::Done) {
+      internal.stream_ended = true;
+    } else if (status == InflateStatus::NeedInput) {
+      internal.refill();
+    }
 
-    if (produced > 0) {
-      this->internal_->member_crc32 = crc32_update(
-          this->internal_->member_crc32,
-          std::string_view{reinterpret_cast<const char *>(
-                               this->internal_->decompressed_buffer.data()),
-                           produced});
-      this->internal_->member_isize += static_cast<std::uint32_t>(produced);
-
-      auto *buffer_start{reinterpret_cast<char *>(
-          this->internal_->decompressed_buffer.data())};
-      this->setg(buffer_start, buffer_start,
-                 buffer_start + static_cast<std::ptrdiff_t>(produced));
+    if (internal.output_next > produced_start) {
+      auto *const start{
+          reinterpret_cast<char *>(internal.output.data() + produced_start)};
+      this->setg(start, start,
+                 reinterpret_cast<char *>(internal.output.data() +
+                                          internal.output_next));
       return traits_type::to_int_type(*this->gptr());
     }
-
-    if (!this->internal_->deflate.stream_ended()) {
-      throw GZIPError{"Deflate stream ended unexpectedly"};
-    }
-
-    std::array<std::uint8_t, 8> trailer{};
-    this->internal_->reader.read_bytes(trailer.data(), trailer.size());
-    const auto stored_crc32{static_cast<std::uint32_t>(trailer[0]) |
-                            (static_cast<std::uint32_t>(trailer[1]) << 8) |
-                            (static_cast<std::uint32_t>(trailer[2]) << 16) |
-                            (static_cast<std::uint32_t>(trailer[3]) << 24)};
-    const auto stored_isize{static_cast<std::uint32_t>(trailer[4]) |
-                            (static_cast<std::uint32_t>(trailer[5]) << 8) |
-                            (static_cast<std::uint32_t>(trailer[6]) << 16) |
-                            (static_cast<std::uint32_t>(trailer[7]) << 24)};
-    if (stored_crc32 != this->internal_->member_crc32) {
-      throw GZIPError{"Gzip member CRC32 mismatch"};
-    }
-    if (stored_isize != this->internal_->member_isize) {
-      throw GZIPError{"Gzip member ISIZE mismatch"};
-    }
-
-    this->internal_->any_member_completed = true;
-    this->internal_->member_started = false;
   }
+
+  return traits_type::eof();
 }
 
 } // namespace sourcemeta::core

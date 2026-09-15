@@ -3,6 +3,7 @@
 
 #include "crypto_helpers.h"
 #include "crypto_openssl.h"
+#include "crypto_system.h"
 
 #include <openssl/bn.h>          // BN_*
 #include <openssl/core_names.h>  // OSSL_PKEY_PARAM_*

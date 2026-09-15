@@ -21,8 +21,8 @@ auto sourcemeta::blaze::default_schema_compiler(
     -> sourcemeta::blaze::Instructions {
   assert(!dynamic_context.keyword.empty());
 
-  using Known = sourcemeta::blaze::SchemaVocabularies::Known;
-  static std::unordered_set<sourcemeta::blaze::SchemaVocabularies::URI>
+  using Known = sourcemeta::core::SchemaVocabularies::Known;
+  static std::unordered_set<sourcemeta::core::SchemaVocabularies::URI>
       supported_vocabularies{Known::JSON_SCHEMA_2020_12_CORE,
                              Known::JSON_SCHEMA_2020_12_APPLICATOR,
                              Known::JSON_SCHEMA_2020_12_UNEVALUATED,

@@ -390,6 +390,28 @@ inline constexpr HTTPStatus HTTP_STATUS_NETWORK_AUTHENTICATION_REQUIRED{
     .wire = "511 Network Authentication Required"};
 
 /// @ingroup http
+///
+/// Check whether a string is a three digit HTTP status code, which RFC 9110
+/// Section 15 gives as three digits whose first is `1` through `5`. This asks
+/// about the form alone, as a code may be well formed without the registry
+/// naming it. For example:
+///
+/// ```cpp
+/// #include <sourcemeta/core/http.h>
+/// #include <cassert>
+///
+/// assert(sourcemeta::core::http_is_status_code("299"));
+/// assert(!sourcemeta::core::http_is_status_code("99"));
+/// assert(!sourcemeta::core::http_is_status_code("2XX"));
+/// ```
+constexpr auto http_is_status_code(const std::string_view value) noexcept
+    -> bool {
+  return value.size() == 3 && value.front() >= '1' && value.front() <= '5' &&
+         value[1] >= '0' && value[1] <= '9' && value[2] >= '0' &&
+         value[2] <= '9';
+}
+
+/// @ingroup http
 /// Resolve a numeric status code into its registered status, with unknown
 /// codes resolving to an empty reason phrase. For example:
 ///

@@ -11,13 +11,13 @@ public:
   [[nodiscard]] auto
   condition(const sourcemeta::core::JSON &schema,
             const sourcemeta::core::JSON &,
-            const sourcemeta::blaze::SchemaVocabularies &vocabularies,
-            const sourcemeta::blaze::SchemaFrame &,
-            const sourcemeta::blaze::SchemaFrame::Location &location,
-            const sourcemeta::blaze::SchemaWalker &,
-            const sourcemeta::blaze::SchemaResolver &, const bool) const
+            const sourcemeta::core::SchemaVocabularies &vocabularies,
+            const sourcemeta::core::SchemaFrame &,
+            const sourcemeta::core::SchemaFrame::Location &location,
+            const sourcemeta::core::SchemaWalker &,
+            const sourcemeta::core::SchemaResolver &) const
       -> SchemaTransformRule::Result override {
-    ONLY_CONTINUE_IF(location.pointer.empty());
+    ONLY_CONTINUE_IF(!location.parent.has_value());
     ONLY_CONTINUE_IF(vocabularies.contains_any(
         {SchemaVocabularies::Known::JSON_SCHEMA_2020_12_META_DATA,
          SchemaVocabularies::Known::JSON_SCHEMA_2019_09_META_DATA,

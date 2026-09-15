@@ -136,8 +136,8 @@ auto TestCase::parse(
 auto TestSuite::parse(const sourcemeta::core::JSON &document,
                       const sourcemeta::core::PointerPositionTracker &tracker,
                       const std::filesystem::path &base_path,
-                      const sourcemeta::blaze::SchemaResolver &schema_resolver,
-                      const sourcemeta::blaze::SchemaWalker &walker,
+                      const sourcemeta::core::SchemaResolver &schema_resolver,
+                      const sourcemeta::core::SchemaWalker &walker,
                       const Compiler &compiler,
                       const std::string_view default_dialect,
                       const std::string_view default_id,
@@ -249,10 +249,10 @@ auto TestSuite::compile_target(const std::size_t target_index,
                    this->default_dialect_, this->default_id_, "",
                    mode == Mode::FastValidation ? this->tweaks_fast_
                                                 : this->tweaks_exhaustive_);
-  } catch (const sourcemeta::blaze::SchemaReferenceError &error) {
+  } catch (const sourcemeta::core::SchemaReferenceError &error) {
     if (error.location() == sourcemeta::core::Pointer{"$ref"} &&
         error.identifier() == target) {
-      throw sourcemeta::blaze::SchemaResolutionError{
+      throw sourcemeta::core::SchemaResolutionError{
           target, "Could not resolve schema under test"};
     }
 

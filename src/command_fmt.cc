@@ -1,8 +1,8 @@
 #include <sourcemeta/blaze/format.h>
-#include <sourcemeta/blaze/foundation.h>
 #include <sourcemeta/core/diff.h>
 #include <sourcemeta/core/io.h>
 #include <sourcemeta/core/json.h>
+#include <sourcemeta/core/jsonschema.h>
 
 #include <iostream>    // std::cerr, std::cout
 #include <sstream>     // std::ostringstream
@@ -128,7 +128,7 @@ auto sourcemeta::jsonschema::fmt(const sourcemeta::core::Options &options)
           sourcemeta::core::prettify(document, expected, indentation);
         } else {
           auto copy = document;
-          sourcemeta::blaze::format(copy, sourcemeta::blaze::schema_walker,
+          sourcemeta::blaze::format(copy, sourcemeta::core::schema_walker,
                                     custom_resolver, effective_dialect);
           sourcemeta::core::prettify(copy, expected, indentation);
         }
@@ -146,42 +146,42 @@ auto sourcemeta::jsonschema::fmt(const sourcemeta::core::Options &options)
           sourcemeta::core::prettify(document, std::cout, indentation);
         } else {
           auto copy = document;
-          sourcemeta::blaze::format(copy, sourcemeta::blaze::schema_walker,
+          sourcemeta::blaze::format(copy, sourcemeta::core::schema_walker,
                                     custom_resolver, effective_dialect);
           sourcemeta::core::prettify(copy, std::cout, indentation);
         }
         std::cout << "\n";
       }
-    } catch (const sourcemeta::blaze::SchemaKeywordError &error) {
-      throw sourcemeta::core::FileError<sourcemeta::blaze::SchemaKeywordError>(
+    } catch (const sourcemeta::core::SchemaKeywordError &error) {
+      throw sourcemeta::core::FileError<sourcemeta::core::SchemaKeywordError>(
           display_path, error);
-    } catch (const sourcemeta::blaze::SchemaFrameError &error) {
-      throw sourcemeta::core::FileError<sourcemeta::blaze::SchemaFrameError>(
+    } catch (const sourcemeta::core::SchemaFrameError &error) {
+      throw sourcemeta::core::FileError<sourcemeta::core::SchemaFrameError>(
           display_path, error);
-    } catch (const sourcemeta::blaze::SchemaAnchorCollisionError &error) {
+    } catch (const sourcemeta::core::SchemaAnchorCollisionError &error) {
       const auto position{parsed.positions.get(error.location())};
       if (position.has_value()) {
         throw PositionError<sourcemeta::core::FileError<
-            sourcemeta::blaze::SchemaAnchorCollisionError>>(
+            sourcemeta::core::SchemaAnchorCollisionError>>(
             std::get<0>(position.value()), std::get<1>(position.value()),
             display_path, error);
       }
 
       throw sourcemeta::core::FileError<
-          sourcemeta::blaze::SchemaAnchorCollisionError>(display_path, error);
-    } catch (const sourcemeta::blaze::SchemaRelativeMetaschemaResolutionError
+          sourcemeta::core::SchemaAnchorCollisionError>(display_path, error);
+    } catch (const sourcemeta::core::SchemaRelativeMetaschemaResolutionError
                  &error) {
       throw sourcemeta::core::FileError<
-          sourcemeta::blaze::SchemaRelativeMetaschemaResolutionError>(
+          sourcemeta::core::SchemaRelativeMetaschemaResolutionError>(
           display_path, error);
-    } catch (const sourcemeta::blaze::SchemaResolutionError &error) {
+    } catch (const sourcemeta::core::SchemaResolutionError &error) {
       throw sourcemeta::core::FileError<
-          sourcemeta::blaze::SchemaResolutionError>(display_path, error);
-    } catch (const sourcemeta::blaze::SchemaUnknownBaseDialectError &) {
+          sourcemeta::core::SchemaResolutionError>(display_path, error);
+    } catch (const sourcemeta::core::SchemaUnknownBaseDialectError &) {
       throw sourcemeta::core::FileError<
-          sourcemeta::blaze::SchemaUnknownBaseDialectError>(display_path);
-    } catch (const sourcemeta::blaze::SchemaError &error) {
-      throw sourcemeta::core::FileError<sourcemeta::blaze::SchemaError>(
+          sourcemeta::core::SchemaUnknownBaseDialectError>(display_path);
+    } catch (const sourcemeta::core::SchemaError &error) {
+      throw sourcemeta::core::FileError<sourcemeta::core::SchemaError>(
           display_path, error.what());
     }
   };
@@ -223,7 +223,7 @@ auto sourcemeta::jsonschema::fmt(const sourcemeta::core::Options &options)
         sourcemeta::core::prettify(entry.second, expected, indentation);
       } else {
         auto copy = entry.second;
-        sourcemeta::blaze::format(copy, sourcemeta::blaze::schema_walker,
+        sourcemeta::blaze::format(copy, sourcemeta::core::schema_walker,
                                   custom_resolver, effective_dialect);
         sourcemeta::core::prettify(copy, expected, indentation);
       }
@@ -246,42 +246,42 @@ auto sourcemeta::jsonschema::fmt(const sourcemeta::core::Options &options)
                                               expected.str());
         }
       }
-    } catch (const sourcemeta::blaze::SchemaKeywordError &error) {
-      throw sourcemeta::core::FileError<sourcemeta::blaze::SchemaKeywordError>(
+    } catch (const sourcemeta::core::SchemaKeywordError &error) {
+      throw sourcemeta::core::FileError<sourcemeta::core::SchemaKeywordError>(
           entry.resolution_base, error);
-    } catch (const sourcemeta::blaze::SchemaFrameError &error) {
-      throw sourcemeta::core::FileError<sourcemeta::blaze::SchemaFrameError>(
+    } catch (const sourcemeta::core::SchemaFrameError &error) {
+      throw sourcemeta::core::FileError<sourcemeta::core::SchemaFrameError>(
           entry.resolution_base, error);
-    } catch (const sourcemeta::blaze::SchemaAnchorCollisionError &error) {
+    } catch (const sourcemeta::core::SchemaAnchorCollisionError &error) {
       const auto position{entry.positions.get(error.location())};
       if (position.has_value()) {
         throw PositionError<sourcemeta::core::FileError<
-            sourcemeta::blaze::SchemaAnchorCollisionError>>(
+            sourcemeta::core::SchemaAnchorCollisionError>>(
             std::get<0>(position.value()), std::get<1>(position.value()),
             entry.resolution_base, error);
       }
 
       throw sourcemeta::core::FileError<
-          sourcemeta::blaze::SchemaAnchorCollisionError>(entry.resolution_base,
-                                                         error);
-    } catch (const sourcemeta::blaze::SchemaRelativeMetaschemaResolutionError
+          sourcemeta::core::SchemaAnchorCollisionError>(entry.resolution_base,
+                                                        error);
+    } catch (const sourcemeta::core::SchemaRelativeMetaschemaResolutionError
                  &error) {
       throw sourcemeta::core::FileError<
-          sourcemeta::blaze::SchemaRelativeMetaschemaResolutionError>(
+          sourcemeta::core::SchemaRelativeMetaschemaResolutionError>(
           entry.resolution_base, error);
-    } catch (const sourcemeta::blaze::SchemaResolutionError &error) {
+    } catch (const sourcemeta::core::SchemaResolutionError &error) {
       throw sourcemeta::core::FileError<
-          sourcemeta::blaze::SchemaResolutionError>(entry.resolution_base,
-                                                    error);
-    } catch (const sourcemeta::blaze::SchemaUnknownBaseDialectError &) {
+          sourcemeta::core::SchemaResolutionError>(entry.resolution_base,
+                                                   error);
+    } catch (const sourcemeta::core::SchemaUnknownBaseDialectError &) {
       throw sourcemeta::core::FileError<
-          sourcemeta::blaze::SchemaUnknownBaseDialectError>(
+          sourcemeta::core::SchemaUnknownBaseDialectError>(
           entry.resolution_base);
-    } catch (const sourcemeta::blaze::SchemaUnknownDialectError &) {
+    } catch (const sourcemeta::core::SchemaUnknownDialectError &) {
       throw sourcemeta::core::FileError<
-          sourcemeta::blaze::SchemaUnknownDialectError>(entry.resolution_base);
-    } catch (const sourcemeta::blaze::SchemaError &error) {
-      throw sourcemeta::core::FileError<sourcemeta::blaze::SchemaError>(
+          sourcemeta::core::SchemaUnknownDialectError>(entry.resolution_base);
+    } catch (const sourcemeta::core::SchemaError &error) {
+      throw sourcemeta::core::FileError<sourcemeta::core::SchemaError>(
           entry.resolution_base, error.what());
     }
   };

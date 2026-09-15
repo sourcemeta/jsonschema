@@ -11,9 +11,9 @@
 #include <sourcemeta/blaze/evaluator.h>
 #include <sourcemeta/blaze/output.h>
 
-#include <sourcemeta/blaze/foundation.h>
 #include <sourcemeta/core/json.h>
 #include <sourcemeta/core/jsonpointer.h>
+#include <sourcemeta/core/jsonschema.h>
 
 #include <chrono>     // std::chrono::steady_clock
 #include <cstddef>    // std::size_t
@@ -148,7 +148,7 @@ struct SOURCEMETA_BLAZE_TEST_EXPORT TestSuite {
   ///
   /// #include <sourcemeta/core/json.h>
   /// #include <sourcemeta/core/jsonpointer.h>
-  /// #include <sourcemeta/blaze/foundation.h>
+  /// #include <sourcemeta/core/jsonschema.h>
   ///
   /// #include <filesystem>
   /// #include <functional>
@@ -173,8 +173,8 @@ struct SOURCEMETA_BLAZE_TEST_EXPORT TestSuite {
   ///
   /// auto suite{sourcemeta::blaze::TestSuite::parse(
   ///     document, tracker, std::filesystem::current_path(),
-  ///     sourcemeta::blaze::schema_resolver,
-  ///     sourcemeta::blaze::schema_walker,
+  ///     sourcemeta::core::schema_resolver,
+  ///     sourcemeta::core::schema_walker,
   ///     sourcemeta::blaze::default_schema_compiler)};
   ///
   /// const auto result{suite.run(
@@ -202,7 +202,7 @@ struct SOURCEMETA_BLAZE_TEST_EXPORT TestSuite {
   ///
   /// #include <sourcemeta/core/json.h>
   /// #include <sourcemeta/core/jsonpointer.h>
-  /// #include <sourcemeta/blaze/foundation.h>
+  /// #include <sourcemeta/core/jsonschema.h>
   ///
   /// #include <cassert>
   /// #include <filesystem>
@@ -222,8 +222,8 @@ struct SOURCEMETA_BLAZE_TEST_EXPORT TestSuite {
   ///
   /// const auto suite{sourcemeta::blaze::TestSuite::parse(
   ///     document, tracker, std::filesystem::current_path(),
-  ///     sourcemeta::blaze::schema_resolver,
-  ///     sourcemeta::blaze::schema_walker,
+  ///     sourcemeta::core::schema_resolver,
+  ///     sourcemeta::core::schema_walker,
   ///     sourcemeta::blaze::default_schema_compiler)};
   ///
   /// assert(suite.targets.size() == 1);
@@ -235,8 +235,8 @@ struct SOURCEMETA_BLAZE_TEST_EXPORT TestSuite {
   parse(const sourcemeta::core::JSON &document,
         const sourcemeta::core::PointerPositionTracker &tracker,
         const std::filesystem::path &base_path,
-        const sourcemeta::blaze::SchemaResolver &schema_resolver,
-        const sourcemeta::blaze::SchemaWalker &walker, const Compiler &compiler,
+        const sourcemeta::core::SchemaResolver &schema_resolver,
+        const sourcemeta::core::SchemaWalker &walker, const Compiler &compiler,
         std::string_view default_dialect = "", std::string_view default_id = "",
         const std::optional<Tweaks> &tweaks = std::nullopt) -> TestSuite;
 
@@ -249,8 +249,8 @@ private:
 #endif
   std::vector<Template> schemas_fast_;
   std::vector<std::optional<Template>> schemas_exhaustive_;
-  SchemaResolver schema_resolver_;
-  SchemaWalker walker_;
+  sourcemeta::core::SchemaResolver schema_resolver_;
+  sourcemeta::core::SchemaWalker walker_;
   Compiler compiler_;
   sourcemeta::core::JSON::String default_dialect_;
   sourcemeta::core::JSON::String default_id_;

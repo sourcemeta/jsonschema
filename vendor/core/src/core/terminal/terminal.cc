@@ -10,7 +10,7 @@
 #include <ostream>     // std::ostream
 #include <string>      // std::string
 #include <string_view> // std::string_view
-#include <utility>     // std::to_underlying
+#include <utility>     // std::to_underlying, std::unreachable
 
 namespace {
 
@@ -49,14 +49,30 @@ auto terminal_set_color_policy(TerminalStream stream,
                                               std::memory_order_relaxed);
 }
 
+auto terminal_reset_color_policy() noexcept -> void {
+  terminal_set_color_policy(TerminalColorPolicy::WhenInteractive);
+}
+
+auto terminal_reset_color_policy(TerminalStream stream) noexcept -> void {
+  terminal_set_color_policy(stream, TerminalColorPolicy::WhenInteractive);
+}
+
 auto terminal_color_policy(TerminalStream stream) noexcept
     -> TerminalColorPolicy {
   return stream_policies[stream_index(stream)].load(std::memory_order_relaxed);
 }
 
 auto terminal_color_enabled(TerminalStream stream) noexcept -> bool {
-  return terminal_color_policy(stream) != TerminalColorPolicy::Disabled &&
-         terminal_is_interactive(stream);
+  switch (terminal_color_policy(stream)) {
+    case TerminalColorPolicy::WhenInteractive:
+      return terminal_is_interactive(stream);
+    case TerminalColorPolicy::Always:
+      return true;
+    case TerminalColorPolicy::Disabled:
+      return false;
+    default:
+      std::unreachable();
+  }
 }
 
 auto terminal_sgr_reset() noexcept -> std::string_view {
@@ -122,9 +138,11 @@ auto terminal_paint(TerminalStream stream, std::string_view text,
   assert(terminal_style_is_valid(style));
 
   const bool enabled{terminal_color_enabled(stream)};
+#if defined(_WIN32)
   if (enabled && style != TerminalStyle::None && !text.empty()) {
     internal::enable_virtual_terminal_stream(stream);
   }
+#endif
   return terminal_paint(text, style, enabled);
 }
 
@@ -153,9 +171,11 @@ auto terminal_paint(std::ostream &output, TerminalStream stream,
   assert(terminal_style_is_valid(style));
 
   const bool enabled{terminal_color_enabled(stream)};
+#if defined(_WIN32)
   if (enabled && style != TerminalStyle::None && !text.empty()) {
     internal::enable_virtual_terminal_stream(stream);
   }
+#endif
   return terminal_paint(output, text, style, enabled);
 }
 

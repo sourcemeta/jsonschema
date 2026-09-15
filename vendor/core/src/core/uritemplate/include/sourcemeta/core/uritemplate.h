@@ -89,6 +89,22 @@ public:
   [[nodiscard]] static auto is_uritemplate(std::string_view input) noexcept
       -> bool;
 
+  /// Check whether a code point may stand literally in a template, which
+  /// RFC 6570 Section 2.1 writes as `literals`, incorporating the corrections
+  /// of Errata 6937. A percent sign is not one of these, as a percent-encoded
+  /// triplet is a production of its own. For example:
+  ///
+  /// ```cpp
+  /// #include <sourcemeta/core/uritemplate.h>
+  ///
+  /// #include <cassert>
+  ///
+  /// assert(sourcemeta::core::URITemplate::is_literal(U'a'));
+  /// assert(!sourcemeta::core::URITemplate::is_literal(U'%'));
+  /// assert(!sourcemeta::core::URITemplate::is_literal(U'{'));
+  /// ```
+  [[nodiscard]] static auto is_literal(char32_t codepoint) noexcept -> bool;
+
   /// Get the number of tokens in the template
   [[nodiscard]] auto size() const noexcept -> std::uint64_t;
 

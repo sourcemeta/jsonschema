@@ -1,13 +1,16 @@
 #include <sourcemeta/core/markdown.h>
+#include <sourcemeta/core/unicode.h>
 
 #include <cmark-gfm-core-extensions.h> // cmark_gfm_core_extensions_ensure_registered
 #include <cmark-gfm-extension_api.h> // cmark_find_syntax_extension, cmark_parser_attach_syntax_extension, cmark_parser_get_syntax_extensions
 #include <cmark-gfm.h> // cmark_parser_new, cmark_parser_feed, cmark_parser_finish, cmark_parser_free, cmark_render_html, cmark_node_free
 
-#include <array>   // std::array
-#include <cstdlib> // std::free
-#include <mutex>   // std::mutex, std::scoped_lock
-#include <string>  // std::string
+#include <array>       // std::array
+#include <cstddef>     // std::size_t
+#include <cstdlib>     // std::free
+#include <mutex>       // std::mutex, std::scoped_lock
+#include <string>      // std::string
+#include <string_view> // std::string_view
 
 namespace sourcemeta::core {
 
@@ -15,6 +18,23 @@ auto markdown_to_html(const std::string_view input, const bool safe)
     -> std::string {
   [[maybe_unused]] static const bool CMARK_INITIALIZED{
       (cmark_gfm_core_extensions_ensure_registered(), true)};
+
+  // Byte sequences that are not UTF-8 become one replacement character per
+  // maximal subpart, as the Unicode Standard recommends, rather than the one
+  // replacement character per sequence that the parser would produce
+  std::size_t valid_length{0};
+  while (valid_length < input.size()) {
+    const auto length{utf8_codepoint_length(input, valid_length)};
+    if (length == 0) {
+      break;
+    }
+
+    valid_length += length;
+  }
+
+  const auto is_valid{valid_length == input.size()};
+  const auto repaired{is_valid ? std::string{} : to_valid_utf8(input)};
+  const std::string_view source{is_valid ? input : std::string_view{repaired}};
 
   // cmark-gfm toggles process-global special-character tables when syntax
   // extensions are attached and detached, so parser construction through
@@ -40,7 +60,7 @@ auto markdown_to_html(const std::string_view input, const bool safe)
     }
   }
 
-  cmark_parser_feed(parser, input.data(), input.size());
+  cmark_parser_feed(parser, source.data(), source.size());
   auto *document{cmark_parser_finish(parser)};
   auto *result{cmark_render_html(document, options,
                                  cmark_parser_get_syntax_extensions(parser))};

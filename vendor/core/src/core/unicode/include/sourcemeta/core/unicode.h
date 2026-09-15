@@ -13,7 +13,7 @@
 #include <optional>    // std::optional
 #include <ostream>     // std::ostream
 #include <string>      // std::string, std::u32string, std::wstring
-#include <string_view> // std::string_view, std::wstring_view
+#include <string_view> // std::string_view, std::u32string_view, std::wstring_view
 #include <utility>     // std::pair, std::make_pair
 
 /// @defgroup unicode Unicode
@@ -588,6 +588,26 @@ SOURCEMETA_CORE_UNICODE_EXPORT
 auto script(const char32_t codepoint) noexcept -> UnicodeScript;
 
 /// @ingroup unicode
+/// Return the general category of a Unicode codepoint. Codepoints beyond
+/// U+10FFFF are reported as unassigned. See
+/// https://www.unicode.org/reports/tr44/ for the property's definition.
+/// For example:
+///
+/// ```cpp
+/// #include <sourcemeta/core/unicode.h>
+/// #include <cassert>
+///
+/// assert(sourcemeta::core::general_category(U'A') ==
+///        sourcemeta::core::GeneralCategory::UppercaseLetter);
+/// assert(sourcemeta::core::general_category(U'\u0301') ==
+///        sourcemeta::core::GeneralCategory::NonspacingMark);
+/// assert(sourcemeta::core::general_category(U' ') ==
+///        sourcemeta::core::GeneralCategory::SpaceSeparator);
+/// ```
+SOURCEMETA_CORE_UNICODE_EXPORT
+auto general_category(const char32_t codepoint) noexcept -> GeneralCategory;
+
+/// @ingroup unicode
 /// Return whether a Unicode codepoint is a combining mark, in the sense
 /// of UAX #44 general category Mn (Nonspacing_Mark), Mc (Spacing_Mark),
 /// or Me (Enclosing_Mark). See https://www.unicode.org/reports/tr44/ for
@@ -729,6 +749,40 @@ auto nfc(const std::u32string_view input) -> std::u32string;
 /// ```
 SOURCEMETA_CORE_UNICODE_EXPORT
 auto is_nfc(const std::u32string_view input) -> bool;
+
+/// @ingroup unicode
+/// Return the full case folding of a Unicode codepoint per Section 3.13 of the
+/// Unicode Standard, which takes the common and full mappings of the Unicode
+/// Character Database and never the simple or Turkic ones. The view points
+/// into static data and remains valid for the program's lifetime. An empty
+/// view means the codepoint folds to itself, which is also the case for every
+/// codepoint beyond U+10FFFF. For example:
+///
+/// ```cpp
+/// #include <sourcemeta/core/unicode.h>
+/// #include <cassert>
+///
+/// assert(sourcemeta::core::case_fold(U'a').empty());
+/// assert(sourcemeta::core::case_fold(U'A') == std::u32string_view{U"a"});
+/// assert(sourcemeta::core::case_fold(U'\u00DF') ==
+///        std::u32string_view{U"ss"});
+/// ```
+SOURCEMETA_CORE_UNICODE_EXPORT
+auto case_fold(const char32_t codepoint) noexcept -> std::u32string_view;
+
+/// @ingroup unicode
+/// Return the full case folding of `input` per Section 3.13 of the Unicode
+/// Standard, folding every codepoint in turn. For example:
+///
+/// ```cpp
+/// #include <sourcemeta/core/unicode.h>
+/// #include <cassert>
+///
+/// assert(sourcemeta::core::case_fold(U"Stra\u00DFe") == U"strasse");
+/// assert(sourcemeta::core::case_fold(U"\u0130") == U"i\u0307");
+/// ```
+SOURCEMETA_CORE_UNICODE_EXPORT
+auto case_fold(const std::u32string_view input) -> std::u32string;
 
 /// @ingroup unicode
 /// Determine the byte length of the valid UTF-8 codepoint starting at the

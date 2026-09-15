@@ -28,7 +28,7 @@ if(SOURCEMETA_CORE_CRYPTO_USE_SYSTEM_OPENSSL)
     crypto_sign_openssl.cc crypto_aes_gcm_openssl.cc crypto_aes_cbc_openssl.cc
     crypto_aes_kw_openssl.cc crypto_rsa_oaep_openssl.cc crypto_ecdh_openssl.cc
     crypto_hkdf_openssl.cc
-    crypto_openssl.h crypto_pkcs8.h)
+    crypto_openssl.h crypto_pkcs8.h crypto_system.h)
   target_link_libraries(sourcemeta_core_crypto PRIVATE OpenSSL::Crypto)
 elseif(APPLE)
   enable_language(OBJCXX)
@@ -123,7 +123,7 @@ elseif(APPLE)
     crypto_eddsa_cryptokit.mm "${CRYPTOKIT_OBJECT}"
     crypto_eddsa.h crypto_eddsa_apple.h crypto_apple.h crypto_aes_apple.h
     crypto_kdf_apple.h
-    crypto_bignum.h crypto_shake256.h crypto_pkcs8.h)
+    crypto_bignum.h crypto_shake256.h crypto_pkcs8.h crypto_system.h)
 
   # The generated Objective-C interface header lives in the build tree
   target_include_directories(sourcemeta_core_crypto
@@ -170,7 +170,8 @@ elseif(WIN32)
     crypto_hkdf_windows.cc
     crypto_eddsa.h
     crypto_windows.h crypto_aes_kw_loop.h
-    crypto_bignum.h crypto_ecc.h crypto_shake256.h crypto_pkcs8.h)
+    crypto_bignum.h crypto_ecc.h crypto_shake256.h crypto_pkcs8.h
+    crypto_system.h)
 
   # The raw secret agreement and the key derivation provider are declared from
   # Windows 10 version 1803 onwards, and the headers hide both unless the
@@ -192,7 +193,7 @@ else()
     crypto_rsa_oaep_other.cc crypto_ecdh_other.cc crypto_hkdf_other.cc
     crypto_aes_block.h crypto_aes_kw_loop.h crypto_sha1_other.h
     crypto_bignum.h crypto_ecc.h crypto_eddsa.h crypto_shake256.h
-    crypto_pkcs8.h crypto_other.h)
+    crypto_pkcs8.h crypto_other.h crypto_rsa_other.h)
 endif()
 
 if(SOURCEMETA_CORE_INSTALL)

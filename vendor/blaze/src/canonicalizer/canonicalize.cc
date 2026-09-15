@@ -1,5 +1,5 @@
 #include <sourcemeta/blaze/canonicalizer.h>
-#include <sourcemeta/blaze/foundation.h>
+#include <sourcemeta/core/jsonschema.h>
 
 #include <sourcemeta/core/json.h>
 #include <sourcemeta/core/jsonpointer.h>
@@ -7,7 +7,8 @@
 
 #include "schema_helpers.h"
 
-#include <algorithm>     // std::sort, std::unique, std::ranges::none_of
+#include <algorithm>     // std::sort, std::unique, std::ranges::contains,
+                         // std::ranges::none_of
 #include <array>         // std::array
 #include <bit>           // std::popcount
 #include <cassert>       // assert
@@ -30,6 +31,8 @@
 
 namespace sourcemeta::blaze {
 
+using namespace sourcemeta::core;
+
 namespace {
 
 #include "rule.h"
@@ -45,8 +48,8 @@ template <std::derived_from<SchemaTransformRule> T>
 
 /// Apply the given rules top-down to every subschema until none of them applies
 auto apply(const std::vector<Rule> &rules, sourcemeta::core::JSON &schema,
-           const sourcemeta::blaze::SchemaWalker &walker,
-           const sourcemeta::blaze::SchemaResolver &resolver,
+           const sourcemeta::core::SchemaWalker &walker,
+           const sourcemeta::core::SchemaResolver &resolver,
            const std::string_view default_dialect = "",
            const std::string_view default_id = "") -> void {
   assert(!rules.empty());
@@ -65,7 +68,7 @@ auto apply(const std::vector<Rule> &rules, sourcemeta::core::JSON &schema,
                      ProcessedRuleHasher>
       processed_rules;
 
-  std::optional<blaze::SchemaFrame> frame;
+  std::optional<core::SchemaFrame> frame;
 
   struct PotentiallyBrokenReference {
     core::Pointer origin;
@@ -84,9 +87,9 @@ auto apply(const std::vector<Rule> &rules, sourcemeta::core::JSON &schema,
         break;
       }
 
-      frame.emplace(blaze::SchemaFrame::Mode::References, schema, walker,
+      frame.emplace(core::SchemaFrame::Mode::References, schema, walker,
                     resolver, default_dialect, default_id,
-                    sourcemeta::blaze::SchemaFrame::IdentifierMode::Fallback);
+                    sourcemeta::core::SchemaFrame::IdentifierMode::Fallback);
     }
 
     std::unordered_set<core::Pointer, core::Pointer::Hasher> visited;
@@ -95,7 +98,7 @@ auto apply(const std::vector<Rule> &rules, sourcemeta::core::JSON &schema,
     // Stopping the traversal stands in for the restart that the
     // rules request once they mutate the schema
     [[maybe_unused]] const auto restarted{frame->any_subschema(
-        [&](const blaze::SchemaFrame::Location &location) -> bool {
+        [&](const core::SchemaFrame::Location &location) -> bool {
           const auto [visited_iterator, inserted] =
               visited.insert(core::to_pointer(location.pointer));
           if (!inserted) {
@@ -116,9 +119,9 @@ auto apply(const std::vector<Rule> &rules, sourcemeta::core::JSON &schema,
             }
 
             potentially_broken_references.clear();
-            frame->for_each_reference([&](const blaze::SchemaReferenceType,
+            frame->for_each_reference([&](const core::SchemaReferenceType,
                                           const core::WeakPointer &origin,
-                                          const blaze::SchemaFrame::Reference
+                                          const core::SchemaFrame::Reference
                                               &reference) -> void {
               const auto destination{frame->traverse(reference.destination)};
               if (!destination.has_value() || !reference.fragment.has_value() ||
@@ -142,9 +145,9 @@ auto apply(const std::vector<Rule> &rules, sourcemeta::core::JSON &schema,
 
             if (reframe_after_transform) {
               frame.emplace(
-                  blaze::SchemaFrame::Mode::References, schema, walker,
-                  resolver, default_dialect, default_id,
-                  sourcemeta::blaze::SchemaFrame::IdentifierMode::Fallback);
+                  core::SchemaFrame::Mode::References, schema, walker, resolver,
+                  default_dialect, default_id,
+                  sourcemeta::core::SchemaFrame::IdentifierMode::Fallback);
             } else if (current.is_boolean()) {
               std::tuple<core::Pointer, std::string_view, core::JSON> mark{
                   entry_pointer, rule->name(), current};
@@ -376,8 +379,8 @@ auto apply(const std::vector<Rule> &rules, sourcemeta::core::JSON &schema,
 } // namespace
 
 auto canonicalize(sourcemeta::core::JSON &schema,
-                  const sourcemeta::blaze::SchemaWalker &walker,
-                  const sourcemeta::blaze::SchemaResolver &resolver,
+                  const sourcemeta::core::SchemaWalker &walker,
+                  const sourcemeta::core::SchemaResolver &resolver,
                   const std::string_view default_dialect,
                   const std::string_view default_id) -> void {
   std::vector<Rule> rules;

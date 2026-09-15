@@ -11,13 +11,13 @@ public:
   [[nodiscard]] auto
   condition(const sourcemeta::core::JSON &schema,
             const sourcemeta::core::JSON &,
-            const sourcemeta::blaze::SchemaVocabularies &,
-            const sourcemeta::blaze::SchemaFrame &,
-            const sourcemeta::blaze::SchemaFrame::Location &location,
-            const sourcemeta::blaze::SchemaWalker &,
-            const sourcemeta::blaze::SchemaResolver &, const bool) const
+            const sourcemeta::core::SchemaVocabularies &,
+            const sourcemeta::core::SchemaFrame &,
+            const sourcemeta::core::SchemaFrame::Location &location,
+            const sourcemeta::core::SchemaWalker &,
+            const sourcemeta::core::SchemaResolver &) const
       -> SchemaTransformRule::Result override {
-    using sourcemeta::blaze::SchemaBaseDialect;
+    using sourcemeta::core::SchemaBaseDialect;
     ONLY_CONTINUE_IF(
         location.base_dialect == SchemaBaseDialect::JSON_SCHEMA_DRAFT_7 ||
         location.base_dialect == SchemaBaseDialect::JSON_SCHEMA_DRAFT_7_HYPER ||

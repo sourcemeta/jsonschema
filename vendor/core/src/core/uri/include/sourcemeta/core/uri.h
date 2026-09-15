@@ -1207,6 +1207,21 @@ public:
   /// ```
   [[nodiscard]] static auto is_gen_delim(char character) noexcept -> bool;
 
+  /// Check if the given character is a URI path character per RFC 3986
+  /// (`unreserved / pct-encoded / sub-delims / ":" / "@"`). A percent sign
+  /// answers true, as it is what a percent-encoded triplet begins with, and
+  /// whether one follows is for the scan around this to say. For example:
+  ///
+  /// ```cpp
+  /// #include <sourcemeta/core/uri.h>
+  /// #include <cassert>
+  ///
+  /// assert(sourcemeta::core::URI::is_pchar('a'));
+  /// assert(sourcemeta::core::URI::is_pchar('@'));
+  /// assert(!sourcemeta::core::URI::is_pchar('/'));
+  /// ```
+  [[nodiscard]] static auto is_pchar(char character) noexcept -> bool;
+
   /// Check if the given string is a valid absolute URI (has a scheme) per
   /// RFC 3986 without constructing a full URI object. For example:
   ///

@@ -27,6 +27,7 @@ add_custom_command(
     "${SOURCEMETA_CORE_UNICODE_UCD_DIR}/UnicodeData.txt"
     "${SOURCEMETA_CORE_UNICODE_UCD_DIR}/CompositionExclusions.txt"
     "${SOURCEMETA_CORE_UNICODE_UCD_DIR}/DerivedCoreProperties.txt"
+    "${SOURCEMETA_CORE_UNICODE_UCD_DIR}/CaseFolding.txt"
   DEPENDS
     "${SOURCEMETA_CORE_UNICODE_CODEGEN_TARGET}"
     "${SOURCEMETA_CORE_UNICODE_UCD_DIR}/PropertyValueAliases.txt"
@@ -39,6 +40,7 @@ add_custom_command(
     "${SOURCEMETA_CORE_UNICODE_UCD_DIR}/UnicodeData.txt"
     "${SOURCEMETA_CORE_UNICODE_UCD_DIR}/CompositionExclusions.txt"
     "${SOURCEMETA_CORE_UNICODE_UCD_DIR}/DerivedCoreProperties.txt"
+    "${SOURCEMETA_CORE_UNICODE_UCD_DIR}/CaseFolding.txt"
   COMMENT "Generating Unicode property tables"
   VERBATIM)
 

@@ -4,6 +4,7 @@
 #include "crypto_eddsa.h"
 #include "crypto_helpers.h"
 #include "crypto_pkcs8.h"
+#include "crypto_system.h"
 
 #define WIN32_LEAN_AND_MEAN
 #ifndef NOMINMAX

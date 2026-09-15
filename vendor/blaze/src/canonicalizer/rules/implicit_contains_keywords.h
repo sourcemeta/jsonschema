@@ -4,15 +4,13 @@ public:
   ImplicitContainsKeywords()
       : SchemaTransformRule{"implicit_contains_keywords"} {};
 
-  [[nodiscard]] auto
-  condition(const sourcemeta::core::JSON &schema,
-            const sourcemeta::core::JSON &root,
-            const sourcemeta::blaze::SchemaVocabularies &vocabularies,
-            const sourcemeta::blaze::SchemaFrame &frame,
-            const sourcemeta::blaze::SchemaFrame::Location &location,
-            const sourcemeta::blaze::SchemaWalker &walker,
-            const sourcemeta::blaze::SchemaResolver &resolver) const
-      -> bool override {
+  [[nodiscard]] auto condition(
+      const sourcemeta::core::JSON &schema, const sourcemeta::core::JSON &root,
+      const sourcemeta::core::SchemaVocabularies &vocabularies,
+      const sourcemeta::core::SchemaFrame &frame,
+      const sourcemeta::core::SchemaFrame::Location &location,
+      const sourcemeta::core::SchemaWalker &walker,
+      const sourcemeta::core::SchemaResolver &resolver) const -> bool override {
     ONLY_CONTINUE_IF(
         vocabularies.contains_any(
             {SchemaVocabularies::Known::JSON_SCHEMA_2019_09_APPLICATOR,

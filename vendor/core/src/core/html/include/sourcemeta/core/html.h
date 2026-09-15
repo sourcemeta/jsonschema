@@ -2,8 +2,8 @@
 #define SOURCEMETA_CORE_HTML_H_
 
 /// @defgroup html HTML
-/// @brief A growing implementation of HTML generation utilities per the HTML
-/// Living Standard.
+/// @brief A growing implementation of HTML utilities per the HTML Living
+/// Standard.
 ///
 /// This functionality is included as follows:
 ///
@@ -11,6 +11,7 @@
 /// #include <sourcemeta/core/html.h>
 /// ```
 
+#include <sourcemeta/core/html_entity.h>
 #include <sourcemeta/core/html_writer.h>
 
 #endif

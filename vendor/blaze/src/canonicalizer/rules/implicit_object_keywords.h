@@ -6,11 +6,11 @@ public:
   [[nodiscard]] auto
   condition(const sourcemeta::core::JSON &schema,
             const sourcemeta::core::JSON &,
-            const sourcemeta::blaze::SchemaVocabularies &vocabularies,
-            const sourcemeta::blaze::SchemaFrame &,
-            const sourcemeta::blaze::SchemaFrame::Location &,
-            const sourcemeta::blaze::SchemaWalker &,
-            const sourcemeta::blaze::SchemaResolver &) const -> bool override {
+            const sourcemeta::core::SchemaVocabularies &vocabularies,
+            const sourcemeta::core::SchemaFrame &,
+            const sourcemeta::core::SchemaFrame::Location &,
+            const sourcemeta::core::SchemaWalker &,
+            const sourcemeta::core::SchemaResolver &) const -> bool override {
     ONLY_CONTINUE_IF(schema.is_object());
 
     const auto *type{schema.try_at("type")};
@@ -93,7 +93,7 @@ private:
 
   auto
   check_object(const sourcemeta::core::JSON &schema,
-               const sourcemeta::blaze::SchemaVocabularies &vocabularies) const
+               const sourcemeta::core::SchemaVocabularies &vocabularies) const
       -> void {
     this->add_pattern_properties_ =
         !schema.defines("patternProperties") &&
@@ -165,7 +165,7 @@ private:
 
   auto
   check_array(const sourcemeta::core::JSON &schema,
-              const sourcemeta::blaze::SchemaVocabularies &vocabularies) const
+              const sourcemeta::core::SchemaVocabularies &vocabularies) const
       -> void {
     if (!vocabularies.contains_any(
             {SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_0,

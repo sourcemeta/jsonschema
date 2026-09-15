@@ -7,6 +7,7 @@
 #include "crypto_eddsa_apple.h"
 #include "crypto_helpers.h"
 #include "crypto_pkcs8.h"
+#include "crypto_system.h"
 
 #include <CoreFoundation/CoreFoundation.h> // CF*, kCF*
 #include <Security/Security.h>             // Sec*, kSec*

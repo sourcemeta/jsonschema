@@ -24,8 +24,8 @@ static auto transformer_callback_noop(
 namespace sourcemeta::jsonbinpack {
 
 auto canonicalize(sourcemeta::core::JSON &schema,
-                  const sourcemeta::blaze::SchemaWalker &walker,
-                  const sourcemeta::blaze::SchemaResolver &resolver,
+                  const sourcemeta::core::SchemaWalker &walker,
+                  const sourcemeta::core::SchemaResolver &resolver,
                   const std::string_view default_dialect) -> void {
   sourcemeta::blaze::canonicalize(schema, walker, make_resolver(resolver),
                                   default_dialect);
@@ -57,8 +57,8 @@ auto make_encoding(sourcemeta::core::JSON &document,
 #include "mapper/number_arbitrary.h"
 
 auto compile(sourcemeta::core::JSON &schema,
-             const sourcemeta::blaze::SchemaWalker &walker,
-             const sourcemeta::blaze::SchemaResolver &resolver,
+             const sourcemeta::core::SchemaWalker &walker,
+             const sourcemeta::core::SchemaResolver &resolver,
              const std::string_view default_dialect) -> void {
   sourcemeta::jsonbinpack::canonicalize(schema, walker, resolver,
                                         default_dialect);

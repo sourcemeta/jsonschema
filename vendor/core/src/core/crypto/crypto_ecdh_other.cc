@@ -42,8 +42,10 @@ auto ecdh_derive(const PrivateKey &private_key, const PublicKey &public_key)
   }
 
   const auto parameters{to_curve_parameters(private_internal->elliptic_curve)};
-  const auto peer_x{bignum_from_bytes(public_internal->coordinate_x)};
-  const auto peer_y{bignum_from_bytes(public_internal->coordinate_y)};
+  const auto peer_x{
+      bignum_from_bytes<CURVE_BIGNUM_CAPACITY>(public_internal->coordinate_x)};
+  const auto peer_y{
+      bignum_from_bytes<CURVE_BIGNUM_CAPACITY>(public_internal->coordinate_y)};
   // Invalid-curve defense: the peer coordinates must be below the field prime
   // and satisfy the curve equation
   if (bignum_compare(peer_x, parameters.prime) >= 0 ||
@@ -53,8 +55,9 @@ auto ecdh_derive(const PrivateKey &private_key, const PublicKey &public_key)
   }
 
   const JacobianPoint peer_point{
-      .x = peer_x, .y = peer_y, .z = bignum_from_u64(1)};
-  auto scalar{bignum_from_bytes(private_internal->scalar)};
+      .x = peer_x, .y = peer_y, .z = bignum_from_u64<CURVE_BIGNUM_CAPACITY>(1)};
+  auto scalar{
+      bignum_from_bytes<CURVE_BIGNUM_CAPACITY>(private_internal->scalar)};
   const SecureBignumScope scalar_scope{scalar};
   const auto product{
       point_scalar_multiply_constant_time(scalar, peer_point, parameters)};

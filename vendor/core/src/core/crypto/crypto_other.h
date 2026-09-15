@@ -26,6 +26,13 @@ struct PrivateKey::Internal {
   std::string modulus;
   std::string public_exponent;
   std::string private_exponent;
+  // The two-prime CRT components (RFC 8017 Section 3.2), left empty for the
+  // multi-prime form, whose private operation uses the private exponent alone
+  std::string prime1;
+  std::string prime2;
+  std::string exponent1;
+  std::string exponent2;
+  std::string coefficient;
   std::string scalar;
   EllipticCurve elliptic_curve;
   std::string edwards_seed;

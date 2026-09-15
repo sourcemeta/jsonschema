@@ -30,6 +30,7 @@ option(SOURCEMETA_CORE_URI "Build the Sourcemeta Core URI library" ON)
 option(SOURCEMETA_CORE_URITEMPLATE "Build the Sourcemeta Core URI Template library" ON)
 option(SOURCEMETA_CORE_JSON "Build the Sourcemeta Core JSON library" ON)
 option(SOURCEMETA_CORE_JSONPOINTER "Build the Sourcemeta Core JSON Pointer library" ON)
+option(SOURCEMETA_CORE_JSONSCHEMA "Build the Sourcemeta Core JSON Schema library" ON)
 option(SOURCEMETA_CORE_JSONPATH "Build the Sourcemeta Core JSON Path library" ON)
 option(SOURCEMETA_CORE_JSONLD "Build the Sourcemeta Core JSON-LD library" ON)
 option(SOURCEMETA_CORE_JSONL "Build the Sourcemeta Core JSONL library" ON)
@@ -38,6 +39,7 @@ option(SOURCEMETA_CORE_JSONRPC "Build the Sourcemeta Core JSON-RPC library" ON)
 option(SOURCEMETA_CORE_MCP "Build the Sourcemeta Core MCP library" ON)
 option(SOURCEMETA_CORE_HTTP "Build the Sourcemeta Core HTTP library" ON)
 option(SOURCEMETA_CORE_HTTP_USE_SYSTEM_CURL "Use system cURL for the Sourcemeta Core HTTP library" OFF)
+option(SOURCEMETA_CORE_OPENAPI "Build the Sourcemeta Core OpenAPI library" ON)
 option(SOURCEMETA_CORE_JOSE "Build the Sourcemeta Core JOSE library" ON)
 option(SOURCEMETA_CORE_OAUTH "Build the Sourcemeta Core OAuth library" ON)
 option(SOURCEMETA_CORE_OIDC "Build the Sourcemeta Core OIDC library" ON)
@@ -64,6 +66,11 @@ include(Sourcemeta)
 # Don't force downstream consumers on this
 if(PROJECT_IS_TOP_LEVEL)
   sourcemeta_enable_simd()
+endif()
+
+# The compiler cache has to be in place before we declare any target
+if(PROJECT_IS_TOP_LEVEL)
+  sourcemeta_ccache_attempt_enable(DIRECTORY "${PROJECT_SOURCE_DIR}/.ccache")
 endif()
 
 # Enable the sanitizers before defining any target
@@ -213,6 +220,10 @@ if(SOURCEMETA_CORE_JSONPOINTER)
   add_subdirectory(src/core/jsonpointer)
 endif()
 
+if(SOURCEMETA_CORE_JSONSCHEMA)
+  add_subdirectory(src/core/jsonschema)
+endif()
+
 if(SOURCEMETA_CORE_JSONPATH)
   add_subdirectory(src/core/jsonpath)
 endif()
@@ -222,7 +233,6 @@ if(SOURCEMETA_CORE_JSONLD)
 endif()
 
 if(SOURCEMETA_CORE_GZIP)
-  find_package(LibDeflate REQUIRED)
   add_subdirectory(src/core/gzip)
 endif()
 
@@ -244,6 +254,10 @@ endif()
 
 if(SOURCEMETA_CORE_HTTP)
   add_subdirectory(src/core/http)
+endif()
+
+if(SOURCEMETA_CORE_OPENAPI)
+  add_subdirectory(src/core/openapi)
 endif()
 
 if(SOURCEMETA_CORE_JOSE)
@@ -406,6 +420,10 @@ if(SOURCEMETA_CORE_TESTS)
     add_subdirectory(test/jsonpointer)
   endif()
 
+  if(SOURCEMETA_CORE_JSONSCHEMA)
+    add_subdirectory(test/jsonschema)
+  endif()
+
   if(SOURCEMETA_CORE_JSONPATH)
     add_subdirectory(test/jsonpath)
   endif()
@@ -436,6 +454,10 @@ if(SOURCEMETA_CORE_TESTS)
 
   if(SOURCEMETA_CORE_HTTP)
     add_subdirectory(test/http)
+  endif()
+
+  if(SOURCEMETA_CORE_OPENAPI)
+    add_subdirectory(test/openapi)
   endif()
 
   if(SOURCEMETA_CORE_JOSE)

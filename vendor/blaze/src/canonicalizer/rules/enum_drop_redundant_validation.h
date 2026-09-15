@@ -7,11 +7,11 @@ public:
   [[nodiscard]] auto
   condition(const sourcemeta::core::JSON &schema,
             const sourcemeta::core::JSON &,
-            const sourcemeta::blaze::SchemaVocabularies &vocabularies,
-            const sourcemeta::blaze::SchemaFrame &frame,
-            const sourcemeta::blaze::SchemaFrame::Location &location,
-            const sourcemeta::blaze::SchemaWalker &walker,
-            const sourcemeta::blaze::SchemaResolver &) const -> bool override {
+            const sourcemeta::core::SchemaVocabularies &vocabularies,
+            const sourcemeta::core::SchemaFrame &frame,
+            const sourcemeta::core::SchemaFrame::Location &location,
+            const sourcemeta::core::SchemaWalker &walker,
+            const sourcemeta::core::SchemaResolver &) const -> bool override {
     ONLY_CONTINUE_IF(
         vocabularies.contains_any(
             {SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_0,
@@ -52,12 +52,12 @@ public:
       }
 
       const auto &metadata{walker(entry.first, vocabularies)};
-      if (metadata.type == sourcemeta::blaze::SchemaKeywordType::Unknown ||
-          metadata.type == sourcemeta::blaze::SchemaKeywordType::Annotation ||
-          metadata.type == sourcemeta::blaze::SchemaKeywordType::Other ||
-          metadata.type == sourcemeta::blaze::SchemaKeywordType::Comment ||
+      if (metadata.type == sourcemeta::core::SchemaKeywordType::Unknown ||
+          metadata.type == sourcemeta::core::SchemaKeywordType::Annotation ||
+          metadata.type == sourcemeta::core::SchemaKeywordType::Other ||
+          metadata.type == sourcemeta::core::SchemaKeywordType::Comment ||
           metadata.type ==
-              sourcemeta::blaze::SchemaKeywordType::LocationMembers) {
+              sourcemeta::core::SchemaKeywordType::LocationMembers) {
         continue;
       }
 

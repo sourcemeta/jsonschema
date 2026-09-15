@@ -98,8 +98,8 @@ static constexpr auto EXPECTED_DEPENDENCIES{
 // part, so a bound like `2.0` is not one there. Draft 6 onwards widened it to
 // any number whose fractional part is zero
 auto integral_reals_are_integers(
-    const sourcemeta::blaze::SchemaVocabularies &vocabularies) -> bool {
-  using Known = sourcemeta::blaze::SchemaVocabularies::Known;
+    const sourcemeta::core::SchemaVocabularies &vocabularies) -> bool {
+  using Known = sourcemeta::core::SchemaVocabularies::Known;
   return !vocabularies.contains_any(
       {Known::JSON_SCHEMA_DRAFT_3, Known::JSON_SCHEMA_DRAFT_3_HYPER,
        Known::JSON_SCHEMA_DRAFT_4, Known::JSON_SCHEMA_DRAFT_4_HYPER});
@@ -109,8 +109,8 @@ auto integral_reals_are_integers(
 // only places they accept a boolean are `additionalProperties` and
 // `additionalItems`, whose own definitions spell that out
 auto booleans_are_schemas(
-    const sourcemeta::blaze::SchemaVocabularies &vocabularies) -> bool {
-  using Known = sourcemeta::blaze::SchemaVocabularies::Known;
+    const sourcemeta::core::SchemaVocabularies &vocabularies) -> bool {
+  using Known = sourcemeta::core::SchemaVocabularies::Known;
   return !vocabularies.contains_any(
       {Known::JSON_SCHEMA_DRAFT_3, Known::JSON_SCHEMA_DRAFT_3_HYPER,
        Known::JSON_SCHEMA_DRAFT_4, Known::JSON_SCHEMA_DRAFT_4_HYPER});
@@ -402,10 +402,10 @@ auto compiler_draft3_core_ref(const Context &context,
                               const DynamicContext &dynamic_context,
                               const Instructions &) -> Instructions {
   const auto entry_pointer{absolute_schema_pointer(context, schema_context)};
-  const auto type{sourcemeta::blaze::SchemaReferenceType::Static};
+  const auto type{sourcemeta::core::SchemaReferenceType::Static};
   const auto reference{context.frame.reference(type, entry_pointer)};
   if (!reference.has_value()) [[unlikely]] {
-    throw sourcemeta::blaze::SchemaReferenceError(
+    throw sourcemeta::core::SchemaReferenceError(
         schema_context.schema.at(dynamic_context.keyword).to_string(),
         to_pointer(entry_pointer), "Could not resolve schema reference");
   }
@@ -430,7 +430,7 @@ auto properties_as_loop(const Context &context,
     return false;
   }
 
-  using Known = sourcemeta::blaze::SchemaVocabularies::Known;
+  using Known = sourcemeta::core::SchemaVocabularies::Known;
   const auto size{properties.size()};
   const auto imports_validation_vocabulary =
       schema_context.vocabularies.contains(Known::JSON_SCHEMA_DRAFT_4) ||
@@ -462,12 +462,12 @@ auto properties_as_loop(const Context &context,
       // Check if any reference from `anyOf` or `oneOf` points to us
       context.frame.any_reference(
           [&context, &current_entry_pointer](
-              const sourcemeta::blaze::SchemaReferenceType,
+              const sourcemeta::core::SchemaReferenceType,
               const sourcemeta::core::WeakPointer &origin,
-              const sourcemeta::blaze::SchemaFrame::Reference &reference)
+              const sourcemeta::core::SchemaFrame::Reference &reference)
               -> bool {
             const auto destination{context.frame.location(
-                sourcemeta::blaze::SchemaReferenceType::Static,
+                sourcemeta::core::SchemaReferenceType::Static,
                 reference.destination)};
             if (!destination.has_value()) {
               return false;
@@ -823,7 +823,7 @@ auto compiler_draft3_applicator_properties_with_options(
 
       const auto &keyword_type{
           context.walker(keyword, schema_context.vocabularies).type};
-      using enum sourcemeta::blaze::SchemaKeywordType;
+      using enum sourcemeta::core::SchemaKeywordType;
       if (keyword_type == Assertion || keyword_type == Annotation ||
           keyword_type == Unknown || keyword_type == Comment ||
           keyword_type == Other || keyword_type == LocationMembers) {
@@ -1136,7 +1136,7 @@ auto compiler_draft3_applicator_properties(
   auto property_instructions{compiler_draft3_applicator_properties_with_options(
       context, schema_context, dynamic_context, current, false, false)};
 
-  using Known = sourcemeta::blaze::SchemaVocabularies::Known;
+  using Known = sourcemeta::core::SchemaVocabularies::Known;
   const auto is_draft3{
       schema_context.vocabularies.contains(Known::JSON_SCHEMA_DRAFT_3) ||
       schema_context.vocabularies.contains(Known::JSON_SCHEMA_DRAFT_3_HYPER)};
@@ -1513,7 +1513,7 @@ auto compiler_draft3_applicator_items_array(
 
   // Draft 3 puts no lower bound on how many schemas the tuple form may list,
   // whereas every dialect after it asks for at least one
-  using Known = sourcemeta::blaze::SchemaVocabularies::Known;
+  using Known = sourcemeta::core::SchemaVocabularies::Known;
   const auto allows_empty{schema_context.vocabularies.contains_any(
       {Known::JSON_SCHEMA_DRAFT_3, Known::JSON_SCHEMA_DRAFT_3_HYPER})};
   const auto &items{schema_context.schema.at(dynamic_context.keyword)};
@@ -1656,7 +1656,7 @@ auto compiler_draft3_applicator_items_with_options(
   // keyword can apply to. Draft 3 puts no lower bound on how many it may list,
   // whereas every dialect after it asks for at least one
   if (schema_context.schema.at(dynamic_context.keyword).is_array()) {
-    using Known = sourcemeta::blaze::SchemaVocabularies::Known;
+    using Known = sourcemeta::core::SchemaVocabularies::Known;
     const auto allows_empty{schema_context.vocabularies.contains_any(
         {Known::JSON_SCHEMA_DRAFT_3, Known::JSON_SCHEMA_DRAFT_3_HYPER})};
     const auto &entries{schema_context.schema.at(dynamic_context.keyword)};
@@ -1913,7 +1913,7 @@ auto compiler_draft3_validation_enum(const Context &context,
         EXPECTED_ARRAY);
   }
 
-  using Known = sourcemeta::blaze::SchemaVocabularies::Known;
+  using Known = sourcemeta::core::SchemaVocabularies::Known;
   if (schema_context.vocabularies.contains_any(
           {Known::JSON_SCHEMA_DRAFT_7, Known::JSON_SCHEMA_DRAFT_7_HYPER,
            Known::JSON_SCHEMA_DRAFT_6, Known::JSON_SCHEMA_DRAFT_6_HYPER,
@@ -2004,7 +2004,7 @@ auto compiler_draft3_validation_maxlength(const Context &context,
 
   // Draft 3 asks only that `maxLength` be an integer, unlike the bounds
   // around it, which it also asks to be non-negative
-  using Known = sourcemeta::blaze::SchemaVocabularies::Known;
+  using Known = sourcemeta::core::SchemaVocabularies::Known;
   if (!schema_context.vocabularies.contains_any(
           {Known::JSON_SCHEMA_DRAFT_3, Known::JSON_SCHEMA_DRAFT_3_HYPER}) &&
       !schema_context.schema.at(dynamic_context.keyword).is_positive()) {
@@ -2257,7 +2257,7 @@ auto compiler_draft3_validation_type(const Context &context,
                                      const Instructions &) -> Instructions {
   const auto &value{schema_context.schema.at(dynamic_context.keyword)};
 
-  using Known = sourcemeta::blaze::SchemaVocabularies::Known;
+  using Known = sourcemeta::core::SchemaVocabularies::Known;
   const auto is_draft3{
       schema_context.vocabularies.contains(Known::JSON_SCHEMA_DRAFT_3) ||
       schema_context.vocabularies.contains(Known::JSON_SCHEMA_DRAFT_3_HYPER)};
@@ -2867,7 +2867,7 @@ auto compiler_draft3_applicator_dependencies(
         EXPECTED_OBJECT);
   }
 
-  using Known = sourcemeta::blaze::SchemaVocabularies::Known;
+  using Known = sourcemeta::core::SchemaVocabularies::Known;
   const auto is_draft3{
       schema_context.vocabularies.contains(Known::JSON_SCHEMA_DRAFT_3) ||
       schema_context.vocabularies.contains(Known::JSON_SCHEMA_DRAFT_3_HYPER)};
@@ -2981,7 +2981,7 @@ auto compiler_draft3_validation_format(const Context &context,
                                        const SchemaContext &schema_context,
                                        const DynamicContext &dynamic_context,
                                        const Instructions &) -> Instructions {
-  using Known = sourcemeta::blaze::SchemaVocabularies::Known;
+  using Known = sourcemeta::core::SchemaVocabularies::Known;
   static constexpr auto UNSUPPORTED_DIALECT_MESSAGE{
       "The format assertion tweak not supported in this dialect"};
 

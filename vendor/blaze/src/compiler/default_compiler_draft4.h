@@ -21,7 +21,7 @@ auto compiler_draft4_validation_required(const Context &context,
                                          const Instructions &current)
     -> Instructions {
   // Draft 4 alone asks that `required` name at least one property
-  using Known = sourcemeta::blaze::SchemaVocabularies::Known;
+  using Known = sourcemeta::core::SchemaVocabularies::Known;
   const auto allows_empty{!schema_context.vocabularies.contains_any(
       {Known::JSON_SCHEMA_DRAFT_4, Known::JSON_SCHEMA_DRAFT_4_HYPER})};
   if (!is_string_array(schema_context.schema.at(dynamic_context.keyword)) ||

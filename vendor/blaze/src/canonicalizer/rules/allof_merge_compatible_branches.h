@@ -7,11 +7,11 @@ public:
   [[nodiscard]] auto
   condition(const sourcemeta::core::JSON &schema,
             const sourcemeta::core::JSON &,
-            const sourcemeta::blaze::SchemaVocabularies &vocabularies,
-            const sourcemeta::blaze::SchemaFrame &frame,
-            const sourcemeta::blaze::SchemaFrame::Location &location,
-            const sourcemeta::blaze::SchemaWalker &walker,
-            const sourcemeta::blaze::SchemaResolver &) const -> bool override {
+            const sourcemeta::core::SchemaVocabularies &vocabularies,
+            const sourcemeta::core::SchemaFrame &frame,
+            const sourcemeta::core::SchemaFrame::Location &location,
+            const sourcemeta::core::SchemaWalker &walker,
+            const sourcemeta::core::SchemaResolver &) const -> bool override {
     static const sourcemeta::core::JSON::String KEYWORD{"allOf"};
     ONLY_CONTINUE_IF(
         vocabularies.contains_any(
@@ -153,8 +153,8 @@ private:
   static auto has_cross_dependencies(
       const sourcemeta::core::JSON &branch_a,
       const sourcemeta::core::JSON &branch_b,
-      const sourcemeta::blaze::SchemaWalker &walker,
-      const sourcemeta::blaze::SchemaVocabularies &vocabularies) -> bool {
+      const sourcemeta::core::SchemaWalker &walker,
+      const sourcemeta::core::SchemaVocabularies &vocabularies) -> bool {
     for (const auto &entry_a : branch_a.as_object()) {
       const auto &metadata{walker(entry_a.first, vocabularies)};
       for (const auto &dependency : metadata.dependencies) {

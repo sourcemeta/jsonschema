@@ -12,11 +12,11 @@ public:
   [[nodiscard]] auto
   condition(const sourcemeta::core::JSON &schema,
             const sourcemeta::core::JSON &root,
-            const sourcemeta::blaze::SchemaVocabularies &vocabularies,
-            const sourcemeta::blaze::SchemaFrame &frame,
-            const sourcemeta::blaze::SchemaFrame::Location &location,
-            const sourcemeta::blaze::SchemaWalker &,
-            const sourcemeta::blaze::SchemaResolver &) const -> bool override {
+            const sourcemeta::core::SchemaVocabularies &vocabularies,
+            const sourcemeta::core::SchemaFrame &frame,
+            const sourcemeta::core::SchemaFrame::Location &location,
+            const sourcemeta::core::SchemaWalker &,
+            const sourcemeta::core::SchemaResolver &) const -> bool override {
     ONLY_CONTINUE_IF(schema.is_object() && !schema.defines("$ref"));
 
     if (vocabularies.contains(
@@ -26,10 +26,10 @@ public:
       reference_pointer.push_back(std::cref(KEYWORD_DYNAMIC_REF));
 
       auto reference_entry{frame.reference(
-          sourcemeta::blaze::SchemaReferenceType::Static, reference_pointer)};
+          sourcemeta::core::SchemaReferenceType::Static, reference_pointer)};
       if (!reference_entry.has_value()) {
         reference_entry = frame.reference(
-            sourcemeta::blaze::SchemaReferenceType::Dynamic, reference_pointer);
+            sourcemeta::core::SchemaReferenceType::Dynamic, reference_pointer);
       }
       if (!reference_entry.has_value()) {
         return false;
@@ -42,7 +42,7 @@ public:
       }
 
       if (destination->get().type ==
-          sourcemeta::blaze::SchemaFrame::LocationType::Anchor) {
+          sourcemeta::core::SchemaFrame::LocationType::Anchor) {
         const auto &subschema{sourcemeta::core::get(
             root, sourcemeta::core::to_pointer(destination->get().pointer))};
         if (subschema.is_object()) {
@@ -74,10 +74,10 @@ public:
       reference_pointer.push_back(std::cref(KEYWORD_RECURSIVE_REF));
 
       auto reference_entry{frame.reference(
-          sourcemeta::blaze::SchemaReferenceType::Static, reference_pointer)};
+          sourcemeta::core::SchemaReferenceType::Static, reference_pointer)};
       if (!reference_entry.has_value()) {
         reference_entry = frame.reference(
-            sourcemeta::blaze::SchemaReferenceType::Dynamic, reference_pointer);
+            sourcemeta::core::SchemaReferenceType::Dynamic, reference_pointer);
       }
       if (!reference_entry.has_value()) {
         return false;

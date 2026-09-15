@@ -76,7 +76,10 @@ enum class TerminalColorPolicy : std::uint8_t {
   /// https://pubs.opengroup.org/onlinepubs/9699919799/functions/isatty.html
   WhenInteractive,
   /// Styling is unconditionally suppressed.
-  Disabled
+  Disabled,
+  /// Styling is unconditionally enabled regardless of destination
+  /// interactivity.
+  Always
 };
 
 /// @ingroup terminal
@@ -330,6 +333,49 @@ auto terminal_set_color_policy(TerminalStream stream,
 
 /// @ingroup terminal
 ///
+/// Reset the color policy across all streams to default
+/// (`TerminalColorPolicy::WhenInteractive`).
+///
+/// For example:
+///
+/// ```cpp
+/// #include <sourcemeta/core/terminal.h>
+/// #include <cassert>
+///
+/// sourcemeta::core::terminal_set_color_policy(
+///     sourcemeta::core::TerminalColorPolicy::Disabled);
+/// sourcemeta::core::terminal_reset_color_policy();
+/// assert(sourcemeta::core::terminal_color_policy() ==
+///        sourcemeta::core::TerminalColorPolicy::WhenInteractive);
+/// ```
+SOURCEMETA_CORE_TERMINAL_EXPORT
+auto terminal_reset_color_policy() noexcept -> void;
+
+/// @ingroup terminal
+///
+/// Reset the color policy for a specific stream to default
+/// (`TerminalColorPolicy::WhenInteractive`).
+///
+/// For example:
+///
+/// ```cpp
+/// #include <sourcemeta/core/terminal.h>
+/// #include <cassert>
+///
+/// sourcemeta::core::terminal_set_color_policy(
+///     sourcemeta::core::TerminalStream::Stderr,
+///     sourcemeta::core::TerminalColorPolicy::Disabled);
+/// sourcemeta::core::terminal_reset_color_policy(
+///     sourcemeta::core::TerminalStream::Stderr);
+/// assert(sourcemeta::core::terminal_color_policy(
+///            sourcemeta::core::TerminalStream::Stderr) ==
+///        sourcemeta::core::TerminalColorPolicy::WhenInteractive);
+/// ```
+SOURCEMETA_CORE_TERMINAL_EXPORT
+auto terminal_reset_color_policy(TerminalStream stream) noexcept -> void;
+
+/// @ingroup terminal
+///
 /// Retrieve the current color policy for the specified stream.
 ///
 /// For example:
@@ -340,7 +386,8 @@ auto terminal_set_color_policy(TerminalStream stream,
 ///
 /// const auto policy{sourcemeta::core::terminal_color_policy()};
 /// assert(policy == sourcemeta::core::TerminalColorPolicy::WhenInteractive ||
-///        policy == sourcemeta::core::TerminalColorPolicy::Disabled);
+///        policy == sourcemeta::core::TerminalColorPolicy::Disabled ||
+///        policy == sourcemeta::core::TerminalColorPolicy::Always);
 /// ```
 SOURCEMETA_CORE_TERMINAL_EXPORT
 auto terminal_color_policy(

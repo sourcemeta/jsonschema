@@ -1,8 +1,9 @@
 #include <sourcemeta/blaze/alterschema.h>
+#include <sourcemeta/blaze/bundle.h>
 #include <sourcemeta/blaze/compiler.h>
 #include <sourcemeta/blaze/evaluator.h>
-#include <sourcemeta/blaze/foundation.h>
 #include <sourcemeta/blaze/output.h>
+#include <sourcemeta/core/jsonschema.h>
 #include <sourcemeta/core/regex.h>
 #include <sourcemeta/core/uri.h>
 
@@ -15,10 +16,11 @@
 #include <cassert>       // assert
 #include <cmath>         // std::floor, std::ceil, std::isfinite
 #include <cstddef>       // std::size_t
-#include <functional>    // std::ref
+#include <functional>    // std::ref, std::reference_wrapper
 #include <iterator>      // std::back_inserter
 #include <limits>        // std::numeric_limits
 #include <memory>        // std::unique_ptr, std::make_unique
+#include <optional>      // std::optional
 #include <sstream>       // std::ostringstream
 #include <string_view>   // std::string_view
 #include <unordered_map> // std::unordered_map
@@ -135,6 +137,131 @@ auto walk_up_in_place_applicators(const JSON &root, const SchemaFrame &frame,
                  is_in_place_applicator, matches);
 }
 
+// Compile a subschema of a wrapper document, whose frame locates schemas
+// within it rather than one at its top. Every schema that the frame locates is
+// bundled into a copy of the document at once, so that the subschema may
+// reference any of them as well as a remote schema
+inline auto compile_embedded_subschema(const JSON &root,
+                                       const SchemaFrame &frame,
+                                       const SchemaFrame::Location &location,
+                                       const SchemaWalker &walker,
+                                       const SchemaResolver &resolver,
+                                       const Compiler &compiler) -> Template {
+  std::unordered_set<Pointer, Pointer::Hasher> roots;
+  std::string_view default_dialect{location.dialect};
+  std::string_view default_base;
+  frame.for_each_subschema([&](const SchemaFrame::Location &entry) -> void {
+    if (entry.parent.has_value()) {
+      return;
+    }
+
+    const auto [iterator, inserted] = roots.insert(to_pointer(entry.pointer));
+    if (!inserted) {
+      return;
+    }
+
+    // A schema that declares no dialect of its own reports the default one
+    // that the document was framed with
+    if (declared_dialect(get(root, *iterator)).empty()) {
+      default_dialect = entry.dialect;
+    }
+
+    // A schema that declares no identifier of its own is addressed from the
+    // top of the document, by the base that the document was framed with
+    if (entry.relative_pointer == 0) {
+      default_base = entry.base;
+    }
+  });
+
+  SchemaFrame::Paths paths;
+  paths.reserve(roots.size());
+  for (const auto &pointer : roots) {
+    paths.push_back(to_weak_pointer(pointer));
+  }
+
+  // A wrapper document may declare a member of this name of its own, so bundle
+  // into one that it does not declare, which then only holds what bundling
+  // embedded
+  JSON::String container_name{"x-sourcemeta-embedded"};
+  while (root.defines(container_name)) {
+    container_name.push_back('_');
+  }
+
+  const Pointer container{container_name};
+  auto document{root};
+  bundle(document, walker, resolver, BundleMode::References, default_dialect,
+         "", container, paths, default_base);
+
+  // Bundling embeds every remote schema into the container, outside of every
+  // schema that the frame located, so each of them is framed as a schema too
+  std::vector<Pointer> embedded;
+  const auto *remotes{document.try_at(container_name)};
+  if (remotes != nullptr) {
+    embedded.reserve(remotes->size());
+    for (const auto &entry : remotes->as_object()) {
+      embedded.push_back(container.concat(Pointer{entry.first}));
+    }
+  }
+
+  for (const auto &pointer : embedded) {
+    paths.push_back(to_weak_pointer(pointer));
+  }
+
+  const SchemaFrame bundled_frame{SchemaFrame::Mode::References,
+                                  document,
+                                  walker,
+                                  resolver,
+                                  default_dialect,
+                                  "",
+                                  SchemaFrame::IdentifierMode::Additional,
+                                  paths,
+                                  default_base};
+  const auto entrypoint{bundled_frame.uri(location.pointer)};
+  assert(entrypoint.has_value());
+  return compile(document, walker, resolver, compiler, bundled_frame,
+                 entrypoint.value().get(), Mode::Exhaustive);
+}
+
+// Compile the subschema at a location of a frame that does not stand alone,
+// setting the base that evaluate paths are relative to, or report nothing if
+// it does not compile
+inline auto compile_non_standalone_subschema(
+    const JSON &root, const SchemaFrame &frame,
+    const SchemaFrame::Location &location, const SchemaWalker &walker,
+    const SchemaResolver &resolver, const Compiler &compiler, WeakPointer &base)
+    -> std::optional<Template> {
+  // A frame that locates schemas within a wrapper document has no schema at
+  // the top of that document to wrap
+  const auto embedded{!frame.traverse(EMPTY_WEAK_POINTER).has_value()};
+  std::optional<JSON> subschema;
+  std::string_view default_id;
+  if (!embedded) {
+    // Deliberately framed without a default identifier, so that the root
+    // comes back empty exactly when the schema declares none of its own
+    const SchemaFrame declared_frame{SchemaFrame::Mode::Root, root, walker,
+                                     resolver, location.dialect};
+    default_id = location.base;
+    if (!declared_frame.root().empty() || default_id.empty()) {
+      default_id = "";
+    }
+
+    subschema.emplace(wrap(root, frame, location, walker, resolver, base));
+  }
+
+  try {
+    return embedded ? compile_embedded_subschema(root, frame, location, walker,
+                                                 resolver, compiler)
+                    : compile(subschema.value(), walker, resolver, compiler,
+                              Mode::Exhaustive, location.dialect, default_id);
+  } catch (const CompilerReferenceTargetNotSchemaError &) {
+    throw;
+  } catch (const SchemaVocabularyError &) {
+    throw;
+  } catch (...) {
+    return std::nullopt;
+  }
+}
+
 #define ONLY_CONTINUE_IF(condition)                                            \
   if (!(condition)) {                                                          \
     return false;                                                              \
@@ -247,70 +374,12 @@ auto walk_up_in_place_applicators(const JSON &root, const SchemaFrame &frame,
 #include "linter/valid_default.h"
 #include "linter/valid_examples.h"
 
-// Upgrade
-#include "upgrade/helpers.h"
-#include "upgrade/prefix_promoted_2020_12_keywords.h"
-#include "upgrade/prefix_promoted_draft_2019_09_keywords.h"
-#include "upgrade/prefix_promoted_draft_4_keywords.h"
-#include "upgrade/prefix_promoted_draft_6_keywords.h"
-#include "upgrade/prefix_promoted_draft_7_keywords.h"
-#include "upgrade/upgrade_2019_09_to_2020_12.h"
-#include "upgrade/upgrade_dialect_override_cleanup.h"
-#include "upgrade/upgrade_draft_3_to_draft_4.h"
-#include "upgrade/upgrade_draft_4_to_draft_6.h"
-#include "upgrade/upgrade_draft_6_to_draft_7.h"
-#include "upgrade/upgrade_draft_7_to_draft_2019_09.h"
-
 #undef ONLY_CONTINUE_IF
 } // namespace sourcemeta::blaze
 
 namespace sourcemeta::blaze {
 
 auto add(SchemaTransformer &bundle, const AlterSchemaMode mode) -> void {
-  if (mode == AlterSchemaMode::UpgradeDraft4 ||
-      mode == AlterSchemaMode::UpgradeDraft6 ||
-      mode == AlterSchemaMode::UpgradeDraft7 ||
-      mode == AlterSchemaMode::Upgrade201909 ||
-      mode == AlterSchemaMode::Upgrade202012) {
-    bundle.add<DraftOfficialDialectWithHttps>();
-    bundle.add<DraftOfficialDialectWithoutEmptyFragment>();
-    bundle.add<PrefixPromotedDraft4Keywords>();
-    bundle.add<UpgradeDraft3ToDraft4>();
-
-    if (mode == AlterSchemaMode::UpgradeDraft6 ||
-        mode == AlterSchemaMode::UpgradeDraft7 ||
-        mode == AlterSchemaMode::Upgrade201909 ||
-        mode == AlterSchemaMode::Upgrade202012) {
-      bundle.add<PrefixPromotedDraft6Keywords>();
-      bundle.add<UpgradeDraft4ToDraft6>();
-      bundle.add<EmptyObjectAsTrue>();
-    }
-
-    if (mode == AlterSchemaMode::UpgradeDraft7 ||
-        mode == AlterSchemaMode::Upgrade201909 ||
-        mode == AlterSchemaMode::Upgrade202012) {
-      bundle.add<PrefixPromotedDraft7Keywords>();
-      bundle.add<UpgradeDraft6ToDraft7>();
-      bundle.add<EnumToConst>();
-    }
-
-    if (mode == AlterSchemaMode::Upgrade201909 ||
-        mode == AlterSchemaMode::Upgrade202012) {
-      bundle.add<PrefixPromoted201909Keywords>();
-      bundle.add<UpgradeDraft7To201909>();
-      bundle.add<DefinitionsToDefs>();
-    }
-
-    if (mode == AlterSchemaMode::Upgrade202012) {
-      bundle.add<PrefixPromoted202012Keywords>();
-      bundle.add<Upgrade201909To202012>();
-    }
-
-    bundle.add<UpgradeDialectOverrideCleanup>();
-
-    return;
-  }
-
   if (mode == AlterSchemaMode::Linter) {
     bundle.add<DefinitionsToDefs>();
   }

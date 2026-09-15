@@ -787,6 +787,26 @@ inline auto is_hex_digit(const char character) noexcept -> bool {
 
 /// @ingroup text
 ///
+/// Check whether a percent-encoded triplet begins at the given position, which
+/// RFC 3986 Section 2.1 writes as `pct-encoded = "%" HEXDIG HEXDIG`. A
+/// position at or past the end of the input begins nothing. For example:
+///
+/// ```cpp
+/// #include <sourcemeta/core/text.h>
+/// #include <cassert>
+///
+/// assert(sourcemeta::core::is_percent_triplet("a%20b", 1));
+/// assert(!sourcemeta::core::is_percent_triplet("a%2", 1));
+/// ```
+inline auto is_percent_triplet(const std::string_view input,
+                               const std::size_t position) noexcept -> bool {
+  return input.size() >= 3 && position < input.size() - 2 &&
+         input[position] == '%' && is_hex_digit(input[position + 1]) &&
+         is_hex_digit(input[position + 2]);
+}
+
+/// @ingroup text
+///
 /// Decode a hexadecimal string into its raw bytes, returning no value when
 /// the input contains a character outside the hexadecimal alphabet, or has an
 /// odd length unless `allow_odd_length` is set, in which case a leading zero

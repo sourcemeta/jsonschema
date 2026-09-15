@@ -14,7 +14,7 @@
 #include <sourcemeta/blaze/format_export.h>
 #endif
 
-#include <sourcemeta/blaze/foundation.h>
+#include <sourcemeta/core/jsonschema.h>
 
 #include <sourcemeta/core/json.h>
 
@@ -30,7 +30,7 @@ namespace sourcemeta::blaze {
 ///
 /// ```cpp
 /// #include <sourcemeta/blaze/format.h>
-/// #include <sourcemeta/blaze/foundation.h>
+/// #include <sourcemeta/core/jsonschema.h>
 ///
 /// #include <sourcemeta/core/json.h>
 ///
@@ -43,15 +43,16 @@ namespace sourcemeta::blaze {
 ///     "minLength": 3,
 ///     "$schema": "https://json-schema.org/draft/2020-12/schema"
 ///   })JSON");
-/// sourcemeta::blaze::format(schema, sourcemeta::blaze::schema_walker,
-///                           sourcemeta::blaze::schema_resolver);
+/// sourcemeta::blaze::format(schema, sourcemeta::core::schema_walker,
+///                           sourcemeta::core::schema_resolver);
 /// std::ostringstream stream;
 /// sourcemeta::core::prettify(schema, stream);
 /// std::cout << stream.str() << std::endl;
 /// ```
 SOURCEMETA_BLAZE_FORMAT_EXPORT
-auto format(sourcemeta::core::JSON &schema, const SchemaWalker &walker,
-            const SchemaResolver &resolver,
+auto format(sourcemeta::core::JSON &schema,
+            const sourcemeta::core::SchemaWalker &walker,
+            const sourcemeta::core::SchemaResolver &resolver,
             std::string_view default_dialect = "") -> void;
 
 } // namespace sourcemeta::blaze

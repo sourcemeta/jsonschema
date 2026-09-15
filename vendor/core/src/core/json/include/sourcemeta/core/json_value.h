@@ -2120,6 +2120,35 @@ public:
     return this->data_object.erase(key);
   }
 
+  /// This method deletes an object key given a pre-calculated property hash.
+  /// For example:
+  ///
+  /// ```cpp
+  /// #include <sourcemeta/core/json.h>
+  /// #include <cassert>
+  ///
+  /// sourcemeta::core::JSON document =
+  ///   sourcemeta::core::parse_json("{ \"foo\": true }");
+  /// document.erase("foo", document.as_object().hash("foo"));
+  /// assert(!document.defines("foo"));
+  /// ```
+  SOURCEMETA_FORCEINLINE auto erase(const String &key,
+                                    const Object::hash_type hash)
+      -> Object::size_type {
+    assert(this->is_object());
+    return this->data_object.erase(key, hash);
+  }
+
+  /// This method deletes an object key by string view given a pre-calculated
+  /// property hash
+  template <typename T>
+    requires std::same_as<std::remove_cvref_t<T>, StringView>
+  SOURCEMETA_FORCEINLINE auto erase(T key, const Object::hash_type hash)
+      -> Object::size_type {
+    assert(this->is_object());
+    return this->data_object.erase(key, hash);
+  }
+
   /// This method deletes a set of object keys. For example:
   ///
   /// ```cpp

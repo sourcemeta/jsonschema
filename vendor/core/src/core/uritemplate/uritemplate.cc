@@ -55,6 +55,10 @@ URITemplate::URITemplate(const std::string_view source) {
   }
 }
 
+auto URITemplate::is_literal(const char32_t codepoint) noexcept -> bool {
+  return is_literal_codepoint(codepoint);
+}
+
 auto URITemplate::is_uritemplate(const std::string_view input) noexcept
     -> bool {
   try {

@@ -21,6 +21,7 @@ using namespace std::literals::string_view_literals;
 constexpr auto HASH_SUB{JSON::Object::hash("sub"sv)};
 constexpr auto HASH_SID{JSON::Object::hash("sid"sv)};
 constexpr auto HASH_JTI{JSON::Object::hash("jti"sv)};
+constexpr auto HASH_NONCE{JSON::Object::hash("nonce"sv)};
 constexpr auto HASH_EVENTS{JSON::Object::hash("events"sv)};
 
 constexpr std::string_view BACKCHANNEL_LOGOUT_EVENT{
@@ -137,7 +138,7 @@ auto oidc_validate_logout_token(
   // A logout token MUST NOT contain a nonce, which prevents it being confused
   // with an ID Token, and a jti string is REQUIRED for replay detection
   const auto *token_identifier{payload.try_at("jti"sv, HASH_JTI)};
-  if (payload.defines("nonce") || token_identifier == nullptr ||
+  if (payload.defines("nonce"sv, HASH_NONCE) || token_identifier == nullptr ||
       !token_identifier->is_string()) {
     return false;
   }
