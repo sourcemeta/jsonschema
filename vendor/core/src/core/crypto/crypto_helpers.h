@@ -10,7 +10,6 @@
 
 #include <cstddef>     // std::size_t
 #include <cstdint>     // std::uint8_t
-#include <optional>    // std::optional, std::nullopt
 #include <string>      // std::string
 #include <string_view> // std::string_view
 #include <utility>     // std::unreachable
@@ -80,23 +79,6 @@ inline auto octets_below_fixed(const std::string_view value,
   return borrow == 1;
 }
 
-// Whether a signature is a well-formed representative for the modulus. RFC 8017
-// Section 8.2.2 step 1 and Section 8.1.2 step 1: "If the length of the
-// signature S is not k octets, output "invalid signature" and stop". The length
-// is checked because the range comparison reads both operands as bare integers,
-// so a signature that merely dropped a leading zero octet would denote the same
-// value and verify, giving a second encoding of one signature. Section 5.2.2
-// then requires the range check, so that an unreduced signature, which an
-// attacker forges by adding the modulus without changing the modular
-// exponentiation result, is rejected. The modulus is stripped for the length so
-// that a stored ASN.1 sign octet cannot inflate k
-inline auto rsa_signature_acceptable(const std::string_view signature,
-                                     const std::string_view modulus) noexcept
-    -> bool {
-  return signature.size() == strip_left(modulus, '\x00').size() &&
-         octets_below(signature, modulus);
-}
-
 // Whether an RSA public exponent is acceptable for the modulus: odd and in the
 // range [3, n) (RFC 8017 Section 3.1). An even exponent is not invertible
 // modulo the totient, e = 1 leaves the signature equal to the padded message
@@ -129,39 +111,6 @@ inline auto curve_field_bytes(const EllipticCurve curve) noexcept
   }
 
   std::unreachable();
-}
-
-// The order bit length of each curve, which the platform key generators take as
-// the requested key size. It is not the field width in bits, since P-521 has a
-// 521-bit order that does not fill its 66 octets
-inline auto curve_bit_length(const EllipticCurve curve) noexcept
-    -> std::size_t {
-  switch (curve) {
-    case EllipticCurve::P256:
-      return 256;
-    case EllipticCurve::P384:
-      return 384;
-    case EllipticCurve::P521:
-      return 521;
-  }
-
-  std::unreachable();
-}
-
-// The inverse mapping, identifying the curve from its field width, so a backend
-// that reports a key only by coordinate size resolves it the same way
-inline auto ec_curve_from_field_bytes(const std::size_t field_bytes) noexcept
-    -> std::optional<EllipticCurve> {
-  switch (field_bytes) {
-    case 32:
-      return EllipticCurve::P256;
-    case 48:
-      return EllipticCurve::P384;
-    case 66:
-      return EllipticCurve::P521;
-    default:
-      return std::nullopt;
-  }
 }
 
 // The group order of each NIST prime curve as big-endian octets (FIPS 186-4
@@ -223,8 +172,7 @@ inline auto ec_private_scalar_in_range(const std::string_view scalar,
   return within != 0;
 }
 
-// The public key and signature octet lengths are fixed per curve (RFC 8032
-// Section 5.1.2 and Section 5.1.6)
+// The public key octet length is fixed per curve (RFC 8032 Section 5.1.2)
 inline auto eddsa_public_key_bytes(const EdwardsCurve curve) noexcept
     -> std::size_t {
   switch (curve) {
@@ -232,18 +180,6 @@ inline auto eddsa_public_key_bytes(const EdwardsCurve curve) noexcept
       return 32;
     case EdwardsCurve::Ed448:
       return 57;
-  }
-
-  std::unreachable();
-}
-
-inline auto eddsa_signature_bytes(const EdwardsCurve curve) noexcept
-    -> std::size_t {
-  switch (curve) {
-    case EdwardsCurve::Ed25519:
-      return 64;
-    case EdwardsCurve::Ed448:
-      return 114;
   }
 
   std::unreachable();

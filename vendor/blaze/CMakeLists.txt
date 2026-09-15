@@ -13,8 +13,8 @@ option(BLAZE_CONFIGURATION "Build the Blaze configuration file library" ON)
 option(BLAZE_ALTERSCHEMA "Build the Blaze alterschema rule library" ON)
 option(BLAZE_CODEGEN "Build the Blaze codegen library" ON)
 option(BLAZE_CANONICALIZER "Build the Blaze canonicalizer library" ON)
+option(BLAZE_CONVERT "Build the Blaze convert library" ON)
 option(BLAZE_EDITOR "Build the Blaze editor schema compatibility library" ON)
-option(BLAZE_FOUNDATION "Build the Blaze foundation JSON Schema library" ON)
 option(BLAZE_BUNDLE "Build the Blaze bundle library" ON)
 option(BLAZE_FORMAT "Build the Blaze format library" ON)
 option(BLAZE_TESTS "Build the Blaze tests" OFF)
@@ -56,10 +56,6 @@ elseif(BLAZE_UNDEFINED_SANITIZER)
   sourcemeta_sanitizer(TYPE undefined)
 endif()
 
-if(BLAZE_FOUNDATION)
-  add_subdirectory(src/foundation)
-endif()
-
 if(BLAZE_BUNDLE)
   add_subdirectory(src/bundle)
 endif()
@@ -98,6 +94,10 @@ endif()
 
 if(BLAZE_CANONICALIZER)
   add_subdirectory(src/canonicalizer)
+endif()
+
+if(BLAZE_CONVERT)
+  add_subdirectory(src/convert)
 endif()
 
 if(BLAZE_EDITOR)
@@ -150,10 +150,6 @@ endif()
 if(BLAZE_TESTS)
   enable_testing()
 
-  if(BLAZE_FOUNDATION)
-    add_subdirectory(test/foundation)
-  endif()
-
   if(BLAZE_BUNDLE)
     add_subdirectory(test/bundle)
   endif()
@@ -192,6 +188,10 @@ if(BLAZE_TESTS)
 
   if(BLAZE_CANONICALIZER)
     add_subdirectory(test/canonicalizer)
+  endif()
+
+  if(BLAZE_CONVERT)
+    add_subdirectory(test/convert)
   endif()
 
   if(BLAZE_EDITOR)

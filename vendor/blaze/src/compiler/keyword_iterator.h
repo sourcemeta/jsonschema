@@ -4,7 +4,7 @@
 #include <sourcemeta/core/json.h>
 #include <sourcemeta/core/jsonpointer.h>
 
-#include <sourcemeta/blaze/foundation.h>
+#include <sourcemeta/core/jsonschema.h>
 
 #include <algorithm>   // std::max, std::ranges::fold_left, std::ranges::sort
 #include <cassert>     // assert
@@ -21,10 +21,10 @@ struct KeywordEntry {
   sourcemeta::core::WeakPointer pointer;
 };
 
-inline auto schema_keyword_priority(const std::string_view keyword,
-                                    const SchemaVocabularies &vocabularies,
-                                    const SchemaWalker &walker)
-    -> std::uint64_t {
+inline auto schema_keyword_priority(
+    const std::string_view keyword,
+    const sourcemeta::core::SchemaVocabularies &vocabularies,
+    const sourcemeta::core::SchemaWalker &walker) -> std::uint64_t {
   const auto &result{walker(keyword, vocabularies)};
   const auto priority_from_dependencies{std::ranges::fold_left(
       result.dependencies, static_cast<std::uint64_t>(0),
@@ -52,9 +52,10 @@ private:
 
 public:
   using const_iterator = internal::const_iterator;
-  SchemaKeywordIterator(const sourcemeta::core::JSON &schema,
-                        const SchemaWalker &walker,
-                        const SchemaVocabularies &vocabularies);
+  SchemaKeywordIterator(
+      const sourcemeta::core::JSON &schema,
+      const sourcemeta::core::SchemaWalker &walker,
+      const sourcemeta::core::SchemaVocabularies &vocabularies);
   [[nodiscard]] auto begin() const -> const_iterator;
   [[nodiscard]] auto end() const -> const_iterator;
   [[nodiscard]] auto cbegin() const -> const_iterator;
@@ -68,8 +69,9 @@ private:
 // construction and then the client traverses again.
 
 inline SchemaKeywordIterator::SchemaKeywordIterator(
-    const sourcemeta::core::JSON &schema, const SchemaWalker &walker,
-    const SchemaVocabularies &vocabularies) {
+    const sourcemeta::core::JSON &schema,
+    const sourcemeta::core::SchemaWalker &walker,
+    const sourcemeta::core::SchemaVocabularies &vocabularies) {
   assert((schema.is_object() || schema.is_boolean()));
   if (schema.is_boolean()) {
     return;

@@ -2,6 +2,7 @@
 #define SOURCEMETA_CORE_URITEMPLATE_HELPERS_H_
 
 #include <sourcemeta/core/text.h>
+#include <sourcemeta/core/unicode.h>
 #include <sourcemeta/core/uritemplate.h>
 
 #include <algorithm>   // std::min
@@ -158,14 +159,21 @@ inline auto append_name(std::string &result, const std::string_view name,
   }
 }
 
-// RFC 6570 Section 2.1: a literal character outside the pct-encoded form. The
-// apostrophe is also accepted because the specification's own normative
-// examples rely on it as a literal
-inline auto is_literal_char(const char character) noexcept -> bool {
-  const auto byte = static_cast<unsigned char>(character);
-  if (byte >= 0x80) {
-    return true;
+// RFC 6570 Section 2.1, incorporating the corrections of Errata 6937:
+//
+//     literals = 1*( %x21 / %x23-24 / %x26-3B / %x3D / %x3F-5B / %x5D / %x5F
+//                / %x61-7A / %x7E / ucschar / iprivate / pct-encoded)
+//
+// The apostrophe falls in the second of those ranges, which is why the
+// specification's own normative examples may rely on it. The two productions
+// beyond the ASCII range are the ones RFC 3987 Section 2.2 defines, so a code
+// point outside them is no literal however it was encoded
+inline auto is_literal_codepoint(const char32_t point) noexcept -> bool {
+  if (point >= 0x80) {
+    return is_ucschar(point) || is_iprivate(point);
   }
+
+  const auto byte = static_cast<unsigned char>(point);
 
   switch (byte) {
     case 0x21:
@@ -353,9 +361,7 @@ auto parse_expression(const std::string_view input)
 
       // See https://www.rfc-editor.org/rfc/rfc6570#section-2.1
       if (character == '%') {
-        if (position + 2 >= input.size() ||
-            !is_hex_digit(input[position + 1]) ||
-            !is_hex_digit(input[position + 2])) {
+        if (!is_percent_triplet(input, position)) {
           throw URITemplateParseError(position + 1);
         }
 
@@ -363,11 +369,15 @@ auto parse_expression(const std::string_view input)
         continue;
       }
 
-      if (!is_literal_char(character)) {
+      // The production is defined over characters rather than over bytes, so
+      // what stands here is read as one before it is held to it
+      const auto codepoint{sourcemeta::core::utf8_decode(input, position)};
+      if (!codepoint.has_value() ||
+          !is_literal_codepoint(codepoint.value().first)) {
         throw URITemplateParseError(position + 1);
       }
 
-      position++;
+      position += codepoint.value().second;
     }
 
     if constexpr (CheckOnly) {

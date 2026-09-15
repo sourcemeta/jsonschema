@@ -16,6 +16,12 @@ macro(sourcemeta_enable_simd)
       if(COMPILER_SUPPORTS_AVX2)
         message(STATUS "Enabling SIMD AVX2")
         set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -mavx2")
+        # Every processor with AVX2 also has carry-less multiplication
+        check_cxx_compiler_flag("-mpclmul" COMPILER_SUPPORTS_PCLMUL)
+        if(COMPILER_SUPPORTS_PCLMUL)
+          message(STATUS "Enabling SIMD PCLMUL")
+          set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -mpclmul")
+        endif()
       else()
         check_cxx_compiler_flag("-msse4.2" COMPILER_SUPPORTS_SSE42)
         if(COMPILER_SUPPORTS_SSE42)
@@ -31,19 +37,21 @@ macro(sourcemeta_enable_simd)
       endif()
     endif()
   elseif(CMAKE_SYSTEM_PROCESSOR MATCHES "arm64|aarch64" AND NOT MSVC)
-    # +crc is part of the optional Armv8.0-A CRC32 extension. It is
+    # +crc is part of the optional Armv8.0-A CRC32 extension, and +crypto
+    # brings the carry-less multiplication instructions. Both are
     # guaranteed on Apple Silicon (Armv8.5+) and several other modern cores,
-    # but Cortex-A53-class CPUs do not have it. The compiler accepting the
-    # flag does not prove the runtime CPU supports the instruction, so the
-    # only platform we auto-enable +crc on is Apple Silicon. Other aarch64
+    # but Cortex-A53-class CPUs may lack them. The compiler accepting the
+    # flags does not prove the runtime CPU supports the instructions, so the
+    # only platform we auto-enable them on is Apple Silicon. Other aarch64
     # targets keep the plain NEON baseline and the CRC32 software fallback.
     set(SIMD_NEON_FLAG_APPLIED FALSE)
     if(APPLE)
-      check_cxx_compiler_flag("-march=armv8-a+fp+simd+crc"
-        COMPILER_SUPPORTS_NEON_CRC)
-      if(COMPILER_SUPPORTS_NEON_CRC)
-        message(STATUS "Enabling SIMD NEON + CRC32")
-        set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -march=armv8-a+fp+simd+crc")
+      check_cxx_compiler_flag("-march=armv8-a+fp+simd+crc+crypto"
+        COMPILER_SUPPORTS_NEON_CRC_CRYPTO)
+      if(COMPILER_SUPPORTS_NEON_CRC_CRYPTO)
+        message(STATUS "Enabling SIMD NEON + CRC32 + Crypto")
+        set(CMAKE_CXX_FLAGS
+          "${CMAKE_CXX_FLAGS} -march=armv8-a+fp+simd+crc+crypto")
         set(SIMD_NEON_FLAG_APPLIED TRUE)
       endif()
     endif()

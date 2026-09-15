@@ -3,15 +3,13 @@ public:
   using reframe_after_transform = std::true_type;
   OrphanDefinitions() : SchemaTransformRule{"orphan_definitions"} {};
 
-  [[nodiscard]] auto
-  condition(const sourcemeta::core::JSON &schema,
-            const sourcemeta::core::JSON &,
-            const sourcemeta::blaze::SchemaVocabularies &vocabularies,
-            const sourcemeta::blaze::SchemaFrame &frame,
-            const sourcemeta::blaze::SchemaFrame::Location &location,
-            const sourcemeta::blaze::SchemaWalker &walker,
-            const sourcemeta::blaze::SchemaResolver &resolver) const
-      -> bool override {
+  [[nodiscard]] auto condition(
+      const sourcemeta::core::JSON &schema, const sourcemeta::core::JSON &,
+      const sourcemeta::core::SchemaVocabularies &vocabularies,
+      const sourcemeta::core::SchemaFrame &frame,
+      const sourcemeta::core::SchemaFrame::Location &location,
+      const sourcemeta::core::SchemaWalker &walker,
+      const sourcemeta::core::SchemaResolver &resolver) const -> bool override {
     ONLY_CONTINUE_IF(schema.is_object());
     const bool has_modern_core{
         vocabularies.contains(
@@ -63,36 +61,36 @@ public:
 
 private:
   static auto
-  subtree_has_dynamic_anchor(const sourcemeta::blaze::SchemaFrame &frame,
+  subtree_has_dynamic_anchor(const sourcemeta::core::SchemaFrame &frame,
                              const sourcemeta::core::WeakPointer &entry_pointer)
       -> bool {
     return frame.any_anchor(
-        sourcemeta::blaze::SchemaReferenceType::Dynamic,
+        sourcemeta::core::SchemaReferenceType::Dynamic,
         [&entry_pointer](
             const std::string_view,
-            const sourcemeta::blaze::SchemaFrame::Location &location) -> bool {
+            const sourcemeta::core::SchemaFrame::Location &location) -> bool {
           return location.pointer.starts_with(entry_pointer);
         });
   }
 
   static auto has_reachable_reference_through(
-      const sourcemeta::blaze::SchemaFrame &frame,
-      const sourcemeta::blaze::SchemaFrame::Location &base,
-      const sourcemeta::blaze::SchemaWalker &walker,
-      const sourcemeta::blaze::SchemaResolver &resolver,
+      const sourcemeta::core::SchemaFrame &frame,
+      const sourcemeta::core::SchemaFrame::Location &base,
+      const sourcemeta::core::SchemaWalker &walker,
+      const sourcemeta::core::SchemaResolver &resolver,
       const sourcemeta::core::WeakPointer &pointer) -> bool {
     return frame.any_reference_into(
         pointer,
-        [&](const sourcemeta::blaze::SchemaReferenceType,
+        [&](const sourcemeta::core::SchemaReferenceType,
             const sourcemeta::core::WeakPointer &source_pointer,
-            const sourcemeta::blaze::SchemaFrame::Reference &) -> bool {
+            const sourcemeta::core::SchemaFrame::Reference &) -> bool {
           if (source_pointer.empty()) {
             return true;
           }
 
           const auto source_location{frame.traverse(
               source_pointer.initial(),
-              sourcemeta::blaze::SchemaFrame::LocationType::Subschema)};
+              sourcemeta::core::SchemaFrame::LocationType::Subschema)};
           return source_location.has_value() &&
                  frame.is_reachable(base, source_location->get(), walker,
                                     resolver);
@@ -100,10 +98,10 @@ private:
   }
 
   static auto
-  collect_orphans(const sourcemeta::blaze::SchemaFrame &frame,
-                  const sourcemeta::blaze::SchemaFrame::Location &base,
-                  const sourcemeta::blaze::SchemaWalker &walker,
-                  const sourcemeta::blaze::SchemaResolver &resolver,
+  collect_orphans(const sourcemeta::core::SchemaFrame &frame,
+                  const sourcemeta::core::SchemaFrame::Location &base,
+                  const sourcemeta::core::SchemaWalker &walker,
+                  const sourcemeta::core::SchemaResolver &resolver,
                   const sourcemeta::core::WeakPointer &prefix,
                   const sourcemeta::core::JSON &schema,
                   const sourcemeta::core::JSON::String &container,
@@ -119,7 +117,7 @@ private:
       const auto absolute_entry_pointer{prefix.concat(entry_pointer)};
       const auto entry_location{frame.traverse(
           absolute_entry_pointer,
-          sourcemeta::blaze::SchemaFrame::LocationType::Subschema)};
+          sourcemeta::core::SchemaFrame::LocationType::Subschema)};
       if (entry_location.has_value() &&
           !frame.is_reachable(base, entry_location->get(), walker, resolver) &&
           !has_reachable_reference_through(frame, base, walker, resolver,

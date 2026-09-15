@@ -1,7 +1,7 @@
 #include <sourcemeta/blaze/bundle.h>
 #include <sourcemeta/blaze/canonicalizer.h>
 #include <sourcemeta/blaze/codegen.h>
-#include <sourcemeta/blaze/foundation.h>
+#include <sourcemeta/core/jsonschema.h>
 
 #include <algorithm>     // std::ranges::sort
 #include <cassert>       // assert
@@ -12,10 +12,10 @@
 namespace {
 
 auto is_validation_subschema(
-    const sourcemeta::blaze::SchemaFrame &frame,
-    const sourcemeta::blaze::SchemaFrame::Location &location,
-    const sourcemeta::blaze::SchemaWalker &walker,
-    const sourcemeta::blaze::SchemaResolver &resolver) -> bool {
+    const sourcemeta::core::SchemaFrame &frame,
+    const sourcemeta::core::SchemaFrame::Location &location,
+    const sourcemeta::core::SchemaWalker &walker,
+    const sourcemeta::core::SchemaResolver &resolver) -> bool {
   if (!location.parent.has_value()) {
     return false;
   }
@@ -38,7 +38,7 @@ auto is_validation_subschema(
   const auto &vocabularies{
       frame.vocabularies(parent_location.value().get(), resolver)};
   const auto &walker_result{walker(keyword_token.to_property(), vocabularies)};
-  using Type = sourcemeta::blaze::SchemaKeywordType;
+  using Type = sourcemeta::core::SchemaKeywordType;
   if (walker_result.type == Type::ApplicatorValueTraverseAnyPropertyKey ||
       walker_result.type == Type::ApplicatorValueTraverseAnyItem) {
     return true;
@@ -69,8 +69,8 @@ auto declared_dialect(const sourcemeta::core::JSON &schema,
 namespace sourcemeta::blaze {
 
 auto compile(const sourcemeta::core::JSON &input,
-             const sourcemeta::blaze::SchemaWalker &walker,
-             const sourcemeta::blaze::SchemaResolver &resolver,
+             const sourcemeta::core::SchemaWalker &walker,
+             const sourcemeta::core::SchemaResolver &resolver,
              const CodegenCompiler &compiler,
              const std::string_view default_dialect,
              const std::string_view default_id) -> CodegenIRResult {
@@ -98,8 +98,8 @@ auto compile(const sourcemeta::core::JSON &input,
   // (3) Frame the resulting schema with instance location information
   // --------------------------------------------------------------------------
 
-  sourcemeta::blaze::SchemaFrame frame{
-      sourcemeta::blaze::SchemaFrame::Mode::References,
+  sourcemeta::core::SchemaFrame frame{
+      sourcemeta::core::SchemaFrame::Mode::References,
       schema,
       walker,
       resolver,
@@ -116,7 +116,7 @@ auto compile(const sourcemeta::core::JSON &input,
       visited;
   CodegenIRResult result;
   frame.for_each_subschema(
-      [&](const sourcemeta::blaze::SchemaFrame::Location &location) -> void {
+      [&](const sourcemeta::core::SchemaFrame::Location &location) -> void {
         // Framing may report resource twice or more given default identifiers
         // and nested resources
         const auto [visited_iterator, inserted] =

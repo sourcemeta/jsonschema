@@ -99,56 +99,16 @@ inline auto parse_hex_digits(const std::string &content, std::size_t start,
   return value;
 }
 
-constexpr auto make_digit_class() -> std::bitset<128> {
-  std::bitset<128> result;
-  for (int code = '0'; code <= '9'; ++code) {
-    result.set(static_cast<std::size_t>(code));
-  }
-
-  return result;
-}
-
-constexpr auto make_word_class() -> std::bitset<128> {
-  std::bitset<128> result;
-  for (int code = 'a'; code <= 'z'; ++code) {
-    result.set(static_cast<std::size_t>(code));
-  }
-
-  for (int code = 'A'; code <= 'Z'; ++code) {
-    result.set(static_cast<std::size_t>(code));
-  }
-
-  for (int code = '0'; code <= '9'; ++code) {
-    result.set(static_cast<std::size_t>(code));
-  }
-
-  result.set('_');
-  return result;
-}
-
-constexpr auto make_space_class() -> std::bitset<128> {
-  std::bitset<128> result;
-  result.set(' ');
-  result.set('\t');
-  result.set('\n');
-  result.set('\r');
-  result.set('\f');
-  result.set('\v');
-  return result;
-}
-
-constexpr auto negate_class(const std::bitset<128> &base) -> std::bitset<128> {
-  auto result = ~base;
-  result.reset(0);
-  return result;
-}
-
-constexpr auto DIGIT_CLASS = make_digit_class();
-constexpr auto WORD_CLASS = make_word_class();
-constexpr auto SPACE_CLASS = make_space_class();
-constexpr auto NON_DIGIT_CLASS = negate_class(DIGIT_CLASS);
-constexpr auto NON_WORD_CLASS = negate_class(WORD_CLASS);
-constexpr auto NON_SPACE_CLASS = negate_class(SPACE_CLASS);
+// The ASCII members of each shorthand class as a set of code points, spelled
+// as the high and low halves of the set. The negated classes leave out the NUL
+// code point along with the members
+constexpr auto DIGIT_CLASS{std::bitset<128>{0x03FF000000000000ULL}};
+constexpr auto WORD_CLASS{(std::bitset<128>{0x07FFFFFE87FFFFFEULL} << 64U) |
+                          std::bitset<128>{0x03FF000000000000ULL}};
+constexpr auto SPACE_CLASS{std::bitset<128>{0x0000000100003E00ULL}};
+constexpr auto NON_DIGIT_CLASS{(~DIGIT_CLASS).reset(0)};
+constexpr auto NON_WORD_CLASS{(~WORD_CLASS).reset(0)};
+constexpr auto NON_SPACE_CLASS{(~SPACE_CLASS).reset(0)};
 
 inline auto set_shorthand_class(std::bitset<128> &characters,
                                 const char shorthand) -> void {

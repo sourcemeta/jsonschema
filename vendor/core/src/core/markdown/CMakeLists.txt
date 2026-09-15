@@ -6,3 +6,6 @@ if(SOURCEMETA_CORE_INSTALL)
 endif()
 
 target_link_libraries(sourcemeta_core_markdown PRIVATE CMarkGFM::cmark_gfm)
+
+target_link_libraries(sourcemeta_core_markdown PRIVATE
+  sourcemeta::core::unicode)

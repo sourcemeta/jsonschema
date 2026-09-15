@@ -659,6 +659,10 @@ auto URI::is_gen_delim(const char character) noexcept -> bool {
   return uri_is_gen_delim(character);
 }
 
+auto URI::is_pchar(const char character) noexcept -> bool {
+  return uri_is_pchar(character);
+}
+
 auto URI::is_uri(const std::string_view input) noexcept -> bool {
   try {
     std::optional<std::string> scheme;

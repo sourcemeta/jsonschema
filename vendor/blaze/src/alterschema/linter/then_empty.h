@@ -15,7 +15,7 @@ public:
   condition(const JSON &schema, const JSON &,
             const SchemaVocabularies &vocabularies, const SchemaFrame &frame,
             const SchemaFrame::Location &location, const SchemaWalker &,
-            const SchemaResolver &, const bool) const
+            const SchemaResolver &) const
       -> SchemaTransformRule::Result override {
     ONLY_CONTINUE_IF(
         vocabularies.contains_any(

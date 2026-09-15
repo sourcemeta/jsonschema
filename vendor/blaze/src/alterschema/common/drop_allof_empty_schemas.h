@@ -7,12 +7,10 @@ public:
                             "Empty schemas in `allOf` are redundant and can be "
                             "removed"} {};
 
-  [[nodiscard]] auto
-  condition(const JSON &schema, const JSON &,
-            const SchemaVocabularies &vocabularies, const SchemaFrame &,
-            const SchemaFrame::Location &, const SchemaWalker &,
-            const SchemaResolver &, const bool) const
-      -> SchemaTransformRule::Result override {
+  [[nodiscard]] auto condition(
+      const JSON &schema, const JSON &, const SchemaVocabularies &vocabularies,
+      const SchemaFrame &, const SchemaFrame::Location &, const SchemaWalker &,
+      const SchemaResolver &) const -> SchemaTransformRule::Result override {
     ONLY_CONTINUE_IF(vocabularies.contains_any(
         {SchemaVocabularies::Known::JSON_SCHEMA_2020_12_APPLICATOR,
          SchemaVocabularies::Known::JSON_SCHEMA_2019_09_APPLICATOR,

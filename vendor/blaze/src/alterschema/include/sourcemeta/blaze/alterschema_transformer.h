@@ -5,9 +5,9 @@
 #include <sourcemeta/blaze/alterschema_export.h>
 #endif
 
-#include <sourcemeta/blaze/foundation.h>
 #include <sourcemeta/core/json.h>
 #include <sourcemeta/core/jsonpointer.h>
+#include <sourcemeta/core/jsonschema.h>
 
 #include <cassert>     // assert
 #include <concepts>    // std::derived_from, std::same_as
@@ -90,13 +90,12 @@ public:
   [[nodiscard]] auto
   check(const sourcemeta::core::JSON &schema,
         const sourcemeta::core::JSON &root,
-        const sourcemeta::blaze::SchemaVocabularies &vocabularies,
-        const sourcemeta::blaze::SchemaWalker &walker,
-        const sourcemeta::blaze::SchemaResolver &resolver,
-        const sourcemeta::blaze::SchemaFrame &frame,
-        const sourcemeta::blaze::SchemaFrame::Location &location,
-        const sourcemeta::core::JSON::String &exclude_keyword,
-        const bool is_metaschema) const -> Result;
+        const sourcemeta::core::SchemaVocabularies &vocabularies,
+        const sourcemeta::core::SchemaWalker &walker,
+        const sourcemeta::core::SchemaResolver &resolver,
+        const sourcemeta::core::SchemaFrame &frame,
+        const sourcemeta::core::SchemaFrame::Location &location,
+        const sourcemeta::core::JSON::String &exclude_keyword) const -> Result;
 
   /// A method to optionally fix any reference location that was affected by the
   /// transformation
@@ -108,15 +107,13 @@ public:
       -> sourcemeta::core::Pointer;
 
   /// The rule condition
-  [[nodiscard]] virtual auto
-  condition(const sourcemeta::core::JSON &schema,
-            const sourcemeta::core::JSON &root,
-            const sourcemeta::blaze::SchemaVocabularies &vocabularies,
-            const sourcemeta::blaze::SchemaFrame &frame,
-            const sourcemeta::blaze::SchemaFrame::Location &location,
-            const sourcemeta::blaze::SchemaWalker &walker,
-            const sourcemeta::blaze::SchemaResolver &resolver,
-            const bool is_metaschema) const -> Result = 0;
+  [[nodiscard]] virtual auto condition(
+      const sourcemeta::core::JSON &schema, const sourcemeta::core::JSON &root,
+      const sourcemeta::core::SchemaVocabularies &vocabularies,
+      const sourcemeta::core::SchemaFrame &frame,
+      const sourcemeta::core::SchemaFrame::Location &location,
+      const sourcemeta::core::SchemaWalker &walker,
+      const sourcemeta::core::SchemaResolver &resolver) const -> Result = 0;
 
   /// The rule transformation. If this virtual method is not overriden,
   /// then the rule is considered to not mutate the schema
@@ -177,27 +174,52 @@ public:
       const sourcemeta::core::Pointer &, const std::string_view,
       const std::string_view, const SchemaTransformRule::Result &, const bool)>;
 
+  /// Frame a document as it currently stands, in References mode. Applying
+  /// rules calls it again whenever a transformation needs a new frame, so the
+  /// frame it returns only has to remain valid until the next call
+  using Framer = std::function<const sourcemeta::core::SchemaFrame &(
+      const sourcemeta::core::JSON &)>;
+
   /// Apply the bundle of rules to a schema
   [[nodiscard]] auto
   apply(sourcemeta::core::JSON &schema,
-        const sourcemeta::blaze::SchemaWalker &walker,
-        const sourcemeta::blaze::SchemaResolver &resolver,
+        const sourcemeta::core::SchemaWalker &walker,
+        const sourcemeta::core::SchemaResolver &resolver,
         const Callback &callback, std::string_view default_dialect = "",
         std::string_view default_id = "",
-        const sourcemeta::core::JSON::String &exclude_keyword = "",
-        const bool is_metaschema = false) const
+        const sourcemeta::core::JSON::String &exclude_keyword = "") const
+      -> std::pair<bool, std::uint8_t>;
+
+  /// Apply the bundle of rules to every subschema that a framer locates within
+  /// a document
+  [[nodiscard]] auto
+  apply(sourcemeta::core::JSON &document, const Framer &framer,
+        const sourcemeta::core::SchemaWalker &walker,
+        const sourcemeta::core::SchemaResolver &resolver,
+        const Callback &callback,
+        const sourcemeta::core::JSON::String &exclude_keyword = "") const
       -> std::pair<bool, std::uint8_t>;
 
   /// Report back the rules from the bundle that need to be applied to a
   /// schema
   [[nodiscard]] auto
   check(const sourcemeta::core::JSON &schema,
-        const sourcemeta::blaze::SchemaWalker &walker,
-        const sourcemeta::blaze::SchemaResolver &resolver,
+        const sourcemeta::core::SchemaWalker &walker,
+        const sourcemeta::core::SchemaResolver &resolver,
         const Callback &callback, std::string_view default_dialect = "",
         std::string_view default_id = "",
-        const sourcemeta::core::JSON::String &exclude_keyword = "",
-        const bool is_metaschema = false) const
+        const sourcemeta::core::JSON::String &exclude_keyword = "") const
+      -> std::pair<bool, std::uint8_t>;
+
+  /// Report back the rules from the bundle that need to be applied to every
+  /// subschema that a frame locates within a document
+  [[nodiscard]] auto
+  check(const sourcemeta::core::JSON &document,
+        const sourcemeta::core::SchemaFrame &frame,
+        const sourcemeta::core::SchemaWalker &walker,
+        const sourcemeta::core::SchemaResolver &resolver,
+        const Callback &callback,
+        const sourcemeta::core::JSON::String &exclude_keyword = "") const
       -> std::pair<bool, std::uint8_t>;
 
   [[nodiscard]] auto begin() const -> auto { return this->rules_.cbegin(); }

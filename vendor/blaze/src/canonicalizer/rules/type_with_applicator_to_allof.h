@@ -7,11 +7,11 @@ public:
   [[nodiscard]] auto
   condition(const sourcemeta::core::JSON &schema,
             const sourcemeta::core::JSON &,
-            const sourcemeta::blaze::SchemaVocabularies &vocabularies,
-            const sourcemeta::blaze::SchemaFrame &frame,
-            const sourcemeta::blaze::SchemaFrame::Location &location,
-            const sourcemeta::blaze::SchemaWalker &walker,
-            const sourcemeta::blaze::SchemaResolver &) const -> bool override {
+            const sourcemeta::core::SchemaVocabularies &vocabularies,
+            const sourcemeta::core::SchemaFrame &frame,
+            const sourcemeta::core::SchemaFrame::Location &location,
+            const sourcemeta::core::SchemaWalker &walker,
+            const sourcemeta::core::SchemaResolver &) const -> bool override {
     ONLY_CONTINUE_IF(
         vocabularies.contains_any(
             {SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_4,
@@ -68,14 +68,14 @@ public:
           continue;
         }
         const auto keyword_type{walker(entry.first, vocabularies).type};
-        if (keyword_type != sourcemeta::blaze::SchemaKeywordType::Unknown &&
-            keyword_type != sourcemeta::blaze::SchemaKeywordType::Annotation &&
-            keyword_type != sourcemeta::blaze::SchemaKeywordType::Comment) {
+        if (keyword_type != sourcemeta::core::SchemaKeywordType::Unknown &&
+            keyword_type != sourcemeta::core::SchemaKeywordType::Annotation &&
+            keyword_type != sourcemeta::core::SchemaKeywordType::Comment) {
           modern_ref_needs_wrapping = true;
-          if (keyword_type != sourcemeta::blaze::SchemaKeywordType::Reference &&
-              keyword_type != sourcemeta::blaze::SchemaKeywordType::Other &&
+          if (keyword_type != sourcemeta::core::SchemaKeywordType::Reference &&
+              keyword_type != sourcemeta::core::SchemaKeywordType::Other &&
               keyword_type !=
-                  sourcemeta::blaze::SchemaKeywordType::LocationMembers) {
+                  sourcemeta::core::SchemaKeywordType::LocationMembers) {
             this->ref_annotations_only_ = false;
           }
         }
@@ -112,10 +112,9 @@ public:
     this->applicators_with_refs_ = 0;
     frame.for_each_reference_from(
         location.pointer,
-        [&](const sourcemeta::blaze::SchemaReferenceType,
+        [&](const sourcemeta::core::SchemaReferenceType,
             const sourcemeta::core::WeakPointer &source_pointer,
-            const sourcemeta::blaze::SchemaFrame::Reference &reference)
-            -> void {
+            const sourcemeta::core::SchemaFrame::Reference &reference) -> void {
           const auto relative{source_pointer.resolve_from(location.pointer)};
           if (relative.empty() || !relative.at(0).is_property()) {
             return;
@@ -157,9 +156,9 @@ public:
 
       const auto all_refs_fixed{!frame.any_reference_from(
           location.pointer,
-          [&](const sourcemeta::blaze::SchemaReferenceType,
+          [&](const sourcemeta::core::SchemaReferenceType,
               const sourcemeta::core::WeakPointer &source_pointer,
-              const sourcemeta::blaze::SchemaFrame::Reference &reference)
+              const sourcemeta::core::SchemaFrame::Reference &reference)
               -> bool {
             const auto relative_src{
                 source_pointer.resolve_from(location.pointer)};

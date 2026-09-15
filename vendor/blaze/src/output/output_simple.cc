@@ -1,6 +1,6 @@
 #include <sourcemeta/blaze/output_simple.h>
 
-#include <sourcemeta/blaze/foundation.h>
+#include <sourcemeta/core/jsonschema.h>
 
 #include <algorithm> // std::min, std::remove_if
 #include <cassert>   // assert

@@ -11,4 +11,4 @@ target_link_libraries(sourcemeta_blaze_format PUBLIC
 target_link_libraries(sourcemeta_blaze_format PUBLIC
   sourcemeta::core::jsonpointer)
 target_link_libraries(sourcemeta_blaze_format PUBLIC
-  sourcemeta::blaze::foundation)
+  sourcemeta::core::jsonschema)

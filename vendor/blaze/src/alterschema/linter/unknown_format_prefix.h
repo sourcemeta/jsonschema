@@ -13,11 +13,11 @@ public:
   [[nodiscard]] auto
   condition(const sourcemeta::core::JSON &schema,
             const sourcemeta::core::JSON &,
-            const sourcemeta::blaze::SchemaVocabularies &vocabularies,
-            const sourcemeta::blaze::SchemaFrame &,
-            const sourcemeta::blaze::SchemaFrame::Location &,
-            const sourcemeta::blaze::SchemaWalker &,
-            const sourcemeta::blaze::SchemaResolver &, const bool) const
+            const sourcemeta::core::SchemaVocabularies &vocabularies,
+            const sourcemeta::core::SchemaFrame &,
+            const sourcemeta::core::SchemaFrame::Location &,
+            const sourcemeta::core::SchemaWalker &,
+            const sourcemeta::core::SchemaResolver &) const
       -> SchemaTransformRule::Result override {
     ONLY_CONTINUE_IF(schema.is_object() && schema.defines("format"));
     const auto &format_value{schema.at("format")};
@@ -46,9 +46,9 @@ public:
 
 private:
   static auto recognized_formats_for(
-      const sourcemeta::blaze::SchemaVocabularies &vocabularies)
+      const sourcemeta::core::SchemaVocabularies &vocabularies)
       -> const std::unordered_set<std::string_view> * {
-    using Known = sourcemeta::blaze::SchemaVocabularies::Known;
+    using Known = sourcemeta::core::SchemaVocabularies::Known;
     if (vocabularies.contains_any(
             {Known::JSON_SCHEMA_DRAFT_3, Known::JSON_SCHEMA_DRAFT_3_HYPER})) {
       return &DRAFT_3_FORMATS;

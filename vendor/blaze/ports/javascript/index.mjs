@@ -323,8 +323,9 @@ function compileInstructionToCode(instruction, captures, visited, budget) {
     case 68: { var r=R('t'); if(!r)return null; if(!children||children.length===0)return r+'return true;'; return r+TO+'return true;for(var k in t){'+lb(children,'t[k]')+'}return true;'; }
     case 69: return fb(69); case 70: return fb(70); case 71: return fb(71); case 72: return fb(72); case 73: return fb(73);
     case 74: return fb(74); case 75: return fb(75); case 76: return fb(76);
-    case 77: { var r=R('t'); return r?r+TO+'return true;for(var k in t){if(_es(t[k])!=='+value+')return false;}return true;':null; }
-    case 78: return fb(78); case 79: return fb(79); case 80: return fb(80); case 81: return fb(81);
+    case 77: return fb(77);
+    case 78: { var r=R('t'); return r?r+TO+'return true;for(var k in t){if(_es(t[k])!=='+value+')return false;}return true;':null; }
+    case 79: return fb(79); case 80: return fb(80); case 81: return fb(81);
     case 82: return fb(82);
     case 83: { var r=R('t'); if(!r)return null; if(!children||children.length===0)return r+'return true;'; return r+'if(!Array.isArray(t))return true;for(var j=0;j<t.length;j++){'+lb(children,'t[j]')+'}return true;'; }
     case 84: { var r=R('t'); if(!r)return null; if(!children||children.length===0)return r+'return true;'; return r+'if(!Array.isArray(t)||'+value+'>=t.length)return true;for(var j='+value+';j<t.length;j++){'+lb(children,'t[j]')+'}return true;'; }

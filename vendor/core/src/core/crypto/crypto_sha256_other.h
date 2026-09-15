@@ -12,36 +12,30 @@
 
 namespace sourcemeta::core {
 
-// The count must be between 1 and 31, as the complementary shift is
-// undefined otherwise
-inline constexpr auto sha256_rotate_right(std::uint32_t value,
-                                          std::uint64_t count) noexcept
-    -> std::uint32_t {
-  return (value >> count) | (value << (32u - count));
-}
-
-// FIPS 180-4 Section 4.1.2 logical functions
+// FIPS 180-4 Section 4.1.2 logical functions. Each right rotation is written
+// out as a shift pair rather than through a helper, so that an unoptimized
+// build does not pay a function call per rotation
 inline constexpr auto sha256_big_sigma_0(std::uint32_t value) noexcept
     -> std::uint32_t {
-  return sha256_rotate_right(value, 2u) ^ sha256_rotate_right(value, 13u) ^
-         sha256_rotate_right(value, 22u);
+  return ((value >> 2u) | (value << 30u)) ^ ((value >> 13u) | (value << 19u)) ^
+         ((value >> 22u) | (value << 10u));
 }
 
 inline constexpr auto sha256_big_sigma_1(std::uint32_t value) noexcept
     -> std::uint32_t {
-  return sha256_rotate_right(value, 6u) ^ sha256_rotate_right(value, 11u) ^
-         sha256_rotate_right(value, 25u);
+  return ((value >> 6u) | (value << 26u)) ^ ((value >> 11u) | (value << 21u)) ^
+         ((value >> 25u) | (value << 7u));
 }
 
 inline constexpr auto sha256_small_sigma_0(std::uint32_t value) noexcept
     -> std::uint32_t {
-  return sha256_rotate_right(value, 7u) ^ sha256_rotate_right(value, 18u) ^
+  return ((value >> 7u) | (value << 25u)) ^ ((value >> 18u) | (value << 14u)) ^
          (value >> 3u);
 }
 
 inline constexpr auto sha256_small_sigma_1(std::uint32_t value) noexcept
     -> std::uint32_t {
-  return sha256_rotate_right(value, 17u) ^ sha256_rotate_right(value, 19u) ^
+  return ((value >> 17u) | (value << 15u)) ^ ((value >> 19u) | (value << 13u)) ^
          (value >> 10u);
 }
 
@@ -79,9 +73,10 @@ inline auto sha256_process_block(const std::uint8_t *block,
 
   // Decode 16 big-endian 32-bit words from the block
   std::array<std::uint32_t, 64> schedule;
+  auto *schedule_data = schedule.data();
   for (std::uint64_t word_index = 0; word_index < 16u; ++word_index) {
     const std::uint64_t byte_index = word_index * 4u;
-    schedule[word_index] =
+    schedule_data[word_index] =
         (static_cast<std::uint32_t>(block[byte_index]) << 24u) |
         (static_cast<std::uint32_t>(block[byte_index + 1u]) << 16u) |
         (static_cast<std::uint32_t>(block[byte_index + 2u]) << 8u) |
@@ -90,35 +85,39 @@ inline auto sha256_process_block(const std::uint8_t *block,
 
   // Extend the message schedule (FIPS 180-4 Section 6.2.2 step 1)
   for (std::uint64_t index = 16u; index < 64u; ++index) {
-    schedule[index] =
-        sha256_small_sigma_1(schedule[index - 2u]) + schedule[index - 7u] +
-        sha256_small_sigma_0(schedule[index - 15u]) + schedule[index - 16u];
+    schedule_data[index] = sha256_small_sigma_1(schedule_data[index - 2u]) +
+                           schedule_data[index - 7u] +
+                           sha256_small_sigma_0(schedule_data[index - 15u]) +
+                           schedule_data[index - 16u];
   }
 
   auto working = state;
+  auto *working_data = working.data();
+  const auto *constants_data = round_constants.data();
 
   // Compression function (FIPS 180-4 Section 6.2.2 step 3)
   for (std::uint64_t round_index = 0u; round_index < 64u; ++round_index) {
-    const auto temporary_1 = working[7] + sha256_big_sigma_1(working[4]) +
-                             sha256_choice(working[4], working[5], working[6]) +
-                             round_constants[round_index] +
-                             schedule[round_index];
+    const auto temporary_1 =
+        working_data[7] + sha256_big_sigma_1(working_data[4]) +
+        sha256_choice(working_data[4], working_data[5], working_data[6]) +
+        constants_data[round_index] + schedule_data[round_index];
     const auto temporary_2 =
-        sha256_big_sigma_0(working[0]) +
-        sha256_majority(working[0], working[1], working[2]);
+        sha256_big_sigma_0(working_data[0]) +
+        sha256_majority(working_data[0], working_data[1], working_data[2]);
 
-    working[7] = working[6];
-    working[6] = working[5];
-    working[5] = working[4];
-    working[4] = working[3] + temporary_1;
-    working[3] = working[2];
-    working[2] = working[1];
-    working[1] = working[0];
-    working[0] = temporary_1 + temporary_2;
+    working_data[7] = working_data[6];
+    working_data[6] = working_data[5];
+    working_data[5] = working_data[4];
+    working_data[4] = working_data[3] + temporary_1;
+    working_data[3] = working_data[2];
+    working_data[2] = working_data[1];
+    working_data[1] = working_data[0];
+    working_data[0] = temporary_1 + temporary_2;
   }
 
+  auto *state_data = state.data();
   for (std::uint64_t index = 0u; index < 8u; ++index) {
-    state[index] += working[index];
+    state_data[index] += working_data[index];
   }
 }
 

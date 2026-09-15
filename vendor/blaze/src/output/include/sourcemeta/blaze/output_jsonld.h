@@ -89,7 +89,7 @@ using JSONLDOutcome =
 /// #include <sourcemeta/blaze/output.h>
 ///
 /// #include <sourcemeta/core/json.h>
-/// #include <sourcemeta/blaze/foundation.h>
+/// #include <sourcemeta/core/jsonschema.h>
 ///
 /// #include <unordered_set>
 /// #include <variant>
@@ -110,8 +110,8 @@ using JSONLDOutcome =
 ///     sourcemeta::blaze::JSONLD_KEYWORDS.end());
 ///
 /// const auto schema_template{sourcemeta::blaze::compile(
-///     schema, sourcemeta::blaze::schema_walker,
-///     sourcemeta::blaze::schema_resolver,
+///     schema, sourcemeta::core::schema_walker,
+///     sourcemeta::core::schema_resolver,
 ///     sourcemeta::blaze::default_schema_compiler,
 ///     sourcemeta::blaze::Mode::FastValidation, "", "", "", tweaks)};
 ///

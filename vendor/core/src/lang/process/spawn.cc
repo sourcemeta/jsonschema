@@ -218,9 +218,6 @@ public:
   ~Descriptor() { this->close(); }
   Descriptor(const Descriptor &) = delete;
   auto operator=(const Descriptor &) -> Descriptor & = delete;
-  Descriptor(Descriptor &&other) noexcept : value_{other.value_} {
-    other.value_ = -1;
-  }
   auto operator=(Descriptor &&other) noexcept -> Descriptor & {
     if (this != &other) {
       this->close();
@@ -361,10 +358,6 @@ auto make_pipe(Descriptor &read_end, Descriptor &write_end) -> bool {
          relocate_above_standard(write_end);
 }
 
-// On every platform this builds for, a would-block error shares its value with
-// EAGAIN
-auto is_retryable_error() -> bool { return errno == EINTR || errno == EAGAIN; }
-
 // Returns whether the stream is still open
 auto drain_stream(Descriptor &descriptor, std::string &destination) -> bool {
   std::array<char, TRANSFER_BUFFER_SIZE> buffer{};
@@ -373,7 +366,9 @@ auto drain_stream(Descriptor &descriptor, std::string &destination) -> bool {
     destination.append(buffer.data(), static_cast<std::size_t>(count));
     return true;
   }
-  if (count == -1 && is_retryable_error()) {
+  // On every platform this builds for, a would-block error shares its value
+  // with EAGAIN
+  if (count == -1 && (errno == EINTR || errno == EAGAIN)) {
     return true;
   }
 
@@ -393,7 +388,7 @@ auto write_stream(Descriptor &descriptor, const std::string_view input,
 
     return;
   }
-  if (count == -1 && is_retryable_error()) {
+  if (count == -1 && (errno == EINTR || errno == EAGAIN)) {
     return;
   }
 

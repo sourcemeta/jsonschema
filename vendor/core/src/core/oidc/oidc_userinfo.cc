@@ -11,17 +11,46 @@
 #include <string_view> // std::string_view
 
 namespace {
+using namespace std::literals::string_view_literals;
+
+// A claim name against the hash of that name. Each of these is looked up in
+// both answers, and in the merged result besides, so the name is hashed once
+// here rather than at every lookup
+struct Claim {
+  sourcemeta::core::JSON::StringView name;
+  sourcemeta::core::JSON::Object::hash_type hash;
+};
+
+constexpr Claim CLAIM_EMAIL{
+    .name = "email"sv, .hash = sourcemeta::core::JSON::Object::hash("email"sv)};
+constexpr Claim CLAIM_EMAIL_VERIFIED{
+    .name = "email_verified"sv,
+    .hash = sourcemeta::core::JSON::Object::hash("email_verified"sv)};
+constexpr Claim CLAIM_PHONE_NUMBER{
+    .name = "phone_number"sv,
+    .hash = sourcemeta::core::JSON::Object::hash("phone_number"sv)};
+constexpr Claim CLAIM_PHONE_NUMBER_VERIFIED{
+    .name = "phone_number_verified"sv,
+    .hash = sourcemeta::core::JSON::Object::hash("phone_number_verified"sv)};
+constexpr Claim CLAIM_NAMES{
+    .name = "_claim_names"sv,
+    .hash = sourcemeta::core::JSON::Object::hash("_claim_names"sv)};
+constexpr Claim CLAIM_SOURCES{
+    .name = "_claim_sources"sv,
+    .hash = sourcemeta::core::JSON::Object::hash("_claim_sources"sv)};
 
 // A claim delivers nothing when it is absent, null, or an empty string, which
 // are the shapes OpenID Connect Core 1.0 Section 5.3.2 names in having an
 // unreturned claim omitted rather than "present with a null or empty string
 // value". It names no others, so an empty array or object is a value like any
 // other here and only the aggregated members below read one differently
-auto carries(const sourcemeta::core::JSON &claims,
-             const sourcemeta::core::JSON::String &name) -> bool {
-  const auto *claim{claims.try_at(name)};
-  return claim != nullptr && !claim->is_null() &&
-         !(claim->is_string() && claim->empty());
+auto carries(const sourcemeta::core::JSON &value) -> bool {
+  return !value.is_null() && !(value.is_string() && value.empty());
+}
+
+auto carries(const sourcemeta::core::JSON &claims, const Claim &claim) -> bool {
+  const auto *value{claims.try_at(claim.name, claim.hash)};
+  return value != nullptr && carries(*value);
 }
 
 // OpenID Connect Core 1.0 Section 5.6.2 makes `_claim_names` the object whose
@@ -30,9 +59,9 @@ auto carries(const sourcemeta::core::JSON &claims,
 // that is empty names none and provides none, and one that is not an object
 // resolves nothing at all
 auto carries_aggregated(const sourcemeta::core::JSON &claims,
-                        const sourcemeta::core::JSON::String &name) -> bool {
-  const auto *claim{claims.try_at(name)};
-  return claim != nullptr && claim->is_object() && !claim->empty();
+                        const Claim &claim) -> bool {
+  const auto *value{claims.try_at(claim.name, claim.hash)};
+  return value != nullptr && value->is_object() && !value->empty();
 }
 
 // A verified assertion speaks for the value delivered alongside it, so the two
@@ -41,25 +70,24 @@ auto carries_aggregated(const sourcemeta::core::JSON &claims,
 auto merge_verified_pair(sourcemeta::core::JSON &result,
                          const sourcemeta::core::JSON &id_token_claims,
                          const sourcemeta::core::JSON &userinfo,
-                         const sourcemeta::core::JSON::String &subject,
-                         const sourcemeta::core::JSON::String &assertion)
-    -> void {
+                         const Claim &subject, const Claim &assertion) -> void {
   if (carries(id_token_claims, subject)) {
     return;
   }
 
   if (carries(userinfo, subject)) {
-    result.assign(subject, userinfo.at(subject));
+    result.assign(subject.name, userinfo.at(subject.name, subject.hash));
     if (carries(userinfo, assertion)) {
-      result.assign(assertion, userinfo.at(assertion));
+      result.assign(assertion.name,
+                    userinfo.at(assertion.name, assertion.hash));
     } else {
-      result.erase(assertion);
+      result.erase(assertion.name, assertion.hash);
     }
 
     return;
   }
 
-  result.erase(assertion);
+  result.erase(assertion.name, assertion.hash);
 }
 
 } // namespace
@@ -153,35 +181,42 @@ auto oidc_merge_claims(const JSON &id_token_claims, const JSON &userinfo)
   // Only the ID Token is signed, so what it says stands and the second answer
   // only fills what the first left out
   auto result{id_token_claims};
-  merge_verified_pair(result, id_token_claims, userinfo, "email",
-                      "email_verified");
-  merge_verified_pair(result, id_token_claims, userinfo, "phone_number",
-                      "phone_number_verified");
+  merge_verified_pair(result, id_token_claims, userinfo, CLAIM_EMAIL,
+                      CLAIM_EMAIL_VERIFIED);
+  merge_verified_pair(result, id_token_claims, userinfo, CLAIM_PHONE_NUMBER,
+                      CLAIM_PHONE_NUMBER_VERIFIED);
 
   // Section 5.6.2 makes the member values of `_claim_names` "references to the
   // member names in the `_claim_sources` member", so the two are taken from
   // one answer or neither, never spliced into a reference with nothing to
   // resolve against
-  const auto aggregated{carries_aggregated(id_token_claims, "_claim_names") ||
-                        carries_aggregated(id_token_claims, "_claim_sources")};
-  if (!aggregated && carries_aggregated(userinfo, "_claim_names") &&
-      carries_aggregated(userinfo, "_claim_sources")) {
-    result.assign("_claim_names", userinfo.at("_claim_names"));
-    result.assign("_claim_sources", userinfo.at("_claim_sources"));
+  const auto aggregated{carries_aggregated(id_token_claims, CLAIM_NAMES) ||
+                        carries_aggregated(id_token_claims, CLAIM_SOURCES)};
+  if (!aggregated && carries_aggregated(userinfo, CLAIM_NAMES) &&
+      carries_aggregated(userinfo, CLAIM_SOURCES)) {
+    result.assign(CLAIM_NAMES.name,
+                  userinfo.at(CLAIM_NAMES.name, CLAIM_NAMES.hash));
+    result.assign(CLAIM_SOURCES.name,
+                  userinfo.at(CLAIM_SOURCES.name, CLAIM_SOURCES.hash));
   }
 
-  for (const auto &claim : userinfo.as_object()) {
-    if (claim.first == "email" || claim.first == "email_verified" ||
-        claim.first == "phone_number" ||
-        claim.first == "phone_number_verified" ||
-        claim.first == "_claim_names" || claim.first == "_claim_sources") {
+  for (const auto &entry : userinfo.as_object()) {
+    if (entry.key_equals(CLAIM_EMAIL.name, CLAIM_EMAIL.hash) ||
+        entry.key_equals(CLAIM_EMAIL_VERIFIED.name,
+                         CLAIM_EMAIL_VERIFIED.hash) ||
+        entry.key_equals(CLAIM_PHONE_NUMBER.name, CLAIM_PHONE_NUMBER.hash) ||
+        entry.key_equals(CLAIM_PHONE_NUMBER_VERIFIED.name,
+                         CLAIM_PHONE_NUMBER_VERIFIED.hash) ||
+        entry.key_equals(CLAIM_NAMES.name, CLAIM_NAMES.hash) ||
+        entry.key_equals(CLAIM_SOURCES.name, CLAIM_SOURCES.hash)) {
       continue;
     }
 
     // A second answer only fills what the first left out, and neither side
     // fills anything with a value that carries nothing
-    if (carries(userinfo, claim.first) && !carries(result, claim.first)) {
-      result.assign(claim.first, claim.second);
+    if (carries(entry.second) &&
+        !carries(result, {.name = entry.first, .hash = entry.hash})) {
+      result.assign(entry.first, entry.second);
     }
   }
 

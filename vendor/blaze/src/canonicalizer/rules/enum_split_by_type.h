@@ -6,11 +6,11 @@ public:
   [[nodiscard]] auto
   condition(const sourcemeta::core::JSON &schema,
             const sourcemeta::core::JSON &,
-            const sourcemeta::blaze::SchemaVocabularies &vocabularies,
-            const sourcemeta::blaze::SchemaFrame &,
-            const sourcemeta::blaze::SchemaFrame::Location &,
-            const sourcemeta::blaze::SchemaWalker &walker,
-            const sourcemeta::blaze::SchemaResolver &) const -> bool override {
+            const sourcemeta::core::SchemaVocabularies &vocabularies,
+            const sourcemeta::core::SchemaFrame &,
+            const sourcemeta::core::SchemaFrame::Location &,
+            const sourcemeta::core::SchemaWalker &walker,
+            const sourcemeta::core::SchemaResolver &) const -> bool override {
     const bool any_of_dialect{
         vocabularies.contains_any(
             {SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_4,
@@ -93,8 +93,8 @@ private:
 
   static auto wraps_single_constraint(
       const sourcemeta::core::JSON &schema, const std::string_view keyword,
-      const sourcemeta::blaze::SchemaWalker &walker,
-      const sourcemeta::blaze::SchemaVocabularies &vocabularies) -> bool {
+      const sourcemeta::core::SchemaWalker &walker,
+      const sourcemeta::core::SchemaVocabularies &vocabularies) -> bool {
     for (const auto &entry : schema.as_object()) {
       if (entry.first == keyword) {
         continue;

@@ -744,6 +744,7 @@ public:
 
   /// Erase an object property
   auto erase(const Key &key, const hash_type key_hash) -> size_type {
+    assert(this->hash(key) == key_hash);
     const auto current_size{this->size()};
 
     if (this->HASHER.is_perfect(key_hash)) {
@@ -772,6 +773,7 @@ public:
   template <typename T>
     requires std::same_as<std::remove_cvref_t<T>, KeyView>
   auto erase(T key, const hash_type key_hash) -> size_type {
+    assert(this->hash(key) == key_hash);
     const auto current_size{this->size()};
 
     if (this->HASHER.is_perfect(key_hash)) {

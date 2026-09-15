@@ -19,8 +19,4 @@ auto is_interactive_fd(int file_descriptor) noexcept -> bool {
   return ::isatty(file_descriptor) == 1;
 }
 
-auto enable_virtual_terminal_stream(TerminalStream) noexcept -> void {
-  // POSIX terminals interpret ANSI escape sequences natively.
-}
-
 } // namespace sourcemeta::core::internal

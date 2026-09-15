@@ -7,6 +7,10 @@
 #include <string_view> // std::string_view
 
 namespace {
+using namespace std::string_view_literals;
+
+constexpr auto HASH_NBF{sourcemeta::core::JSON::Object::hash("nbf"sv)};
+constexpr auto HASH_IAT{sourcemeta::core::JSON::Object::hash("iat"sv)};
 
 using Clock = std::chrono::system_clock;
 
@@ -75,7 +79,7 @@ auto jwt_check_claims(
   // in the future. A claim that is present but malformed fails closed rather
   // than being ignored (RFC 7519 Section 4.1.5)
   const auto &payload{token.payload()};
-  if (payload.defines("nbf")) {
+  if (payload.defines("nbf"sv, HASH_NBF)) {
     const auto not_before{token.not_before()};
     if (!not_before.has_value() ||
         shift_forward(now, clock_skew.not_before) < not_before.value()) {
@@ -85,7 +89,7 @@ auto jwt_check_claims(
 
   // The issued-at time, when present, must be a usable NumericDate that is not
   // in the future (RFC 7519 Section 4.1.6)
-  if (payload.defines("iat")) {
+  if (payload.defines("iat"sv, HASH_IAT)) {
     const auto issued_at{token.issued_at()};
     if (!issued_at.has_value() ||
         shift_forward(now, clock_skew.issued_at) < issued_at.value()) {

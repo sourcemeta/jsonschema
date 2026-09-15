@@ -460,7 +460,7 @@ auto compiler_2019_09_core_recursiveref(const Context &context,
   const auto entry_pointer{absolute_schema_pointer(context, schema_context)};
   // In this case, just behave as a normal static reference
   if (!context.frame
-           .reference(sourcemeta::blaze::SchemaReferenceType::Dynamic,
+           .reference(sourcemeta::core::SchemaReferenceType::Dynamic,
                       entry_pointer)
            .has_value()) {
     return compiler_draft3_core_ref(context, schema_context, dynamic_context,

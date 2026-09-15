@@ -1,6 +1,6 @@
 #include <sourcemeta/blaze/alterschema.h>
 
-#include <sourcemeta/blaze/foundation.h>
+#include <sourcemeta/core/jsonschema.h>
 
 #include <sourcemeta/core/json.h>
 #include <sourcemeta/core/jsonpointer.h>
@@ -14,12 +14,14 @@
 
 namespace sourcemeta::blaze {
 
-auto wrap(const sourcemeta::core::JSON &schema, const SchemaFrame &frame,
-          const SchemaFrame::Location &location, const SchemaWalker &walker,
-          const SchemaResolver &resolver, sourcemeta::core::WeakPointer &base)
-    -> sourcemeta::core::JSON {
-  assert(frame.mode() == SchemaFrame::Mode::References);
-  assert(location.type != SchemaFrame::LocationType::Pointer);
+auto wrap(const sourcemeta::core::JSON &schema,
+          const sourcemeta::core::SchemaFrame &frame,
+          const sourcemeta::core::SchemaFrame::Location &location,
+          const sourcemeta::core::SchemaWalker &walker,
+          const sourcemeta::core::SchemaResolver &resolver,
+          sourcemeta::core::WeakPointer &base) -> sourcemeta::core::JSON {
+  assert(frame.mode() == sourcemeta::core::SchemaFrame::Mode::References);
+  assert(location.type != sourcemeta::core::SchemaFrame::LocationType::Pointer);
 
   const auto &pointer{location.pointer};
   if (pointer.empty()) {
@@ -34,8 +36,11 @@ auto wrap(const sourcemeta::core::JSON &schema, const SchemaFrame &frame,
   assert(sourcemeta::core::try_get(schema, pointer));
   const auto has_internal_references{frame.any_reference_from(
       pointer,
-      [](const SchemaReferenceType, const sourcemeta::core::WeakPointer &,
-         const SchemaFrame::Reference &) -> bool { return true; })};
+      [](const sourcemeta::core::SchemaReferenceType,
+         const sourcemeta::core::WeakPointer &,
+         const sourcemeta::core::SchemaFrame::Reference &) -> bool {
+        return true;
+      })};
 
   if (!has_internal_references) {
     auto subschema{sourcemeta::core::get(schema, pointer)};
@@ -66,8 +71,9 @@ auto wrap(const sourcemeta::core::JSON &schema, const SchemaFrame &frame,
   constexpr std::string_view WRAPPER_IDENTIFIER{"__sourcemeta-core-wrap__"};
   // Deliberately framed without a default identifier, so that the root comes
   // back empty exactly when the schema declares none of its own
-  SchemaFrame declared_frame{SchemaFrame::Mode::Root, copy, walker, resolver,
-                             location.dialect};
+  sourcemeta::core::SchemaFrame declared_frame{
+      sourcemeta::core::SchemaFrame::Mode::Root, copy, walker, resolver,
+      location.dialect};
   const std::string_view maybe_id{declared_frame.root()};
   const auto identifier{maybe_id.empty() ? WRAPPER_IDENTIFIER : maybe_id};
 
@@ -78,8 +84,8 @@ auto wrap(const sourcemeta::core::JSON &schema, const SchemaFrame &frame,
 
     // Otherwise we will get an error with the `WRAPPER_IDENTIFIER`, which will
     // be confusing to end users
-  } catch (const SchemaReferenceObjectResourceError &) {
-    throw SchemaError(
+  } catch (const sourcemeta::core::SchemaReferenceObjectResourceError &) {
+    throw sourcemeta::core::SchemaError(
         "Cannot process a JSON Schema Draft 7 or older with a top-level "
         "`$ref` (which overrides sibling keywords) without introducing "
         "undefined behavior");

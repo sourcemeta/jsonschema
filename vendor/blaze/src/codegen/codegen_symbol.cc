@@ -1,5 +1,5 @@
 #include <sourcemeta/blaze/codegen.h>
-#include <sourcemeta/blaze/foundation.h>
+#include <sourcemeta/core/jsonschema.h>
 
 #include <sourcemeta/core/uri.h>
 
@@ -75,8 +75,8 @@ auto push_token_segments(std::vector<std::string> &result,
 
 namespace sourcemeta::blaze {
 
-auto symbol(const sourcemeta::blaze::SchemaFrame &frame,
-            const sourcemeta::blaze::SchemaFrame::Location &location)
+auto symbol(const sourcemeta::core::SchemaFrame &frame,
+            const sourcemeta::core::SchemaFrame::Location &location)
     -> std::vector<std::string> {
   std::vector<std::string> result;
 

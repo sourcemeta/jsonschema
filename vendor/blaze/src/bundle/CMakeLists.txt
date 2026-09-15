@@ -11,6 +11,6 @@ target_link_libraries(sourcemeta_blaze_bundle PUBLIC
 target_link_libraries(sourcemeta_blaze_bundle PUBLIC
   sourcemeta::core::jsonpointer)
 target_link_libraries(sourcemeta_blaze_bundle PUBLIC
-  sourcemeta::blaze::foundation)
+  sourcemeta::core::jsonschema)
 target_link_libraries(sourcemeta_blaze_bundle PRIVATE
   sourcemeta::core::uri)

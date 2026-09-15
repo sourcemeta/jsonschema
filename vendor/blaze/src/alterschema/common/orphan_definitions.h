@@ -11,11 +11,11 @@ public:
   [[nodiscard]] auto
   condition(const sourcemeta::core::JSON &schema,
             const sourcemeta::core::JSON &,
-            const sourcemeta::blaze::SchemaVocabularies &vocabularies,
-            const sourcemeta::blaze::SchemaFrame &frame,
-            const sourcemeta::blaze::SchemaFrame::Location &location,
-            const sourcemeta::blaze::SchemaWalker &walker,
-            const sourcemeta::blaze::SchemaResolver &resolver, const bool) const
+            const sourcemeta::core::SchemaVocabularies &vocabularies,
+            const sourcemeta::core::SchemaFrame &frame,
+            const sourcemeta::core::SchemaFrame::Location &location,
+            const sourcemeta::core::SchemaWalker &walker,
+            const sourcemeta::core::SchemaResolver &resolver) const
       -> SchemaTransformRule::Result override {
     ONLY_CONTINUE_IF(schema.is_object());
     const bool has_modern_core{
@@ -32,14 +32,24 @@ public:
                                schema.defines("definitions")};
     ONLY_CONTINUE_IF(has_defs || has_definitions);
 
-    const auto base{frame.traverse(frame.root())};
-    ONLY_CONTINUE_IF(base.has_value());
+    // A frame may locate more than one schema within its document, and a
+    // definition is only an orphan if none of them reaches it
+    std::vector<
+        std::reference_wrapper<const sourcemeta::core::SchemaFrame::Location>>
+        roots;
+    frame.for_each_subschema(
+        [&roots](const sourcemeta::core::SchemaFrame::Location &entry) -> void {
+          if (!entry.parent.has_value()) {
+            roots.emplace_back(entry);
+          }
+        });
+    ONLY_CONTINUE_IF(!roots.empty());
 
     std::vector<Pointer> orphans;
-    collect_orphans(frame, base->get(), walker, resolver, location.pointer,
-                    schema, "$defs", has_defs, orphans);
-    collect_orphans(frame, base->get(), walker, resolver, location.pointer,
-                    schema, "definitions", has_definitions, orphans);
+    collect_orphans(frame, roots, walker, resolver, location.pointer, schema,
+                    "$defs", has_defs, orphans);
+    collect_orphans(frame, roots, walker, resolver, location.pointer, schema,
+                    "definitions", has_definitions, orphans);
 
     ONLY_CONTINUE_IF(!orphans.empty());
     return applies_to_pointers(std::move(orphans));
@@ -67,35 +77,35 @@ public:
 
 private:
   static auto
-  subtree_has_dynamic_anchor(const sourcemeta::blaze::SchemaFrame &frame,
+  subtree_has_dynamic_anchor(const sourcemeta::core::SchemaFrame &frame,
                              const WeakPointer &entry_pointer) -> bool {
     return frame.any_anchor(
-        sourcemeta::blaze::SchemaReferenceType::Dynamic,
+        sourcemeta::core::SchemaReferenceType::Dynamic,
         [&entry_pointer](
             const std::string_view,
-            const sourcemeta::blaze::SchemaFrame::Location &location) -> bool {
+            const sourcemeta::core::SchemaFrame::Location &location) -> bool {
           return location.pointer.starts_with(entry_pointer);
         });
   }
 
   static auto has_reachable_reference_through(
-      const sourcemeta::blaze::SchemaFrame &frame,
-      const sourcemeta::blaze::SchemaFrame::Location &base,
-      const sourcemeta::blaze::SchemaWalker &walker,
-      const sourcemeta::blaze::SchemaResolver &resolver,
+      const sourcemeta::core::SchemaFrame &frame,
+      const sourcemeta::core::SchemaFrame::Location &base,
+      const sourcemeta::core::SchemaWalker &walker,
+      const sourcemeta::core::SchemaResolver &resolver,
       const WeakPointer &pointer) -> bool {
     return frame.any_reference_into(
         pointer,
-        [&](const sourcemeta::blaze::SchemaReferenceType,
+        [&](const sourcemeta::core::SchemaReferenceType,
             const sourcemeta::core::WeakPointer &source_pointer,
-            const sourcemeta::blaze::SchemaFrame::Reference &) -> bool {
+            const sourcemeta::core::SchemaFrame::Reference &) -> bool {
           if (source_pointer.empty()) {
             return true;
           }
 
           const auto source_location{frame.traverse(
               source_pointer.initial(),
-              sourcemeta::blaze::SchemaFrame::LocationType::Subschema)};
+              sourcemeta::core::SchemaFrame::LocationType::Subschema)};
           return source_location.has_value() &&
                  frame.is_reachable(base, source_location->get(), walker,
                                     resolver);
@@ -103,10 +113,11 @@ private:
   }
 
   static auto
-  collect_orphans(const sourcemeta::blaze::SchemaFrame &frame,
-                  const sourcemeta::blaze::SchemaFrame::Location &base,
-                  const sourcemeta::blaze::SchemaWalker &walker,
-                  const sourcemeta::blaze::SchemaResolver &resolver,
+  collect_orphans(const sourcemeta::core::SchemaFrame &frame,
+                  const std::vector<std::reference_wrapper<
+                      const sourcemeta::core::SchemaFrame::Location>> &roots,
+                  const sourcemeta::core::SchemaWalker &walker,
+                  const sourcemeta::core::SchemaResolver &resolver,
                   const WeakPointer &prefix, const JSON &schema,
                   const JSON::String &container, const bool has_container,
                   std::vector<Pointer> &orphans) -> void {
@@ -120,11 +131,19 @@ private:
       const auto absolute_entry_pointer{prefix.concat(entry_pointer)};
       const auto entry_location{frame.traverse(
           absolute_entry_pointer,
-          sourcemeta::blaze::SchemaFrame::LocationType::Subschema)};
+          sourcemeta::core::SchemaFrame::LocationType::Subschema)};
       if (entry_location.has_value() &&
-          !frame.is_reachable(base, entry_location->get(), walker, resolver) &&
-          !has_reachable_reference_through(frame, base, walker, resolver,
-                                           absolute_entry_pointer) &&
+          std::ranges::none_of(
+              roots,
+              [&](const std::reference_wrapper<
+                  const sourcemeta::core::SchemaFrame::Location> &root)
+                  -> bool {
+                return frame.is_reachable(root.get(), entry_location->get(),
+                                          walker, resolver) ||
+                       has_reachable_reference_through(frame, root.get(),
+                                                       walker, resolver,
+                                                       absolute_entry_pointer);
+              }) &&
           !(!frame.standalone() &&
             subtree_has_dynamic_anchor(frame, absolute_entry_pointer))) {
         orphans.push_back(Pointer{container, entry.first});

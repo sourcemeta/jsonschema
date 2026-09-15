@@ -5,7 +5,7 @@
 #include <sourcemeta/core/options.h>
 #include <sourcemeta/core/text.h>
 
-#include <algorithm> // std::sort
+#include <algorithm> // std::ranges::sort, std::ranges::find
 #include <array>     // std::array
 #include <cstddef>   // std::size_t, std::ptrdiff_t
 #include <cstdint> // std::uint8_t, std::uint16_t, std::uint32_t, std::uint64_t
@@ -15,7 +15,7 @@
 #include <ios>         // std::hex, std::uppercase, std::dec
 #include <iostream>    // std::cerr
 #include <map>         // std::map
-#include <optional>    // std::optional
+#include <optional>    // std::optional, std::nullopt
 #include <ostream>     // std::ostream
 #include <ranges>      // std::views::transform
 #include <regex>       // std::regex, std::regex_match, std::smatch, std::cmatch
@@ -34,9 +34,10 @@ constexpr std::size_t TOTAL_CODEPOINTS{0x110000};
 constexpr std::size_t TABLE_PAGE_SHIFT{10};
 constexpr std::size_t TABLE_PAGE_SIZE{1 << TABLE_PAGE_SHIFT};
 constexpr std::size_t NUM_PAGES{TOTAL_CODEPOINTS / TABLE_PAGE_SIZE};
-constexpr std::size_t DECOMPOSITION_OFFSET_BITS{14};
-constexpr std::size_t DECOMPOSITION_OFFSET_MASK{
-    (1U << DECOMPOSITION_OFFSET_BITS) - 1U};
+constexpr std::size_t MAPPING_OFFSET_BITS{14};
+constexpr std::size_t MAPPING_OFFSET_MASK{(1U << MAPPING_OFFSET_BITS) - 1U};
+constexpr std::size_t MAPPING_LENGTH_MAXIMUM{
+    (1U << (16U - MAPPING_OFFSET_BITS)) - 1U};
 
 constexpr auto JOINING_TYPE_ORDER{std::to_array<std::string_view>({
 #define SOURCEMETA_CORE_UCD_ALIAS_ENTRY(name, alias) alias,
@@ -62,6 +63,17 @@ constexpr auto UNICODE_SCRIPT_ORDER{std::to_array<std::string_view>({
 #undef SOURCEMETA_CORE_UCD_ALIAS_ENTRY
 })};
 
+constexpr auto GENERAL_CATEGORY_ORDER{std::to_array<std::string_view>({
+#define SOURCEMETA_CORE_UCD_ALIAS_ENTRY(name, alias) alias,
+    SOURCEMETA_CORE_GENERAL_CATEGORY_LIST(SOURCEMETA_CORE_UCD_ALIAS_ENTRY)
+#undef SOURCEMETA_CORE_UCD_ALIAS_ENTRY
+})};
+
+// Per UAX #44, these general category values only group other values together
+// and never describe a codepoint on their own
+constexpr auto GENERAL_CATEGORY_GROUPS{
+    std::to_array<std::string_view>({"LC", "L", "M", "N", "P", "S", "Z", "C"})};
+
 using ValueMap = std::map<std::string, std::uint8_t, std::less<>>;
 
 struct PropertyEntry {
@@ -75,7 +87,7 @@ struct TwoStageTable {
   std::vector<std::uint8_t> stage2;
 };
 
-struct DecompositionTable {
+struct MappingTable {
   std::vector<char32_t> blob;
   std::vector<std::uint16_t> stage1;
   std::vector<std::uint16_t> stage2;
@@ -113,6 +125,15 @@ auto canonical_index(const std::span<const std::string_view> order,
     }
   }
   throw std::runtime_error{"Alias not in canonical order"};
+}
+
+auto general_category_index(const std::span<const std::string_view> aliases)
+    -> std::optional<std::uint8_t> {
+  if (std::ranges::find(GENERAL_CATEGORY_GROUPS, aliases.front()) !=
+      GENERAL_CATEGORY_GROUPS.end()) {
+    return std::nullopt;
+  }
+  return canonical_index(GENERAL_CATEGORY_ORDER, aliases);
 }
 
 template <typename Callback>
@@ -157,11 +178,21 @@ auto for_each_ucd_entry(std::istream &stream, Callback callback) -> void {
 
 auto parse_property_file(const std::filesystem::path &input_path,
                          const ValueMap &value_map,
-                         const std::optional<std::string_view> property_filter)
+                         const std::optional<std::string_view> property_filter,
+                         const std::optional<std::string_view> default_value)
     -> std::vector<PropertyEntry> {
   auto stream{sourcemeta::core::read_file(input_path)};
   std::vector<PropertyEntry> missing;
   std::vector<PropertyEntry> data;
+  if (default_value.has_value()) {
+    const auto default_iterator{value_map.find(default_value.value())};
+    if (default_iterator == value_map.end()) {
+      throw std::runtime_error{std::string{"Unknown property value: "}.append(
+          default_value.value())};
+    }
+    missing.push_back(
+        {.first = 0, .last = 0x10FFFF, .value = default_iterator->second});
+  }
   for_each_ucd_entry(stream, [&](const UCDEntry &entry) {
     std::string_view value_token;
     if (property_filter.has_value()) {
@@ -258,9 +289,12 @@ auto build_alias_map(const std::filesystem::path &aliases_path,
     }
     const std::span<const std::string_view> aliases{fields.begin() + 1,
                                                     fields.end()};
-    const auto value{value_fn(aliases)};
+    const std::optional<std::uint8_t> value{value_fn(aliases)};
+    if (!value.has_value()) {
+      return;
+    }
     for (const auto alias : aliases) {
-      result[std::string{alias}] = value;
+      result[std::string{alias}] = value.value();
     }
   });
   return result;
@@ -321,6 +355,61 @@ auto parse_unicode_data(const std::filesystem::path &input_path)
                       "2 codepoints"}};
     }
     result.decompositions[entry.first] = std::move(decomposition);
+  });
+  return result;
+}
+
+auto parse_case_folding(const std::filesystem::path &input_path)
+    -> std::map<std::uint32_t, std::vector<std::uint32_t>> {
+  auto stream{sourcemeta::core::read_file(input_path)};
+  std::map<std::uint32_t, std::vector<std::uint32_t>> result;
+  for_each_ucd_entry(stream, [&](const UCDEntry &entry) {
+    if (entry.first != entry.last) {
+      throw std::runtime_error{
+          "CaseFolding.txt: codepoint range not supported"};
+    }
+    std::array<std::string_view, 2> rest{};
+    std::size_t count{0};
+    sourcemeta::core::split(entry.trailing, ';',
+                            [&](const std::string_view field) {
+                              if (count < rest.size()) {
+                                rest[count] = field;
+                              }
+                              count += 1;
+                            });
+    if (count < rest.size()) {
+      throw std::runtime_error{
+          std::string{"CaseFolding.txt: too few fields in line: "}.append(
+              entry.trailing)};
+    }
+    // Full case folding takes the common and full mappings, leaving out the
+    // simple ones and the Turkic ones
+    const auto status{sourcemeta::core::trim(rest[0])};
+    if (status == "S" || status == "T") {
+      return;
+    }
+    if (status != "C" && status != "F") {
+      throw std::runtime_error{
+          std::string{"CaseFolding.txt: unknown status: "}.append(status)};
+    }
+    std::vector<std::uint32_t> folding;
+    sourcemeta::core::split(sourcemeta::core::trim(rest[1]), ' ',
+                            [&](const std::string_view token) {
+                              const auto trimmed{sourcemeta::core::trim(token)};
+                              if (!trimmed.empty()) {
+                                folding.push_back(parse_hex_codepoint(trimmed));
+                              }
+                            });
+    if (folding.empty()) {
+      throw std::runtime_error{
+          std::string{"CaseFolding.txt: empty mapping in line: "}.append(
+              entry.trailing)};
+    }
+    if (!result.emplace(entry.first, std::move(folding)).second) {
+      throw std::runtime_error{
+          std::string{"CaseFolding.txt: more than one full case folding for "
+                      "a codepoint"}};
+    }
   });
   return result;
 }
@@ -389,22 +478,24 @@ auto build_page_table(const std::span<const T> values)
   return {std::move(stage1), std::move(stage2)};
 }
 
-auto build_canonical_decomposition_pages(
-    const std::map<std::uint32_t, std::vector<std::uint32_t>> &decompositions)
-    -> DecompositionTable {
+auto build_mapping_pages(
+    const std::map<std::uint32_t, std::vector<std::uint32_t>> &mappings)
+    -> MappingTable {
   std::vector<char32_t> blob;
   std::vector<std::uint16_t> packed(TOTAL_CODEPOINTS, 0);
-  for (const auto &[codepoint, decomposition] : decompositions) {
+  for (const auto &[codepoint, mapping] : mappings) {
     const auto offset{blob.size()};
-    if (offset > DECOMPOSITION_OFFSET_MASK) {
-      throw std::runtime_error{
-          std::string{"canonical decomposition blob exceeds offset cap"}};
+    if (offset > MAPPING_OFFSET_MASK) {
+      throw std::runtime_error{std::string{"mapping blob exceeds offset cap"}};
     }
-    for (const auto value : decomposition) {
+    if (mapping.size() > MAPPING_LENGTH_MAXIMUM) {
+      throw std::runtime_error{std::string{"mapping exceeds length cap"}};
+    }
+    for (const auto value : mapping) {
       blob.push_back(static_cast<char32_t>(value));
     }
     packed[codepoint] = static_cast<std::uint16_t>(
-        (decomposition.size() << DECOMPOSITION_OFFSET_BITS) | offset);
+        (mapping.size() << MAPPING_OFFSET_BITS) | offset);
   }
   auto [stage1, stage2] = build_page_table<std::uint16_t>(std::span{packed});
   return {.blob = std::move(blob),
@@ -462,17 +553,17 @@ auto emit_property(std::ostream &stream, const std::string_view prefix,
   stream << "};\n\n";
 }
 
-auto emit_canonical_decomposition(std::ostream &stream,
-                                  const DecompositionTable &table) -> void {
-  stream << "constexpr char32_t CANONICAL_DECOMPOSITION_BLOB["
-         << table.blob.size() << "] = {\n";
+auto emit_mapping(std::ostream &stream, const std::string_view prefix,
+                  const MappingTable &table) -> void {
+  stream << "constexpr char32_t " << prefix << "_BLOB[" << table.blob.size()
+         << "] = {\n";
   emit_row<char32_t>(stream, table.blob, 8, EMIT_HEX);
   stream << "};\n\n";
-  stream << "constexpr std::uint16_t CANONICAL_DECOMPOSITION_STAGE1["
+  stream << "constexpr std::uint16_t " << prefix << "_STAGE1["
          << table.stage1.size() << "] = {\n";
   emit_row<std::uint16_t>(stream, table.stage1, 16, EMIT_DECIMAL);
   stream << "};\n\n";
-  stream << "constexpr std::uint16_t CANONICAL_DECOMPOSITION_STAGE2["
+  stream << "constexpr std::uint16_t " << prefix << "_STAGE2["
          << table.stage2.size() << "] = {\n";
   emit_row<std::uint16_t>(stream, table.stage2, 16, EMIT_DECIMAL);
   stream << "};\n\n";
@@ -507,7 +598,7 @@ auto main(const int argc, const char *const argv[]) -> int {
     sourcemeta::core::Options app;
     app.parse(argc, argv);
     const auto &positional{app.positional()};
-    if (positional.size() != 11) {
+    if (positional.size() != 12) {
       std::cerr
           << "Usage: " << (argc > 0 ? argv[0] : "codegen")
           << " <output.h> <PropertyValueAliases.txt>"
@@ -515,7 +606,7 @@ auto main(const int argc, const char *const argv[]) -> int {
              " <DerivedBidiClass.txt> <Scripts.txt>"
              " <DerivedGeneralCategory.txt> <DerivedNormalizationProps.txt>"
              " <UnicodeData.txt> <CompositionExclusions.txt>"
-             " <DerivedCoreProperties.txt>\n";
+             " <DerivedCoreProperties.txt> <CaseFolding.txt>\n";
       return EXIT_FAILURE;
     }
 
@@ -525,6 +616,7 @@ auto main(const int argc, const char *const argv[]) -> int {
     const std::filesystem::path unicode_data_path{positional.at(8)};
     const std::filesystem::path composition_exclusions_path{positional.at(9)};
     const std::filesystem::path core_properties_path{positional.at(10)};
+    const std::filesystem::path case_folding_path{positional.at(11)};
 
     const auto canonical_value{
         [](const std::span<const std::string_view> order) {
@@ -550,6 +642,8 @@ auto main(const int argc, const char *const argv[]) -> int {
         build_alias_map(aliases_path, "bc", canonical_value(BIDI_CLASS_ORDER))};
     const auto script_map{build_alias_map(
         aliases_path, "sc", canonical_value(UNICODE_SCRIPT_ORDER))};
+    const auto general_category_map{
+        build_alias_map(aliases_path, "gc", general_category_index)};
     const auto combining_mark_map{
         build_alias_map(aliases_path, "gc",
                         [](const std::span<const std::string_view> aliases) {
@@ -571,41 +665,57 @@ auto main(const int argc, const char *const argv[]) -> int {
       std::string_view prefix;
       std::filesystem::path input_path;
       std::optional<std::string_view> property_filter;
+      // The value of the codepoints that the file does not list, for files
+      // that do not declare such a default themselves
+      std::optional<std::string_view> default_value;
       const ValueMap &value_map;
     };
 
-    const std::array<PropertySpec, 8> properties{
+    const std::array<PropertySpec, 9> properties{
         {{.prefix = "COMBINING_CLASS",
           .input_path = positional.at(2),
           .property_filter = std::nullopt,
+          .default_value = std::nullopt,
           .value_map = combining_class_map},
          {.prefix = "JOINING_TYPE",
           .input_path = positional.at(3),
           .property_filter = std::nullopt,
+          .default_value = std::nullopt,
           .value_map = joining_type_map},
          {.prefix = "BIDI_CLASS",
           .input_path = positional.at(4),
           .property_filter = std::nullopt,
+          .default_value = std::nullopt,
           .value_map = bidi_class_map},
          {.prefix = "UNICODE_SCRIPT",
           .input_path = positional.at(5),
           .property_filter = std::nullopt,
+          .default_value = std::nullopt,
           .value_map = script_map},
+         {.prefix = "GENERAL_CATEGORY",
+          .input_path = positional.at(6),
+          .property_filter = std::nullopt,
+          .default_value = std::optional<std::string_view>{"Cn"},
+          .value_map = general_category_map},
          {.prefix = "IS_COMBINING_MARK",
           .input_path = positional.at(6),
           .property_filter = std::nullopt,
+          .default_value = std::nullopt,
           .value_map = combining_mark_map},
          {.prefix = "NFC_QUICK_CHECK",
           .input_path = normalization_props_path,
           .property_filter = std::optional<std::string_view>{"NFC_QC"},
+          .default_value = std::nullopt,
           .value_map = nfc_quick_check_map},
          {.prefix = "IS_ID_START",
           .input_path = core_properties_path,
           .property_filter = std::optional<std::string_view>{"ID_Start"},
+          .default_value = std::nullopt,
           .value_map = membership_map},
          {.prefix = "IS_ID_CONTINUE",
           .input_path = core_properties_path,
           .property_filter = std::optional<std::string_view>{"ID_Continue"},
+          .default_value = std::nullopt,
           .value_map = membership_map}}};
 
     const auto unicode_data{parse_unicode_data(unicode_data_path)};
@@ -613,23 +723,25 @@ auto main(const int argc, const char *const argv[]) -> int {
         parse_full_composition_exclusions(normalization_props_path)};
     const auto explicit_exclusions{
         parse_explicit_composition_exclusions(composition_exclusions_path)};
+    const auto case_foldings{parse_case_folding(case_folding_path)};
 
     sourcemeta::core::write_file(output_path, [&](std::ostream &stream) {
       stream << "#include <cstddef>\n";
       stream << "#include <cstdint>\n\n";
       stream << "namespace {\n\n";
       for (const auto &spec : properties) {
-        emit_property(
-            stream, spec.prefix,
-            build_pages(parse_property_file(spec.input_path, spec.value_map,
-                                            spec.property_filter)));
+        emit_property(stream, spec.prefix,
+                      build_pages(parse_property_file(
+                          spec.input_path, spec.value_map, spec.property_filter,
+                          spec.default_value)));
       }
-      emit_canonical_decomposition(stream, build_canonical_decomposition_pages(
-                                               unicode_data.decompositions));
+      emit_mapping(stream, "CANONICAL_DECOMPOSITION",
+                   build_mapping_pages(unicode_data.decompositions));
       emit_canonical_composition(stream, build_canonical_compositions(
                                              unicode_data.decompositions,
                                              unicode_data.ccc, full_exclusions,
                                              explicit_exclusions));
+      emit_mapping(stream, "CASE_FOLDING", build_mapping_pages(case_foldings));
       stream << "} // namespace\n";
     });
   } catch (const std::exception &error) {

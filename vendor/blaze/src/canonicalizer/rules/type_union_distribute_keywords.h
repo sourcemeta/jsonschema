@@ -7,11 +7,11 @@ public:
   [[nodiscard]] auto
   condition(const sourcemeta::core::JSON &schema,
             const sourcemeta::core::JSON &,
-            const sourcemeta::blaze::SchemaVocabularies &vocabularies,
-            const sourcemeta::blaze::SchemaFrame &,
-            const sourcemeta::blaze::SchemaFrame::Location &,
-            const sourcemeta::blaze::SchemaWalker &walker,
-            const sourcemeta::blaze::SchemaResolver &) const -> bool override {
+            const sourcemeta::core::SchemaVocabularies &vocabularies,
+            const sourcemeta::core::SchemaFrame &frame,
+            const sourcemeta::core::SchemaFrame::Location &location,
+            const sourcemeta::core::SchemaWalker &walker,
+            const sourcemeta::core::SchemaResolver &) const -> bool override {
     ONLY_CONTINUE_IF(
         vocabularies.contains_any(
             {SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_3,
@@ -28,6 +28,10 @@ public:
     this->wrap_keywords_.clear();
     this->wrap_ = false;
     std::vector<sourcemeta::core::JSON::String> movable;
+    // Walking the frame is linear on the entire document, so only do it if a
+    // keyword really is about to be copied into more than one branch, and
+    // remember the outcome for the keywords that follow
+    std::optional<std::vector<std::string_view>> declaring;
     for (const auto &entry : schema.as_object()) {
       // `required` is a property-presence flag, not a value assertion, so it
       // is never pushed into a branch
@@ -36,7 +40,7 @@ public:
       }
 
       const auto &metadata{walker(entry.first, vocabularies)};
-      if (metadata.type == sourcemeta::blaze::SchemaKeywordType::Reference) {
+      if (metadata.type == sourcemeta::core::SchemaKeywordType::Reference) {
         continue;
       }
 
@@ -66,10 +70,32 @@ public:
           break;
         }
 
+        // `additionalProperties` and `additionalItems` only apply to what
+        // their siblings do not already cover, so moving one of them next to
+        // different siblings, or a sibling next to one of them, would change
+        // what it covers
+        if (changes_leftovers(entry.first, entry.second, type->at(index))) {
+          conflict = true;
+          break;
+        }
+
         targets.push_back(index);
       }
 
-      if (!has_match || conflict) {
+      // Copying a value that declares an identifier or an anchor into more
+      // than one branch would declare it more than once. Wrap instead so each
+      // declaration is only ever moved
+      bool duplicates_identifier{false};
+      if (!this->wrap_ && targets.size() > 1) {
+        if (!declaring.has_value()) {
+          declaring = declaring_keywords(frame, location.pointer);
+        }
+
+        duplicates_identifier =
+            std::ranges::contains(declaring.value(), entry.first);
+      }
+
+      if (!has_match || conflict || duplicates_identifier) {
         this->wrap_ = true;
       } else {
         this->moves_.emplace_back(entry.first, std::move(targets));
@@ -171,6 +197,81 @@ public:
   }
 
 private:
+  // Whether the given keyword takes properties away from
+  // `additionalProperties`. An empty one takes nothing away
+  static auto narrows(const sourcemeta::core::JSON &schema,
+                      const sourcemeta::core::JSON::String &keyword) -> bool {
+    const auto *value{schema.try_at(keyword)};
+    return (value != nullptr) && value->is_object() && !value->empty();
+  }
+
+  // Whether the given keyword of the given schema still constrains anything
+  static auto constrains(const sourcemeta::core::JSON &schema,
+                         const sourcemeta::core::JSON::String &keyword)
+      -> bool {
+    const auto *value{schema.try_at(keyword)};
+    return (value != nullptr) && !is_empty_schema(*value);
+  }
+
+  // `additionalProperties` and `additionalItems` constrain whatever their
+  // siblings leave over, so what they cover depends on the company they keep.
+  // Vacuous siblings leave everything over, and a vacuous leftovers keyword
+  // accepts whatever reaches it, so neither of those changes anything
+  static auto changes_leftovers(const sourcemeta::core::JSON::String &keyword,
+                                const sourcemeta::core::JSON &value,
+                                const sourcemeta::core::JSON &branch) -> bool {
+    if (keyword == "additionalProperties") {
+      return !is_empty_schema(value) && (narrows(branch, "properties") ||
+                                         narrows(branch, "patternProperties"));
+    }
+
+    if (keyword == "properties" || keyword == "patternProperties") {
+      return value.is_object() && !value.empty() &&
+             constrains(branch, "additionalProperties");
+    }
+
+    // A dormant `additionalItems` normally gets dropped when its schema has
+    // no tuple `items`, but not while a reference points through it. Moving
+    // such a one next to a tuple `items` would wake it up
+    if (keyword == "additionalItems") {
+      const auto *items{branch.try_at("items")};
+      return !is_empty_schema(value) && (items != nullptr) && items->is_array();
+    }
+
+    if (keyword == "items") {
+      return value.is_array() && constrains(branch, "additionalItems");
+    }
+
+    return false;
+  }
+
+  // The keywords of the given schema whose value declares an identifier or an
+  // anchor anywhere inside it
+  static auto declaring_keywords(const sourcemeta::core::SchemaFrame &frame,
+                                 const sourcemeta::core::WeakPointer &base)
+      -> std::vector<std::string_view> {
+    std::vector<std::string_view> result;
+    frame.for_each_location(
+        [&base, &result](
+            const sourcemeta::core::SchemaReferenceType, const std::string_view,
+            const sourcemeta::core::SchemaFrame::Location &candidate) -> void {
+          if ((candidate.type ==
+                   sourcemeta::core::SchemaFrame::LocationType::Resource ||
+               candidate.type ==
+                   sourcemeta::core::SchemaFrame::LocationType::Anchor) &&
+              candidate.pointer.size() > base.size() &&
+              candidate.pointer.starts_with(base) &&
+              candidate.pointer.at(base.size()).is_property()) {
+            const std::string_view keyword{
+                candidate.pointer.at(base.size()).to_property()};
+            if (!std::ranges::contains(result, keyword)) {
+              result.push_back(keyword);
+            }
+          }
+        });
+    return result;
+  }
+
   static auto branch_type_set(const sourcemeta::core::JSON &branch)
       -> sourcemeta::core::JSON::TypeSet {
     if (!branch.is_object()) {

@@ -13,7 +13,7 @@ public:
   condition(const JSON &schema, const JSON &,
             const SchemaVocabularies &vocabularies, const SchemaFrame &,
             const SchemaFrame::Location &, const SchemaWalker &walker,
-            const SchemaResolver &, const bool) const
+            const SchemaResolver &) const
       -> SchemaTransformRule::Result override {
     ONLY_CONTINUE_IF(schema.is_object());
     std::vector<Pointer> locations;

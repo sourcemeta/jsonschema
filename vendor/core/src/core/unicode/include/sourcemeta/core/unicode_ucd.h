@@ -258,6 +258,51 @@ enum class UnicodeScript : std::uint8_t {
 };
 
 /// @ingroup unicode
+/// Each entry maps a `GeneralCategory` enum name to its UCD short alias.
+#define SOURCEMETA_CORE_GENERAL_CATEGORY_LIST(X)                               \
+  X(UppercaseLetter, "Lu")                                                     \
+  X(LowercaseLetter, "Ll")                                                     \
+  X(TitlecaseLetter, "Lt")                                                     \
+  X(ModifierLetter, "Lm")                                                      \
+  X(OtherLetter, "Lo")                                                         \
+  X(NonspacingMark, "Mn")                                                      \
+  X(SpacingMark, "Mc")                                                         \
+  X(EnclosingMark, "Me")                                                       \
+  X(DecimalNumber, "Nd")                                                       \
+  X(LetterNumber, "Nl")                                                        \
+  X(OtherNumber, "No")                                                         \
+  X(ConnectorPunctuation, "Pc")                                                \
+  X(DashPunctuation, "Pd")                                                     \
+  X(OpenPunctuation, "Ps")                                                     \
+  X(ClosePunctuation, "Pe")                                                    \
+  X(InitialPunctuation, "Pi")                                                  \
+  X(FinalPunctuation, "Pf")                                                    \
+  X(OtherPunctuation, "Po")                                                    \
+  X(MathSymbol, "Sm")                                                          \
+  X(CurrencySymbol, "Sc")                                                      \
+  X(ModifierSymbol, "Sk")                                                      \
+  X(OtherSymbol, "So")                                                         \
+  X(SpaceSeparator, "Zs")                                                      \
+  X(LineSeparator, "Zl")                                                       \
+  X(ParagraphSeparator, "Zp")                                                  \
+  X(Control, "Cc")                                                             \
+  X(Format, "Cf")                                                              \
+  X(Surrogate, "Cs")                                                           \
+  X(PrivateUse, "Co")                                                          \
+  X(Unassigned, "Cn")
+
+/// @ingroup unicode
+/// The general category of a Unicode codepoint per UAX #44. See
+/// https://www.unicode.org/reports/tr44/ for the property's definition.
+enum class GeneralCategory : std::uint8_t {
+#if !defined(DOXYGEN)
+#define SOURCEMETA_CORE_UCD_ENUM_ENTRY(name, alias) name,
+  SOURCEMETA_CORE_GENERAL_CATEGORY_LIST(SOURCEMETA_CORE_UCD_ENUM_ENTRY)
+#undef SOURCEMETA_CORE_UCD_ENUM_ENTRY
+#endif
+};
+
+/// @ingroup unicode
 /// Each entry maps an `NFCQuickCheck` enum name to its UCD short alias.
 #define SOURCEMETA_CORE_NFC_QUICK_CHECK_LIST(X)                                \
   X(Yes, "Y")                                                                  \

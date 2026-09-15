@@ -14,8 +14,8 @@
 #include <sourcemeta/blaze/editor_export.h>
 #endif
 
-#include <sourcemeta/blaze/foundation.h>
 #include <sourcemeta/core/json.h>
+#include <sourcemeta/core/jsonschema.h>
 
 #include <string_view> // std::string_view
 
@@ -35,13 +35,13 @@ namespace sourcemeta::blaze {
 ///
 /// ```cpp
 /// #include <sourcemeta/core/json.h>
+/// #include <sourcemeta/core/jsonschema.h>
 /// #include <sourcemeta/blaze/bundle.h>
-/// #include <sourcemeta/blaze/foundation.h>
 /// #include <sourcemeta/blaze/editor.h>
 ///
 /// // A custom resolver that knows about the referenced schema
 /// static auto test_resolver(std::string_view identifier)
-///     -> sourcemeta::blaze::SchemaResolverResult {
+///     -> sourcemeta::core::SchemaResolverResult {
 ///   if (identifier == "https://www.example.com/another") {
 ///     return sourcemeta::core::parse_json(R"JSON({
 ///       "$id": "https://www.example.com/another",
@@ -49,7 +49,7 @@ namespace sourcemeta::blaze {
 ///       "type": "string"
 ///     })JSON");
 ///   } else {
-///     return sourcemeta::blaze::schema_resolver(identifier);
+///     return sourcemeta::core::schema_resolver(identifier);
 ///   }
 /// }
 ///
@@ -60,15 +60,15 @@ namespace sourcemeta::blaze {
 /// })JSON");
 ///
 /// sourcemeta::blaze::bundle(schema,
-///   sourcemeta::blaze::schema_walker, test_resolver,
+///   sourcemeta::core::schema_walker, test_resolver,
 ///   sourcemeta::blaze::BundleMode::NonOfficialMetaschemas);
 /// sourcemeta::blaze::for_editor(schema,
-///   sourcemeta::blaze::schema_walker, test_resolver);
+///   sourcemeta::core::schema_walker, test_resolver);
 /// ```
 SOURCEMETA_BLAZE_EDITOR_EXPORT
 auto for_editor(sourcemeta::core::JSON &schema,
-                const sourcemeta::blaze::SchemaWalker &walker,
-                const sourcemeta::blaze::SchemaResolver &resolver,
+                const sourcemeta::core::SchemaWalker &walker,
+                const sourcemeta::core::SchemaResolver &resolver,
                 std::string_view default_dialect = "") -> void;
 
 } // namespace sourcemeta::blaze

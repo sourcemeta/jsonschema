@@ -1,4 +1,4 @@
-#include <sourcemeta/blaze/foundation.h>
+#include <sourcemeta/core/jsonschema.h>
 
 #include <sourcemeta/blaze/compiler.h>
 #include <sourcemeta/blaze/evaluator.h>
@@ -27,15 +27,15 @@
 namespace {
 
 auto assert_annotations_support(
-    const sourcemeta::blaze::SchemaFrame &frame,
+    const sourcemeta::core::SchemaFrame &frame,
     const std::filesystem::path &schema_resolution_base) -> void {
   const auto root_location{frame.root_location()};
   assert(root_location.has_value());
   switch (root_location.value().get().base_dialect) {
-    case sourcemeta::blaze::SchemaBaseDialect::JSON_SCHEMA_2020_12:
-    case sourcemeta::blaze::SchemaBaseDialect::JSON_SCHEMA_2020_12_HYPER:
-    case sourcemeta::blaze::SchemaBaseDialect::JSON_SCHEMA_2019_09:
-    case sourcemeta::blaze::SchemaBaseDialect::JSON_SCHEMA_2019_09_HYPER:
+    case sourcemeta::core::SchemaBaseDialect::JSON_SCHEMA_2020_12:
+    case sourcemeta::core::SchemaBaseDialect::JSON_SCHEMA_2020_12_HYPER:
+    case sourcemeta::core::SchemaBaseDialect::JSON_SCHEMA_2019_09:
+    case sourcemeta::core::SchemaBaseDialect::JSON_SCHEMA_2019_09_HYPER:
       return;
     default:
       throw sourcemeta::jsonschema::UnsupportedDialectRdfError{

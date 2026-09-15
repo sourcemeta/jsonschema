@@ -6,7 +6,7 @@
 #endif
 
 #include <sourcemeta/blaze/evaluator.h>
-#include <sourcemeta/blaze/foundation.h>
+#include <sourcemeta/core/jsonschema.h>
 
 #include <sourcemeta/core/json.h>
 #include <sourcemeta/core/jsonpointer.h>
@@ -29,7 +29,7 @@ namespace sourcemeta::blaze {
 /// #include <sourcemeta/blaze/output.h>
 ///
 /// #include <sourcemeta/core/json.h>
-/// #include <sourcemeta/blaze/foundation.h>
+/// #include <sourcemeta/core/jsonschema.h>
 ///
 /// #include <cassert>
 /// #include <functional>
@@ -42,8 +42,8 @@ namespace sourcemeta::blaze {
 /// })JSON");
 ///
 /// const auto schema_template{sourcemeta::blaze::compile(
-///     schema, sourcemeta::blaze::schema_walker,
-///     sourcemeta::blaze::schema_resolver,
+///     schema, sourcemeta::core::schema_walker,
+///     sourcemeta::core::schema_resolver,
 ///     sourcemeta::blaze::default_schema_compiler)};
 ///
 /// const sourcemeta::core::JSON instance{5};

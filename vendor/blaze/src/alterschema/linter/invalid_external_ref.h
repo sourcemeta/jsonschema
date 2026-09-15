@@ -12,7 +12,7 @@ public:
   condition(const JSON &schema, const JSON &,
             const SchemaVocabularies &vocabularies, const SchemaFrame &frame,
             const SchemaFrame::Location &location, const SchemaWalker &walker,
-            const SchemaResolver &resolver, const bool) const
+            const SchemaResolver &resolver) const
       -> SchemaTransformRule::Result override {
     ONLY_CONTINUE_IF(!frame.standalone());
     ONLY_CONTINUE_IF(vocabularies.contains_any(

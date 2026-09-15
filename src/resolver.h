@@ -2,10 +2,10 @@
 #define SOURCEMETA_JSONSCHEMA_CLI_RESOLVER_H_
 
 #include <sourcemeta/blaze/configuration.h>
-#include <sourcemeta/blaze/foundation.h>
 #include <sourcemeta/core/http.h>
 #include <sourcemeta/core/io.h>
 #include <sourcemeta/core/json.h>
+#include <sourcemeta/core/jsonschema.h>
 #include <sourcemeta/core/options.h>
 #include <sourcemeta/core/uri.h>
 #include <sourcemeta/core/yaml.h>
@@ -276,8 +276,8 @@ static inline auto fetch_schema(const sourcemeta::core::Options &options,
                                 std::string_view identifier,
                                 const bool remote = true,
                                 const bool bundle = false)
-    -> sourcemeta::blaze::SchemaResolverResult {
-  auto official_result{sourcemeta::blaze::schema_resolver(identifier)};
+    -> sourcemeta::core::SchemaResolverResult {
+  auto official_result{sourcemeta::core::schema_resolver(identifier)};
   if (official_result.has_value()) {
     return official_result;
   }
@@ -324,16 +324,16 @@ static inline auto fetch_schema(const sourcemeta::core::Options &options,
 
 static inline auto
 anonymous_base_dialect(const sourcemeta::core::JSON &schema,
-                       const sourcemeta::blaze::SchemaResolver &resolver)
-    -> std::optional<sourcemeta::blaze::SchemaBaseDialect> {
+                       const sourcemeta::core::SchemaResolver &resolver)
+    -> std::optional<sourcemeta::core::SchemaBaseDialect> {
   if (!schema.is_object()) {
     return std::nullopt;
   }
 
   try {
-    const sourcemeta::blaze::SchemaFrame frame{
-        sourcemeta::blaze::SchemaFrame::Mode::Root, schema,
-        sourcemeta::blaze::schema_walker, resolver};
+    const sourcemeta::core::SchemaFrame frame{
+        sourcemeta::core::SchemaFrame::Mode::Root, schema,
+        sourcemeta::core::schema_walker, resolver};
     if (!frame.root().empty()) {
       return std::nullopt;
     }
@@ -344,7 +344,7 @@ anonymous_base_dialect(const sourcemeta::core::JSON &schema,
     }
 
     return location.value().get().base_dialect;
-  } catch (const sourcemeta::blaze::SchemaUnknownBaseDialectError &) {
+  } catch (const sourcemeta::core::SchemaUnknownBaseDialectError &) {
     return std::nullopt;
   }
 }
@@ -355,7 +355,7 @@ enum class IdentifierKeyword : std::uint8_t { Unknown, Modern, Legacy };
 // dialect relies on, which reveals that keyword without framing anything
 static inline auto identifier_keyword(const std::string_view dialect)
     -> IdentifierKeyword {
-  const auto metaschema{sourcemeta::blaze::schema_resolver(dialect)};
+  const auto metaschema{sourcemeta::core::schema_resolver(dialect)};
   if (!metaschema.has_value()) {
     return IdentifierKeyword::Unknown;
   }
@@ -517,7 +517,7 @@ public:
           try {
             this->import_entry(entries[index], default_dialect);
           } catch (const sourcemeta::core::FileError<
-                   sourcemeta::blaze::SchemaResolutionError> &) {
+                   sourcemeta::core::SchemaResolutionError> &) {
             if (!failure) {
               failure = std::current_exception();
             }
@@ -581,7 +581,7 @@ public:
 
   // Prevent accidental copies, as every schema this imported would come
   // along. Passing this resolver by value to anything that takes a
-  // sourcemeta::blaze::SchemaResolver would do exactly that
+  // sourcemeta::core::SchemaResolver would do exactly that
   CustomResolver(const CustomResolver &) = delete;
   auto operator=(const CustomResolver &) -> CustomResolver & = delete;
   CustomResolver(CustomResolver &&) = default;
@@ -598,10 +598,10 @@ public:
 
     // Registering the top-level schema is not enough. We need to check
     // and register every embedded schema resource too
-    const sourcemeta::blaze::SchemaFrame frame{
-        sourcemeta::blaze::SchemaFrame::Mode::References,
+    const sourcemeta::core::SchemaFrame frame{
+        sourcemeta::core::SchemaFrame::Mode::References,
         schema,
-        sourcemeta::blaze::schema_walker,
+        sourcemeta::core::schema_walker,
         std::ref(*this),
         default_dialect,
         default_id};
@@ -610,7 +610,7 @@ public:
     frame.for_each_resource(
         [this, &schema, &frame, &origin, &callback, &added_any_schema](
             const std::string_view uri,
-            const sourcemeta::blaze::SchemaFrame::Location &entry) -> void {
+            const sourcemeta::core::SchemaFrame::Location &entry) -> void {
           auto subschema{sourcemeta::core::get(schema, entry.pointer)};
           // Reject a resource whose vocabularies we cannot make sense of
           // upfront, rather than at the point some consumer relies on them
@@ -621,8 +621,8 @@ public:
           // resolve their dialect and identifiers, otherwise the
           // consumer might have no idea what to do with them
           subschema.assign("$schema", sourcemeta::core::JSON{entry.dialect});
-          sourcemeta::blaze::schema_reidentify(subschema, uri,
-                                               entry.base_dialect);
+          sourcemeta::core::schema_reidentify(subschema, uri,
+                                              entry.base_dialect);
 
           const std::string identifier{uri};
           const auto result{this->schemas_.emplace(identifier, subschema)};
@@ -649,7 +649,7 @@ public:
   }
 
   auto operator()(std::string_view identifier) const
-      -> sourcemeta::blaze::SchemaResolverResult {
+      -> sourcemeta::core::SchemaResolverResult {
     const std::string string_identifier{identifier};
     const auto mapped_result = this->configuration_.and_then(
         [this,
@@ -690,8 +690,8 @@ public:
     }
 
     auto schema{std::move(fetched).to_owned()};
-    sourcemeta::blaze::schema_reidentify(schema, string_identifier,
-                                         base_dialect.value());
+    sourcemeta::core::schema_reidentify(schema, string_identifier,
+                                        base_dialect.value());
     return schema;
   }
 
@@ -702,7 +702,7 @@ private:
         << "Detecting schema resources from file: " << entry.first << "\n";
 
     if (!entry.second.is_object() && !entry.second.is_boolean()) {
-      throw sourcemeta::core::FileError<sourcemeta::blaze::SchemaError>(
+      throw sourcemeta::core::FileError<sourcemeta::core::SchemaError>(
           entry.resolution_base,
           "The file you provided does not represent a valid JSON Schema");
     }
@@ -734,47 +734,46 @@ private:
       throw sourcemeta::core::FileError<SchemaIdentifierConflictError>(
           entry.resolution_base, error.identifier(), error.location(),
           error.other_path(), error.other());
-    } catch (const sourcemeta::blaze::SchemaKeywordError &error) {
-      throw sourcemeta::core::FileError<sourcemeta::blaze::SchemaKeywordError>(
+    } catch (const sourcemeta::core::SchemaKeywordError &error) {
+      throw sourcemeta::core::FileError<sourcemeta::core::SchemaKeywordError>(
           entry.resolution_base, error);
-    } catch (const sourcemeta::blaze::SchemaFrameError &error) {
-      throw sourcemeta::core::FileError<sourcemeta::blaze::SchemaFrameError>(
+    } catch (const sourcemeta::core::SchemaFrameError &error) {
+      throw sourcemeta::core::FileError<sourcemeta::core::SchemaFrameError>(
           entry.resolution_base, error.identifier(), error.what());
-    } catch (const sourcemeta::blaze::SchemaAnchorCollisionError &error) {
+    } catch (const sourcemeta::core::SchemaAnchorCollisionError &error) {
       const auto position{entry.positions.get(error.location())};
       if (position.has_value()) {
         throw PositionError<sourcemeta::core::FileError<
-            sourcemeta::blaze::SchemaAnchorCollisionError>>(
+            sourcemeta::core::SchemaAnchorCollisionError>>(
             std::get<0>(position.value()), std::get<1>(position.value()),
             entry.resolution_base, error);
       }
 
       throw sourcemeta::core::FileError<
-          sourcemeta::blaze::SchemaAnchorCollisionError>(entry.resolution_base,
-                                                         error);
-    } catch (const sourcemeta::blaze::SchemaReferenceError &error) {
-      throw sourcemeta::core::FileError<
-          sourcemeta::blaze::SchemaReferenceError>(
+          sourcemeta::core::SchemaAnchorCollisionError>(entry.resolution_base,
+                                                        error);
+    } catch (const sourcemeta::core::SchemaReferenceError &error) {
+      throw sourcemeta::core::FileError<sourcemeta::core::SchemaReferenceError>(
           entry.resolution_base, error.identifier(), error.location(),
           error.what());
-    } catch (const sourcemeta::blaze::SchemaUnknownBaseDialectError &) {
+    } catch (const sourcemeta::core::SchemaUnknownBaseDialectError &) {
       throw sourcemeta::core::FileError<
-          sourcemeta::blaze::SchemaUnknownBaseDialectError>(
+          sourcemeta::core::SchemaUnknownBaseDialectError>(
           entry.resolution_base);
-    } catch (const sourcemeta::blaze::SchemaUnknownDialectError &) {
+    } catch (const sourcemeta::core::SchemaUnknownDialectError &) {
       throw sourcemeta::core::FileError<
-          sourcemeta::blaze::SchemaUnknownDialectError>(entry.resolution_base);
-    } catch (const sourcemeta::blaze::SchemaRelativeMetaschemaResolutionError
+          sourcemeta::core::SchemaUnknownDialectError>(entry.resolution_base);
+    } catch (const sourcemeta::core::SchemaRelativeMetaschemaResolutionError
                  &error) {
       throw sourcemeta::core::FileError<
-          sourcemeta::blaze::SchemaRelativeMetaschemaResolutionError>(
+          sourcemeta::core::SchemaRelativeMetaschemaResolutionError>(
           entry.resolution_base, error);
-    } catch (const sourcemeta::blaze::SchemaResolutionError &error) {
+    } catch (const sourcemeta::core::SchemaResolutionError &error) {
       throw sourcemeta::core::FileError<
-          sourcemeta::blaze::SchemaResolutionError>(
+          sourcemeta::core::SchemaResolutionError>(
           entry.resolution_base, error.identifier(), error.what());
-    } catch (const sourcemeta::blaze::SchemaError &error) {
-      throw sourcemeta::core::FileError<sourcemeta::blaze::SchemaError>(
+    } catch (const sourcemeta::core::SchemaError &error) {
+      throw sourcemeta::core::FileError<sourcemeta::core::SchemaError>(
           entry.resolution_base, error.what());
     }
   }
@@ -794,12 +793,12 @@ inline auto
 resolver(const sourcemeta::core::Options &options, const bool remote,
          const std::string_view default_dialect,
          const std::optional<sourcemeta::blaze::Configuration> &configuration)
-    -> const sourcemeta::blaze::SchemaResolver & {
+    -> const sourcemeta::core::SchemaResolver & {
   using CacheKey = std::pair<bool, std::string>;
   static std::map<CacheKey, CustomResolver> resolver_cache;
   // What callers get is a handle that refers back to the cached resolver,
   // as the resolver itself must never be copied into the callee
-  static std::map<CacheKey, sourcemeta::blaze::SchemaResolver> handle_cache;
+  static std::map<CacheKey, sourcemeta::core::SchemaResolver> handle_cache;
   const CacheKey cache_key{remote, std::string{default_dialect}};
 
   const auto handle{handle_cache.find(cache_key)};

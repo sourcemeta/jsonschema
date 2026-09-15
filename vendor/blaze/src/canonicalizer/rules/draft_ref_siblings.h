@@ -6,11 +6,11 @@ public:
   [[nodiscard]] auto
   condition(const sourcemeta::core::JSON &schema,
             const sourcemeta::core::JSON &,
-            const sourcemeta::blaze::SchemaVocabularies &vocabularies,
-            const sourcemeta::blaze::SchemaFrame &,
-            const sourcemeta::blaze::SchemaFrame::Location &,
-            const sourcemeta::blaze::SchemaWalker &walker,
-            const sourcemeta::blaze::SchemaResolver &) const -> bool override {
+            const sourcemeta::core::SchemaVocabularies &vocabularies,
+            const sourcemeta::core::SchemaFrame &,
+            const sourcemeta::core::SchemaFrame::Location &,
+            const sourcemeta::core::SchemaWalker &walker,
+            const sourcemeta::core::SchemaResolver &) const -> bool override {
     ONLY_CONTINUE_IF(vocabularies.contains_any(
         {SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_7,
          SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_6,
@@ -25,8 +25,8 @@ public:
     std::vector<sourcemeta::core::Pointer> locations;
     for (const auto &entry : schema.as_object()) {
       const auto &metadata{walker(entry.first, vocabularies)};
-      if (metadata.type == sourcemeta::blaze::SchemaKeywordType::Reference ||
-          metadata.type == sourcemeta::blaze::SchemaKeywordType::Comment ||
+      if (metadata.type == sourcemeta::core::SchemaKeywordType::Reference ||
+          metadata.type == sourcemeta::core::SchemaKeywordType::Comment ||
           // If we disallow this, we end up deleting it and the linter will fail
           // with an error about not knowing the dialect
           entry.first == "$schema") {

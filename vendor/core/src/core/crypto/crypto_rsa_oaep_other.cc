@@ -5,6 +5,7 @@
 #include "crypto_helpers.h"
 #include "crypto_other.h"
 #include "crypto_random.h"
+#include "crypto_rsa_other.h"
 #include "crypto_sha1_other.h"
 
 #include <cstddef>     // std::size_t
@@ -154,10 +155,7 @@ auto rsa_oaep_decrypt(const PrivateKey &key, const RSAOAEPHash hash,
     return std::nullopt;
   }
 
-  auto exponent{bignum_from_bytes(internal->private_exponent)};
-  const SecureBignumScope exponent_scope{exponent};
-  auto message_number{
-      bignum_mod_exp_ct(ciphertext_number, exponent, barrett_context(modulus))};
+  auto message_number{rsa_private_operation(*internal, ciphertext_number)};
   const SecureBignumScope message_scope{message_number};
   const auto encoded_message{bignum_to_bytes(message_number, key_length)};
 

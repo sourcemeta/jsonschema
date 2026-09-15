@@ -5,8 +5,8 @@
 #include <cstddef>     // std::size_t
 #include <cstdint>     // std::uint8_t
 #include <optional>    // std::optional, std::nullopt
-#include <string>      // std::string, std::wstring
-#include <string_view> // std::string_view, std::wstring_view
+#include <string>      // std::string, std::u32string, std::wstring
+#include <string_view> // std::string_view, std::u32string_view, std::wstring_view
 
 #if defined(_WIN32) || defined(__CYGWIN__)
 #define WIN32_LEAN_AND_MEAN
@@ -368,6 +368,15 @@ auto script(const char32_t codepoint) noexcept -> UnicodeScript {
       UNICODE_SCRIPT_STAGE2[(page << 10U) | (codepoint & 0x3FFU)]);
 }
 
+auto general_category(const char32_t codepoint) noexcept -> GeneralCategory {
+  if (codepoint > 0x10FFFF) {
+    return GeneralCategory::Unassigned;
+  }
+  const std::size_t page{GENERAL_CATEGORY_STAGE1[codepoint >> 10U]};
+  return static_cast<GeneralCategory>(
+      GENERAL_CATEGORY_STAGE2[(page << 10U) | (codepoint & 0x3FFU)]);
+}
+
 auto is_combining_mark(const char32_t codepoint) noexcept -> bool {
   if (codepoint > 0x10FFFF) {
     return false;
@@ -437,6 +446,32 @@ auto canonical_composition(const char32_t starter,
     return CANONICAL_COMPOSITIONS[low].composed;
   }
   return std::nullopt;
+}
+
+auto case_fold(const char32_t codepoint) noexcept -> std::u32string_view {
+  if (codepoint > 0x10FFFF) {
+    return {};
+  }
+  const std::size_t page{CASE_FOLDING_STAGE1[codepoint >> 10U]};
+  const std::uint16_t packed{
+      CASE_FOLDING_STAGE2[(page << 10U) | (codepoint & 0x3FFU)]};
+  const auto length{static_cast<std::size_t>(packed >> 14U)};
+  const auto offset{static_cast<std::size_t>(packed & 0x3FFFU)};
+  return std::u32string_view{CASE_FOLDING_BLOB + offset, length};
+}
+
+auto case_fold(const std::u32string_view input) -> std::u32string {
+  std::u32string result;
+  result.reserve(input.size());
+  for (const auto codepoint : input) {
+    const auto folding{case_fold(codepoint)};
+    if (folding.empty()) {
+      result.push_back(codepoint);
+    } else {
+      result.append(folding);
+    }
+  }
+  return result;
 }
 
 } // namespace sourcemeta::core

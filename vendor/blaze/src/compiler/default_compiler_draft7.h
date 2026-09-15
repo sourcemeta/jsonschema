@@ -28,7 +28,7 @@ auto compiler_draft7_applicator_if(const Context &context,
                schema_context.base)
             .recompose()};
     assert(context.frame
-               .location(sourcemeta::blaze::SchemaReferenceType::Static,
+               .location(sourcemeta::core::SchemaReferenceType::Static,
                          destination)
                .has_value());
 
@@ -103,7 +103,7 @@ auto compiler_draft7_applicator_if(const Context &context,
                schema_context.base)
             .recompose()};
     assert(context.frame
-               .location(sourcemeta::blaze::SchemaReferenceType::Static,
+               .location(sourcemeta::core::SchemaReferenceType::Static,
                          destination)
                .has_value());
     DynamicContext new_dynamic_context{

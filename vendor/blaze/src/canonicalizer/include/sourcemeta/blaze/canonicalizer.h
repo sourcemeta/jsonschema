@@ -14,7 +14,7 @@
 #include <sourcemeta/blaze/canonicalizer_export.h>
 #endif
 
-#include <sourcemeta/blaze/foundation.h>
+#include <sourcemeta/core/jsonschema.h>
 
 #include <sourcemeta/core/json.h>
 
@@ -28,20 +28,20 @@ namespace sourcemeta::blaze {
 ///
 /// ```cpp
 /// #include <sourcemeta/blaze/canonicalizer.h>
-/// #include <sourcemeta/blaze/foundation.h>
+/// #include <sourcemeta/core/jsonschema.h>
 ///
 /// auto schema = sourcemeta::core::parse_json(R"JSON({
 ///   "$schema": "http://json-schema.org/draft-03/schema#",
 ///   "type": "boolean"
 /// })JSON");
 ///
-/// sourcemeta::blaze::canonicalize(schema, sourcemeta::blaze::schema_walker,
-///                                 sourcemeta::blaze::schema_resolver);
+/// sourcemeta::blaze::canonicalize(schema, sourcemeta::core::schema_walker,
+///                                 sourcemeta::core::schema_resolver);
 /// ```
 SOURCEMETA_BLAZE_CANONICALIZER_EXPORT
 auto canonicalize(sourcemeta::core::JSON &schema,
-                  const sourcemeta::blaze::SchemaWalker &walker,
-                  const sourcemeta::blaze::SchemaResolver &resolver,
+                  const sourcemeta::core::SchemaWalker &walker,
+                  const sourcemeta::core::SchemaResolver &resolver,
                   const std::string_view default_dialect = "",
                   const std::string_view default_id = "") -> void;
 

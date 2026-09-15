@@ -12,36 +12,30 @@
 
 namespace sourcemeta::core {
 
-// The count must be between 1 and 63, as the complementary shift is
-// undefined otherwise
-inline constexpr auto sha2_64_rotate_right(std::uint64_t value,
-                                           std::uint64_t count) noexcept
-    -> std::uint64_t {
-  return (value >> count) | (value << (64u - count));
-}
-
-// FIPS 180-4 Section 4.1.3 logical functions
+// FIPS 180-4 Section 4.1.3 logical functions. Each right rotation is written
+// out as a shift pair rather than through a helper, so that an unoptimized
+// build does not pay a function call per rotation
 inline constexpr auto sha2_64_big_sigma_0(std::uint64_t value) noexcept
     -> std::uint64_t {
-  return sha2_64_rotate_right(value, 28u) ^ sha2_64_rotate_right(value, 34u) ^
-         sha2_64_rotate_right(value, 39u);
+  return ((value >> 28u) | (value << 36u)) ^ ((value >> 34u) | (value << 30u)) ^
+         ((value >> 39u) | (value << 25u));
 }
 
 inline constexpr auto sha2_64_big_sigma_1(std::uint64_t value) noexcept
     -> std::uint64_t {
-  return sha2_64_rotate_right(value, 14u) ^ sha2_64_rotate_right(value, 18u) ^
-         sha2_64_rotate_right(value, 41u);
+  return ((value >> 14u) | (value << 50u)) ^ ((value >> 18u) | (value << 46u)) ^
+         ((value >> 41u) | (value << 23u));
 }
 
 inline constexpr auto sha2_64_small_sigma_0(std::uint64_t value) noexcept
     -> std::uint64_t {
-  return sha2_64_rotate_right(value, 1u) ^ sha2_64_rotate_right(value, 8u) ^
+  return ((value >> 1u) | (value << 63u)) ^ ((value >> 8u) | (value << 56u)) ^
          (value >> 7u);
 }
 
 inline constexpr auto sha2_64_small_sigma_1(std::uint64_t value) noexcept
     -> std::uint64_t {
-  return sha2_64_rotate_right(value, 19u) ^ sha2_64_rotate_right(value, 61u) ^
+  return ((value >> 19u) | (value << 45u)) ^ ((value >> 61u) | (value << 3u)) ^
          (value >> 6u);
 }
 
@@ -94,9 +88,10 @@ inline auto sha2_64_process_block(const std::uint8_t *block,
 
   // Decode 16 big-endian 64-bit words from the block
   std::array<std::uint64_t, 80> schedule;
+  auto *schedule_data = schedule.data();
   for (std::uint64_t word_index = 0; word_index < 16u; ++word_index) {
     const std::uint64_t byte_index = word_index * 8u;
-    schedule[word_index] =
+    schedule_data[word_index] =
         (static_cast<std::uint64_t>(block[byte_index]) << 56u) |
         (static_cast<std::uint64_t>(block[byte_index + 1u]) << 48u) |
         (static_cast<std::uint64_t>(block[byte_index + 2u]) << 40u) |
@@ -109,35 +104,39 @@ inline auto sha2_64_process_block(const std::uint8_t *block,
 
   // Extend the message schedule (FIPS 180-4 Section 6.4.2 step 1)
   for (std::uint64_t index = 16u; index < 80u; ++index) {
-    schedule[index] =
-        sha2_64_small_sigma_1(schedule[index - 2u]) + schedule[index - 7u] +
-        sha2_64_small_sigma_0(schedule[index - 15u]) + schedule[index - 16u];
+    schedule_data[index] = sha2_64_small_sigma_1(schedule_data[index - 2u]) +
+                           schedule_data[index - 7u] +
+                           sha2_64_small_sigma_0(schedule_data[index - 15u]) +
+                           schedule_data[index - 16u];
   }
 
   auto working = state;
+  auto *working_data = working.data();
+  const auto *constants_data = round_constants.data();
 
   // Compression function (FIPS 180-4 Section 6.4.2 step 3)
   for (std::uint64_t round_index = 0u; round_index < 80u; ++round_index) {
     const auto temporary_1 =
-        working[7] + sha2_64_big_sigma_1(working[4]) +
-        sha2_64_choice(working[4], working[5], working[6]) +
-        round_constants[round_index] + schedule[round_index];
+        working_data[7] + sha2_64_big_sigma_1(working_data[4]) +
+        sha2_64_choice(working_data[4], working_data[5], working_data[6]) +
+        constants_data[round_index] + schedule_data[round_index];
     const auto temporary_2 =
-        sha2_64_big_sigma_0(working[0]) +
-        sha2_64_majority(working[0], working[1], working[2]);
+        sha2_64_big_sigma_0(working_data[0]) +
+        sha2_64_majority(working_data[0], working_data[1], working_data[2]);
 
-    working[7] = working[6];
-    working[6] = working[5];
-    working[5] = working[4];
-    working[4] = working[3] + temporary_1;
-    working[3] = working[2];
-    working[2] = working[1];
-    working[1] = working[0];
-    working[0] = temporary_1 + temporary_2;
+    working_data[7] = working_data[6];
+    working_data[6] = working_data[5];
+    working_data[5] = working_data[4];
+    working_data[4] = working_data[3] + temporary_1;
+    working_data[3] = working_data[2];
+    working_data[2] = working_data[1];
+    working_data[1] = working_data[0];
+    working_data[0] = temporary_1 + temporary_2;
   }
 
+  auto *state_data = state.data();
   for (std::uint64_t index = 0u; index < 8u; ++index) {
-    state[index] += working[index];
+    state_data[index] += working_data[index];
   }
 }
 

@@ -1,6 +1,6 @@
 #include <sourcemeta/blaze/format.h>
 
-#include <sourcemeta/blaze/foundation.h>
+#include <sourcemeta/core/jsonschema.h>
 
 #include <cstdint>       // std::uint64_t
 #include <limits>        // std::numeric_limits
@@ -136,18 +136,21 @@ auto keyword_compare(const sourcemeta::core::JSON::String &left,
 
 namespace sourcemeta::blaze {
 
-auto format(sourcemeta::core::JSON &schema, const SchemaWalker &walker,
-            const SchemaResolver &resolver, std::string_view default_dialect)
-    -> void {
+auto format(sourcemeta::core::JSON &schema,
+            const sourcemeta::core::SchemaWalker &walker,
+            const sourcemeta::core::SchemaResolver &resolver,
+            std::string_view default_dialect) -> void {
   assert((schema.is_object() || schema.is_boolean()));
   std::vector<sourcemeta::core::Pointer> subschemas;
 
   {
-    SchemaFrame frame{SchemaFrame::Mode::Locations, schema, walker, resolver,
-                      default_dialect};
+    sourcemeta::core::SchemaFrame frame{
+        sourcemeta::core::SchemaFrame::Mode::Locations, schema, walker,
+        resolver, default_dialect};
 
     frame.for_each_subschema(
-        [&subschemas](const SchemaFrame::Location &location) -> void {
+        [&subschemas](
+            const sourcemeta::core::SchemaFrame::Location &location) -> void {
           subschemas.push_back(sourcemeta::core::to_pointer(location.pointer));
         });
   }
