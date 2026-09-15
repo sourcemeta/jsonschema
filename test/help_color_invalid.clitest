@@ -1,0 +1,28 @@
+// Invalid CLI arguments
+RUN help --color sometimes STDIN /dev/null IN . INTO result.txt EXPECTING 5
+
+WRITE expected.txt UNTIL EOF
+2> error: The given color policy is not supported
+2>   at option color
+2>   with values
+2>   - auto
+2>   - always
+2>   - never
+2>
+2> Run the `help` command for usage information
+EOF
+
+COMPARE result.txt AGAINST expected.txt
+
+// Invalid CLI arguments (JSON)
+RUN help --json --color sometimes STDIN /dev/null IN . INTO result_json.txt EXPECTING 5
+
+WRITE expected_json.txt UNTIL EOF
+1> {
+1>   "error": "The given color policy is not supported",
+1>   "option": "color",
+1>   "values": [ "auto", "always", "never" ]
+1> }
+EOF
+
+COMPARE result_json.txt AGAINST expected_json.txt

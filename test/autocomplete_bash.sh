@@ -143,4 +143,10 @@ test_completion "jsonschema validate --" "--header" "Validate includes global op
 test_no_completion "jsonschema validate --header " "After --header no completion is offered"
 test_no_completion "jsonschema validate -H " "After -H no completion is offered"
 
+test_completion "jsonschema help --" "--color" "Help includes global option --color"
+test_completion "jsonschema help --color " "auto" "After --color auto is offered"
+test_completion "jsonschema help --color " "always" "After --color always is offered"
+test_completion "jsonschema help --color " "never" "After --color never is offered"
+test_completion "jsonschema validate --" "--color" "Validate includes global option --color"
+
 echo "PASS" 1>&2

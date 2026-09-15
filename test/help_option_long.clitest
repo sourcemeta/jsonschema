@@ -1,12 +1,15 @@
-RUN --help STDIN /dev/null IN . INTO result.txt EXPECTING 0
+RUN --help --color always STDIN /dev/null IN . INTO result.txt EXPECTING 0
 REPLACE .exe WITH '' IN result.txt
 REPLACE $VERSION WITH '[VERSION]' IN result.txt
+REPLACE MATCHING '\x1B\[1;36m' WITH '[ANSI_BOLD_CYAN]' IN result.txt
+REPLACE MATCHING '\x1B\[1m' WITH '[ANSI_BOLD]' IN result.txt
+REPLACE MATCHING '\x1B\[0m' WITH '[ANSI_RESET]' IN result.txt
 
 WRITE expected.txt UNTIL EOF
-1> JSON Schema CLI - v[VERSION]
-1> Usage: jsonschema <command> [arguments...]
+1> [ANSI_BOLD_CYAN]JSON Schema CLI[ANSI_RESET] - v[VERSION]
+1> [ANSI_BOLD]Usage:[ANSI_RESET] jsonschema <command> [arguments...]
 1>
-1> Global Options:
+1> [ANSI_BOLD]Global Options:[ANSI_RESET]
 1>
 1>    --verbose, -v                  Enable verbose output
 1>    --debug, -g                    Enable even higher verbose output
@@ -21,8 +24,10 @@ WRITE expected.txt UNTIL EOF
 1>    --http, -h                     Allow network access to resolve remote schemas
 1>    --header, -H <name: value>     Send a custom HTTP header on every outgoing
 1>                                   request. May be passed multiple times
+1>    --color <when>                 Control terminal colors: auto, always, or never
+1>                                   (default: auto)
 1>
-1> Commands:
+1> [ANSI_BOLD]Commands:[ANSI_RESET]
 1>
 1>    version / --version / -v
 1>

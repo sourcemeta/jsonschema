@@ -35,6 +35,7 @@ _jsonschema() {
     '(--debug -g)'{--debug,-g}'[Enable debug output]'
     '*'{--header,-H}'[Send a custom HTTP header (Name: Value)]:header:'
     '(--configuration -C)'{--configuration,-C}'[Use the given configuration file]:configuration file:_files'
+    '--color[Control terminal colors]:when:(auto always never)'
   )
 
   _arguments -C \
@@ -171,6 +172,8 @@ _jsonschema() {
             '2:instance file:_files -g "*.json *.yaml *.yml"'
           ;;
         version|help)
+          _arguments \
+            ${global_options[@]}
           ;;
       esac
       ;;

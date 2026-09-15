@@ -2,6 +2,14 @@ RUN help STDIN /dev/null IN . INTO result.txt EXPECTING 0
 REPLACE .exe WITH '' IN result.txt
 REPLACE $VERSION WITH '[VERSION]' IN result.txt
 
+RUN help --color auto STDIN /dev/null IN . INTO result_auto.txt EXPECTING 0
+REPLACE .exe WITH '' IN result_auto.txt
+REPLACE $VERSION WITH '[VERSION]' IN result_auto.txt
+
+RUN help --color never STDIN /dev/null IN . INTO result_never.txt EXPECTING 0
+REPLACE .exe WITH '' IN result_never.txt
+REPLACE $VERSION WITH '[VERSION]' IN result_never.txt
+
 WRITE expected.txt UNTIL EOF
 1> JSON Schema CLI - v[VERSION]
 1> Usage: jsonschema <command> [arguments...]
@@ -21,6 +29,8 @@ WRITE expected.txt UNTIL EOF
 1>    --http, -h                     Allow network access to resolve remote schemas
 1>    --header, -H <name: value>     Send a custom HTTP header on every outgoing
 1>                                   request. May be passed multiple times
+1>    --color <when>                 Control terminal colors: auto, always, or never
+1>                                   (default: auto)
 1>
 1> Commands:
 1>
@@ -160,3 +170,5 @@ WRITE expected.txt UNTIL EOF
 EOF
 
 COMPARE result.txt AGAINST expected.txt
+COMPARE result_auto.txt AGAINST expected.txt
+COMPARE result_never.txt AGAINST expected.txt
