@@ -12,6 +12,7 @@
 #include "command.h"
 #include "configure.h"
 #include "error.h"
+#include "print.h"
 #include "utils.h"
 
 constexpr std::string_view USAGE_GLOBAL_OPTIONS{
@@ -347,28 +348,23 @@ auto jsonschema_main(const std::string &program, const std::string &command,
 
   if (command == "help" || command == "--help" || command == "-h") {
     parse_options(app, argc, argv, {.skip = 1});
-    std::println("{} - v{}",
-                 sourcemeta::core::terminal_paint(
-                     sourcemeta::core::TerminalStream::Stdout,
-                     "JSON Schema CLI",
-                     sourcemeta::core::TerminalStyle::Bold |
-                         sourcemeta::core::TerminalStyle::Cyan),
-                 sourcemeta::jsonschema::PROJECT_VERSION);
+    using sourcemeta::core::TerminalStyle;
+    using sourcemeta::jsonschema::paint;
+    using sourcemeta::jsonschema::println;
+
+    std::println(
+        "{} - v{}",
+        paint("JSON Schema CLI", TerminalStyle::Bold | TerminalStyle::Cyan),
+        sourcemeta::jsonschema::PROJECT_VERSION);
     std::println("{} {} <command> [arguments...]",
-                 sourcemeta::core::terminal_paint(
-                     sourcemeta::core::TerminalStream::Stdout,
-                     "Usage:", sourcemeta::core::TerminalStyle::Bold),
+                 paint("Usage:", TerminalStyle::Bold),
                  std::filesystem::path{program}.filename().string());
-    std::println("\n{}",
-                 sourcemeta::core::terminal_paint(
-                     sourcemeta::core::TerminalStream::Stdout,
-                     "Global Options:", sourcemeta::core::TerminalStyle::Bold));
+    std::println();
+    println(TerminalStyle::Bold, "Global Options:");
     std::println();
     std::print("{}", USAGE_GLOBAL_OPTIONS);
-    std::println("\n{}",
-                 sourcemeta::core::terminal_paint(
-                     sourcemeta::core::TerminalStream::Stdout,
-                     "Commands:", sourcemeta::core::TerminalStyle::Bold));
+    std::println();
+    println(TerminalStyle::Bold, "Commands:");
     std::println();
     std::print("{}", USAGE_COMMANDS);
     return EXIT_SUCCESS;
