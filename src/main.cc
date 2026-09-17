@@ -177,22 +177,39 @@ auto print_help_header() -> void {
   constexpr auto logo_style{TerminalStyle::Bold | TerminalStyle::Cyan};
   constexpr auto title_style{TerminalStyle::Bold | TerminalStyle::Cyan};
 
-  std::println("{}     {}", paint("  __               __", logo_style),
-               paint("\\====\\    /====/", logo_style));
-  std::println("{}     {}     {} - v{}",
-               paint(" / /      /        \\ \\", logo_style),
-               paint("\\====\\  /====/", logo_style),
-               paint("JSON Schema CLI", title_style),
+  std::println("{}", paint("       ____                                  ____", logo_style));
+  std::println("{}", paint("      /                                          \\", logo_style));
+  std::println("{}", paint("     /                                            \\", logo_style));
+  std::println("{}", paint("    |                       /                      |", logo_style));
+  std::println("{}", paint("    |          \\           /                       |", logo_style));
+  std::println("{}", paint("    |           \\         /                        |", logo_style));
+  std::println("{}", paint("    |            \\       /                         |", logo_style));
+  std::println("{}", paint("====<             \\_____/        \\       /          >====", logo_style));
+  std::println("{}", paint("====<                              \\     /           >====", logo_style));
+  std::println("{}", paint("    |                               \\   /           |", logo_style));
+  std::println("{}", paint("    |                                \\ /            |", logo_style));
+  std::println("{}", paint("    |                                 X             |", logo_style));
+  std::println("{}", paint("    |                                / \\            |", logo_style));
+  std::println("{}", paint("    |                               /   \\           |", logo_style));
+  std::println("{}", paint("    |                              /     \\          |", logo_style));
+  std::println("{}", paint("    |                                             |", logo_style));
+  std::println("{}", paint("     \\                                           /", logo_style));
+  std::println("{}", paint("      \\____                                 ____/", logo_style));
+  std::println();
+  std::println("{} - v{}", paint("JSON Schema CLI", title_style),
                sourcemeta::jsonschema::PROJECT_VERSION);
-  std::println("{}      {}      by Sourcemeta",
-               paint("{ {    \\ /    \\ /   } }", logo_style),
-               paint("\\====><====/", logo_style));
-  std::println("{}     {}",
-               paint(" \\ \\           X   / /", logo_style),
-               paint("/====/  \\====\\", logo_style));
-  std::println("{}     {}",
-               paint("  \\_\\         / \\ /_/", logo_style),
-               paint("/====/    \\====\\", logo_style));
+  std::println();
+  std::println("{}", paint("    \\\\\\               ///", logo_style));
+  std::println("{}", paint("       \\\\\\         ///", logo_style));
+  std::println("{}", paint("          \\\\\\   ///", logo_style));
+  std::println("{}", paint("           ///\\\\\\\\", logo_style));
+  std::println("{}", paint("        < <       > >", logo_style));
+  std::println("{}", paint("           \\\\\\\\///", logo_style));
+  std::println("{}", paint("          ///   \\\\", logo_style));
+  std::println("{}", paint("       ///         \\\\", logo_style));
+  std::println("{}", paint("    ///               \\\\", logo_style));
+  std::println();
+  std::println("by Sourcemeta");
   std::println();
   std::println("Validate, lint, format, test, and bundle JSON Schemas.");
   std::println();

@@ -15,11 +15,38 @@ REPLACE .exe WITH '' IN result_no_args.txt
 REPLACE $VERSION WITH '[VERSION]' IN result_no_args.txt
 
 WRITE expected.txt UNTIL EOF
-1>   __               __     \====\    /====/
-1>  / /      /        \ \     \====\  /====/     JSON Schema CLI - v[VERSION]
-1> { {    \ /    \ /   } }      \====><====/      by Sourcemeta
-1>  \ \           X   / /     /====/  \====\
-1>   \_\         / \ /_/     /====/    \====\
+1>        ____                                  ____
+1>       /                                          \
+1>      /                                            \
+1>     |                       /                      |
+1>     |          \           /                       |
+1>     |           \         /                        |
+1>     |            \       /                         |
+1> ====<             \_____/        \       /          >====
+1> ====<                              \     /           >====
+1>     |                               \   /           |
+1>     |                                \ /            |
+1>     |                                 X             |
+1>     |                                / \            |
+1>     |                               /   \           |
+1>     |                              /     \          |
+1>     |                                             |
+1>      \                                           /
+1>       \____                                 ____/
+1>
+1> JSON Schema CLI - v[VERSION]
+1>
+1>     \\\               ///
+1>        \\\         ///
+1>           \\\   ///
+1>            ///\\\\
+1>         < <       > >
+1>            \\\\///
+1>           ///   \\
+1>        ///         \\
+1>     ///               \\
+1>
+1> by Sourcemeta
 1>
 1> Validate, lint, format, test, and bundle JSON Schemas.
 1>
