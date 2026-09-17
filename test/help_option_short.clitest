@@ -3,7 +3,14 @@ REPLACE .exe WITH '' IN result.txt
 REPLACE $VERSION WITH '[VERSION]' IN result.txt
 
 WRITE expected.txt UNTIL EOF
-1> JSON Schema CLI - v[VERSION]
+1>   __               /      __         \         /
+1>  / /        \     /       \ \        \  /\   /    JSON Schema CLI - v[VERSION]
+1> { {          \   /   \ /   } }    <  ><  ><  >   by Sourcemeta
+1>  \ \          \_/    / \  / /        /  \/  \
+1>   \_\                    /_/        /         \
+1>
+1> Validate, lint, format, test, and bundle JSON Schemas.
+1>
 1> Usage: jsonschema <command> [arguments...]
 1>
 1> Global Options:

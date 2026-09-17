@@ -6,7 +6,14 @@ REPLACE MATCHING '\x1B\[1m' WITH '[ANSI_BOLD]' IN result.txt
 REPLACE MATCHING '\x1B\[0m' WITH '[ANSI_RESET]' IN result.txt
 
 WRITE expected.txt UNTIL EOF
-1> [ANSI_BOLD_CYAN]JSON Schema CLI[ANSI_RESET] - v[VERSION]
+1> [ANSI_BOLD_CYAN]  __               /      __[ANSI_RESET]       [ANSI_BOLD_CYAN]  \         /[ANSI_RESET]
+1> [ANSI_BOLD_CYAN] / /        \     /       \ \[ANSI_RESET]     [ANSI_BOLD_CYAN]   \  /\   /[ANSI_RESET]    [ANSI_BOLD_CYAN]JSON Schema CLI[ANSI_RESET] - v[VERSION]
+1> [ANSI_BOLD_CYAN]{ {          \   /   \ /   } }[ANSI_RESET]    [ANSI_BOLD_CYAN]<  ><  ><  >[ANSI_RESET]   by Sourcemeta
+1> [ANSI_BOLD_CYAN] \ \          \_/    / \  / /[ANSI_RESET]     [ANSI_BOLD_CYAN]   /  \/  \[ANSI_RESET]
+1> [ANSI_BOLD_CYAN]  \_\                    /_/[ANSI_RESET]      [ANSI_BOLD_CYAN]  /         \[ANSI_RESET]
+1>
+1> Validate, lint, format, test, and bundle JSON Schemas.
+1>
 1> [ANSI_BOLD]Usage:[ANSI_RESET] jsonschema <command> [arguments...]
 1>
 1> [ANSI_BOLD]Global Options:[ANSI_RESET]

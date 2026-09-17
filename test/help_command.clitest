@@ -10,8 +10,19 @@ RUN help --color never STDIN /dev/null IN . INTO result_never.txt EXPECTING 0
 REPLACE .exe WITH '' IN result_never.txt
 REPLACE $VERSION WITH '[VERSION]' IN result_never.txt
 
+RUN STDIN /dev/null IN . INTO result_no_args.txt EXPECTING 0
+REPLACE .exe WITH '' IN result_no_args.txt
+REPLACE $VERSION WITH '[VERSION]' IN result_no_args.txt
+
 WRITE expected.txt UNTIL EOF
-1> JSON Schema CLI - v[VERSION]
+1>   __               /      __         \         /
+1>  / /        \     /       \ \        \  /\   /    JSON Schema CLI - v[VERSION]
+1> { {          \   /   \ /   } }    <  ><  ><  >   by Sourcemeta
+1>  \ \          \_/    / \  / /        /  \/  \
+1>   \_\                    /_/        /         \
+1>
+1> Validate, lint, format, test, and bundle JSON Schemas.
+1>
 1> Usage: jsonschema <command> [arguments...]
 1>
 1> Global Options:
@@ -172,3 +183,4 @@ EOF
 COMPARE result.txt AGAINST expected.txt
 COMPARE result_auto.txt AGAINST expected.txt
 COMPARE result_never.txt AGAINST expected.txt
+COMPARE result_no_args.txt AGAINST expected.txt

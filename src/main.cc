@@ -170,6 +170,34 @@ For more documentation, visit https://github.com/sourcemeta/jsonschema
 
 namespace {
 
+auto print_help_header() -> void {
+  using sourcemeta::core::TerminalStyle;
+  using sourcemeta::jsonschema::paint;
+
+  constexpr auto logo_style{TerminalStyle::Bold | TerminalStyle::Cyan};
+  constexpr auto title_style{TerminalStyle::Bold | TerminalStyle::Cyan};
+
+  std::println("{}       {}", paint("  __               /      __", logo_style),
+               paint("  \\         /", logo_style));
+  std::println("{}     {}    {} - v{}",
+               paint(" / /        \\     /       \\ \\", logo_style),
+               paint("   \\  /\\   /", logo_style),
+               paint("JSON Schema CLI", title_style),
+               sourcemeta::jsonschema::PROJECT_VERSION);
+  std::println("{}    {}   by Sourcemeta",
+               paint("{ {          \\   /   \\ /   } }", logo_style),
+               paint("<  ><  ><  >", logo_style));
+  std::println("{}     {}",
+               paint(" \\ \\          \\_/    / \\  / /", logo_style),
+               paint("   /  \\/  \\", logo_style));
+  std::println("{}      {}",
+               paint("  \\_\\                    /_/", logo_style),
+               paint("  /         \\", logo_style));
+  std::println();
+  std::println("Validate, lint, format, test, and bundle JSON Schemas.");
+  std::println();
+}
+
 auto parse_options(sourcemeta::core::Options &app, int argc, char **argv,
                    const sourcemeta::core::OptionsModifiers &modifiers = {})
     -> void {
@@ -352,10 +380,7 @@ auto jsonschema_main(const std::string &program, const std::string &command,
     using sourcemeta::jsonschema::paint;
     using sourcemeta::jsonschema::println;
 
-    std::println(
-        "{} - v{}",
-        paint("JSON Schema CLI", TerminalStyle::Bold | TerminalStyle::Cyan),
-        sourcemeta::jsonschema::PROJECT_VERSION);
+    print_help_header();
     std::println("{} {} <command> [arguments...]",
                  paint("Usage:", TerminalStyle::Bold),
                  std::filesystem::path{program}.filename().string());
