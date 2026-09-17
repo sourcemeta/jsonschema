@@ -1,6 +1,8 @@
 #include <sourcemeta/core/jsonschema.h>
 #include <sourcemeta/core/options.h>
+#include <sourcemeta/core/terminal.h>
 
+#include <cstddef>     // std::size_t
 #include <cstdlib>     // EXIT_SUCCESS
 #include <filesystem>  // std::filesystem
 #include <print>       // std::print, std::println
@@ -10,12 +12,11 @@
 #include "command.h"
 #include "configure.h"
 #include "error.h"
+#include "print.h"
 #include "utils.h"
 
-constexpr std::string_view USAGE_DETAILS{R"EOF(
-Global Options:
-
-   --verbose, -v                  Enable verbose output
+constexpr std::string_view USAGE_GLOBAL_OPTIONS{
+    R"EOF(   --verbose, -v                  Enable verbose output
    --debug, -g                    Enable even higher verbose output
    --resolve, -r                  Import the given JSON Schema (or directory of schemas)
                                   into the resolution context
@@ -28,10 +29,11 @@ Global Options:
    --http, -h                     Allow network access to resolve remote schemas
    --header, -H <name: value>     Send a custom HTTP header on every outgoing
                                   request. May be passed multiple times
+   --color <when>                 Control terminal colors: auto, always, or never
+                                  (default: auto)
+)EOF"};
 
-Commands:
-
-   version / --version / -v
+constexpr std::string_view USAGE_COMMANDS{R"EOF(   version / --version / -v
 
        Print the current version of the JSON Schema CLI.
 
@@ -166,6 +168,40 @@ Commands:
 For more documentation, visit https://github.com/sourcemeta/jsonschema
 )EOF"};
 
+namespace {
+
+auto parse_options(sourcemeta::core::Options &app, int argc, char **argv,
+                   const sourcemeta::core::OptionsModifiers &modifiers = {})
+    -> void {
+  app.parse(argc, argv, modifiers);
+  if (app.contains("color")) {
+    const auto &color_values{app.at("color")};
+    if (!color_values.empty()) {
+      const auto color{color_values.back()};
+      if (color == "auto") {
+        sourcemeta::core::terminal_set_color_policy(
+            sourcemeta::core::TerminalColorPolicy::WhenInteractive);
+      } else if (color == "always") {
+        sourcemeta::core::terminal_set_color_policy(
+            sourcemeta::core::TerminalColorPolicy::Always);
+      } else if (color == "never") {
+        sourcemeta::core::terminal_set_color_policy(
+            sourcemeta::core::TerminalColorPolicy::Disabled);
+      } else {
+        throw sourcemeta::jsonschema::InvalidOptionEnumerationValueError{
+            "The given color policy is not supported",
+            "color",
+            {"auto", "always", "never"}};
+      }
+    }
+  } else {
+    sourcemeta::core::terminal_set_color_policy(
+        sourcemeta::core::TerminalColorPolicy::WhenInteractive);
+  }
+}
+
+} // namespace
+
 auto jsonschema_main(const std::string &program, const std::string &command,
                      sourcemeta::core::Options &app, int argc, char **argv)
     -> int {
@@ -175,13 +211,13 @@ auto jsonschema_main(const std::string &program, const std::string &command,
     app.option("extension", {"e"});
     app.option("ignore", {"i"});
     app.option("indentation", {"n"});
-    app.parse(argc, argv, {.skip = 1});
+    parse_options(app, argc, argv, {.skip = 1});
     sourcemeta::jsonschema::fmt(app);
     return EXIT_SUCCESS;
   }
 
   if (command == "inspect") {
-    app.parse(argc, argv, {.skip = 1});
+    parse_options(app, argc, argv, {.skip = 1});
     sourcemeta::jsonschema::inspect(app);
     return EXIT_SUCCESS;
   }
@@ -190,7 +226,7 @@ auto jsonschema_main(const std::string &program, const std::string &command,
     app.flag("without-id", {"w"});
     app.option("extension", {"e"});
     app.option("ignore", {"i"});
-    app.parse(argc, argv, {.skip = 1});
+    parse_options(app, argc, argv, {.skip = 1});
     sourcemeta::jsonschema::bundle(app);
     return EXIT_SUCCESS;
   }
@@ -208,7 +244,7 @@ auto jsonschema_main(const std::string &program, const std::string &command,
     app.option("indentation", {"n"});
     app.option("rule", {"a"});
     app.option("top-level-rule", {"t"});
-    app.parse(argc, argv, {.skip = 1});
+    parse_options(app, argc, argv, {.skip = 1});
     sourcemeta::jsonschema::lint(app);
     return EXIT_SUCCESS;
   }
@@ -224,7 +260,7 @@ auto jsonschema_main(const std::string &program, const std::string &command,
     app.option("template", {"m"});
     app.option("loop", {"l"});
     app.option("entrypoint", {"p"});
-    app.parse(argc, argv, {.skip = 1});
+    parse_options(app, argc, argv, {.skip = 1});
     sourcemeta::jsonschema::validate(app);
     return EXIT_SUCCESS;
   }
@@ -235,7 +271,7 @@ auto jsonschema_main(const std::string &program, const std::string &command,
     app.flag("continue", {"c"});
     app.option("extension", {"e"});
     app.option("ignore", {"i"});
-    app.parse(argc, argv, {.skip = 1});
+    parse_options(app, argc, argv, {.skip = 1});
     sourcemeta::jsonschema::metaschema(app);
     return EXIT_SUCCESS;
   }
@@ -246,7 +282,7 @@ auto jsonschema_main(const std::string &program, const std::string &command,
     app.flag("minify", {"m"});
     app.option("include", {"n"});
     app.option("entrypoint", {"p"});
-    app.parse(argc, argv, {.skip = 1});
+    parse_options(app, argc, argv, {.skip = 1});
     sourcemeta::jsonschema::compile(app);
     return EXIT_SUCCESS;
   }
@@ -257,19 +293,19 @@ auto jsonschema_main(const std::string &program, const std::string &command,
     app.option("extension", {"e"});
     app.option("ignore", {"i"});
     app.option("jobs", {"J"});
-    app.parse(argc, argv, {.skip = 1});
+    parse_options(app, argc, argv, {.skip = 1});
     sourcemeta::jsonschema::test(app);
     return EXIT_SUCCESS;
   }
 
   if (command == "encode") {
-    app.parse(argc, argv, {.skip = 1});
+    parse_options(app, argc, argv, {.skip = 1});
     sourcemeta::jsonschema::encode(app);
     return EXIT_SUCCESS;
   }
 
   if (command == "decode") {
-    app.parse(argc, argv, {.skip = 1});
+    parse_options(app, argc, argv, {.skip = 1});
     sourcemeta::jsonschema::decode(app);
     return EXIT_SUCCESS;
   }
@@ -277,7 +313,7 @@ auto jsonschema_main(const std::string &program, const std::string &command,
   if (command == "codegen") {
     app.option("name", {"n"});
     app.option("target", {"t"});
-    app.parse(argc, argv, {.skip = 1});
+    parse_options(app, argc, argv, {.skip = 1});
     sourcemeta::jsonschema::codegen(app);
     return EXIT_SUCCESS;
   }
@@ -285,7 +321,7 @@ auto jsonschema_main(const std::string &program, const std::string &command,
   if (command == "install") {
     app.flag("force", {"f"});
     app.flag("frozen", {"z"});
-    app.parse(argc, argv, {.skip = 1});
+    parse_options(app, argc, argv, {.skip = 1});
     sourcemeta::jsonschema::install(app);
     return EXIT_SUCCESS;
   }
@@ -293,7 +329,7 @@ auto jsonschema_main(const std::string &program, const std::string &command,
   if (command == "upgrade") {
     app.option("to", {"t"});
     app.flag("meta", {"m"});
-    app.parse(argc, argv, {.skip = 1});
+    parse_options(app, argc, argv, {.skip = 1});
     sourcemeta::jsonschema::upgrade(app);
     return EXIT_SUCCESS;
   }
@@ -305,21 +341,37 @@ auto jsonschema_main(const std::string &program, const std::string &command,
     app.option("compact", {"c"});
     app.option("extension", {"e"});
     app.option("ignore", {"i"});
-    app.parse(argc, argv, {.skip = 1});
+    parse_options(app, argc, argv, {.skip = 1});
     sourcemeta::jsonschema::rdf(app);
     return EXIT_SUCCESS;
   }
 
   if (command == "help" || command == "--help" || command == "-h") {
-    std::println("JSON Schema CLI - v{}",
-                 sourcemeta::jsonschema::PROJECT_VERSION);
-    std::println("Usage: {} <command> [arguments...]",
+    parse_options(app, argc, argv, {.skip = 1});
+    using sourcemeta::core::TerminalStyle;
+    using sourcemeta::jsonschema::paint;
+    using sourcemeta::jsonschema::println;
+
+    std::println(
+        "{} - v{}",
+        paint("JSON Schema CLI", TerminalStyle::Bold | TerminalStyle::Cyan),
+        sourcemeta::jsonschema::PROJECT_VERSION);
+    std::println("{} {} <command> [arguments...]",
+                 paint("Usage:", TerminalStyle::Bold),
                  std::filesystem::path{program}.filename().string());
-    std::print("{}", USAGE_DETAILS);
+    std::println();
+    println(TerminalStyle::Bold, "Global Options:");
+    std::println();
+    std::print("{}", USAGE_GLOBAL_OPTIONS);
+    std::println();
+    println(TerminalStyle::Bold, "Commands:");
+    std::println();
+    std::print("{}", USAGE_COMMANDS);
     return EXIT_SUCCESS;
   }
 
   if (command == "version" || command == "--version" || command == "-v") {
+    parse_options(app, argc, argv, {.skip = 1});
     std::println("{}", sourcemeta::jsonschema::PROJECT_VERSION);
     return EXIT_SUCCESS;
   }
@@ -337,6 +389,7 @@ auto main(int argc, char **argv) noexcept -> int {
   app.option("default-dialect", {"d"});
   app.option("configuration", {"C"});
   app.option("header", {"H"});
+  app.option("color", {});
 
   return sourcemeta::jsonschema::try_catch(app, [&app, argc, argv]() {
     const std::string program{argv[0]};

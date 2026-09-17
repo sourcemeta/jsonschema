@@ -12,7 +12,7 @@ jsonschema metaschema [schemas-or-directories...]
   [--ignore/-i <schemas-or-directories>] [--trace/-t]
   [--default-dialect/-d <uri>] [--json/-j] [--continue/-c]
   [--format-assertion/-F]
-  [--configuration/-C <path>]
+  [--configuration/-C <path>] [--color auto|always|never]
 ```
 
 > [!NOTE]

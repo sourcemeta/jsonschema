@@ -5,7 +5,7 @@ Installing Dependencies
 jsonschema install [<uri> <path>]
   [--force/-f] [--frozen/-z]
   [--header/-H "<name>: <value>"] [--verbose/-v] [--debug/-g] [--json/-j]
-  [--configuration/-C <path>]
+  [--configuration/-C <path>] [--color auto|always|never]
 ```
 
 Many applications rely on consuming schemas authored and maintained by others.

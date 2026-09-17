@@ -21,6 +21,8 @@ WRITE expected.txt UNTIL EOF
 1>    --http, -h                     Allow network access to resolve remote schemas
 1>    --header, -H <name: value>     Send a custom HTTP header on every outgoing
 1>                                   request. May be passed multiple times
+1>    --color <when>                 Control terminal colors: auto, always, or never
+1>                                   (default: auto)
 1>
 1> Commands:
 1>
