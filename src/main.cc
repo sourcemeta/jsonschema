@@ -170,6 +170,7 @@ For more documentation, visit https://github.com/sourcemeta/jsonschema
 
 namespace {
 
+// clang-format off
 auto print_help_header() -> void {
   using sourcemeta::core::TerminalStyle;
   using sourcemeta::jsonschema::paint;
@@ -228,6 +229,7 @@ auto print_help_header() -> void {
   std::println("Validate, lint, format, test, and bundle JSON Schemas.");
   std::println();
 }
+// clang-format on
 
 auto parse_options(sourcemeta::core::Options &app, int argc, char **argv,
                    const sourcemeta::core::OptionsModifiers &modifiers = {})
