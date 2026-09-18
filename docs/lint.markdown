@@ -165,21 +165,13 @@ object entry with `topLevel` set to `true` marks the rule as top-level only.
 OpenAPI Descriptions
 --------------------
 
-If an input declares an `openapi` version of `3.1.x` or `3.2.x`, the `lint`
-command treats it as an [OpenAPI](https://spec.openapis.org/oas/latest.html)
-description rather than as a schema. Every Schema Object in the description
-(for example, the ones under `components/schemas` or the `schema` of a
-parameter, request body, or response) is linted, and every warning reports its
-location from the root of the description. Top-level rules, including the ones
-registered with `--top-level-rule/-t`, apply to every Schema Object.
-
-The description decides the dialect of its schemas through its
-`jsonSchemaDialect` field or the default dialect of its OpenAPI version, so the
-`--default-dialect/-d` option does not apply to them. An input that does not
-conform to the OpenAPI specification is reported as an error.
-
-**The `--format/-m` option is not supported when passing OpenAPI
-descriptions.**
+If the input is an OpenAPI spec v3.1 or v3.2 (v3.0 and older are NOT fully
+compliant with the JSON Schema specification), the `lint` command treats it as
+an [OpenAPI](https://spec.openapis.org/oas/latest.html) description rather than
+as a schema. Every Schema Object in the description (for example, the ones
+under `components/schemas` or the `schema` of a parameter, request body, or
+response) is linted, and every warning reports its location from the root of
+the description.
 
 Examples
 --------
