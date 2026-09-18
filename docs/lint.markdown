@@ -34,7 +34,9 @@ automatically fix many of them.
 > linting API specifications (OpenAPI, AsyncAPI, Arazzo, etc) touching on JSON
 > Schema as a byproduct. Therefore, this CLI is expected to have deeper
 > coverage of JSON Schema and be also usable in JSON Schema use cases that are
-> not related to APIs. If you are working with JSON Schema for API
+> not related to APIs. This CLI can also lint the schemas embedded in OpenAPI
+> descriptions (see [OpenAPI Descriptions](#openapi-descriptions)), but not the
+> rest of the description. If you are working with JSON Schema for API
 > specifications, you should make use of both linters together!
 
 **The `--fix/-f` option is not supported when passing YAML schemas.**
@@ -160,6 +162,17 @@ Custom rules can also be declared in the
 [`jsonschema.json`](./configuration.markdown) configuration file, where an
 object entry with `topLevel` set to `true` marks the rule as top-level only.
 
+OpenAPI Descriptions
+--------------------
+
+If the input is an OpenAPI spec v3.1 or v3.2 (v3.0 and older are NOT fully
+compliant with the JSON Schema specification), the `lint` command treats it as
+an [OpenAPI](https://spec.openapis.org/oas/latest.html) description rather than
+as a schema. Every Schema Object in the description (for example, the ones
+under `components/schemas` or the `schema` of a parameter, request body, or
+response) is linted, and every warning reports its location from the root of
+the description.
+
 Examples
 --------
 
@@ -235,6 +248,12 @@ jsonschema lint
 
 ```sh
 jsonschema lint --extension .schema.json
+```
+
+### Lint the schemas of an OpenAPI description
+
+```sh
+jsonschema lint path/to/openapi.yaml
 ```
 
 ### Fix lint warnings on a single schema

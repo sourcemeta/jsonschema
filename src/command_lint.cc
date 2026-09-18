@@ -4,9 +4,11 @@
 #include <sourcemeta/core/json.h>
 #include <sourcemeta/core/jsonpointer.h>
 #include <sourcemeta/core/jsonschema.h>
+#include <sourcemeta/core/openapi.h>
 
 #include <sourcemeta/blaze/compiler.h>
 
+#include <cstdint>     // std::uint8_t
 #include <cstdlib>     // EXIT_SUCCESS
 #include <filesystem>  // std::filesystem::current_path
 #include <iostream>    // std::cerr, std::cout
@@ -15,6 +17,7 @@
 #include <ostream>     // std::ostream
 #include <sstream>     // std::ostringstream
 #include <string_view> // std::string_view
+#include <utility>     // std::pair
 
 #include "command.h"
 #include "configuration.h"
@@ -111,7 +114,7 @@ static auto get_lint_callback(sourcemeta::core::JSON &errors_array,
         errors_array.push_back(error_obj);
       } else {
         if (entry.from_stdin) {
-          std::cout << sourcemeta::jsonschema::STDIN_DEFAULT_ID;
+          std::cout << entry.first;
         } else {
           std::cout << std::filesystem::relative(entry.resolution_base)
                            .generic_string();
@@ -141,6 +144,67 @@ static auto get_lint_callback(sourcemeta::core::JSON &errors_array,
       }
     }
   };
+}
+
+// An OpenAPI description declares no identifier of its own under the revisions
+// we support, so the one it is linted under is where it came from
+static auto openapi_default_id(const sourcemeta::jsonschema::InputJSON &entry)
+    -> std::string {
+  if (entry.from_stdin) {
+    return std::string{sourcemeta::jsonschema::STDIN_OPENAPI_DEFAULT_ID};
+  }
+
+  return sourcemeta::jsonschema::default_id(entry);
+}
+
+// An OpenAPI description that comes from standard input is not a schema, so it
+// goes by an identifier of its own wherever we report on it
+static auto
+retag_openapi_stdin(std::vector<sourcemeta::jsonschema::InputJSON> &entries)
+    -> void {
+  for (auto &entry : entries) {
+    if (entry.from_stdin &&
+        sourcemeta::core::openapi_version(entry.second).has_value()) {
+      entry.first =
+          std::string{sourcemeta::jsonschema::STDIN_OPENAPI_DEFAULT_ID};
+      entry.resolution_base = sourcemeta::jsonschema::openapi_stdin_path();
+    }
+  }
+}
+
+static auto
+check_openapi(const sourcemeta::blaze::SchemaTransformer &bundle,
+              const sourcemeta::jsonschema::InputJSON &entry,
+              const sourcemeta::core::SchemaResolver &resolver,
+              const sourcemeta::blaze::SchemaTransformer::Callback &callback)
+    -> std::pair<bool, std::uint8_t> {
+  const sourcemeta::core::OpenAPIFrame frame{
+      entry.second, sourcemeta::core::schema_walker, resolver,
+      openapi_default_id(entry)};
+  return bundle.check(entry.second, frame.schemas(),
+                      sourcemeta::core::schema_walker, resolver, callback,
+                      sourcemeta::core::JSON::String{EXCLUDE_KEYWORD});
+}
+
+static auto
+apply_openapi(const sourcemeta::blaze::SchemaTransformer &bundle,
+              sourcemeta::core::JSON &document,
+              const sourcemeta::jsonschema::InputJSON &entry,
+              const sourcemeta::core::SchemaResolver &resolver,
+              const sourcemeta::blaze::SchemaTransformer::Callback &callback)
+    -> std::pair<bool, std::uint8_t> {
+  const auto default_base{openapi_default_id(entry)};
+  std::optional<sourcemeta::core::OpenAPIFrame> frame;
+  return bundle.apply(
+      document,
+      [&frame, &resolver, &default_base](const sourcemeta::core::JSON &current)
+          -> const sourcemeta::core::SchemaFrame & {
+        frame.emplace(current, sourcemeta::core::schema_walker, resolver,
+                      default_base);
+        return frame.value().schemas();
+      },
+      sourcemeta::core::schema_walker, resolver, callback,
+      sourcemeta::core::JSON::String{EXCLUDE_KEYWORD});
 }
 
 static auto load_rule(sourcemeta::blaze::SchemaTransformer &bundle,
@@ -383,7 +447,8 @@ auto sourcemeta::jsonschema::lint(const sourcemeta::core::Options &options)
   const auto indentation{parse_indentation(options)};
 
   if (options.contains("fix")) {
-    const auto entries = for_each_json(options);
+    auto entries = for_each_json(options);
+    retag_openapi_stdin(entries);
 
     for (const auto &entry : entries) {
       const auto configuration_path{
@@ -405,18 +470,32 @@ auto sourcemeta::jsonschema::lint(const sourcemeta::core::Options &options)
         throw NotSchemaError{entry.resolution_base};
       }
 
+      const auto is_openapi{
+          sourcemeta::core::openapi_version(entry.second).has_value()};
+      if (is_openapi && format_output) {
+        throw sourcemeta::core::FileError<UnsupportedOpenAPIFormatError>(
+            entry.resolution_base);
+      }
+
       auto copy = entry.second;
       bool printed_progress{false};
 
       const auto wrapper_result =
           sourcemeta::jsonschema::try_catch(options, [&]() {
             try {
-              const auto apply_result = bundle.apply(
-                  copy, sourcemeta::core::schema_walker, custom_resolver,
-                  get_lint_callback(errors_array, entry, output_json, true,
-                                    printed_progress),
-                  dialect, sourcemeta::jsonschema::default_id(entry),
-                  sourcemeta::core::JSON::String{EXCLUDE_KEYWORD});
+              const auto apply_result =
+                  is_openapi
+                      ? apply_openapi(bundle, copy, entry, custom_resolver,
+                                      get_lint_callback(errors_array, entry,
+                                                        output_json, true,
+                                                        printed_progress))
+                      : bundle.apply(
+                            copy, sourcemeta::core::schema_walker,
+                            custom_resolver,
+                            get_lint_callback(errors_array, entry, output_json,
+                                              true, printed_progress),
+                            dialect, sourcemeta::jsonschema::default_id(entry),
+                            sourcemeta::core::JSON::String{EXCLUDE_KEYWORD});
               if (printed_progress) {
                 std::cerr << "\n";
               }
@@ -426,6 +505,22 @@ auto sourcemeta::jsonschema::lint(const sourcemeta::core::Options &options)
               }
 
               return EXIT_SUCCESS;
+            } catch (const sourcemeta::core::OpenAPIError &error) {
+              if (printed_progress) {
+                std::cerr << "\n";
+              }
+
+              const auto position{entry.positions.get(error.location())};
+              if (position.has_value()) {
+                throw PositionError<sourcemeta::core::FileError<
+                    sourcemeta::core::OpenAPIError>>(
+                    std::get<0>(position.value()),
+                    std::get<1>(position.value()), entry.resolution_base,
+                    error);
+              }
+
+              throw sourcemeta::core::FileError<sourcemeta::core::OpenAPIError>(
+                  entry.resolution_base, error);
             } catch (
                 const sourcemeta::blaze::SchemaTransformRuleProcessedTwiceError
                     &error) {
@@ -602,7 +697,10 @@ auto sourcemeta::jsonschema::lint(const sourcemeta::core::Options &options)
       }
     }
   } else {
-    for (const auto &entry : for_each_json(options)) {
+    auto entries = for_each_json(options);
+    retag_openapi_stdin(entries);
+
+    for (const auto &entry : entries) {
       const auto configuration_path{
           find_configuration(options, entry.resolution_base)};
       const auto &configuration{read_configuration(options, configuration_path,
@@ -616,17 +714,25 @@ auto sourcemeta::jsonschema::lint(const sourcemeta::core::Options &options)
 
       LOG_VERBOSE(options) << "Linting: " << entry.first << "\n";
 
+      const auto is_openapi{
+          sourcemeta::core::openapi_version(entry.second).has_value()};
       bool printed_progress{false};
       const auto wrapper_result =
           sourcemeta::jsonschema::try_catch(options, [&]() {
             try {
-              const auto subresult = bundle.check(
-                  entry.second, sourcemeta::core::schema_walker,
-                  custom_resolver,
-                  get_lint_callback(errors_array, entry, output_json, false,
-                                    printed_progress),
-                  dialect, sourcemeta::jsonschema::default_id(entry),
-                  sourcemeta::core::JSON::String{EXCLUDE_KEYWORD});
+              const auto subresult =
+                  is_openapi
+                      ? check_openapi(bundle, entry, custom_resolver,
+                                      get_lint_callback(errors_array, entry,
+                                                        output_json, false,
+                                                        printed_progress))
+                      : bundle.check(
+                            entry.second, sourcemeta::core::schema_walker,
+                            custom_resolver,
+                            get_lint_callback(errors_array, entry, output_json,
+                                              false, printed_progress),
+                            dialect, sourcemeta::jsonschema::default_id(entry),
+                            sourcemeta::core::JSON::String{EXCLUDE_KEYWORD});
               scores.emplace_back(subresult.second);
               if (subresult.first) {
                 return EXIT_SUCCESS;
@@ -634,6 +740,18 @@ auto sourcemeta::jsonschema::lint(const sourcemeta::core::Options &options)
 
               // Return 2 for logical lint failures
               return EXIT_EXPECTED_FAILURE;
+            } catch (const sourcemeta::core::OpenAPIError &error) {
+              const auto position{entry.positions.get(error.location())};
+              if (position.has_value()) {
+                throw PositionError<sourcemeta::core::FileError<
+                    sourcemeta::core::OpenAPIError>>(
+                    std::get<0>(position.value()),
+                    std::get<1>(position.value()), entry.resolution_base,
+                    error);
+              }
+
+              throw sourcemeta::core::FileError<sourcemeta::core::OpenAPIError>(
+                  entry.resolution_base, error);
             } catch (
                 const sourcemeta::blaze::CompilerInvalidRegexError &error) {
               throw sourcemeta::core::FileError<

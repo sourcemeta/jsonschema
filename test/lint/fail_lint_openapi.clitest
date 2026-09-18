@@ -1,0 +1,63 @@
+WRITE openapi.json UNTIL EOF
+{
+  "openapi": "3.1.1",
+  "info": { "title": "Example", "version": "1.0.0" },
+  "components": {
+    "schemas": {
+      "Pet": {
+        "title": "Pet",
+        "description": "A pet in the store",
+        "examples": [ "dog" ],
+        "type": "string",
+        "enum": [ "dog", "cat" ]
+      }
+    }
+  }
+}
+EOF
+
+// Validation failure
+RUN lint openapi.json STDIN /dev/null IN . INTO result_0.txt EXPECTING 2
+
+WRITE expected_0.txt UNTIL EOF
+1> openapi.json:11:9:
+1>   Setting `type` alongside `enum` is considered an anti-pattern, as the enumeration choices already imply their respective types (enum_with_type)
+1>     at location "/components/schemas/Pet/enum"
+1> openapi.json:10:9:
+1>   Setting `type` alongside `enum` is considered an anti-pattern, as the enumeration choices already imply their respective types (enum_with_type)
+1>     at location "/components/schemas/Pet/type"
+EOF
+
+COMPARE result_0.txt AGAINST expected_0.txt
+
+// Validation failure
+RUN lint openapi.json --json STDIN /dev/null IN . INTO result_1.txt EXPECTING 2
+
+REPLACE $CWD WITH '[CWD]' IN result_1.txt
+
+WRITE expected_1.txt UNTIL EOF
+1> {
+1>   "valid": false,
+1>   "health": 0,
+1>   "errors": [
+1>     {
+1>       "path": "[CWD]/openapi.json",
+1>       "id": "enum_with_type",
+1>       "message": "Setting `type` alongside `enum` is considered an anti-pattern, as the enumeration choices already imply their respective types",
+1>       "description": null,
+1>       "schemaLocation": [ "components", "schemas", "Pet", "type" ],
+1>       "position": [ 10, 9, 10, 24 ]
+1>     },
+1>     {
+1>       "path": "[CWD]/openapi.json",
+1>       "id": "enum_with_type",
+1>       "message": "Setting `type` alongside `enum` is considered an anti-pattern, as the enumeration choices already imply their respective types",
+1>       "description": null,
+1>       "schemaLocation": [ "components", "schemas", "Pet", "enum" ],
+1>       "position": [ 11, 9, 11, 32 ]
+1>     }
+1>   ]
+1> }
+EOF
+
+COMPARE result_1.txt AGAINST expected_1.txt
