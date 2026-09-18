@@ -536,6 +536,11 @@ private:
 constexpr std::string_view STDIN_DEFAULT_ID{
     "tag:sourcemeta.com,2026:jsonschema/stdin"};
 
+// An OpenAPI description that comes from standard input is not a schema, so we
+// give it an identifier of its own, on the same terms as the one above
+constexpr std::string_view STDIN_OPENAPI_DEFAULT_ID{
+    "tag:sourcemeta.com,2026:openapi/stdin"};
+
 // Input read from standard input never corresponds to a file, so we carry the
 // identifier itself where a path would otherwise go. It is never resolved
 // against the filesystem, as every such site is guarded on whether the input
@@ -544,10 +549,21 @@ inline auto stdin_path() -> std::filesystem::path {
   return std::filesystem::path{STDIN_DEFAULT_ID};
 }
 
+// The same, for an OpenAPI description, which goes by an identifier of its own
+inline auto openapi_stdin_path() -> std::filesystem::path {
+  return std::filesystem::path{STDIN_OPENAPI_DEFAULT_ID};
+}
+
+// A path that stands for standard input names no file, so it prints as itself
+// rather than being resolved against the filesystem
+inline auto is_stdin_path(const std::filesystem::path &path) -> bool {
+  return path == stdin_path() || path == openapi_stdin_path();
+}
+
 inline auto stdin_path_string(const std::filesystem::path &path)
     -> std::string {
-  if (path == stdin_path()) {
-    return std::string{STDIN_DEFAULT_ID};
+  if (is_stdin_path(path)) {
+    return path.generic_string();
   }
 
   return sourcemeta::core::weakly_canonical(path).generic_string();
@@ -562,8 +578,8 @@ inline auto stdin_path_string(const std::filesystem::path &path)
 // afford once per instance
 inline auto relative_path_string(const std::filesystem::path &canonical)
     -> std::string {
-  if (canonical == stdin_path()) {
-    return std::string{STDIN_DEFAULT_ID};
+  if (is_stdin_path(canonical)) {
+    return canonical.generic_string();
   }
 
   // The working directory cannot change while a command runs

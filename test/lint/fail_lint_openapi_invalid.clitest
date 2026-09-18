@@ -36,3 +36,38 @@ WRITE expected_1.txt UNTIL EOF
 EOF
 
 COMPARE result_1.txt AGAINST expected_1.txt
+
+WRITE stdin_0 UNTIL EOF
+{
+  "openapi": "3.1.1",
+  "info": { "title": "Example", "version": "1.0.0" }
+}
+EOF
+
+// Schema input error
+RUN lint - STDIN stdin_0 IN . INTO result_2.txt EXPECTING 4
+
+WRITE expected_2.txt UNTIL EOF
+2> error: The OpenAPI Description must declare paths, components or webhooks
+2>   at line 1
+2>   at column 1
+2>   at file path tag:sourcemeta.com,2026:openapi/stdin
+2>   at location ""
+EOF
+
+COMPARE result_2.txt AGAINST expected_2.txt
+
+// Schema input error
+RUN lint - --json STDIN stdin_0 IN . INTO result_3.txt EXPECTING 4
+
+WRITE expected_3.txt UNTIL EOF
+1> {
+1>   "error": "The OpenAPI Description must declare paths, components or webhooks",
+1>   "line": 1,
+1>   "column": 1,
+1>   "filePath": "tag:sourcemeta.com,2026:openapi/stdin",
+1>   "location": ""
+1> }
+EOF
+
+COMPARE result_3.txt AGAINST expected_3.txt
