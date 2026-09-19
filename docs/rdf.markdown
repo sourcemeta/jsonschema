@@ -28,7 +28,8 @@ maintaining a separate JSON-LD `@context` that can silently drift from the
 schema. To learn more about the motivation and design behind this feature,
 refer to our [Fully solving JSON Schema and JSON-LD
 interoperability](https://www.sourcemeta.com/blog/json-schema-jsonld-interoperability/)
-blog post.
+blog post. If you are new to JSON-LD itself, [A JSON-LD
+Handbook](https://dr-json-ld.com/book/) is a great place to learn about it.
 
 **This command is experimental and we are actively seeking feedback to make
 this better. Please open an issue at
