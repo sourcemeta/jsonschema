@@ -3,7 +3,12 @@ REPLACE .exe WITH '' IN result.txt
 REPLACE $VERSION WITH '[VERSION]' IN result.txt
 
 WRITE expected.txt UNTIL EOF
-1> JSON Schema CLI - v[VERSION]
+1>   \  /   JSON Schema CLI - v[VERSION]
+1>    ><    by Sourcemeta
+1>   /  \
+1>
+1> The CLI for working with JSON Schema, the world's most popular schema language.
+1>
 1> Usage: jsonschema <command> [arguments...]
 1>
 1> Global Options:

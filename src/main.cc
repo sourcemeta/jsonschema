@@ -170,6 +170,25 @@ For more documentation, visit https://github.com/sourcemeta/jsonschema
 
 namespace {
 
+// clang-format off
+auto print_help_header() -> void {
+  using sourcemeta::core::TerminalStyle;
+  using sourcemeta::jsonschema::paint;
+
+  constexpr auto LOGO_STYLE{TerminalStyle::Bold | TerminalStyle::Cyan};
+  constexpr auto TITLE_STYLE{TerminalStyle::Bold | TerminalStyle::Cyan};
+
+  std::println("{}   {} - v{}", paint(R"(  \  /)", LOGO_STYLE),
+               paint("JSON Schema CLI", TITLE_STYLE),
+               sourcemeta::jsonschema::PROJECT_VERSION);
+  std::println("{}   by Sourcemeta", paint("   >< ", LOGO_STYLE));
+  std::println("{}", paint(R"(  /  \)", LOGO_STYLE));
+  std::println();
+  std::println("The CLI for working with JSON Schema, the world's most popular schema language.");
+  std::println();
+}
+// clang-format on
+
 auto parse_options(sourcemeta::core::Options &app, int argc, char **argv,
                    const sourcemeta::core::OptionsModifiers &modifiers = {})
     -> void {
@@ -352,10 +371,7 @@ auto jsonschema_main(const std::string &program, const std::string &command,
     using sourcemeta::jsonschema::paint;
     using sourcemeta::jsonschema::println;
 
-    std::println(
-        "{} - v{}",
-        paint("JSON Schema CLI", TerminalStyle::Bold | TerminalStyle::Cyan),
-        sourcemeta::jsonschema::PROJECT_VERSION);
+    print_help_header();
     std::println("{} {} <command> [arguments...]",
                  paint("Usage:", TerminalStyle::Bold),
                  std::filesystem::path{program}.filename().string());
