@@ -34,15 +34,15 @@ WRITE expected.txt UNTIL EOF
 1>
 1> [ANSI_BOLD]Commands:[ANSI_RESET]
 1>
-1>    version / --version / -v
+1>    [ANSI_BOLD_CYAN]version[ANSI_RESET] / --version / -v
 1>
 1>        Print the current version of the JSON Schema CLI.
 1>
-1>    help / --help / -h
+1>    [ANSI_BOLD_CYAN]help[ANSI_RESET] / --help / -h
 1>
 1>        Print this command reference help.
 1>
-1>    validate <schema.json|.yaml> <instance.json|.jsonl|.jsonl.gz|.yaml|directory...>
+1>    [ANSI_BOLD_CYAN]validate[ANSI_RESET] <schema.json|.yaml> <instance.json|.jsonl|.jsonl.gz|.yaml|directory...>
 1>             [--benchmark/-b] [--loop <iterations>] [--extension/-e <extension>]
 1>             [--ignore/-i <schemas-or-directories>] [--trace/-t] [--fast/-f]
 1>             [--template/-m <template.json>] [--entrypoint/-p <pointer|uri>]
@@ -64,7 +64,7 @@ WRITE expected.txt UNTIL EOF
 1>        for error reporting purposes. Make sure they match or you will get
 1>        non-sense results.
 1>
-1>    metaschema [schemas-or-directories...] [--extension/-e <extension>]
+1>    [ANSI_BOLD_CYAN]metaschema[ANSI_RESET] [schemas-or-directories...] [--extension/-e <extension>]
 1>               [--ignore/-i <schemas-or-directories>] [--trace/-t]
 1>               [--continue/-c] [--format-assertion/-F]
 1>
@@ -72,7 +72,7 @@ WRITE expected.txt UNTIL EOF
 1>        to their metaschemas. The --trace/-t option is only allowed given a
 1>        single schema.
 1>
-1>    compile <schema.json|.yaml> [--extension/-e <extension>]
+1>    [ANSI_BOLD_CYAN]compile[ANSI_RESET] <schema.json|.yaml> [--extension/-e <extension>]
 1>            [--ignore/-i <schemas-or-directories>] [--fast/-f] [--minify/-m]
 1>            [--include/-n <name>] [--entrypoint/-p <pointer|uri>]
 1>            [--format-assertion/-F]
@@ -81,7 +81,7 @@ WRITE expected.txt UNTIL EOF
 1>        Use --include/-n to output as a C/C++ header file.
 1>        Use --entrypoint/-p to compile a subschema by JSON Pointer or URI.
 1>
-1>    test [schemas-or-directories...] [--extension/-e <extension>]
+1>    [ANSI_BOLD_CYAN]test[ANSI_RESET] [schemas-or-directories...] [--extension/-e <extension>]
 1>         [--ignore/-i <schemas-or-directories>] [--format-assertion/-F]
 1>         [--jobs/-J <count>] [--trace/-t]
 1>
@@ -89,14 +89,14 @@ WRITE expected.txt UNTIL EOF
 1>        Pass --json/-j to output results in CTRF format (https://ctrf.io).
 1>        Pass --trace/-t to print the evaluation trace of every failing test.
 1>
-1>    fmt [schemas-or-directories...] [--check/-c] [--extension/-e <extension>]
+1>    [ANSI_BOLD_CYAN]fmt[ANSI_RESET] [schemas-or-directories...] [--check/-c] [--extension/-e <extension>]
 1>        [--ignore/-i <schemas-or-directories>] [--keep-ordering/-k]
 1>        [--indentation/-n <spaces>]
 1>
 1>        Format the input schemas in-place or check they are formatted.
 1>        This command does not support YAML schemas yet.
 1>
-1>    lint [schemas-or-directories...] [--fix/-f] [--format/-m]
+1>    [ANSI_BOLD_CYAN]lint[ANSI_RESET] [schemas-or-directories...] [--fix/-f] [--format/-m]
 1>         [--keep-ordering/-k] [--extension/-e <extension>]
 1>         [--ignore/-i <schemas-or-directories>] [--exclude/-x <rule-name>]
 1>         [--only/-o <rule-name>] [--list/-l] [--indentation/-n <spaces>]
@@ -113,7 +113,7 @@ WRITE expected.txt UNTIL EOF
 1>        Use --top-level-rule/-t to add a custom lint rule that only runs
 1>        against the document root.
 1>
-1>    upgrade <schema.json|.yaml>
+1>    [ANSI_BOLD_CYAN]upgrade[ANSI_RESET] <schema.json|.yaml>
 1>            [--to/-t draft4|draft6|draft7|2019-09|2020-12] [--meta/-m]
 1>
 1>        Upgrade the given schema to a newer JSON Schema dialect.
@@ -122,31 +122,31 @@ WRITE expected.txt UNTIL EOF
 1>        Pass --meta/-m as a hint when the input is a meta-schema
 1>        (not auto-detectable on Draft 7 and older dialects).
 1>
-1>    bundle <schema.json|.yaml> [--extension/-e <extension>]
+1>    [ANSI_BOLD_CYAN]bundle[ANSI_RESET] <schema.json|.yaml> [--extension/-e <extension>]
 1>           [--ignore/-i <schemas-or-directories>] [--without-id/-w]
 1>
 1>        Perform JSON Schema Bundling on a schema to inline remote references,
 1>        printing the result to standard output.
 1>
-1>    inspect <schema.json|.yaml>
+1>    [ANSI_BOLD_CYAN]inspect[ANSI_RESET] <schema.json|.yaml>
 1>
 1>        Statically inspect a schema to display schema locations and
 1>        references in a human-readable manner.
 1>
-1>    codegen <schema.json|.yaml> --target/-t <target> [--name/-n <name>]
+1>    [ANSI_BOLD_CYAN]codegen[ANSI_RESET] <schema.json|.yaml> --target/-t <target> [--name/-n <name>]
 1>
 1>        Generate code from a JSON Schema. Currently only supports
 1>        --target/-t set to typescript and JSON Schema 2020-12.
 1>
-1>    encode <document.json|.jsonl> <output.binpack>
+1>    [ANSI_BOLD_CYAN]encode[ANSI_RESET] <document.json|.jsonl> <output.binpack>
 1>
 1>        Encode a JSON document or JSONL dataset using JSON BinPack.
 1>
-1>    decode <output.binpack> <output.json|.jsonl>
+1>    [ANSI_BOLD_CYAN]decode[ANSI_RESET] <output.binpack> <output.json|.jsonl>
 1>
 1>        Decode a JSON document or JSONL dataset using JSON BinPack.
 1>
-1>    rdf <schema.json|.yaml> <instance.json|.yaml> [--flatten/-l]
+1>    [ANSI_BOLD_CYAN]rdf[ANSI_RESET] <schema.json|.yaml> <instance.json|.yaml> [--flatten/-l]
 1>        [--compact/-c <context.json|.yaml>] [--fast/-f] [--format-assertion/-F]
 1>        [--extension/-e <extension>] [--ignore/-i <schemas-or-directories>]
 1>
@@ -157,7 +157,7 @@ WRITE expected.txt UNTIL EOF
 1>        exhaustive mode by default. Pass --fast/-f to optimise for speed at
 1>        the expense of validation error quality.
 1>
-1>    install [<uri> <path>] [--force/-f] [--frozen/-z]
+1>    [ANSI_BOLD_CYAN]install[ANSI_RESET] [<uri> <path>] [--force/-f] [--frozen/-z]
 1>
 1>        Fetch and install external schema dependencies declared in
 1>        jsonschema.json. Pass a URI and a local file path to add a new
