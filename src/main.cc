@@ -189,6 +189,42 @@ auto print_help_header() -> void {
 }
 // clang-format on
 
+auto print_help_commands(std::string_view commands) -> void {
+  using sourcemeta::core::TerminalStyle;
+  using sourcemeta::jsonschema::paint;
+
+  constexpr auto COMMAND_STYLE{TerminalStyle::Bold | TerminalStyle::Cyan};
+
+  std::size_t start{0};
+  while (start < commands.size()) {
+    const auto end{commands.find('\n', start)};
+    const auto line{end == std::string_view::npos
+                        ? commands.substr(start)
+                        : commands.substr(start, end - start)};
+
+    if (line.size() > 3 && line[0] == ' ' && line[1] == ' ' && line[2] == ' ' &&
+        line[3] != ' ') {
+      const auto token_end{line.find(' ', 3)};
+      const auto token{token_end == std::string_view::npos
+                           ? line.substr(3)
+                           : line.substr(3, token_end - 3)};
+      const auto remainder{token_end == std::string_view::npos
+                               ? std::string_view{}
+                               : line.substr(token_end)};
+      std::print("   {}{}", paint(token, COMMAND_STYLE), remainder);
+    } else {
+      std::print("{}", line);
+    }
+
+    if (end != std::string_view::npos) {
+      std::print("\n");
+      start = end + 1;
+    } else {
+      break;
+    }
+  }
+}
+
 auto parse_options(sourcemeta::core::Options &app, int argc, char **argv,
                    const sourcemeta::core::OptionsModifiers &modifiers = {})
     -> void {
@@ -382,7 +418,7 @@ auto jsonschema_main(const std::string &program, const std::string &command,
     std::println();
     println(TerminalStyle::Bold, "Commands:");
     std::println();
-    std::print("{}", USAGE_COMMANDS);
+    print_help_commands(USAGE_COMMANDS);
     return EXIT_SUCCESS;
   }
 
