@@ -24,8 +24,19 @@
 #include "error.h"
 #include "input.h"
 #include "logger.h"
+#include "print.h"
 #include "resolver.h"
 #include "utils.h"
+
+namespace {
+
+using sourcemeta::core::TerminalStyle;
+constexpr auto FAILURE_STYLE{TerminalStyle::Bold | TerminalStyle::Red};
+constexpr auto MESSAGE_STYLE{TerminalStyle::Bold};
+constexpr auto IDENTIFIER_STYLE{TerminalStyle::Bold | TerminalStyle::Cyan};
+constexpr auto LOCATION_STYLE{TerminalStyle::Cyan};
+
+} // namespace
 
 constexpr std::string_view EXCLUDE_KEYWORD{"x-lint-exclude"};
 
@@ -130,10 +141,24 @@ static auto get_lint_callback(sourcemeta::core::JSON &errors_array,
         }
 
         std::cout << ":\n";
-        std::cout << "  " << message << " (" << name << ")\n";
-        std::cout << "    at location \"";
-        sourcemeta::core::stringify(schema_location, std::cout);
-        std::cout << "\"\n";
+        std::cout << "  ";
+        if (sourcemeta::core::terminal_color_enabled(
+                sourcemeta::core::TerminalStream::Stdout)) {
+          std::cout << sourcemeta::jsonschema::paint("✗", FAILURE_STYLE) << " ";
+        }
+        std::cout << sourcemeta::jsonschema::paint(message, MESSAGE_STYLE)
+                  << " ("
+                  << sourcemeta::jsonschema::paint(name, IDENTIFIER_STYLE)
+                  << ")\n";
+        std::ostringstream pointer_stream;
+        sourcemeta::core::stringify(schema_location, pointer_stream);
+        std::cout << "    "
+                  << sourcemeta::jsonschema::paint("at location",
+                                                   TerminalStyle::Bold)
+                  << " \""
+                  << sourcemeta::jsonschema::paint(pointer_stream.str(),
+                                                   LOCATION_STYLE)
+                  << "\"\n";
 
         if (result.description.has_value()) {
           reindent(result.description.value(), "    ", std::cout);
@@ -420,7 +445,8 @@ auto sourcemeta::jsonschema::lint(const sourcemeta::core::Options &options)
 
     std::size_t count{0};
     for (const auto &entry : rules) {
-      std::cout << entry.first << "\n";
+      std::cout << sourcemeta::jsonschema::paint(entry.first, IDENTIFIER_STYLE)
+                << "\n";
       std::cout << "  " << entry.second << "\n\n";
       count += 1;
     }
