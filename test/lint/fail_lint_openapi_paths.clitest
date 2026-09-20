@@ -1,0 +1,94 @@
+WRITE openapi.json UNTIL EOF
+{
+  "openapi": "3.1.1",
+  "info": { "title": "Example", "version": "1.0.0" },
+  "paths": {
+    "/pets": {
+      "get": {
+        "responses": {
+          "200": {
+            "description": "A pet",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "title": "Pet",
+                  "description": "A pet in the store",
+                  "examples": [ "dog" ],
+                  "type": "string",
+                  "enum": [ "dog", "cat" ]
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
+EOF
+
+// Validation failure
+RUN lint openapi.json STDIN /dev/null IN . INTO result_0.txt EXPECTING 2
+
+WRITE expected_0.txt UNTIL EOF
+1> openapi.json:17:19:
+1>   Setting `type` alongside `enum` is considered an anti-pattern, as the enumeration choices already imply their respective types (enum_with_type)
+1>     at location "/paths/~1pets/get/responses/200/content/application~1json/schema/enum"
+1> openapi.json:16:19:
+1>   Setting `type` alongside `enum` is considered an anti-pattern, as the enumeration choices already imply their respective types (enum_with_type)
+1>     at location "/paths/~1pets/get/responses/200/content/application~1json/schema/type"
+EOF
+
+COMPARE result_0.txt AGAINST expected_0.txt
+
+// Validation failure
+RUN lint openapi.json --json STDIN /dev/null IN . INTO result_1.txt EXPECTING 2
+
+REPLACE $CWD WITH '[CWD]' IN result_1.txt
+
+WRITE expected_1.txt UNTIL EOF
+1> {
+1>   "valid": false,
+1>   "health": 0,
+1>   "errors": [
+1>     {
+1>       "path": "[CWD]/openapi.json",
+1>       "id": "enum_with_type",
+1>       "message": "Setting `type` alongside `enum` is considered an anti-pattern, as the enumeration choices already imply their respective types",
+1>       "description": null,
+1>       "schemaLocation": [
+1>         "paths",
+1>         "/pets",
+1>         "get",
+1>         "responses",
+1>         "200",
+1>         "content",
+1>         "application/json",
+1>         "schema",
+1>         "type"
+1>       ],
+1>       "position": [ 16, 19, 16, 34 ]
+1>     },
+1>     {
+1>       "path": "[CWD]/openapi.json",
+1>       "id": "enum_with_type",
+1>       "message": "Setting `type` alongside `enum` is considered an anti-pattern, as the enumeration choices already imply their respective types",
+1>       "description": null,
+1>       "schemaLocation": [
+1>         "paths",
+1>         "/pets",
+1>         "get",
+1>         "responses",
+1>         "200",
+1>         "content",
+1>         "application/json",
+1>         "schema",
+1>         "enum"
+1>       ],
+1>       "position": [ 17, 19, 17, 42 ]
+1>     }
+1>   ]
+1> }
+EOF
+
+COMPARE result_1.txt AGAINST expected_1.txt
