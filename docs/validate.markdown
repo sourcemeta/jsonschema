@@ -13,7 +13,7 @@ jsonschema validate <schema.json|.yaml> <instance.json|.jsonl|.jsonl.gz|.yaml|di
   [--ignore/-i <schemas-or-directories>] [--trace/-t] [--fast/-f]
   [--template/-m <template.json>] [--json/-j] [--entrypoint/-p <pointer|uri>]
   [--continue/-c] [--format-assertion/-F] [--configuration/-C <path>]
-  [--color auto|always|never]
+  [--valid/-V] [--invalid/-I] [--color auto|always|never]
 ```
 
 > [!NOTE]
@@ -249,6 +249,19 @@ jsonschema validate path/to/my/schema.json path/to/instances/ --extension .data.
 ```sh
 jsonschema validate path/to/my/schema.json path/to/instances/ \
   --ignore path/to/instances/drafts
+```
+
+### Assert that a JSON instance fails validation
+
+```sh
+jsonschema validate path/to/my/schema.json path/to/my/instance.json --invalid
+```
+
+### Assert that a directory of instances all fail validation
+
+```sh
+jsonschema validate path/to/my/schema.json path/to/invalid-instances/ \
+  --invalid --continue
 ```
 
 ### Validate a JSON instance against a specific subschema

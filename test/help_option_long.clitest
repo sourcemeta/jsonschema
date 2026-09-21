@@ -46,12 +46,17 @@ WRITE expected.txt UNTIL EOF
 1>             [--benchmark/-b] [--loop <iterations>] [--extension/-e <extension>]
 1>             [--ignore/-i <schemas-or-directories>] [--trace/-t] [--fast/-f]
 1>             [--template/-m <template.json>] [--entrypoint/-p <pointer|uri>]
-1>             [--continue/-c] [--format-assertion/-F]
+1>             [--continue/-c] [--format-assertion/-F] [--valid/-V] [--invalid/-I]
 1>
 1>        Validate one or more instances against the given schema.
 1>
 1>        The --trace/-t option is only allowed given a single instance, and
 1>        --benchmark/-b given a single file, which may be a JSONL dataset.
+1>
+1>        Pass --invalid/-I to assert that every instance fails validation
+1>        instead, reporting the ones that unexpectedly succeed. The --valid/-V
+1>        option states the default behaviour explicitly and cannot be combined
+1>        with --invalid/-I.
 1>
 1>        By default, schemas are validated in exhaustive mode, which results in
 1>        better error messages, at the expense of speed. The --fast/-f option

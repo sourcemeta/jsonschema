@@ -45,12 +45,17 @@ constexpr std::string_view USAGE_COMMANDS{R"EOF(   version / --version / -v
             [--benchmark/-b] [--loop <iterations>] [--extension/-e <extension>]
             [--ignore/-i <schemas-or-directories>] [--trace/-t] [--fast/-f]
             [--template/-m <template.json>] [--entrypoint/-p <pointer|uri>]
-            [--continue/-c] [--format-assertion/-F]
+            [--continue/-c] [--format-assertion/-F] [--valid/-V] [--invalid/-I]
 
        Validate one or more instances against the given schema.
 
        The --trace/-t option is only allowed given a single instance, and
        --benchmark/-b given a single file, which may be a JSONL dataset.
+
+       Pass --invalid/-I to assert that every instance fails validation
+       instead, reporting the ones that unexpectedly succeed. The --valid/-V
+       option states the default behaviour explicitly and cannot be combined
+       with --invalid/-I.
 
        By default, schemas are validated in exhaustive mode, which results in
        better error messages, at the expense of speed. The --fast/-f option
@@ -310,6 +315,8 @@ auto jsonschema_main(const std::string &program, const std::string &command,
     app.flag("fast", {"f"});
     app.flag("format-assertion", {"F"});
     app.flag("continue", {"c"});
+    app.flag("valid", {"V"});
+    app.flag("invalid", {"I"});
     app.option("extension", {"e"});
     app.option("ignore", {"i"});
     app.option("template", {"m"});
