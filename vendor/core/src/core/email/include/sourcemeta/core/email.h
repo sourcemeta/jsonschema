@@ -107,6 +107,29 @@ SOURCEMETA_CORE_EMAIL_EXPORT
 auto is_idn_email_uts46(const std::string_view value) -> bool;
 
 /// @ingroup email
+/// Check whether the given string is a valid email address per the HTML
+/// Standard, the grammar behind the `email` input type, which deliberately
+/// departs from RFC 5322. The local part is any sequence of `atext` characters
+/// and dots, and the domain is a dot-separated sequence of letter-digit-hyphen
+/// labels of up to 63 characters that neither start nor end with a hyphen.
+/// Quoted strings, comments, and address literals are not accepted. See
+/// https://html.spec.whatwg.org/multipage/input.html#valid-e-mail-address.
+/// For example:
+///
+/// ```cpp
+/// #include <sourcemeta/core/email.h>
+///
+/// #include <cassert>
+///
+/// assert(sourcemeta::core::is_html_email("user@example.com"));
+/// assert(sourcemeta::core::is_html_email(".a..b.@example.com"));
+/// assert(!sourcemeta::core::is_html_email("\"a b\"@example.com"));
+/// assert(!sourcemeta::core::is_html_email("user@[192.168.1.1]"));
+/// ```
+SOURCEMETA_CORE_EMAIL_EXPORT
+auto is_html_email(const std::string_view value) -> bool;
+
+/// @ingroup email
 /// Produce the domain half of a valid RFC 5321 `Mailbox`, returning an empty
 /// view when the input is not one, which no valid mailbox can otherwise yield
 /// since a domain is never empty. The separator is located by parsing the

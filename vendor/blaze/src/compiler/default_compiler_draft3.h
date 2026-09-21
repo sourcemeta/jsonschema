@@ -8,10 +8,36 @@
 
 #include <algorithm> // std::sort, std::ranges::any_of, std::ranges::all_of, std::find_if, std::ranges::none_of
 #include <cassert>   // assert
-#include <set>       // std::set
-#include <utility>   // std::move, std::to_underlying
+#include <initializer_list> // std::initializer_list
+#include <set>              // std::set
+#include <utility>          // std::move, std::to_underlying
 
 #include "compile_helpers.h"
+
+// Draft 3 spells the absence of a type restriction as a type of its own, so a
+// schema that declares `any` narrows nothing and every keyword it carries
+// still applies. Only a type that rules the keyword out lets us skip it
+static auto
+narrows_type_away(const sourcemeta::core::JSON &schema,
+                  const std::initializer_list<std::string_view> types) -> bool {
+  const auto *value{schema.try_at("type")};
+  if (value == nullptr || !value->is_string()) {
+    return false;
+  }
+
+  const auto &name{value->to_string()};
+  if (name == "any") {
+    return false;
+  }
+
+  for (const auto candidate : types) {
+    if (candidate == name) {
+      return false;
+    }
+  }
+
+  return true;
+}
 
 static auto parse_regex(const std::string &pattern,
                         const sourcemeta::blaze::Context &context,
@@ -292,9 +318,7 @@ auto compile_required_assertions(const Context &context,
                                  const Instructions &current,
                                  ValueStringSet properties_set)
     -> Instructions {
-  if (schema_context.schema.defines("type") &&
-      schema_context.schema.at("type").is_string() &&
-      schema_context.schema.at("type").to_string() != "object") {
+  if (narrows_type_away(schema_context.schema, {"object"})) {
     return {};
   }
 
@@ -655,9 +679,7 @@ auto compiler_draft3_applicator_properties_with_options(
     return {};
   }
 
-  if (schema_context.schema.defines("type") &&
-      schema_context.schema.at("type").is_string() &&
-      schema_context.schema.at("type").to_string() != "object") {
+  if (narrows_type_away(schema_context.schema, {"object"})) {
     return {};
   }
 
@@ -1176,9 +1198,7 @@ auto compiler_draft3_applicator_patternproperties_with_options(
     return {};
   }
 
-  if (schema_context.schema.defines("type") &&
-      schema_context.schema.at("type").is_string() &&
-      schema_context.schema.at("type").to_string() != "object") {
+  if (narrows_type_away(schema_context.schema, {"object"})) {
     return {};
   }
 
@@ -1313,9 +1333,7 @@ auto compiler_draft3_applicator_additionalproperties_with_options(
     const Context &context, const SchemaContext &schema_context,
     const DynamicContext &dynamic_context, const bool annotate,
     const bool track_evaluation) -> Instructions {
-  if (schema_context.schema.defines("type") &&
-      schema_context.schema.at("type").is_string() &&
-      schema_context.schema.at("type").to_string() != "object") {
+  if (narrows_type_away(schema_context.schema, {"object"})) {
     return {};
   }
 
@@ -1481,9 +1499,7 @@ auto compiler_draft3_validation_pattern(const Context &context,
         EXPECTED_STRING);
   }
 
-  if (schema_context.schema.defines("type") &&
-      schema_context.schema.at("type").is_string() &&
-      schema_context.schema.at("type").to_string() != "string") {
+  if (narrows_type_away(schema_context.schema, {"string"})) {
     return {};
   }
 
@@ -1532,9 +1548,7 @@ auto compiler_draft3_applicator_items_array(
     return {};
   }
 
-  if (schema_context.schema.defines("type") &&
-      schema_context.schema.at("type").is_string() &&
-      schema_context.schema.at("type").to_string() != "array") {
+  if (narrows_type_away(schema_context.schema, {"array"})) {
     return {};
   }
 
@@ -1671,9 +1685,7 @@ auto compiler_draft3_applicator_items_with_options(
     }
   }
 
-  if (schema_context.schema.defines("type") &&
-      schema_context.schema.at("type").is_string() &&
-      schema_context.schema.at("type").to_string() != "array") {
+  if (narrows_type_away(schema_context.schema, {"array"})) {
     return {};
   }
 
@@ -1806,9 +1818,7 @@ auto compiler_draft3_applicator_additionalitems_from_cursor(
     const Context &context, const SchemaContext &schema_context,
     const DynamicContext &dynamic_context, const std::size_t cursor,
     const bool annotate, const bool track_evaluation) -> Instructions {
-  if (schema_context.schema.defines("type") &&
-      schema_context.schema.at("type").is_string() &&
-      schema_context.schema.at("type").to_string() != "array") {
+  if (narrows_type_away(schema_context.schema, {"array"})) {
     return {};
   }
 
@@ -1871,9 +1881,7 @@ auto compiler_draft3_applicator_additionalitems_with_options(
     const Context &context, const SchemaContext &schema_context,
     const DynamicContext &dynamic_context, const bool annotate,
     const bool track_evaluation) -> Instructions {
-  if (schema_context.schema.defines("type") &&
-      schema_context.schema.at("type").is_string() &&
-      schema_context.schema.at("type").to_string() != "array") {
+  if (narrows_type_away(schema_context.schema, {"array"})) {
     return {};
   }
 
@@ -1979,9 +1987,7 @@ auto compiler_draft3_validation_uniqueitems(
     return {};
   }
 
-  if (schema_context.schema.defines("type") &&
-      schema_context.schema.at("type").is_string() &&
-      schema_context.schema.at("type").to_string() != "array") {
+  if (narrows_type_away(schema_context.schema, {"array"})) {
     return {};
   }
 
@@ -2013,9 +2019,7 @@ auto compiler_draft3_validation_maxlength(const Context &context,
         EXPECTED_NON_NEGATIVE);
   }
 
-  if (schema_context.schema.defines("type") &&
-      schema_context.schema.at("type").is_string() &&
-      schema_context.schema.at("type").to_string() != "string") {
+  if (narrows_type_away(schema_context.schema, {"string"})) {
     return {};
   }
 
@@ -2069,9 +2073,7 @@ auto compiler_draft3_validation_minlength(const Context &context,
         EXPECTED_NON_NEGATIVE);
   }
 
-  if (schema_context.schema.defines("type") &&
-      schema_context.schema.at("type").is_string() &&
-      schema_context.schema.at("type").to_string() != "string") {
+  if (narrows_type_away(schema_context.schema, {"string"})) {
     return {};
   }
 
@@ -2115,9 +2117,7 @@ auto compiler_draft3_validation_maxitems(const Context &context,
         EXPECTED_NON_NEGATIVE);
   }
 
-  if (schema_context.schema.defines("type") &&
-      schema_context.schema.at("type").is_string() &&
-      schema_context.schema.at("type").to_string() != "array") {
+  if (narrows_type_away(schema_context.schema, {"array"})) {
     return {};
   }
 
@@ -2156,9 +2156,7 @@ auto compiler_draft3_validation_minitems(const Context &context,
         EXPECTED_NON_NEGATIVE);
   }
 
-  if (schema_context.schema.defines("type") &&
-      schema_context.schema.at("type").is_string() &&
-      schema_context.schema.at("type").to_string() != "array") {
+  if (narrows_type_away(schema_context.schema, {"array"})) {
     return {};
   }
 
@@ -2191,10 +2189,7 @@ auto compiler_draft3_validation_maximum(const Context &context,
         EXPECTED_NUMBER);
   }
 
-  if (schema_context.schema.defines("type") &&
-      schema_context.schema.at("type").is_string() &&
-      schema_context.schema.at("type").to_string() != "integer" &&
-      schema_context.schema.at("type").to_string() != "number") {
+  if (narrows_type_away(schema_context.schema, {"integer", "number"})) {
     return {};
   }
 
@@ -2226,10 +2221,7 @@ auto compiler_draft3_validation_minimum(const Context &context,
         EXPECTED_NUMBER);
   }
 
-  if (schema_context.schema.defines("type") &&
-      schema_context.schema.at("type").is_string() &&
-      schema_context.schema.at("type").to_string() != "integer" &&
-      schema_context.schema.at("type").to_string() != "number") {
+  if (narrows_type_away(schema_context.schema, {"integer", "number"})) {
     return {};
   }
 
@@ -2896,9 +2888,7 @@ auto compiler_draft3_applicator_dependencies(
 
   // Only once the shape is known to be good does it matter whether the keyword
   // can apply to the instances this schema admits
-  if (schema_context.schema.defines("type") &&
-      schema_context.schema.at("type").is_string() &&
-      schema_context.schema.at("type").to_string() != "object") {
+  if (narrows_type_away(schema_context.schema, {"object"})) {
     return {};
   }
 
@@ -2964,10 +2954,7 @@ auto compiler_draft3_validation_divisibleby(
         EXPECTED_POSITIVE);
   }
 
-  if (schema_context.schema.defines("type") &&
-      schema_context.schema.at("type").is_string() &&
-      schema_context.schema.at("type").to_string() != "integer" &&
-      schema_context.schema.at("type").to_string() != "number") {
+  if (narrows_type_away(schema_context.schema, {"integer", "number"})) {
     return {};
   }
 

@@ -351,6 +351,22 @@ auto supports_id_anchors(const sourcemeta::core::SchemaBaseDialect base_dialect)
   }
 }
 
+// Draft 6 introduced a plain name syntax for the fragment that an identifier
+// may consist of. Draft 4 and 3 impose no pattern on it
+auto requires_plain_name_anchors(
+    const sourcemeta::core::SchemaBaseDialect base_dialect) -> bool {
+  using sourcemeta::core::SchemaBaseDialect;
+  switch (base_dialect) {
+    case SchemaBaseDialect::JSON_SCHEMA_DRAFT_7:
+    case SchemaBaseDialect::JSON_SCHEMA_DRAFT_7_HYPER:
+    case SchemaBaseDialect::JSON_SCHEMA_DRAFT_6:
+    case SchemaBaseDialect::JSON_SCHEMA_DRAFT_6_HYPER:
+      return true;
+    default:
+      return false;
+  }
+}
+
 // Generic URI normalisation only decodes unreserved characters (see RFC 3986,
 // section 6.2.2.2), so a reference destination may still spell its JSON
 // Pointer fragment with percent-encoded octets. Re-serialise such fragments
@@ -917,9 +933,46 @@ SchemaFrame::SchemaFrame(const Mode mode, const sourcemeta::core::JSON &root,
     // This mode analyses a single schema, which the caller may have pointed
     // at through a container, so its identifier is the one we report
     std::optional<sourcemeta::core::JSON::String> root_id{std::nullopt};
+    bool root_declares_anchor{false};
     if (path.empty() || this->mode_ == SchemaFrame::Mode::Root) {
-      const auto maybe_id{sourcemeta::core::identify(
-          schema, root_base_dialect.value(), default_id)};
+      const auto declared_id{sourcemeta::core::identify(
+          schema, root_base_dialect.value(), std::string_view{})};
+
+      // Before 2019-09 an identifier that consists of nothing but a fragment
+      // names the schema it sits on rather than declaring a resource of its
+      // own, so the schema goes by whatever name the caller gave it, if any,
+      // and we take care of the fragment as an anchor further down, just like
+      // we do for every other subschema
+      //
+      //   To specify such a subschema identifier, the "$id" keyword is set to
+      //   a URI reference with a plain name fragment (not a JSON Pointer
+      //   fragment).
+      //
+      // See
+      // https://json-schema.org/draft-07/draft-handrews-json-schema-01#rfc.section.8.2.3
+      root_declares_anchor = !declared_id.empty() &&
+                             supports_id_anchors(root_base_dialect.value()) &&
+                             declared_id.starts_with('#');
+      if (root_declares_anchor) {
+        // The mode that reports on a single schema never walks the document,
+        // so the anchor that this declares is held to the rules of its dialect
+        // here rather than wherever every other anchor of the document is
+        if (requires_plain_name_anchors(root_base_dialect.value())) {
+          if (!is_valid_anchor(declared_id.substr(1))) {
+            throw SchemaKeywordError(
+                sourcemeta::core::id_keyword(root_base_dialect.value()).name,
+                declared_id, "Invalid anchor value");
+          }
+        } else if (!sourcemeta::core::URI::is_uri_reference(declared_id)) {
+          throw SchemaKeywordError(
+              sourcemeta::core::id_keyword(root_base_dialect.value()).name,
+              declared_id, "The identifier is not a valid URI");
+        }
+      }
+
+      const auto maybe_id{root_declares_anchor || declared_id.empty()
+                              ? default_id
+                              : declared_id};
       if (!maybe_id.empty()) {
         try {
           root_id = canonicalize_identifier(maybe_id, default_base);
@@ -1065,9 +1118,16 @@ SchemaFrame::SchemaFrame(const Mode mode, const sourcemeta::core::JSON &root,
       const std::string default_id_for_entry{
           entry.pointer.empty() && root_id.has_value() ? root_id.value()
                                                        : std::string{}};
-      const auto maybe_id{sourcemeta::core::identify(entry.subschema.get(),
-                                                     entry.base_dialect.value(),
-                                                     default_id_for_entry)};
+      // An identifier that only names the top of the document in place was
+      // taken apart above, which leaves the name the caller gave it, if any,
+      // as the one that identifies the document
+      const auto maybe_id{
+          entry.pointer.empty() && root_declares_anchor &&
+                  !default_id_for_entry.empty()
+              ? std::string_view{default_id_for_entry}
+              : sourcemeta::core::identify(entry.subschema.get(),
+                                           entry.base_dialect.value(),
+                                           default_id_for_entry)};
       std::optional<sourcemeta::core::JSON::String> identifier{
           !maybe_id.empty()
               ? std::make_optional<sourcemeta::core::JSON::String>(maybe_id)

@@ -15,6 +15,7 @@ option(SOURCEMETA_CORE_LANG_OPTIONS "Build the Sourcemeta Core Options library" 
 option(SOURCEMETA_CORE_LANG_TEXT "Build the Sourcemeta Core language text library" ON)
 option(SOURCEMETA_CORE_LANG_STACKTRACE "Build the Sourcemeta Core language stacktrace library" ON)
 option(SOURCEMETA_CORE_LANG_TEST "Build the Sourcemeta Core language test library" ON)
+option(SOURCEMETA_CORE_LANG_BENCHMARK "Build the Sourcemeta Core language benchmark library" ON)
 option(SOURCEMETA_CORE_UNICODE "Build the Sourcemeta Core Unicode library" ON)
 option(SOURCEMETA_CORE_PUNYCODE "Build the Sourcemeta Core Punycode library" ON)
 option(SOURCEMETA_CORE_TIME "Build the Sourcemeta Core time library" ON)
@@ -54,11 +55,10 @@ option(SOURCEMETA_CORE_TESTS "Build the Sourcemeta Core tests" OFF)
 option(SOURCEMETA_CORE_TESTS_CI "Build the Sourcemeta Core CI tests" OFF)
 option(SOURCEMETA_CORE_BENCHMARK "Build the Sourcemeta Core benchmarks" OFF)
 option(SOURCEMETA_CORE_DOCS "Build the Sourcemeta Core docs" OFF)
-option(SOURCEMETA_CORE_CLANG_TIDY_ANALYZER "Run the Clang static analyzer alongside ClangTidy" OFF)
+option(SOURCEMETA_CORE_CLANG_TIDY "Run ClangTidy alongside compilation wherever this project can" ON)
 option(SOURCEMETA_CORE_INSTALL "Install the Sourcemeta Core library" ON)
 option(SOURCEMETA_CORE_ADDRESS_SANITIZER "Build Sourcemeta Core with an address sanitizer" OFF)
 option(SOURCEMETA_CORE_UNDEFINED_SANITIZER "Build Sourcemeta Core with an undefined behavior sanitizer" OFF)
-option(SOURCEMETA_CORE_CONTRIB_GOOGLEBENCHMARK "Build the GoogleBenchmark library for downstream consumers" OFF)
 option(SOURCEMETA_CORE_USE_SYSTEM_ALLOCATOR "Always use the system allocator" OFF)
 
 include(Sourcemeta)
@@ -158,6 +158,10 @@ endif()
 
 if(SOURCEMETA_CORE_LANG_TEST)
   add_subdirectory(src/lang/test)
+endif()
+
+if(SOURCEMETA_CORE_LANG_BENCHMARK)
+  add_subdirectory(src/lang/benchmark)
 endif()
 
 if(SOURCEMETA_CORE_UNICODE)
@@ -285,7 +289,6 @@ if(SOURCEMETA_CORE_CSS)
 endif()
 
 if(SOURCEMETA_CORE_MARKDOWN)
-  find_package(CMarkGFM REQUIRED)
   add_subdirectory(src/core/markdown)
 endif()
 
@@ -310,10 +313,6 @@ if(PROJECT_IS_TOP_LEVEL)
 endif()
 
 # Testing
-
-if(SOURCEMETA_CORE_CONTRIB_GOOGLEBENCHMARK OR SOURCEMETA_CORE_BENCHMARK)
-  find_package(GoogleBenchmark REQUIRED)
-endif()
 
 if(SOURCEMETA_CORE_TESTS)
   enable_testing()
@@ -362,6 +361,10 @@ if(SOURCEMETA_CORE_TESTS)
 
   if(SOURCEMETA_CORE_LANG_TEST)
     add_subdirectory(test/test)
+  endif()
+
+  if(SOURCEMETA_CORE_LANG_BENCHMARK)
+    add_subdirectory(test/benchmark)
   endif()
 
   if(SOURCEMETA_CORE_UNICODE)

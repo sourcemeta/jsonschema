@@ -8,7 +8,8 @@
 #include <sourcemeta/core/unicode_ucd.h>
 
 #include <cstddef>     // std::size_t
-#include <cstdint>     // std::uint8_t
+#include <cstdint>     // std::uint8_t, std::uint64_t
+#include <cstring>     // std::memcpy
 #include <istream>     // std::istream
 #include <optional>    // std::optional
 #include <ostream>     // std::ostream
@@ -287,6 +288,50 @@ constexpr auto utf8_sequence_size(const std::string_view input) -> std::size_t {
   }
 
   return size;
+}
+
+/// @ingroup unicode
+/// Check whether the given input consists entirely of well-formed UTF-8
+/// sequences per RFC 3629 Section 4, without allocating. ASCII runs are
+/// skipped eight bytes at a time. For example:
+///
+/// ```cpp
+/// #include <sourcemeta/core/unicode.h>
+/// #include <cassert>
+///
+/// assert(sourcemeta::core::is_valid_utf8("caf\xC3\xA9"));
+/// assert(!sourcemeta::core::is_valid_utf8("a\xFF"));
+/// ```
+inline auto is_valid_utf8(const std::string_view input) noexcept -> bool {
+  constexpr std::uint64_t HIGH_BITS{0x8080808080808080ULL};
+  const auto size{input.size()};
+  std::size_t position{0};
+  while (position < size) {
+    // Comparing what is left rather than the position past the word keeps the
+    // sum of a position and a word from wrapping around
+    if (size - position >= 8) {
+      std::uint64_t word{0};
+      std::memcpy(&word, input.data() + position, 8);
+      if ((word & HIGH_BITS) == 0) {
+        position += 8;
+        continue;
+      }
+    }
+
+    if (static_cast<unsigned char>(input[position]) < 0x80) {
+      position += 1;
+      continue;
+    }
+
+    const auto length{utf8_sequence_size(input.substr(position))};
+    if (length == 0) {
+      return false;
+    }
+
+    position += length;
+  }
+
+  return true;
 }
 
 /// @ingroup unicode

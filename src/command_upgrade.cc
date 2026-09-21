@@ -1,4 +1,3 @@
-#include <sourcemeta/blaze/format.h>
 #include <sourcemeta/core/io.h>
 #include <sourcemeta/core/json.h>
 #include <sourcemeta/core/jsonpointer.h>
@@ -229,8 +228,7 @@ auto sourcemeta::jsonschema::upgrade(const sourcemeta::core::Options &options)
         options.contains("meta"));
   }
 
-  sourcemeta::blaze::format(schema, sourcemeta::core::schema_walker,
-                            custom_resolver, dialect);
+  sourcemeta::jsonschema::format_schema(schema, custom_resolver, dialect);
 
   sourcemeta::core::prettify(schema, std::cout);
   std::cout << "\n";

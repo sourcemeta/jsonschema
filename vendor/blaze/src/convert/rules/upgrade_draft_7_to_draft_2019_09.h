@@ -11,25 +11,16 @@ public:
             const sourcemeta::core::SchemaFrame &frame,
             const sourcemeta::core::SchemaFrame::Location &location,
             const sourcemeta::core::SchemaWalker &,
-            const sourcemeta::core::SchemaResolver &,
-            const bool is_metaschema) const -> bool override {
-    this->metaschema_synthesis_pending_ = false;
-
+            const sourcemeta::core::SchemaResolver &, const bool) const
+      -> bool override {
     ONLY_CONTINUE_IF(
         vocabularies.contains(SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_7) &&
         schema.is_object());
 
-    const bool needs_dialect_transition{
-        subschema_at_dialect(schema, location, DRAFT_7_URL) ||
-        has_actionable_id_fragment(schema) ||
-        has_actionable_dependencies(schema) ||
-        has_actionable_ref_siblings(schema)};
-
-    const bool needs_metaschema_vocabulary{is_metaschema &&
-                                           location.pointer.empty() &&
-                                           !schema.defines("$vocabulary")};
-
-    ONLY_CONTINUE_IF(needs_dialect_transition || needs_metaschema_vocabulary);
+    ONLY_CONTINUE_IF(subschema_at_dialect(schema, location, DRAFT_7_URL) ||
+                     has_actionable_id_fragment(schema) ||
+                     has_actionable_dependencies(schema) ||
+                     has_actionable_ref_siblings(schema));
 
     if (frame.any_subschema_under(
             location.pointer,
@@ -45,7 +36,6 @@ public:
       return false;
     }
 
-    this->metaschema_synthesis_pending_ = needs_metaschema_vocabulary;
     return true;
   }
 
@@ -55,13 +45,9 @@ public:
     this->split_id_fragment(schema);
     this->split_dependencies(schema);
     if (bump_schema(schema)) {
-      drop_dialect_overrides(schema, true);
+      drop_dialect_overrides(schema, true, DRAFT_2019_09_URL);
     } else {
       mark_dialect_override(schema, DRAFT_2019_09_URL);
-    }
-
-    if (this->metaschema_synthesis_pending_) {
-      synthesize_2019_09_vocabulary(schema);
     }
   }
 
@@ -91,19 +77,6 @@ private:
   static constexpr std::string_view DRAFT_2019_09_URL{
       "https://json-schema.org/draft/2019-09/schema"};
 
-  static constexpr std::string_view VOCAB_2019_09_CORE_URL{
-      "https://json-schema.org/draft/2019-09/vocab/core"};
-  static constexpr std::string_view VOCAB_2019_09_APPLICATOR_URL{
-      "https://json-schema.org/draft/2019-09/vocab/applicator"};
-  static constexpr std::string_view VOCAB_2019_09_VALIDATION_URL{
-      "https://json-schema.org/draft/2019-09/vocab/validation"};
-  static constexpr std::string_view VOCAB_2019_09_META_DATA_URL{
-      "https://json-schema.org/draft/2019-09/vocab/meta-data"};
-  static constexpr std::string_view VOCAB_2019_09_FORMAT_URL{
-      "https://json-schema.org/draft/2019-09/vocab/format"};
-  static constexpr std::string_view VOCAB_2019_09_CONTENT_URL{
-      "https://json-schema.org/draft/2019-09/vocab/content"};
-
   // NOLINTNEXTLINE(cert-err58-cpp,bugprone-throwing-static-initialization)
   static inline const std::array<std::string_view, 12> SHADOW_EXEMPT_KEYWORDS{
       {"$schema", "$id", "title", "description", "default", "examples",
@@ -130,8 +103,6 @@ private:
   mutable std::vector<
       std::pair<sourcemeta::core::Pointer, sourcemeta::core::Pointer>>
       renames_;
-
-  mutable bool metaschema_synthesis_pending_{false};
 
   static auto is_shadow_exempt(const std::string_view keyword) -> bool {
     return std::ranges::any_of(SHADOW_EXEMPT_KEYWORDS,
@@ -337,52 +308,6 @@ private:
       return true;
     }
     return false;
-  }
-
-  static auto synthesize_2019_09_vocabulary(sourcemeta::core::JSON &schema)
-      -> void {
-    std::string_view anchor;
-    if (schema.defines("$id")) {
-      anchor = "$id";
-    } else if (schema.defines("$schema")) {
-      anchor = "$schema";
-    }
-
-    const std::string *next_key{nullptr};
-    if (!anchor.empty()) {
-      bool found_anchor{false};
-      for (const auto &entry : schema.as_object()) {
-        if (found_anchor) {
-          next_key = &entry.first;
-          break;
-        }
-        if (entry.first == anchor) {
-          found_anchor = true;
-        }
-      }
-    }
-
-    if (next_key != nullptr) {
-      schema.try_assign_before(
-          "$vocabulary", sourcemeta::core::JSON::make_object(), *next_key);
-    } else {
-      schema.assign_assume_new("$vocabulary",
-                               sourcemeta::core::JSON::make_object());
-    }
-
-    auto &vocabularies{schema.at("$vocabulary")};
-    vocabularies.assign_assume_new(std::string{VOCAB_2019_09_CORE_URL},
-                                   sourcemeta::core::JSON{true});
-    vocabularies.assign_assume_new(std::string{VOCAB_2019_09_APPLICATOR_URL},
-                                   sourcemeta::core::JSON{true});
-    vocabularies.assign_assume_new(std::string{VOCAB_2019_09_VALIDATION_URL},
-                                   sourcemeta::core::JSON{true});
-    vocabularies.assign_assume_new(std::string{VOCAB_2019_09_META_DATA_URL},
-                                   sourcemeta::core::JSON{true});
-    vocabularies.assign_assume_new(std::string{VOCAB_2019_09_FORMAT_URL},
-                                   sourcemeta::core::JSON{false});
-    vocabularies.assign_assume_new(std::string{VOCAB_2019_09_CONTENT_URL},
-                                   sourcemeta::core::JSON{true});
   }
 
   static auto has_pending_pattern(const sourcemeta::core::JSON &subschema)

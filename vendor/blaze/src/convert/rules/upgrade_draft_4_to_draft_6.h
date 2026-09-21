@@ -35,6 +35,15 @@ public:
     ONLY_CONTINUE_IF(sanitization_branch || other_branch ||
                      root_via_default_dialect);
 
+    // A meta-schema the document embeds decides the dialect its referrers are
+    // read under, so moving it before them would take them off this dialect
+    // before their turn
+    if (is_metaschema_target(schema, frame, location.pointer) &&
+        has_pending_metaschema_referrer(root, frame, location.pointer,
+                                        has_pending_draft_4_pattern)) {
+      return false;
+    }
+
     if (!sanitization_branch && other_branch &&
         enclosing_resource_has_pending_sanitization(location, root, frame)) {
       return false;
@@ -43,12 +52,17 @@ public:
     if (!sanitization_branch) {
       if (frame.any_subschema_under(
               location.pointer,
-              [&root](const sourcemeta::core::SchemaFrame::Location &entry)
+              [&root,
+               &frame](const sourcemeta::core::SchemaFrame::Location &entry)
                   -> bool {
                 const auto entry_pointer{
                     sourcemeta::core::to_pointer(entry.pointer)};
                 const auto &entry_schema{
                     sourcemeta::core::get(root, entry_pointer)};
+                if (is_metaschema_target(entry_schema, frame, entry.pointer)) {
+                  return false;
+                }
+
                 if (entry_schema.is_object() && entry_schema.defines("$ref")) {
                   return false;
                 }
@@ -108,7 +122,7 @@ public:
     if (schema.defines("$schema") && schema.at("$schema").is_string() &&
         schema.at("$schema").to_string() == DRAFT_4_URL) {
       schema.assign("$schema", sourcemeta::core::JSON{DRAFT_6_URL});
-      drop_dialect_overrides(schema, true);
+      drop_dialect_overrides(schema, true, DRAFT_6_URL);
     } else {
       mark_dialect_override(schema, DRAFT_6_URL);
     }

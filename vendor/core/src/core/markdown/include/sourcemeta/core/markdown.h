@@ -5,6 +5,10 @@
 #include <sourcemeta/core/markdown_export.h>
 #endif
 
+// NOLINTBEGIN(misc-include-cleaner)
+#include <sourcemeta/core/markdown_error.h>
+// NOLINTEND(misc-include-cleaner)
+
 #include <string>      // std::string
 #include <string_view> // std::string_view
 
@@ -27,7 +31,11 @@ namespace sourcemeta::core {
 /// links are suppressed by default, so the result is safe to render from
 /// untrusted input. Passing a false safe argument lets raw HTML and unsafe
 /// links pass through unchanged, which must only be done for trusted input.
-/// For example:
+/// The specification lets link references and short table rows expand to an
+/// output far larger than the input, so the conversion throws `MarkdownError`
+/// once the rendered link references expand past the larger of 16 times the
+/// input size and 1,048,576 bytes, or once a table inserts more than 524,288
+/// empty cells. For example:
 ///
 /// ```cpp
 /// #include <sourcemeta/core/markdown.h>

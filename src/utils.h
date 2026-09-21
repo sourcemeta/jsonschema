@@ -152,6 +152,15 @@ inline auto default_dialect(
   return "";
 }
 
+inline auto format_schema(sourcemeta::core::JSON &schema,
+                          const sourcemeta::core::SchemaResolver &resolver,
+                          const std::string_view dialect) -> void {
+  const sourcemeta::core::SchemaFrame frame{
+      sourcemeta::core::SchemaFrame::Mode::Locations, schema,
+      sourcemeta::core::schema_walker, resolver, dialect};
+  sourcemeta::core::schema_format(schema, frame);
+}
+
 inline auto parse_jobs(const sourcemeta::core::Options &options)
     -> std::size_t {
   if (options.contains("jobs")) {

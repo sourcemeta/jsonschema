@@ -1,5 +1,4 @@
 #include <sourcemeta/blaze/alterschema.h>
-#include <sourcemeta/blaze/format.h>
 #include <sourcemeta/core/io.h>
 #include <sourcemeta/core/json.h>
 #include <sourcemeta/core/jsonpointer.h>
@@ -660,8 +659,8 @@ auto sourcemeta::jsonschema::lint(const sourcemeta::core::Options &options)
         if (entry.from_stdin) {
           if (format_output) {
             if (!keep_ordering) {
-              sourcemeta::blaze::format(copy, sourcemeta::core::schema_walker,
-                                        custom_resolver, dialect);
+              sourcemeta::jsonschema::format_schema(copy, custom_resolver,
+                                                    dialect);
             }
           }
 
@@ -669,8 +668,8 @@ auto sourcemeta::jsonschema::lint(const sourcemeta::core::Options &options)
           std::cout << "\n";
         } else if (format_output) {
           if (!keep_ordering) {
-            sourcemeta::blaze::format(copy, sourcemeta::core::schema_walker,
-                                      custom_resolver, dialect);
+            sourcemeta::jsonschema::format_schema(copy, custom_resolver,
+                                                  dialect);
           }
 
           std::ostringstream expected;

@@ -248,6 +248,7 @@ auto apply(const std::vector<Rule> &rules, sourcemeta::core::JSON &schema,
 #include "rules/draft_official_dialect_without_empty_fragment.h"
 #include "rules/empty_object_as_true.h"
 #include "rules/enum_to_const.h"
+#include "rules/metaschema_vocabulary.h"
 #include "rules/prefix_promoted_2020_12_keywords.h"
 #include "rules/prefix_promoted_draft_2019_09_keywords.h"
 #include "rules/prefix_promoted_draft_4_keywords.h"
@@ -271,7 +272,7 @@ auto convert(sourcemeta::core::JSON &schema,
              const std::string_view default_id, const bool is_metaschema)
     -> void {
   std::vector<Rule> rules;
-  rules.reserve(17);
+  rules.reserve(18);
   rules.push_back(make_rule<DraftOfficialDialectWithHttps>());
   rules.push_back(make_rule<DraftOfficialDialectWithoutEmptyFragment>());
   rules.push_back(make_rule<PrefixPromotedDraft4Keywords>());
@@ -296,6 +297,7 @@ auto convert(sourcemeta::core::JSON &schema,
       target == ConvertTarget::Draft202012) {
     rules.push_back(make_rule<PrefixPromoted201909Keywords>());
     rules.push_back(make_rule<UpgradeDraft7To201909>());
+    rules.push_back(make_rule<MetaschemaVocabulary>());
     rules.push_back(make_rule<DefinitionsToDefs>());
   }
 

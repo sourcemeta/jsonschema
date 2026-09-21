@@ -3,6 +3,9 @@
 
 #include "compile_helpers.h"
 
+#include <set>     // std::set
+#include <utility> // std::pair
+
 namespace {
 using namespace sourcemeta::core;
 using namespace sourcemeta::blaze;
@@ -13,12 +16,51 @@ const std::string UNEVALUATED_PROPERTIES{"unevaluatedProperties"};
 const std::string UNEVALUATED_ITEMS{"unevaluatedItems"};
 // NOLINTEND(cert-err58-cpp,bugprone-throwing-static-initialization)
 
+// Whether a location is already being visited has to survive the nested calls
+// that walk through it, and stop applying the moment they unwind
+class PathGuard {
+public:
+  PathGuard(std::set<std::pair<WeakPointer, bool>> &visited,
+            const WeakPointer &pointer, const bool is_static)
+      : visited_{visited}, entry_{pointer, is_static},
+        first_visit_{visited.insert(this->entry_).second} {}
+
+  ~PathGuard() {
+    if (this->first_visit_) {
+      this->visited_.erase(this->entry_);
+    }
+  }
+
+  [[nodiscard]] auto first_visit() const -> bool { return this->first_visit_; }
+
+  PathGuard(const PathGuard &) = delete;
+  auto operator=(const PathGuard &) -> PathGuard & = delete;
+  PathGuard(PathGuard &&) = delete;
+  auto operator=(PathGuard &&) -> PathGuard & = delete;
+
+private:
+  std::set<std::pair<WeakPointer, bool>> &visited_;
+  const std::pair<WeakPointer, bool> entry_;
+  const bool first_visit_;
+};
+
 auto find_adjacent_dependencies(
     const JSON::String &current, const JSON &schema, const SchemaFrame &frame,
     const SchemaWalker &walker, const SchemaResolver &resolver,
     const std::set<JSON::String> &keywords, const SchemaFrame::Location &root,
     const SchemaFrame::Location &entry, const bool is_static,
+    std::set<std::pair<WeakPointer, bool>> &visited,
     sourcemeta::blaze::SchemaUnevaluatedEntry &result) -> void {
+  // A schema may reference itself, directly or through a chain of in-place
+  // applicators. Following such a cycle forever exhausts the stack, so we cut
+  // it as soon as we meet a location already on the path we came in through.
+  // The mark only lives as long as that path, as two references to a common
+  // target are not a cycle, and each of them still has to be accounted for
+  const PathGuard guard{visited, entry.pointer, is_static};
+  if (!guard.first_visit()) {
+    return;
+  }
+
   const auto &subschema{get(schema, entry.pointer)};
   if (!subschema.is_object()) {
     return;
@@ -63,7 +105,7 @@ auto find_adjacent_dependencies(
           SchemaUnevaluatedEntry nested;
           find_adjacent_dependencies(
               current, schema, frame, walker, resolver, keywords, root,
-              reference.second.value().get(), is_static, nested);
+              reference.second.value().get(), is_static, visited, nested);
 
           // Whatever the target contributes gets recorded at the location of
           // the target itself, which tells the applicators this reference sits
@@ -95,7 +137,7 @@ auto find_adjacent_dependencies(
           find_adjacent_dependencies(
               current, schema, frame, walker, resolver, keywords, root,
               frame.traverse(entry, make_weak_pointer(property.first, index)),
-              is_static, result);
+              is_static, visited, result);
         }
 
         break;
@@ -107,7 +149,7 @@ auto find_adjacent_dependencies(
             find_adjacent_dependencies(
                 current, schema, frame, walker, resolver, keywords, root,
                 frame.traverse(entry, make_weak_pointer(property.first, index)),
-                false, result);
+                false, visited, result);
           }
         }
 
@@ -121,7 +163,7 @@ auto find_adjacent_dependencies(
           find_adjacent_dependencies(
               current, schema, frame, walker, resolver, keywords, root,
               frame.traverse(entry, make_weak_pointer(property.first)), false,
-              result);
+              visited, result);
         }
 
         break;
@@ -131,14 +173,14 @@ auto find_adjacent_dependencies(
             find_adjacent_dependencies(
                 current, schema, frame, walker, resolver, keywords, root,
                 frame.traverse(entry, make_weak_pointer(property.first, index)),
-                false, result);
+                false, visited, result);
           }
         } else if ((property.second.is_object() ||
                     property.second.is_boolean())) {
           find_adjacent_dependencies(
               current, schema, frame, walker, resolver, keywords, root,
               frame.traverse(entry, make_weak_pointer(property.first)), false,
-              result);
+              visited, result);
         }
 
         break;
@@ -149,7 +191,7 @@ auto find_adjacent_dependencies(
                 current, schema, frame, walker, resolver, keywords, root,
                 frame.traverse(entry,
                                make_weak_pointer(property.first, pair.first)),
-                false, result);
+                false, visited, result);
           }
         }
 
@@ -226,18 +268,20 @@ auto unevaluated(const JSON &schema, const SchemaFrame &frame,
                Known::JSON_SCHEMA_2020_12_APPLICATOR)) ||
           subschema_vocabularies.contains(
               Known::JSON_SCHEMA_2019_09_APPLICATOR)) {
+        std::set<std::pair<WeakPointer, bool>> visited;
         SchemaUnevaluatedEntry unevaluated;
         find_adjacent_dependencies(
             "unevaluatedProperties", schema, frame, walker, resolver,
             {"properties", "patternProperties", "additionalProperties",
              "unevaluatedProperties"},
-            location, location, true, unevaluated);
+            location, location, true, visited, unevaluated);
         register_under_all_bases(result, frame, location,
                                  UNEVALUATED_PROPERTIES, unevaluated);
       }
     }
 
     if (has_unevaluated_items) {
+      std::set<std::pair<WeakPointer, bool>> visited;
       SchemaUnevaluatedEntry unevaluated;
       if (subschema_vocabularies.contains(
               Known::JSON_SCHEMA_2020_12_UNEVALUATED) &&
@@ -246,7 +290,7 @@ auto unevaluated(const JSON &schema, const SchemaFrame &frame,
         find_adjacent_dependencies(
             "unevaluatedItems", schema, frame, walker, resolver,
             {"prefixItems", "items", "contains", "unevaluatedItems"}, location,
-            location, true, unevaluated);
+            location, true, visited, unevaluated);
         register_under_all_bases(result, frame, location, UNEVALUATED_ITEMS,
                                  unevaluated);
       } else if (subschema_vocabularies.contains(
@@ -254,7 +298,7 @@ auto unevaluated(const JSON &schema, const SchemaFrame &frame,
         find_adjacent_dependencies(
             "unevaluatedItems", schema, frame, walker, resolver,
             {"items", "additionalItems", "unevaluatedItems"}, location,
-            location, true, unevaluated);
+            location, true, visited, unevaluated);
         register_under_all_bases(result, frame, location, UNEVALUATED_ITEMS,
                                  unevaluated);
       }

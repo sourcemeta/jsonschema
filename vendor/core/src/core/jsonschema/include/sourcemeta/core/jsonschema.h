@@ -101,6 +101,42 @@ auto schema_reidentify(sourcemeta::core::JSON &schema,
                        std::string_view new_identifier,
                        const SchemaBaseDialect base_dialect) -> void;
 
+/// @ingroup jsonschema
+///
+/// This function reorders the properties of every subschema that the given
+/// frame reports, following an opinionated JSON Schema aware order, modifying
+/// the schema in place. Note that doing so invalidates the given frame, as the
+/// locations it holds point into the schema. For example:
+///
+/// ```cpp
+/// #include <sourcemeta/core/json.h>
+/// #include <sourcemeta/core/jsonschema.h>
+///
+/// #include <iostream>
+/// #include <sstream>
+///
+/// sourcemeta::core::JSON document =
+///     sourcemeta::core::parse_json(R"JSON({
+///   "type": "string",
+///   "minLength": 3,
+///   "$schema": "https://json-schema.org/draft/2020-12/schema"
+/// })JSON");
+///
+/// const sourcemeta::core::SchemaFrame frame{
+///   sourcemeta::core::SchemaFrame::Mode::Locations, document,
+///   sourcemeta::core::schema_walker,
+///   sourcemeta::core::schema_resolver};
+///
+/// sourcemeta::core::schema_format(document, frame);
+///
+/// std::ostringstream stream;
+/// sourcemeta::core::prettify(document, stream);
+/// std::cout << stream.str() << std::endl;
+/// ```
+SOURCEMETA_CORE_JSONSCHEMA_EXPORT
+auto schema_format(sourcemeta::core::JSON &schema, const SchemaFrame &frame)
+    -> void;
+
 } // namespace sourcemeta::core
 
 #endif

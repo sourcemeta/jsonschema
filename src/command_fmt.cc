@@ -1,4 +1,3 @@
-#include <sourcemeta/blaze/format.h>
 #include <sourcemeta/core/diff.h>
 #include <sourcemeta/core/io.h>
 #include <sourcemeta/core/json.h>
@@ -128,8 +127,8 @@ auto sourcemeta::jsonschema::fmt(const sourcemeta::core::Options &options)
           sourcemeta::core::prettify(document, expected, indentation);
         } else {
           auto copy = document;
-          sourcemeta::blaze::format(copy, sourcemeta::core::schema_walker,
-                                    custom_resolver, effective_dialect);
+          sourcemeta::jsonschema::format_schema(copy, custom_resolver,
+                                                effective_dialect);
           sourcemeta::core::prettify(copy, expected, indentation);
         }
         expected << "\n";
@@ -146,8 +145,8 @@ auto sourcemeta::jsonschema::fmt(const sourcemeta::core::Options &options)
           sourcemeta::core::prettify(document, std::cout, indentation);
         } else {
           auto copy = document;
-          sourcemeta::blaze::format(copy, sourcemeta::core::schema_walker,
-                                    custom_resolver, effective_dialect);
+          sourcemeta::jsonschema::format_schema(copy, custom_resolver,
+                                                effective_dialect);
           sourcemeta::core::prettify(copy, std::cout, indentation);
         }
         std::cout << "\n";
@@ -223,8 +222,8 @@ auto sourcemeta::jsonschema::fmt(const sourcemeta::core::Options &options)
         sourcemeta::core::prettify(entry.second, expected, indentation);
       } else {
         auto copy = entry.second;
-        sourcemeta::blaze::format(copy, sourcemeta::core::schema_walker,
-                                  custom_resolver, effective_dialect);
+        sourcemeta::jsonschema::format_schema(copy, custom_resolver,
+                                              effective_dialect);
         sourcemeta::core::prettify(copy, expected, indentation);
       }
       expected << "\n";

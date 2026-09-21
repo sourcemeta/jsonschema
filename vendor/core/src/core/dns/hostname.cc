@@ -6,6 +6,27 @@
 
 namespace sourcemeta::core {
 
+auto is_hostname_label(const std::string_view value) -> bool {
+  // RFC 1035 §2.3.4: per-label cap is 63 octets
+  if (value.empty() || value.size() > 63) {
+    return false;
+  }
+
+  // RFC 1123 §2.1: first character must be let-dig, never hyphen, and RFC 952
+  // §B ends a label in a let-dig too, where let-dig = ALPHA / DIGIT
+  if (!is_alphanum(value.front()) || !is_alphanum(value.back())) {
+    return false;
+  }
+
+  for (const auto character : value) {
+    if (character != '-' && !is_alphanum(character)) {
+      return false;
+    }
+  }
+
+  return true;
+}
+
 auto is_hostname(const std::string_view value) -> bool {
   // RFC 952 §B: <hname> requires at least one <name>
   if (value.empty()) {
@@ -19,39 +40,11 @@ auto is_hostname(const std::string_view value) -> bool {
     return false;
   }
 
-  std::string_view::size_type position{0};
-  while (position < value.size()) {
-    const auto label_start{position};
-    bool last_was_hyphen{false};
-    bool label_has_content{false};
-
-    while (position < value.size() && value[position] != '.') {
-      const auto character{value[position]};
-      if (character == '-') {
-        // RFC 1123 §2.1: first character must be let-dig, never hyphen
-        if (!label_has_content) {
-          return false;
-        }
-        last_was_hyphen = true;
-        position += 1;
-        label_has_content = true;
-        continue;
-      }
-
-      // RFC 952 §B: let-dig = ALPHA / DIGIT
-      if (is_alphanum(character)) {
-        last_was_hyphen = false;
-        position += 1;
-        label_has_content = true;
-        continue;
-      }
-
-      return false;
-    }
-
-    // RFC 1035 §2.3.4: per-label cap is 63 octets
-    const auto label_length{position - label_start};
-    if (label_length == 0 || label_length > 63 || last_was_hyphen) {
+  std::string_view remaining{value};
+  while (true) {
+    const auto dot{remaining.find('.')};
+    const auto label{remaining.substr(0, dot)};
+    if (!is_hostname_label(label)) {
       return false;
     }
 
@@ -59,23 +52,21 @@ auto is_hostname(const std::string_view value) -> bool {
     // case-insensitively. A-labels must also satisfy RFC 5891 §4.2.3 and
     // RFC 5892 (Punycode round-trip, IDNA 2008 derived properties,
     // contextual rules)
-    const auto label{value.substr(label_start, label_length)};
     if (starts_with_ignore_case(label, "xn--") &&
         !idna_is_valid_a_label(label)) {
       return false;
     }
 
-    if (position < value.size()) {
-      // value[position] == '.'
-      position += 1;
-      if (position == value.size()) {
-        // Trailing dot is not part of the host name grammar
-        return false;
-      }
+    if (dot == std::string_view::npos) {
+      return true;
+    }
+
+    remaining.remove_prefix(dot + 1);
+    // Trailing dot is not part of the host name grammar
+    if (remaining.empty()) {
+      return false;
     }
   }
-
-  return true;
 }
 
 } // namespace sourcemeta::core

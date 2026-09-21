@@ -9,7 +9,11 @@
 #include <sourcemeta/core/html_escape.h>
 #include <sourcemeta/core/preprocessor.h>
 
+#include <array>       // std::array
 #include <cassert>     // assert
+#include <cstddef>     // std::size_t
+#include <cstdint>     // std::uint8_t
+#include <string>      // std::string
 #include <string_view> // std::string_view
 #include <vector>      // std::vector
 
@@ -40,14 +44,18 @@ public:
   /// Close the most recently opened element. Closing when no element is open
   /// has no effect.
   SOURCEMETA_FORCEINLINE auto close() -> HTMLWriter & {
-    this->flush_open_tag();
+    this->tag_open_ = false;
     assert(!this->tag_stack_.empty());
     if (this->tag_stack_.empty()) [[unlikely]] {
       return *this;
     }
-    this->buffer_.append("</");
-    this->buffer_.append(this->tag_stack_.back());
-    this->buffer_.append(">");
+    const auto &closing{this->tag_stack_.back()};
+    // Copying every byte of the fixed storage is cheaper than copying a
+    // variable number of them, and the bytes past the tag are then dropped
+    this->buffer_.reserve_additional(closing.bytes.size());
+    this->buffer_.append_unchecked(
+        std::string_view{closing.bytes.data(), closing.bytes.size()});
+    this->buffer_.remove_suffix(closing.bytes.size() - closing.size);
     this->tag_stack_.pop_back();
     return *this;
   }
@@ -58,12 +66,104 @@ public:
                                         std::string_view value)
       -> HTMLWriter & {
     assert(this->tag_open_);
-    this->buffer_.append(" ");
-    this->buffer_.append(name);
-    this->buffer_.append("=\"");
+    this->reopen_tag();
+    // The space before the name, the equals sign and the quotation mark after
+    // it, along with the end of the tag, which takes four bytes for a void
+    // element
+    this->buffer_.reserve_additional(name.size() + 7);
+    this->buffer_.append_unchecked(" ");
+    this->buffer_.append_unchecked(name);
+    this->buffer_.append_unchecked("=\"");
     html_escape_append(this->buffer_, value);
-    this->buffer_.append("\"");
+    this->buffer_.reserve_additional(4);
+    if (this->tag_open_is_void_) {
+      this->buffer_.append_unchecked("\" />");
+    } else {
+      this->buffer_.append_unchecked("\">");
+    }
     return *this;
+  }
+
+  /// Add an attribute without a value, such as a boolean attribute, to the
+  /// currently open tag. Must be called immediately after an element method
+  /// and before any content. For example:
+  ///
+  /// ```cpp
+  /// #include <sourcemeta/core/html.h>
+  /// #include <cassert>
+  ///
+  /// sourcemeta::core::HTMLWriter document;
+  /// document.input().attribute("type", "checkbox").attribute("checked");
+  /// assert(document.str() == "<input type=\"checkbox\" checked />");
+  /// ```
+  SOURCEMETA_FORCEINLINE auto attribute(std::string_view name) -> HTMLWriter & {
+    assert(this->tag_open_);
+    this->reopen_tag();
+    this->buffer_.reserve_additional(name.size() + 1);
+    this->buffer_.append_unchecked(" ");
+    this->buffer_.append_unchecked(name);
+    this->end_open_tag();
+    return *this;
+  }
+
+  /// Write a line feed unless nothing was written yet or the output already
+  /// ends with one, so that the markup that follows starts on a line of its
+  /// own. For example:
+  ///
+  /// ```cpp
+  /// #include <sourcemeta/core/html.h>
+  /// #include <cassert>
+  ///
+  /// sourcemeta::core::HTMLWriter document;
+  /// document.p("Hello");
+  /// document.ensure_line_feed();
+  /// document.ensure_line_feed();
+  /// document.p("World");
+  /// assert(document.str() == "<p>Hello</p>\n<p>World</p>");
+  /// ```
+  SOURCEMETA_FORCEINLINE auto ensure_line_feed() -> HTMLWriter & {
+    this->tag_open_ = false;
+    if (this->buffer_.size() > 0 && this->buffer_.back() != '\n') {
+      this->buffer_.append('\n');
+    }
+
+    return *this;
+  }
+
+  /// Move the rendered HTML string out of the writer, leaving the writer empty
+  /// and ready to render another document. For example:
+  ///
+  /// ```cpp
+  /// #include <sourcemeta/core/html.h>
+  /// #include <cassert>
+  ///
+  /// sourcemeta::core::HTMLWriter document;
+  /// document.p("Hello");
+  /// const auto result{document.take()};
+  /// assert(result == "<p>Hello</p>");
+  /// assert(document.str().empty());
+  /// ```
+  [[nodiscard]] SOURCEMETA_FORCEINLINE auto take() -> std::string {
+    this->tag_open_ = false;
+    this->tag_stack_.clear();
+    return this->buffer_.take();
+  }
+
+  /// Discard the output and every open element. For example:
+  ///
+  /// ```cpp
+  /// #include <sourcemeta/core/html.h>
+  /// #include <cassert>
+  ///
+  /// sourcemeta::core::HTMLWriter document;
+  /// document.div().p("Hello");
+  /// document.clear();
+  /// assert(document.str().empty());
+  /// ```
+  SOURCEMETA_FORCEINLINE auto clear() -> void {
+    this->tag_open_ = false;
+    this->tag_stack_.clear();
+    this->buffer_.clear();
   }
 
   /// Write HTML-escaped text content. The single-argument element shorthand
@@ -73,7 +173,7 @@ public:
   /// the content of a raw-text element must be written unescaped rather than as
   /// escaped text, and it must not contain that element's closing-tag sequence.
   SOURCEMETA_FORCEINLINE auto text(std::string_view content) -> HTMLWriter & {
-    this->flush_open_tag();
+    this->tag_open_ = false;
     html_escape_append(this->buffer_, content);
     return *this;
   }
@@ -81,14 +181,13 @@ public:
   /// Write content without HTML-escaping. This is how the content of a raw-text
   /// element is emitted, since escaped text would corrupt it.
   SOURCEMETA_FORCEINLINE auto raw(std::string_view content) -> HTMLWriter & {
-    this->flush_open_tag();
+    this->tag_open_ = false;
     this->buffer_.append(content);
     return *this;
   }
 
   /// Get the rendered HTML string
   [[nodiscard]] SOURCEMETA_FORCEINLINE auto str() -> const std::string & {
-    this->flush_open_tag();
     return this->buffer_.str();
   }
 
@@ -112,12 +211,12 @@ public:
 // NOLINTBEGIN(bugprone-macro-parentheses)
 #define HTML_WRITER_CONTAINER(name)                                            \
   SOURCEMETA_FORCEINLINE auto name() -> HTMLWriter & {                         \
-    this->open_tag(#name);                                                     \
+    this->open_tag("<" #name ">", ClosingTag{"</" #name ">"});                 \
     return *this;                                                              \
   }                                                                            \
   SOURCEMETA_FORCEINLINE auto name(std::string_view text_content)              \
       -> HTMLWriter & {                                                        \
-    this->open_tag(#name);                                                     \
+    this->open_tag("<" #name ">", ClosingTag{"</" #name ">"});                 \
     this->text(text_content);                                                  \
     this->close();                                                             \
     return *this;                                                              \
@@ -128,12 +227,12 @@ public:
 // NOLINTBEGIN(bugprone-macro-parentheses)
 #define HTML_WRITER_CONTAINER_NAMED(name, tag)                                 \
   SOURCEMETA_FORCEINLINE auto name() -> HTMLWriter & {                         \
-    this->open_tag(#tag);                                                      \
+    this->open_tag("<" #tag ">", ClosingTag{"</" #tag ">"});                   \
     return *this;                                                              \
   }                                                                            \
   SOURCEMETA_FORCEINLINE auto name(std::string_view text_content)              \
       -> HTMLWriter & {                                                        \
-    this->open_tag(#tag);                                                      \
+    this->open_tag("<" #tag ">", ClosingTag{"</" #tag ">"});                   \
     this->text(text_content);                                                  \
     this->close();                                                             \
     return *this;                                                              \
@@ -145,7 +244,7 @@ public:
 // NOLINTBEGIN(bugprone-macro-parentheses)
 #define HTML_WRITER_VOID(name)                                                 \
   SOURCEMETA_FORCEINLINE auto name() -> HTMLWriter & {                         \
-    this->void_tag(#name);                                                     \
+    this->void_tag("<" #name " />");                                           \
     return *this;                                                              \
   }
 // NOLINTEND(bugprone-macro-parentheses)
@@ -447,27 +546,50 @@ public:
 #endif
 
 private:
-  SOURCEMETA_FORCEINLINE auto open_tag(std::string_view tag) -> void {
-    this->flush_open_tag();
-    this->buffer_.append("<");
-    this->buffer_.append(tag);
-    this->tag_stack_.push_back(tag);
+  // A closing tag kept in a fixed number of bytes, as copying a constant
+  // number of bytes is cheaper than copying a variable one
+  struct ClosingTag {
+    constexpr explicit ClosingTag(const std::string_view tag) noexcept
+        : size{static_cast<std::uint8_t>(tag.size())} {
+      for (std::size_t index = 0; index < tag.size(); index += 1) {
+        this->bytes[index] = tag[index];
+      }
+    }
+
+    std::array<char, 16> bytes{};
+    std::uint8_t size;
+  };
+
+  SOURCEMETA_FORCEINLINE auto open_tag(std::string_view opening,
+                                       const ClosingTag &closing) -> void {
+    this->buffer_.append(opening);
+    this->tag_stack_.push_back(closing);
     this->tag_open_ = true;
     this->tag_open_is_void_ = false;
   }
 
-  SOURCEMETA_FORCEINLINE auto void_tag(std::string_view tag) -> void {
-    this->flush_open_tag();
-    this->buffer_.append("<");
-    this->buffer_.append(tag);
+  SOURCEMETA_FORCEINLINE auto void_tag(std::string_view opening) -> void {
+    this->buffer_.append(opening);
     this->tag_open_ = true;
     this->tag_open_is_void_ = true;
   }
 
-  auto flush_open_tag() -> void;
+  // Remove the characters that end the tag opened last, so that attributes
+  // can go before them
+  SOURCEMETA_FORCEINLINE auto reopen_tag() -> void {
+    this->buffer_.remove_suffix(this->tag_open_is_void_ ? 3 : 1);
+  }
+
+  SOURCEMETA_FORCEINLINE auto end_open_tag() -> void {
+    if (this->tag_open_is_void_) {
+      this->buffer_.append(" />");
+    } else {
+      this->buffer_.append('>');
+    }
+  }
 
   HTMLBuffer buffer_;
-  std::vector<std::string_view> tag_stack_;
+  std::vector<ClosingTag> tag_stack_;
   bool tag_open_{false};
   bool tag_open_is_void_{false};
 #if defined(_MSC_VER)
