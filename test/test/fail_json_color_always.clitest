@@ -1,0 +1,76 @@
+WRITE schema.json UNTIL EOF
+{
+  "id": "https://example.com",
+  "$schema": "http://json-schema.org/draft-04/schema#",
+  "type": "string"
+}
+EOF
+
+WRITE test.json UNTIL EOF
+{
+  "target": "https://example.com",
+  "tests": [
+    {
+      "description": "Should pass but fails",
+      "valid": true,
+      "data": 123
+    }
+  ]
+}
+EOF
+
+WRITE summary.txt UNTIL EOF
+2> 1 validated, 1 passed, 0 failed
+EOF
+
+// Test assertion failure
+RUN test test.json --resolve schema.json --json --color always STDIN /dev/null IN . INTO result.txt EXPECTING 2
+
+EXTRACT STDOUT FROM result.txt INTO report.json
+
+RUN validate $CTRF_SCHEMA report.json STDIN /dev/null IN . INTO validated.txt EXPECTING 0
+
+COMPARE validated.txt AGAINST summary.txt
+
+REPLACE $VERSION WITH '[VERSION]' IN result.txt
+DROP LINES CONTAINING '"duration":' IN result.txt
+DROP LINES CONTAINING '"start":' IN result.txt
+DROP LINES CONTAINING '"stop":' IN result.txt
+DROP LINES CONTAINING '"threadId":' IN result.txt
+REPLACE $CWD WITH '[CWD]' IN result.txt
+
+WRITE expected.txt UNTIL EOF
+1> {
+1>   "reportFormat": "CTRF",
+1>   "specVersion": "0.0.0",
+1>   "results": {
+1>     "tool": {
+1>       "name": "jsonschema",
+1>       "version": "[VERSION]"
+1>     },
+1>     "summary": {
+1>       "tests": 1,
+1>       "passed": 0,
+1>       "failed": 1,
+1>       "pending": 0,
+1>       "skipped": 0,
+1>       "other": 0,
+1>     },
+1>     "tests": [
+1>       {
+1>         "name": "Should pass but fails",
+1>         "status": "failed",
+1>         "suite": [ "https://example.com" ],
+1>         "type": "unit",
+1>         "filePath": "[CWD]/test.json",
+1>         "line": 4,
+1>         "retries": 0,
+1>         "flaky": false,
+1>         "trace": "error: Schema validation failure\n  The value was expected to be of type string but it was of type integer\n    at instance location \"\"\n    at evaluate path \"/type\"\n"
+1>       }
+1>     ]
+1>   }
+1> }
+EOF
+
+COMPARE result.txt AGAINST expected.txt
