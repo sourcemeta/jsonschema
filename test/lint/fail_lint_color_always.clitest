@@ -1,0 +1,28 @@
+WRITE schema.json UNTIL EOF
+{
+  "$schema": "http://json-schema.org/draft-04/schema#",
+  "title": "Test",
+  "description": "Test schema",
+  "type": "string",
+  "enum": [ "foo" ]
+}
+EOF
+
+RUN lint schema.json --only enum_with_type --color always STDIN /dev/null IN . INTO result.txt EXPECTING 2
+
+REPLACE MATCHING '\x1B\[1;31m' WITH '[ANSI_BOLD_RED]' IN result.txt
+REPLACE MATCHING '\x1B\[1;36m' WITH '[ANSI_BOLD_CYAN]' IN result.txt
+REPLACE MATCHING '\x1B\[1m' WITH '[ANSI_BOLD]' IN result.txt
+REPLACE MATCHING '\x1B\[36m' WITH '[ANSI_CYAN]' IN result.txt
+REPLACE MATCHING '\x1B\[0m' WITH '[ANSI_RESET]' IN result.txt
+
+WRITE expected.txt UNTIL EOF
+1> schema.json:6:3:
+1>   [ANSI_BOLD_RED]✗[ANSI_RESET] [ANSI_BOLD]Setting `type` alongside `enum` is considered an anti-pattern, as the enumeration choices already imply their respective types[ANSI_RESET] ([ANSI_BOLD_CYAN]enum_with_type[ANSI_RESET])
+1>     [ANSI_BOLD]at location[ANSI_RESET] "[ANSI_CYAN]/enum[ANSI_RESET]"
+1> schema.json:5:3:
+1>   [ANSI_BOLD_RED]✗[ANSI_RESET] [ANSI_BOLD]Setting `type` alongside `enum` is considered an anti-pattern, as the enumeration choices already imply their respective types[ANSI_RESET] ([ANSI_BOLD_CYAN]enum_with_type[ANSI_RESET])
+1>     [ANSI_BOLD]at location[ANSI_RESET] "[ANSI_CYAN]/type[ANSI_RESET]"
+EOF
+
+COMPARE result.txt AGAINST expected.txt

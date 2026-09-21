@@ -1,0 +1,13 @@
+RUN lint --list --only definitions_to_defs --color always STDIN /dev/null IN . INTO result.txt EXPECTING 0
+
+REPLACE MATCHING '\x1B\[1;36m' WITH '[ANSI_BOLD_CYAN]' IN result.txt
+REPLACE MATCHING '\x1B\[0m' WITH '[ANSI_RESET]' IN result.txt
+
+WRITE expected.txt UNTIL EOF
+1> [ANSI_BOLD_CYAN]definitions_to_defs[ANSI_RESET]
+1>   `definitions` was superseded by `$defs` in 2019-09 and later versions
+1>
+1> Number of rules: 1
+EOF
+
+COMPARE result.txt AGAINST expected.txt
