@@ -13,6 +13,7 @@
 #include <cmath>       // std::sqrt
 #include <iostream>    // std::cerr
 #include <iterator>    // std::next
+#include <ostream>     // std::ostream
 #include <string>      // std::string
 #include <string_view> // std::string_view
 
@@ -81,12 +82,48 @@ auto parse_loop(const sourcemeta::core::Options &options) -> std::uint64_t {
   return 1;
 }
 
+auto met_expectation(const bool result, const bool expect_invalid) -> bool {
+  return expect_invalid ? !result : result;
+}
+
+auto standard_output(sourcemeta::blaze::Evaluator &evaluator,
+                     const sourcemeta::blaze::Template &schema_template,
+                     const sourcemeta::core::JSON &instance,
+                     const bool fast_mode, const bool expect_invalid,
+                     const bool result,
+                     const sourcemeta::core::PointerPositionTracker &positions)
+    -> sourcemeta::core::JSON {
+  if (expect_invalid) {
+    auto output{sourcemeta::core::JSON::make_object()};
+    output.assign("valid", sourcemeta::core::JSON{
+                               met_expectation(result, expect_invalid)});
+    return output;
+  }
+
+  return sourcemeta::blaze::standard(
+      evaluator, schema_template, instance,
+      fast_mode ? sourcemeta::blaze::StandardOutput::Flag
+                : sourcemeta::blaze::StandardOutput::Basic,
+      positions);
+}
+
+auto print_failure(const sourcemeta::blaze::SimpleOutput &output,
+                   const sourcemeta::core::PointerPositionTracker &positions,
+                   const bool expect_invalid, std::ostream &stream) -> void {
+  if (expect_invalid) {
+    stream << "error: The instance was expected to be invalid\n";
+    return;
+  }
+
+  sourcemeta::jsonschema::print(output, positions, stream);
+}
+
 // validate instance in a loop to measure avg and stdev
 auto run_loop(sourcemeta::blaze::Evaluator &evaluator,
               const sourcemeta::blaze::Template &schema_template,
               const sourcemeta::core::JSON &instance,
               const std::string &instance_path, const int64_t instance_index,
-              const uint64_t loop) -> bool {
+              const uint64_t loop, const bool expect_invalid) -> bool {
   const auto iterations = static_cast<double>(loop);
   double sum = 0.0;
   double sum_of_squares = 0.0;
@@ -132,8 +169,9 @@ auto run_loop(sourcemeta::blaze::Evaluator &evaluator,
   }
   std::cout << std::fixed;
   std::cout.precision(3);
-  std::cout << ": " << (result ? "PASS" : "FAIL") << " " << avg << " +- "
-            << stdev << " us (" << empty << ")\n";
+  std::cout << ": "
+            << (met_expectation(result, expect_invalid) ? "PASS" : "FAIL")
+            << " " << avg << " +- " << stdev << " us (" << empty << ")\n";
 
   return result;
 }
@@ -144,6 +182,7 @@ auto process_entry(const sourcemeta::jsonschema::InputJSON &entry,
                    const sourcemeta::blaze::Template &schema_template,
                    bool benchmark, std::uint64_t benchmark_loop, bool trace,
                    bool fast_mode, bool json_output, bool continue_on_error,
+                   bool expect_invalid,
                    const sourcemeta::core::Options &options,
                    sourcemeta::jsonschema::ValidationSummary &summary) -> bool {
   try {
@@ -159,14 +198,14 @@ auto process_entry(const sourcemeta::jsonschema::InputJSON &entry,
           sourcemeta::jsonschema::relative_path_string(entry.resolution_base),
           entry.multidocument ? static_cast<std::int64_t>(entry.index + 1)
                               : static_cast<std::int64_t>(-1),
-          benchmark_loop);
-      if (!subresult) {
+          benchmark_loop, expect_invalid);
+      if (!met_expectation(subresult, expect_invalid)) {
         summary.failed += 1;
       }
     } else if (trace) {
       subresult = evaluator.validate(schema_template, entry.second,
                                      std::ref(trace_output));
-    } else if (fast_mode) {
+    } else if (fast_mode || expect_invalid) {
       subresult = evaluator.validate(schema_template, entry.second);
     } else if (!json_output) {
       subresult =
@@ -174,11 +213,11 @@ auto process_entry(const sourcemeta::jsonschema::InputJSON &entry,
     }
 
     if (benchmark) {
-      return subresult || continue_on_error;
+      return met_expectation(subresult, expect_invalid) || continue_on_error;
     }
 
     if (trace) {
-      if (!subresult) {
+      if (!met_expectation(subresult, expect_invalid)) {
         summary.failed += 1;
       }
     } else if (json_output) {
@@ -187,11 +226,9 @@ auto process_entry(const sourcemeta::jsonschema::InputJSON &entry,
                          entry.resolution_base)
                   << "\n";
       }
-      const auto suboutput{sourcemeta::blaze::standard(
-          evaluator, schema_template, entry.second,
-          fast_mode ? sourcemeta::blaze::StandardOutput::Flag
-                    : sourcemeta::blaze::StandardOutput::Basic,
-          entry.positions)};
+      const auto suboutput{
+          standard_output(evaluator, schema_template, entry.second, fast_mode,
+                          expect_invalid, subresult, entry.positions)};
       assert(suboutput.is_object());
       assert(suboutput.defines("valid"));
       assert(suboutput.at("valid").is_boolean());
@@ -203,7 +240,7 @@ auto process_entry(const sourcemeta::jsonschema::InputJSON &entry,
           return false;
         }
       }
-    } else if (subresult) {
+    } else if (met_expectation(subresult, expect_invalid)) {
       if (continue_on_error && entry.multidocument && summary.failed > 0) {
         sourcemeta::jsonschema::LOG_VERBOSE(options) << "\n";
       }
@@ -230,7 +267,7 @@ auto process_entry(const sourcemeta::jsonschema::InputJSON &entry,
       } else {
         std::cerr << "\n";
       }
-      sourcemeta::jsonschema::print(output, entry.positions, std::cerr);
+      print_failure(output, entry.positions, expect_invalid, std::cerr);
       summary.failed += 1;
       if (!continue_on_error) {
         return false;
@@ -256,6 +293,11 @@ auto sourcemeta::jsonschema::validate(const sourcemeta::core::Options &options)
   }
 
   validate_http_headers(options);
+
+  if (options.contains("valid") && options.contains("invalid")) {
+    throw OptionConflictError{
+        "The `--valid/-V` and `--invalid/-I` options are mutually exclusive"};
+  }
 
   const auto &schema_path{options.positional().at(0)};
   const bool schema_from_stdin = (schema_path == "-");
@@ -303,6 +345,7 @@ auto sourcemeta::jsonschema::validate(const sourcemeta::core::Options &options)
   const auto trace{options.contains("trace")};
   const auto json_output{options.contains("json")};
   const auto continue_on_error{options.contains("continue")};
+  const auto expect_invalid{options.contains("invalid")};
 
   if (options.contains("entrypoint") && !options.at("entrypoint").empty() &&
       options.contains("template") && !options.at("template").empty()) {
@@ -384,7 +427,7 @@ auto sourcemeta::jsonschema::validate(const sourcemeta::core::Options &options)
     for (auto entry{entries.cbegin()}; entry != entries.cend(); ++entry) {
       if (!process_entry(*entry, evaluator, schema_template, benchmark,
                          benchmark_loop, trace, fast_mode, json_output,
-                         continue_on_error, options, summary)) {
+                         continue_on_error, expect_invalid, options, summary)) {
         summary.stopped = std::next(entry) != entries.cend();
         break;
       }
@@ -423,7 +466,8 @@ auto sourcemeta::jsonschema::validate(const sourcemeta::core::Options &options)
         for (auto entry{entries.cbegin()}; entry != entries.cend(); ++entry) {
           if (!process_entry(*entry, evaluator, schema_template, benchmark,
                              benchmark_loop, trace, fast_mode, json_output,
-                             continue_on_error, options, summary)) {
+                             continue_on_error, expect_invalid, options,
+                             summary)) {
             summary.stopped = std::next(entry) != entries.cend();
             proceed = false;
             break;
@@ -454,11 +498,12 @@ auto sourcemeta::jsonschema::validate(const sourcemeta::core::Options &options)
           if (benchmark) {
             subresult = run_loop(evaluator, schema_template, instance,
                                  relative_path_string(instance_display_path),
-                                 static_cast<std::int64_t>(-1), benchmark_loop);
+                                 static_cast<std::int64_t>(-1), benchmark_loop,
+                                 expect_invalid);
           } else if (trace) {
             subresult = evaluator.validate(schema_template, instance,
                                            std::ref(trace_output));
-          } else if (fast_mode) {
+          } else if (fast_mode || expect_invalid) {
             subresult = evaluator.validate(schema_template, instance);
           } else if (!json_output) {
             subresult =
@@ -466,15 +511,13 @@ auto sourcemeta::jsonschema::validate(const sourcemeta::core::Options &options)
           }
 
           if (trace) {
-            if (!subresult) {
+            if (!met_expectation(subresult, expect_invalid)) {
               summary.failed += 1;
             }
           } else if (json_output) {
-            const auto suboutput{sourcemeta::blaze::standard(
-                evaluator, schema_template, instance,
-                fast_mode ? sourcemeta::blaze::StandardOutput::Flag
-                          : sourcemeta::blaze::StandardOutput::Basic,
-                tracker)};
+            const auto suboutput{
+                standard_output(evaluator, schema_template, instance, fast_mode,
+                                expect_invalid, subresult, tracker)};
             assert(suboutput.is_object());
             assert(suboutput.defines("valid"));
             assert(suboutput.at("valid").is_boolean());
@@ -485,14 +528,14 @@ auto sourcemeta::jsonschema::validate(const sourcemeta::core::Options &options)
 
             sourcemeta::core::prettify(suboutput, std::cout);
             std::cout << "\n";
-          } else if (subresult) {
+          } else if (met_expectation(subresult, expect_invalid)) {
             LOG_VERBOSE(options)
                 << "ok: " << relative_path_string(instance_display_path)
                 << "\n";
           } else {
             std::cerr << "fail: " << relative_path_string(instance_display_path)
                       << "\n";
-            print(output, tracker, std::cerr);
+            print_failure(output, tracker, expect_invalid, std::cerr);
             summary.failed += 1;
             proceed = continue_on_error;
           }

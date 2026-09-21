@@ -111,6 +111,8 @@ test_completion "jsonschema validate --" "--verbose" "Validate includes global o
 test_completion "jsonschema validate --" "--benchmark" "Validate includes --benchmark"
 test_completion "jsonschema validate --" "--trace" "Validate includes --trace"
 test_completion "jsonschema validate --" "--fast" "Validate includes --fast"
+test_completion "jsonschema validate --" "--valid" "Validate includes --valid"
+test_completion "jsonschema validate --" "--invalid" "Validate includes --invalid"
 
 test_completion "jsonschema lint --" "--fix" "Lint includes --fix"
 test_completion "jsonschema lint --" "--list" "Lint includes --list"

@@ -60,6 +60,8 @@ _jsonschema() {
             '(--trace -t)'{--trace,-t}'[Enable trace output (single instance only)]' \
             '(--fast -f)'{--fast,-f}'[Optimise for speed]' \
             '(--template -m)'{--template,-m}'[Use pre-compiled schema template]:template file:_files -g "*.json"' \
+            '(--valid -V --invalid -I)'{--valid,-V}'[Assert that every instance validates]' \
+            '(--valid -V --invalid -I)'{--invalid,-I}'[Assert that every instance fails validation]' \
             '1:schema file:_files -g "*.json *.yaml *.yml"' \
             '*:instance file:_files -g "*.json *.yaml *.yml *.jsonl"'
           ;;
