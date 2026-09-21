@@ -32,3 +32,16 @@ WRITE expected_0.txt UNTIL EOF
 EOF
 
 COMPARE result_0.txt AGAINST expected_0.txt
+
+// Validation failure
+RUN validate schema.json instances --invalid --json STDIN /dev/null IN . INTO result_1.txt EXPECTING 2
+
+WRITE expected_1.txt UNTIL EOF
+1> {
+1>   "valid": false
+1> }
+2> instances/instance_1.json
+2> warning: Stopped at first failure, pass --continue/-c to keep going
+EOF
+
+COMPARE result_1.txt AGAINST expected_1.txt
