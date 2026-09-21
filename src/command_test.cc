@@ -17,6 +17,7 @@
 #include <atomic>    // std::atomic
 #include <chrono>    // std::chrono
 #include <cstddef>   // std::size_t
+#include <cstdint>   // std::uint8_t
 #include <exception> // std::exception_ptr, std::current_exception, std::rethrow_exception
 #include <iostream>    // std::cout
 #include <mutex>       // std::mutex, std::scoped_lock
@@ -25,6 +26,7 @@
 #include <string>      // std::string
 #include <string_view> // std::string_view
 #include <thread>      // std::this_thread
+#include <utility>     // std::unreachable
 #include <vector>      // std::vector
 
 #include "command.h"
@@ -33,15 +35,58 @@
 #include "error.h"
 #include "input.h"
 #include "logger.h"
+#include "print.h"
 #include "resolver.h"
 #include "utils.h"
 
 namespace {
 
+using sourcemeta::core::TerminalStyle;
+constexpr auto PASS_STYLE{TerminalStyle::Bold | TerminalStyle::Green};
+constexpr auto FAIL_STYLE{TerminalStyle::Bold | TerminalStyle::Red};
+constexpr auto EMPTY_STYLE{TerminalStyle::Bold | TerminalStyle::Yellow};
+constexpr auto HEADING_STYLE{TerminalStyle::Bold | TerminalStyle::Cyan};
+
+enum class TestStatus : std::uint8_t { Pass, Fail, NoTests };
+
+auto format_status(TestStatus status) -> std::string {
+  if (sourcemeta::core::terminal_color_enabled(
+          sourcemeta::core::TerminalStream::Stdout)) {
+    switch (status) {
+      case TestStatus::Pass:
+        return sourcemeta::jsonschema::paint(
+            "✓ PASS", PASS_STYLE, sourcemeta::core::TerminalStream::Stdout);
+      case TestStatus::Fail:
+        return sourcemeta::jsonschema::paint(
+            "✗ FAIL", FAIL_STYLE, sourcemeta::core::TerminalStream::Stdout);
+      case TestStatus::NoTests:
+        return sourcemeta::jsonschema::paint(
+            "NO TESTS", EMPTY_STYLE, sourcemeta::core::TerminalStream::Stdout);
+    }
+    std::unreachable();
+  }
+
+  switch (status) {
+    case TestStatus::Pass:
+      return "PASS";
+    case TestStatus::Fail:
+      return "FAIL";
+    case TestStatus::NoTests:
+      return "NO TESTS";
+  }
+  std::unreachable();
+}
+
+auto format_error_label() -> std::string {
+  return sourcemeta::jsonschema::paint(
+      "error:", FAIL_STYLE, sourcemeta::core::TerminalStream::Stdout);
+}
+
 auto print_rdf_failure(const sourcemeta::jsonschema::InputJSON &entry,
                        const std::size_t test_index,
                        const sourcemeta::blaze::TestOutcome &outcome,
-                       std::ostream &stream) -> void {
+                       std::ostream &stream,
+                       const std::string_view error_label = "error:") -> void {
   if (outcome.rdf_error.has_value()) {
     const auto &error{outcome.rdf_error.value()};
     auto position{entry.positions.get(
@@ -52,7 +97,7 @@ auto print_rdf_failure(const sourcemeta::jsonschema::InputJSON &entry,
           sourcemeta::core::Pointer{"tests", test_index, "dataPath"});
     }
 
-    stream << "error: " << error.message << "\n";
+    stream << error_label << " " << error.message << "\n";
     if (position.has_value()) {
       stream << "  at line " << std::get<0>(position.value()) << "\n";
       stream << "  at column " << std::get<1>(position.value()) << "\n";
@@ -94,7 +139,7 @@ auto print_rdf_failure(const sourcemeta::jsonschema::InputJSON &entry,
       position = entry.positions.get(location);
     }
 
-    stream << "error: RDF expansion mismatch\n";
+    stream << error_label << " RDF expansion mismatch\n";
     if (position.has_value()) {
       stream << "  at line " << std::get<0>(position.value()) << "\n";
       stream << "  at column " << std::get<1>(position.value()) << "\n";
@@ -189,7 +234,11 @@ auto emit_target_header(
     std::optional<sourcemeta::core::JSON::String> &last_target_header,
     std::ostream &stream) -> void {
   if (multi_target && last_target_header != target) {
-    stream << "  " << target << ":\n";
+    stream << "  "
+           << sourcemeta::jsonschema::paint(
+                  target, HEADING_STYLE,
+                  sourcemeta::core::TerminalStream::Stdout)
+           << ":\n";
     last_target_header = target;
   }
 }
@@ -213,7 +262,10 @@ auto run_suite_as_text(const sourcemeta::core::Options &options,
         entry, schema_resolver, dialect,
         sourcemeta::jsonschema::format_assertion_tweaks(options))};
 
-    stream << entry.first << ":";
+    stream << sourcemeta::jsonschema::paint(
+                  entry.first, HEADING_STYLE,
+                  sourcemeta::core::TerminalStream::Stdout)
+           << ":";
 
     const auto multi_target{test_suite.targets.size() > 1};
     std::optional<sourcemeta::core::JSON::String> last_target_header;
@@ -238,8 +290,9 @@ auto run_suite_as_text(const sourcemeta::core::Options &options,
             if (verbose) {
               emit_target_header(multi_target, target, last_target_header,
                                  stream);
-              stream << entry_indent << index << "/" << total << " PASS "
-                     << description << "\n";
+              stream << entry_indent << index << "/" << total << " "
+                     << format_status(TestStatus::Pass) << " " << description
+                     << "\n";
             }
           } else if (!test_case.valid && outcome.valid) {
             if (!verbose) {
@@ -247,9 +300,11 @@ auto run_suite_as_text(const sourcemeta::core::Options &options,
             }
             emit_target_header(multi_target, target, last_target_header,
                                stream);
-            stream << entry_indent << index << "/" << total << " FAIL "
-                   << description << "\n\n"
-                   << "error: Passed but was expected to fail\n";
+            stream << entry_indent << index << "/" << total << " "
+                   << format_status(TestStatus::Fail) << " " << description
+                   << "\n\n"
+                   << format_error_label()
+                   << " Passed but was expected to fail\n";
 
             if (index != total && verbose) {
               stream << "\n";
@@ -270,9 +325,11 @@ auto run_suite_as_text(const sourcemeta::core::Options &options,
             }
             emit_target_header(multi_target, target, last_target_header,
                                stream);
-            stream << entry_indent << index << "/" << total << " FAIL "
-                   << description << "\n\n";
-            sourcemeta::jsonschema::print(output, test_case.tracker, stream);
+            stream << entry_indent << index << "/" << total << " "
+                   << format_status(TestStatus::Fail) << " " << description
+                   << "\n\n";
+            sourcemeta::jsonschema::print(output, test_case.tracker, stream,
+                                          format_error_label());
 
             if (trace) {
               stream << "\n";
@@ -294,10 +351,11 @@ auto run_suite_as_text(const sourcemeta::core::Options &options,
             }
             emit_target_header(multi_target, target, last_target_header,
                                stream);
-            stream << entry_indent << index << "/" << total << " FAIL "
-                   << description << "\n\n";
+            stream << entry_indent << index << "/" << total << " "
+                   << format_status(TestStatus::Fail) << " " << description
+                   << "\n\n";
             print_rdf_failure(entry, (index - 1) % test_suite.tests.size(),
-                              outcome, stream);
+                              outcome, stream, format_error_label());
 
             if (index != total && verbose) {
               stream << "\n";
@@ -306,10 +364,10 @@ auto run_suite_as_text(const sourcemeta::core::Options &options,
         })};
 
     if (suite_result.total == 0) {
-      stream << " NO TESTS\n";
+      stream << " " << format_status(TestStatus::NoTests) << "\n";
     } else if (!verbose && suite_result.passed == suite_result.total) {
-      stream << " PASS " << suite_result.passed << "/" << suite_result.total
-             << "\n";
+      stream << " " << format_status(TestStatus::Pass) << " "
+             << suite_result.passed << "/" << suite_result.total << "\n";
     }
 
     return suite_result;

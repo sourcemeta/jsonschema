@@ -1,0 +1,30 @@
+WRITE schema.json UNTIL EOF
+{
+  "id": "https://example.com",
+  "$schema": "http://json-schema.org/draft-04/schema#",
+  "title": "Test",
+  "description": "Test schema",
+  "type": "string"
+}
+EOF
+
+WRITE test.json UNTIL EOF
+{
+  "target": "https://example.com",
+  "tests": []
+}
+EOF
+
+// Other input error
+RUN test test.json --resolve schema.json --color always STDIN /dev/null IN . INTO result_0.txt EXPECTING 6
+
+REPLACE MATCHING '\x1B\[1;33m' WITH '[ANSI_BOLD_YELLOW]' IN result_0.txt
+REPLACE MATCHING '\x1B\[1;36m' WITH '[ANSI_BOLD_CYAN]' IN result_0.txt
+REPLACE MATCHING '\x1B\[0m' WITH '[ANSI_RESET]' IN result_0.txt
+REPLACE $CWD WITH '[CWD]' IN result_0.txt
+
+WRITE expected_0.txt UNTIL EOF
+1> [ANSI_BOLD_CYAN][CWD]/test.json[ANSI_RESET]: [ANSI_BOLD_YELLOW]NO TESTS[ANSI_RESET]
+EOF
+
+COMPARE result_0.txt AGAINST expected_0.txt

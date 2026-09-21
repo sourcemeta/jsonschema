@@ -1,0 +1,54 @@
+MAKE DIRECTORY schemas
+
+WRITE schemas/one.json UNTIL EOF
+{
+  "id": "https://example.com/one",
+  "$schema": "http://json-schema.org/draft-04/schema#",
+  "type": "string"
+}
+EOF
+
+WRITE schemas/two.json UNTIL EOF
+{
+  "id": "https://example.com/two",
+  "$schema": "http://json-schema.org/draft-04/schema#",
+  "type": "number"
+}
+EOF
+
+WRITE test.json UNTIL EOF
+{
+  "target": [
+    "https://example.com/one",
+    "https://example.com/two"
+  ],
+  "tests": [
+    {
+      "description": "String is valid",
+      "valid": true,
+      "data": "foo"
+    }
+  ]
+}
+EOF
+
+// Validation failure
+RUN test test.json --resolve schemas --color always STDIN /dev/null IN . INTO result_0.txt EXPECTING 2
+
+REPLACE MATCHING '\x1B\[1;31m' WITH '[ANSI_BOLD_RED]' IN result_0.txt
+REPLACE MATCHING '\x1B\[1;36m' WITH '[ANSI_BOLD_CYAN]' IN result_0.txt
+REPLACE MATCHING '\x1B\[0m' WITH '[ANSI_RESET]' IN result_0.txt
+REPLACE $CWD WITH '[CWD]' IN result_0.txt
+
+WRITE expected_0.txt UNTIL EOF
+1> [ANSI_BOLD_CYAN][CWD]/test.json[ANSI_RESET]:
+1>   [ANSI_BOLD_CYAN]https://example.com/two[ANSI_RESET]:
+1>     2/2 [ANSI_BOLD_RED]✗ FAIL[ANSI_RESET] String is valid
+1>
+1> [ANSI_BOLD_RED]error:[ANSI_RESET] Schema validation failure
+1>   The value was expected to be of type number but it was of type string
+1>     at instance location ""
+1>     at evaluate path "/type"
+EOF
+
+COMPARE result_0.txt AGAINST expected_0.txt

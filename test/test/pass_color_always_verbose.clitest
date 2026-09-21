@@ -1,0 +1,43 @@
+WRITE schema.json UNTIL EOF
+{
+  "id": "https://example.com",
+  "$schema": "http://json-schema.org/draft-04/schema#",
+  "title": "Test",
+  "description": "Test schema",
+  "type": "string"
+}
+EOF
+
+WRITE test.json UNTIL EOF
+{
+  "target": "https://example.com",
+  "tests": [
+    {
+      "description": "First test",
+      "valid": true,
+      "data": "foo"
+    },
+    {
+      "description": "Invalid type",
+      "valid": false,
+      "data": 1
+    }
+  ]
+}
+EOF
+
+RUN test test.json --resolve schema.json --verbose --jobs 1 --color always STDIN /dev/null IN . INTO result_0.txt EXPECTING 0
+
+REPLACE MATCHING '\x1B\[1;32m' WITH '[ANSI_BOLD_GREEN]' IN result_0.txt
+REPLACE MATCHING '\x1B\[1;36m' WITH '[ANSI_BOLD_CYAN]' IN result_0.txt
+REPLACE MATCHING '\x1B\[0m' WITH '[ANSI_RESET]' IN result_0.txt
+REPLACE $CWD WITH '[CWD]' IN result_0.txt
+
+WRITE expected_0.txt UNTIL EOF
+1> [ANSI_BOLD_CYAN][CWD]/test.json[ANSI_RESET]:
+1>   1/2 [ANSI_BOLD_GREEN]✓ PASS[ANSI_RESET] First test
+1>   2/2 [ANSI_BOLD_GREEN]✓ PASS[ANSI_RESET] Invalid type
+2> Using parallelism: 1
+EOF
+
+COMPARE result_0.txt AGAINST expected_0.txt

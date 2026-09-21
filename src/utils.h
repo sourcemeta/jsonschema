@@ -433,8 +433,9 @@ inline auto facet_name(const sourcemeta::blaze::JSONLDFacet facet)
 template <typename Entries>
 inline auto print(const Entries &output,
                   const sourcemeta::core::PointerPositionTracker &tracker,
-                  std::ostream &stream) -> void {
-  stream << "error: Schema validation failure\n";
+                  std::ostream &stream,
+                  const std::string_view error_label = "error:") -> void {
+  stream << error_label << " Schema validation failure\n";
   for (const auto &entry : output) {
     stream << "  " << entry.message << "\n";
     stream << "    at instance location \"";

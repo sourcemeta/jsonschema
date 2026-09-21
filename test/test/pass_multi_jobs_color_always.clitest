@@ -1,0 +1,131 @@
+WRITE schema.json UNTIL EOF
+{
+  "id": "https://example.com",
+  "$schema": "http://json-schema.org/draft-04/schema#",
+  "title": "Test",
+  "description": "Test schema",
+  "type": "string"
+}
+EOF
+
+MAKE DIRECTORY tests
+
+WRITE tests/1.json UNTIL EOF
+{
+  "target": "https://example.com",
+  "tests": [
+    {
+      "description": "First test",
+      "valid": true,
+      "data": "foo"
+    }
+  ]
+}
+EOF
+
+WRITE tests/2.json UNTIL EOF
+{
+  "target": "https://example.com",
+  "tests": [
+    {
+      "description": "First test",
+      "valid": true,
+      "data": "bar"
+    }
+  ]
+}
+EOF
+
+WRITE tests/3.json UNTIL EOF
+{
+  "target": "https://example.com",
+  "tests": [
+    {
+      "description": "First test",
+      "valid": true,
+      "data": "baz"
+    }
+  ]
+}
+EOF
+
+WRITE tests/4.json UNTIL EOF
+{
+  "target": "https://example.com",
+  "tests": [
+    {
+      "description": "First test",
+      "valid": false,
+      "data": 1
+    }
+  ]
+}
+EOF
+
+WRITE tests/5.json UNTIL EOF
+{
+  "target": "https://example.com",
+  "tests": [
+    {
+      "description": "First test",
+      "valid": false,
+      "data": 2
+    }
+  ]
+}
+EOF
+
+WRITE tests/6.json UNTIL EOF
+{
+  "target": "https://example.com",
+  "tests": [
+    {
+      "description": "First test",
+      "valid": false,
+      "data": 3
+    }
+  ]
+}
+EOF
+
+// Running in parallel, the order of the lines is not part of the contract
+RUN test tests --resolve schema.json --jobs 3 --color always STDIN /dev/null IN . INTO result_0.txt EXPECTING 0
+
+REPLACE MATCHING '\x1B\[1;32m' WITH '[ANSI_BOLD_GREEN]' IN result_0.txt
+REPLACE MATCHING '\x1B\[1;36m' WITH '[ANSI_BOLD_CYAN]' IN result_0.txt
+REPLACE MATCHING '\x1B\[0m' WITH '[ANSI_RESET]' IN result_0.txt
+REPLACE $CWD WITH '[CWD]' IN result_0.txt
+
+SORT result_0.txt
+
+WRITE expected_0.txt UNTIL EOF
+1> [ANSI_BOLD_CYAN][CWD]/tests/1.json[ANSI_RESET]: [ANSI_BOLD_GREEN]✓ PASS[ANSI_RESET] 1/1
+1> [ANSI_BOLD_CYAN][CWD]/tests/2.json[ANSI_RESET]: [ANSI_BOLD_GREEN]✓ PASS[ANSI_RESET] 1/1
+1> [ANSI_BOLD_CYAN][CWD]/tests/3.json[ANSI_RESET]: [ANSI_BOLD_GREEN]✓ PASS[ANSI_RESET] 1/1
+1> [ANSI_BOLD_CYAN][CWD]/tests/4.json[ANSI_RESET]: [ANSI_BOLD_GREEN]✓ PASS[ANSI_RESET] 1/1
+1> [ANSI_BOLD_CYAN][CWD]/tests/5.json[ANSI_RESET]: [ANSI_BOLD_GREEN]✓ PASS[ANSI_RESET] 1/1
+1> [ANSI_BOLD_CYAN][CWD]/tests/6.json[ANSI_RESET]: [ANSI_BOLD_GREEN]✓ PASS[ANSI_RESET] 1/1
+EOF
+
+SORT expected_0.txt
+
+COMPARE result_0.txt AGAINST expected_0.txt
+
+// Serially, the order is deterministic and asserted exactly
+RUN test tests --resolve schema.json --jobs 1 --color always STDIN /dev/null IN . INTO result_1.txt EXPECTING 0
+
+REPLACE MATCHING '\x1B\[1;32m' WITH '[ANSI_BOLD_GREEN]' IN result_1.txt
+REPLACE MATCHING '\x1B\[1;36m' WITH '[ANSI_BOLD_CYAN]' IN result_1.txt
+REPLACE MATCHING '\x1B\[0m' WITH '[ANSI_RESET]' IN result_1.txt
+REPLACE $CWD WITH '[CWD]' IN result_1.txt
+
+WRITE expected_1.txt UNTIL EOF
+1> [ANSI_BOLD_CYAN][CWD]/tests/1.json[ANSI_RESET]: [ANSI_BOLD_GREEN]✓ PASS[ANSI_RESET] 1/1
+1> [ANSI_BOLD_CYAN][CWD]/tests/2.json[ANSI_RESET]: [ANSI_BOLD_GREEN]✓ PASS[ANSI_RESET] 1/1
+1> [ANSI_BOLD_CYAN][CWD]/tests/3.json[ANSI_RESET]: [ANSI_BOLD_GREEN]✓ PASS[ANSI_RESET] 1/1
+1> [ANSI_BOLD_CYAN][CWD]/tests/4.json[ANSI_RESET]: [ANSI_BOLD_GREEN]✓ PASS[ANSI_RESET] 1/1
+1> [ANSI_BOLD_CYAN][CWD]/tests/5.json[ANSI_RESET]: [ANSI_BOLD_GREEN]✓ PASS[ANSI_RESET] 1/1
+1> [ANSI_BOLD_CYAN][CWD]/tests/6.json[ANSI_RESET]: [ANSI_BOLD_GREEN]✓ PASS[ANSI_RESET] 1/1
+EOF
+
+COMPARE result_1.txt AGAINST expected_1.txt
