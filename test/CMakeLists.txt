@@ -412,6 +412,17 @@ add_jsonschema_test(validate/fail_invalid_directory_continue)
 add_jsonschema_test(validate/fail_invalid_stop)
 add_jsonschema_test(validate/pass_invalid_jsonl)
 add_jsonschema_test(validate/fail_valid_invalid_conflict)
+add_jsonschema_test(validate/pass_color_always_verbose)
+add_jsonschema_test(validate/pass_color_never_verbose)
+add_jsonschema_test(validate/fail_color_always)
+add_jsonschema_test(validate/fail_jsonl_color_always_verbose)
+add_jsonschema_test(validate/pass_invalid_color_always_verbose)
+add_jsonschema_test(validate/fail_invalid_color_always)
+add_jsonschema_test(validate/pass_benchmark_color_always)
+add_jsonschema_test(validate/fail_benchmark_color_always)
+add_jsonschema_test(validate/pass_invalid_benchmark_color_always)
+add_jsonschema_test(validate/fail_json_color_always)
+
 
 # Metaschema
 add_jsonschema_test(metaschema/pass_trace)
