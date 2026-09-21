@@ -99,48 +99,6 @@ non-sense results.
 > pure-JavaScript evaluator for browsers and JavaScript runtimes like
 > Node.js, letting you compile with this CLI and validate anywhere.
 
-Asserting the Expected Outcome
-------------------------------
-
-By default, the command expects every instance to validate against the schema.
-The `--invalid`/`-I` option inverts that expectation, asserting that every
-instance fails validation instead. An instance that fails is then reported as a
-pass, and an instance that validates is reported as a failure:
-
-```sh
-$ jsonschema validate schema.json instance.json --invalid
-fail: instance.json
-error: The instance was expected to be invalid
-
-1 validated, 0 passed, 1 failed
-```
-
-This is how you assert that a schema rejects the documents it is supposed to
-reject, which is the counterpart of the negative test cases that the
-[`test`](./test.markdown) command supports.
-
-The `--valid`/`-V` option states the default expectation explicitly, so that a
-script reads the same way whichever expectation it asserts. The two options
-cannot be combined.
-
-The expectation applies to every instance individually, and it governs every
-verdict that the command reports. The `passed` and `failed` counts of the
-summary line mean "met the expectation" rather than "validated", `--continue`/`-c`
-keeps going past instances whose expectation was not met, and the exit code is
-2 whenever at least one expectation was not met.
-
-> [!WARNING]
-> Under `--invalid`/`-I`, the `--json`/`-j` output is a single `valid` boolean
-> reporting whether the expectation was met, with no `errors` or `annotations`.
-> It is therefore not the standard JSON Schema output format that the option
-> otherwise produces. Do not pass `--invalid`/`-I` if you need to consume the
-> result as a standard output document.
-
-> [!TIP]
-> Pair `--invalid`/`-I` with `--fast`/`-f`. Error messages are never reported
-> for an instance that was expected to fail, so there is nothing to gain from
-> exhaustive mode.
-
 Examples
 --------
 
