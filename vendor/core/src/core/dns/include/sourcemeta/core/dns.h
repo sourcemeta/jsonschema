@@ -19,6 +19,25 @@
 namespace sourcemeta::core {
 
 /// @ingroup dns
+/// Check whether the given string is a valid label of an Internet host name,
+/// which RFC 1123 Section 2.1 and RFC 952 Section B make of a letter or digit,
+/// followed by letters, digits, and hyphens, and ending in a letter or digit,
+/// within the 63 octets that RFC 1035 Section 2.3.4 allows. For example:
+///
+/// ```cpp
+/// #include <sourcemeta/core/dns.h>
+///
+/// #include <cassert>
+///
+/// assert(sourcemeta::core::is_hostname_label("example"));
+/// assert(sourcemeta::core::is_hostname_label("1host"));
+/// assert(!sourcemeta::core::is_hostname_label("-bad"));
+/// assert(!sourcemeta::core::is_hostname_label("bad-"));
+/// ```
+SOURCEMETA_CORE_DNS_EXPORT
+auto is_hostname_label(const std::string_view value) -> bool;
+
+/// @ingroup dns
 /// Check whether the given string is a valid Internet host name per
 /// RFC 1123 Section 2.1, which relaxes the first-character rule of
 /// RFC 952 to allow either a letter or a digit. For example:

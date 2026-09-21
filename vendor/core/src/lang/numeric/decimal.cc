@@ -773,9 +773,6 @@ auto Decimal::to_string() const -> std::string {
   } else if (this->coefficient_ == 0 && ((this->flags_ & FLAG_BIG) == 0)) {
     decimal_place = -1 + ((((this->exponent_ + 2) % 3) + 3) % 3);
   } else {
-    decimal_place = integer_digit_count +
-                    ((((integer_digit_count - 1) % 3) + 3) % 3) -
-                    ((((integer_digit_count - 1) % 3) + 3) % 3);
     auto adjusted = integer_digit_count - 1;
     auto remainder = ((adjusted % 3) + 3) % 3;
     decimal_place = 1 + remainder;

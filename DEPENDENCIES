@@ -1,5 +1,5 @@
 vendorpull https://github.com/sourcemeta/vendorpull 1dcbac42809cf87cb5b045106b863e17ad84ba02
-core https://github.com/sourcemeta/core a9f8c86de6e60c9f4f0b6d81e69e4cd60252c12b
-jsonbinpack https://github.com/sourcemeta/jsonbinpack cde3961db79771daffdbecd9ca147ed5f71455be
-blaze https://github.com/sourcemeta/blaze f25c2ab22cb13964a47be77acb8bbcc01ad1f2dd
+core https://github.com/sourcemeta/core 9c3323a59a4f8113e269cfb713c85ba34cf06d96
+jsonbinpack https://github.com/sourcemeta/jsonbinpack 53eadaa93be306ba29fcc4c2494cf186fed18fe4
+blaze https://github.com/sourcemeta/blaze d8d3b28a989b49672fa141b5d37792551999d532
 ctrf https://github.com/ctrf-io/ctrf 93ea827d951390190171d37443bff169cf47c808

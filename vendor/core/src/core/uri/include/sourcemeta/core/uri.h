@@ -11,9 +11,10 @@
 #include <sourcemeta/core/uri_error.h>
 // NOLINTEND(misc-include-cleaner)
 
+#include <array>       // std::array
 #include <concepts>    // std::convertible_to, std::same_as
 #include <cstddef>     // std::size_t, std::ptrdiff_t
-#include <cstdint>     // std::uint32_t
+#include <cstdint>     // std::uint8_t, std::uint32_t
 #include <filesystem>  // std::filesystem
 #include <istream>     // std::istream
 #include <iterator>    // std::forward_iterator_tag
@@ -937,6 +938,102 @@ public:
     }
   }
 
+  /// Percent-encode the octets of a string that cannot appear where they are
+  /// in a URI reference, appending the result to a string like output sink.
+  /// Unlike `escape`, the unreserved characters, the sub-delimiters, the colon,
+  /// the at sign, the slash, the question mark, and every valid percent-encoded
+  /// triplet pass through, so the delimiters of a URI reference survive and an
+  /// already encoded string is not encoded twice. Following RFC 3986, the
+  /// number sign only passes through once, as it introduces the fragment, and
+  /// the square brackets only pass through around the IP literal host of an
+  /// authority, the only place they may appear. The output must not alias the
+  /// input.
+  /// For example:
+  ///
+  /// ```cpp
+  /// #include <sourcemeta/core/uri.h>
+  /// #include <cassert>
+  /// #include <string>
+  ///
+  /// std::string output;
+  /// sourcemeta::core::URI::escape_reference("http://[::1]/a b?c#d#e", output);
+  /// assert(output == "http://[::1]/a%20b?c#d%23e");
+  /// ```
+  template <typename Output>
+  static auto escape_reference(const std::string_view input, Output &output)
+      -> void {
+    // RFC 3986 Section 2.2 and Section 2.3: the unreserved characters, the
+    // sub-delims, and the gen-delims other than the square brackets and the
+    // number sign
+    static constexpr std::array<std::uint8_t, 256> PASS_THROUGH{{
+        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, // 0x00
+        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, // 0x10
+        0, 1, 0, 0, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, // 0x20
+        1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 0, 1, // 0x30
+        1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, // 0x40
+        1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 1, // 0x50
+        0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, // 0x60
+        1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 1, 0, // 0x70
+        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, // 0x80
+        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, // 0x90
+        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, // 0xA0
+        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, // 0xB0
+        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, // 0xC0
+        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, // 0xD0
+        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, // 0xE0
+        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0  // 0xF0
+    }};
+
+    bool in_fragment{false};
+    // The square brackets are rare, so the IP literal is only located once
+    // one of them shows up
+    bool literal_located{false};
+    std::pair<std::size_t, std::size_t> literal{std::string_view::npos,
+                                                std::string_view::npos};
+    std::size_t run_start{0};
+    for (std::size_t position = 0; position < input.size(); position += 1) {
+      const auto byte{static_cast<unsigned char>(input[position])};
+      // RFC 3986 Section 2.1: pct-encoded = "%" HEXDIG HEXDIG
+      if (PASS_THROUGH[byte] != 0 ||
+          (byte == '%' && is_percent_triplet(input, position))) {
+        continue;
+      }
+
+      // RFC 3986 Section 3.5: "A fragment identifier component is indicated
+      // by the presence of a number sign ("#") character and terminated by
+      // the end of the URI", where fragment = *( pchar / "/" / "?" ) leaves no
+      // room for another number sign
+      if (byte == '#' && !in_fragment) {
+        in_fragment = true;
+        continue;
+      }
+
+      if (byte == '[' || byte == ']') [[unlikely]] {
+        if (!literal_located) {
+          literal = ip_literal_brackets(input);
+          literal_located = true;
+        }
+
+        if (position == literal.first || position == literal.second) {
+          continue;
+        }
+      }
+
+      // The characters that pass through are appended in runs
+      output.append(input.substr(run_start, position - run_start));
+      // RFC 3986 Section 2.1: percent-encode with uppercase hexadecimal
+      const auto high{static_cast<unsigned char>((byte >> 4U) & 0x0FU)};
+      const auto low{static_cast<unsigned char>(byte & 0x0FU)};
+      const std::array<char, 3> encoded{
+          {'%', static_cast<char>(high < 10 ? '0' + high : 'A' + high - 10),
+           static_cast<char>(low < 10 ? '0' + low : 'A' + low - 10)}};
+      output.append(std::string_view{encoded.data(), encoded.size()});
+      run_start = position + 1;
+    }
+
+    output.append(input.substr(run_start));
+  }
+
   /// Append a percent-encoded name and value pair to a query, form body, or
   /// fragment under construction (RFC 3986 Section 2.1), joining it to any
   /// preceding pair. The caller writes the opening character of a fresh
@@ -1340,6 +1437,11 @@ public:
 
 private:
   auto parse(std::string_view input) -> void;
+
+  // The positions of the square brackets around the IP literal host of a URI
+  // reference, if it has one
+  [[nodiscard]] static auto ip_literal_brackets(std::string_view input) noexcept
+      -> std::pair<std::size_t, std::size_t>;
 
   // WHATWG URL Section 5.1: "Replace any 0x2B (+) in name and value with 0x20
   // (SP)" and then percent-decode, which Section 1.3 defines to append a "%"

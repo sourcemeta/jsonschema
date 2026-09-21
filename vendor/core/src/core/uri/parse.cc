@@ -10,6 +10,7 @@
 #include <cassert>      // assert
 #include <cctype>       // std::isalpha, std::isdigit
 #include <charconv>     // std::from_chars
+#include <cstddef>      // std::size_t
 #include <cstdint>      // std::uint64_t
 #include <limits>       // std::numeric_limits
 #include <optional>     // std::optional
@@ -152,6 +153,43 @@ auto parse_port(const std::string_view input,
 
     return port_value;
   }
+}
+
+// RFC 3986 Section 3.2.2: IP-literal = "[" ( IPv6address / IPvFuture ) "]",
+// with IPvFuture = "v" 1*HEXDIG "." 1*( unreserved / sub-delims / ":" )
+auto is_ip_literal(const std::string_view content) -> bool {
+  if (content.empty()) {
+    return false;
+  }
+
+  if (content.front() != 'v' && content.front() != 'V') {
+    return sourcemeta::core::is_ipv6(content);
+  }
+
+  std::string_view::size_type position{1};
+  while (position < content.size() && hex_digit_value(content[position]) >= 0) {
+    position += 1;
+  }
+
+  if (position == 1 || position >= content.size() ||
+      content[position] != URI_DOT) {
+    return false;
+  }
+
+  position += 1;
+  if (position >= content.size()) {
+    return false;
+  }
+
+  for (; position < content.size(); position += 1) {
+    const auto character{content[position]};
+    if (!uri_is_unreserved(character) && !uri_is_sub_delim(character) &&
+        character != URI_COLON) {
+      return false;
+    }
+  }
+
+  return true;
 }
 
 template <bool CheckOnly>
@@ -653,6 +691,61 @@ auto URI::is_scheme(const std::string_view input) noexcept -> bool {
     }
   }
   return true;
+}
+
+auto URI::ip_literal_brackets(const std::string_view input) noexcept
+    -> std::pair<std::size_t, std::size_t> {
+  const std::pair<std::size_t, std::size_t> none{std::string_view::npos,
+                                                 std::string_view::npos};
+  // RFC 3986 Section 3.2: "The authority component is preceded by a double
+  // slash ("//") and is terminated by the next slash ("/"), question mark
+  // ("?"), or number sign ("#") character, or by the end of the URI"
+  std::size_t authority_start{0};
+  const auto delimiter{input.find_first_of(":/?#")};
+  if (delimiter != std::string_view::npos && input[delimiter] == ':' &&
+      URI::is_scheme(input.substr(0, delimiter)) &&
+      input.substr(delimiter + 1, 2) == "//") {
+    authority_start = delimiter + 3;
+  } else if (input.starts_with("//")) {
+    authority_start = 2;
+  } else {
+    return none;
+  }
+
+  auto authority_end{input.find_first_of("/?#", authority_start)};
+  if (authority_end == std::string_view::npos) {
+    authority_end = input.size();
+  }
+
+  // RFC 3986 Section 3.2: authority = [ userinfo "@" ] host [ ":" port ],
+  // where neither the host nor the port can contain an at sign
+  const auto userinfo_end{
+      input.substr(authority_start, authority_end - authority_start)
+          .rfind('@')};
+  const auto host{userinfo_end == std::string_view::npos
+                      ? authority_start
+                      : authority_start + userinfo_end + 1};
+
+  // RFC 3986 Section 3.2.2: "A host identified by an Internet Protocol literal
+  // address, version 6 [RFC3513] or later, is distinguished by enclosing the
+  // IP literal within square brackets ("[" and "]"). This is the only place
+  // where square bracket characters are allowed in the URI syntax"
+  if (host >= authority_end || input[host] != '[') {
+    return none;
+  }
+
+  const auto closing{input.find(']', host)};
+  if (closing >= authority_end ||
+      (closing + 1 != authority_end && input[closing + 1] != ':')) {
+    return none;
+  }
+
+  // Brackets around anything else cannot appear in a URI reference
+  if (!is_ip_literal(input.substr(host + 1, closing - host - 1))) {
+    return none;
+  }
+
+  return {host, closing};
 }
 
 auto URI::is_gen_delim(const char character) noexcept -> bool {

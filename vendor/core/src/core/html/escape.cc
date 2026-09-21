@@ -1,6 +1,7 @@
 #include <sourcemeta/core/html_escape.h>
 
-#include <string> // std::string
+#include <cstddef> // std::size_t
+#include <string>  // std::string
 
 namespace sourcemeta::core {
 
@@ -123,114 +124,6 @@ auto html_escape(std::string &text) -> void {
 
         return count;
       });
-}
-
-static auto needs_escape(const std::string_view input) -> bool {
-  for (std::string_view::size_type position{0}; position < input.size();
-       position += 1) {
-    // The no-break space also requires escaping (HTML Living Standard "escaping
-    // a string" step 2)
-    if (static_cast<unsigned char>(input[position]) == 0xC2 &&
-        position + 1 < input.size() &&
-        static_cast<unsigned char>(input[position + 1]) == 0xA0) {
-      return true;
-    }
-
-    switch (input[position]) {
-      case '&':
-      case '<':
-      case '>':
-      case '"':
-      case '\'':
-        return true;
-      default:
-        break;
-    }
-  }
-
-  return false;
-}
-
-auto html_escape_append(std::string &output, const std::string_view input)
-    -> void {
-  if (!needs_escape(input)) {
-    output += input;
-    return;
-  }
-
-  for (std::string_view::size_type position{0}; position < input.size();
-       position += 1) {
-    // The no-break space is replaced by its named entity (HTML Living Standard
-    // "escaping a string" step 2)
-    if (static_cast<unsigned char>(input[position]) == 0xC2 &&
-        position + 1 < input.size() &&
-        static_cast<unsigned char>(input[position + 1]) == 0xA0) {
-      output += "&nbsp;";
-      position += 1;
-      continue;
-    }
-
-    switch (input[position]) {
-      case '&':
-        output += "&amp;";
-        break;
-      case '<':
-        output += "&lt;";
-        break;
-      case '>':
-        output += "&gt;";
-        break;
-      case '"':
-        output += "&quot;";
-        break;
-      case '\'':
-        output += "&#39;";
-        break;
-      default:
-        output += input[position];
-    }
-  }
-}
-
-auto html_escape_append(HTMLBuffer &output, const std::string_view input)
-    -> void {
-  if (!needs_escape(input)) {
-    output.append(input);
-    return;
-  }
-
-  for (std::string_view::size_type position{0}; position < input.size();
-       position += 1) {
-    // The no-break space is replaced by its named entity (HTML Living Standard
-    // "escaping a string" step 2)
-    if (static_cast<unsigned char>(input[position]) == 0xC2 &&
-        position + 1 < input.size() &&
-        static_cast<unsigned char>(input[position + 1]) == 0xA0) {
-      output.append("&nbsp;");
-      position += 1;
-      continue;
-    }
-
-    switch (input[position]) {
-      case '&':
-        output.append("&amp;");
-        break;
-      case '<':
-        output.append("&lt;");
-        break;
-      case '>':
-        output.append("&gt;");
-        break;
-      case '"':
-        output.append("&quot;");
-        break;
-      case '\'':
-        output.append("&#39;");
-        break;
-      default:
-        output.append(input[position]);
-    }
-  }
 }
 
 } // namespace sourcemeta::core

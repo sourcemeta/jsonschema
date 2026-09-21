@@ -91,8 +91,19 @@ function(sourcemeta_clang_tidy_attempt_enable)
     message(FATAL_ERROR "You must pass the target name using the TARGET option")
   endif()
 
+  # Whether to analyse at all is the caller's to decide, while whether this
+  # project can is decided here. A project that vendors this without declaring
+  # the option keeps the behaviour it had before the option existed, so only an
+  # explicit refusal turns the tool off
+  if(DEFINED SOURCEMETA_CORE_CLANG_TIDY AND NOT SOURCEMETA_CORE_CLANG_TIDY)
+    return()
+  endif()
+
   # TODO: Support other platforms too, like Linux
-  if(APPLE AND SOURCEMETA_COMPILER_LLVM)
+  #
+  # A shared build compiles the same sources as a static one, differing only in
+  # linkage, so analysing both finds the same things twice at full price
+  if(APPLE AND SOURCEMETA_COMPILER_LLVM AND NOT BUILD_SHARED_LIBS)
     message(STATUS "Enabling ClangTidy alongside compilation for target ${SOURCEMETA_TARGET_CLANG_TIDY_ATTEMPT_ENABLE_TARGET}")
   else()
     return()
@@ -119,22 +130,14 @@ function(sourcemeta_clang_tidy_attempt_enable)
         CACHE STRING "CXX_CLANG_TIDY")
   endif()
 
-  # The static analyzer roughly triples ClangTidy time per translation unit, so
-  # it stays out of the local edit loop. This sits outside the cache guard above
-  # so that toggling the option takes effect on an existing build tree. The
-  # `--checks` argument is appended to the `Checks` option of the configuration
-  # file rather than replacing it, so the group composes with whatever the file
-  # enables
+  # This sits outside the cache guard above so that every target composes its
+  # own arguments rather than freezing the first target's into the cache
   set(TARGET_CLANG_TIDY "${SOURCEMETA_CXX_CLANG_TIDY}")
 
   # This tool bundles a newer compiler than the ones this project builds with,
   # and reports a counter macro that third-party headers have long relied on as
   # a feature of a language revision that is yet to be released
   list(APPEND TARGET_CLANG_TIDY "--extra-arg=-Wno-c2y-extensions")
-
-  if(SOURCEMETA_CORE_CLANG_TIDY_ANALYZER)
-    list(APPEND TARGET_CLANG_TIDY "--checks=clang-analyzer-*")
-  endif()
 
   set_target_properties("${SOURCEMETA_TARGET_CLANG_TIDY_ATTEMPT_ENABLE_TARGET}"
     PROPERTIES CXX_CLANG_TIDY "${TARGET_CLANG_TIDY}")

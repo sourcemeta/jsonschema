@@ -163,6 +163,39 @@ auto is_idn_email_uts46(const std::string_view value) -> bool {
   return mailbox_separator<true, true>(value).has_value();
 }
 
+auto is_html_email(const std::string_view value) -> bool {
+  // HTML Standard valid email address: email = 1*( atext / "." ) "@" label
+  // *( "." label ), where the at sign is not atext, so the first one separates
+  // the local part from the domain
+  const auto separator{value.find('@')};
+  if (separator == std::string_view::npos || separator == 0) {
+    return false;
+  }
+
+  for (const auto character : value.substr(0, separator)) {
+    if (character != '.' && !is_atext(character)) {
+      return false;
+    }
+  }
+
+  auto domain{value.substr(separator + 1)};
+  while (true) {
+    // HTML Standard valid email address: label = let-dig [ [ ldh-str ]
+    // let-dig ], which is the label of a host name, limited to a length of 63
+    // characters by RFC 1034 §3.5
+    const auto dot{domain.find('.')};
+    if (!is_hostname_label(domain.substr(0, dot))) {
+      return false;
+    }
+
+    if (dot == std::string_view::npos) {
+      return true;
+    }
+
+    domain.remove_prefix(dot + 1);
+  }
+}
+
 auto email_domain(const std::string_view value) -> std::string_view {
   const auto separator{mailbox_separator<false>(value)};
   if (!separator.has_value()) {

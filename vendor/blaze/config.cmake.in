@@ -15,14 +15,30 @@ if(NOT BLAZE_COMPONENTS)
   list(APPEND BLAZE_COMPONENTS convert)
   list(APPEND BLAZE_COMPONENTS editor)
   list(APPEND BLAZE_COMPONENTS bundle)
-  list(APPEND BLAZE_COMPONENTS format)
 endif()
 
 include(CMakeFindDependencyMacro)
-find_dependency(Core COMPONENTS
+
+set(BLAZE_CORE_COMPONENTS
   unicode punycode idna regex uri uritemplate json
   jsonpointer jsonschema jsonld io yaml crypto email ip dns time css
   memory)
+
+# This installation ships its own copy of Core, and CMake never searches the
+# prefix of the package it is currently resolving, so a consumer that doesn't
+# explicitly name our prefix, like on Windows, where the default install
+# location nests as `C:/Program Files (x86)/blaze`, finds Blaze but not the
+# Core next to it. Qt does the same for its sibling packages in
+# `Qt6GuiDependencies.cmake`, while leaving external ones to `find_dependency`.
+# We probe for that sibling with a quiet `find_package` rather than with
+# `find_dependency`, as the latter returns out of this file the moment it comes
+# up empty, which would leave no room to fall back on the ordinary search for
+# installations that were built against a Core from somewhere else
+find_package(Core QUIET COMPONENTS ${BLAZE_CORE_COMPONENTS}
+  PATHS "${CMAKE_CURRENT_LIST_DIR}/../core" NO_DEFAULT_PATH)
+if(NOT Core_FOUND)
+  find_dependency(Core COMPONENTS ${BLAZE_CORE_COMPONENTS})
+endif()
 
 foreach(component ${BLAZE_COMPONENTS})
   if(component STREQUAL "compiler")
@@ -62,8 +78,6 @@ foreach(component ${BLAZE_COMPONENTS})
     include("${CMAKE_CURRENT_LIST_DIR}/sourcemeta_blaze_editor.cmake")
   elseif(component STREQUAL "bundle")
     include("${CMAKE_CURRENT_LIST_DIR}/sourcemeta_blaze_bundle.cmake")
-  elseif(component STREQUAL "format")
-    include("${CMAKE_CURRENT_LIST_DIR}/sourcemeta_blaze_format.cmake")
   else()
     message(FATAL_ERROR "Unknown Blaze component: ${component}")
   endif()

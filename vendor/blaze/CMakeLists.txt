@@ -16,7 +16,6 @@ option(BLAZE_CANONICALIZER "Build the Blaze canonicalizer library" ON)
 option(BLAZE_CONVERT "Build the Blaze convert library" ON)
 option(BLAZE_EDITOR "Build the Blaze editor schema compatibility library" ON)
 option(BLAZE_BUNDLE "Build the Blaze bundle library" ON)
-option(BLAZE_FORMAT "Build the Blaze format library" ON)
 option(BLAZE_TESTS "Build the Blaze tests" OFF)
 option(BLAZE_BENCHMARK "Build the Blaze benchmarks" OFF)
 option(BLAZE_CONTRIB "Build the Blaze contrib programs" OFF)
@@ -58,10 +57,6 @@ endif()
 
 if(BLAZE_BUNDLE)
   add_subdirectory(src/bundle)
-endif()
-
-if(BLAZE_FORMAT)
-  add_subdirectory(src/format)
 endif()
 
 if(BLAZE_COMPILER)
@@ -152,10 +147,6 @@ if(BLAZE_TESTS)
 
   if(BLAZE_BUNDLE)
     add_subdirectory(test/bundle)
-  endif()
-
-  if(BLAZE_FORMAT)
-    add_subdirectory(test/format)
   endif()
 
   if(BLAZE_COMPILER)

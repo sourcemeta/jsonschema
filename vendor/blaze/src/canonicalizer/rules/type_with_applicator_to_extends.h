@@ -33,7 +33,24 @@ public:
     const unsigned int applicator_count{(has_extends ? 1U : 0U) +
                                         (has_disallow ? 1U : 0U) +
                                         (has_type_array ? 1U : 0U)};
-    const bool has_structural{has_type || has_enum};
+
+    // An assertion left beside `extends` or `disallow` has to be pushed into a
+    // branch of its own, otherwise shapes such as `extends` sitting next to
+    // `properties` are never rewritten and the result is not in canonical form.
+    //
+    // A type union on its own deliberately does not count here. In Draft 3 the
+    // distribution rule folds neighbouring assertions into the branches, but in
+    // Draft 0 to 2 there is no such rule, so `{"type": [...], "minLength": 2}`
+    // is a resting state. Splitting it would only invite the implicit type rule
+    // to rebuild the union around the assertion on the next pass, and the
+    // fixpoint would never settle
+    const bool has_assertion{
+        std::ranges::any_of(schema.as_object(), [](const auto &entry) -> bool {
+          return is_assertion_keyword(entry.first) &&
+                 !(entry.first == "type" && entry.second.is_array());
+        })};
+    const bool has_structural{has_type || has_enum ||
+                              ((has_extends || has_disallow) && has_assertion)};
 
     ONLY_CONTINUE_IF((has_structural && applicator_count >= 1) ||
                      applicator_count >= 2);
@@ -45,8 +62,13 @@ public:
 
     auto typed_branch{sourcemeta::core::JSON::make_object()};
     for (const auto &entry : schema.as_object()) {
+      // Note that `required` must stay where it is. It is a marker read by the
+      // parent `properties` object rather than an assertion about the instance,
+      // so moving it into an `extends` branch silently makes it inert and the
+      // implicit default left behind flips whether the property is required
       if (entry.first == "extends" || entry.first == "disallow" ||
           entry.first == "$schema" || entry.first == "id" ||
+          entry.first == "required" ||
           (entry.first == "type" && entry.second.is_array())) {
         continue;
       }
@@ -85,6 +107,9 @@ public:
     }
     if (schema.defines("id")) {
       new_schema.assign("id", schema.at("id"));
+    }
+    if (schema.defines("required")) {
+      new_schema.assign("required", schema.at("required"));
     }
     new_schema.assign("extends", std::move(new_extends));
     schema.into(std::move(new_schema));
@@ -133,6 +158,26 @@ public:
 private:
   static constexpr std::array<const char *, 3> APPLICATORS{
       {"extends", "disallow", "type"}};
+
+  // The assertion keywords of these dialects. This is deliberately an
+  // allow-list rather than a list of keywords to ignore: a keyword missing from
+  // here only means the rule does not fire, which is the previous behaviour,
+  // whereas a keyword wrongly treated as an assertion is rewritten on every
+  // pass and the fixpoint never settles. Markers such as `required` and
+  // `optional`, the `definitions` container, the core identity keywords and
+  // metadata are all absent for that reason
+  static constexpr std::array<const char *, 19> ASSERTIONS{
+      {"enum", "type", "properties", "patternProperties",
+       "additionalProperties", "items", "additionalItems", "minItems",
+       "maxItems", "uniqueItems", "minLength", "maxLength", "pattern", "format",
+       "divisibleBy", "minimum", "maximum", "exclusiveMinimum",
+       "exclusiveMaximum"}};
+
+  static auto is_assertion_keyword(std::string_view keyword) -> bool {
+    return std::ranges::any_of(
+        ASSERTIONS,
+        [keyword](const auto *entry) -> bool { return keyword == entry; });
+  }
 
   static constexpr auto applicator_bit(std::string_view keyword)
       -> std::uint8_t {

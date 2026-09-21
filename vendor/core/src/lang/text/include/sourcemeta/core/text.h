@@ -18,7 +18,7 @@
 #include <ostream>     // std::ostream
 #include <string>      // std::string
 #include <string_view> // std::string_view
-#include <type_traits> // std::remove_cv_t
+#include <type_traits> // std::is_nothrow_copy_constructible_v, std::is_nothrow_invocable_r_v, std::remove_cv_t
 #include <utility>     // std::pair
 #include <vector>      // std::vector
 
@@ -316,6 +316,33 @@ constexpr auto is_alphanum(const std::string_view value) noexcept -> bool {
 
 /// @ingroup text
 ///
+/// Return whether a character is an ASCII punctuation character, which is any
+/// printable ASCII character other than the space, a letter, or a digit. For
+/// example:
+///
+/// ```cpp
+/// #include <sourcemeta/core/text.h>
+/// #include <cassert>
+///
+/// assert(sourcemeta::core::is_punctuation('!'));
+/// assert(sourcemeta::core::is_punctuation('~'));
+/// assert(!sourcemeta::core::is_punctuation('a'));
+/// assert(!sourcemeta::core::is_punctuation(' '));
+/// ```
+template <typename Character>
+  requires std::same_as<Character, char> ||
+           std::same_as<Character, signed char> ||
+           std::same_as<Character, unsigned char> ||
+           std::same_as<Character, wchar_t>
+constexpr auto is_punctuation(const Character character) noexcept -> bool {
+  return (character >= '!' && character <= '/') ||
+         (character >= ':' && character <= '@') ||
+         (character >= '[' && character <= '`') ||
+         (character >= '{' && character <= '~');
+}
+
+/// @ingroup text
+///
 /// Truncate a string in place to at most `maximum_length` bytes, appending
 /// `marker` on truncation. Rewinds to a UTF-8 code-point boundary so
 /// multi-byte characters are never split. For example:
@@ -395,6 +422,79 @@ auto strip_left(const std::string_view input, const char character) noexcept
 SOURCEMETA_CORE_TEXT_EXPORT
 auto strip_right(const std::string_view input, const char character) noexcept
     -> std::string_view;
+
+/// @ingroup text
+///
+/// Return `input` with its leading characters that satisfy `predicate`
+/// removed. For example:
+///
+/// ```cpp
+/// #include <sourcemeta/core/text.h>
+/// #include <cassert>
+///
+/// const auto is_zero{[](const char character) { return character == '0'; }};
+/// assert(sourcemeta::core::strip_left("000123", is_zero) == "123");
+/// ```
+template <typename Predicate>
+  requires std::predicate<Predicate &, char>
+constexpr auto
+strip_left(const std::string_view input, Predicate predicate) noexcept(
+    std::is_nothrow_invocable_r_v<bool, Predicate &, char> &&
+    std::is_nothrow_copy_constructible_v<Predicate>) -> std::string_view {
+  std::string_view result{input};
+  while (!result.empty() && predicate(result.front())) {
+    result.remove_prefix(1);
+  }
+
+  return result;
+}
+
+/// @ingroup text
+///
+/// Return `input` with its trailing characters that satisfy `predicate`
+/// removed. For example:
+///
+/// ```cpp
+/// #include <sourcemeta/core/text.h>
+/// #include <cassert>
+///
+/// const auto is_zero{[](const char character) { return character == '0'; }};
+/// assert(sourcemeta::core::strip_right("123000", is_zero) == "123");
+/// ```
+template <typename Predicate>
+  requires std::predicate<Predicate &, char>
+constexpr auto
+strip_right(const std::string_view input, Predicate predicate) noexcept(
+    std::is_nothrow_invocable_r_v<bool, Predicate &, char> &&
+    std::is_nothrow_copy_constructible_v<Predicate>) -> std::string_view {
+  std::string_view result{input};
+  while (!result.empty() && predicate(result.back())) {
+    result.remove_suffix(1);
+  }
+
+  return result;
+}
+
+/// @ingroup text
+///
+/// Return `input` with its leading and trailing characters that satisfy
+/// `predicate` removed, for when the characters to trim are not the ASCII
+/// whitespace. For example:
+///
+/// ```cpp
+/// #include <sourcemeta/core/text.h>
+/// #include <cassert>
+///
+/// const auto is_dash{[](const char character) { return character == '-'; }};
+/// assert(sourcemeta::core::trim("--hello--", is_dash) == "hello");
+/// ```
+template <typename Predicate>
+  requires std::predicate<Predicate &, char>
+constexpr auto trim(const std::string_view input, Predicate predicate) noexcept(
+    std::is_nothrow_invocable_r_v<bool, Predicate &, char> &&
+    std::is_nothrow_copy_constructible_v<Predicate>) -> std::string_view {
+  return strip_right(strip_left(input, predicate), predicate);
+}
 
 /// @ingroup text
 ///
