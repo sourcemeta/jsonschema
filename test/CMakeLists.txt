@@ -423,7 +423,6 @@ add_jsonschema_test(validate/fail_benchmark_color_always)
 add_jsonschema_test(validate/pass_invalid_benchmark_color_always)
 add_jsonschema_test(validate/fail_json_color_always)
 
-
 # Metaschema
 add_jsonschema_test(metaschema/pass_trace)
 add_jsonschema_test(metaschema/fail_trace)
