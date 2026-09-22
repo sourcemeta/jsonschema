@@ -1,0 +1,30 @@
+WRITE schema.json UNTIL EOF
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "foo": {
+      "type": "string"
+    }
+  }
+}
+EOF
+
+WRITE instance.json UNTIL EOF
+{ "foo": "bar" }
+EOF
+
+// Validation failure
+RUN validate schema.json instance.json --invalid --color always STDIN /dev/null IN . INTO result_0.txt EXPECTING 2
+
+REPLACE MATCHING '\x1B\[1;31m' WITH '[ANSI_BOLD_RED]' IN result_0.txt
+REPLACE MATCHING '\x1B\[0m' WITH '[ANSI_RESET]' IN result_0.txt
+
+WRITE expected_0.txt UNTIL EOF
+2> [ANSI_BOLD_RED]✗ fail:[ANSI_RESET] instance.json
+2> error: The instance was expected to be invalid
+2>
+2> 1 validated, 0 passed, 1 failed
+EOF
+
+COMPARE result_0.txt AGAINST expected_0.txt

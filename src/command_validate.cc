@@ -11,21 +11,59 @@
 
 #include <chrono>      // std::chrono
 #include <cmath>       // std::sqrt
+#include <cstdint>     // std::uint8_t, std::uint64_t
 #include <iostream>    // std::cerr
 #include <iterator>    // std::next
 #include <ostream>     // std::ostream
 #include <string>      // std::string
 #include <string_view> // std::string_view
+#include <utility>     // std::unreachable
 
 #include "command.h"
 #include "configuration.h"
 #include "error.h"
 #include "input.h"
 #include "logger.h"
+#include "print.h"
 #include "resolver.h"
 #include "utils.h"
 
 namespace {
+
+using sourcemeta::core::TerminalStyle;
+constexpr auto PASS_STYLE{TerminalStyle::Bold | TerminalStyle::Green};
+constexpr auto FAIL_STYLE{TerminalStyle::Bold | TerminalStyle::Red};
+
+enum class ValidationStatus : std::uint8_t { Pass, Fail };
+
+auto format_validation_status(ValidationStatus status) -> std::string {
+  if (sourcemeta::core::terminal_color_enabled(
+          sourcemeta::core::TerminalStream::Stderr)) {
+    switch (status) {
+      case ValidationStatus::Pass:
+        return sourcemeta::jsonschema::paint(
+            "✓ ok:", PASS_STYLE, sourcemeta::core::TerminalStream::Stderr);
+      case ValidationStatus::Fail:
+        return sourcemeta::jsonschema::paint(
+            "✗ fail:", FAIL_STYLE, sourcemeta::core::TerminalStream::Stderr);
+    }
+    std::unreachable();
+  }
+
+  switch (status) {
+    case ValidationStatus::Pass:
+      return "ok:";
+    case ValidationStatus::Fail:
+      return "fail:";
+  }
+  std::unreachable();
+}
+
+auto format_benchmark_status(const bool passed) -> std::string {
+  return sourcemeta::jsonschema::paint(
+      passed ? "PASS" : "FAIL", passed ? PASS_STYLE : FAIL_STYLE,
+      sourcemeta::core::TerminalStream::Stdout);
+}
 
 auto get_precompiled_schema_template_path(
     const sourcemeta::core::Options &options)
@@ -170,7 +208,7 @@ auto run_loop(sourcemeta::blaze::Evaluator &evaluator,
   std::cout << std::fixed;
   std::cout.precision(3);
   std::cout << ": "
-            << (met_expectation(result, expect_invalid) ? "PASS" : "FAIL")
+            << format_benchmark_status(met_expectation(result, expect_invalid))
             << " " << avg << " +- " << stdev << " us (" << empty << ")\n";
 
   return result;
@@ -245,7 +283,7 @@ auto process_entry(const sourcemeta::jsonschema::InputJSON &entry,
         sourcemeta::jsonschema::LOG_VERBOSE(options) << "\n";
       }
       sourcemeta::jsonschema::LOG_VERBOSE(options)
-          << "ok: "
+          << format_validation_status(ValidationStatus::Pass) << " "
           << sourcemeta::jsonschema::relative_path_string(
                  entry.resolution_base);
       if (entry.multidocument) {
@@ -257,7 +295,7 @@ auto process_entry(const sourcemeta::jsonschema::InputJSON &entry,
       if (continue_on_error && entry.multidocument && summary.failed > 0) {
         std::cerr << "\n";
       }
-      std::cerr << "fail: "
+      std::cerr << format_validation_status(ValidationStatus::Fail) << " "
                 << sourcemeta::jsonschema::relative_path_string(
                        entry.resolution_base);
       if (entry.multidocument) {
@@ -530,11 +568,11 @@ auto sourcemeta::jsonschema::validate(const sourcemeta::core::Options &options)
             std::cout << "\n";
           } else if (met_expectation(subresult, expect_invalid)) {
             LOG_VERBOSE(options)
-                << "ok: " << relative_path_string(instance_display_path)
-                << "\n";
+                << format_validation_status(ValidationStatus::Pass) << " "
+                << relative_path_string(instance_display_path) << "\n";
           } else {
-            std::cerr << "fail: " << relative_path_string(instance_display_path)
-                      << "\n";
+            std::cerr << format_validation_status(ValidationStatus::Fail) << " "
+                      << relative_path_string(instance_display_path) << "\n";
             print_failure(output, tracker, expect_invalid, std::cerr);
             summary.failed += 1;
             proceed = continue_on_error;
