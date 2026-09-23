@@ -1,7 +1,19 @@
 WRITE schema.json UNTIL EOF
 {
-  "$schema": "http://json-schema.org/draft-03/schema#",
-  "type": "string"
+  "$schema": "https://example.com/meta",
+  "$id": "https://example.com/schema",
+  "type": "string",
+  "$defs": {
+    "https://example.com/meta": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "$id": "https://example.com/meta",
+      "$vocabulary": {
+        "https://json-schema.org/draft/2020-12/vocab/core": true,
+        "https://example.com/vocab/unknown": true
+      },
+      "type": "object"
+    }
+  }
 }
 EOF
 
@@ -13,7 +25,7 @@ REPLACE $CWD WITH '[CWD]' IN result.txt
 WRITE expected_0.txt UNTIL EOF
 2> error: Unsupported required vocabulary
 2>   at file path [CWD]/schema.json
-2>   at uri http://json-schema.org/draft-03/schema#
+2>   at uri https://example.com/vocab/unknown
 EOF
 
 COMPARE result.txt AGAINST expected_0.txt
@@ -27,7 +39,7 @@ WRITE expected_1.txt UNTIL EOF
 1> {
 1>   "error": "Unsupported required vocabulary",
 1>   "filePath": "[CWD]/schema.json",
-1>   "uri": "http://json-schema.org/draft-03/schema#"
+1>   "uri": "https://example.com/vocab/unknown"
 1> }
 EOF
 
