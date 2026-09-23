@@ -1,4 +1,3 @@
-#include <sourcemeta/blaze/bundle.h>
 #include <sourcemeta/blaze/compiler.h>
 #include <sourcemeta/blaze/evaluator.h>
 #include <sourcemeta/core/jsonschema.h>
@@ -833,10 +832,11 @@ auto compile(const sourcemeta::core::JSON &schema,
   // Make sure the input schema is bundled, otherwise we won't be able to
   // resolve remote references here. Meta-schemas are not needed, as we
   // can determine vocabularies through the resolver
-  const sourcemeta::core::JSON result{sourcemeta::blaze::bundle(
-      schema, walker, resolver, sourcemeta::blaze::BundleMode::References,
-      default_dialect, default_id, std::nullopt,
-      {sourcemeta::core::EMPTY_WEAK_POINTER}, "", max_locations)};
+  sourcemeta::core::SchemaBundleOptions bundle_options;
+  bundle_options.mode = sourcemeta::core::SchemaBundleOptions::Mode::References;
+  bundle_options.max_locations = max_locations;
+  const sourcemeta::core::JSON result{sourcemeta::core::schema_bundle(
+      schema, walker, resolver, default_dialect, default_id, bundle_options)};
 
   sourcemeta::core::SchemaFrame frame{
       sourcemeta::core::SchemaFrame::Mode::References,

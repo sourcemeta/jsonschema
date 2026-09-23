@@ -210,6 +210,11 @@ auto sourcemeta::core::schema_reidentify(sourcemeta::core::JSON &schema,
   schema_reidentify(schema, new_identifier, resolved_base_dialect.value());
 }
 
+auto sourcemeta::core::schema_identifier_keyword(
+    const SchemaBaseDialect base_dialect) -> std::string_view {
+  return sourcemeta::core::id_keyword(base_dialect).name;
+}
+
 auto sourcemeta::core::schema_reidentify(sourcemeta::core::JSON &schema,
                                          std::string_view new_identifier,
                                          const SchemaBaseDialect base_dialect)

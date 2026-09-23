@@ -2,7 +2,8 @@ sourcemeta_library(NAMESPACE sourcemeta PROJECT core NAME openapi
   PRIVATE_HEADERS error.h
   SOURCES helpers.h reference.h example.h content.h link.h response.h
           parameter.h request_body.h security.h path_item.h paths.h
-          components.h external_documentation.h info.h server.h tag.h
+          components.h discriminator.h external_documentation.h info.h
+          server.h tag.h
           document.h frame.cc version.cc)
 
 if(SOURCEMETA_CORE_INSTALL)

@@ -11,8 +11,7 @@ public:
             const sourcemeta::core::SchemaFrame &,
             const sourcemeta::core::SchemaFrame::Location &,
             const sourcemeta::core::SchemaWalker &,
-            const sourcemeta::core::SchemaResolver &, const bool) const
-      -> bool override {
+            const sourcemeta::core::SchemaResolver &) const -> bool override {
     ONLY_CONTINUE_IF(
         vocabularies.contains(SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_6) &&
         schema.is_object());

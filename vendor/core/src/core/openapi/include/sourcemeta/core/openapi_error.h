@@ -8,6 +8,7 @@
 #include <sourcemeta/core/json.h>
 #include <sourcemeta/core/jsonpointer.h>
 
+#include <cstdint>     // std::uint64_t
 #include <exception>   // std::exception
 #include <string>      // std::string
 #include <string_view> // std::string_view
@@ -77,6 +78,37 @@ private:
   JSON::String base_;
   Pointer location_;
   const char *message_;
+};
+
+/// @ingroup openapi
+/// An error that represents framing that ran past what the caller allowed it
+/// to register. For example:
+///
+/// ```cpp
+/// #include <sourcemeta/core/openapi.h>
+/// #include <cassert>
+///
+/// const sourcemeta::core::OpenAPIFrameLimitError error{100};
+/// assert(error.limit() == 100);
+/// ```
+class SOURCEMETA_CORE_OPENAPI_EXPORT OpenAPIFrameLimitError
+    : public std::exception {
+public:
+  /// Create a framing limit error
+  OpenAPIFrameLimitError(const std::uint64_t limit) : limit_{limit} {}
+
+  [[nodiscard]] auto what() const noexcept -> const char * override {
+    return "The OpenAPI Description exceeds the maximum number of locations "
+           "that framing may register";
+  }
+
+  /// The maximum number of locations that framing was allowed to register
+  [[nodiscard]] auto limit() const noexcept -> std::uint64_t {
+    return this->limit_;
+  }
+
+private:
+  std::uint64_t limit_;
 };
 
 #if defined(_MSC_VER)

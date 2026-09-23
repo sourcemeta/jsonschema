@@ -118,13 +118,12 @@ constexpr std::string_view USAGE_COMMANDS{R"EOF(   version / --version / -v
        against the document root.
 
    upgrade <schema.json|.yaml>
-           [--to/-t draft4|draft6|draft7|2019-09|2020-12] [--meta/-m]
+           [--to/-t draft4|draft6|draft7|2019-09|2020-12]
 
        Upgrade the given schema to a newer JSON Schema dialect.
        Defaults to the latest dialect (2020-12). Schemas that declare a
-       custom meta-schema cannot be upgraded by this command.
-       Pass --meta/-m as a hint when the input is a meta-schema
-       (not auto-detectable on Draft 7 and older dialects).
+       custom meta-schema and schemas that are meta-schemas themselves
+       cannot be upgraded by this command.
 
    bundle <schema.json|.yaml> [--extension/-e <extension>]
           [--ignore/-i <schemas-or-directories>] [--without-id/-w]
@@ -390,7 +389,6 @@ auto jsonschema_main(const std::string &program, const std::string &command,
 
   if (command == "upgrade") {
     app.option("to", {"t"});
-    app.flag("meta", {"m"});
     parse_options(app, argc, argv, {.skip = 1});
     sourcemeta::jsonschema::upgrade(app);
     return EXIT_SUCCESS;

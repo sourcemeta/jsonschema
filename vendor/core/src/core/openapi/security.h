@@ -433,10 +433,9 @@ inline auto openapi_check_security_scheme_name(const JSON::StringView name,
   }
 
   // Naming a whole OpenAPI Description is naming something that is not a
-  // Security Scheme Object, which is the same demand a Path Item Object's
-  // `$ref` makes of what it points at
+  // Security Scheme Object
   openapi_follow_target(target.value(), origin,
-                        OpenAPIObjectKind::SecurityScheme, true, walk);
+                        OpenAPIObjectKind::SecurityScheme, walk);
 }
 
 inline auto openapi_check_security_requirement(const JSON &value,

@@ -128,13 +128,12 @@ WRITE expected.txt UNTIL EOF
 1>        against the document root.
 1>
 1>    upgrade <schema.json|.yaml>
-1>            [--to/-t draft4|draft6|draft7|2019-09|2020-12] [--meta/-m]
+1>            [--to/-t draft4|draft6|draft7|2019-09|2020-12]
 1>
 1>        Upgrade the given schema to a newer JSON Schema dialect.
 1>        Defaults to the latest dialect (2020-12). Schemas that declare a
-1>        custom meta-schema cannot be upgraded by this command.
-1>        Pass --meta/-m as a hint when the input is a meta-schema
-1>        (not auto-detectable on Draft 7 and older dialects).
+1>        custom meta-schema and schemas that are meta-schemas themselves
+1>        cannot be upgraded by this command.
 1>
 1>    bundle <schema.json|.yaml> [--extension/-e <extension>]
 1>           [--ignore/-i <schemas-or-directories>] [--without-id/-w]

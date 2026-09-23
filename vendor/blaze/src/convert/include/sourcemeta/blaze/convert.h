@@ -46,7 +46,10 @@ enum class ConvertTarget : std::uint8_t {
 /// @ingroup convert
 /// Convert the given schema, in place, to the given dialect. Only upgrades are
 /// supported, so a schema already on that dialect or a newer one is left as
-/// is. For example:
+/// is. A document that describes itself or that carries the meta-schema
+/// something in it declares raises `ConvertUnsupportedMetaschemaError`, and one
+/// that sits on a dialect outside the official ladder raises
+/// `ConvertUnsupportedDialectError`. For example:
 ///
 /// ```cpp
 /// #include <sourcemeta/blaze/convert.h>
@@ -67,8 +70,7 @@ auto convert(sourcemeta::core::JSON &schema,
              const sourcemeta::core::SchemaResolver &resolver,
              const ConvertTarget target,
              const std::string_view default_dialect = "",
-             const std::string_view default_id = "",
-             const bool is_metaschema = false) -> void;
+             const std::string_view default_id = "") -> void;
 
 } // namespace sourcemeta::blaze
 

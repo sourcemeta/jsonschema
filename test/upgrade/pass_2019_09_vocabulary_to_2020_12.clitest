@@ -15,8 +15,7 @@ WRITE schema.json UNTIL EOF
 }
 EOF
 
-RUN upgrade --meta --to 2020-12 schema.json STDIN /dev/null IN . INTO meta.txt EXPECTING 0
-RUN upgrade --to 2020-12 schema.json STDIN /dev/null IN . INTO plain.txt EXPECTING 0
+RUN upgrade --to 2020-12 schema.json STDIN /dev/null IN . INTO result.txt EXPECTING 0
 
 WRITE expected.txt UNTIL EOF
 1> {
@@ -36,5 +35,4 @@ WRITE expected.txt UNTIL EOF
 1> }
 EOF
 
-COMPARE meta.txt AGAINST plain.txt
-COMPARE meta.txt AGAINST expected.txt
+COMPARE result.txt AGAINST expected.txt

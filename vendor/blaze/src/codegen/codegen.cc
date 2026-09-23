@@ -1,4 +1,3 @@
-#include <sourcemeta/blaze/bundle.h>
 #include <sourcemeta/blaze/canonicalizer.h>
 #include <sourcemeta/blaze/codegen.h>
 #include <sourcemeta/core/jsonschema.h>
@@ -78,9 +77,10 @@ auto compile(const sourcemeta::core::JSON &input,
   // (1) Bundle the schema to resolve external references
   // --------------------------------------------------------------------------
 
-  auto schema{sourcemeta::blaze::bundle(
-      input, walker, resolver, sourcemeta::blaze::BundleMode::References,
-      default_dialect, default_id)};
+  sourcemeta::core::SchemaBundleOptions bundle_options;
+  bundle_options.mode = sourcemeta::core::SchemaBundleOptions::Mode::References;
+  auto schema{sourcemeta::core::schema_bundle(
+      input, walker, resolver, default_dialect, default_id, bundle_options)};
 
   // --------------------------------------------------------------------------
   // (2) Canonicalize the schema for easier analysis

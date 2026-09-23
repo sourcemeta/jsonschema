@@ -17,6 +17,4 @@ target_link_libraries(sourcemeta_blaze_codegen PUBLIC
 target_link_libraries(sourcemeta_blaze_codegen PUBLIC
   sourcemeta::core::jsonschema)
 target_link_libraries(sourcemeta_blaze_codegen PRIVATE
-  sourcemeta::blaze::bundle)
-target_link_libraries(sourcemeta_blaze_codegen PRIVATE
   sourcemeta::blaze::canonicalizer)

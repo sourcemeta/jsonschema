@@ -107,7 +107,10 @@ public:
     // location entry to point to if it is an external unresolved reference
     /// The absolute URI that the reference resolves to
     sourcemeta::core::JSON::String destination;
-    /// The base that the reference resolved against, empty when there is none
+    /// The part of the destination that comes before its fragment, which is
+    /// empty when the destination is a fragment alone. This is where the
+    /// reference leads rather than what it was resolved against, which is the
+    /// base of whichever location holds it
     std::string_view base;
     /// The fragment of the destination, if it declares one
     std::optional<std::string_view> fragment;

@@ -1,4 +1,3 @@
-#include <sourcemeta/blaze/bundle.h>
 #include <sourcemeta/core/io.h>
 #include <sourcemeta/core/json.h>
 #include <sourcemeta/core/jsonschema.h>
@@ -52,10 +51,10 @@ auto sourcemeta::jsonschema::compile(const sourcemeta::core::Options &options)
   sourcemeta::blaze::Template schema_template;
   try {
     if (options.contains("entrypoint") && !options.at("entrypoint").empty()) {
-      const sourcemeta::core::JSON bundled{sourcemeta::blaze::bundle(
-          schema, sourcemeta::core::schema_walker, custom_resolver,
-          sourcemeta::blaze::BundleMode::References, dialect,
-          schema_default_id)};
+      const sourcemeta::core::JSON bundled{sourcemeta::core::schema_bundle(
+          schema, sourcemeta::core::schema_walker, custom_resolver, dialect,
+          schema_default_id,
+          sourcemeta::jsonschema::bundle_references_options())};
 
       const sourcemeta::core::SchemaFrame frame{
           sourcemeta::core::SchemaFrame::Mode::References,

@@ -1,4 +1,3 @@
-#include <sourcemeta/blaze/bundle.h>
 #include <sourcemeta/core/io.h>
 #include <sourcemeta/core/json.h>
 #include <sourcemeta/core/jsonpointer.h>
@@ -105,10 +104,11 @@ auto sourcemeta::jsonschema::metaschema(
           sourcemeta::core::SchemaFrame::Mode::Root, entry.second,
           sourcemeta::core::schema_walker, custom_resolver,
           default_dialect_option};
-      const sourcemeta::core::JSON bundled{sourcemeta::blaze::bundle(
+      const sourcemeta::core::JSON bundled{sourcemeta::core::schema_bundle(
           schema_frame.metaschema(custom_resolver),
           sourcemeta::core::schema_walker, custom_resolver,
-          sourcemeta::blaze::BundleMode::References, default_dialect_option)};
+          default_dialect_option, "",
+          sourcemeta::jsonschema::bundle_references_options())};
       const sourcemeta::core::SchemaFrame frame{
           sourcemeta::core::SchemaFrame::Mode::References, bundled,
           sourcemeta::core::schema_walker, custom_resolver,

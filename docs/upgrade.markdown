@@ -3,7 +3,7 @@ Upgrading
 
 ```sh
 jsonschema upgrade <schema.json|.yaml> [--to/-t draft4|draft6|draft7|2019-09|2020-12]
-  [--meta/-m] [--http/-h] [--verbose/-v] [--debug/-g] [--json/-j]
+  [--http/-h] [--verbose/-v] [--debug/-g] [--json/-j]
   [--header/-H "<name>: <value>"]
   [--resolve/-r <schemas-or-directories> ...]
   [--default-dialect/-d <uri>] [--configuration/-C <path>]
@@ -72,8 +72,12 @@ The result will be something like this:
 ```
 
 > [!WARNING]
-> We don't support upgrading schemas with custom meta-schemas, as both the
-> schema and its meta-schema would need to be upgraded together.
+> We don't support upgrading meta-schemas, nor schemas that declare a custom
+> meta-schema. A meta-schema describes a dialect by naming that dialect's
+> keywords as ordinary data. Upgrading renames the keywords, but nothing
+> renames the data that was talking about them, so a meta-schema requiring
+> `definitions` still requires it after its schemas moved to `$defs`. Upgrade
+> both by hand instead.
 
 > [!NOTE]
 > The `--to/-t` option means "upgrade to at least this dialect". If your
@@ -82,13 +86,13 @@ The result will be something like this:
 > schema to Draft 7 will do nothing.
 
 > [!NOTE]
-> Pass `--meta/-m` when the input schema is itself a meta-schema (a schema
-> intended to describe other schemas). From JSON Schema 2019-09 onwards,
-> meta-schemas are required to declare a `$vocabulary` keyword. When the
-> flag is set, the upgrade synthesizes the standard `$vocabulary` block
-> for the target dialect at the document root if one is not already
-> present. This is mainly relevant when upgrading from Draft 7 to
-> 2019-09 (or transitively to 2020-12).
+> A meta-schema is only recognised as one if the document describes itself, or
+> if it travels in the same document as a schema that declares it. Otherwise it
+> is indistinguishable from an ordinary schema, and gets upgraded like one.
+
+> [!NOTE]
+> Every resource in the document must sit on Draft 3 or newer, and not on a
+> hyper-schema dialect, as we don't support upgrading from those yet.
 
 Examples
 --------
@@ -129,10 +133,4 @@ jsonschema upgrade path/to/schema.json \
 
 ```sh
 jsonschema upgrade path/to/schema.yaml
-```
-
-### Upgrade a Draft 7 meta-schema to a newer dialect
-
-```sh
-jsonschema upgrade path/to/metaschema.json --to 2019-09 --meta
 ```

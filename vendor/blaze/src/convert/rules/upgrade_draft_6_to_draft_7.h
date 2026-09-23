@@ -11,8 +11,7 @@ public:
             const sourcemeta::core::SchemaFrame &frame,
             const sourcemeta::core::SchemaFrame::Location &location,
             const sourcemeta::core::SchemaWalker &,
-            const sourcemeta::core::SchemaResolver &, const bool) const
-      -> bool override {
+            const sourcemeta::core::SchemaResolver &) const -> bool override {
     ONLY_CONTINUE_IF(
         vocabularies.contains(SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_6) &&
         subschema_at_dialect(schema, location, DRAFT_6_URL));

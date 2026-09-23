@@ -1,13 +1,11 @@
 #include <sourcemeta/core/openapi.h>
 
-#include <sourcemeta/core/text.h>
-#include <sourcemeta/core/uri.h>
-
+#include "discriminator.h"
 #include "document.h"
 #include "helpers.h"
 #include "info.h"
 
-#include <algorithm>   // std::ranges::find
+#include <algorithm>   // std::ranges::all_of, std::ranges::find
 #include <cassert>     // assert
 #include <cstddef>     // std::size_t
 #include <map>         // std::map
@@ -21,15 +19,9 @@
 namespace {
 using namespace std::string_view_literals;
 
-// The base a location is keyed by is the key up to its fragment, which is why
-// nothing repeats it on the entry itself. A parent is given as one of these
-// keys rather than as a bare pointer, so that following it is a lookup in the
-// same map rather than a key the reader has to rebuild
-auto document_of(const sourcemeta::core::JSON::String &uri)
-    -> sourcemeta::core::JSON::String {
-  return sourcemeta::core::JSON::String{sourcemeta::core::take_until(uri, '#')};
-}
-
+// A parent is given as one of the keys a location is held under rather than as
+// a bare pointer, so that following it is a lookup in the same map rather than
+// a key the reader has to rebuild
 auto parent_of(const std::map<sourcemeta::core::JSON::String,
                               sourcemeta::core::OpenAPILocation> &locations,
                const sourcemeta::core::JSON::String &uri,
@@ -39,7 +31,7 @@ auto parent_of(const std::map<sourcemeta::core::JSON::String,
     return sourcemeta::core::JSON{nullptr};
   }
 
-  const auto document{document_of(uri)};
+  const auto document{sourcemeta::core::openapi_document_uri(uri)};
   auto pointer{location.pointer};
   while (!pointer.empty()) {
     pointer.pop_back();
@@ -69,7 +61,8 @@ auto error_at(const std::map<sourcemeta::core::JSON::String,
     pointer = pointer.concat(sourcemeta::core::JSON::String{field});
   }
 
-  return {document_of(location), std::move(pointer), message};
+  return {sourcemeta::core::openapi_document_uri(location), std::move(pointer),
+          message};
 }
 
 auto error_at(const sourcemeta::core::OpenAPIWalk &walk,
@@ -203,45 +196,6 @@ auto version_string(const sourcemeta::core::OpenAPIVersion version)
   }
 
   std::unreachable();
-}
-
-// OpenAPI Specification 3.1.1, Section 4.6 determines a document's base URI
-// "in accordance with RFC3986 Section 5.1.2 - 5.1.4", a range that starts at
-// 5.1.2 and so leaves out 5.1.1, "Base URI Embedded in Content". A 3.1
-// document therefore has no way of declaring its own base, and what remains is
-// 5.1.3, "Base URI from the Retrieval URI", which only the caller can supply.
-// Section 4.6 says as much: implementations "SHOULD allow users to provide
-// documents with their intended retrieval URIs"
-auto canonical_base(const std::string_view input)
-    -> sourcemeta::core::JSON::String {
-  if (input.empty()) {
-    return {};
-  }
-
-  std::optional<sourcemeta::core::URI> base;
-  try {
-    base.emplace(input);
-  } catch (const sourcemeta::core::URIParseError &) {
-    base.reset();
-  }
-
-  // RFC 3986 Section 5.2.1: "only the scheme component is required to be
-  // present in a base URI". Anything without one cannot resolve a reference
-  // RFC 3986 Section 5.2.2 resolves a reference against a base's scheme,
-  // authority, path and query, and never against its fragment, so a fragment
-  // is no part of what a base is. Keeping one would also put two of them in
-  // every location this frame reports
-  if (base.has_value() && base.value().scheme().has_value()) {
-    base.value().canonicalize();
-    const auto result{base.value().recompose_without_fragment()};
-    if (result.has_value()) {
-      return result.value();
-    }
-  }
-
-  throw sourcemeta::core::OpenAPIError{
-      sourcemeta::core::EMPTY_POINTER,
-      "The OpenAPI Description base must be a URI with a scheme"};
 }
 
 // A Reference Object, and a Path Item Object that declares a `$ref`, stand in
@@ -521,35 +475,6 @@ auto project(const sourcemeta::core::OpenAPIWalk &walk)
   return result;
 }
 
-auto analyse(const sourcemeta::core::JSON &document,
-             sourcemeta::core::JSON::String base)
-    -> sourcemeta::core::OpenAPIWalk {
-  sourcemeta::core::OpenAPIWalk walk{
-      .base = std::move(base),
-      .document = &document,
-      .operation_ids = {},
-      .visited = {},
-      .locations = {},
-      .references = {},
-      .parameters = {},
-      .path_items = {},
-      .operation_records = {},
-      .callbacks = {},
-      .endpoints = {},
-      .servers = {},
-      .security = {},
-      .security_schemes = {},
-      .tags = {},
-      .tag_parents = {},
-      .tag_names = {},
-      .operation_id_links = {},
-      .version = sourcemeta::core::OpenAPIVersion::OPENAPI_3_1,
-      .dialect = {},
-      .info = {}};
-  sourcemeta::core::openapi_check_document(document, walk);
-  return walk;
-}
-
 } // namespace
 
 namespace sourcemeta::core {
@@ -563,6 +488,9 @@ struct OpenAPIFrame::Internal {
   std::map<JSON::String, OpenAPILocation> locations;
   std::map<JSON::String, OpenAPIReference> references;
   std::vector<OpenAPIOperation> operations;
+  // What a Discriminator Object names by URI, which is a reference the schemas
+  // hold rather than one the shell around them does
+  std::vector<OpenAPIDiscriminator> discriminators;
   // Reading inside a Schema Object is the business of whatever understands
   // JSON Schema, so this is that pass over every Schema Object position at
   // once. It is declared last so that it is destroyed first, as it holds
@@ -577,7 +505,9 @@ OpenAPIFrame::OpenAPIFrame(const JSON &document, const SchemaWalker &walker,
                            const std::string_view default_base,
                            const std::uint64_t max_locations)
     : internal_{std::make_unique<Internal>()} {
-  auto walk{analyse(document, canonical_base(default_base))};
+  auto walk{sourcemeta::core::openapi_analyse(
+      document, sourcemeta::core::openapi_canonical_base(default_base),
+      max_locations)};
   this->internal_->version = walk.version;
   this->internal_->info = walk.info;
   // What the caller passed in is where the entry document was retrieved from,
@@ -599,12 +529,13 @@ OpenAPIFrame::OpenAPIFrame(const JSON &document, const SchemaWalker &walker,
 
   // Projecting reads the whole walk, so nothing is taken out of it until after
   this->internal_->operations = project(walk);
+  const auto walk_locations{walk.locations.size()};
   this->internal_->locations = std::move(walk.locations);
   this->internal_->references = std::move(walk.references);
 
   // Every Schema Object position of the document at once, rather than one
   // pass each, so that a schema referring to another resolves against a frame
-  // that holds both. Section 4.8.24.1 scopes `jsonSchemaDialect` to "all
+  // that holds both. Section 4.8.24.5 scopes `jsonSchemaDialect` to "all
   // Schema Objects contained within an OAS document", and a document has one
   // base, so what those positions have in common is the whole of what this
   // pass needs to be told
@@ -613,8 +544,8 @@ OpenAPIFrame::OpenAPIFrame(const JSON &document, const SchemaWalker &walker,
 
   // What sits inside a Schema Object is JSON Schema's to make sense of, so a
   // reference that names a place in there has the description read one of its
-  // own Objects out of a schema. Appendix G of OAS 3.2, and Section 3.2 of
-  // 3.1, leave what to do about a place read as two kinds of thing to the
+  // own Objects out of a schema. Appendix G of OAS 3.2, and Section 4.3.2
+  // of 3.1, leave what to do about a place read as two kinds of thing to the
   // implementation and allow saying so, which is what this does. Framing the
   // schemas could not proceed regardless, as it is given each of these
   // positions to frame and they must not sit within one another
@@ -643,17 +574,45 @@ OpenAPIFrame::OpenAPIFrame(const JSON &document, const SchemaWalker &walker,
   }
 
   this->internal_->schema_resolver = resolver;
-  this->internal_->schemas = std::make_unique<SchemaFrame>(
-      SchemaFrame::Mode::References, document, walker, resolver,
-      root->second.dialect, "", SchemaFrame::IdentifierMode::Additional,
-      this->internal_->schema_paths, this->internal_->base, max_locations);
+  // What the shell of a description goes by and what its schemas go by are
+  // places of the one description, so they spend from the one allowance. The
+  // walk above has already spent its share, and it never spends more than it
+  // was handed
+  assert(walk_locations <= max_locations);
+  try {
+    this->internal_->schemas = std::make_unique<SchemaFrame>(
+        SchemaFrame::Mode::References, document, walker, resolver,
+        root->second.dialect, "", SchemaFrame::IdentifierMode::Additional,
+        this->internal_->schema_paths, this->internal_->base,
+        max_locations - walk_locations);
+  } catch (const SchemaFrameLimitError &) {
+    // Framing the schemas was handed what was left rather than the whole, so
+    // the allowance it reports is not the one the caller set
+    throw OpenAPIFrameLimitError{max_locations};
+  }
+
+  // OpenAPI Specification 3.1.1, Section 4.3 lists the URI form of a
+  // Discriminator Object `mapping` among the fields that connect the documents
+  // of a description, and Appendix G of 3.2 keeps it among the connections a
+  // description makes. It is the one of them that a schema frame does not
+  // read, as the keyword it sits under belongs to the dialect this
+  // specification publishes rather than to JSON Schema
+  this->internal_->discriminators =
+      openapi_discriminators(document, *(this->internal_->schemas),
+                             this->internal_->base, walker, resolver);
+  const auto every_mapping_lands{
+      std::ranges::all_of(this->internal_->discriminators,
+                          [this](const auto &discriminator) -> bool {
+                            return openapi_discriminator_lands(
+                                *(this->internal_->schemas), discriminator);
+                          })};
 
   // What a Schema Object references is as much a part of the description as
   // what the shell around it does, so a description whose schemas reach for
   // something nobody holds is one that is missing a part of itself just the
   // same
-  this->internal_->standalone =
-      every_reference_lands && this->internal_->schemas->standalone();
+  this->internal_->standalone = every_reference_lands && every_mapping_lands &&
+                                this->internal_->schemas->standalone();
 
   // Section 4.3.3 has resolving a Link Object `operationId` require "parsing
   // all referenced documents prior to determining an `operationId` to be
@@ -766,6 +725,25 @@ auto OpenAPIFrame::to_json() const -> JSON {
   }
 
   result.assign_assume_new("operations", std::move(operations));
+
+  // Only a description whose schemas name one carries these, so a description
+  // that names none reports nothing rather than an empty list
+  if (!this->internal_->discriminators.empty()) {
+    auto discriminators{JSON::make_array()};
+    for (const auto &discriminator : this->internal_->discriminators) {
+      auto entry{JSON::make_object()};
+      entry.assign_assume_new("pointer", JSON{to_string(discriminator.origin)});
+      entry.assign_assume_new("destination", JSON{discriminator.destination});
+      entry.assign_assume_new("scope", JSON{discriminator.scope});
+      entry.assign_assume_new("dangling",
+                              JSON{!openapi_discriminator_lands(
+                                  *(this->internal_->schemas), discriminator)});
+      discriminators.push_back(std::move(entry));
+    }
+
+    result.assign_assume_new("discriminators", std::move(discriminators));
+  }
+
   return result;
 }
 

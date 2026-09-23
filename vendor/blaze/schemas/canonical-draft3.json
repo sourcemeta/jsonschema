@@ -37,9 +37,6 @@
         "$schema": {
           "type": "string"
         },
-        "id": {
-          "type": "string"
-        },
         "definitions": {
           "$comment": "TODO: `definitions` is permitted on any subschema as an interim measure, because the canonicaliser preserves it wherever the author wrote it. The desired shape is a single flat `definitions` at the root holding every subschema as a node, with `$ref`s as the edges between them, after which this should be tightened to the root only",
           "type": "object",

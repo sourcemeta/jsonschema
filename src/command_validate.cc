@@ -1,4 +1,3 @@
-#include <sourcemeta/blaze/bundle.h>
 #include <sourcemeta/core/io.h>
 #include <sourcemeta/core/json.h>
 #include <sourcemeta/core/jsonl.h>
