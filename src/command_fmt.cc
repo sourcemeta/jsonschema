@@ -13,10 +13,14 @@
 #include "error.h"
 #include "input.h"
 #include "logger.h"
+#include "print.h"
 #include "resolver.h"
 #include "utils.h"
 
 namespace {
+
+using sourcemeta::jsonschema::format_validation_status;
+using sourcemeta::jsonschema::ValidationStatus;
 
 auto diff_operation_name(const sourcemeta::core::Diff::Operation::Type type)
     -> std::string_view {
@@ -75,10 +79,61 @@ auto report_check_failure(const std::string &current,
     entry.assign("diff", to_diff_json(difference));
     errors.push_back(std::move(entry));
   } else {
-    std::cerr << "fail: " << label << "\n";
-    sourcemeta::core::stringify(
-        difference, std::cerr, sourcemeta::core::Diff::Format::Unified,
-        {.original_label = "current", .modified_label = "expected"});
+    std::cerr << format_validation_status(ValidationStatus::Fail) << " "
+              << label << "\n";
+    sourcemeta::core::Diff::FormatOptions format_options{
+        .original_label = "current",
+        .modified_label = "expected",
+    };
+    if (sourcemeta::core::terminal_color_enabled(
+            sourcemeta::core::TerminalStream::Stderr)) {
+      format_options.line_writer = [](std::ostream &stream,
+                                      const sourcemeta::core::Diff::
+                                          FormatOptions::LineType type,
+                                      const std::string_view prefix,
+                                      const std::string_view content) {
+        auto style{sourcemeta::core::TerminalStyle::None};
+        switch (type) {
+          case sourcemeta::core::Diff::FormatOptions::LineType::Delete:
+            style = sourcemeta::core::TerminalStyle::Red;
+            break;
+          case sourcemeta::core::Diff::FormatOptions::LineType::Insert:
+            style = sourcemeta::core::TerminalStyle::Green;
+            break;
+          case sourcemeta::core::Diff::FormatOptions::LineType::Hunk:
+            style = sourcemeta::core::TerminalStyle::Cyan;
+            break;
+          case sourcemeta::core::Diff::FormatOptions::LineType::HeaderOriginal:
+          case sourcemeta::core::Diff::FormatOptions::LineType::HeaderModified:
+            style = sourcemeta::core::TerminalStyle::Bold;
+            break;
+          case sourcemeta::core::Diff::FormatOptions::LineType::NoNewline:
+            style = sourcemeta::core::TerminalStyle::Yellow;
+            break;
+          case sourcemeta::core::Diff::FormatOptions::LineType::Context:
+            style = sourcemeta::core::TerminalStyle::None;
+            break;
+        }
+
+        if (style == sourcemeta::core::TerminalStyle::None) {
+          stream.write(prefix.data(),
+                       static_cast<std::streamsize>(prefix.size()));
+          stream.write(content.data(),
+                       static_cast<std::streamsize>(content.size()));
+        } else {
+          std::string line;
+          line.reserve(prefix.size() + content.size());
+          line.append(prefix);
+          line.append(content);
+          stream << sourcemeta::jsonschema::paint(
+              line, style, sourcemeta::core::TerminalStream::Stderr);
+        }
+      };
+    }
+
+    sourcemeta::core::stringify(difference, std::cerr,
+                                sourcemeta::core::Diff::Format::Unified,
+                                format_options);
   }
 }
 
@@ -134,7 +189,10 @@ auto sourcemeta::jsonschema::fmt(const sourcemeta::core::Options &options)
         expected << "\n";
 
         if (raw_stdin == expected.str()) {
-          LOG_VERBOSE(options) << "ok: " << stdin_label << "\n";
+          const auto status =
+              output_json ? std::string{"ok:"}
+                          : format_validation_status(ValidationStatus::Pass);
+          LOG_VERBOSE(options) << status << " " << stdin_label << "\n";
         } else {
           report_check_failure(raw_stdin, expected.str(), stdin_label,
                                output_json, errors);
@@ -233,7 +291,10 @@ auto sourcemeta::jsonschema::fmt(const sourcemeta::core::Options &options)
 
       if (options.contains("check")) {
         if (current == expected.str()) {
-          LOG_VERBOSE(options) << "ok: " << entry.first << "\n";
+          const auto status =
+              output_json ? std::string{"ok:"}
+                          : format_validation_status(ValidationStatus::Pass);
+          LOG_VERBOSE(options) << status << " " << entry.first << "\n";
         } else {
           report_check_failure(current, expected.str(), entry.first,
                                output_json, errors);
@@ -319,8 +380,12 @@ auto sourcemeta::jsonschema::fmt(const sourcemeta::core::Options &options)
 
   if (!result) {
     if (!output_json) {
-      std::cerr << "\nRun the `fmt` command without `--check/-c` to fix the "
-                   "formatting"
+      constexpr auto HINT_STYLE{sourcemeta::core::TerminalStyle::Bold |
+                                sourcemeta::core::TerminalStyle::Cyan};
+      std::cerr << "\n"
+                << paint("Run the `fmt` command without `--check/-c` to fix "
+                         "the formatting",
+                         HINT_STYLE, sourcemeta::core::TerminalStream::Stderr)
                 << "\n";
     }
 

@@ -1,0 +1,49 @@
+WRITE schema.json UNTIL EOF
+{
+  "type": "string",
+  "$schema": "http://json-schema.org/draft-04/schema#",
+  "title": "Test",
+  "description": "Test schema"
+}
+EOF
+
+RUN fmt schema.json --check --color always STDIN /dev/null IN . INTO result.txt EXPECTING 2
+
+REPLACE $CWD WITH '[CWD]' IN result.txt
+REPLACE MATCHING '\x1B\[1;31m' WITH '[ANSI_BOLD_RED]' IN result.txt
+REPLACE MATCHING '\x1B\[1;36m' WITH '[ANSI_BOLD_CYAN]' IN result.txt
+REPLACE MATCHING '\x1B\[1m' WITH '[ANSI_BOLD]' IN result.txt
+REPLACE MATCHING '\x1B\[31m' WITH '[ANSI_RED]' IN result.txt
+REPLACE MATCHING '\x1B\[32m' WITH '[ANSI_GREEN]' IN result.txt
+REPLACE MATCHING '\x1B\[36m' WITH '[ANSI_CYAN]' IN result.txt
+REPLACE MATCHING '\x1B\[0m' WITH '[ANSI_RESET]' IN result.txt
+
+WRITE expected.txt UNTIL EOF
+2> [ANSI_BOLD_RED]✗ fail:[ANSI_RESET] [CWD]/schema.json
+2> [ANSI_BOLD]--- current[ANSI_RESET]
+2> [ANSI_BOLD]+++ expected[ANSI_RESET]
+2> [ANSI_CYAN]@@ -1,6 +1,6 @@[ANSI_RESET]
+2>  {
+2> [ANSI_RED]-  "type": "string",[ANSI_RESET]
+2>    "$schema": "http://json-schema.org/draft-04/schema#",
+2>    "title": "Test",
+2> [ANSI_RED]-  "description": "Test schema"[ANSI_RESET]
+2> [ANSI_GREEN]+  "description": "Test schema",[ANSI_RESET]
+2> [ANSI_GREEN]+  "type": "string"[ANSI_RESET]
+2>  }
+2>
+2> [ANSI_BOLD_CYAN]Run the `fmt` command without `--check/-c` to fix the formatting[ANSI_RESET]
+EOF
+
+COMPARE result.txt AGAINST expected.txt
+
+WRITE expected_file_0.txt UNTIL EOF
+{
+  "type": "string",
+  "$schema": "http://json-schema.org/draft-04/schema#",
+  "title": "Test",
+  "description": "Test schema"
+}
+EOF
+
+COMPARE schema.json AGAINST expected_file_0.txt
