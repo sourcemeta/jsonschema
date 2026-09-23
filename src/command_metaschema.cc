@@ -108,7 +108,7 @@ auto sourcemeta::jsonschema::metaschema(
           schema_frame.metaschema(custom_resolver),
           sourcemeta::core::schema_walker, custom_resolver,
           default_dialect_option, "",
-          {.mode = sourcemeta::core::SchemaBundleOptions::Mode::References})};
+          sourcemeta::jsonschema::bundle_references_options())};
       const sourcemeta::core::SchemaFrame frame{
           sourcemeta::core::SchemaFrame::Mode::References, bundled,
           sourcemeta::core::schema_walker, custom_resolver,

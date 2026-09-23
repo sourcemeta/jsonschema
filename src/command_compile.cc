@@ -54,7 +54,7 @@ auto sourcemeta::jsonschema::compile(const sourcemeta::core::Options &options)
       const sourcemeta::core::JSON bundled{sourcemeta::core::schema_bundle(
           schema, sourcemeta::core::schema_walker, custom_resolver, dialect,
           schema_default_id,
-          {.mode = sourcemeta::core::SchemaBundleOptions::Mode::References})};
+          sourcemeta::jsonschema::bundle_references_options())};
 
       const sourcemeta::core::SchemaFrame frame{
           sourcemeta::core::SchemaFrame::Mode::References,

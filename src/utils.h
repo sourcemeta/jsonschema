@@ -208,6 +208,13 @@ inline auto format_assertion_tweaks(const sourcemeta::core::Options &options)
   return std::nullopt;
 }
 
+inline auto bundle_references_options()
+    -> sourcemeta::core::SchemaBundleOptions {
+  sourcemeta::core::SchemaBundleOptions options;
+  options.mode = sourcemeta::core::SchemaBundleOptions::Mode::References;
+  return options;
+}
+
 inline auto
 bundle_for_evaluation(const sourcemeta::core::JSON &schema,
                       const sourcemeta::core::SchemaResolver &resolver,
@@ -218,7 +225,7 @@ bundle_for_evaluation(const sourcemeta::core::JSON &schema,
   try {
     return sourcemeta::core::schema_bundle(
         schema, sourcemeta::core::schema_walker, resolver, dialect, default_id,
-        {.mode = sourcemeta::core::SchemaBundleOptions::Mode::References});
+        bundle_references_options());
   } catch (const sourcemeta::core::SchemaKeywordError &error) {
     throw sourcemeta::core::FileError<sourcemeta::core::SchemaKeywordError>(
         resolution_base, error);
