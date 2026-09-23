@@ -428,6 +428,27 @@ private:
   std::filesystem::path path_;
 };
 
+class UnsupportedDialectCodegenError : public std::runtime_error {
+public:
+  UnsupportedDialectCodegenError(std::filesystem::path path,
+                                 std::string dialect)
+      : std::runtime_error{"This command requires the schema to declare JSON "
+                           "Schema 2020-12"},
+        path_{std::move(path)}, dialect_{std::move(dialect)} {}
+
+  [[nodiscard]] auto path() const noexcept -> const std::filesystem::path & {
+    return this->path_;
+  }
+
+  [[nodiscard]] auto identifier() const noexcept -> const std::string & {
+    return this->dialect_;
+  }
+
+private:
+  std::filesystem::path path_;
+  std::string dialect_;
+};
+
 class UnsupportedDialectRdfError : public std::runtime_error {
 public:
   UnsupportedDialectRdfError(std::filesystem::path path, std::string dialect)
@@ -1145,6 +1166,16 @@ inline auto try_catch(const sourcemeta::core::Options &options,
       const sourcemeta::core::FileError<UnsupportedOpenAPIFormatError> &error) {
     const auto is_json{options.contains("json")};
     print_exception(is_json, error);
+    return EXIT_NOT_SUPPORTED;
+  } catch (const UnsupportedDialectCodegenError &error) {
+    const auto is_json{options.contains("json")};
+    print_exception(is_json, error);
+    if (!is_json) {
+      std::cerr << "\nCode generation is only implemented for the 2020-12 "
+                   "dialect. Consider\n";
+      std::cerr << "running the `upgrade` command to move your schema to it\n";
+    }
+
     return EXIT_NOT_SUPPORTED;
   } catch (const PositionError<UnsupportedDialectUpgradeError> &error) {
     const auto is_json{options.contains("json")};
