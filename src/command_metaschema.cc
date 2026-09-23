@@ -21,6 +21,7 @@
 #include "error.h"
 #include "input.h"
 #include "logger.h"
+#include "print.h"
 #include "resolver.h"
 #include "utils.h"
 
@@ -151,11 +152,14 @@ auto sourcemeta::jsonschema::metaschema(
         if (evaluator.validate(cache.at(std::string{dialect}), entry.second,
                                std::ref(output))) {
           LOG_VERBOSE(options)
-              << "ok: " << relative_path_string(entry.resolution_base)
-              << "\n  matches " << dialect << "\n";
+              << format_validation_status(ValidationStatus::Pass) << " "
+              << relative_path_string(entry.resolution_base) << "\n  matches "
+              << paint(dialect, sourcemeta::core::TerminalStyle::Cyan,
+                       sourcemeta::core::TerminalStream::Stderr)
+              << "\n";
         } else {
-          std::cerr << "fail: " << relative_path_string(entry.resolution_base)
-                    << "\n";
+          std::cerr << format_validation_status(ValidationStatus::Fail) << " "
+                    << relative_path_string(entry.resolution_base) << "\n";
           print(output, entry.positions, std::cerr);
           summary.failed += 1;
         }

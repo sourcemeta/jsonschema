@@ -490,6 +490,11 @@ add_jsonschema_test(metaschema/fail_stdin_duplicate)
 add_jsonschema_test(metaschema/fail_stdin_invalid_json)
 add_jsonschema_test(metaschema/fail_invalid_header)
 add_jsonschema_test(metaschema/pass_bundled_metaschema)
+add_jsonschema_test(metaschema/pass_color_always_verbose)
+add_jsonschema_test(metaschema/pass_color_never_verbose)
+add_jsonschema_test(metaschema/fail_color_always)
+add_jsonschema_test(metaschema/fail_directory_continue_color_always)
+add_jsonschema_test(metaschema/fail_json_color_always)
 
 # Test
 add_jsonschema_test(test/fail_resolve_directory_non_schema)
