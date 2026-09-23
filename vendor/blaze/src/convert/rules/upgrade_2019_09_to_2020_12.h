@@ -4,15 +4,13 @@ public:
   Upgrade201909To202012()
       : SchemaTransformRule{"upgrade_2019_09_to_2020_12"} {};
 
-  [[nodiscard]] auto
-  condition(const sourcemeta::core::JSON &schema,
-            const sourcemeta::core::JSON &root,
-            const sourcemeta::core::SchemaVocabularies &vocabularies,
-            const sourcemeta::core::SchemaFrame &frame,
-            const sourcemeta::core::SchemaFrame::Location &location,
-            const sourcemeta::core::SchemaWalker &walker,
-            const sourcemeta::core::SchemaResolver &resolver, const bool) const
-      -> bool override {
+  [[nodiscard]] auto condition(
+      const sourcemeta::core::JSON &schema, const sourcemeta::core::JSON &root,
+      const sourcemeta::core::SchemaVocabularies &vocabularies,
+      const sourcemeta::core::SchemaFrame &frame,
+      const sourcemeta::core::SchemaFrame::Location &location,
+      const sourcemeta::core::SchemaWalker &walker,
+      const sourcemeta::core::SchemaResolver &resolver) const -> bool override {
     this->sanitize_pending_ = false;
 
     ONLY_CONTINUE_IF(vocabularies.contains(
@@ -32,10 +30,11 @@ public:
             any_descendant_has_pending_pattern(root, frame, location);
         this->resource_has_recursive_anchor_ =
             compute_resource_has_recursive_anchor(root, frame, location);
-        this->anchor_at_resource_root_ =
-            location.pointer.empty() ||
-            location.type ==
-                sourcemeta::core::SchemaFrame::LocationType::Resource;
+        this->anchor_at_resource_root_ = is_resource_root(frame, location);
+        if (needs_dynamic_anchor_name(schema)) {
+          this->dynamic_anchor_name_ = compute_dynamic_anchor_name(root);
+        }
+
         this->document_has_unevaluated_items_ =
             compute_document_has_unevaluated_items(root, frame, walker,
                                                    resolver);
@@ -58,9 +57,11 @@ public:
 
     this->resource_has_recursive_anchor_ =
         compute_resource_has_recursive_anchor(root, frame, location);
-    this->anchor_at_resource_root_ =
-        location.pointer.empty() ||
-        location.type == sourcemeta::core::SchemaFrame::LocationType::Resource;
+    this->anchor_at_resource_root_ = is_resource_root(frame, location);
+    if (needs_dynamic_anchor_name(schema)) {
+      this->dynamic_anchor_name_ = compute_dynamic_anchor_name(root);
+    }
+
     this->document_has_unevaluated_items_ =
         compute_document_has_unevaluated_items(root, frame, walker, resolver);
     return true;
@@ -84,7 +85,8 @@ public:
       if (schema.at("$recursiveAnchor").to_boolean() &&
           this->anchor_at_resource_root_) {
         schema.rename("$recursiveAnchor", "$dynamicAnchor");
-        schema.at("$dynamicAnchor").into(sourcemeta::core::JSON{"meta"});
+        schema.at("$dynamicAnchor")
+            .into(sourcemeta::core::JSON{this->dynamic_anchor_name_});
       } else {
         schema.erase("$recursiveAnchor");
       }
@@ -93,7 +95,8 @@ public:
     if (schema.defines("$recursiveRef")) {
       schema.rename("$recursiveRef", "$dynamicRef");
       if (this->resource_has_recursive_anchor_) {
-        schema.at("$dynamicRef").into(sourcemeta::core::JSON{"#meta"});
+        schema.at("$dynamicRef")
+            .into(sourcemeta::core::JSON{"#" + this->dynamic_anchor_name_});
       }
     }
 
@@ -260,10 +263,12 @@ private:
       const auto iter{VOCAB_URI_MAP_2019_09_TO_2020_12.find(entry.first)};
       if (iter == VOCAB_URI_MAP_2019_09_TO_2020_12.cend()) {
         fresh.assign(entry.first, entry.second);
+        // The unevaluated keywords are defined in terms of the annotations
+        // the applicator ones produce, so the declaration that survives for
+        // the applicator vocabulary is the one that speaks for both
         if (entry.first == APPLICATOR_2020_12_URI &&
             should_inline_unevaluated) {
-          fresh.assign(std::string{UNEVALUATED_2020_12_URI},
-                       applicator_2019_09_value.value());
+          fresh.assign(std::string{UNEVALUATED_2020_12_URI}, entry.second);
         }
         continue;
       }
@@ -295,8 +300,10 @@ private:
   mutable std::vector<
       std::pair<sourcemeta::core::Pointer, sourcemeta::core::Pointer>>
       renames_;
+
   mutable bool resource_has_recursive_anchor_{false};
   mutable bool anchor_at_resource_root_{false};
+  mutable std::string dynamic_anchor_name_{"meta"};
   mutable bool is_inside_contains_wrapper_{false};
   mutable bool descendant_has_pending_pattern_{false};
   mutable bool document_has_unevaluated_items_{false};
@@ -624,6 +631,72 @@ private:
       auto &target{sourcemeta::core::get(schema, rewrite.ref_pointer)};
       target.into(sourcemeta::core::JSON{rewrite.new_value});
     }
+  }
+
+  // Whichever frame entry the traversal happens to reach first decides the
+  // entry type, and a resource has several. Asking the frame which resource
+  // encloses this location answers the same question the same way every time
+  static auto
+  is_resource_root(const sourcemeta::core::SchemaFrame &frame,
+                   const sourcemeta::core::SchemaFrame::Location &location)
+      -> bool {
+    if (location.pointer.empty()) {
+      return true;
+    }
+
+    const auto closest{find_enclosing_resource(frame, location)};
+    return closest.has_value() &&
+           closest.value().get().pointer == location.pointer;
+  }
+
+  // A dynamic anchor is what a dynamic reference binds to across every
+  // resource in the same scope, so every resource that gets one has to spell
+  // it the same way. That makes the name a property of the document. Only the
+  // static anchors it already spells are in the way: another dynamic anchor
+  // carrying this very name is the point rather than a collision
+  static auto collect_static_anchors(const sourcemeta::core::JSON &node,
+                                     std::set<std::string> &names) -> void {
+    if (node.is_array()) {
+      for (const auto &item : node.as_array()) {
+        collect_static_anchors(item, names);
+      }
+
+      return;
+    }
+
+    if (!node.is_object()) {
+      return;
+    }
+
+    const auto *anchor{node.try_at("$anchor")};
+    if (anchor != nullptr && anchor->is_string()) {
+      names.emplace(anchor->to_string());
+    }
+
+    for (const auto &entry : node.as_object()) {
+      collect_static_anchors(entry.second, names);
+    }
+  }
+
+  // Naming a dynamic anchor means reading the whole document, so only a
+  // subschema that is about to carry one or point at one pays for it
+  static auto needs_dynamic_anchor_name(const sourcemeta::core::JSON &schema)
+      -> bool {
+    return schema.is_object() &&
+           schema.defines_any({"$recursiveAnchor", "$recursiveRef"});
+  }
+
+  static auto compute_dynamic_anchor_name(const sourcemeta::core::JSON &root)
+      -> std::string {
+    std::set<std::string> in_use;
+    collect_static_anchors(root, in_use);
+
+    std::string name{"meta"};
+    while (in_use.contains(name)) {
+      name.insert(0, "x-");
+    }
+
+    return name;
   }
 
   static auto compute_resource_has_recursive_anchor(

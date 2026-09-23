@@ -23,6 +23,8 @@
 #include "tag.h"
 
 #include <array>       // std::array
+#include <cstdint>     // std::uint64_t
+#include <limits>      // std::numeric_limits
 #include <optional>    // std::optional
 #include <string_view> // std::string_view
 #include <utility>     // std::move, std::swap, std::unreachable
@@ -79,7 +81,8 @@ inline auto openapi_check_document(const JSON &document, OpenAPIWalk &walk)
 // What a document's `$self` establishes as its base, or nothing when it
 // establishes none. OpenAPI Specification 3.2.1, Section 4.1: the field
 // "provides the self-assigned URI of this document, which also serves as its
-// base URI in accordance with RFC3986 Section 5.1.1", and Section 4.7.1.1: "If
+// base URI in accordance with RFC3986 Section 5.1.1", and Section 4.1.2.2.1:
+// "If
 // `$self` is a relative URI reference, it is resolved against the next
 // possible base URI source before being used". That next source is whatever
 // base is in force here, which is the retrieval URI for the entry document and
@@ -216,20 +219,7 @@ inline auto openapi_follow_internal_reference(const URI &target,
 inline auto openapi_reference_target(const JSON::StringView reference,
                                      const OpenAPIWalk &walk)
     -> std::optional<URI> {
-  try {
-    URI target{JSON::String{reference}};
-    if (!walk.base.empty()) {
-      target.resolve_from(URI{walk.base});
-    }
-
-    // Canonicalising here is what makes two spellings of one place one place,
-    // both to the set that remembers where the walk has been and to a caller
-    // comparing a destination against a location
-    target.canonicalize();
-    return target;
-  } catch (const URIParseError &) {
-    return std::nullopt;
-  }
+  return openapi_resolve_uri(reference, walk.base);
 }
 
 // Reading whatever a reference landed on, which is the same work wherever the
@@ -238,7 +228,6 @@ inline auto openapi_reference_target(const JSON::StringView reference,
 // is not a reference the frame writes down
 inline auto openapi_follow_target(const URI &target, const Pointer &origin,
                                   const OpenAPIObjectKind expected,
-                                  const bool demands_its_own_kind,
                                   OpenAPIWalk &walk) -> void {
   const auto identifier{target.recompose_without_fragment()};
   const auto names_a_fragment{target.fragment().has_value()};
@@ -252,7 +241,7 @@ inline auto openapi_follow_target(const URI &target, const Pointer &origin,
     return;
   }
 
-  if (demands_its_own_kind && !names_a_fragment && walk.document != nullptr &&
+  if (!names_a_fragment && walk.document != nullptr &&
       openapi_is_document(*walk.document)) {
     throw OpenAPIError{walk.base, origin,
                        "This reference must name a document that holds only "
@@ -284,21 +273,16 @@ inline auto openapi_follow_reference(const JSON::StringView reference,
       OpenAPIReference{.original = JSON::String{reference},
                        .destination = target.value().recompose()});
 
-  // Section 4.8.9, of a Path Item Object's `$ref`: "the referenced structure
-  // MUST be in the form of a Path Item Object", and Section 4.8.20, of a Link
-  // Object's `operationRef`: it "MUST point to an Operation Object". A
-  // document that declares a root `openapi` field is an OpenAPI Description
-  // and neither of those, so a reference from one of those two positions that
-  // names such a document whole has landed on the wrong thing. Section 4.3.1's
-  // detection settles how a document is read, which is a separate question
-  // from whether a reference was allowed to point at it. Section 4.8.23 holds
-  // a Reference Object to nothing but the form of a URI, and those two
-  // positions are the only ones a `$ref` reaches either kind from, so what
-  // the demand really follows is the position rather than the kind
-  openapi_follow_target(target.value(), origin, expected,
-                        expected == OpenAPIObjectKind::PathItem ||
-                            expected == OpenAPIObjectKind::Operation,
-                        walk);
+  // OpenAPI Specification 3.2.1, Section 4.1.2: "all documents in an OAD MUST
+  // have either an OpenAPI Object or a Schema Object at the root". A Schema
+  // Object is what a Schema Object reference names, which never reaches here,
+  // so every document that a reference of the shell may name holds an OpenAPI
+  // Object. That is not one of the kinds any position here expects to find,
+  // so a reference that names such a document whole has landed on the wrong
+  // thing whatever kind it expected. Section 4.8.9 and Section 4.8.20 say as
+  // much of the two positions they speak of, and the rest follows from what a
+  // document may hold rather than from what those two sections single out
+  openapi_follow_target(target.value(), origin, expected, walk);
 }
 
 // OpenAPI Specification 3.1.1, Section 4.8.1: "This is the root object of the
@@ -373,7 +357,7 @@ inline auto openapi_check_document(const JSON &document, OpenAPIWalk &walk)
       if (established.has_value()) {
         walk.base = std::move(established.value());
 
-        // Section 4.7.1: "To ensure interoperability, references MUST use the
+        // Section 4.1.1: "To ensure interoperability, references MUST use the
         // target document's `$self` URI if the `$self` field is present". So
         // this is the URI the document answers to, and one that names it by
         // where it was retrieved from instead names another document, which
@@ -474,6 +458,41 @@ inline auto openapi_check_document(const JSON &document, OpenAPIWalk &walk)
 
     throw OpenAPIError{walk.base, error.location(), error.what()};
   }
+}
+
+// Everything the checks need in order to start from nothing, which is a walk
+// of the given document keyed by the given base. A 3.2 document may name
+// itself, so what the walk ends up keyed by is what it reports rather than
+// what it was handed
+inline auto openapi_analyse(const JSON &document, JSON::String base,
+                            const std::uint64_t max_locations =
+                                std::numeric_limits<std::uint64_t>::max())
+    -> OpenAPIWalk {
+  OpenAPIWalk walk{.base = std::move(base),
+                   .document = &document,
+                   .operation_ids = {},
+                   .visited = {},
+                   .locations = {},
+                   .references = {},
+                   .parameters = {},
+                   .path_items = {},
+                   .operation_records = {},
+                   .callbacks = {},
+                   .endpoints = {},
+                   .servers = {},
+                   .security = {},
+                   .security_schemes = {},
+                   .tags = {},
+                   .tag_parents = {},
+                   .tag_names = {},
+                   .operation_id_links = {},
+                   .version = OpenAPIVersion::OPENAPI_3_1,
+                   .dialect = {},
+                   .info = {},
+                   .remaining = max_locations,
+                   .limit = max_locations};
+  openapi_check_document(document, walk);
+  return walk;
 }
 
 } // namespace sourcemeta::core

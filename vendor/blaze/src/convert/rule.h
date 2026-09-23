@@ -33,8 +33,7 @@ public:
             const sourcemeta::core::SchemaFrame &frame,
             const sourcemeta::core::SchemaFrame::Location &location,
             const sourcemeta::core::SchemaWalker &walker,
-            const sourcemeta::core::SchemaResolver &resolver,
-            const bool is_metaschema) const -> bool = 0;
+            const sourcemeta::core::SchemaResolver &resolver) const -> bool = 0;
 
   virtual auto transform(sourcemeta::core::JSON &schema) const -> void = 0;
 

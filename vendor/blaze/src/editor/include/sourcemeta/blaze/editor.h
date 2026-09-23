@@ -36,7 +36,6 @@ namespace sourcemeta::blaze {
 /// ```cpp
 /// #include <sourcemeta/core/json.h>
 /// #include <sourcemeta/core/jsonschema.h>
-/// #include <sourcemeta/blaze/bundle.h>
 /// #include <sourcemeta/blaze/editor.h>
 ///
 /// // A custom resolver that knows about the referenced schema
@@ -59,9 +58,8 @@ namespace sourcemeta::blaze {
 ///   "$ref": "another"
 /// })JSON");
 ///
-/// sourcemeta::blaze::bundle(schema,
-///   sourcemeta::core::schema_walker, test_resolver,
-///   sourcemeta::blaze::BundleMode::NonOfficialMetaschemas);
+/// sourcemeta::core::schema_bundle(schema,
+///   sourcemeta::core::schema_walker, test_resolver);
 /// sourcemeta::blaze::for_editor(schema,
 ///   sourcemeta::core::schema_walker, test_resolver);
 /// ```

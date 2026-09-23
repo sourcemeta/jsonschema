@@ -1,4 +1,3 @@
-#include <sourcemeta/blaze/bundle.h>
 #include <sourcemeta/blaze/configuration.h>
 #include <sourcemeta/core/jsonschema.h>
 
@@ -117,10 +116,9 @@ auto fetch_and_write(
 
   try {
     const std::string default_dialect_value{default_dialect.value_or("")};
-    sourcemeta::blaze::bundle(
-        out_schema, sourcemeta::core::schema_walker, resolver,
-        sourcemeta::blaze::BundleMode::NonOfficialMetaschemas,
-        default_dialect_value, dependency_uri);
+    sourcemeta::core::schema_bundle(out_schema, sourcemeta::core::schema_walker,
+                                    resolver, default_dialect_value,
+                                    dependency_uri);
   } catch (...) {
     emit_event(callback, FetchEvent::Type::Error, dependency_uri,
                dependency_path, index, total, "Failed to bundle schema",

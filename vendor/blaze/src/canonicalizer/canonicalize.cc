@@ -243,6 +243,87 @@ auto apply(const std::vector<Rule> &rules, sourcemeta::core::JSON &schema,
   }
 }
 
+auto is_draft3(const core::SchemaBaseDialect base_dialect) -> bool {
+  return base_dialect == core::SchemaBaseDialect::JSON_SCHEMA_DRAFT_3 ||
+         base_dialect == core::SchemaBaseDialect::JSON_SCHEMA_DRAFT_3_HYPER;
+}
+
+/// Remove every Draft 3 identifier, including anchors and the identifier of
+/// the root. Every reference is first resolved while the frame still knows
+/// the identifiers, and rewritten into a form that does not depend on any of
+/// them: a JSON Pointer into this document when the destination is local, or
+/// the absolute URI when it is not. Only then are the identifiers erased, so
+/// no reference can lose the base it was resolved against.
+///
+/// This only applies to documents that are Draft 3 throughout. A document of
+/// another dialect may embed a Draft 3 resource and reference it by its
+/// identifier from outside, with a reference this pass must not rewrite, so
+/// such documents are left untouched
+auto eliminate_identifiers(sourcemeta::core::JSON &schema,
+                           const sourcemeta::core::SchemaWalker &walker,
+                           const sourcemeta::core::SchemaResolver &resolver,
+                           const std::string_view default_dialect,
+                           const std::string_view default_id) -> void {
+  if (!schema.is_object()) {
+    return;
+  }
+
+  std::vector<std::pair<core::Pointer, core::JSON::String>> reference_changes;
+  std::vector<core::Pointer> identifier_owners;
+
+  {
+    const core::SchemaFrame frame{core::SchemaFrame::Mode::References,
+                                  schema,
+                                  walker,
+                                  resolver,
+                                  default_dialect,
+                                  default_id,
+                                  core::SchemaFrame::IdentifierMode::Fallback};
+
+    if (frame.any_subschema(
+            [](const core::SchemaFrame::Location &location) -> bool {
+              return !is_draft3(location.base_dialect);
+            })) {
+      return;
+    }
+
+    frame.for_each_reference(
+        [&](const core::SchemaReferenceType, const core::WeakPointer &origin,
+            const core::SchemaFrame::Reference &reference) -> void {
+          assert(!origin.empty() && origin.back().is_property());
+          if (origin.back().to_property() != "$ref") {
+            return;
+          }
+
+          const auto destination{frame.traverse(reference.destination)};
+          reference_changes.emplace_back(
+              core::to_pointer(origin),
+              destination.has_value()
+                  ? core::to_uri(destination->get().pointer).recompose()
+                  : reference.destination);
+        });
+
+    frame.for_each_subschema(
+        [&](const core::SchemaFrame::Location &location) -> void {
+          const auto &subschema{core::get(schema, location.pointer)};
+          if (subschema.is_object() && subschema.defines("id")) {
+            identifier_owners.push_back(core::to_pointer(location.pointer));
+          }
+        });
+  }
+
+  for (const auto &[pointer, value] : reference_changes) {
+    core::set(schema, pointer, core::JSON{value});
+  }
+
+  // Rewriting a reference cannot turn a subschema into something else
+  for (const auto &pointer : identifier_owners) {
+    auto &subschema{core::get(schema, pointer)};
+    assert(subschema.is_object());
+    subschema.erase("id");
+  }
+}
+
 #include "helpers.h"
 
 #include "rules/additional_items_implicit.h"
@@ -514,6 +595,12 @@ auto canonicalize(sourcemeta::core::JSON &schema,
   rules.push_back(make_rule<SingleBranchAnyOf>());
   rules.push_back(make_rule<SingleBranchOneOf>());
   apply(rules, schema, walker, resolver, default_dialect, default_id);
+
+  // Identifiers are removed last, once no rule will reshape the schema again.
+  // Removing them first would hand the rules references that are plain JSON
+  // Pointers, which some of them do not yet preserve when they move or copy
+  // the subschemas those pointers go through
+  eliminate_identifiers(schema, walker, resolver, default_dialect, default_id);
 }
 
 } // namespace sourcemeta::blaze

@@ -3,7 +3,7 @@ Upgrading
 
 ```sh
 jsonschema upgrade <schema.json|.yaml> [--to/-t draft4|draft6|draft7|2019-09|2020-12]
-  [--meta/-m] [--http/-h] [--verbose/-v] [--debug/-g] [--json/-j]
+  [--http/-h] [--verbose/-v] [--debug/-g] [--json/-j]
   [--header/-H "<name>: <value>"]
   [--resolve/-r <schemas-or-directories> ...]
   [--default-dialect/-d <uri>] [--configuration/-C <path>]
@@ -72,8 +72,10 @@ The result will be something like this:
 ```
 
 > [!WARNING]
-> We don't support upgrading schemas with custom meta-schemas, as both the
-> schema and its meta-schema would need to be upgraded together.
+> This command refuses to upgrade meta-schemas, and refuses to upgrade schemas
+> that declare one of their own. See [Meta-schemas cannot be
+> upgraded](#meta-schemas-cannot-be-upgraded) for why, and for what to do
+> instead.
 
 > [!NOTE]
 > The `--to/-t` option means "upgrade to at least this dialect". If your
@@ -81,14 +83,65 @@ The result will be something like this:
 > the schema unchanged. For example, asking the CLI to upgrade a 2020-12
 > schema to Draft 7 will do nothing.
 
+Meta-schemas cannot be upgraded
+-------------------------------
+
+A meta-schema describes a dialect, and it describes it by naming that dialect's
+keywords as ordinary data. Upgrading a schema renames its keywords, but nothing
+renames the data in a meta-schema that was talking about them. Take this Draft 7
+meta-schema, which insists that subschemas live under `definitions`:
+
+```json
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://example.com/meta",
+  "type": "object",
+  "required": [ "definitions" ]
+}
+```
+
+Upgrading a schema that declares this dialect to 2020-12 renames its
+`definitions` keyword to `$defs`, while the `"definitions"` string inside
+`required` stays as it is, because it is a string and not a keyword. The
+upgraded schema no longer matches the dialect it declares, and neither document
+is wrong on its own. Nothing in either file says whether `"definitions"` there
+means the keyword or a property of that name, so the command refuses rather than
+guess:
+
+- Upgrading a document that describes itself, which is to say one whose `$id`
+  names the dialect its `$schema` names, fails with `Cannot upgrade a schema
+  that is itself a meta-schema`. The same applies to a document that carries,
+  as an embedded resource, the meta-schema that something in it declares.
+- Upgrading a schema that declares a meta-schema of its own fails with `Cannot
+  upgrade a schema that uses a custom meta-schema`, whether that meta-schema is
+  reachable through the resolver or bundled into the same document.
+
+In both cases, upgrade the meta-schema and the schemas that declare it by hand,
+deciding for yourself what each name in the meta-schema was meant to mean.
+
 > [!NOTE]
-> Pass `--meta/-m` when the input schema is itself a meta-schema (a schema
-> intended to describe other schemas). From JSON Schema 2019-09 onwards,
-> meta-schemas are required to declare a `$vocabulary` keyword. When the
-> flag is set, the upgrade synthesizes the standard `$vocabulary` block
-> for the target dialect at the document root if one is not already
-> present. This is mainly relevant when upgrading from Draft 7 to
-> 2019-09 (or transitively to 2020-12).
+> A document that does **not** describe itself is indistinguishable from an
+> ordinary schema, and this command upgrades it like one. A Draft 7 meta-schema
+> identified as `https://example.com/meta` that declares
+> `http://json-schema.org/draft-07/schema#` as its `$schema` is a well-formed
+> Draft 7 schema, and nothing in it says it is a meta-schema. Bundle such a
+> meta-schema together with a schema that declares it if you want the command
+> to recognise it.
+
+> [!NOTE]
+> From JSON Schema 2019-09 onwards, meta-schemas are required to declare a
+> `$vocabulary` keyword. Because meta-schemas are no longer upgraded, this
+> command no longer synthesizes that keyword, and the `--meta/-m` flag that
+> used to request it is gone.
+
+Dialects that cannot be upgraded
+--------------------------------
+
+Only the dialects that `--to/-t` accepts, plus Draft 3, can be upgraded from.
+Anything else fails with `Upgrading schemas from this dialect is not supported
+yet`, including Draft 0 through Draft 2 and every hyper-schema dialect. This
+applies per resource, so a document whose root sits on a supported dialect still
+fails if any resource embedded in it does not.
 
 Examples
 --------
@@ -129,10 +182,4 @@ jsonschema upgrade path/to/schema.json \
 
 ```sh
 jsonschema upgrade path/to/schema.yaml
-```
-
-### Upgrade a Draft 7 meta-schema to a newer dialect
-
-```sh
-jsonschema upgrade path/to/metaschema.json --to 2019-09 --meta
 ```

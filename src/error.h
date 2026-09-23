@@ -263,6 +263,91 @@ private:
   sourcemeta::core::Pointer location_;
 };
 
+class InvalidReferenceUpgradeError : public std::runtime_error {
+public:
+  InvalidReferenceUpgradeError(std::filesystem::path path,
+                               sourcemeta::core::Pointer location,
+                               std::string reference)
+      : std::runtime_error{"The reference does not point to a schema"},
+        path_{std::move(path)}, location_{std::move(location)},
+        reference_{std::move(reference)} {}
+
+  [[nodiscard]] auto path() const noexcept -> const std::filesystem::path & {
+    return this->path_;
+  }
+
+  [[nodiscard]] auto location() const noexcept
+      -> const sourcemeta::core::Pointer & {
+    return this->location_;
+  }
+
+  [[nodiscard]] auto uri() const noexcept -> const std::string & {
+    return this->reference_;
+  }
+
+private:
+  std::filesystem::path path_;
+  sourcemeta::core::Pointer location_;
+  std::string reference_;
+};
+
+class BrokenReferenceUpgradeError : public std::runtime_error {
+public:
+  BrokenReferenceUpgradeError(std::filesystem::path path,
+                              sourcemeta::core::Pointer location,
+                              std::string reference)
+      : std::runtime_error{"The reference broke after upgrading"},
+        path_{std::move(path)}, location_{std::move(location)},
+        reference_{std::move(reference)} {}
+
+  [[nodiscard]] auto path() const noexcept -> const std::filesystem::path & {
+    return this->path_;
+  }
+
+  [[nodiscard]] auto location() const noexcept
+      -> const sourcemeta::core::Pointer & {
+    return this->location_;
+  }
+
+  [[nodiscard]] auto uri() const noexcept -> const std::string & {
+    return this->reference_;
+  }
+
+private:
+  std::filesystem::path path_;
+  sourcemeta::core::Pointer location_;
+  std::string reference_;
+};
+
+class MetaschemaUpgradeError : public std::runtime_error {
+public:
+  MetaschemaUpgradeError(std::filesystem::path path,
+                         sourcemeta::core::Pointer location,
+                         std::string dialect)
+      : std::runtime_error{"Cannot upgrade a schema that is itself a "
+                           "meta-schema"},
+        path_{std::move(path)}, location_{std::move(location)},
+        dialect_{std::move(dialect)} {}
+
+  [[nodiscard]] auto path() const noexcept -> const std::filesystem::path & {
+    return this->path_;
+  }
+
+  [[nodiscard]] auto location() const noexcept
+      -> const sourcemeta::core::Pointer & {
+    return this->location_;
+  }
+
+  [[nodiscard]] auto uri() const noexcept -> const std::string & {
+    return this->dialect_;
+  }
+
+private:
+  std::filesystem::path path_;
+  sourcemeta::core::Pointer location_;
+  std::string dialect_;
+};
+
 class CustomMetaschemaUpgradeError : public std::runtime_error {
 public:
   CustomMetaschemaUpgradeError(std::filesystem::path path,
@@ -1155,6 +1240,84 @@ inline auto try_catch(const sourcemeta::core::Options &options,
     }
 
     return EXIT_UNEXPECTED_ERROR;
+  } catch (const PositionError<InvalidReferenceUpgradeError> &error) {
+    const auto is_json{options.contains("json")};
+    print_exception(is_json, error);
+    if (!is_json) {
+      std::cerr << "\n";
+      std::cerr << "An upgrade rewrites the references that a change of "
+                   "dialect moves, which it\n";
+      std::cerr << "cannot do for one that never pointed at a schema. Fix the "
+                   "reported reference\n";
+      std::cerr << "and try again\n";
+    }
+
+    return EXIT_SCHEMA_INPUT_ERROR;
+  } catch (const InvalidReferenceUpgradeError &error) {
+    const auto is_json{options.contains("json")};
+    print_exception(is_json, error);
+    if (!is_json) {
+      std::cerr << "\n";
+      std::cerr << "An upgrade rewrites the references that a change of "
+                   "dialect moves, which it\n";
+      std::cerr << "cannot do for one that never pointed at a schema. Fix the "
+                   "reported reference\n";
+      std::cerr << "and try again\n";
+    }
+
+    return EXIT_SCHEMA_INPUT_ERROR;
+  } catch (const PositionError<BrokenReferenceUpgradeError> &error) {
+    const auto is_json{options.contains("json")};
+    print_exception(is_json, error);
+    if (!is_json) {
+      std::cerr << "\n";
+      std::cerr << "This is a case we don't know how to upgrade yet. Please "
+                   "report it to the\n";
+      std::cerr << "issue tracker, so we can add it to the test suite and fix "
+                   "it:\n\n";
+      std::cerr << "https://github.com/sourcemeta/jsonschema/issues\n";
+    }
+
+    return EXIT_NOT_SUPPORTED;
+  } catch (const BrokenReferenceUpgradeError &error) {
+    const auto is_json{options.contains("json")};
+    print_exception(is_json, error);
+    if (!is_json) {
+      std::cerr << "\n";
+      std::cerr << "This is a case we don't know how to upgrade yet. Please "
+                   "report it to the\n";
+      std::cerr << "issue tracker, so we can add it to the test suite and fix "
+                   "it:\n\n";
+      std::cerr << "https://github.com/sourcemeta/jsonschema/issues\n";
+    }
+
+    return EXIT_NOT_SUPPORTED;
+  } catch (const PositionError<MetaschemaUpgradeError> &error) {
+    const auto is_json{options.contains("json")};
+    print_exception(is_json, error);
+    if (!is_json) {
+      std::cerr << "\n";
+      std::cerr << "Meta-schemas name the keywords of their dialect as "
+                   "ordinary data, which an\n";
+      std::cerr << "upgrade cannot rename alongside the keywords themselves. "
+                   "Please upgrade\n";
+      std::cerr << "meta-schemas manually.\n";
+    }
+
+    return EXIT_NOT_SUPPORTED;
+  } catch (const MetaschemaUpgradeError &error) {
+    const auto is_json{options.contains("json")};
+    print_exception(is_json, error);
+    if (!is_json) {
+      std::cerr << "\n";
+      std::cerr << "Meta-schemas name the keywords of their dialect as "
+                   "ordinary data, which an\n";
+      std::cerr << "upgrade cannot rename alongside the keywords themselves. "
+                   "Please upgrade\n";
+      std::cerr << "meta-schemas manually.\n";
+    }
+
+    return EXIT_NOT_SUPPORTED;
   } catch (const PositionError<CustomMetaschemaUpgradeError> &error) {
     const auto is_json{options.contains("json")};
     print_exception(is_json, error);

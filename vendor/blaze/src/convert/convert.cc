@@ -31,6 +31,7 @@ using namespace sourcemeta::core;
 
 namespace {
 
+#include "helpers.h"
 #include "rule.h"
 
 using Rule = std::tuple<std::unique_ptr<SchemaTransformRule>, bool>;
@@ -42,13 +43,60 @@ template <std::derived_from<SchemaTransformRule> T>
           std::is_same_v<typename T::reframe_after_transform, std::true_type>};
 }
 
+/// A reference that lands on something other than a schema is not a reference
+/// the conversion can carry across dialects, as the document never had one
+auto assert_schema_references(const core::SchemaFrame &frame) -> void {
+  frame.for_each_reference(
+      [&frame](const core::SchemaReferenceType, const core::WeakPointer &origin,
+               const core::SchemaFrame::Reference &reference) -> void {
+        const auto destination{frame.traverse(reference.destination)};
+        if (destination.has_value() &&
+            destination.value().get().type ==
+                core::SchemaFrame::LocationType::Pointer) {
+          throw ConvertInvalidReferenceError{reference.destination,
+                                             core::to_pointer(origin)};
+        }
+      });
+}
+
+/// Conversion renames keywords, while a meta-schema names those same keywords
+/// as ordinary data that nothing renames alongside them. Until the two can be
+/// told apart, a document that describes itself or that carries the
+/// meta-schema something in it declares is refused. A dialect the ladder does
+/// not name is refused too, as there are no rules for moving a schema off it
+auto assert_convertible_dialects(const core::JSON &schema,
+                                 const core::SchemaFrame &frame,
+                                 const std::string_view default_id) -> void {
+  const auto document{frame.traverse(core::EMPTY_WEAK_POINTER)};
+  if (document.has_value() &&
+      describes_itself(schema, document.value().get().base_dialect,
+                       default_id)) {
+    throw ConvertUnsupportedMetaschemaError{schema.at("$schema").to_string(),
+                                            core::EMPTY_POINTER};
+  }
+
+  frame.for_each_subschema(
+      [&schema, &frame](const core::SchemaFrame::Location &location) -> void {
+        auto pointer{core::to_pointer(location.pointer)};
+        if (is_metaschema_target(core::get(schema, pointer), frame,
+                                 location.pointer)) {
+          throw ConvertUnsupportedMetaschemaError{location.dialect,
+                                                  std::move(pointer)};
+        }
+
+        if (!names_ladder_dialect(location.dialect)) {
+          throw ConvertUnsupportedDialectError{location.dialect,
+                                               std::move(pointer)};
+        }
+      });
+}
+
 /// Apply the given rules top-down to every subschema until none of them applies
 auto apply(const std::vector<Rule> &rules, sourcemeta::core::JSON &schema,
            const sourcemeta::core::SchemaWalker &walker,
            const sourcemeta::core::SchemaResolver &resolver,
            const std::string_view default_dialect,
-           const std::string_view default_id, const bool is_metaschema)
-    -> void {
+           const std::string_view default_id) -> void {
   assert(!rules.empty());
 
   struct ProcessedRuleHasher {
@@ -77,6 +125,7 @@ auto apply(const std::vector<Rule> &rules, sourcemeta::core::JSON &schema,
   };
 
   std::vector<PotentiallyBrokenReference> potentially_broken_references;
+  bool asserted{false};
 
   while (true) {
     if (!frame.has_value()) {
@@ -87,6 +136,12 @@ auto apply(const std::vector<Rule> &rules, sourcemeta::core::JSON &schema,
       frame.emplace(core::SchemaFrame::Mode::References, schema, walker,
                     resolver, default_dialect, default_id,
                     sourcemeta::core::SchemaFrame::IdentifierMode::Fallback);
+
+      if (!asserted) {
+        assert_convertible_dialects(schema, frame.value(), default_id);
+        assert_schema_references(frame.value());
+        asserted = true;
+      }
     }
 
     std::unordered_set<core::Pointer, core::Pointer::Hasher> visited;
@@ -107,9 +162,9 @@ auto apply(const std::vector<Rule> &rules, sourcemeta::core::JSON &schema,
               frame->vocabularies(location, resolver)};
 
           for (const auto &[rule, reframe_after_transform] : rules) {
-            const auto outcome{
-                rule->condition(current, schema, current_vocabularies, *frame,
-                                location, walker, resolver, is_metaschema)};
+            const auto outcome{rule->condition(current, schema,
+                                               current_vocabularies, *frame,
+                                               location, walker, resolver)};
 
             if (!outcome) {
               continue;
@@ -165,7 +220,11 @@ auto apply(const std::vector<Rule> &rules, sourcemeta::core::JSON &schema,
                 new_location.value().get().relative_pointer};
             const auto current_slice{entry_pointer.slice(resource_offset)};
             for (const auto &saved_reference : potentially_broken_references) {
-              if (core::try_get(schema, saved_reference.target_pointer)) {
+              // A reference only breaks when its destination stops resolving.
+              // The target sitting at a different pointer than before is not
+              // enough, as a resource that moved as a whole keeps resolving
+              // the fragments that its own identifier is the base of
+              if (frame->traverse(saved_reference.destination).has_value()) {
                 continue;
               }
 
@@ -216,7 +275,7 @@ auto apply(const std::vector<Rule> &rules, sourcemeta::core::JSON &schema,
 
             assert(!rule->condition(current, schema, new_vocabularies, *frame,
                                     new_location.value().get(), walker,
-                                    resolver, is_metaschema));
+                                    resolver));
 
             std::tuple<core::Pointer, std::string_view, core::JSON> mark{
                 entry_pointer, rule->name(), current};
@@ -241,14 +300,13 @@ auto apply(const std::vector<Rule> &rules, sourcemeta::core::JSON &schema,
   }
 }
 
-#include "helpers.h"
-
 #include "rules/definitions_to_defs.h"
+#include "rules/dependencies_to_dependent.h"
 #include "rules/draft_official_dialect_with_https.h"
 #include "rules/draft_official_dialect_without_empty_fragment.h"
 #include "rules/empty_object_as_true.h"
 #include "rules/enum_to_const.h"
-#include "rules/metaschema_vocabulary.h"
+#include "rules/modern_official_dialect_with_empty_fragment.h"
 #include "rules/prefix_promoted_2020_12_keywords.h"
 #include "rules/prefix_promoted_draft_2019_09_keywords.h"
 #include "rules/prefix_promoted_draft_4_keywords.h"
@@ -269,12 +327,12 @@ auto convert(sourcemeta::core::JSON &schema,
              const sourcemeta::core::SchemaWalker &walker,
              const sourcemeta::core::SchemaResolver &resolver,
              const ConvertTarget target, const std::string_view default_dialect,
-             const std::string_view default_id, const bool is_metaschema)
-    -> void {
+             const std::string_view default_id) -> void {
   std::vector<Rule> rules;
-  rules.reserve(18);
+  rules.reserve(20);
   rules.push_back(make_rule<DraftOfficialDialectWithHttps>());
   rules.push_back(make_rule<DraftOfficialDialectWithoutEmptyFragment>());
+  rules.push_back(make_rule<ModernOfficialDialectWithEmptyFragment>());
   rules.push_back(make_rule<PrefixPromotedDraft4Keywords>());
   rules.push_back(make_rule<UpgradeDraft3ToDraft4>());
 
@@ -284,21 +342,21 @@ auto convert(sourcemeta::core::JSON &schema,
     rules.push_back(make_rule<PrefixPromotedDraft6Keywords>());
     rules.push_back(make_rule<UpgradeDraft4ToDraft6>());
     rules.push_back(make_rule<EmptyObjectAsTrue>());
+    rules.push_back(make_rule<EnumToConst>());
   }
 
   if (target == ConvertTarget::Draft7 || target == ConvertTarget::Draft201909 ||
       target == ConvertTarget::Draft202012) {
     rules.push_back(make_rule<PrefixPromotedDraft7Keywords>());
     rules.push_back(make_rule<UpgradeDraft6ToDraft7>());
-    rules.push_back(make_rule<EnumToConst>());
   }
 
   if (target == ConvertTarget::Draft201909 ||
       target == ConvertTarget::Draft202012) {
     rules.push_back(make_rule<PrefixPromoted201909Keywords>());
     rules.push_back(make_rule<UpgradeDraft7To201909>());
-    rules.push_back(make_rule<MetaschemaVocabulary>());
     rules.push_back(make_rule<DefinitionsToDefs>());
+    rules.push_back(make_rule<DependenciesToDependent>());
   }
 
   if (target == ConvertTarget::Draft202012) {
@@ -307,8 +365,8 @@ auto convert(sourcemeta::core::JSON &schema,
   }
 
   rules.push_back(make_rule<UpgradeDialectOverrideCleanup>());
-  apply(rules, schema, walker, resolver, default_dialect, default_id,
-        is_metaschema);
+  apply(rules, schema, walker, resolver, default_dialect, default_id);
+  erase_dialect_overrides(schema);
 }
 
 } // namespace sourcemeta::blaze

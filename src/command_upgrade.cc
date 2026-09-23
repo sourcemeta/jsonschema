@@ -9,7 +9,6 @@
 
 #include <filesystem>  // std::filesystem
 #include <iostream>    // std::cout
-#include <optional>    // std::optional, std::nullopt
 #include <string>      // std::string
 #include <string_view> // std::string_view
 #include <tuple>       // std::get
@@ -26,7 +25,7 @@
 namespace {
 
 auto parse_target_dialect(const std::string_view value)
-    -> std::optional<sourcemeta::blaze::ConvertTarget> {
+    -> sourcemeta::blaze::ConvertTarget {
   if (value == "draft4") {
     return sourcemeta::blaze::ConvertTarget::Draft4;
   }
@@ -53,18 +52,59 @@ auto parse_target_dialect(const std::string_view value)
       {"draft4", "draft6", "draft7", "2019-09", "2020-12"}};
 }
 
-auto assert_upgradable(
-    const sourcemeta::core::JSON &schema,
-    const sourcemeta::core::SchemaResolver &resolver,
-    const std::string &dialect, const std::string &default_id,
-    const std::filesystem::path &schema_display_path,
-    const sourcemeta::core::PointerPositionTracker &positions) -> void {
-  std::optional<sourcemeta::core::SchemaFrame> frame;
+template <typename Error>
+[[noreturn]] auto
+throw_upgrade_error(const std::filesystem::path &schema_display_path,
+                    const sourcemeta::core::PointerPositionTracker &positions,
+                    sourcemeta::core::Pointer location, std::string uri)
+    -> void {
+  const auto position{positions.get(location)};
+  if (position.has_value()) {
+    throw sourcemeta::jsonschema::PositionError<Error>{
+        std::get<0>(position.value()), std::get<1>(position.value()),
+        schema_display_path, std::move(location), std::move(uri)};
+  }
 
+  throw Error{schema_display_path, std::move(location), std::move(uri)};
+}
+
+auto upgrade_schema(sourcemeta::core::JSON &schema,
+                    const sourcemeta::core::SchemaResolver &resolver,
+                    const sourcemeta::blaze::ConvertTarget target,
+                    const std::string &dialect, const std::string &default_id,
+                    const std::filesystem::path &schema_display_path,
+                    const sourcemeta::core::PointerPositionTracker &positions)
+    -> void {
   try {
-    frame.emplace(sourcemeta::core::SchemaFrame::Mode::Locations, schema,
-                  sourcemeta::core::schema_walker, resolver, dialect,
-                  default_id);
+    sourcemeta::blaze::convert(schema, sourcemeta::core::schema_walker,
+                               resolver, target, dialect, default_id);
+  } catch (const sourcemeta::blaze::ConvertUnsupportedMetaschemaError &error) {
+    throw_upgrade_error<sourcemeta::jsonschema::MetaschemaUpgradeError>(
+        schema_display_path, positions, error.location(),
+        std::string{error.identifier()});
+  } catch (const sourcemeta::blaze::ConvertUnsupportedDialectError &error) {
+    // A dialect with no conversion rules is either one we have not taught
+    // the CLI yet or one only the author of the schema knows about, which are
+    // different problems to act on. Whether JSON Schema names the dialect is
+    // what tells them apart
+    if (sourcemeta::core::schema_is_known(error.identifier())) {
+      throw_upgrade_error<
+          sourcemeta::jsonschema::UnsupportedDialectUpgradeError>(
+          schema_display_path, positions, error.location(),
+          std::string{error.identifier()});
+    }
+
+    throw_upgrade_error<sourcemeta::jsonschema::CustomMetaschemaUpgradeError>(
+        schema_display_path, positions, error.location(),
+        std::string{error.identifier()});
+  } catch (const sourcemeta::blaze::ConvertInvalidReferenceError &error) {
+    throw_upgrade_error<sourcemeta::jsonschema::InvalidReferenceUpgradeError>(
+        schema_display_path, positions, error.location(),
+        std::string{error.identifier()});
+  } catch (const sourcemeta::blaze::ConvertBrokenReferenceError &error) {
+    throw_upgrade_error<sourcemeta::jsonschema::BrokenReferenceUpgradeError>(
+        schema_display_path, positions, error.location(),
+        std::string{error.identifier()});
   } catch (const sourcemeta::core::SchemaKeywordError &error) {
     throw sourcemeta::core::FileError<sourcemeta::core::SchemaKeywordError>(
         schema_display_path, error);
@@ -105,71 +145,6 @@ auto assert_upgradable(
     throw sourcemeta::core::FileError<sourcemeta::core::SchemaError>(
         schema_display_path, error.what());
   }
-
-  frame.value().for_each_location(
-      [&schema_display_path, &positions](
-          const sourcemeta::core::SchemaReferenceType, const std::string_view,
-          const sourcemeta::core::SchemaFrame::Location &location) -> void {
-        switch (location.base_dialect) {
-          case sourcemeta::core::SchemaBaseDialect::JSON_SCHEMA_2020_12:
-          case sourcemeta::core::SchemaBaseDialect::JSON_SCHEMA_2020_12_HYPER:
-          case sourcemeta::core::SchemaBaseDialect::JSON_SCHEMA_2019_09:
-          case sourcemeta::core::SchemaBaseDialect::JSON_SCHEMA_2019_09_HYPER:
-          case sourcemeta::core::SchemaBaseDialect::JSON_SCHEMA_DRAFT_7:
-          case sourcemeta::core::SchemaBaseDialect::JSON_SCHEMA_DRAFT_7_HYPER:
-          case sourcemeta::core::SchemaBaseDialect::JSON_SCHEMA_DRAFT_6:
-          case sourcemeta::core::SchemaBaseDialect::JSON_SCHEMA_DRAFT_6_HYPER:
-          case sourcemeta::core::SchemaBaseDialect::JSON_SCHEMA_DRAFT_4:
-          case sourcemeta::core::SchemaBaseDialect::JSON_SCHEMA_DRAFT_4_HYPER:
-          case sourcemeta::core::SchemaBaseDialect::JSON_SCHEMA_DRAFT_3:
-          case sourcemeta::core::SchemaBaseDialect::JSON_SCHEMA_DRAFT_3_HYPER:
-            return;
-          default:
-            break;
-        }
-
-        const auto unsupported_location_pointer{
-            sourcemeta::core::to_pointer(location.pointer)};
-        auto unsupported_dialect{std::string{location.dialect}};
-        const auto unsupported_position{
-            positions.get(unsupported_location_pointer)};
-        if (unsupported_position.has_value()) {
-          throw sourcemeta::jsonschema::PositionError<
-              sourcemeta::jsonschema::UnsupportedDialectUpgradeError>{
-              std::get<0>(unsupported_position.value()),
-              std::get<1>(unsupported_position.value()), schema_display_path,
-              unsupported_location_pointer, std::move(unsupported_dialect)};
-        }
-
-        throw sourcemeta::jsonschema::UnsupportedDialectUpgradeError{
-            schema_display_path, unsupported_location_pointer,
-            std::move(unsupported_dialect)};
-      });
-
-  frame.value().for_each_location(
-      [&schema_display_path, &positions](
-          const sourcemeta::core::SchemaReferenceType, const std::string_view,
-          const sourcemeta::core::SchemaFrame::Location &location) -> void {
-        if (sourcemeta::core::schema_is_known(location.dialect)) {
-          return;
-        }
-
-        const auto custom_location_pointer{
-            sourcemeta::core::to_pointer(location.pointer)};
-        auto custom_dialect{std::string{location.dialect}};
-        const auto position{positions.get(custom_location_pointer)};
-        if (position.has_value()) {
-          throw sourcemeta::jsonschema::PositionError<
-              sourcemeta::jsonschema::CustomMetaschemaUpgradeError>{
-              std::get<0>(position.value()), std::get<1>(position.value()),
-              schema_display_path, custom_location_pointer,
-              std::move(custom_dialect)};
-        }
-
-        throw sourcemeta::jsonschema::CustomMetaschemaUpgradeError{
-            schema_display_path, custom_location_pointer,
-            std::move(custom_dialect)};
-      });
 }
 
 } // namespace
@@ -183,7 +158,7 @@ auto sourcemeta::jsonschema::upgrade(const sourcemeta::core::Options &options)
 
   const auto target_value{options.contains("to") ? options.at("to").front()
                                                  : std::string_view{"2020-12"}};
-  const auto target_dialect_mode{parse_target_dialect(target_value)};
+  const auto target_dialect{parse_target_dialect(target_value)};
 
   const std::filesystem::path schema_path{options.positional().front()};
   const bool schema_from_stdin = (schema_path == "-");
@@ -215,18 +190,10 @@ auto sourcemeta::jsonschema::upgrade(const sourcemeta::core::Options &options)
   const auto &custom_resolver{
       resolver(options, options.contains("http"), dialect, configuration)};
 
-  assert_upgradable(
-      schema, custom_resolver, dialect,
+  upgrade_schema(
+      schema, custom_resolver, target_dialect, dialect,
       sourcemeta::jsonschema::default_id(schema_path, schema_from_stdin),
       schema_display_path, parsed_schema.positions);
-
-  if (target_dialect_mode.has_value()) {
-    sourcemeta::blaze::convert(
-        schema, sourcemeta::core::schema_walker, custom_resolver,
-        target_dialect_mode.value(), dialect,
-        sourcemeta::jsonschema::default_id(schema_path, schema_from_stdin),
-        options.contains("meta"));
-  }
 
   sourcemeta::jsonschema::format_schema(schema, custom_resolver, dialect);
 

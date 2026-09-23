@@ -1,0 +1,50 @@
+WRITE schema.json UNTIL EOF
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://example.com/main",
+  "properties": {
+    "foo": { "$ref": "#/definitions/year/minimum" }
+  },
+  "definitions": {
+    "year": { "type": "integer", "minimum": 1900 }
+  }
+}
+EOF
+
+// Schema input error
+RUN upgrade --to 2020-12 schema.json STDIN /dev/null IN . INTO result.txt EXPECTING 4
+
+REPLACE $CWD WITH '[CWD]' IN result.txt
+
+WRITE expected.txt UNTIL EOF
+2> error: The reference does not point to a schema
+2>   at line 5
+2>   at column 14
+2>   at file path [CWD]/schema.json
+2>   at location "/properties/foo/$ref"
+2>   at uri https://example.com/main#/definitions/year/minimum
+2>
+2> An upgrade rewrites the references that a change of dialect moves, which it
+2> cannot do for one that never pointed at a schema. Fix the reported reference
+2> and try again
+EOF
+
+COMPARE result.txt AGAINST expected.txt
+
+// Schema input error
+RUN upgrade --to 2020-12 --json schema.json STDIN /dev/null IN . INTO result_json.txt EXPECTING 4
+
+REPLACE $CWD WITH '[CWD]' IN result_json.txt
+
+WRITE expected_json.txt UNTIL EOF
+1> {
+1>   "error": "The reference does not point to a schema",
+1>   "line": 5,
+1>   "column": 14,
+1>   "filePath": "[CWD]/schema.json",
+1>   "location": "/properties/foo/$ref",
+1>   "uri": "https://example.com/main#/definitions/year/minimum"
+1> }
+EOF
+
+COMPARE result_json.txt AGAINST expected_json.txt

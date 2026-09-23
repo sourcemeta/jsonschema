@@ -15,7 +15,7 @@ option(BLAZE_CODEGEN "Build the Blaze codegen library" ON)
 option(BLAZE_CANONICALIZER "Build the Blaze canonicalizer library" ON)
 option(BLAZE_CONVERT "Build the Blaze convert library" ON)
 option(BLAZE_EDITOR "Build the Blaze editor schema compatibility library" ON)
-option(BLAZE_BUNDLE "Build the Blaze bundle library" ON)
+option(BLAZE_DEPENDENCIES "Build the Blaze dependencies library" ON)
 option(BLAZE_TESTS "Build the Blaze tests" OFF)
 option(BLAZE_BENCHMARK "Build the Blaze benchmarks" OFF)
 option(BLAZE_CONTRIB "Build the Blaze contrib programs" OFF)
@@ -53,10 +53,6 @@ if(BLAZE_ADDRESS_SANITIZER)
   sourcemeta_sanitizer(TYPE address)
 elseif(BLAZE_UNDEFINED_SANITIZER)
   sourcemeta_sanitizer(TYPE undefined)
-endif()
-
-if(BLAZE_BUNDLE)
-  add_subdirectory(src/bundle)
 endif()
 
 if(BLAZE_COMPILER)
@@ -97,6 +93,10 @@ endif()
 
 if(BLAZE_EDITOR)
   add_subdirectory(src/editor)
+endif()
+
+if(BLAZE_DEPENDENCIES)
+  add_subdirectory(src/dependencies)
 endif()
 
 if(BLAZE_CONTRIB)
@@ -145,10 +145,6 @@ endif()
 if(BLAZE_TESTS)
   enable_testing()
 
-  if(BLAZE_BUNDLE)
-    add_subdirectory(test/bundle)
-  endif()
-
   if(BLAZE_COMPILER)
     add_subdirectory(test/compiler)
   endif()
@@ -187,6 +183,10 @@ if(BLAZE_TESTS)
 
   if(BLAZE_EDITOR)
     add_subdirectory(test/editor)
+  endif()
+
+  if(BLAZE_DEPENDENCIES)
+    add_subdirectory(test/dependencies)
   endif()
 
   if(PROJECT_IS_TOP_LEVEL)

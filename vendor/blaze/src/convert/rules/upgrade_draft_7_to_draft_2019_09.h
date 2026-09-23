@@ -11,8 +11,7 @@ public:
             const sourcemeta::core::SchemaFrame &frame,
             const sourcemeta::core::SchemaFrame::Location &location,
             const sourcemeta::core::SchemaWalker &,
-            const sourcemeta::core::SchemaResolver &, const bool) const
-      -> bool override {
+            const sourcemeta::core::SchemaResolver &) const -> bool override {
     ONLY_CONTINUE_IF(
         vocabularies.contains(SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_7) &&
         schema.is_object());
@@ -30,6 +29,7 @@ public:
                   sourcemeta::core::to_pointer(entry.pointer)};
               const auto &entry_schema{
                   sourcemeta::core::get(root, entry_pointer)};
+
               return has_descendant_pending_pattern(entry_schema,
                                                     entry.dialect);
             })) {
@@ -263,6 +263,10 @@ private:
       }
     }
 
+    // An empty container has nothing to sort into the two keywords that
+    // replaced this one, and picking either would invent a claim the document
+    // never made. A `definitions` has a single successor, which is why that
+    // one is renamed rather than dropped
     if (dependent_required.empty() && dependent_schemas.empty()) {
       schema.erase("dependencies");
       return;

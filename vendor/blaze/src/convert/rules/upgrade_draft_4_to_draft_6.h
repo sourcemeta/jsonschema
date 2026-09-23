@@ -11,8 +11,7 @@ public:
             const sourcemeta::core::SchemaFrame &frame,
             const sourcemeta::core::SchemaFrame::Location &location,
             const sourcemeta::core::SchemaWalker &,
-            const sourcemeta::core::SchemaResolver &, const bool) const
-      -> bool override {
+            const sourcemeta::core::SchemaResolver &) const -> bool override {
     this->sanitize_pending_ = false;
 
     ONLY_CONTINUE_IF(
@@ -35,15 +34,6 @@ public:
     ONLY_CONTINUE_IF(sanitization_branch || other_branch ||
                      root_via_default_dialect);
 
-    // A meta-schema the document embeds decides the dialect its referrers are
-    // read under, so moving it before them would take them off this dialect
-    // before their turn
-    if (is_metaschema_target(schema, frame, location.pointer) &&
-        has_pending_metaschema_referrer(root, frame, location.pointer,
-                                        has_pending_draft_4_pattern)) {
-      return false;
-    }
-
     if (!sanitization_branch && other_branch &&
         enclosing_resource_has_pending_sanitization(location, root, frame)) {
       return false;
@@ -52,17 +42,12 @@ public:
     if (!sanitization_branch) {
       if (frame.any_subschema_under(
               location.pointer,
-              [&root,
-               &frame](const sourcemeta::core::SchemaFrame::Location &entry)
+              [&root](const sourcemeta::core::SchemaFrame::Location &entry)
                   -> bool {
                 const auto entry_pointer{
                     sourcemeta::core::to_pointer(entry.pointer)};
                 const auto &entry_schema{
                     sourcemeta::core::get(root, entry_pointer)};
-                if (is_metaschema_target(entry_schema, frame, entry.pointer)) {
-                  return false;
-                }
-
                 if (entry_schema.is_object() && entry_schema.defines("$ref")) {
                   return false;
                 }
