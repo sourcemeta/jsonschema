@@ -1,0 +1,23 @@
+WRITE schema.json UNTIL EOF
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Test",
+  "description": "Test schema",
+  "type": "string"
+}
+EOF
+
+RUN metaschema schema.json --verbose --color always STDIN /dev/null IN . INTO result.txt EXPECTING 0
+
+REPLACE MATCHING '\x1B\[1;32m' WITH '[ANSI_BOLD_GREEN]' IN result.txt
+REPLACE MATCHING '\x1B\[36m' WITH '[ANSI_CYAN]' IN result.txt
+REPLACE MATCHING '\x1B\[0m' WITH '[ANSI_RESET]' IN result.txt
+
+WRITE expected.txt UNTIL EOF
+2> [ANSI_BOLD_GREEN]✓ ok:[ANSI_RESET] schema.json
+2>   matches [ANSI_CYAN]https://json-schema.org/draft/2020-12/schema[ANSI_RESET]
+2>
+2> 1 validated, 1 passed, 0 failed
+EOF
+
+COMPARE result.txt AGAINST expected.txt

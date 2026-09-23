@@ -1,0 +1,40 @@
+MAKE DIRECTORY schemas
+
+WRITE schemas/schema_1.json UNTIL EOF
+{
+  "$schema": "http://json-schema.org/draft-04/schema#",
+  "minimum": "foo"
+}
+EOF
+
+WRITE schemas/schema_2.json UNTIL EOF
+{
+  "$schema": "http://json-schema.org/draft-04/schema#",
+  "minimum": 1
+}
+EOF
+
+// Validation failure
+RUN metaschema schemas --continue --verbose --color always STDIN /dev/null IN . INTO result_0.txt EXPECTING 2
+
+REPLACE MATCHING '\x1B\[1;31m' WITH '[ANSI_BOLD_RED]' IN result_0.txt
+REPLACE MATCHING '\x1B\[1;32m' WITH '[ANSI_BOLD_GREEN]' IN result_0.txt
+REPLACE MATCHING '\x1B\[36m' WITH '[ANSI_CYAN]' IN result_0.txt
+REPLACE MATCHING '\x1B\[0m' WITH '[ANSI_RESET]' IN result_0.txt
+
+WRITE expected_0.txt UNTIL EOF
+2> [ANSI_BOLD_RED]✗ fail:[ANSI_RESET] schemas/schema_1.json
+2> error: Schema validation failure
+2>   The value was expected to be of type number but it was of type string
+2>     at instance location "/minimum" (line 3, column 3)
+2>     at evaluate path "/properties/minimum/type"
+2>   The object value was expected to validate against the 33 defined properties subschemas
+2>     at instance location "" (line 1, column 1)
+2>     at evaluate path "/properties"
+2> [ANSI_BOLD_GREEN]✓ ok:[ANSI_RESET] schemas/schema_2.json
+2>   matches [ANSI_CYAN]http://json-schema.org/draft-04/schema#[ANSI_RESET]
+2>
+2> 2 validated, 1 passed, 1 failed
+EOF
+
+COMPARE result_0.txt AGAINST expected_0.txt

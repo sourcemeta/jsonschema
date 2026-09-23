@@ -31,33 +31,10 @@
 namespace {
 
 using sourcemeta::core::TerminalStyle;
+using sourcemeta::jsonschema::format_validation_status;
+using sourcemeta::jsonschema::ValidationStatus;
 constexpr auto PASS_STYLE{TerminalStyle::Bold | TerminalStyle::Green};
 constexpr auto FAIL_STYLE{TerminalStyle::Bold | TerminalStyle::Red};
-
-enum class ValidationStatus : std::uint8_t { Pass, Fail };
-
-auto format_validation_status(ValidationStatus status) -> std::string {
-  if (sourcemeta::core::terminal_color_enabled(
-          sourcemeta::core::TerminalStream::Stderr)) {
-    switch (status) {
-      case ValidationStatus::Pass:
-        return sourcemeta::jsonschema::paint(
-            "✓ ok:", PASS_STYLE, sourcemeta::core::TerminalStream::Stderr);
-      case ValidationStatus::Fail:
-        return sourcemeta::jsonschema::paint(
-            "✗ fail:", FAIL_STYLE, sourcemeta::core::TerminalStream::Stderr);
-    }
-    std::unreachable();
-  }
-
-  switch (status) {
-    case ValidationStatus::Pass:
-      return "ok:";
-    case ValidationStatus::Fail:
-      return "fail:";
-  }
-  std::unreachable();
-}
 
 auto format_benchmark_status(const bool passed) -> std::string {
   return sourcemeta::jsonschema::paint(
