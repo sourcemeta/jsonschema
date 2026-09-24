@@ -27,8 +27,9 @@ for local consumption or further distribution.  The JSON Schema CLI supports
 this functionality through the `bundle` command.
 
 The result is printed in the format the input was written in: a YAML schema
-bundles into YAML and a JSON schema into JSON. Each level of nesting keeps the
-width the input was written with, which `--indentation/-n` overrides.
+bundles into YAML and a JSON schema into JSON. A YAML result keeps the width
+each level of nesting was written with, while a JSON result is laid out with
+two spaces. Use `--indentation/-n` to set the width in either case.
 
 > [!WARNING]
 > A popular use case for JSON Schema is providing auto-completion for code

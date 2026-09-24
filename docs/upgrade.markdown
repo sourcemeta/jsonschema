@@ -22,8 +22,9 @@ locations whose path has changed. By default, schemas are upgraded to the
 latest supported dialect, and the result is printed to standard output.
 
 The result is printed in the format the input was written in: a YAML schema
-upgrades into YAML and a JSON schema into JSON. Each level of nesting keeps the
-width the input was written with, which `--indentation/-n` overrides.
+upgrades into YAML and a JSON schema into JSON. A YAML result keeps the width
+each level of nesting was written with, while a JSON result is laid out with
+two spaces. Use `--indentation/-n` to set the width in either case.
 
 For example, consider the following Draft 3 schema:
 
