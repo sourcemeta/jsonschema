@@ -172,6 +172,31 @@ auto parse_yaml(const JSON::String &input, YAMLRoundTrip &roundtrip) -> JSON;
 
 /// @ingroup yaml
 ///
+/// Create a JSON document from a C++ standard input stream that represents a
+/// YAML document, collecting round-trip metadata to reproduce the original
+/// formatting. The stream is left just after the document that was read, so
+/// that a stream holding several documents can be read one document at a
+/// time. For example:
+///
+/// ```cpp
+/// #include <sourcemeta/core/json.h>
+/// #include <sourcemeta/core/yaml.h>
+///
+/// #include <sstream>
+///
+/// std::istringstream stream{"hello: world\n---\nsecond: document\n"};
+/// while (stream.peek() != std::char_traits<char>::eof()) {
+///   sourcemeta::core::YAMLRoundTrip roundtrip;
+///   const sourcemeta::core::JSON document =
+///     sourcemeta::core::parse_yaml(stream, roundtrip);
+/// }
+/// ```
+SOURCEMETA_CORE_YAML_EXPORT
+auto parse_yaml(std::basic_istream<JSON::Char, JSON::CharTraits> &stream,
+                YAMLRoundTrip &roundtrip) -> JSON;
+
+/// @ingroup yaml
+///
 /// Parse a YAML string with round-trip metadata into an existing JSON value,
 /// invoking the given callback during parsing. The result is constructed
 /// directly into the given reference rather than returned by value to ensure
@@ -180,6 +205,20 @@ auto parse_yaml(const JSON::String &input, YAMLRoundTrip &roundtrip) -> JSON;
 SOURCEMETA_CORE_YAML_EXPORT
 auto parse_yaml(const JSON::String &input, YAMLRoundTrip &roundtrip,
                 JSON &output, const JSON::ParseCallback &callback) -> void;
+
+/// @ingroup yaml
+///
+/// Parse a YAML document from a C++ standard input stream with round-trip
+/// metadata into an existing JSON value, invoking the given callback during
+/// parsing. The stream is left just after the document that was read, so that
+/// a stream holding several documents can be read one document at a time. The
+/// result is constructed directly into the given reference rather than
+/// returned by value to ensure that references passed through the parse
+/// callback remain valid after parsing completes.
+SOURCEMETA_CORE_YAML_EXPORT
+auto parse_yaml(std::basic_istream<JSON::Char, JSON::CharTraits> &stream,
+                YAMLRoundTrip &roundtrip, JSON &output,
+                const JSON::ParseCallback &callback) -> void;
 
 /// @ingroup yaml
 ///

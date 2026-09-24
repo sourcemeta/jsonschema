@@ -26,12 +26,26 @@ static constexpr std::array<char, 16> HEX_DIGITS{{'0', '1', '2', '3', '4', '5',
                                                   '6', '7', '8', '9', 'a', 'b',
                                                   'c', 'd', 'e', 'f'}};
 
-inline auto write_indent(OutputStream &stream, const std::size_t indent,
-                         const std::size_t width = INDENT_WIDTH) -> void {
-  for (std::size_t index{0}; index < indent * width; ++index) {
+// A processor is free to write line breaks with whatever convention suits the
+// document. See https://yaml.org/spec/1.2.2/#54-line-break-characters
+inline auto write_break(OutputStream &stream, const YAMLRoundTrip *roundtrip)
+    -> void {
+  if ((roundtrip != nullptr) && roundtrip->carriage_returns) {
+    stream.put('\r');
+  }
+
+  stream.put('\n');
+}
+
+inline auto write_indent(OutputStream &stream, const std::size_t columns)
+    -> void {
+  for (std::size_t index{0}; index < columns; ++index) {
     stream.put(' ');
   }
 }
+
+// The width of the "- " indicator that opens a block sequence entry
+static constexpr std::size_t SEQUENCE_INDICATOR_WIDTH{2};
 
 inline auto looks_like_number(const std::string &value) -> bool {
   std::size_t start{0};
@@ -214,49 +228,48 @@ inline auto write_string(OutputStream &stream, const std::string &value)
 }
 
 inline auto write_block_scalar(
-    OutputStream &stream, const std::string &value, const std::size_t indent,
-    const YAMLRoundTrip::ScalarStyle style,
+    OutputStream &stream, const std::string &value,
+    const std::size_t content_columns, const YAMLRoundTrip::ScalarStyle style,
     const YAMLRoundTrip::Chomping chomping,
     const std::optional<std::string> &header_comment = std::nullopt,
-    const std::size_t indent_width = INDENT_WIDTH,
-    const std::size_t explicit_indent = 0,
-    const bool indent_before_chomping = false) -> void {
+    const std::size_t indicator = 0, const bool indent_before_chomping = false,
+    const YAMLRoundTrip *roundtrip = nullptr) -> void {
   stream.put(style == YAMLRoundTrip::ScalarStyle::Literal ? '|' : '>');
-  if (indent_before_chomping && explicit_indent > 0) {
-    stream.put(static_cast<char>('0' + explicit_indent));
+  if (indent_before_chomping && indicator > 0) {
+    stream.put(static_cast<char>('0' + indicator));
   }
   if (chomping == YAMLRoundTrip::Chomping::Strip) {
     stream.put('-');
   } else if (chomping == YAMLRoundTrip::Chomping::Keep) {
     stream.put('+');
   }
-  if (!indent_before_chomping && explicit_indent > 0) {
-    stream.put(static_cast<char>('0' + explicit_indent));
+  if (!indent_before_chomping && indicator > 0) {
+    stream.put(static_cast<char>('0' + indicator));
   }
   if (header_comment.has_value()) {
     stream.put(' ');
     const auto &comment{header_comment.value()};
     stream.write(comment.data(), static_cast<std::streamsize>(comment.size()));
   }
-  stream.put('\n');
+  write_break(stream, roundtrip);
 
   std::size_t position{0};
   while (position < value.size()) {
     auto line_end{value.find('\n', position)};
     if (line_end == std::string::npos) {
-      write_indent(stream, indent, indent_width);
+      write_indent(stream, content_columns);
       stream.write(value.data() + position,
                    static_cast<std::streamsize>(value.size() - position));
-      stream.put('\n');
+      write_break(stream, roundtrip);
       break;
     }
 
     if (line_end > position) {
-      write_indent(stream, indent, indent_width);
+      write_indent(stream, content_columns);
     }
     stream.write(value.data() + position,
                  static_cast<std::streamsize>(line_end - position));
-    stream.put('\n');
+    write_break(stream, roundtrip);
     position = line_end + 1;
   }
 }
@@ -275,6 +288,85 @@ inline auto matches_recorded_value(const YAMLRoundTrip::NodeStyle &style,
                                    const JSON &value) -> bool {
   return style.content_value.has_value() &&
          same_value(style.content_value.value(), value);
+}
+
+// The content indentation level of a block scalar that carries no indicator is
+// read off its first non-empty line, so detection fails when that line begins
+// with a space, and when the content holds no non-empty line at all.
+// See https://yaml.org/spec/1.2.2/#8111-block-indentation-indicator
+inline auto block_detection_fails(const std::string &value) -> bool {
+  std::size_t position{0};
+  while (position < value.size()) {
+    const auto line_end{value.find('\n', position)};
+    const auto length{line_end == std::string::npos ? value.size() - position
+                                                    : line_end - position};
+    if (length > 0) {
+      return value[position] == ' ';
+    }
+
+    if (line_end == std::string::npos) {
+      break;
+    }
+
+    position = line_end + 1;
+  }
+
+  return !value.empty();
+}
+
+// Every line a block scalar writes is closed with a line break, so the chomping
+// indicator is what decides which of the trailing breaks of the value survive
+// being read back. See
+// https://yaml.org/spec/1.2.2/#8112-block-chomping-indicator
+inline auto required_chomping(const std::string &value)
+    -> YAMLRoundTrip::Chomping {
+  const auto body{value.find_last_not_of('\n')};
+  if (body == std::string::npos) {
+    return value.empty() ? YAMLRoundTrip::Chomping::Clip
+                         : YAMLRoundTrip::Chomping::Keep;
+  }
+
+  const auto breaks{value.size() - body - 1};
+  if (breaks == 0) {
+    return YAMLRoundTrip::Chomping::Strip;
+  }
+
+  return breaks == 1 ? YAMLRoundTrip::Chomping::Clip
+                     : YAMLRoundTrip::Chomping::Keep;
+}
+
+// Clipping and keeping both leave a single trailing line break in place, so a
+// recorded indicator that only differs in that way still says the same thing
+// and is worth writing back as it was
+inline auto block_chomping(const YAMLRoundTrip::NodeStyle &style,
+                           const std::string &value)
+    -> YAMLRoundTrip::Chomping {
+  const auto required{required_chomping(value)};
+  if (!style.chomping.has_value() || style.chomping.value() == required) {
+    return required;
+  }
+
+  return (required == YAMLRoundTrip::Chomping::Clip && !value.empty() &&
+          style.chomping.value() == YAMLRoundTrip::Chomping::Keep)
+             ? YAMLRoundTrip::Chomping::Keep
+             : required;
+}
+
+// The folded style joins the lines of its content, so it can only stand for a
+// value that has no line break of its own to lose
+inline auto folding_preserves(const std::string &value) -> bool {
+  const auto body{value.find_last_not_of('\n')};
+  return body == std::string::npos || value.find('\n') == std::string::npos ||
+         value.find('\n') > body;
+}
+
+// The text a block scalar writes, which is the original one for as long as the
+// document still holds the value it was read from
+inline auto block_scalar_content(const YAMLRoundTrip::NodeStyle &style,
+                                 const JSON &value) -> const std::string & {
+  return style.block_content.has_value() && matches_recorded_value(style, value)
+             ? style.block_content.value()
+             : value.to_string();
 }
 
 inline auto find_anchor(const AnchorValues &anchors,
@@ -318,6 +410,66 @@ inline auto write_anchor(OutputStream &stream, const std::string &name,
   stream.put('&');
   stream.write(name.data(), static_cast<std::streamsize>(name.size()));
   anchors.emplace_back(name, &value);
+}
+
+// A tag names the kind of value its node holds, so it may only be emitted
+// while the document still holds that kind of value
+inline auto matching_tag(const YAMLRoundTrip::NodeStyle *style,
+                         const JSON &value) -> const std::string * {
+  if ((style == nullptr) || !style->tag.has_value() ||
+      !style->tag_type.has_value() || style->tag_type.value() != value.type()) {
+    return nullptr;
+  }
+
+  return &style->tag.value();
+}
+
+// Comments and node properties are read off a position in a sequence, so they
+// only stand for what is written there while the sequence still holds the same
+// items it was read from
+inline auto keeps_item_annotations(const YAMLRoundTrip::NodeStyle *style,
+                                   const JSON &value) -> bool {
+  return (style == nullptr) || !style->sequence_size.has_value() ||
+         style->sequence_size.value() == value.size();
+}
+
+inline auto has_node_properties(const YAMLRoundTrip::NodeStyle *style,
+                                const JSON &value) -> bool {
+  return (matching_tag(style, value) != nullptr) ||
+         ((style != nullptr) && style->anchor.has_value());
+}
+
+// Writes the tag and anchor that decorate a node, in the order they were
+// written, and reports whether anything was written at all, as a node property
+// has to be separated from the node it decorates
+inline auto write_node_properties(OutputStream &stream, const JSON &value,
+                                  const YAMLRoundTrip::NodeStyle *style,
+                                  AnchorValues &anchors) -> bool {
+  const auto *tag{matching_tag(style, value)};
+  const bool anchor{(style != nullptr) && style->anchor.has_value()};
+  if ((tag == nullptr) && !anchor) {
+    return false;
+  }
+
+  if ((tag != nullptr) && style->tag_before_anchor) {
+    stream.write(tag->data(), static_cast<std::streamsize>(tag->size()));
+    if (anchor) {
+      stream.put(' ');
+    }
+  }
+
+  if (anchor) {
+    write_anchor(stream, style->anchor.value(), value, anchors);
+  }
+
+  if ((tag != nullptr) && !style->tag_before_anchor) {
+    if (anchor) {
+      stream.put(' ');
+    }
+    stream.write(tag->data(), static_cast<std::streamsize>(tag->size()));
+  }
+
+  return true;
 }
 
 inline auto write_string_with_style(OutputStream &stream, const JSON &value,
@@ -508,17 +660,33 @@ inline auto is_implicit_null(const JSON &value, const YAMLRoundTrip *roundtrip,
   return !match->second.scalar.has_value();
 }
 
-inline auto write_flow_anchor(OutputStream &stream, const JSON &value,
-                              const YAMLRoundTrip *roundtrip,
-                              AnchorValues &anchors, const Pointer &pointer)
+inline auto write_flow_properties(OutputStream &stream, const JSON &value,
+                                  const YAMLRoundTrip *roundtrip,
+                                  AnchorValues &anchors, const Pointer &pointer)
     -> void {
   if (roundtrip == nullptr) {
     return;
   }
   const auto match{roundtrip->styles.find(pointer)};
-  if (match != roundtrip->styles.end() && match->second.anchor.has_value()) {
-    write_anchor(stream, match->second.anchor.value(), value, anchors);
+  if (match != roundtrip->styles.end() &&
+      write_node_properties(stream, value, &match->second, anchors)) {
     stream.put(' ');
+  }
+}
+
+// The same as writing the properties of a flow node, but for a node that is
+// written with no value at all, so nothing follows to be separated from
+inline auto write_flow_node_properties(OutputStream &stream, const JSON &value,
+                                       const YAMLRoundTrip *roundtrip,
+                                       AnchorValues &anchors,
+                                       const Pointer &pointer) -> void {
+  if (roundtrip == nullptr) {
+    return;
+  }
+
+  const auto match{roundtrip->styles.find(pointer)};
+  if (match != roundtrip->styles.end()) {
+    write_node_properties(stream, value, &match->second, anchors);
   }
 }
 
@@ -527,13 +695,18 @@ inline auto write_flow_mapping(OutputStream &stream, const JSON &value,
                                AnchorValues &anchors, Pointer &pointer)
     -> void {
   bool compact{false};
+  bool padded{false};
   if (roundtrip != nullptr) {
     const auto match{roundtrip->styles.find(pointer)};
     if (match != roundtrip->styles.end()) {
       compact = match->second.compact_flow;
+      padded = match->second.padded_flow;
     }
   }
   stream.put('{');
+  if (padded) {
+    stream.put(' ');
+  }
   bool first{true};
   for (const auto &entry : value.as_object()) {
     if (!first) {
@@ -547,11 +720,17 @@ inline auto write_flow_mapping(OutputStream &stream, const JSON &value,
     pointer.push_back(entry.first);
     write_key_string(stream, entry.first, roundtrip, pointer);
     stream.write(": ", 2);
-    if (!is_implicit_null(entry.second, roundtrip, pointer)) {
-      write_flow_anchor(stream, entry.second, roundtrip, anchors, pointer);
+    if (is_implicit_null(entry.second, roundtrip, pointer)) {
+      write_flow_node_properties(stream, entry.second, roundtrip, anchors,
+                                 pointer);
+    } else {
+      write_flow_properties(stream, entry.second, roundtrip, anchors, pointer);
       write_inline_value(stream, entry.second, roundtrip, anchors, pointer);
     }
     pointer.pop_back();
+  }
+  if (padded) {
+    stream.put(' ');
   }
   stream.put('}');
 }
@@ -561,13 +740,20 @@ inline auto write_flow_sequence(OutputStream &stream, const JSON &value,
                                 AnchorValues &anchors, Pointer &pointer)
     -> void {
   bool compact{false};
+  bool padded{false};
+  bool annotations{true};
   if (roundtrip != nullptr) {
     const auto match{roundtrip->styles.find(pointer)};
     if (match != roundtrip->styles.end()) {
       compact = match->second.compact_flow;
+      padded = match->second.padded_flow;
+      annotations = keeps_item_annotations(&match->second, value);
     }
   }
   stream.put('[');
+  if (padded) {
+    stream.put(' ');
+  }
   bool first{true};
   std::size_t item_index{0};
   for (const auto &item : value.as_array()) {
@@ -580,21 +766,26 @@ inline auto write_flow_sequence(OutputStream &stream, const JSON &value,
     }
     first = false;
     pointer.push_back(item_index);
-    write_flow_anchor(stream, item, roundtrip, anchors, pointer);
+    if (annotations) {
+      write_flow_properties(stream, item, roundtrip, anchors, pointer);
+    }
     write_inline_value(stream, item, roundtrip, anchors, pointer);
     pointer.pop_back();
     item_index++;
+  }
+  if (padded) {
+    stream.put(' ');
   }
   stream.put(']');
 }
 
 inline auto write_block_mapping(OutputStream &stream, const JSON &value,
-                                std::size_t indent, bool skip_first_indent,
+                                std::size_t columns, bool skip_first_indent,
                                 const YAMLRoundTrip *roundtrip,
                                 AnchorValues &anchors, Pointer &pointer)
     -> void;
 inline auto write_block_sequence(OutputStream &stream, const JSON &value,
-                                 std::size_t indent, bool skip_first_indent,
+                                 std::size_t columns, bool skip_first_indent,
                                  const YAMLRoundTrip *roundtrip,
                                  AnchorValues &anchors, Pointer &pointer)
     -> void;
@@ -609,9 +800,18 @@ inline auto emit_inline_comment(OutputStream &stream,
 }
 
 inline auto write_node(OutputStream &stream, const JSON &value,
-                       const std::size_t indent, const bool skip_first_indent,
+                       const std::size_t columns,
+                       const std::size_t block_indicator,
+                       const bool skip_first_indent,
                        const YAMLRoundTrip *roundtrip, AnchorValues &anchors,
-                       Pointer &pointer) -> void {
+                       Pointer &pointer, const bool skip_properties = false,
+                       const bool annotations = true) -> void {
+  const auto width{(roundtrip != nullptr) ? roundtrip->indent_width
+                                          : INDENT_WIDTH};
+  // Only the document root sits at the leftmost column, and a block scalar
+  // there has no column of its own, so its content is pushed one nesting level
+  // in to leave room for whatever follows it
+  const auto block_columns{columns == 0 ? width : columns};
   const YAMLRoundTrip::NodeStyle *node_style{nullptr};
   if (roundtrip != nullptr) {
     const auto style_match{roundtrip->styles.find(pointer)};
@@ -620,89 +820,112 @@ inline auto write_node(OutputStream &stream, const JSON &value,
     }
   }
 
+  const YAMLRoundTrip::NodeStyle *annotation_style{annotations ? node_style
+                                                               : nullptr};
+
   const auto *alias{matching_alias(value, roundtrip, anchors, pointer)};
   if (alias != nullptr) {
     write_alias(stream, *alias);
-    emit_inline_comment(stream, node_style);
-    stream.put('\n');
+    emit_inline_comment(stream, annotation_style);
+    write_break(stream, roundtrip);
     return;
   }
 
-  bool has_anchor{false};
-  if ((node_style != nullptr) && node_style->anchor.has_value()) {
-    write_anchor(stream, node_style->anchor.value(), value, anchors);
-    has_anchor = true;
-  }
+  const bool has_properties{
+      skip_properties
+          ? false
+          : write_node_properties(stream, value, annotation_style, anchors)};
 
   const bool flow{
       (node_style != nullptr) && node_style->collection.has_value() &&
       node_style->collection.value() == YAMLRoundTrip::CollectionStyle::Flow};
 
+  // An indicator is a single digit, so content that needs one but sits too far
+  // in has to give up on block style and be quoted instead
+  const bool block_style{
+      (node_style != nullptr) && value.is_string() &&
+      node_style->scalar.has_value() &&
+      (node_style->scalar.value() == YAMLRoundTrip::ScalarStyle::Literal ||
+       node_style->scalar.value() == YAMLRoundTrip::ScalarStyle::Folded) &&
+      ((block_indicator >= 1 && block_indicator <= 9) ||
+       !block_detection_fails(block_scalar_content(*node_style, value)))};
+
   if (value.is_object() && !value.empty()) {
     if (flow) {
-      if (has_anchor) {
+      if (has_properties) {
         stream.put(' ');
       }
       write_flow_mapping(stream, value, roundtrip, anchors, pointer);
-      emit_inline_comment(stream, node_style);
-      stream.put('\n');
+      emit_inline_comment(stream, annotation_style);
+      write_break(stream, roundtrip);
     } else {
-      if (has_anchor) {
-        emit_inline_comment(stream, node_style);
-        stream.put('\n');
+      if (has_properties) {
+        emit_inline_comment(stream, annotation_style);
+        write_break(stream, roundtrip);
       }
-      write_block_mapping(stream, value, indent,
-                          has_anchor ? false : skip_first_indent, roundtrip,
+      write_block_mapping(stream, value, columns,
+                          has_properties ? false : skip_first_indent, roundtrip,
                           anchors, pointer);
     }
   } else if (value.is_array() && !value.empty()) {
     if (flow) {
-      if (has_anchor) {
+      if (has_properties) {
         stream.put(' ');
       }
       write_flow_sequence(stream, value, roundtrip, anchors, pointer);
-      emit_inline_comment(stream, node_style);
-      stream.put('\n');
+      emit_inline_comment(stream, annotation_style);
+      write_break(stream, roundtrip);
     } else {
-      if (has_anchor) {
-        emit_inline_comment(stream, node_style);
-        stream.put('\n');
+      if (has_properties) {
+        emit_inline_comment(stream, annotation_style);
+        write_break(stream, roundtrip);
       }
-      write_block_sequence(stream, value, indent,
-                           has_anchor ? false : skip_first_indent, roundtrip,
-                           anchors, pointer);
+      // A block sequence may sit at the indentation of the mapping key it
+      // belongs to rather than one level further in
+      const auto sequence_columns{(node_style != nullptr) &&
+                                          node_style->unindented_sequence &&
+                                          columns >= block_indicator
+                                      ? columns - block_indicator
+                                      : columns};
+      write_block_sequence(stream, value, sequence_columns,
+                           has_properties ? false : skip_first_indent,
+                           roundtrip, anchors, pointer);
     }
-  } else if ((node_style != nullptr) && value.is_string() &&
-             node_style->scalar.has_value() &&
-             (node_style->scalar.value() ==
-                  YAMLRoundTrip::ScalarStyle::Literal ||
-              node_style->scalar.value() ==
-                  YAMLRoundTrip::ScalarStyle::Folded)) {
-    if (has_anchor) {
+  } else if (block_style) {
+    if (has_properties) {
       stream.put(' ');
     }
-    const auto chomping{
-        node_style->chomping.value_or(YAMLRoundTrip::Chomping::Clip)};
-    const auto &content{node_style->block_content.has_value() &&
-                                matches_recorded_value(*node_style, value)
-                            ? node_style->block_content.value()
-                            : value.to_string()};
-    write_block_scalar(stream, content, indent, node_style->scalar.value(),
-                       chomping, node_style->comment_inline,
-                       roundtrip->indent_width, node_style->explicit_indent,
-                       node_style->indent_before_chomping);
+    const auto &content{block_scalar_content(*node_style, value)};
+    const auto &text{value.to_string()};
+    // The recorded style only reproduces the text it was read from, so once the
+    // document holds something else, a style that would lose a line break in
+    // the process gives way to one that keeps every line as it is
+    const bool original{node_style->block_content.has_value() &&
+                        matches_recorded_value(*node_style, value)};
+    const auto style{original || folding_preserves(text)
+                         ? node_style->scalar.value()
+                         : YAMLRoundTrip::ScalarStyle::Literal};
+    const std::optional<std::string> header_comment{
+        (annotation_style != nullptr) ? annotation_style->comment_inline
+                                      : std::nullopt};
+    const bool indicated{block_detection_fails(content) ||
+                         node_style->explicit_indent > 0};
+    write_block_scalar(stream, content, block_columns, style,
+                       block_chomping(*node_style, text), header_comment,
+                       indicated ? block_indicator : 0,
+                       node_style->indent_before_chomping, roundtrip);
   } else {
-    if (has_anchor) {
+    if (has_properties) {
       stream.put(' ');
     }
     write_inline_value(stream, value, roundtrip, anchors, pointer);
-    emit_inline_comment(stream, node_style);
-    stream.put('\n');
+    emit_inline_comment(stream, annotation_style);
+    write_break(stream, roundtrip);
   }
 }
 
 inline auto write_block_mapping(OutputStream &stream, const JSON &value,
-                                const std::size_t indent,
+                                const std::size_t columns,
                                 const bool skip_first_indent,
                                 const YAMLRoundTrip *roundtrip,
                                 AnchorValues &anchors, Pointer &pointer)
@@ -729,16 +952,16 @@ inline auto write_block_mapping(OutputStream &stream, const JSON &value,
       if ((entry_style != nullptr) && !entry_style->comments_before.empty()) {
         for (const auto &comment : entry_style->comments_before) {
           if (comment.empty()) {
-            stream.put('\n');
+            write_break(stream, roundtrip);
           } else {
-            write_indent(stream, indent, width);
+            write_indent(stream, columns);
             stream.write(comment.data(),
                          static_cast<std::streamsize>(comment.size()));
-            stream.put('\n');
+            write_break(stream, roundtrip);
           }
         }
       }
-      write_indent(stream, indent, width);
+      write_indent(stream, columns);
     }
     first = false;
 
@@ -749,13 +972,12 @@ inline auto write_block_mapping(OutputStream &stream, const JSON &value,
         (roundtrip != nullptr) && entry.second.is_null() && !entry_is_alias &&
         ((entry_style == nullptr) || !entry_style->scalar.has_value())};
     if (implicit_null) {
-      if ((entry_style != nullptr) && entry_style->anchor.has_value()) {
+      if (has_node_properties(entry_style, entry.second)) {
         stream.put(' ');
-        write_anchor(stream, entry_style->anchor.value(), entry.second,
-                     anchors);
+        write_node_properties(stream, entry.second, entry_style, anchors);
       }
       emit_inline_comment(stream, entry_style);
-      stream.put('\n');
+      write_break(stream, roundtrip);
     } else {
       bool has_indicator_comment{false};
       if ((entry_style != nullptr) &&
@@ -765,13 +987,12 @@ inline auto write_block_mapping(OutputStream &stream, const JSON &value,
         const auto &comment{entry_style->comment_on_indicator.value()};
         stream.write(comment.data(),
                      static_cast<std::streamsize>(comment.size()));
-        stream.put('\n');
-        write_indent(stream, indent + 1, width);
+        write_break(stream, roundtrip);
+        write_indent(stream, columns + width);
       }
       if (!has_indicator_comment) {
-        const bool has_prefix{
-            entry_is_alias ||
-            ((entry_style != nullptr) && entry_style->anchor.has_value())};
+        const bool has_prefix{entry_is_alias ||
+                              has_node_properties(entry_style, entry.second)};
         const bool entry_flow{(entry_style != nullptr) &&
                               entry_style->collection.has_value() &&
                               entry_style->collection.value() ==
@@ -781,12 +1002,12 @@ inline auto write_block_mapping(OutputStream &stream, const JSON &value,
             !entry.second.empty() && !entry_flow && !has_prefix};
         if (nested) {
           emit_inline_comment(stream, entry_style);
-          stream.put('\n');
+          write_break(stream, roundtrip);
         } else {
           stream.put(' ');
         }
       }
-      write_node(stream, entry.second, indent + 1,
+      write_node(stream, entry.second, columns + width, width,
                  has_indicator_comment ? true : false, roundtrip, anchors,
                  pointer);
     }
@@ -796,21 +1017,28 @@ inline auto write_block_mapping(OutputStream &stream, const JSON &value,
 }
 
 inline auto write_block_sequence(OutputStream &stream, const JSON &value,
-                                 const std::size_t indent,
+                                 const std::size_t columns,
                                  const bool skip_first_indent,
                                  const YAMLRoundTrip *roundtrip,
                                  AnchorValues &anchors, Pointer &pointer)
     -> void {
   assert(value.is_array() && !value.empty());
-  const auto width{(roundtrip != nullptr) ? roundtrip->indent_width
-                                          : INDENT_WIDTH};
+  const YAMLRoundTrip::NodeStyle *sequence_style{nullptr};
+  if (roundtrip != nullptr) {
+    const auto style_match{roundtrip->styles.find(pointer)};
+    if (style_match != roundtrip->styles.end()) {
+      sequence_style = &style_match->second;
+    }
+  }
+
+  const bool annotations{keeps_item_annotations(sequence_style, value)};
   bool first{true};
   std::size_t item_index{0};
   for (const auto &item : value.as_array()) {
     pointer.push_back(item_index);
 
     const YAMLRoundTrip::NodeStyle *item_style{nullptr};
-    if (roundtrip != nullptr) {
+    if (annotations && (roundtrip != nullptr)) {
       const auto style_match{roundtrip->styles.find(pointer)};
       if (style_match != roundtrip->styles.end()) {
         item_style = &style_match->second;
@@ -824,16 +1052,16 @@ inline auto write_block_sequence(OutputStream &stream, const JSON &value,
       if ((item_style != nullptr) && !item_style->comments_before.empty()) {
         for (const auto &comment : item_style->comments_before) {
           if (comment.empty()) {
-            stream.put('\n');
+            write_break(stream, roundtrip);
           } else {
-            write_indent(stream, indent, width);
+            write_indent(stream, columns);
             stream.write(comment.data(),
                          static_cast<std::streamsize>(comment.size()));
-            stream.put('\n');
+            write_break(stream, roundtrip);
           }
         }
       }
-      write_indent(stream, indent, width);
+      write_indent(stream, columns);
     }
     first = false;
 
@@ -843,9 +1071,9 @@ inline auto write_block_sequence(OutputStream &stream, const JSON &value,
     if (implicit_null) {
       stream.put('-');
       if (item_style != nullptr) {
-        if (item_style->anchor.has_value()) {
+        if (has_node_properties(item_style, item)) {
           stream.put(' ');
-          write_anchor(stream, item_style->anchor.value(), item, anchors);
+          write_node_properties(stream, item, item_style, anchors);
         }
         if (item_style->comment_on_indicator.has_value() &&
             !item_style->comment_on_indicator.value().empty()) {
@@ -856,7 +1084,7 @@ inline auto write_block_sequence(OutputStream &stream, const JSON &value,
         }
       }
       emit_inline_comment(stream, item_style);
-      stream.put('\n');
+      write_break(stream, roundtrip);
     } else {
       bool has_indicator{false};
       if ((item_style != nullptr) &&
@@ -870,13 +1098,15 @@ inline auto write_block_sequence(OutputStream &stream, const JSON &value,
           stream.write(comment.data(),
                        static_cast<std::streamsize>(comment.size()));
         }
-        stream.put('\n');
-        write_indent(stream, indent + 1, width);
+        write_break(stream, roundtrip);
+        write_indent(stream, columns + SEQUENCE_INDICATOR_WIDTH);
       }
       if (!has_indicator) {
         stream.write("- ", 2);
       }
-      write_node(stream, item, indent + 1, true, roundtrip, anchors, pointer);
+      write_node(stream, item, columns + SEQUENCE_INDICATOR_WIDTH,
+                 SEQUENCE_INDICATOR_WIDTH, true, roundtrip, anchors, pointer,
+                 false, annotations);
     }
 
     pointer.pop_back();
@@ -887,41 +1117,74 @@ inline auto write_block_sequence(OutputStream &stream, const JSON &value,
 template <template <typename T> typename Allocator>
 auto stringify_yaml(const JSON &document, OutputStream &stream,
                     const YAMLRoundTrip *roundtrip = nullptr) -> void {
-  if (roundtrip) {
-    for (const auto &comment : roundtrip->leading_comments) {
-      stream.write(comment.data(),
-                   static_cast<std::streamsize>(comment.size()));
-      stream.put('\n');
+  if ((roundtrip != nullptr) && roundtrip->byte_order_mark) {
+    stream.write("\xEF\xBB\xBF", 3);
+  }
+
+  Pointer pointer;
+  AnchorValues anchors;
+  const YAMLRoundTrip::NodeStyle *root_style{nullptr};
+  if (roundtrip != nullptr) {
+    const auto style_match{roundtrip->styles.find(pointer)};
+    if (style_match != roundtrip->styles.end()) {
+      root_style = &style_match->second;
     }
   }
 
-  if (roundtrip && roundtrip->explicit_document_start) {
+  // A node property on the root node belongs on the document start marker,
+  // which is the only line that precedes the node itself
+  bool root_properties{false};
+
+  bool directed{false};
+  if (roundtrip != nullptr) {
+    for (const auto &line : roundtrip->document_prefix) {
+      directed = directed || line.starts_with('%');
+      stream.write(line.data(), static_cast<std::streamsize>(line.size()));
+      write_break(stream, roundtrip);
+    }
+
+    for (const auto &comment : roundtrip->leading_comments) {
+      stream.write(comment.data(),
+                   static_cast<std::streamsize>(comment.size()));
+      write_break(stream, roundtrip);
+    }
+  }
+
+  // A document that carries directives is closed off from them by an explicit
+  // start marker. See https://yaml.org/spec/1.2.2/#912-document-markers
+  if (roundtrip && (roundtrip->explicit_document_start || directed)) {
     stream.write("---", 3);
+    if (has_node_properties(root_style, document)) {
+      stream.put(' ');
+      root_properties =
+          write_node_properties(stream, document, root_style, anchors);
+    }
     if (roundtrip->document_start_comment.has_value()) {
       stream.put(' ');
       const auto &comment{roundtrip->document_start_comment.value()};
       stream.write(comment.data(),
                    static_cast<std::streamsize>(comment.size()));
     }
-    stream.put('\n');
+    write_break(stream, roundtrip);
     for (const auto &comment : roundtrip->post_start_comments) {
       stream.write(comment.data(),
                    static_cast<std::streamsize>(comment.size()));
-      stream.put('\n');
+      write_break(stream, roundtrip);
     }
   }
 
-  Pointer pointer;
-  AnchorValues anchors;
   if (!is_implicit_null(document, roundtrip, pointer)) {
-    write_node(stream, document, 0, false, roundtrip, anchors, pointer);
+    const auto width{(roundtrip != nullptr) ? roundtrip->indent_width
+                                            : INDENT_WIDTH};
+    write_node(stream, document, 0, width + 1, false, roundtrip, anchors,
+               pointer, root_properties);
   }
 
   if (roundtrip) {
     for (const auto &comment : roundtrip->pre_end_comments) {
       stream.write(comment.data(),
                    static_cast<std::streamsize>(comment.size()));
-      stream.put('\n');
+      write_break(stream, roundtrip);
     }
   }
 
@@ -933,14 +1196,14 @@ auto stringify_yaml(const JSON &document, OutputStream &stream,
       stream.write(comment.data(),
                    static_cast<std::streamsize>(comment.size()));
     }
-    stream.put('\n');
+    write_break(stream, roundtrip);
   }
 
   if (roundtrip) {
     for (const auto &comment : roundtrip->trailing_comments) {
       stream.write(comment.data(),
                    static_cast<std::streamsize>(comment.size()));
-      stream.put('\n');
+      write_break(stream, roundtrip);
     }
   }
 }

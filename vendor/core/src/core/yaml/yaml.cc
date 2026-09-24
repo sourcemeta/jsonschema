@@ -6,7 +6,29 @@
 #include <sourcemeta/core/json_error.h>
 #include <sourcemeta/core/yaml.h>
 
+#include <algorithm>   // std::min
+#include <string_view> // std::string_view
+
 namespace sourcemeta::core {
+
+namespace {
+
+// The presentation the document uses for its bytes, which a round-trip has to
+// reproduce even though neither affects what the document means. Only the part
+// of the input the document was read from counts, as whatever follows it
+// belongs to the next document and may well be written differently
+auto record_encoding(const sourcemeta::core::JSON::String &input,
+                     const sourcemeta::core::yaml::Lexer &lexer,
+                     const sourcemeta::core::yaml::Parser &parser,
+                     sourcemeta::core::YAMLRoundTrip &roundtrip) -> void {
+  const std::string_view document{
+      input.data(),
+      std::min(lexer.bom_length() + parser.position(), input.size())};
+  roundtrip.byte_order_mark = lexer.bom_length() > 0;
+  roundtrip.carriage_returns = document.find("\r\n") != document.npos;
+}
+
+} // namespace
 
 auto parse_yaml(std::basic_istream<JSON::Char, JSON::CharTraits> &stream)
     -> JSON {
@@ -129,7 +151,31 @@ auto parse_yaml(const JSON::String &input, YAMLRoundTrip &roundtrip) -> JSON {
   roundtrip = {};
   yaml::Lexer lexer{input, true};
   yaml::Parser parser{&lexer, nullptr, &roundtrip};
-  return parser.parse();
+  auto result{parser.parse()};
+  record_encoding(input, lexer, parser, roundtrip);
+  return result;
+}
+
+auto parse_yaml(std::basic_istream<JSON::Char, JSON::CharTraits> &stream,
+                YAMLRoundTrip &roundtrip) -> JSON {
+  roundtrip = {};
+  const auto start_pos{stream.tellg()};
+  const auto input{read_to_string(stream)};
+
+  yaml::Lexer lexer{input, true};
+  yaml::Parser parser{&lexer, nullptr, &roundtrip};
+  auto result{parser.parse()};
+
+  // The parser position is relative to the input after any byte order mark has
+  // been stripped, so the mark is added back to resume the stream at the right
+  // character
+  resume_stream(stream, start_pos,
+                static_cast<std::streamsize>(lexer.bom_length()) +
+                    static_cast<std::streamsize>(parser.position()));
+
+  record_encoding(input, lexer, parser, roundtrip);
+
+  return result;
 }
 
 auto parse_yaml(const JSON::String &input, YAMLRoundTrip &roundtrip,
@@ -138,6 +184,28 @@ auto parse_yaml(const JSON::String &input, YAMLRoundTrip &roundtrip,
   yaml::Lexer lexer{input, true};
   yaml::Parser parser{&lexer, &callback, &roundtrip};
   output = parser.parse();
+  record_encoding(input, lexer, parser, roundtrip);
+}
+
+auto parse_yaml(std::basic_istream<JSON::Char, JSON::CharTraits> &stream,
+                YAMLRoundTrip &roundtrip, JSON &output,
+                const JSON::ParseCallback &callback) -> void {
+  roundtrip = {};
+  const auto start_pos{stream.tellg()};
+  const auto input{read_to_string(stream)};
+
+  yaml::Lexer lexer{input, true};
+  yaml::Parser parser{&lexer, &callback, &roundtrip};
+  output = parser.parse();
+
+  // The parser position is relative to the input after any byte order mark has
+  // been stripped, so the mark is added back to resume the stream at the right
+  // character
+  resume_stream(stream, start_pos,
+                static_cast<std::streamsize>(lexer.bom_length()) +
+                    static_cast<std::streamsize>(parser.position()));
+
+  record_encoding(input, lexer, parser, roundtrip);
 }
 
 auto stringify_yaml(const JSON &document,
