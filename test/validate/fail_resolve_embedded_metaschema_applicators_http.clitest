@@ -1,0 +1,160 @@
+// A locally supplied embedded identifier must be shielded from remote
+// fetching wherever a subschema may sit, not only under the keywords that
+// reserve a place for definitions. Each `--resolve` document below declares
+// as its own meta-schema an identifier that it embeds under an applicator,
+// so it can never be imported, and every one of the three ways an applicator
+// holds subschemas is covered: as the members of an object, as the elements
+// of an array, and as a single value. The run must terminate with the local
+// resolution diagnostic and no network round trip
+
+ENV SOURCEMETA_CORE_CURL_SO $CWD/does-not-exist.so
+
+WRITE schema.json UNTIL EOF
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "string"
+}
+EOF
+
+WRITE members.json UNTIL EOF
+{
+  "$schema": "https://example.com/embedded-meta",
+  "$id": "https://example.com/members",
+  "properties": {
+    "meta": {
+      "$id": "https://example.com/embedded-meta",
+      "$vocabulary": {
+        "https://json-schema.org/draft/2020-12/vocab/core": true,
+        "https://json-schema.org/draft/2020-12/vocab/applicator": true,
+        "https://json-schema.org/draft/2020-12/vocab/validation": true
+      }
+    }
+  }
+}
+EOF
+
+WRITE elements.json UNTIL EOF
+{
+  "$schema": "https://example.com/embedded-meta",
+  "$id": "https://example.com/elements",
+  "allOf": [
+    {
+      "$id": "https://example.com/embedded-meta",
+      "$vocabulary": {
+        "https://json-schema.org/draft/2020-12/vocab/core": true,
+        "https://json-schema.org/draft/2020-12/vocab/applicator": true,
+        "https://json-schema.org/draft/2020-12/vocab/validation": true
+      }
+    }
+  ]
+}
+EOF
+
+WRITE value.json UNTIL EOF
+{
+  "$schema": "https://example.com/embedded-meta",
+  "$id": "https://example.com/value",
+  "not": {
+    "$id": "https://example.com/embedded-meta",
+    "$vocabulary": {
+      "https://json-schema.org/draft/2020-12/vocab/core": true,
+      "https://json-schema.org/draft/2020-12/vocab/applicator": true,
+      "https://json-schema.org/draft/2020-12/vocab/validation": true
+    }
+  }
+}
+EOF
+
+WRITE instance.json UNTIL EOF
+"hello"
+EOF
+
+// Schema input error
+RUN validate schema.json instance.json --http --resolve members.json STDIN /dev/null IN . INTO result_0.txt EXPECTING 4
+
+REPLACE $CWD WITH '[CWD]' IN result_0.txt
+
+WRITE expected_0.txt UNTIL EOF
+2> error: Could not resolve the metaschema of the schema
+2>   at identifier https://example.com/embedded-meta
+2>   at file path [CWD]/members.json
+2>
+2> This is likely because you forgot to import such schema using `--resolve/-r`
+EOF
+
+COMPARE result_0.txt AGAINST expected_0.txt
+
+// Schema input error
+RUN validate schema.json instance.json --http --resolve members.json --json STDIN /dev/null IN . INTO result_1.txt EXPECTING 4
+
+REPLACE $CWD WITH '[CWD]' IN result_1.txt
+
+WRITE expected_1.txt UNTIL EOF
+1> {
+1>   "error": "Could not resolve the metaschema of the schema",
+1>   "identifier": "https://example.com/embedded-meta",
+1>   "filePath": "[CWD]/members.json"
+1> }
+EOF
+
+COMPARE result_1.txt AGAINST expected_1.txt
+
+// Schema input error
+RUN validate schema.json instance.json --http --resolve elements.json STDIN /dev/null IN . INTO result_2.txt EXPECTING 4
+
+REPLACE $CWD WITH '[CWD]' IN result_2.txt
+
+WRITE expected_2.txt UNTIL EOF
+2> error: Could not resolve the metaschema of the schema
+2>   at identifier https://example.com/embedded-meta
+2>   at file path [CWD]/elements.json
+2>
+2> This is likely because you forgot to import such schema using `--resolve/-r`
+EOF
+
+COMPARE result_2.txt AGAINST expected_2.txt
+
+// Schema input error
+RUN validate schema.json instance.json --http --resolve elements.json --json STDIN /dev/null IN . INTO result_3.txt EXPECTING 4
+
+REPLACE $CWD WITH '[CWD]' IN result_3.txt
+
+WRITE expected_3.txt UNTIL EOF
+1> {
+1>   "error": "Could not resolve the metaschema of the schema",
+1>   "identifier": "https://example.com/embedded-meta",
+1>   "filePath": "[CWD]/elements.json"
+1> }
+EOF
+
+COMPARE result_3.txt AGAINST expected_3.txt
+
+// Schema input error
+RUN validate schema.json instance.json --http --resolve value.json STDIN /dev/null IN . INTO result_4.txt EXPECTING 4
+
+REPLACE $CWD WITH '[CWD]' IN result_4.txt
+
+WRITE expected_4.txt UNTIL EOF
+2> error: Could not resolve the metaschema of the schema
+2>   at identifier https://example.com/embedded-meta
+2>   at file path [CWD]/value.json
+2>
+2> This is likely because you forgot to import such schema using `--resolve/-r`
+EOF
+
+COMPARE result_4.txt AGAINST expected_4.txt
+
+// Schema input error
+RUN validate schema.json instance.json --http --resolve value.json --json STDIN /dev/null IN . INTO result_5.txt EXPECTING 4
+
+REPLACE $CWD WITH '[CWD]' IN result_5.txt
+
+WRITE expected_5.txt UNTIL EOF
+1> {
+1>   "error": "Could not resolve the metaschema of the schema",
+1>   "identifier": "https://example.com/embedded-meta",
+1>   "filePath": "[CWD]/value.json"
+1> }
+EOF
+
+COMPARE result_5.txt AGAINST expected_5.txt

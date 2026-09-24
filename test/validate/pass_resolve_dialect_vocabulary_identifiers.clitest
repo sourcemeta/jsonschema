@@ -1,0 +1,67 @@
+// A keyword only holds schema resources when the dialect in effect declares
+// the vocabulary that defines it. The custom meta-schema below declares the
+// applicator vocabulary, so the identifier that `properties` holds is a
+// resource of the document that declares it, and the input whose own
+// meta-schema it is resolves against that local file. The run succeeds
+// without any network round trip, so the outcome does not depend on network
+// state
+
+ENV SOURCEMETA_CORE_CURL_SO $CWD/does-not-exist.so
+
+WRITE schema.json UNTIL EOF
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "string"
+}
+EOF
+
+WRITE custom-meta.json UNTIL EOF
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.com/custom-meta",
+  "$vocabulary": {
+    "https://json-schema.org/draft/2020-12/vocab/core": true,
+    "https://json-schema.org/draft/2020-12/vocab/applicator": true
+  }
+}
+EOF
+
+WRITE uses-custom.json UNTIL EOF
+{
+  "$schema": "https://example.com/custom-meta",
+  "$id": "https://example.com/uses-custom",
+  "properties": {
+    "meta": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "$id": "https://example.com/embedded-meta",
+      "$vocabulary": {
+        "https://json-schema.org/draft/2020-12/vocab/core": true,
+        "https://json-schema.org/draft/2020-12/vocab/applicator": true,
+        "https://json-schema.org/draft/2020-12/vocab/validation": true
+      }
+    }
+  }
+}
+EOF
+
+WRITE orphan.json UNTIL EOF
+{
+  "$schema": "https://example.com/embedded-meta",
+  "$id": "https://example.com/orphan",
+  "type": "string"
+}
+EOF
+
+WRITE instance.json UNTIL EOF
+"hello"
+EOF
+
+RUN validate schema.json instance.json --http --resolve orphan.json --resolve uses-custom.json --resolve custom-meta.json --verbose STDIN /dev/null IN . INTO result_0.txt EXPECTING 0
+
+WRITE expected_0.txt UNTIL EOF
+2> ok: instance.json
+2>
+2> 1 validated, 1 passed, 0 failed
+EOF
+
+COMPARE result_0.txt AGAINST expected_0.txt

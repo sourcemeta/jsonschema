@@ -1,0 +1,108 @@
+// Which keyword introduces a schema resource depends on the dialect that the
+// resource itself declares. The `--resolve` documents below each name as
+// their own meta-schema an identifier that a Draft 4 resource embedded under
+// `$defs` declares through `id`, which is what identifies in that dialect,
+// so the identifier belongs to the user and must be shielded from remote
+// fetching. The second document carries a `$id` alongside it that points
+// elsewhere, which that dialect gives no meaning to. Both runs must
+// terminate with the local resolution diagnostic and no network round trip
+
+ENV SOURCEMETA_CORE_CURL_SO $CWD/does-not-exist.so
+
+WRITE schema.json UNTIL EOF
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "string"
+}
+EOF
+
+WRITE legacy.json UNTIL EOF
+{
+  "$schema": "https://example.com/embedded-meta",
+  "$id": "https://example.com/legacy",
+  "$defs": {
+    "meta": {
+      "$schema": "http://json-schema.org/draft-04/schema#",
+      "id": "https://example.com/embedded-meta"
+    }
+  }
+}
+EOF
+
+WRITE legacy-both.json UNTIL EOF
+{
+  "$schema": "https://example.com/embedded-meta",
+  "$id": "https://example.com/legacy-both",
+  "$defs": {
+    "meta": {
+      "$schema": "http://json-schema.org/draft-04/schema#",
+      "id": "https://example.com/embedded-meta",
+      "$id": "https://example.com/elsewhere"
+    }
+  }
+}
+EOF
+
+WRITE instance.json UNTIL EOF
+"hello"
+EOF
+
+// Schema input error
+RUN validate schema.json instance.json --http --resolve legacy.json STDIN /dev/null IN . INTO result_0.txt EXPECTING 4
+
+REPLACE $CWD WITH '[CWD]' IN result_0.txt
+
+WRITE expected_0.txt UNTIL EOF
+2> error: Could not resolve the metaschema of the schema
+2>   at identifier https://example.com/embedded-meta
+2>   at file path [CWD]/legacy.json
+2>
+2> This is likely because you forgot to import such schema using `--resolve/-r`
+EOF
+
+COMPARE result_0.txt AGAINST expected_0.txt
+
+// Schema input error
+RUN validate schema.json instance.json --http --resolve legacy.json --json STDIN /dev/null IN . INTO result_1.txt EXPECTING 4
+
+REPLACE $CWD WITH '[CWD]' IN result_1.txt
+
+WRITE expected_1.txt UNTIL EOF
+1> {
+1>   "error": "Could not resolve the metaschema of the schema",
+1>   "identifier": "https://example.com/embedded-meta",
+1>   "filePath": "[CWD]/legacy.json"
+1> }
+EOF
+
+COMPARE result_1.txt AGAINST expected_1.txt
+
+// Schema input error
+RUN validate schema.json instance.json --http --resolve legacy-both.json STDIN /dev/null IN . INTO result_2.txt EXPECTING 4
+
+REPLACE $CWD WITH '[CWD]' IN result_2.txt
+
+WRITE expected_2.txt UNTIL EOF
+2> error: Could not resolve the metaschema of the schema
+2>   at identifier https://example.com/embedded-meta
+2>   at file path [CWD]/legacy-both.json
+2>
+2> This is likely because you forgot to import such schema using `--resolve/-r`
+EOF
+
+COMPARE result_2.txt AGAINST expected_2.txt
+
+// Schema input error
+RUN validate schema.json instance.json --http --resolve legacy-both.json --json STDIN /dev/null IN . INTO result_3.txt EXPECTING 4
+
+REPLACE $CWD WITH '[CWD]' IN result_3.txt
+
+WRITE expected_3.txt UNTIL EOF
+1> {
+1>   "error": "Could not resolve the metaschema of the schema",
+1>   "identifier": "https://example.com/embedded-meta",
+1>   "filePath": "[CWD]/legacy-both.json"
+1> }
+EOF
+
+COMPARE result_3.txt AGAINST expected_3.txt
