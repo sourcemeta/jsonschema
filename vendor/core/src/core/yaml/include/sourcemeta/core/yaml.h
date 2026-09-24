@@ -15,6 +15,7 @@
 #include <cstddef>    // std::size_t
 #include <filesystem> // std::filesystem
 #include <istream>    // std::basic_istream
+#include <optional>   // std::optional, std::nullopt
 #include <ostream>    // std::basic_ostream
 
 /// @defgroup yaml YAML
@@ -278,10 +279,17 @@ auto read_yaml(const std::filesystem::path &path, YAMLRoundTrip &roundtrip,
 ///   sourcemeta::core::parse_yaml(input, roundtrip);
 /// sourcemeta::core::stringify_yaml(document, std::cout, roundtrip);
 /// ```
+///
+/// Each level of nesting is laid out with the width the document was written
+/// with, unless an indentation is given, which overrides it. A width of zero
+/// would run a nested collection into the one that holds it, so it is treated
+/// as one.
 SOURCEMETA_CORE_YAML_EXPORT
 auto stringify_yaml(const JSON &document,
                     std::basic_ostream<JSON::Char, JSON::CharTraits> &stream,
-                    const YAMLRoundTrip &roundtrip) -> void;
+                    const YAMLRoundTrip &roundtrip,
+                    const std::optional<std::size_t> indentation = std::nullopt)
+    -> void;
 
 /// @ingroup yaml
 ///

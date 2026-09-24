@@ -8,13 +8,12 @@
 
 #include <algorithm>   // std::min, std::max
 #include <cstddef>     // std::size_t
+#include <optional>    // std::optional
 #include <string_view> // std::string_view
 
 namespace sourcemeta::core {
 
 namespace {
-
-constexpr std::size_t ONE_COLUMN{1};
 
 // The presentation the document uses for its bytes, which a round-trip has to
 // reproduce even though neither affects what the document means. Only the part
@@ -240,16 +239,18 @@ auto read_yaml(const std::filesystem::path &path, YAMLRoundTrip &roundtrip,
 auto stringify_yaml(const JSON &document,
                     std::basic_ostream<JSON::Char, JSON::CharTraits> &stream,
                     const std::size_t indentation) -> void {
-  // A nesting width of zero would run a nested collection into the one that
-  // holds it, so the narrowest width that still nests is used instead
-  yaml::stringify_yaml<JSON::Allocator>(document, stream, nullptr,
-                                        std::max(indentation, ONE_COLUMN));
+  yaml::stringify_yaml<JSON::Allocator>(document, stream, nullptr, indentation);
 }
 
 auto stringify_yaml(const JSON &document,
                     std::basic_ostream<JSON::Char, JSON::CharTraits> &stream,
-                    const YAMLRoundTrip &roundtrip) -> void {
-  yaml::stringify_yaml<JSON::Allocator>(document, stream, &roundtrip);
+                    const YAMLRoundTrip &roundtrip,
+                    const std::optional<std::size_t> indentation) -> void {
+  // Without a width of its own to go by, the document keeps the one it was
+  // written with, which is what a round-trip is for
+  yaml::stringify_yaml<JSON::Allocator>(
+      document, stream, &roundtrip,
+      indentation.value_or(roundtrip.indent_width));
 }
 
 } // namespace sourcemeta::core

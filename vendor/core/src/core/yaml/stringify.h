@@ -6,6 +6,7 @@
 #include <sourcemeta/core/text.h>
 #include <sourcemeta/core/yaml_roundtrip.h>
 
+#include <algorithm>     // std::max
 #include <array>         // std::array
 #include <cassert>       // assert
 #include <charconv>      // std::to_chars
@@ -24,6 +25,7 @@ namespace sourcemeta::core::yaml {
 using OutputStream = std::basic_ostream<JSON::Char, JSON::CharTraits>;
 
 static constexpr std::size_t INDENT_WIDTH{2};
+static constexpr std::size_t ONE_COLUMN{1};
 static constexpr std::array<char, 16> HEX_DIGITS{{'0', '1', '2', '3', '4', '5',
                                                   '6', '7', '8', '9', 'a', 'b',
                                                   'c', 'd', 'e', 'f'}};
@@ -1263,8 +1265,9 @@ auto stringify_yaml(const JSON &document, OutputStream &stream,
   }
 
   if (!is_implicit_null(document, roundtrip, pointer)) {
-    const auto width{(roundtrip != nullptr) ? roundtrip->indent_width
-                                            : indentation};
+    // A nesting width of zero would run a nested collection into the one that
+    // holds it, so the narrowest width that still nests is used instead
+    const auto width{std::max(indentation, ONE_COLUMN)};
     write_node(stream, document, 0, width, width + 1, false, roundtrip, anchors,
                pointer, root_properties);
   }
