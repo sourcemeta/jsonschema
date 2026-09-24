@@ -1,0 +1,148 @@
+// Only what a local `--resolve` input declares as a schema resource may be
+// kept away from the network. An identifier that sits inside annotation data
+// belongs to an instance rather than to a resource the user supplied, whether
+// it appears in the input that cannot resolve its meta-schema or in one that
+// imports cleanly, and however much the payload carrying it looks like a
+// schema of its own. The cURL library cannot be loaded, so the error below
+// proves that a network request was attempted in every case
+
+ENV SOURCEMETA_CORE_CURL_SO $CWD/does-not-exist.so
+
+WRITE schema.json UNTIL EOF
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "string"
+}
+EOF
+
+WRITE orphan-annotated.json UNTIL EOF
+{
+  "$schema": "https://example.com/genuinely-remote-meta",
+  "$id": "https://example.com/orphan-annotated",
+  "type": "string",
+  "examples": [ { "$id": "https://example.com/genuinely-remote-meta" } ]
+}
+EOF
+
+WRITE orphan.json UNTIL EOF
+{
+  "$schema": "https://example.com/genuinely-remote-meta",
+  "$id": "https://example.com/orphan",
+  "type": "string"
+}
+EOF
+
+WRITE annotations.json UNTIL EOF
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.com/annotations",
+  "examples": [ { "$id": "https://example.com/genuinely-remote-meta" } ],
+  "default": { "$id": "https://example.com/genuinely-remote-meta" },
+  "enum": [ { "$id": "https://example.com/genuinely-remote-meta" } ],
+  "x-annotation": { "$id": "https://example.com/genuinely-remote-meta" }
+}
+EOF
+
+WRITE nested-annotation.json UNTIL EOF
+{
+  "$schema": "https://example.com/genuinely-remote-meta",
+  "$id": "https://example.com/nested-annotation",
+  "examples": [
+    {
+      "$defs": { "meta": { "$id": "https://example.com/genuinely-remote-meta" } },
+      "allOf": [ { "$id": "https://example.com/genuinely-remote-meta" } ]
+    }
+  ]
+}
+EOF
+
+WRITE instance.json UNTIL EOF
+"hello"
+EOF
+
+// Not supported
+RUN validate schema.json instance.json --http --resolve orphan-annotated.json STDIN /dev/null IN . INTO result_0.txt EXPECTING 3
+
+REPLACE $CWD WITH '[CWD]' IN result_0.txt
+
+WRITE expected_0.txt UNTIL EOF
+2> error: Could not load the cURL library from the configured path
+2>   with environment variable SOURCEMETA_CORE_CURL_SO
+2>   with paths
+2>   - [CWD]/does-not-exist.so
+EOF
+
+COMPARE result_0.txt AGAINST expected_0.txt
+
+// Not supported
+RUN validate schema.json instance.json --http --resolve orphan-annotated.json --json STDIN /dev/null IN . INTO result_1.txt EXPECTING 3
+
+REPLACE $CWD WITH '[CWD]' IN result_1.txt
+
+WRITE expected_1.txt UNTIL EOF
+1> {
+1>   "error": "Could not load the cURL library from the configured path",
+1>   "environmentVariable": "SOURCEMETA_CORE_CURL_SO",
+1>   "paths": [ "[CWD]/does-not-exist.so" ]
+1> }
+EOF
+
+COMPARE result_1.txt AGAINST expected_1.txt
+
+// Not supported
+RUN validate schema.json instance.json --http --resolve orphan.json --resolve annotations.json STDIN /dev/null IN . INTO result_2.txt EXPECTING 3
+
+REPLACE $CWD WITH '[CWD]' IN result_2.txt
+
+WRITE expected_2.txt UNTIL EOF
+2> error: Could not load the cURL library from the configured path
+2>   with environment variable SOURCEMETA_CORE_CURL_SO
+2>   with paths
+2>   - [CWD]/does-not-exist.so
+EOF
+
+COMPARE result_2.txt AGAINST expected_2.txt
+
+// Not supported
+RUN validate schema.json instance.json --http --resolve orphan.json --resolve annotations.json --json STDIN /dev/null IN . INTO result_3.txt EXPECTING 3
+
+REPLACE $CWD WITH '[CWD]' IN result_3.txt
+
+WRITE expected_3.txt UNTIL EOF
+1> {
+1>   "error": "Could not load the cURL library from the configured path",
+1>   "environmentVariable": "SOURCEMETA_CORE_CURL_SO",
+1>   "paths": [ "[CWD]/does-not-exist.so" ]
+1> }
+EOF
+
+COMPARE result_3.txt AGAINST expected_3.txt
+
+// Not supported
+RUN validate schema.json instance.json --http --resolve nested-annotation.json STDIN /dev/null IN . INTO result_4.txt EXPECTING 3
+
+REPLACE $CWD WITH '[CWD]' IN result_4.txt
+
+WRITE expected_4.txt UNTIL EOF
+2> error: Could not load the cURL library from the configured path
+2>   with environment variable SOURCEMETA_CORE_CURL_SO
+2>   with paths
+2>   - [CWD]/does-not-exist.so
+EOF
+
+COMPARE result_4.txt AGAINST expected_4.txt
+
+// Not supported
+RUN validate schema.json instance.json --http --resolve nested-annotation.json --json STDIN /dev/null IN . INTO result_5.txt EXPECTING 3
+
+REPLACE $CWD WITH '[CWD]' IN result_5.txt
+
+WRITE expected_5.txt UNTIL EOF
+1> {
+1>   "error": "Could not load the cURL library from the configured path",
+1>   "environmentVariable": "SOURCEMETA_CORE_CURL_SO",
+1>   "paths": [ "[CWD]/does-not-exist.so" ]
+1> }
+EOF
+
+COMPARE result_5.txt AGAINST expected_5.txt

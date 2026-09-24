@@ -393,60 +393,6 @@ resolve_identifier(const sourcemeta::core::JSON &document,
   }
 }
 
-// Framing a schema is what reveals the identifiers it declares, but framing
-// needs its meta-schema resolved first, which is precisely what the caller
-// cannot do yet. Scan for identifiers syntactically instead, erring on the
-// side of collecting too many, as the only cost of a false positive is
-// declining to fetch an identifier over the network. Only one of `$id` and
-// `id` identifies a resource, and which one depends on the dialect. Follow a
-// chain of bases for each keyword, as branching on every resource that
-// declares both takes exponential time. Where an official dialect is in
-// effect, both chains resolve its keyword, so that a resource switching
-// dialects still resolves against its parent whichever keyword identified it
-static inline auto
-collect_identifiers(const sourcemeta::core::JSON &document,
-                    const sourcemeta::core::URI &modern_base,
-                    const sourcemeta::core::URI &legacy_base,
-                    const IdentifierKeyword keyword,
-                    std::unordered_set<std::string> &accumulator) -> void {
-  if (document.is_object()) {
-    const auto *dialect{document.try_at("$schema")};
-    const auto effective_keyword{dialect != nullptr && dialect->is_string()
-                                     ? identifier_keyword(dialect->to_string())
-                                     : keyword};
-    const auto modern_resolved{resolve_identifier(
-        document, effective_keyword == IdentifierKeyword::Legacy ? "id" : "$id",
-        modern_base, accumulator)};
-
-    // Chains that share a base and follow the same keyword resolve alike
-    const auto shared{effective_keyword != IdentifierKeyword::Unknown &&
-                      &modern_base == &legacy_base};
-    const auto legacy_resolved{
-        shared
-            ? std::optional<sourcemeta::core::URI>{}
-            : resolve_identifier(
-                  document,
-                  effective_keyword == IdentifierKeyword::Modern ? "$id" : "id",
-                  legacy_base, accumulator)};
-
-    const auto &children_modern_base{
-        modern_resolved.has_value() ? modern_resolved.value() : modern_base};
-    const auto &children_legacy_base{shared ? children_modern_base
-                                            : (legacy_resolved.has_value()
-                                                   ? legacy_resolved.value()
-                                                   : legacy_base)};
-    for (const auto &entry : document.as_object()) {
-      collect_identifiers(entry.second, children_modern_base,
-                          children_legacy_base, effective_keyword, accumulator);
-    }
-  } else if (document.is_array()) {
-    for (const auto &element : document.as_array()) {
-      collect_identifiers(element, modern_base, legacy_base, keyword,
-                          accumulator);
-    }
-  }
-}
-
 // Identifiers are stored canonicalized, as whoever asks for one may well have
 // resolved it against a base URI first and so spell it differently than the
 // document that declares it. Trying the identifier as given before parsing it
@@ -493,21 +439,6 @@ public:
       // a network fetch for it
       const auto allow_remote{this->remote_};
 
-      // Once remote fetching does come back on, it must still never shadow a
-      // schema that the user supplied locally, so remember every identifier
-      // these entries can contribute. Entries that do get imported are found
-      // among the imported schemas before this ever comes into play
-      if (allow_remote) {
-        const auto default_keyword{identifier_keyword(default_dialect)};
-        for (const auto &entry : entries) {
-          sourcemeta::core::URI base{sourcemeta::jsonschema::default_id(entry)};
-          base.canonicalize();
-          this->pending_identifiers_.insert(base.recompose());
-          collect_identifiers(entry.second, base, base, default_keyword,
-                              this->pending_identifiers_);
-        }
-      }
-
       this->remote_ = false;
       while (!pending.empty()) {
         std::vector<std::size_t> deferred;
@@ -539,6 +470,16 @@ public:
           // Before giving up, let the remaining entries try their remote
           // fallback when the user enabled it
           if (allow_remote && !this->remote_) {
+            // Remote fetching must still never shadow a schema that the user
+            // supplied locally, so remember what the entries that are still
+            // stuck declare before letting the network in. Entries that did
+            // get imported are found among the imported schemas before this
+            // ever comes into play
+            for (const auto index : deferred) {
+              this->collect_pending_identifiers(entries[index],
+                                                default_dialect);
+            }
+
             this->remote_ = true;
           } else {
             std::rethrow_exception(failure);
@@ -596,8 +537,9 @@ public:
                &callback = nullptr) -> bool {
     assert(schema.is_object() || schema.is_boolean());
 
-    // Registering the top-level schema is not enough. We need to check
-    // and register every embedded schema resource too
+    // Framing the whole document is what vets it, from the vocabularies every
+    // resource declares to the anchors it collides on, so the analysis stays
+    // as wide as the file. What gets registered does not
     const sourcemeta::core::SchemaFrame frame{
         sourcemeta::core::SchemaFrame::Mode::References,
         schema,
@@ -611,14 +553,21 @@ public:
         [this, &schema, &frame, &origin, &callback, &added_any_schema](
             const std::string_view uri,
             const sourcemeta::core::SchemaFrame::Location &entry) -> void {
-          auto subschema{sourcemeta::core::get(schema, entry.pointer)};
           // Reject a resource whose vocabularies we cannot make sense of
           // upfront, rather than at the point some consumer relies on them
           [[maybe_unused]] const auto &subschema_vocabularies{
               frame.vocabularies(entry, std::ref(*this))};
 
-          // Given we might be resolving embedded resources, we fully
-          // resolve their dialect and identifiers, otherwise the
+          // A file stands for the single schema it declares. A resource that
+          // the schema merely embeds is reachable from within that schema,
+          // and answering for it on its own would hand back a schema that the
+          // user never supplied as one
+          if (!entry.pointer.empty()) {
+            return;
+          }
+
+          auto subschema{sourcemeta::core::get(schema, entry.pointer)};
+          // Fully resolve the dialect and identifier, otherwise the
           // consumer might have no idea what to do with them
           subschema.assign("$schema", sourcemeta::core::JSON{entry.dialect});
           sourcemeta::core::schema_reidentify(subschema, uri,
@@ -696,6 +645,46 @@ public:
   }
 
 private:
+  // Framing a schema is what reveals the identifiers it declares, but framing
+  // needs its meta-schema resolved first, which is precisely what an entry
+  // that cannot be imported is missing. Read the identifier it declares at
+  // its own root instead, as that is the only claim that can be read without
+  // knowing the dialect. An identifier that such an entry merely embeds stays
+  // out, as reaching it would mean walking into places whose meaning depends
+  // on the very vocabularies that are not known here, and mistaking the
+  // instance an annotation carries for a schema resource would keep a schema
+  // the user never supplied away from the network
+  auto collect_pending_identifiers(const InputJSON &entry,
+                                   const std::string_view default_dialect)
+      -> void {
+    sourcemeta::core::URI base{sourcemeta::jsonschema::default_id(entry)};
+    base.canonicalize();
+    this->pending_identifiers_.insert(base.recompose());
+
+    if (!entry.second.is_object()) {
+      return;
+    }
+
+    const auto *dialect{entry.second.try_at("$schema")};
+    const auto keyword{dialect != nullptr && dialect->is_string()
+                           ? identifier_keyword(dialect->to_string())
+                           : identifier_keyword(default_dialect)};
+
+    // Only one of `$id` and `id` identifies a resource, and which one depends
+    // on the dialect. An entry that cannot be imported is one whose dialect
+    // could not be resolved, so it gets to claim whichever of the two it
+    // spells
+    if (keyword != IdentifierKeyword::Legacy) {
+      [[maybe_unused]] const auto modern{resolve_identifier(
+          entry.second, "$id", base, this->pending_identifiers_)};
+    }
+
+    if (keyword != IdentifierKeyword::Modern) {
+      [[maybe_unused]] const auto legacy{resolve_identifier(
+          entry.second, "id", base, this->pending_identifiers_)};
+    }
+  }
+
   auto import_entry(const InputJSON &entry,
                     const std::string_view default_dialect) -> void {
     LOG_DEBUG(this->options_)

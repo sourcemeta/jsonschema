@@ -57,14 +57,21 @@ Then `--resolve string.json` tells the CLI where to find it:
 jsonschema bundle schema.json --resolve string.json
 ```
 
-An imported schema becomes reachable under two things: every identifier it
-declares, and the `file://` URI of the file it was read from. The second is what
-makes relative references between unidentified files work, as the next section
-explains.
+An imported schema becomes reachable under two things: the identifier it
+declares at its root, and the `file://` URI of the file it was read from. The
+second is what makes relative references between unidentified files work, as
+the next section explains.
 
 What it is *not* reachable under is its name on disk. Importing a file whose
 identifier is not the one being referenced has no effect on that reference, no
 matter what the file is called.
+
+Neither is it reachable under the identifiers of the schema resources it
+embeds. A file stands for the single schema it declares, and a resource buried
+under a keyword such as `$defs` belongs to that schema rather than standing on
+its own. References from within the file reach it as usual, but no other file
+can name it. To share such a resource, give it a file of its own and import
+that file.
 
 You may pass `--resolve/-r` as many times as you need, and you may point it at
 a directory to import every schema inside it:
