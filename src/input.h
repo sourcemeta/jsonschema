@@ -8,13 +8,13 @@
 #include <sourcemeta/core/jsonl.h>
 #include <sourcemeta/core/jsonpointer.h>
 #include <sourcemeta/core/options.h>
+#include <sourcemeta/core/text.h>
 #include <sourcemeta/core/yaml.h>
 
 #include "configuration.h"
 #include "logger.h"
 
 #include <algorithm>     // std::any_of, std::none_of, std::sort, std::count
-#include <cctype>        // std::isspace
 #include <cstddef>       // std::size_t
 #include <cstdint>       // std::uint8_t, std::uintptr_t
 #include <deque>         // std::deque
@@ -26,6 +26,7 @@
 #include <set>           // std::set
 #include <sstream>       // std::ostringstream, std::istringstream
 #include <string>        // std::string
+#include <string_view>   // std::string_view
 #include <unordered_set> // std::unordered_set
 #include <vector>        // std::vector
 
@@ -169,15 +170,27 @@ make_position_callback(sourcemeta::core::PointerPositionTracker &tracker,
       };
 }
 
-inline auto at_end_of_stream(std::istream &stream) -> bool {
-  auto character{stream.peek()};
-  while (character != std::char_traits<char>::eof() &&
-         std::isspace(static_cast<unsigned char>(character)) != 0) {
-    stream.get();
-    character = stream.peek();
+// RFC 8259 Section 2: "ws = *( %x20 / %x09 / %x0A / %x0D )", which is narrower
+// than the ASCII whitespace that sourcemeta::core::trim strips by default
+inline auto is_json_whitespace(const char character) noexcept -> bool {
+  return character == ' ' || character == '\t' || character == '\n' ||
+         character == '\r';
+}
+
+// Whether the buffer the stream reads from carries nothing but JSON whitespace
+// past the point the parser stopped at
+inline auto at_end_of_stream(const std::string &input, std::istream &stream)
+    -> bool {
+  const auto consumed{stream.tellg()};
+  if (consumed < 0) {
+    return false;
   }
 
-  return character == std::char_traits<char>::eof();
+  const auto offset{static_cast<std::size_t>(consumed)};
+  return offset >= input.size() ||
+         sourcemeta::core::strip_left(std::string_view{input}.substr(offset),
+                                      is_json_whitespace)
+             .empty();
 }
 
 // Parse every YAML document the stream holds, keeping line numbers running
@@ -258,12 +271,41 @@ inline auto read_file(const std::filesystem::path &path) -> ParsedJSON {
   }
 }
 
+// Read standard input as the one or more YAML documents it holds, reporting
+// the JSON error that sent us here if it cannot be read that way either
+inline auto read_stdin_yaml(const std::string &input,
+                            const sourcemeta::core::JSONParseError &json_error)
+    -> std::vector<ParsedJSON> {
+  std::istringstream stream{input};
+  std::vector<MultiDocEntry> documents;
+
+  try {
+    documents = read_yaml_documents(stream);
+  } catch (...) {
+    throw sourcemeta::core::JSONFileParseError(stdin_path(), json_error);
+  }
+
+  if (documents.empty()) {
+    throw sourcemeta::core::JSONFileParseError(stdin_path(), json_error);
+  }
+
+  std::vector<ParsedJSON> result;
+  result.reserve(documents.size());
+  for (auto &entry : documents) {
+    result.push_back({.document = std::move(entry.document),
+                      .positions = std::move(entry.positions),
+                      .property_storage = std::move(entry.property_storage),
+                      .yaml = true});
+  }
+
+  return result;
+}
+
 // Read every document the given standard input buffer holds, trying JSON
 // first, then JSONL for input that carries more than one JSON document, and
 // finally YAML
 inline auto read_stdin_documents(const std::string &input)
     -> std::vector<ParsedJSON> {
-  std::vector<ParsedJSON> result;
   std::istringstream json_stream{input};
   sourcemeta::core::PointerPositionTracker positions;
   auto property_storage = std::make_shared<std::deque<std::string>>();
@@ -273,38 +315,21 @@ inline auto read_stdin_documents(const std::string &input)
   try {
     sourcemeta::core::parse_json(json_stream, document, callback);
   } catch (const sourcemeta::core::JSONParseError &json_error) {
-    std::istringstream yaml_stream{input};
-    std::vector<MultiDocEntry> documents;
-
-    try {
-      documents = read_yaml_documents(yaml_stream);
-    } catch (...) {
-      throw sourcemeta::core::JSONFileParseError(stdin_path(), json_error);
-    }
-
-    if (documents.empty()) {
-      throw sourcemeta::core::JSONFileParseError(stdin_path(), json_error);
-    }
-
-    result.reserve(documents.size());
-    for (auto &entry : documents) {
-      result.push_back({.document = std::move(entry.document),
-                        .positions = std::move(entry.positions),
-                        .property_storage = std::move(entry.property_storage),
-                        .yaml = true});
-    }
-
-    return result;
+    return read_stdin_yaml(input, json_error);
   }
 
-  if (at_end_of_stream(json_stream)) {
+  if (at_end_of_stream(input, json_stream)) {
+    std::vector<ParsedJSON> result;
     result.push_back({.document = std::move(document),
                       .positions = std::move(positions),
                       .property_storage = std::move(property_storage)});
     return result;
   }
 
-  // Standard input that carries more than one JSON document is JSONL
+  // Standard input that carries more than one JSON document is JSONL, unless
+  // what follows the first document only reads as YAML, as a YAML stream may
+  // open with a document that is JSON and separate the rest with markers
+  std::vector<ParsedJSON> result;
   std::istringstream jsonl_stream{input};
   try {
     for (const auto &entry : sourcemeta::core::JSONL{jsonl_stream}) {
@@ -315,7 +340,7 @@ inline auto read_stdin_documents(const std::string &input)
                         .property_storage = {}});
     }
   } catch (const sourcemeta::core::JSONParseError &error) {
-    throw sourcemeta::core::JSONFileParseError(stdin_path(), error);
+    return read_stdin_yaml(input, error);
   }
 
   return result;

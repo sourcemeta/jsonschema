@@ -1,0 +1,15 @@
+WRITE stdin_input UNTIL EOF
+{ "$schema": "https://json-schema.org/draft/2020-12/schema", "type": "string" }
+EOF
+
+// Other input error
+RUN fmt - STDIN stdin_input IN . INTO result.txt EXPECTING 6
+
+WRITE expected.txt UNTIL EOF
+2> error: Failed to parse the JSON document
+2>   at line 1
+2>   at column 80
+2>   at file path tag:sourcemeta.com,2026:jsonschema/stdin
+EOF
+
+COMPARE result.txt AGAINST expected.txt
