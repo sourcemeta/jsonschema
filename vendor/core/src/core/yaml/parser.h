@@ -198,6 +198,20 @@ public:
     return this->lexer_->position();
   }
 
+  // Metadata collected for a round-trip describes the one document it was read
+  // from, so a stream that carries more than that cannot be written back
+  auto validate_single_document() -> void {
+    auto token{this->next_token()};
+    while (token.has_value() && token->type == TokenType::DocumentEnd) {
+      token = this->next_token();
+    }
+
+    if (token.has_value() && token->type != TokenType::StreamEnd) [[unlikely]] {
+      throw YAMLParseError{token->line, token->column,
+                           "Unexpected content after document"};
+    }
+  }
+
   auto validate_end_of_stream() -> void {
     auto token{this->next_token()};
     // The preceding parse already consumed a document, so its end marker, if

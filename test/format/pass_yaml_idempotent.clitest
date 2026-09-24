@@ -1,0 +1,35 @@
+WRITE schema.yaml UNTIL EOF
+# A schema for greetings
+$schema: https://json-schema.org/draft/2020-12/schema
+additionalProperties: false
+title: Hello World
+properties:
+  foo: {}
+EOF
+
+RUN fmt schema.yaml STDIN /dev/null IN . INTO result_0.txt EXPECTING 0
+
+WRITE expected_0.txt UNTIL EOF
+EOF
+
+COMPARE result_0.txt AGAINST expected_0.txt
+
+WRITE expected_file_0.txt UNTIL EOF
+# A schema for greetings
+$schema: https://json-schema.org/draft/2020-12/schema
+title: Hello World
+properties:
+  foo: {}
+additionalProperties: false
+EOF
+
+COMPARE schema.yaml AGAINST expected_file_0.txt
+
+RUN fmt schema.yaml STDIN /dev/null IN . INTO result_1.txt EXPECTING 0
+
+WRITE expected_1.txt UNTIL EOF
+EOF
+
+COMPARE result_1.txt AGAINST expected_1.txt
+
+COMPARE schema.yaml AGAINST expected_file_0.txt

@@ -106,13 +106,19 @@ inline auto openapi_check_responses(const JSON &value, const Pointer &base,
   openapi_record(walk, base, OpenAPIObjectKind::Responses);
   openapi_expect_object(value, base, "The Responses Object must be an object");
 
-  // The meta-schema bounds this map from below, and requires a `default` when
-  // no status code is named
+  // Section 4.8.16: "The Responses Object MUST contain at least one response
+  // code". Neither revision says which keys count as one, and the OpenAPI
+  // Initiative settled that twice over: the published meta-schema carries
+  // "either default, or at least one response code property must exist", and
+  // their own conformance corpus files a Responses Object holding nothing but
+  // a `default` under the passing cases of both revisions. So a `default`
+  // answers for a response here, and only an Object answering for none at all
+  // is turned down
   if (value.empty()) {
     throw OpenAPIError{base, "The Responses Object must not be empty"};
   }
 
-  bool names_a_status_code{false};
+  bool answers_for_a_response{false};
   for (const auto &entry : value.as_object()) {
     if (entry.first.starts_with(OPENAPI_EXTENSION_PREFIX)) {
       continue;
@@ -120,6 +126,7 @@ inline auto openapi_check_responses(const JSON &value, const Pointer &base,
 
     const auto location{openapi_child(base, entry.first)};
     if (entry.first == "default"sv) {
+      answers_for_a_response = true;
       openapi_check_response_or_reference(entry.second, location, walk);
       continue;
     }
@@ -130,14 +137,13 @@ inline auto openapi_check_responses(const JSON &value, const Pointer &base,
                          "code or a status code range"};
     }
 
-    names_a_status_code = true;
+    answers_for_a_response = true;
     openapi_check_response_or_reference(entry.second, location, walk);
   }
 
-  if (!names_a_status_code &&
-      value.try_at("default", OPENAPI_HASH_DEFAULT) == nullptr) {
+  if (!answers_for_a_response) {
     throw OpenAPIError{
-        base, "The Responses Object must declare a default or a status code"};
+        base, "The Responses Object must declare a status code or a default"};
   }
 }
 

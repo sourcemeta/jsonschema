@@ -1,0 +1,23 @@
+WRITE schema.yaml UNTIL EOF
+$schema: http://json-schema.org/draft-04/schema#
+title: Test
+description: Test schema
+type: string
+EOF
+
+COPY schema.yaml TO original.yaml
+
+STAT MTIME schema.yaml INTO mtime_before.txt
+
+RUN fmt schema.yaml STDIN /dev/null IN . INTO result_0.txt EXPECTING 0
+
+WRITE expected_0.txt UNTIL EOF
+EOF
+
+COMPARE result_0.txt AGAINST expected_0.txt
+
+STAT MTIME schema.yaml INTO mtime_after.txt
+
+COMPARE mtime_after.txt AGAINST mtime_before.txt
+
+COMPARE schema.yaml AGAINST original.yaml

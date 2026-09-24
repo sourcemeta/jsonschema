@@ -6,16 +6,18 @@
 #include <sourcemeta/core/text.h>
 #include <sourcemeta/core/yaml_roundtrip.h>
 
-#include <array>       // std::array
-#include <cassert>     // assert
-#include <charconv>    // std::to_chars
-#include <cmath>       // std::modf
-#include <cstddef>     // std::size_t
-#include <ostream>     // std::basic_ostream
-#include <string>      // std::string
-#include <string_view> // std::string_view
-#include <utility>     // std::pair
-#include <vector>      // std::vector
+#include <array>         // std::array
+#include <cassert>       // assert
+#include <charconv>      // std::to_chars
+#include <cmath>         // std::modf
+#include <cstddef>       // std::size_t
+#include <optional>      // std::optional
+#include <ostream>       // std::basic_ostream
+#include <string>        // std::string
+#include <string_view>   // std::string_view
+#include <unordered_map> // std::unordered_map
+#include <utility>       // std::pair
+#include <vector>        // std::vector
 
 namespace sourcemeta::core::yaml {
 
@@ -780,12 +782,14 @@ inline auto write_flow_sequence(OutputStream &stream, const JSON &value,
 }
 
 inline auto write_block_mapping(OutputStream &stream, const JSON &value,
-                                std::size_t columns, bool skip_first_indent,
+                                std::size_t columns, std::size_t width,
+                                bool skip_first_indent,
                                 const YAMLRoundTrip *roundtrip,
                                 AnchorValues &anchors, Pointer &pointer)
     -> void;
 inline auto write_block_sequence(OutputStream &stream, const JSON &value,
-                                 std::size_t columns, bool skip_first_indent,
+                                 std::size_t columns, std::size_t width,
+                                 bool skip_first_indent,
                                  const YAMLRoundTrip *roundtrip,
                                  AnchorValues &anchors, Pointer &pointer)
     -> void;
@@ -800,14 +804,12 @@ inline auto emit_inline_comment(OutputStream &stream,
 }
 
 inline auto write_node(OutputStream &stream, const JSON &value,
-                       const std::size_t columns,
+                       const std::size_t columns, const std::size_t width,
                        const std::size_t block_indicator,
                        const bool skip_first_indent,
                        const YAMLRoundTrip *roundtrip, AnchorValues &anchors,
                        Pointer &pointer, const bool skip_properties = false,
                        const bool annotations = true) -> void {
-  const auto width{(roundtrip != nullptr) ? roundtrip->indent_width
-                                          : INDENT_WIDTH};
   // Only the document root sits at the leftmost column, and a block scalar
   // there has no column of its own, so its content is pushed one nesting level
   // in to leave room for whatever follows it
@@ -863,7 +865,7 @@ inline auto write_node(OutputStream &stream, const JSON &value,
         emit_inline_comment(stream, annotation_style);
         write_break(stream, roundtrip);
       }
-      write_block_mapping(stream, value, columns,
+      write_block_mapping(stream, value, columns, width,
                           has_properties ? false : skip_first_indent, roundtrip,
                           anchors, pointer);
     }
@@ -887,7 +889,7 @@ inline auto write_node(OutputStream &stream, const JSON &value,
                                           columns >= block_indicator
                                       ? columns - block_indicator
                                       : columns};
-      write_block_sequence(stream, value, sequence_columns,
+      write_block_sequence(stream, value, sequence_columns, width,
                            has_properties ? false : skip_first_indent,
                            roundtrip, anchors, pointer);
     }
@@ -926,13 +928,12 @@ inline auto write_node(OutputStream &stream, const JSON &value,
 
 inline auto write_block_mapping(OutputStream &stream, const JSON &value,
                                 const std::size_t columns,
+                                const std::size_t width,
                                 const bool skip_first_indent,
                                 const YAMLRoundTrip *roundtrip,
                                 AnchorValues &anchors, Pointer &pointer)
     -> void {
   assert(value.is_object() && !value.empty());
-  const auto width{(roundtrip != nullptr) ? roundtrip->indent_width
-                                          : INDENT_WIDTH};
   bool first{true};
   for (const auto &entry : value.as_object()) {
     pointer.push_back(entry.first);
@@ -1007,7 +1008,7 @@ inline auto write_block_mapping(OutputStream &stream, const JSON &value,
           stream.put(' ');
         }
       }
-      write_node(stream, entry.second, columns + width, width,
+      write_node(stream, entry.second, columns + width, width, width,
                  has_indicator_comment ? true : false, roundtrip, anchors,
                  pointer);
     }
@@ -1018,6 +1019,7 @@ inline auto write_block_mapping(OutputStream &stream, const JSON &value,
 
 inline auto write_block_sequence(OutputStream &stream, const JSON &value,
                                  const std::size_t columns,
+                                 const std::size_t width,
                                  const bool skip_first_indent,
                                  const YAMLRoundTrip *roundtrip,
                                  AnchorValues &anchors, Pointer &pointer)
@@ -1104,7 +1106,7 @@ inline auto write_block_sequence(OutputStream &stream, const JSON &value,
       if (!has_indicator) {
         stream.write("- ", 2);
       }
-      write_node(stream, item, columns + SEQUENCE_INDICATOR_WIDTH,
+      write_node(stream, item, columns + SEQUENCE_INDICATOR_WIDTH, width,
                  SEQUENCE_INDICATOR_WIDTH, true, roundtrip, anchors, pointer,
                  false, annotations);
     }
@@ -1114,9 +1116,96 @@ inline auto write_block_sequence(OutputStream &stream, const JSON &value,
   }
 }
 
+// An anchor only names something when an alias that refers to it is written
+// later, as an alias may not stand before the anchor it names. A caller that
+// rearranges the document can move an anchor past its aliases, which expands
+// them and leaves the anchor naming nothing.
+// See https://yaml.org/spec/1.2.2/#71-alias-nodes
+struct AnchorDefinition {
+  Pointer pointer;
+  std::string name;
+  std::size_t position;
+};
+
+inline auto scan_anchor_uses(
+    const JSON &value, const YAMLRoundTrip &roundtrip, Pointer &pointer,
+    std::size_t &position, std::vector<AnchorDefinition> &definitions,
+    std::unordered_map<std::string, std::size_t> &aliases) -> void {
+  const auto alias{roundtrip.aliases.find(pointer)};
+  if (alias != roundtrip.aliases.cend()) {
+    aliases[alias->second] = position;
+  } else {
+    const auto style{roundtrip.styles.find(pointer)};
+    if (style != roundtrip.styles.cend() && style->second.anchor.has_value()) {
+      definitions.emplace_back(pointer, style->second.anchor.value(), position);
+    }
+  }
+
+  position += 1;
+
+  if (value.is_object()) {
+    for (const auto &entry : value.as_object()) {
+      pointer.push_back(entry.first);
+      scan_anchor_uses(entry.second, roundtrip, pointer, position, definitions,
+                       aliases);
+      pointer.pop_back();
+    }
+  } else if (value.is_array()) {
+    std::size_t index{0};
+    for (const auto &item : value.as_array()) {
+      pointer.push_back(index);
+      scan_anchor_uses(item, roundtrip, pointer, position, definitions,
+                       aliases);
+      pointer.pop_back();
+      index += 1;
+    }
+  }
+}
+
+// An anchor that never had an alias is markup the document was written with, so
+// only one whose aliases have all moved ahead of it is dropped
+inline auto collect_dead_anchors(const JSON &document,
+                                 const YAMLRoundTrip &roundtrip)
+    -> std::vector<Pointer> {
+  std::vector<Pointer> dead;
+  if (roundtrip.aliases.empty()) {
+    return dead;
+  }
+
+  Pointer pointer;
+  std::size_t position{0};
+  std::vector<AnchorDefinition> definitions;
+  std::unordered_map<std::string, std::size_t> aliases;
+  scan_anchor_uses(document, roundtrip, pointer, position, definitions,
+                   aliases);
+
+  for (const auto &definition : definitions) {
+    const auto match{aliases.find(definition.name)};
+    if (match != aliases.cend() && match->second < definition.position) {
+      dead.push_back(definition.pointer);
+    }
+  }
+
+  return dead;
+}
+
 template <template <typename T> typename Allocator>
 auto stringify_yaml(const JSON &document, OutputStream &stream,
-                    const YAMLRoundTrip *roundtrip = nullptr) -> void {
+                    const YAMLRoundTrip *roundtrip = nullptr,
+                    const std::size_t indentation = INDENT_WIDTH) -> void {
+  std::optional<YAMLRoundTrip> pruned;
+  if (roundtrip != nullptr) {
+    const auto dead{collect_dead_anchors(document, *roundtrip)};
+    if (!dead.empty()) {
+      pruned = *roundtrip;
+      for (const auto &entry : dead) {
+        pruned.value().styles[entry].anchor.reset();
+      }
+
+      roundtrip = &pruned.value();
+    }
+  }
+
   if ((roundtrip != nullptr) && roundtrip->byte_order_mark) {
     stream.write("\xEF\xBB\xBF", 3);
   }
@@ -1175,8 +1264,8 @@ auto stringify_yaml(const JSON &document, OutputStream &stream,
 
   if (!is_implicit_null(document, roundtrip, pointer)) {
     const auto width{(roundtrip != nullptr) ? roundtrip->indent_width
-                                            : INDENT_WIDTH};
-    write_node(stream, document, 0, width + 1, false, roundtrip, anchors,
+                                            : indentation};
+    write_node(stream, document, 0, width, width + 1, false, roundtrip, anchors,
                pointer, root_properties);
   }
 

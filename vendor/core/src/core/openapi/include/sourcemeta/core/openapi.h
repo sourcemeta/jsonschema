@@ -45,7 +45,8 @@ enum class OpenAPIVersion : std::uint8_t {
 
 /// @ingroup openapi
 /// Determine the version of an OpenAPI Description from its `openapi` field
-/// without framing it, returning no value for a version we do not recognise.
+/// without framing it, returning no value for a version we do not recognise
+/// and for anything that declares no such field to read.
 /// The patch component of the field carries no meaning, so every `3.1.x`
 /// release maps to the same result. For example:
 ///
@@ -139,7 +140,10 @@ struct OpenAPIInfo {
 /// std::cout << std::endl;
 /// ```
 ///
-/// A frame is analysed once, on construction, and is immutable afterwards.
+/// A frame is analysed once, on construction, and what it reports never
+/// changes afterwards. Reading one is not thread safe even so, as it answers
+/// out of caches it fills as it goes. A frame cannot be copied or moved, so it
+/// is built where it is read.
 class SOURCEMETA_CORE_OPENAPI_EXPORT OpenAPIFrame {
 public:
   /// Frame an OpenAPI Description from a given document. That document must
@@ -149,8 +153,9 @@ public:
   /// The base is the retrieval URI of the document. OpenAPI 3.1 offers a
   /// document no way of declaring an identity of its own, so under that
   /// revision this is the only way to give the description one. From 3.2
-  /// onwards a document may declare `$self`, which takes precedence and is
-  /// resolved against this when relative
+  /// onwards a document may declare `$self`, which takes precedence once it is
+  /// absolute, resolving against this when relative and standing aside when
+  /// neither gives it a scheme
   ///
   /// Only the given document is read. A reference that leaves it is recorded
   /// and left there, and a frame holding one of those does not stand alone
@@ -161,10 +166,31 @@ public:
   /// description may be written against is the caller's to state: pass
   /// sourcemeta::core::schema_walker and
   /// sourcemeta::core::schema_resolver for the dialects that are published,
-  /// and a resolver of your own for one that is not
+  /// and a resolver of your own for one that is not. The frame keeps the
+  /// resolver and asks it again when exporting, so whatever it reaches for has
+  /// to be there for as long as the frame is
+  ///
+  /// The places the description holds and the places its Schema Objects hold
+  /// are places of the one description, so they spend from the one allowance.
+  /// Bound it to throw sourcemeta::core::OpenAPIFrameLimitError rather than
+  /// register past it, which reports the allowance the caller set rather than
+  /// whatever was left of it
+  ///
+  /// The base must carry a scheme. One that does not is refused before the
+  /// document is read, which is why such a refusal names no place within it
   ///
   /// A document that does not conform to the specification is rejected here
-  /// rather than reported back
+  /// rather than reported back, by throwing sourcemeta::core::OpenAPIError.
+  /// What sits inside a Schema Object is held to JSON Schema instead, so one
+  /// naming a dialect nothing resolves throws
+  /// sourcemeta::core::SchemaResolutionError, one declaring an identifier or a
+  /// reference that is no URI throws sourcemeta::core::SchemaKeywordError, and
+  /// two colliding on an identifier or on an anchor throw
+  /// sourcemeta::core::SchemaFrameError and
+  /// sourcemeta::core::SchemaAnchorCollisionError respectively. One whose
+  /// dialect or base dialect cannot be settled at all throws
+  /// sourcemeta::core::SchemaUnknownDialectError or
+  /// sourcemeta::core::SchemaUnknownBaseDialectError
   OpenAPIFrame(
       const JSON &document, const SchemaWalker &walker,
       const SchemaResolver &resolver, std::string_view default_base = "",
@@ -228,7 +254,8 @@ public:
   /// against, canonicalised, or the empty URI reference when nothing
   /// established one, which leaves those references relative. It is the
   /// `$self` the entry document declares, and the retrieval URI the caller
-  /// supplied when it declares none. For example:
+  /// supplied when it declares none or when what it declares cannot be made
+  /// absolute, in either case stripped of any fragment. For example:
   ///
   /// ```cpp
   /// #include <sourcemeta/core/json.h>
@@ -251,7 +278,9 @@ public:
 
   /// Check whether everything this description references is inside what was
   /// framed, which counts what its Schema Objects reference as much as what
-  /// the shell around them does. For example:
+  /// the shell around them does. The dialect a Schema Object names is not one
+  /// of those, as a schema is under no obligation to carry the meta-schema it
+  /// is written against. For example:
   ///
   /// ```cpp
   /// #include <sourcemeta/core/json.h>
@@ -299,7 +328,28 @@ public:
   [[nodiscard]] auto schemas() const noexcept -> const SchemaFrame &;
 
   /// Export the frame as JSON. This is the complete state of the frame, and
-  /// for now its only window
+  /// for now its only window. It asks the resolver the frame kept, so a
+  /// meta-schema that has gone out of reach since throws
+  /// sourcemeta::core::SchemaResolutionError here rather than at construction.
+  /// For example:
+  ///
+  /// ```cpp
+  /// #include <sourcemeta/core/json.h>
+  /// #include <sourcemeta/core/openapi.h>
+  /// #include <cassert>
+  ///
+  /// const auto document{sourcemeta::core::parse_json(R"({
+  ///   "openapi": "3.1.1",
+  ///   "info": { "title": "Example", "version": "1.0.0" },
+  ///   "paths": {}
+  /// })")};
+  ///
+  /// const sourcemeta::core::OpenAPIFrame frame{
+  ///     document, sourcemeta::core::schema_walker,
+  ///     sourcemeta::core::schema_resolver};
+  ///
+  /// assert(frame.to_json().at("version").to_string() == "3.1");
+  /// ```
   [[nodiscard]] auto to_json() const -> JSON;
 
 private:
@@ -397,10 +447,11 @@ struct OpenAPIBundleOptions {
 /// resolver are what reading inside a Schema Object takes, and the OpenAPI
 /// resolver is how the rest of the description is reached. No document the
 /// description spans may declare a revision of the OpenAPI Specification other
-/// than the one the entry document declares, as what this produces is one
-/// document that declares one, and a revision neither holds every field of
-/// another nor reads what they share by the same rules. This overload mutates
-/// the input document. For example:
+/// than the one the entry document declares. The specification does not ask
+/// for that. It is a choice this makes, as what this produces is one document
+/// that declares one revision, and there is none to pick that can express both
+/// what one revision holds and what another does. This overload mutates the
+/// input document. For example:
 ///
 /// ```cpp
 /// #include <sourcemeta/core/json.h>
@@ -451,7 +502,8 @@ auto openapi_bundle(JSON &document, const SchemaWalker &walker,
 /// Bundle an OpenAPI Description by embedding everything it references from
 /// another document into its own Components Object. No document the description
 /// spans may declare a revision of the OpenAPI Specification other than the one
-/// the entry document declares. This overload returns a new document, without
+/// the entry document declares, which is a choice this makes rather than one
+/// the specification asks for. This overload returns a new document, without
 /// mutating the input. For example:
 ///
 /// ```cpp

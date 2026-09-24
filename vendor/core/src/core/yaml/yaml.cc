@@ -6,12 +6,15 @@
 #include <sourcemeta/core/json_error.h>
 #include <sourcemeta/core/yaml.h>
 
-#include <algorithm>   // std::min
+#include <algorithm>   // std::min, std::max
+#include <cstddef>     // std::size_t
 #include <string_view> // std::string_view
 
 namespace sourcemeta::core {
 
 namespace {
+
+constexpr std::size_t ONE_COLUMN{1};
 
 // The presentation the document uses for its bytes, which a round-trip has to
 // reproduce even though neither affects what the document means. Only the part
@@ -208,10 +211,39 @@ auto parse_yaml(std::basic_istream<JSON::Char, JSON::CharTraits> &stream,
   record_encoding(input, lexer, parser, roundtrip);
 }
 
+auto read_yaml(const std::filesystem::path &path, YAMLRoundTrip &roundtrip)
+    -> JSON {
+  JSON result{nullptr};
+  read_yaml(path, roundtrip, result, nullptr);
+  return result;
+}
+
+auto read_yaml(const std::filesystem::path &path, YAMLRoundTrip &roundtrip,
+               JSON &output, const JSON::ParseCallback &callback) -> void {
+  roundtrip = {};
+  const auto input{read_file_to_string(path)};
+
+  try {
+    yaml::Lexer lexer{input, true};
+    yaml::Parser parser{&lexer, &callback, &roundtrip};
+    output = parser.parse();
+
+    parser.validate_single_document();
+
+    record_encoding(input, lexer, parser, roundtrip);
+  } catch (const YAMLParseError &error) {
+    // For producing better error messages
+    throw YAMLFileParseError(path, error);
+  }
+}
+
 auto stringify_yaml(const JSON &document,
-                    std::basic_ostream<JSON::Char, JSON::CharTraits> &stream)
-    -> void {
-  yaml::stringify_yaml<JSON::Allocator>(document, stream);
+                    std::basic_ostream<JSON::Char, JSON::CharTraits> &stream,
+                    const std::size_t indentation) -> void {
+  // A nesting width of zero would run a nested collection into the one that
+  // holds it, so the narrowest width that still nests is used instead
+  yaml::stringify_yaml<JSON::Allocator>(document, stream, nullptr,
+                                        std::max(indentation, ONE_COLUMN));
 }
 
 auto stringify_yaml(const JSON &document,

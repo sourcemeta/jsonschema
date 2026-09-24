@@ -138,7 +138,15 @@ inline auto openapi_check_paths(const JSON &document, OpenAPIWalk &walk)
     // writes out a grammar and forbids repeating an expression: "Each
     // template expression MUST NOT appear more than once in a single path
     // template". Both are new in 3.2, so a path 3.1 accepts is still accepted
-    // when a document declares 3.1
+    // when a document declares 3.1.
+    //
+    // The grammar is introduced as a definition, and neither of the two
+    // requirements beside it speaks of the key's shape, so what licenses
+    // turning a key down for its shape is the same clause the Server Object
+    // goes by: 3.2.1 Section 4.12.4, "All API URLs MUST successfully parse and
+    // percent-decode using [RFC3986] rules", a path being appended to a server
+    // URL to make one. The grammar is the whole of what the specification says
+    // a path template is, and it is read for nothing but the shape
     if (walk.version == OpenAPIVersion::OPENAPI_3_2) {
       if (!openapi_is_path_template(entry.first)) {
         throw OpenAPIError{location,

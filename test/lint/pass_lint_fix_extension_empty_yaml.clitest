@@ -1,0 +1,31 @@
+MAKE DIRECTORY schemas
+
+WRITE schemas/schema1 UNTIL EOF
+# A constant string
+$schema: http://json-schema.org/draft-06/schema#
+description: Test schema
+examples: [ foo ]
+type: string
+const: foo
+title: I should not be moved up
+EOF
+
+RUN lint schemas --extension '' --fix STDIN /dev/null IN . INTO result_0.txt EXPECTING 0
+
+WRITE expected_file_0.txt UNTIL EOF
+# A constant string
+$schema: http://json-schema.org/draft-06/schema#
+description: Test schema
+examples: [ foo ]
+const: foo
+title: I should not be moved up
+EOF
+
+COMPARE schemas/schema1 AGAINST expected_file_0.txt
+
+WRITE expected_0.txt UNTIL EOF
+2> warning: Matching files with no extension
+2> .
+EOF
+
+COMPARE result_0.txt AGAINST expected_0.txt

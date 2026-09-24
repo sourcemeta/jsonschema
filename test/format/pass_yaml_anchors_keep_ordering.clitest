@@ -1,0 +1,28 @@
+WRITE schema.yaml UNTIL EOF
+$schema: https://json-schema.org/draft/2020-12/schema
+$defs:
+  name: &name
+    type: string
+properties:
+  first: *name
+  last: *name
+EOF
+
+RUN fmt schema.yaml --keep-ordering STDIN /dev/null IN . INTO result.txt EXPECTING 0
+
+WRITE expected.txt UNTIL EOF
+EOF
+
+COMPARE result.txt AGAINST expected.txt
+
+WRITE expected_file_0.txt UNTIL EOF
+$schema: https://json-schema.org/draft/2020-12/schema
+$defs:
+  name: &name
+    type: string
+properties:
+  first: *name
+  last: *name
+EOF
+
+COMPARE schema.yaml AGAINST expected_file_0.txt

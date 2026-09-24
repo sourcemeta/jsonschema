@@ -155,12 +155,7 @@ auto sourcemeta::jsonschema::fmt(const sourcemeta::core::Options &options)
     const auto display_path{stdin_path()};
 
     std::string raw_stdin;
-    const auto parsed{read_from_stdin(&raw_stdin)};
-    if (parsed.yaml) {
-      throw YAMLInputError{"This command does not support YAML input files yet",
-                           display_path};
-    }
-
+    auto parsed{read_from_stdin(&raw_stdin, InputFormatting::Preserve)};
     const auto &document{parsed.document};
     const auto dialect{default_dialect(options, configuration)};
     const auto is_test_document =
@@ -179,14 +174,15 @@ auto sourcemeta::jsonschema::fmt(const sourcemeta::core::Options &options)
       if (options.contains("check")) {
         std::ostringstream expected;
         if (options.contains("keep-ordering")) {
-          sourcemeta::core::prettify(document, expected, indentation);
+          sourcemeta::jsonschema::write_schema(document, expected, indentation,
+                                               parsed.roundtrip);
         } else {
           auto copy = document;
           sourcemeta::jsonschema::format_schema(copy, custom_resolver,
                                                 effective_dialect);
-          sourcemeta::core::prettify(copy, expected, indentation);
+          sourcemeta::jsonschema::write_schema(copy, expected, indentation,
+                                               parsed.roundtrip);
         }
-        expected << "\n";
 
         if (raw_stdin == expected.str()) {
           const auto status =
@@ -200,14 +196,15 @@ auto sourcemeta::jsonschema::fmt(const sourcemeta::core::Options &options)
         }
       } else {
         if (options.contains("keep-ordering")) {
-          sourcemeta::core::prettify(document, std::cout, indentation);
+          sourcemeta::jsonschema::write_schema(document, std::cout, indentation,
+                                               parsed.roundtrip);
         } else {
           auto copy = document;
           sourcemeta::jsonschema::format_schema(copy, custom_resolver,
                                                 effective_dialect);
-          sourcemeta::core::prettify(copy, std::cout, indentation);
+          sourcemeta::jsonschema::write_schema(copy, std::cout, indentation,
+                                               parsed.roundtrip);
         }
-        std::cout << "\n";
       }
     } catch (const sourcemeta::core::SchemaKeywordError &error) {
       throw sourcemeta::core::FileError<sourcemeta::core::SchemaKeywordError>(
@@ -243,12 +240,7 @@ auto sourcemeta::jsonschema::fmt(const sourcemeta::core::Options &options)
     }
   };
 
-  const auto handle_file_entry = [&](const InputJSON &entry) {
-    if (entry.yaml) {
-      throw YAMLInputError{"This command does not support YAML input files yet",
-                           entry.resolution_base};
-    }
-
+  const auto handle_file_entry = [&](InputJSON &entry) {
     if (entry.multidocument) {
       throw MultiDocumentInputError{
           "This command does not support input with multiple documents",
@@ -283,14 +275,15 @@ auto sourcemeta::jsonschema::fmt(const sourcemeta::core::Options &options)
 
       std::ostringstream expected;
       if (options.contains("keep-ordering")) {
-        sourcemeta::core::prettify(entry.second, expected, indentation);
+        sourcemeta::jsonschema::write_schema(entry.second, expected,
+                                             indentation, entry.roundtrip);
       } else {
         auto copy = entry.second;
         sourcemeta::jsonschema::format_schema(copy, custom_resolver,
                                               effective_dialect);
-        sourcemeta::core::prettify(copy, expected, indentation);
+        sourcemeta::jsonschema::write_schema(copy, expected, indentation,
+                                             entry.roundtrip);
       }
-      expected << "\n";
 
       const auto current{
           sourcemeta::core::read_file_to_string(entry.resolution_base)};
@@ -356,7 +349,8 @@ auto sourcemeta::jsonschema::fmt(const sourcemeta::core::Options &options)
   // When no positional arguments are given, default to for_each_json(options)
   // which scans the current directory.
   if (options.positional().empty()) {
-    for (const auto &entry : for_each_json(options)) {
+    auto entries{for_each_json(options, InputFormatting::Preserve)};
+    for (auto &entry : entries) {
       handle_file_entry(entry);
     }
   } else {
@@ -365,7 +359,8 @@ auto sourcemeta::jsonschema::fmt(const sourcemeta::core::Options &options)
       if (arg == "-") {
         handle_stdin();
       } else {
-        for (const auto &entry : for_each_json({arg}, options)) {
+        auto entries{for_each_json({arg}, options, InputFormatting::Preserve)};
+        for (auto &entry : entries) {
           handle_file_entry(entry);
         }
       }

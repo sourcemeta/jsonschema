@@ -1,0 +1,40 @@
+WRITE schemas/one.yaml UNTIL EOF
+# The YAML one
+$schema: https://json-schema.org/draft/2020-12/schema
+type: string
+title: One
+EOF
+
+WRITE schemas/two.json UNTIL EOF
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "string",
+  "title": "Two"
+}
+EOF
+
+RUN fmt schemas STDIN /dev/null IN . INTO result.txt EXPECTING 0
+
+WRITE expected.txt UNTIL EOF
+EOF
+
+COMPARE result.txt AGAINST expected.txt
+
+WRITE expected_file_0.txt UNTIL EOF
+# The YAML one
+$schema: https://json-schema.org/draft/2020-12/schema
+title: One
+type: string
+EOF
+
+COMPARE schemas/one.yaml AGAINST expected_file_0.txt
+
+WRITE expected_file_1.txt UNTIL EOF
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Two",
+  "type": "string"
+}
+EOF
+
+COMPARE schemas/two.json AGAINST expected_file_1.txt

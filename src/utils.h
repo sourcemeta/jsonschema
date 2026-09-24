@@ -8,6 +8,7 @@
 #include <sourcemeta/core/jsonschema.h>
 #include <sourcemeta/core/options.h>
 #include <sourcemeta/core/uri.h>
+#include <sourcemeta/core/yaml.h>
 
 #include <sourcemeta/blaze/compiler.h>
 #include <sourcemeta/blaze/output.h>
@@ -158,6 +159,21 @@ inline auto format_schema(sourcemeta::core::JSON &schema,
       sourcemeta::core::SchemaFrame::Mode::Locations, schema,
       sourcemeta::core::schema_walker, resolver, dialect};
   sourcemeta::core::schema_format(schema, frame);
+}
+
+inline auto
+write_schema(const sourcemeta::core::JSON &schema, std::ostream &stream,
+             const std::size_t indentation,
+             std::optional<sourcemeta::core::YAMLRoundTrip> &roundtrip)
+    -> void {
+  if (roundtrip.has_value()) {
+    roundtrip.value().indent_width = indentation;
+    sourcemeta::core::stringify_yaml(schema, stream, roundtrip.value());
+    return;
+  }
+
+  sourcemeta::core::prettify(schema, stream, indentation);
+  stream << "\n";
 }
 
 inline auto parse_jobs(const sourcemeta::core::Options &options)

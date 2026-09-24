@@ -1,0 +1,36 @@
+WRITE schema.yaml UNTIL EOF
+# Leading comment
+$schema: https://json-schema.org/draft/2020-12/schema
+type: object # inline on type
+properties:
+  # About foo
+  foo:
+    type: string # inline on foo type
+title: Comments
+description: |
+  A literal
+  block
+EOF
+
+RUN fmt schema.yaml STDIN /dev/null IN . INTO result.txt EXPECTING 0
+
+WRITE expected.txt UNTIL EOF
+EOF
+
+COMPARE result.txt AGAINST expected.txt
+
+WRITE expected_file_0.txt UNTIL EOF
+# Leading comment
+$schema: https://json-schema.org/draft/2020-12/schema
+title: Comments
+description: |
+  A literal
+  block
+type: object # inline on type
+properties:
+  # About foo
+  foo:
+    type: string # inline on foo type
+EOF
+
+COMPARE schema.yaml AGAINST expected_file_0.txt

@@ -1,0 +1,31 @@
+WRITE schema UNTIL EOF
+$schema: https://json-schema.org/draft/2020-12/schema
+type: string
+---
+$schema: https://json-schema.org/draft/2020-12/schema
+type: integer
+EOF
+
+// Other input error
+RUN fmt schema STDIN /dev/null IN . INTO result.txt EXPECTING 6
+
+REPLACE $CWD WITH '[CWD]' IN result.txt
+
+WRITE expected.txt UNTIL EOF
+2> error: Unexpected content after document
+2>   at line 3
+2>   at column 1
+2>   at file path [CWD]/schema
+EOF
+
+COMPARE result.txt AGAINST expected.txt
+
+WRITE expected_file_0.txt UNTIL EOF
+$schema: https://json-schema.org/draft/2020-12/schema
+type: string
+---
+$schema: https://json-schema.org/draft/2020-12/schema
+type: integer
+EOF
+
+COMPARE schema AGAINST expected_file_0.txt

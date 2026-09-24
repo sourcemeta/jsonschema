@@ -167,12 +167,11 @@ auto elevate_embedded_resources(
     if (bundled.contains(identifier_string)) {
       if (container_exists && root_container->is_object()) {
         for (const auto &root_entry : root_container->as_object()) {
-          if (!root_entry.first.starts_with(identifier_string)) {
-            continue;
-          }
-
           // Same reasoning as above: rule out what cannot match, and what
-          // framing would reject, before paying for a frame
+          // framing would reject, before paying for a frame. What a container
+          // calls an entry is no guide to what that entry identifies, since a
+          // caller may hold one under a name of its own choosing, so the
+          // declared identifier below is what rules an entry in or out
           if (!root_entry.second.is_object()) {
             continue;
           }
