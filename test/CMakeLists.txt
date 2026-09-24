@@ -119,6 +119,13 @@ add_jsonschema_test(format/pass_test_document_explicit_dialect)
 add_jsonschema_test(format/pass_test_document_directory)
 add_jsonschema_test(format/pass_test_document_schema_keyword)
 add_jsonschema_test(format/pass_bundled_metaschema)
+add_jsonschema_test(format/pass_check_color_always_verbose)
+add_jsonschema_test(format/pass_check_color_never_verbose)
+add_jsonschema_test(format/fail_check_color_always)
+add_jsonschema_test(format/fail_check_color_never)
+add_jsonschema_test(format/fail_check_many_color_always_verbose)
+add_jsonschema_test(format/fail_check_json_color_always)
+add_jsonschema_test(format/pass_check_json_color_always_verbose)
 
 # Validate
 add_jsonschema_test(validate/fail_instance_enoent)

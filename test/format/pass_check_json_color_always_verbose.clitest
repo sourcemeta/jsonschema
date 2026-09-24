@@ -1,0 +1,22 @@
+WRITE schema.json UNTIL EOF
+{
+  "$schema": "http://json-schema.org/draft-04/schema#",
+  "title": "Test",
+  "description": "Test schema",
+  "type": 1
+}
+EOF
+
+RUN fmt schema.json --check --json --verbose --color always STDIN /dev/null IN . INTO result.txt EXPECTING 0
+
+REPLACE $CWD WITH '[CWD]' IN result.txt
+
+WRITE expected.txt UNTIL EOF
+1> {
+1>   "valid": true
+1> }
+2> Checking: [CWD]/schema.json
+2> ok: [CWD]/schema.json
+EOF
+
+COMPARE result.txt AGAINST expected.txt
