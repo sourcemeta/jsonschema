@@ -21,8 +21,9 @@ specifications into account, including re-writing references that point at
 locations whose path has changed. By default, schemas are upgraded to the
 latest supported dialect, and the result is printed to standard output.
 
-Use `--indentation/-n` to set how many spaces each level of nesting of the
-result is laid out with, which defaults to two.
+The result is printed in the format the input was written in: a YAML schema
+upgrades into YAML and a JSON schema into JSON. Each level of nesting keeps the
+width the input was written with, which `--indentation/-n` overrides.
 
 For example, consider the following Draft 3 schema:
 

@@ -1,16 +1,16 @@
-WRITE schema.custom UNTIL EOF
+WRITE input.yaml UNTIL EOF
 $schema: https://json-schema.org/draft/2020-12/schema
 $id: https://example.com
 $ref: nested
 EOF
 
-WRITE nested.custom UNTIL EOF
+WRITE remote.yaml UNTIL EOF
 $schema: https://json-schema.org/draft/2020-12/schema
 $id: https://example.com/nested
 type: string
 EOF
 
-RUN bundle schema.custom --resolve nested.custom STDIN /dev/null IN . INTO result.txt EXPECTING 0
+RUN bundle - --resolve remote.yaml STDIN input.yaml IN . INTO result.txt EXPECTING 0
 
 WRITE expected.txt UNTIL EOF
 1> $schema: https://json-schema.org/draft/2020-12/schema

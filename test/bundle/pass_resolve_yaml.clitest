@@ -19,29 +19,25 @@ EOF
 
 RUN bundle schema.yaml --resolve remote.yaml STDIN /dev/null IN . INTO result.txt EXPECTING 0
 
-EXTRACT STDOUT FROM result.txt INTO bundled.json
+EXTRACT STDOUT FROM result.txt INTO bundled.yaml
 
 WRITE expected_0.txt UNTIL EOF
-1> {
-1>   "$schema": "https://json-schema.org/draft/2020-12/schema",
-1>   "$id": "https://example.com",
-1>   "title": "Test",
-1>   "description": "Test schema",
-1>   "$ref": "nested",
-1>   "$defs": {
-1>     "https://example.com/nested": {
-1>       "$schema": "https://json-schema.org/draft/2020-12/schema",
-1>       "$id": "https://example.com/nested",
-1>       "title": "Test",
-1>       "description": "Test schema",
-1>       "type": "string"
-1>     }
-1>   }
-1> }
+1> $schema: https://json-schema.org/draft/2020-12/schema
+1> $id: https://example.com
+1> title: Test
+1> description: Test schema
+1> $ref: nested
+1> $defs:
+1>   https://example.com/nested:
+1>     $schema: https://json-schema.org/draft/2020-12/schema
+1>     $id: https://example.com/nested
+1>     title: Test
+1>     description: Test schema
+1>     type: string
 EOF
 
 COMPARE result.txt AGAINST expected_0.txt
 
-RUN fmt bundled.json --check STDIN /dev/null IN . INTO checked.txt EXPECTING 0
+RUN fmt bundled.yaml --check STDIN /dev/null IN . INTO checked.txt EXPECTING 0
 
 COMPARE checked.txt AGAINST silent.txt
