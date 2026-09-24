@@ -6,6 +6,7 @@
 #include <sourcemeta/core/json.h>
 #include <sourcemeta/core/jsonpointer.h>
 #include <sourcemeta/core/jsonschema.h>
+#include <sourcemeta/core/openapi.h>
 #include <sourcemeta/core/options.h>
 #include <sourcemeta/core/uri.h>
 #include <sourcemeta/core/yaml.h>
@@ -114,6 +115,25 @@ inline auto looks_like_test_document(const sourcemeta::core::JSON &document)
   return document.is_object() && !document.defines("$schema") &&
          document.defines("target") && document.at("target").is_string() &&
          document.defines("tests") && document.at("tests").is_array();
+}
+
+// The revision an OpenAPI description declares, when it is one we cannot read.
+// A document that declares the field as anything but a string is no OpenAPI
+// description by any reading of the specification, so it goes on being read as
+// a schema rather than being turned down here
+inline auto unsupported_openapi_version(const sourcemeta::core::JSON &document)
+    -> const sourcemeta::core::JSON * {
+  if (!document.is_object()) {
+    return nullptr;
+  }
+
+  const auto *version{document.try_at("openapi")};
+  if (version == nullptr || !version->is_string()) {
+    return nullptr;
+  }
+
+  return sourcemeta::core::openapi_version(document).has_value() ? nullptr
+                                                                 : version;
 }
 
 inline auto default_dialect(

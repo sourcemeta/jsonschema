@@ -496,6 +496,13 @@ auto sourcemeta::jsonschema::lint(const sourcemeta::core::Options &options)
         throw NotSchemaError{entry.resolution_base};
       }
 
+      const auto *unsupported_revision{
+          unsupported_openapi_version(entry.second)};
+      if (unsupported_revision != nullptr) {
+        throw sourcemeta::core::FileError<UnsupportedOpenAPIVersionError>(
+            entry.resolution_base, unsupported_revision->to_string());
+      }
+
       const auto is_openapi{
           sourcemeta::core::openapi_version(entry.second).has_value()};
       if (is_openapi && format_output) {
@@ -736,6 +743,13 @@ auto sourcemeta::jsonschema::lint(const sourcemeta::core::Options &options)
           resolver(options, options.contains("http"), dialect, configuration)};
       if (!entry.second.is_object() && !entry.second.is_boolean()) {
         throw NotSchemaError{entry.resolution_base};
+      }
+
+      const auto *unsupported_revision{
+          unsupported_openapi_version(entry.second)};
+      if (unsupported_revision != nullptr) {
+        throw sourcemeta::core::FileError<UnsupportedOpenAPIVersionError>(
+            entry.resolution_base, unsupported_revision->to_string());
       }
 
       LOG_VERBOSE(options) << "Linting: " << entry.first << "\n";
