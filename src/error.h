@@ -178,6 +178,21 @@ public:
             "The --format option is not supported for OpenAPI descriptions"} {}
 };
 
+class UnsupportedOpenAPIVersionError : public std::runtime_error {
+public:
+  UnsupportedOpenAPIVersionError(std::string value)
+      : std::runtime_error{"This OpenAPI Specification revision is not "
+                           "supported"},
+        value_{std::move(value)} {}
+
+  [[nodiscard]] auto value() const noexcept -> const std::string & {
+    return this->value_;
+  }
+
+private:
+  std::string value_;
+};
+
 class OptionConflictError : public std::runtime_error {
 public:
   OptionConflictError(const std::string &message)
@@ -1165,6 +1180,11 @@ inline auto try_catch(const sourcemeta::core::Options &options,
     return EXIT_NOT_SUPPORTED;
   } catch (
       const sourcemeta::core::FileError<UnsupportedOpenAPIFormatError> &error) {
+    const auto is_json{options.contains("json")};
+    print_exception(is_json, error);
+    return EXIT_NOT_SUPPORTED;
+  } catch (const sourcemeta::core::FileError<UnsupportedOpenAPIVersionError>
+               &error) {
     const auto is_json{options.contains("json")};
     print_exception(is_json, error);
     return EXIT_NOT_SUPPORTED;
