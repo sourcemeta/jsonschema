@@ -151,6 +151,7 @@ struct ParsedJSON {
   sourcemeta::core::PointerPositionTracker positions;
   std::shared_ptr<std::deque<std::string>> property_storage;
   bool yaml{false};
+  bool multidocument{false};
   std::optional<sourcemeta::core::YAMLRoundTrip> roundtrip{std::nullopt};
 };
 
@@ -200,28 +201,27 @@ inline auto at_end_of_stream(const std::string &input, std::istream &stream)
              .empty();
 }
 
-// Parse every YAML document the stream holds, keeping line numbers running
+// Parse every YAML document the input holds, keeping line numbers running
 // across the documents that follow the first
-inline auto read_yaml_documents(std::istream &stream,
+inline auto read_yaml_documents(const std::string &input,
                                 const InputFormatting formatting)
     -> std::vector<MultiDocEntry> {
   std::vector<MultiDocEntry> documents;
+  std::istringstream stream{input};
   std::uint64_t line_offset{0};
-  std::uint64_t max_line{0};
+  std::size_t consumed{0};
 
   while (stream.peek() != std::char_traits<char>::eof()) {
     sourcemeta::core::PointerPositionTracker positions;
     auto property_storage = std::make_shared<std::deque<std::string>>();
     const std::uint64_t current_offset{line_offset};
-    max_line = 0;
-    auto callback = [&positions, &property_storage, current_offset, &max_line](
+    auto callback = [&positions, &property_storage, current_offset](
                         const sourcemeta::core::JSON::ParsePhase phase,
                         const sourcemeta::core::JSON::Type type,
                         const std::uint64_t line, const std::uint64_t column,
                         const sourcemeta::core::JSON::ParseContext context,
                         const std::size_t index,
                         const sourcemeta::core::JSON::String &property) {
-      max_line = std::max(max_line, line);
       property_storage->emplace_back(property);
       positions(phase, type, line + current_offset, column, context, index,
                 property_storage->back());
@@ -240,26 +240,51 @@ inline auto read_yaml_documents(std::istream &stream,
                          .positions = std::move(positions),
                          .property_storage = std::move(property_storage),
                          .roundtrip = std::move(roundtrip)});
-    line_offset += max_line > 0 ? max_line - 1 : 0;
+
+    // A document that carries no values reports no lines of its own, so the
+    // lines it occupies are counted from the input it consumed
+    const auto position{stream.tellg()};
+    const auto offset{position < 0 ? input.size()
+                                   : static_cast<std::size_t>(position)};
+    line_offset += static_cast<std::uint64_t>(
+        std::count(input.cbegin() + static_cast<std::ptrdiff_t>(consumed),
+                   input.cbegin() + static_cast<std::ptrdiff_t>(offset), '\n'));
+    consumed = offset;
   }
 
   return documents;
 }
 
+struct ParsedYAML {
+  std::optional<sourcemeta::core::YAMLRoundTrip> roundtrip{std::nullopt};
+  bool multidocument{false};
+};
+
 inline auto
 read_yaml_file(const std::filesystem::path &path,
                sourcemeta::core::JSON &output,
                const sourcemeta::core::JSON::ParseCallback &callback,
-               const InputFormatting formatting)
-    -> std::optional<sourcemeta::core::YAMLRoundTrip> {
+               const InputFormatting formatting) -> ParsedYAML {
   if (formatting == InputFormatting::Discard) {
     sourcemeta::core::read_yaml(path, output, callback);
-    return std::nullopt;
+    return {};
   }
 
+  // A file that holds more than one document cannot be written back from a
+  // single set of round-trip metadata, but it is still valid YAML, so the
+  // caller gets to report that rather than a parse error
+  const auto input{sourcemeta::core::read_file_to_string(path)};
+  std::istringstream stream{input};
   sourcemeta::core::YAMLRoundTrip roundtrip;
-  sourcemeta::core::read_yaml(path, roundtrip, output, callback);
-  return roundtrip;
+
+  try {
+    sourcemeta::core::parse_yaml(stream, roundtrip, output, callback);
+  } catch (const sourcemeta::core::YAMLParseError &error) {
+    throw sourcemeta::core::YAMLFileParseError{path, error};
+  }
+
+  return {.roundtrip = std::move(roundtrip),
+          .multidocument = !at_end_of_stream(input, stream)};
 }
 
 inline auto
@@ -273,12 +298,13 @@ read_file(const std::filesystem::path &path,
 
   if (extension == ".yaml" || extension == ".yml") {
     auto callback = make_position_callback(positions, property_storage);
-    auto roundtrip{read_yaml_file(path, document, callback, formatting)};
+    auto parsed{read_yaml_file(path, document, callback, formatting)};
     return {.document = std::move(document),
             .positions = std::move(positions),
             .property_storage = std::move(property_storage),
             .yaml = true,
-            .roundtrip = std::move(roundtrip)};
+            .multidocument = parsed.multidocument,
+            .roundtrip = std::move(parsed.roundtrip)};
   }
 
   if (extension == ".json") {
@@ -300,12 +326,13 @@ read_file(const std::filesystem::path &path,
     auto yaml_property_storage = std::make_shared<std::deque<std::string>>();
     auto callback =
         make_position_callback(yaml_positions, yaml_property_storage);
-    auto roundtrip{read_yaml_file(path, document, callback, formatting)};
+    auto parsed{read_yaml_file(path, document, callback, formatting)};
     return {.document = std::move(document),
             .positions = std::move(yaml_positions),
             .property_storage = std::move(yaml_property_storage),
             .yaml = true,
-            .roundtrip = std::move(roundtrip)};
+            .multidocument = parsed.multidocument,
+            .roundtrip = std::move(parsed.roundtrip)};
   }
 }
 
@@ -315,11 +342,10 @@ inline auto read_stdin_yaml(const std::string &input,
                             const sourcemeta::core::JSONParseError &json_error,
                             const InputFormatting formatting)
     -> std::vector<ParsedJSON> {
-  std::istringstream stream{input};
   std::vector<MultiDocEntry> documents;
 
   try {
-    documents = read_yaml_documents(stream, formatting);
+    documents = read_yaml_documents(input, formatting);
   } catch (...) {
     throw sourcemeta::core::JSONFileParseError(stdin_path(), json_error);
   }
@@ -475,10 +501,10 @@ handle_input_file(const std::filesystem::path &canonical,
     if (std::filesystem::is_empty(canonical)) {
       return;
     }
-    auto stream{sourcemeta::core::read_file(canonical)};
     std::vector<MultiDocEntry> documents;
     try {
-      documents = read_yaml_documents(stream, formatting);
+      documents = read_yaml_documents(
+          sourcemeta::core::read_file_to_string(canonical), formatting);
     } catch (const sourcemeta::core::YAMLParseError &error) {
       throw sourcemeta::core::YAMLFileParseError{canonical, error};
     }
@@ -520,6 +546,7 @@ handle_input_file(const std::filesystem::path &canonical,
                       .resolution_base = canonical,
                       .second = std::move(parsed.document),
                       .positions = std::move(parsed.positions),
+                      .multidocument = parsed.multidocument,
                       .yaml = parsed.yaml,
                       .property_storage = std::move(parsed.property_storage),
                       .roundtrip = std::move(parsed.roundtrip)});
