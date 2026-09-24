@@ -185,7 +185,7 @@ public:
                            "supported"},
         value_{std::move(value)} {}
 
-  [[nodiscard]] auto value() const -> const std::string & {
+  [[nodiscard]] auto value() const noexcept -> const std::string & {
     return this->value_;
   }
 

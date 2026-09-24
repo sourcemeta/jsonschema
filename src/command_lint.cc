@@ -196,6 +196,20 @@ retag_openapi_stdin(std::vector<sourcemeta::jsonschema::InputJSON> &entries)
   }
 }
 
+// A description of a revision we cannot read is no JSON Schema either, so it is
+// turned down rather than linted as one
+static auto
+reject_unsupported_openapi(const sourcemeta::jsonschema::InputJSON &entry)
+    -> void {
+  const auto *version{
+      sourcemeta::jsonschema::unsupported_openapi_version(entry.second)};
+  if (version != nullptr) {
+    throw sourcemeta::core::FileError<
+        sourcemeta::jsonschema::UnsupportedOpenAPIVersionError>(
+        entry.resolution_base, version->to_string());
+  }
+}
+
 static auto
 check_openapi(const sourcemeta::blaze::SchemaTransformer &bundle,
               const sourcemeta::jsonschema::InputJSON &entry,
@@ -496,12 +510,7 @@ auto sourcemeta::jsonschema::lint(const sourcemeta::core::Options &options)
         throw NotSchemaError{entry.resolution_base};
       }
 
-      const auto *unsupported_revision{
-          unsupported_openapi_version(entry.second)};
-      if (unsupported_revision != nullptr) {
-        throw sourcemeta::core::FileError<UnsupportedOpenAPIVersionError>(
-            entry.resolution_base, unsupported_revision->to_string());
-      }
+      reject_unsupported_openapi(entry);
 
       const auto is_openapi{
           sourcemeta::core::openapi_version(entry.second).has_value()};
@@ -745,12 +754,7 @@ auto sourcemeta::jsonschema::lint(const sourcemeta::core::Options &options)
         throw NotSchemaError{entry.resolution_base};
       }
 
-      const auto *unsupported_revision{
-          unsupported_openapi_version(entry.second)};
-      if (unsupported_revision != nullptr) {
-        throw sourcemeta::core::FileError<UnsupportedOpenAPIVersionError>(
-            entry.resolution_base, unsupported_revision->to_string());
-      }
+      reject_unsupported_openapi(entry);
 
       LOG_VERBOSE(options) << "Linting: " << entry.first << "\n";
 
