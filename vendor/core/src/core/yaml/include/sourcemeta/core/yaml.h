@@ -12,8 +12,10 @@
 #include <sourcemeta/core/yaml_roundtrip.h>
 // NOLINTEND(misc-include-cleaner)
 
+#include <cstddef>    // std::size_t
 #include <filesystem> // std::filesystem
 #include <istream>    // std::basic_istream
+#include <optional>   // std::optional, std::nullopt
 #include <ostream>    // std::basic_ostream
 
 /// @defgroup yaml YAML
@@ -172,6 +174,31 @@ auto parse_yaml(const JSON::String &input, YAMLRoundTrip &roundtrip) -> JSON;
 
 /// @ingroup yaml
 ///
+/// Create a JSON document from a C++ standard input stream that represents a
+/// YAML document, collecting round-trip metadata to reproduce the original
+/// formatting. The stream is left just after the document that was read, so
+/// that a stream holding several documents can be read one document at a
+/// time. For example:
+///
+/// ```cpp
+/// #include <sourcemeta/core/json.h>
+/// #include <sourcemeta/core/yaml.h>
+///
+/// #include <sstream>
+///
+/// std::istringstream stream{"hello: world\n---\nsecond: document\n"};
+/// while (stream.peek() != std::char_traits<char>::eof()) {
+///   sourcemeta::core::YAMLRoundTrip roundtrip;
+///   const sourcemeta::core::JSON document =
+///     sourcemeta::core::parse_yaml(stream, roundtrip);
+/// }
+/// ```
+SOURCEMETA_CORE_YAML_EXPORT
+auto parse_yaml(std::basic_istream<JSON::Char, JSON::CharTraits> &stream,
+                YAMLRoundTrip &roundtrip) -> JSON;
+
+/// @ingroup yaml
+///
 /// Parse a YAML string with round-trip metadata into an existing JSON value,
 /// invoking the given callback during parsing. The result is constructed
 /// directly into the given reference rather than returned by value to ensure
@@ -180,6 +207,57 @@ auto parse_yaml(const JSON::String &input, YAMLRoundTrip &roundtrip) -> JSON;
 SOURCEMETA_CORE_YAML_EXPORT
 auto parse_yaml(const JSON::String &input, YAMLRoundTrip &roundtrip,
                 JSON &output, const JSON::ParseCallback &callback) -> void;
+
+/// @ingroup yaml
+///
+/// Parse a YAML document from a C++ standard input stream with round-trip
+/// metadata into an existing JSON value, invoking the given callback during
+/// parsing. The stream is left just after the document that was read, so that
+/// a stream holding several documents can be read one document at a time. The
+/// result is constructed directly into the given reference rather than
+/// returned by value to ensure that references passed through the parse
+/// callback remain valid after parsing completes.
+SOURCEMETA_CORE_YAML_EXPORT
+auto parse_yaml(std::basic_istream<JSON::Char, JSON::CharTraits> &stream,
+                YAMLRoundTrip &roundtrip, JSON &output,
+                const JSON::ParseCallback &callback) -> void;
+
+/// @ingroup yaml
+///
+/// Read a JSON document from a file location that represents a YAML file,
+/// collecting round-trip metadata to reproduce the original formatting. Unlike
+/// the stream overload, the file must hold a single document, as a file that
+/// carries more cannot be written back from one set of metadata. For example:
+///
+/// ```cpp
+/// #include <sourcemeta/core/json.h>
+/// #include <sourcemeta/core/yaml.h>
+///
+/// #include <iostream>
+///
+/// sourcemeta::core::YAMLRoundTrip roundtrip;
+/// const sourcemeta::core::JSON document =
+///   sourcemeta::core::read_yaml("test.yaml", roundtrip);
+/// sourcemeta::core::stringify_yaml(document, std::cout, roundtrip);
+/// ```
+///
+/// If parsing fails, sourcemeta::core::YAMLFileParseError will be thrown.
+SOURCEMETA_CORE_YAML_EXPORT
+auto read_yaml(const std::filesystem::path &path, YAMLRoundTrip &roundtrip)
+    -> JSON;
+
+/// @ingroup yaml
+///
+/// Read a YAML file with round-trip metadata into an existing JSON value,
+/// invoking the given callback during parsing. The file must hold a single
+/// document. The result is constructed directly into the given reference
+/// rather than returned by value to ensure that references passed through the
+/// parse callback remain valid after parsing completes.
+///
+/// If parsing fails, sourcemeta::core::YAMLFileParseError will be thrown.
+SOURCEMETA_CORE_YAML_EXPORT
+auto read_yaml(const std::filesystem::path &path, YAMLRoundTrip &roundtrip,
+               JSON &output, const JSON::ParseCallback &callback) -> void;
 
 /// @ingroup yaml
 ///
@@ -201,14 +279,23 @@ auto parse_yaml(const JSON::String &input, YAMLRoundTrip &roundtrip,
 ///   sourcemeta::core::parse_yaml(input, roundtrip);
 /// sourcemeta::core::stringify_yaml(document, std::cout, roundtrip);
 /// ```
+///
+/// Each level of nesting is laid out with the width the document was written
+/// with, unless an indentation is given, which overrides it. A width of zero
+/// would run a nested collection into the one that holds it, so it is treated
+/// as one.
 SOURCEMETA_CORE_YAML_EXPORT
 auto stringify_yaml(const JSON &document,
                     std::basic_ostream<JSON::Char, JSON::CharTraits> &stream,
-                    const YAMLRoundTrip &roundtrip) -> void;
+                    const YAMLRoundTrip &roundtrip,
+                    const std::optional<std::size_t> indentation = std::nullopt)
+    -> void;
 
 /// @ingroup yaml
 ///
-/// Stringify a JSON document as YAML. For example:
+/// Stringify a JSON document as YAML, laying out each level of nesting with
+/// the given number of spaces. A width of zero would run a nested collection
+/// into the one that holds it, so it is treated as one. For example:
 ///
 /// ```cpp
 /// #include <sourcemeta/core/json.h>
@@ -222,8 +309,8 @@ auto stringify_yaml(const JSON &document,
 /// ```
 SOURCEMETA_CORE_YAML_EXPORT
 auto stringify_yaml(const JSON &document,
-                    std::basic_ostream<JSON::Char, JSON::CharTraits> &stream)
-    -> void;
+                    std::basic_ostream<JSON::Char, JSON::CharTraits> &stream,
+                    const std::size_t indentation = 2) -> void;
 
 } // namespace sourcemeta::core
 

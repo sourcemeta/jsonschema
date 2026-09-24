@@ -1,0 +1,46 @@
+WRITE schema.yaml UNTIL EOF
+# Needs formatting
+$schema: http://json-schema.org/draft-04/schema#
+type: string
+title: Test
+description: Test schema
+EOF
+
+// Validation failure
+RUN fmt schema.yaml --check --json STDIN /dev/null IN . INTO result.txt EXPECTING 2
+
+REPLACE $CWD WITH '[CWD]' IN result.txt
+
+WRITE expected.txt UNTIL EOF
+1> {
+1>   "valid": false,
+1>   "errors": [
+1>     {
+1>       "path": "[CWD]/schema.yaml",
+1>       "diff": [
+1>         {
+1>           "type": "equal",
+1>           "lines": [
+1>             "# Needs formatting",
+1>             "$schema: http://json-schema.org/draft-04/schema#"
+1>           ]
+1>         },
+1>         {
+1>           "type": "delete",
+1>           "lines": [ "type: string" ]
+1>         },
+1>         {
+1>           "type": "equal",
+1>           "lines": [ "title: Test", "description: Test schema" ]
+1>         },
+1>         {
+1>           "type": "insert",
+1>           "lines": [ "type: string" ]
+1>         }
+1>       ]
+1>     }
+1>   ]
+1> }
+EOF
+
+COMPARE result.txt AGAINST expected.txt

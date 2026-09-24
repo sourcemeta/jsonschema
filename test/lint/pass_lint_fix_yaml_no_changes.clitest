@@ -1,0 +1,19 @@
+WRITE schema.yaml UNTIL EOF
+# Nothing to fix here
+$schema: http://json-schema.org/draft-06/schema#
+title: Clean
+description: Test schema
+examples: [ foo ]
+const:     foo
+EOF
+
+COPY schema.yaml TO original.yaml
+
+RUN lint schema.yaml --fix STDIN /dev/null IN . INTO result_0.txt EXPECTING 0
+
+WRITE expected_0.txt UNTIL EOF
+EOF
+
+COMPARE result_0.txt AGAINST expected_0.txt
+
+COMPARE schema.yaml AGAINST original.yaml

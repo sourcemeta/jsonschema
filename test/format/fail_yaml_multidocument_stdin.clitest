@@ -1,0 +1,29 @@
+WRITE stdin_0 UNTIL EOF
+$schema: https://json-schema.org/draft/2020-12/schema
+type: string
+---
+$schema: https://json-schema.org/draft/2020-12/schema
+type: integer
+EOF
+
+// Not supported
+RUN fmt - STDIN stdin_0 IN . INTO result.txt EXPECTING 3
+
+WRITE expected.txt UNTIL EOF
+2> error: This command does not support reading multiple documents from standard input
+2>   at file path tag:sourcemeta.com,2026:jsonschema/stdin
+EOF
+
+COMPARE result.txt AGAINST expected.txt
+
+// Not supported
+RUN fmt - --json STDIN stdin_0 IN . INTO result_json.txt EXPECTING 3
+
+WRITE expected_json.txt UNTIL EOF
+1> {
+1>   "error": "This command does not support reading multiple documents from standard input",
+1>   "filePath": "tag:sourcemeta.com,2026:jsonschema/stdin"
+1> }
+EOF
+
+COMPARE result_json.txt AGAINST expected_json.txt

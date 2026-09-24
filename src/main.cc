@@ -98,7 +98,6 @@ constexpr std::string_view USAGE_COMMANDS{R"EOF(   version / --version / -v
        [--indentation/-n <spaces>]
 
        Format the input schemas in-place or check they are formatted.
-       This command does not support YAML schemas yet.
 
    lint [schemas-or-directories...] [--fix/-f] [--format/-m]
         [--keep-ordering/-k] [--extension/-e <extension>]
@@ -108,7 +107,6 @@ constexpr std::string_view USAGE_COMMANDS{R"EOF(   version / --version / -v
         [--format-assertion/-F]
 
        Lint the input schemas and potentially fix the reported issues.
-       The --fix/-f option is not supported when passing YAML schemas.
        Use --format/-m with --fix to format the output even when there
        are no linting issues.
        Use --keep-ordering/-k with --format to preserve key order.

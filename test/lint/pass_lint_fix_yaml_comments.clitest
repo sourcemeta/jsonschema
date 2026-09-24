@@ -1,0 +1,34 @@
+WRITE schema.yaml UNTIL EOF
+# Top level
+$schema: http://json-schema.org/draft-06/schema#
+title: Comments
+description: Test schema
+examples: [ foo ]
+properties:
+  # About foo
+  foo:
+    type: string # redundant with const
+    const: bar
+EOF
+
+RUN lint schema.yaml --fix STDIN /dev/null IN . INTO result_0.txt EXPECTING 0
+
+WRITE expected_file_0.txt UNTIL EOF
+# Top level
+$schema: http://json-schema.org/draft-06/schema#
+title: Comments
+description: Test schema
+examples: [ foo ]
+properties:
+  # About foo
+  foo:
+    const: bar
+EOF
+
+COMPARE schema.yaml AGAINST expected_file_0.txt
+
+WRITE expected_0.txt UNTIL EOF
+2> .
+EOF
+
+COMPARE result_0.txt AGAINST expected_0.txt

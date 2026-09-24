@@ -1,7 +1,9 @@
 WRITE schema.yaml UNTIL EOF
-$schema: http://json-schema.org/draft-06/schema#
+$schema: https://json-schema.org/draft/2020-12/schema
 type: string
-enum: [ foo ]
+---
+$schema: https://json-schema.org/draft/2020-12/schema
+type: integer
 EOF
 
 // Not supported
@@ -10,7 +12,7 @@ RUN lint schema.yaml --fix STDIN /dev/null IN . INTO result_0.txt EXPECTING 3
 REPLACE $CWD WITH '[CWD]' IN result_0.txt
 
 WRITE expected_0.txt UNTIL EOF
-2> error: The --fix option is not supported for YAML input files
+2> error: The --fix option is not supported for input with multiple documents
 2>   at file path [CWD]/schema.yaml
 EOF
 
@@ -23,9 +25,19 @@ REPLACE $CWD WITH '[CWD]' IN result_1.txt
 
 WRITE expected_1.txt UNTIL EOF
 1> {
-1>   "error": "The --fix option is not supported for YAML input files",
+1>   "error": "The --fix option is not supported for input with multiple documents",
 1>   "filePath": "[CWD]/schema.yaml"
 1> }
 EOF
 
 COMPARE result_1.txt AGAINST expected_1.txt
+
+WRITE expected_file_0.txt UNTIL EOF
+$schema: https://json-schema.org/draft/2020-12/schema
+type: string
+---
+$schema: https://json-schema.org/draft/2020-12/schema
+type: integer
+EOF
+
+COMPARE schema.yaml AGAINST expected_file_0.txt

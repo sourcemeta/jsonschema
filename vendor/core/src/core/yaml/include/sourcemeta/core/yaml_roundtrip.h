@@ -84,6 +84,13 @@ public:
     std::optional<JSON> content_value;
     /// The anchor name attached to the node
     std::optional<std::string> anchor;
+    /// The tag attached to the node, as it was written
+    std::optional<std::string> tag;
+    /// The type the tagged node held when the tag was recorded, so that a tag
+    /// is only reproduced while the document still holds that kind of value
+    std::optional<JSON::Type> tag_type;
+    /// Whether the tag precedes the anchor
+    bool tag_before_anchor{false};
     /// The comments preceding the node
     std::vector<std::string> comments_before;
     /// The comment on the same line as the node
@@ -92,6 +99,16 @@ public:
     std::optional<std::string> comment_on_indicator;
     /// Whether the flow collection uses compact formatting
     bool compact_flow{false};
+    /// Whether the flow collection is padded with a space inside its delimiters
+    bool padded_flow{false};
+    /// Whether a block sequence that is the value of a mapping key sits at the
+    /// same indentation as that key rather than one level in.
+    /// See https://yaml.org/spec/1.2.2/#821-block-sequences
+    bool unindented_sequence{false};
+    /// How many items the sequence held when it was read, so that comments and
+    /// node properties recorded against a position are only reproduced while
+    /// that position still holds the item they were read from
+    std::optional<std::size_t> sequence_size;
   };
 
   /// The recorded formatting for each node by pointer
@@ -102,6 +119,11 @@ public:
   std::unordered_map<Pointer, ScalarStyle, Pointer::Hasher> key_styles;
   /// The original quoted content for each mapping key
   std::unordered_map<Pointer, std::string, Pointer::Hasher> key_quoted_contents;
+  /// The directive and comment lines that precede the document start marker,
+  /// in the order they were written. A document that carries a directive
+  /// always begins with an explicit start marker.
+  /// See https://yaml.org/spec/1.2.2/#912-document-markers
+  std::vector<std::string> document_prefix;
   /// Whether the document begins with an explicit start marker
   bool explicit_document_start{false};
   /// Whether the document ends with an explicit end marker
@@ -120,6 +142,11 @@ public:
   std::vector<std::string> trailing_comments;
   /// The indentation width used when emitting the document
   std::size_t indent_width{2};
+  /// Whether the document begins with a byte order mark
+  bool byte_order_mark{false};
+  /// Whether the document separates its lines with a carriage return and a
+  /// line feed rather than a line feed alone
+  bool carriage_returns{false};
 };
 
 #if defined(_MSC_VER)

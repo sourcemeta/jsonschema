@@ -1,0 +1,42 @@
+WRITE api.yaml UNTIL EOF
+# My API
+openapi: 3.1.0
+info:
+  title: Example
+  version: 1.0.0
+components:
+  schemas:
+    # A name
+    Name:
+      title: Name
+      description: The name of a person
+      examples: [ foo ]
+      type: string
+      enum: [ foo ]
+EOF
+
+RUN lint api.yaml --fix STDIN /dev/null IN . INTO result_0.txt EXPECTING 0
+
+WRITE expected_file_0.txt UNTIL EOF
+# My API
+openapi: 3.1.0
+info:
+  title: Example
+  version: 1.0.0
+components:
+  schemas:
+    # A name
+    Name:
+      title: Name
+      description: The name of a person
+      examples: [ foo ]
+      const: foo
+EOF
+
+COMPARE api.yaml AGAINST expected_file_0.txt
+
+WRITE expected_0.txt UNTIL EOF
+2> ..
+EOF
+
+COMPARE result_0.txt AGAINST expected_0.txt

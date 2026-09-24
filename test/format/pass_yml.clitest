@@ -1,0 +1,20 @@
+WRITE schema.yml UNTIL EOF
+$schema: https://json-schema.org/draft/2020-12/schema
+type: object
+title: Hello World
+EOF
+
+RUN fmt schema.yml STDIN /dev/null IN . INTO result.txt EXPECTING 0
+
+WRITE expected.txt UNTIL EOF
+EOF
+
+COMPARE result.txt AGAINST expected.txt
+
+WRITE expected_file_0.txt UNTIL EOF
+$schema: https://json-schema.org/draft/2020-12/schema
+title: Hello World
+type: object
+EOF
+
+COMPARE schema.yml AGAINST expected_file_0.txt

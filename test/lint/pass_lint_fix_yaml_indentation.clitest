@@ -1,0 +1,30 @@
+WRITE schema.yaml UNTIL EOF
+$schema: http://json-schema.org/draft-06/schema#
+title: Nested
+description: Test schema
+examples: [ foo ]
+properties:
+  foo:
+    type: string
+    enum: [ bar ]
+EOF
+
+RUN lint schema.yaml --fix --indentation 4 STDIN /dev/null IN . INTO result_0.txt EXPECTING 0
+
+WRITE expected_file_0.txt UNTIL EOF
+$schema: http://json-schema.org/draft-06/schema#
+title: Nested
+description: Test schema
+examples: [ foo ]
+properties:
+    foo:
+        const: bar
+EOF
+
+COMPARE schema.yaml AGAINST expected_file_0.txt
+
+WRITE expected_0.txt UNTIL EOF
+2> ..
+EOF
+
+COMPARE result_0.txt AGAINST expected_0.txt

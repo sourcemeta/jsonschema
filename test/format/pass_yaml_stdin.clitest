@@ -1,0 +1,17 @@
+WRITE stdin_0 UNTIL EOF
+# A schema for greetings
+$schema: https://json-schema.org/draft/2020-12/schema
+additionalProperties: false
+title: Hello World
+EOF
+
+RUN fmt - STDIN stdin_0 IN . INTO result.txt EXPECTING 0
+
+WRITE expected.txt UNTIL EOF
+1> # A schema for greetings
+1> $schema: https://json-schema.org/draft/2020-12/schema
+1> title: Hello World
+1> additionalProperties: false
+EOF
+
+COMPARE result.txt AGAINST expected.txt

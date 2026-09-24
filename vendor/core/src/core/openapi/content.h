@@ -99,11 +99,14 @@ inline auto openapi_check_nested_encoding(const JSON &value,
                                           OpenAPIWalk &walk) -> void {
   const auto *named{value.try_at("encoding", OPENAPI_HASH_ENCODING)};
 
-  // Section 4.14, of `encoding`: "This field MUST NOT be present if
+  // 3.2.1 Section 4.14, of `encoding`: "This field MUST NOT be present if
   // `prefixEncoding` or `itemEncoding` are present", and each of those two
-  // says the same of `encoding` in turn. Section 4.15 defines all three by
-  // reference to that Object, and the published meta-schema holds the pair to
-  // the same rule in both places
+  // says the same of `encoding` in turn. 3.2.1 Section 4.15 defines all three
+  // by reference to that Object and states no exclusion of its own, so what
+  // settles the nested pair is the corpus, which files both
+  // `encoding-enc-prefix-exclusion` and `encoding-enc-item-exclusion` as
+  // failing, and the published meta-schema, which holds the pair to the same
+  // rule in both places
   if (named != nullptr &&
       (value.try_at("prefixEncoding", OPENAPI_HASH_PREFIX_ENCODING) !=
            nullptr ||
@@ -148,8 +151,9 @@ inline auto openapi_check_encoding(const JSON &value, const Pointer &base,
       value, OPENAPI_ENCODING_FIELDS_3_1, OPENAPI_ENCODING_FIELDS_3_2, base,
       "The Encoding Object does not define this field", walk);
 
-  // The specification says media type definitions "SHOULD be in compliance
-  // with RFC6838", which is not a requirement, so only the type is checked
+  // 3.1.1 Section 3.6 says media type definitions "SHOULD be in compliance
+  // with RFC6838", which is not a requirement, and 3.2 drops the sentence
+  // rather than strengthening it, so only the type is checked
   openapi_check_optional_string(
       value, base, "contentType"sv, OPENAPI_HASH_CONTENT_TYPE,
       "The Encoding Object content type must be a string");
@@ -207,8 +211,8 @@ inline auto openapi_check_media_type(const JSON &value, const Pointer &base,
       "The Media Type Object example and examples are mutually exclusive",
       "The Media Type Object examples must be an object", walk);
 
-  // Section 4.14: "itemSchema | Schema Object", for a sequential media type,
-  // which is a fifth position where framing hands off to JSON Schema
+  // 3.2.1 Section 4.14: "itemSchema | Schema Object", for a sequential media
+  // type, which is a fifth position where framing hands off to JSON Schema
   const auto *item_schema{value.try_at("itemSchema", OPENAPI_HASH_ITEM_SCHEMA)};
   if (item_schema != nullptr) {
     openapi_expect_schema(*item_schema, openapi_child(base, "itemSchema"sv),
@@ -232,8 +236,9 @@ inline auto openapi_check_media_type_or_reference(const JSON &value,
 }
 
 // The map that the Request Body, Response, Parameter and Header Objects all
-// key by media type. Section 4.5 says those definitions "SHOULD be in
-// compliance with RFC6838", so the keys carry no requirement to enforce.
+// key by media type. 3.1.1 Section 3.6 says those definitions "SHOULD be in
+// compliance with RFC6838", which carries no requirement to enforce, and 3.2
+// drops the sentence rather than strengthening it.
 // OpenAPI Specification 3.2.1 widens what the values may be in all four of
 // those Objects, from "Map[string, Media Type Object]" to "Map[string, Media
 // Type Object | Reference Object]", which is what its Components Object entry
@@ -262,8 +267,11 @@ inline auto openapi_check_header(const JSON &value, const Pointer &base,
   const auto *schema{value.try_at("schema", OPENAPI_HASH_SCHEMA)};
   const auto *content{value.try_at("content", OPENAPI_HASH_CONTENT)};
 
-  // OpenAPI Specification 3.1.1, Section 4.8.21: "The `schema` field and
-  // `content` field are mutually exclusive", and one of them has to be there
+  // OpenAPI Specification 3.1.1, Section 4.8.21 has "The Header Object
+  // follows the structure of the Parameter Object", and none of the changes it
+  // lists touches either field, so Section 4.8.12's rule reaches here whole:
+  // "Parameter Objects MUST include either a `content` field or a `schema`
+  // field, but not both"
   if (schema != nullptr && content != nullptr) {
     throw OpenAPIError{
         base, "The Header Object schema and content are mutually exclusive"};
@@ -313,7 +321,8 @@ inline auto openapi_check_header(const JSON &value, const Pointer &base,
     const auto location{openapi_child(base, "content"sv)};
     openapi_check_content(*content, location,
                           "The Header Object content must be an object", walk);
-    // The meta-schema bounds this map at one entry in both directions
+    // Section 4.8.21: "The map MUST only contain one entry", which an empty
+    // map answers no better than a crowded one
     if (content->size() != 1) {
       throw OpenAPIError{
           location, "The Header Object content must hold exactly one entry"};

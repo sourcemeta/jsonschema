@@ -56,8 +56,8 @@ inline auto openapi_check_example(const JSON &value, const Pointer &base,
         base, "The Example Object data value and value are mutually exclusive"};
   }
 
-  // Section 4.19: "serializedValue | string | An example of the serialized
-  // form of the value [...] If this field is present, `value`, and
+  // 3.2.1 Section 4.19: "serializedValue | string | An example of the
+  // serialized form of the value [...] If this field is present, `value`, and
   // `externalValue` MUST be absent". The `externalValue` field states the
   // other half of that pair the same way
   const auto *serialized{
@@ -110,8 +110,8 @@ inline auto openapi_check_example_or_reference(const JSON &value,
 }
 
 // The Parameter, Media Type and Header Objects all carry this pair, and all
-// three state that "The `example` field is mutually exclusive of the
-// `examples` field"
+// three state that "The `example` and `examples` fields are mutually
+// exclusive"
 inline auto openapi_check_examples(const JSON &value, const Pointer &base,
                                    const char *exclusive_message,
                                    const char *type_message, OpenAPIWalk &walk)

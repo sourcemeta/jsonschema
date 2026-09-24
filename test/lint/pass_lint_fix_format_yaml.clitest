@@ -1,0 +1,52 @@
+WRITE schema.yaml UNTIL EOF
+# A constant string
+$schema: http://json-schema.org/draft-06/schema#
+description: Test schema
+examples: [ foo ]
+type: string
+const: foo
+title: I should not be moved up
+EOF
+
+RUN lint schema.yaml --fix --format STDIN /dev/null IN . INTO result_0.txt EXPECTING 0
+
+WRITE expected_file_0.txt UNTIL EOF
+# A constant string
+$schema: http://json-schema.org/draft-06/schema#
+title: I should not be moved up
+description: Test schema
+examples: [ foo ]
+const: foo
+EOF
+
+COMPARE schema.yaml AGAINST expected_file_0.txt
+
+WRITE expected_0.txt UNTIL EOF
+2> .
+EOF
+
+COMPARE result_0.txt AGAINST expected_0.txt
+
+WRITE schema_json.yaml UNTIL EOF
+# A constant string
+$schema: http://json-schema.org/draft-06/schema#
+description: Test schema
+examples: [ foo ]
+type: string
+const: foo
+title: I should not be moved up
+EOF
+
+RUN lint schema_json.yaml --fix --format --json STDIN /dev/null IN . INTO result_1.txt EXPECTING 0
+
+COMPARE schema_json.yaml AGAINST expected_file_0.txt
+
+WRITE expected_1.txt UNTIL EOF
+1> {
+1>   "valid": true,
+1>   "health": 100,
+1>   "errors": []
+1> }
+EOF
+
+COMPARE result_1.txt AGAINST expected_1.txt

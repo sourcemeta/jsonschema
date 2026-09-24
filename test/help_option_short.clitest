@@ -96,7 +96,6 @@ WRITE expected.txt UNTIL EOF
 1>        [--indentation/-n <spaces>]
 1>
 1>        Format the input schemas in-place or check they are formatted.
-1>        This command does not support YAML schemas yet.
 1>
 1>    lint [schemas-or-directories...] [--fix/-f] [--format/-m]
 1>         [--keep-ordering/-k] [--extension/-e <extension>]
@@ -106,7 +105,6 @@ WRITE expected.txt UNTIL EOF
 1>         [--format-assertion/-F]
 1>
 1>        Lint the input schemas and potentially fix the reported issues.
-1>        The --fix/-f option is not supported when passing YAML schemas.
 1>        Use --format/-m with --fix to format the output even when there
 1>        are no linting issues.
 1>        Use --keep-ordering/-k with --format to preserve key order.

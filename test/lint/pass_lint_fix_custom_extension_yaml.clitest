@@ -1,0 +1,28 @@
+WRITE schema.custom UNTIL EOF
+# A constant string
+$schema: http://json-schema.org/draft-06/schema#
+description: Test schema
+examples: [ foo ]
+type: string
+const: foo
+title: I should not be moved up
+EOF
+
+RUN lint schema.custom --fix STDIN /dev/null IN . INTO result_0.txt EXPECTING 0
+
+WRITE expected_file_0.txt UNTIL EOF
+# A constant string
+$schema: http://json-schema.org/draft-06/schema#
+description: Test schema
+examples: [ foo ]
+const: foo
+title: I should not be moved up
+EOF
+
+COMPARE schema.custom AGAINST expected_file_0.txt
+
+WRITE expected_0.txt UNTIL EOF
+2> .
+EOF
+
+COMPARE result_0.txt AGAINST expected_0.txt

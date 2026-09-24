@@ -44,7 +44,15 @@ constexpr auto OPENAPI_DIALECT_3_1{
 // URI instead: it "is identified by the URI of the form
 // `https://spec.openapis.org/oas/3.2/dialect/YYYY-MM-DD` [...] see the list of
 // current schemas for the specific URI". One date is published for 3.2, and it
-// is the one this repository already resolves
+// is the one this repository already resolves.
+//
+// A document that declares 3.2.0 gets this one as well, although that patch
+// reads "identified by the URI
+// `https://spec.openapis.org/oas/3.1/dialect/base`" and so names the dialect of
+// the revision before it. 3.2.1 Section 2.1 makes a revision the
+// `major`.`minor` pair alone, so what a later patch of one says is what the
+// whole of it says, and the earlier wording is a mistake that patch corrects
+// rather than a rule of its own
 constexpr auto OPENAPI_DIALECT_3_2{
     "https://spec.openapis.org/oas/3.2/dialect/2025-09-17"sv};
 
@@ -84,19 +92,20 @@ inline auto openapi_check_document(const JSON &document, OpenAPIWalk &walk)
 // What a document's `$self` establishes as its base, or nothing when it
 // establishes none. OpenAPI Specification 3.2.1, Section 4.1: the field
 // "provides the self-assigned URI of this document, which also serves as its
-// base URI in accordance with RFC3986 Section 5.1.1", and Section 4.1.2.2.1:
-// "If
-// `$self` is a relative URI reference, it is resolved against the next
-// possible base URI source before being used". That next source is whatever
-// base is in force here, which is the retrieval URI for the entry document and
-// the URI a reference named for any other. RFC 3986 Section 5.2.1 has only the
-// scheme required of a base, so a relative `$self` with nothing absolute to
-// resolve against establishes nothing, and Section 5.2.2 never resolves
-// against a fragment, so one written here is dropped rather than read. The
-// specification's own published schema turns such a `$self` down outright,
-// which Section 4 makes it no place to: "If the JSON Schema differs from this
-// section, then this section MUST be considered authoritative", and the
-// section it differs from asks only for a URI reference
+// base URI in accordance with RFC3986 Section 5.1.1", and 3.2.1
+// Section 4.1.2.2.1: "If `$self` is a relative URI reference, it is resolved
+// against the next possible base URI source ([RFC3986] Section 5.1.2
+// [...] 5.1.4) before being used for the resolution of other relative URI
+// references". That source is whatever base is in force here, which is the
+// retrieval URI for the entry document and the URI a reference named for any
+// other. RFC 3986
+// Section 5.2.1 has only the scheme required of a base, so a relative `$self`
+// with nothing absolute to resolve against establishes nothing, and
+// Section 5.2.2 never resolves against a fragment, so one written here is
+// dropped rather than read. The specification's own published schema turns such
+// a `$self` down outright, which 3.2.1 Section 4 makes it no place to: "If the
+// JSON Schema differs from this section, then this section MUST be considered
+// authoritative", and the section it differs from asks only for a URI reference
 inline auto openapi_document_base(const JSON::StringView self,
                                   const OpenAPIWalk &walk)
     -> std::optional<JSON::String> {
@@ -344,8 +353,8 @@ inline auto openapi_check_document(const JSON &document, OpenAPIWalk &walk)
         document, OPENAPI_ROOT_FIELDS_3_1, OPENAPI_ROOT_FIELDS_3_2,
         EMPTY_POINTER, "The OpenAPI Object does not define this field", walk);
 
-    // Section 4.1: "$self | string | This string MUST be in the form of a URI
-    // reference as defined by RFC3986 Section 4.1". Only 3.2 defines the
+    // 3.2.1 Section 4.1: "$self | string | This string MUST be in the form of a
+    // URI reference as defined by RFC3986 Section 4.1". Only 3.2 defines the
     // field, and the table above has already turned it down for anything
     // earlier. What it establishes is the base that every location in this
     // document is keyed by, so it is settled before anything records one
@@ -363,10 +372,10 @@ inline auto openapi_check_document(const JSON &document, OpenAPIWalk &walk)
       //
       //   MUST NOT contain a fragment
       //
-      // but Section 4 settles which of the two answers for this: "This text is
-      // the only normative description of the format. A JSON Schema is hosted
-      // on spec.openapis.org for informational purposes. If the JSON Schema
-      // differs from this section, then this section MUST be considered
+      // but 3.2.1 Section 4 settles which of the two answers for this: "This
+      // text is the only normative description of the format. A JSON Schema is
+      // hosted on spec.openapis.org for informational purposes. If the JSON
+      // Schema differs from this section, then this section MUST be considered
       // authoritative". The text asks only for a URI reference, and RFC 3986
       // Section 4.1 admits a fragment in one, so the pattern is a rule the
       // normative prose does not carry and is not enforced here. Nothing is
@@ -377,9 +386,9 @@ inline auto openapi_check_document(const JSON &document, OpenAPIWalk &walk)
       if (established.has_value()) {
         walk.base = std::move(established.value());
 
-        // Section 4.1.1: "To ensure interoperability, references MUST use the
-        // target document's `$self` URI if the `$self` field is present". So
-        // this is the URI the document answers to, and one that names it by
+        // 3.2.1 Section 4.1.1: "To ensure interoperability, references MUST use
+        // the target document's `$self` URI if the `$self` field is present".
+        // So this is the URI the document answers to, and one that names it by
         // where it was retrieved from instead names another document, which
         // the same paragraph calls "not interoperable" and NOT RECOMMENDED
       }
@@ -408,9 +417,19 @@ inline auto openapi_check_document(const JSON &document, OpenAPIWalk &walk)
       openapi_collect_tags(document, walk);
     }
 
-    // Section 3.1: an OpenAPI Description "MUST contain at least one paths
-    // field, components field, or webhooks field"
-    if (document.try_at("paths", OPENAPI_HASH_PATHS) == nullptr &&
+    // OpenAPI Specification 3.2.1, Section 4.1 binds every document that holds
+    // an OpenAPI Object: "In addition to the required fields, at least one of
+    // the `components`, `paths`, or `webhooks` fields MUST be present".
+    //
+    // 3.1.1, Section 3.1 binds the description instead, and names what it is
+    // made of while doing so: "An OpenAPI Description (OAD) [...] is composed
+    // of an entry document [...] and any/all of its referenced documents [...]
+    // and MUST contain at least one `paths` field, `components` field, or
+    // `webhooks` field". 3.1.0 asked it of a document and 3.1.1 moved the
+    // subject, so a document of that revision that another one reaches is free
+    // to hold none of the three as long as the description holds one
+    if ((!walk.referenced || walk.version == OpenAPIVersion::OPENAPI_3_2) &&
+        document.try_at("paths", OPENAPI_HASH_PATHS) == nullptr &&
         document.try_at("components", OPENAPI_HASH_COMPONENTS) == nullptr &&
         document.try_at("webhooks", OPENAPI_HASH_WEBHOOKS) == nullptr) {
       throw OpenAPIError{
@@ -440,7 +459,8 @@ inline auto openapi_check_document(const JSON &document, OpenAPIWalk &walk)
     // Section 4.8.24.1: "To allow use of a different default `$schema` value
     // for all Schema Objects contained within an OAS document, a
     // `jsonSchemaDialect` value may be set within the OpenAPI Object. If this
-    // default is not set, then the OAS dialect schema id MUST be used". What a
+    // default is not set, then the OAS dialect schema id MUST be used for
+    // these Schema Objects". What a
     // Schema Object says about itself overrides this, which is a matter for
     // whatever reads inside one
     JSON::String effective_dialect{openapi_dialect(walk.version)};
@@ -533,10 +553,10 @@ inline auto openapi_check_tag_parents(
 
 // OpenAPI Specification 3.1.1, Section 4.8.20: "The identified or reference
 // operation MUST be unique, and in the case of an `operationId`, it MUST be
-// resolved within the scope of the OpenAPI Description". Section 4.3.3
-// recommends resolving one "considering all Operation Objects from all parsed
-// documents", so nothing is decided here until every document of the
-// description is held at once
+// resolved within the scope of the OpenAPI Description". Section 4.3.3 goes on
+// that "This requires parsing all referenced documents prior to determining an
+// `operationId` to be unresolvable", so nothing is decided here until every
+// document of the description is held at once
 inline auto openapi_check_operation_id_links(
     const OpenAPIWalk &walk,
     const std::map<JSON::String, OpenAPILocation> &locations) -> void {
@@ -569,7 +589,7 @@ inline auto openapi_check_schema_positions(const OpenAPIWalk &walk) -> void {
 
     // Which place holds this one is what the walk recorded of each place
     // above it rather than anything the order of them suggests. A location is
-    // held under a key that sorts as a string, and Section 4.7 admits both
+    // held under a key that sorts as a string, and Section 4.8.7 admits both
     // `-` and `.` into a component name, either of which falls below the `/`
     // that separates a place from what sits within it. So a sibling named
     // that way comes between an Object and its own contents, which is why

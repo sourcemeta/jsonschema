@@ -472,7 +472,7 @@ auto sourcemeta::jsonschema::lint(const sourcemeta::core::Options &options)
   const auto indentation{parse_indentation(options)};
 
   if (options.contains("fix")) {
-    auto entries = for_each_json(options);
+    auto entries = for_each_json(options, InputFormatting::Preserve);
     retag_openapi_stdin(entries);
 
     for (const auto &entry : entries) {
@@ -485,12 +485,6 @@ auto sourcemeta::jsonschema::lint(const sourcemeta::core::Options &options)
       const auto &custom_resolver{
           resolver(options, options.contains("http"), dialect, configuration)};
       LOG_VERBOSE(options) << "Linting: " << entry.first << "\n";
-      if (entry.yaml) {
-        throw YAMLInputError{
-            "The --fix option is not supported for YAML input files",
-            entry.resolution_base};
-      }
-
       if (entry.multidocument) {
         throw MultiDocumentInputError{
             "The --fix option is not supported for input with multiple "
@@ -697,8 +691,8 @@ auto sourcemeta::jsonschema::lint(const sourcemeta::core::Options &options)
             }
           }
 
-          sourcemeta::core::prettify(copy, std::cout, indentation);
-          std::cout << "\n";
+          sourcemeta::jsonschema::write_schema(copy, std::cout, indentation,
+                                               entry.roundtrip);
         } else if (format_output) {
           if (!keep_ordering) {
             sourcemeta::jsonschema::format_schema(copy, custom_resolver,
@@ -706,8 +700,8 @@ auto sourcemeta::jsonschema::lint(const sourcemeta::core::Options &options)
           }
 
           std::ostringstream expected;
-          sourcemeta::core::prettify(copy, expected, indentation);
-          expected << "\n";
+          sourcemeta::jsonschema::write_schema(copy, expected, indentation,
+                                               entry.roundtrip);
 
           const auto current{
               sourcemeta::core::read_file_to_string(entry.resolution_base)};
@@ -719,9 +713,9 @@ auto sourcemeta::jsonschema::lint(const sourcemeta::core::Options &options)
         } else if (copy != entry.second) {
           sourcemeta::core::atomic_write_file(
               entry.resolution_base,
-              [&copy, &indentation](std::ostream &stream) -> void {
-                sourcemeta::core::prettify(copy, stream, indentation);
-                stream << "\n";
+              [&copy, &indentation, &entry](std::ostream &stream) -> void {
+                sourcemeta::jsonschema::write_schema(copy, stream, indentation,
+                                                     entry.roundtrip);
               });
         }
       } else {

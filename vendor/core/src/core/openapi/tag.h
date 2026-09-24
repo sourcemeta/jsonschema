@@ -64,7 +64,7 @@ inline auto openapi_check_tag(const JSON &value, const Pointer &base,
   openapi_check_optional_string(value, base, "kind"sv, OPENAPI_HASH_KIND,
                                 "The Tag Object kind must be a string");
 
-  // Section 4.22: "parent | string | The `name` of a tag that this tag is
+  // 3.2.1 Section 4.22: "parent | string | The `name` of a tag that this tag is
   // nested under. The named tag MUST exist in the API description, and
   // circular references between parent and child tags MUST NOT be used".
   // Neither of those can be settled until every tag has been read

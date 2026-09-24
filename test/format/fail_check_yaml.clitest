@@ -1,0 +1,39 @@
+WRITE schema.yaml UNTIL EOF
+# Needs formatting
+$schema: http://json-schema.org/draft-04/schema#
+type: string
+title: Test
+description: Test schema
+EOF
+
+// Validation failure
+RUN fmt schema.yaml --check STDIN /dev/null IN . INTO result.txt EXPECTING 2
+
+REPLACE $CWD WITH '[CWD]' IN result.txt
+
+WRITE expected.txt UNTIL EOF
+2> fail: [CWD]/schema.yaml
+2> --- current
+2> +++ expected
+2> @@ -1,5 +1,5 @@
+2>  # Needs formatting
+2>  $schema: http://json-schema.org/draft-04/schema#
+2> -type: string
+2>  title: Test
+2>  description: Test schema
+2> +type: string
+2>
+2> Run the `fmt` command without `--check/-c` to fix the formatting
+EOF
+
+COMPARE result.txt AGAINST expected.txt
+
+WRITE expected_file_0.txt UNTIL EOF
+# Needs formatting
+$schema: http://json-schema.org/draft-04/schema#
+type: string
+title: Test
+description: Test schema
+EOF
+
+COMPARE schema.yaml AGAINST expected_file_0.txt
