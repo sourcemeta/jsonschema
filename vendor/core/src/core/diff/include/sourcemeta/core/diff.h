@@ -7,6 +7,7 @@
 
 #include <cstddef>     // std::size_t
 #include <cstdint>     // std::uint8_t
+#include <functional>  // std::function
 #include <ostream>     // std::ostream
 #include <string_view> // std::string_view
 #include <vector>      // std::vector
@@ -87,12 +88,44 @@ struct Diff {
 
   /// Controls the presentation of a rendered set of differences
   struct FormatOptions {
+    /// The semantic role of a line in a unified diff
+    enum class LineType : std::uint8_t {
+      /// The header indicating the original document label
+      HeaderOriginal,
+      /// The header indicating the modified document label
+      HeaderModified,
+      /// A hunk range header
+      Hunk,
+      /// An unchanged context line
+      Context,
+      /// A deleted line from the original document
+      Delete,
+      /// An inserted line into the modified document
+      Insert,
+      /// The marker indicating a missing final newline
+      NoNewline
+    };
+
+    /// Custom writer for rendering individual logical unified-diff lines.
+    ///
+    /// The callback receives the destination stream, the line's semantic role,
+    /// its textual prefix (such as `"-"` or `"@@ "`), and its content, both
+    /// excluding the terminating newline. The callback is responsible for
+    /// writing only the line body to the stream; Core unconditionally appends
+    /// the terminating newline. Views passed to the callback are only
+    /// guaranteed to remain valid for the duration of the callback.
+    using LineWriter =
+        std::function<void(std::ostream &stream, LineType type,
+                           std::string_view prefix, std::string_view content)>;
+
     /// The name given to the original input in the header
     std::string_view original_label{"a"};
     /// The name given to the modified input in the header
     std::string_view modified_label{"b"};
     /// The number of unchanged lines shown around each change
     std::size_t context{3};
+    /// Optional custom line writer for logical unified-diff lines
+    LineWriter line_writer{};
   };
 
   /// The tokens of the original input
@@ -158,6 +191,18 @@ auto diff(const std::string_view original, const std::string_view modified,
 ///                        " foo\n"
 ///                        "-bar\n"
 ///                        "+baz\n");
+///
+/// std::ostringstream custom_stream;
+/// sourcemeta::core::stringify(
+///     result, custom_stream, sourcemeta::core::Diff::Format::Unified,
+///     {.line_writer =
+///          [](std::ostream &output,
+///             const sourcemeta::core::Diff::FormatOptions::LineType type,
+///             const std::string_view prefix,
+///             const std::string_view content) {
+///            output.write(prefix.data(), prefix.size());
+///            output.write(content.data(), content.size());
+///          }});
 /// ```
 SOURCEMETA_CORE_DIFF_EXPORT
 auto stringify(const Diff &document, std::ostream &stream,

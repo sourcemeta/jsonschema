@@ -432,6 +432,19 @@ inline auto openapi_check_security_scheme_name(const JSON::StringView name,
                 "scheme or the URI of one"};
   }
 
+  // A name that leads out of the document it was written in is one this does
+  // not hold, and saying so is what keeps a description that spans more than
+  // one document from reading as whole. Every other way of naming another
+  // Object is written down where the Object that makes it sits, which one of
+  // these cannot be, as a single Security Requirement Object may name several
+  walk.security_references.insert_or_assign(
+      openapi_location_uri(walk.base, origin),
+      OpenAPIReference{.original = JSON::String{name},
+                       .destination = target.value().recompose(),
+                       .dangling = false,
+                       .expected = OpenAPIObjectKind::SecurityScheme,
+                       .origin = origin});
+
   // Naming a whole OpenAPI Description is naming something that is not a
   // Security Scheme Object
   openapi_follow_target(target.value(), origin,

@@ -15,6 +15,7 @@
 #include <map>              // std::map
 #include <optional>         // std::optional
 #include <set>              // std::set
+#include <span>             // std::span
 #include <string_view>      // std::string_view
 #include <utility>          // std::pair, std::unreachable
 #include <vector>           // std::vector
@@ -149,6 +150,45 @@ inline auto openapi_kind_name(const OpenAPIObjectKind kind) noexcept
   std::unreachable();
 }
 
+// OpenAPI Specification 3.1.1, Section 4.6: "Unless specified otherwise, all
+// fields that are URIs MAY be relative references as defined by RFC3986", and
+// one of those is resolved "using the referring document's base URI". So an
+// Object that moves to another document carries fields that would otherwise
+// go on resolving against a base that is no longer theirs.
+//
+// Which fields those are is what the row of each one says rather than what it
+// is named. Section 4.6: "Note that some URI fields are named `url` for
+// historical reasons, but the descriptive text for those fields uses the
+// correct \"URI\" terminology". So a row reading URI belongs here and a row
+// reading URL does not, as Section 4.7 resolves those "using the URLs defined
+// in the Server Object as a Base URL" rather than against any document. The
+// endpoints of a Security Scheme Object and of an OAuth Flow Object are that
+// second kind, and moving one leaves what it names untouched because the
+// Server Objects it reads against are not what moved.
+//
+// A `$ref` and an `operationRef` are left out, as the frame records those as
+// references of their own. A Server Object `url` is left out too, as Section
+// 4.8.5 makes it a URL template rather than a URI reference, and resolving one
+// through a URI would mangle the variables it is written with. So is every
+// field of the Objects that only ever sit at the root of a document, as those
+// never move anywhere
+constexpr std::array<JSON::StringView, 1> OPENAPI_URI_FIELDS_EXTERNAL_DOCS{
+    {"url"sv}};
+constexpr std::array<JSON::StringView, 1> OPENAPI_URI_FIELDS_EXAMPLE{
+    {"externalValue"sv}};
+
+inline auto openapi_embedded_uri_fields(const OpenAPIObjectKind kind) noexcept
+    -> std::span<const JSON::StringView> {
+  switch (kind) {
+    case OpenAPIObjectKind::ExternalDocumentation:
+      return OPENAPI_URI_FIELDS_EXTERNAL_DOCS;
+    case OpenAPIObjectKind::Example:
+      return OPENAPI_URI_FIELDS_EXAMPLE;
+    default:
+      return {};
+  }
+}
+
 /// Where an Object that stands in for another leads. OpenAPI Specification
 /// 3.1.1 has a Reference Object and a Path Item Object each declare at most
 /// one `$ref`, and a Schema Object's `$ref` never reaches here, so this is a
@@ -163,6 +203,13 @@ struct OpenAPIReference {
   /// Whether that destination is nowhere the frame holds, which is what makes
   /// a description one that has to be made whole before it describes anything
   bool dangling{false};
+  /// What the position that spells it expects to find at the far end, which
+  /// OpenAPI Specification 3.1.1, Section 4.3.1 fixes by where the reference
+  /// sits rather than by anything the target says about itself
+  OpenAPIObjectKind expected{OpenAPIObjectKind::Document};
+  /// Where the member that spells it sits, which is the one place a rewrite
+  /// of this reference has to write to
+  Pointer origin;
 };
 
 /// How an Operation Object is reached from the entry document. OpenAPI
@@ -281,6 +328,16 @@ struct OpenAPILocation {
 // clash is only ever caught within it
 struct OpenAPIWalk {
   JSON::String base;
+  // Where the document was retrieved from, which `$self` may take the place of
+  // as the base every URI it holds resolves against. OpenAPI Specification
+  // 3.2.1, Section 4.5.2 keeps the addresses of the API itself out of that:
+  // "Because the API is a distinct entity from the OpenAPI document, RFC3986's
+  // base URI rules for the OpenAPI document do not apply", and Section 4.5.2.1
+  // says which base does apply instead: "For API URLs the `$self` field, which
+  // identifies the OpenAPI document, is ignored and the retrieval URI is used
+  // instead". So this is kept apart from the base above rather than replaced
+  // by it
+  JSON::String retrieval;
   // The document the checks are reading, which a reference that stays inside
   // it resolves its fragment against
   const JSON *document{nullptr};
@@ -334,6 +391,19 @@ struct OpenAPIWalk {
   /// The names the entry document declares as security schemes, which is what
   /// a Security Requirement Object anywhere in the description may name
   std::set<JSON::String> security_schemes;
+  /// Where a Security Requirement Object names a Security Scheme Object by the
+  /// URI of one rather than by the name of a component, and what each of those
+  /// names leads to. OpenAPI Specification 3.2.1 admits both spellings. This
+  /// is kept apart from the references above because a single one of those
+  /// Objects may name several schemes, which is more than one entry keyed by
+  /// the Object that makes it, so each is keyed by the member that spells it
+  /// instead. Reading one Object twice, which following a reference into the
+  /// document being read does, must still record it once
+  std::map<JSON::String, OpenAPIReference> security_references;
+  /// Whether an entry document is what the names above came from, which is
+  /// what makes this a document the description reaches rather than the one
+  /// that describes the API
+  bool referenced{false};
   /// Where the entry document declares each Tag Object, by the name it gave
   /// it, which is the name an Operation Object's tags resolve against
   std::map<JSON::String, JSON::String> tags;
@@ -519,6 +589,23 @@ inline auto openapi_resolve_uri(const JSON::StringView reference,
 // which is why nothing repeats it on the entry a key leads to
 inline auto openapi_document_uri(const JSON::String &uri) -> JSON::String {
   return JSON::String{take_until(uri, '#')};
+}
+
+// Where a problem found once the walk is over belongs. A location says which
+// base it is keyed by and where under it the Object sits, and a field hangs
+// off that when the problem is with one rather than with the Object holding it
+inline auto
+openapi_error_at(const std::map<JSON::String, OpenAPILocation> &locations,
+                 const JSON::String &location, const char *message,
+                 const JSON::StringView field = {}) -> OpenAPIError {
+  const auto match{locations.find(location)};
+  auto pointer{match == locations.cend() ? EMPTY_POINTER
+                                         : match->second.pointer};
+  if (!field.empty()) {
+    pointer = pointer.concat(JSON::String{field});
+  }
+
+  return {openapi_document_uri(location), std::move(pointer), message};
 }
 
 // OpenAPI Specification 3.1.1, Section 4.6 determines a document's base URI

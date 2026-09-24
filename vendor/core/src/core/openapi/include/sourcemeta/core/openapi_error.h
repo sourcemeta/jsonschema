@@ -81,6 +81,124 @@ private:
 };
 
 /// @ingroup openapi
+/// An error that represents a document of an OpenAPI Description that nothing
+/// could produce. For example:
+///
+/// ```cpp
+/// #include <sourcemeta/core/jsonpointer.h>
+/// #include <sourcemeta/core/openapi.h>
+/// #include <cassert>
+///
+/// const sourcemeta::core::OpenAPIResolutionError error{
+///     "https://example.com/openapi.json", sourcemeta::core::Pointer{"$ref"},
+///     "https://example.com/shared.json", "Could not resolve"};
+/// assert(error.identifier() == "https://example.com/shared.json");
+/// ```
+class SOURCEMETA_CORE_OPENAPI_EXPORT OpenAPIResolutionError
+    : public std::exception {
+public:
+  /// Create a resolution error from the document the reference was made in,
+  /// where in it the reference sits, what it names, and a message
+  OpenAPIResolutionError(JSON::String base, Pointer location,
+                         JSON::String identifier, const char *message)
+      : base_{std::move(base)}, location_{std::move(location)},
+        identifier_{std::move(identifier)}, message_{message} {}
+  OpenAPIResolutionError(JSON::String base, Pointer location,
+                         JSON::String identifier, std::string message) = delete;
+  OpenAPIResolutionError(JSON::String base, Pointer location,
+                         JSON::String identifier,
+                         std::string &&message) = delete;
+  OpenAPIResolutionError(JSON::String base, Pointer location,
+                         JSON::String identifier,
+                         std::string_view message) = delete;
+
+  [[nodiscard]] auto what() const noexcept -> const char * override {
+    return this->message_;
+  }
+
+  /// The URI that nothing could produce a document for
+  [[nodiscard]] auto identifier() const noexcept -> JSON::StringView {
+    return this->identifier_;
+  }
+
+  /// Get where the reference is, as a pointer from the root of the document
+  /// that makes it
+  [[nodiscard]] auto location() const noexcept -> const Pointer & {
+    return this->location_;
+  }
+
+  /// Get the base URI of the document that makes the reference
+  [[nodiscard]] auto base() const noexcept -> JSON::StringView {
+    return this->base_;
+  }
+
+private:
+  JSON::String base_;
+  Pointer location_;
+  JSON::String identifier_;
+  const char *message_;
+};
+
+/// @ingroup openapi
+/// An error that represents a reference of an OpenAPI Description that names
+/// something it may not. For example:
+///
+/// ```cpp
+/// #include <sourcemeta/core/jsonpointer.h>
+/// #include <sourcemeta/core/openapi.h>
+/// #include <cassert>
+///
+/// const sourcemeta::core::OpenAPIReferenceError error{
+///     "https://example.com/openapi.json", sourcemeta::core::Pointer{"$ref"},
+///     "https://example.com/shared.json#/info", "Wrong kind"};
+/// assert(error.identifier() == "https://example.com/shared.json#/info");
+/// ```
+class SOURCEMETA_CORE_OPENAPI_EXPORT OpenAPIReferenceError
+    : public std::exception {
+public:
+  /// Create a reference error from the document the reference was made in,
+  /// where in it the reference sits, what it names, and a message
+  OpenAPIReferenceError(JSON::String base, Pointer location,
+                        JSON::String identifier, const char *message)
+      : base_{std::move(base)}, location_{std::move(location)},
+        identifier_{std::move(identifier)}, message_{message} {}
+  OpenAPIReferenceError(JSON::String base, Pointer location,
+                        JSON::String identifier, std::string message) = delete;
+  OpenAPIReferenceError(JSON::String base, Pointer location,
+                        JSON::String identifier,
+                        std::string &&message) = delete;
+  OpenAPIReferenceError(JSON::String base, Pointer location,
+                        JSON::String identifier,
+                        std::string_view message) = delete;
+
+  [[nodiscard]] auto what() const noexcept -> const char * override {
+    return this->message_;
+  }
+
+  /// The URI that the reference names, resolved and canonicalised
+  [[nodiscard]] auto identifier() const noexcept -> JSON::StringView {
+    return this->identifier_;
+  }
+
+  /// Get where the reference is, as a pointer from the root of the document
+  /// that makes it
+  [[nodiscard]] auto location() const noexcept -> const Pointer & {
+    return this->location_;
+  }
+
+  /// Get the base URI of the document that makes the reference
+  [[nodiscard]] auto base() const noexcept -> JSON::StringView {
+    return this->base_;
+  }
+
+private:
+  JSON::String base_;
+  Pointer location_;
+  JSON::String identifier_;
+  const char *message_;
+};
+
+/// @ingroup openapi
 /// An error that represents framing that ran past what the caller allowed it
 /// to register. For example:
 ///
@@ -103,6 +221,37 @@ public:
   }
 
   /// The maximum number of locations that framing was allowed to register
+  [[nodiscard]] auto limit() const noexcept -> std::uint64_t {
+    return this->limit_;
+  }
+
+private:
+  std::uint64_t limit_;
+};
+
+/// @ingroup openapi
+/// An error that represents bundling that ran past what the caller allowed it
+/// to analyse. For example:
+///
+/// ```cpp
+/// #include <sourcemeta/core/openapi.h>
+/// #include <cassert>
+///
+/// const sourcemeta::core::OpenAPIBundleLimitError error{100};
+/// assert(error.limit() == 100);
+/// ```
+class SOURCEMETA_CORE_OPENAPI_EXPORT OpenAPIBundleLimitError
+    : public std::exception {
+public:
+  /// Create a bundling limit error
+  OpenAPIBundleLimitError(const std::uint64_t limit) : limit_{limit} {}
+
+  [[nodiscard]] auto what() const noexcept -> const char * override {
+    return "The OpenAPI Description exceeds the maximum number of locations "
+           "that bundling may analyse";
+  }
+
+  /// The maximum number of locations that bundling was allowed to register
   [[nodiscard]] auto limit() const noexcept -> std::uint64_t {
     return this->limit_;
   }

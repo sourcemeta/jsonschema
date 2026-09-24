@@ -83,6 +83,41 @@ inline auto openapi_is_component_key(const JSON::StringView key) noexcept
   return !key.empty();
 }
 
+// The Components Object member that holds each kind of Object a reference may
+// name, which is where bundling puts what it embeds, and nothing for a kind
+// that the Components Object has no home for. OpenAPI Specification 3.1.1,
+// Section 4.8.7 gives one member per referenceable kind but none for an
+// Operation Object, which is reached through the Path Item Object holding it
+inline auto openapi_component_container(const OpenAPIObjectKind kind) noexcept
+    -> JSON::StringView {
+  switch (kind) {
+    case OpenAPIObjectKind::Schema:
+      return "schemas"sv;
+    case OpenAPIObjectKind::Response:
+      return "responses"sv;
+    case OpenAPIObjectKind::Parameter:
+      return "parameters"sv;
+    case OpenAPIObjectKind::Example:
+      return "examples"sv;
+    case OpenAPIObjectKind::RequestBody:
+      return "requestBodies"sv;
+    case OpenAPIObjectKind::Header:
+      return "headers"sv;
+    case OpenAPIObjectKind::SecurityScheme:
+      return "securitySchemes"sv;
+    case OpenAPIObjectKind::Link:
+      return "links"sv;
+    case OpenAPIObjectKind::Callbacks:
+      return "callbacks"sv;
+    case OpenAPIObjectKind::PathItem:
+      return "pathItems"sv;
+    case OpenAPIObjectKind::MediaType:
+      return "mediaTypes"sv;
+    default:
+      return {};
+  }
+}
+
 // OpenAPI Specification 3.1.1, Section 4.8.7: "Holds a set of reusable objects
 // for different aspects of the OAS". What each entry of those maps holds is
 // not read here, and the Schema Objects under `schemas` are never read at all,

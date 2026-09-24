@@ -187,11 +187,13 @@ inline auto openapi_check_operation(const JSON &value, const Pointer &base,
     const auto location{openapi_child(base, "callbacks"sv)};
     openapi_expect_object(*callbacks, location,
                           "The Operation Object callbacks must be an object");
+    // Section 4.8.10: "callbacks | Map[string, Callback Object | Reference
+    // Object] | A map of possible out-of band callbacks related to the parent
+    // operation [...] The key is a unique identifier for the Callback Object".
+    // Its keys are identifiers rather than field names, and like the webhooks
+    // map and unlike the Paths Object this one carries no extension carve-out,
+    // so a member named `x-` is a callback
     for (const auto &entry : callbacks->as_object()) {
-      if (entry.first.starts_with(OPENAPI_EXTENSION_PREFIX)) {
-        continue;
-      }
-
       const auto callback{openapi_child(location, entry.first)};
       openapi_check_callbacks_or_reference(entry.second, callback, walk);
       record.callbacks.push_back(openapi_location_uri(walk.base, callback));
