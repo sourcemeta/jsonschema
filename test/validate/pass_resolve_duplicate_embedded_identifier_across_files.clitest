@@ -1,0 +1,72 @@
+// An identifier that a `--resolve` input merely embeds does not collide with
+// one that another input declares. A file stands for the single schema it
+// declares at its root, so a resource buried under `$defs` belongs to the
+// file holding it and answers for nothing outside it. The two files below
+// spell the same identifier with contradicting contents, one at its root and
+// one buried, and the import still succeeds with the root declaration
+// answering for it, which the instance below proves by validating as the
+// string that one describes rather than the number the buried one does
+
+WRITE schema.json UNTIL EOF
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$ref": "https://example.com/shared"
+}
+EOF
+
+WRITE schemas/aaa.json UNTIL EOF
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.com/shared",
+  "type": "string"
+}
+EOF
+
+WRITE schemas/zzz.json UNTIL EOF
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.com/outer",
+  "$defs": {
+    "buried": {
+      "$id": "https://example.com/shared",
+      "type": "number"
+    }
+  }
+}
+EOF
+
+WRITE instance.json UNTIL EOF
+"hello"
+EOF
+
+WRITE number.json UNTIL EOF
+42
+EOF
+
+RUN validate schema.json instance.json --resolve schemas --verbose STDIN /dev/null IN . INTO result_0.txt EXPECTING 0
+
+WRITE expected_0.txt UNTIL EOF
+2> ok: instance.json
+2>
+2> 1 validated, 1 passed, 0 failed
+EOF
+
+COMPARE result_0.txt AGAINST expected_0.txt
+
+// Validation failure
+RUN validate schema.json number.json --resolve schemas STDIN /dev/null IN . INTO result_1.txt EXPECTING 2
+
+WRITE expected_1.txt UNTIL EOF
+2> fail: number.json
+2> error: Schema validation failure
+2>   The value was expected to be of type string but it was of type integer
+2>     at instance location "" (line 1, column 1)
+2>     at evaluate path "/$ref/type"
+2>   The integer value was expected to validate against the referenced schema
+2>     at instance location "" (line 1, column 1)
+2>     at evaluate path "/$ref"
+2>
+2> 1 validated, 0 passed, 1 failed
+EOF
+
+COMPARE result_1.txt AGAINST expected_1.txt
