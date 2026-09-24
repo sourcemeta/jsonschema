@@ -4,7 +4,7 @@ sourcemeta_library(NAMESPACE sourcemeta PROJECT core NAME openapi
           parameter.h request_body.h security.h path_item.h paths.h
           components.h discriminator.h external_documentation.h info.h
           server.h tag.h
-          document.h frame.cc version.cc)
+          document.h bundle.cc frame.cc version.cc)
 
 if(SOURCEMETA_CORE_INSTALL)
   sourcemeta_library_install(NAMESPACE sourcemeta PROJECT core NAME openapi)

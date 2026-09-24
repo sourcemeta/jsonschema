@@ -27,15 +27,41 @@ inline auto write_diff_range(std::ostream &stream, const std::size_t start,
   }
 }
 
-inline auto write_diff_line(std::ostream &stream, const char prefix,
+inline auto write_diff_output_line(std::ostream &stream,
+                                   const Diff::FormatOptions &options,
+                                   const Diff::FormatOptions::LineType type,
+                                   const std::string_view prefix,
+                                   const std::string_view content) -> void {
+  if (options.line_writer) {
+    options.line_writer(stream, type, prefix, content);
+  } else {
+    write_diff_text(stream, prefix);
+    write_diff_text(stream, content);
+  }
+  stream.put('\n');
+}
+
+inline auto append_diff_range(std::string &result, const std::size_t start,
+                              const std::size_t count) -> void {
+  digits_append(result, count == 0 ? start : start + 1);
+  if (count != 1) {
+    result.push_back(',');
+    digits_append(result, count);
+  }
+}
+
+inline auto write_diff_line(std::ostream &stream,
+                            const Diff::FormatOptions &options,
+                            const Diff::FormatOptions::LineType type,
+                            const std::string_view prefix,
                             const std::vector<std::string_view> &lines,
                             const std::size_t index,
                             const bool ends_with_newline) -> void {
-  stream.put(prefix);
-  write_diff_text(stream, lines[index]);
-  stream.put('\n');
+  write_diff_output_line(stream, options, type, prefix, lines[index]);
   if (!ends_with_newline && index + 1 == lines.size()) {
-    write_diff_text(stream, "\\ No newline at end of file\n");
+    write_diff_output_line(stream, options,
+                           Diff::FormatOptions::LineType::NoNewline, "\\ ",
+                           "No newline at end of file");
   }
 }
 
@@ -98,24 +124,40 @@ inline auto stringify_diff_unified(const Diff &document, std::ostream &stream,
     const auto modified_end{operations[change_end - 1].modified_end + trailing};
 
     if (!wrote_header) {
-      write_diff_text(stream, "--- ");
-      write_diff_text(stream, options.original_label);
-      stream.put('\n');
-      write_diff_text(stream, "+++ ");
-      write_diff_text(stream, options.modified_label);
-      stream.put('\n');
+      write_diff_output_line(stream, options,
+                             Diff::FormatOptions::LineType::HeaderOriginal,
+                             "--- ", options.original_label);
+      write_diff_output_line(stream, options,
+                             Diff::FormatOptions::LineType::HeaderModified,
+                             "+++ ", options.modified_label);
       wrote_header = true;
     }
 
-    write_diff_text(stream, "@@ -");
-    write_diff_range(stream, original_start, original_end - original_start);
-    write_diff_text(stream, " +");
-    write_diff_range(stream, modified_start, modified_end - modified_start);
-    write_diff_text(stream, " @@\n");
+    if (!options.line_writer) {
+      write_diff_text(stream, "@@ -");
+      write_diff_range(stream, original_start, original_end - original_start);
+      write_diff_text(stream, " +");
+      write_diff_range(stream, modified_start, modified_end - modified_start);
+      write_diff_text(stream, " @@\n");
+    } else {
+      std::string hunk_content;
+      hunk_content.reserve(48);
+      hunk_content.push_back('-');
+      append_diff_range(hunk_content, original_start,
+                        original_end - original_start);
+      hunk_content.append(" +");
+      append_diff_range(hunk_content, modified_start,
+                        modified_end - modified_start);
+      hunk_content.append(" @@");
+      write_diff_output_line(stream, options,
+                             Diff::FormatOptions::LineType::Hunk, "@@ ",
+                             hunk_content);
+    }
 
     for (auto line{original_start};
          line < operations[change_begin].original_start; ++line) {
-      write_diff_line(stream, ' ', document.original, line,
+      write_diff_line(stream, options, Diff::FormatOptions::LineType::Context,
+                      " ", document.original, line,
                       document.original_ends_with_newline);
     }
 
@@ -125,24 +167,27 @@ inline auto stringify_diff_unified(const Diff &document, std::ostream &stream,
         case Diff::Operation::Type::Equal:
           for (auto line{operation.original_start};
                line < operation.original_end; ++line) {
-            write_diff_line(stream, ' ', document.original, line,
-                            document.original_ends_with_newline);
+            write_diff_line(
+                stream, options, Diff::FormatOptions::LineType::Context, " ",
+                document.original, line, document.original_ends_with_newline);
           }
 
           break;
         case Diff::Operation::Type::Delete:
           for (auto line{operation.original_start};
                line < operation.original_end; ++line) {
-            write_diff_line(stream, '-', document.original, line,
-                            document.original_ends_with_newline);
+            write_diff_line(
+                stream, options, Diff::FormatOptions::LineType::Delete, "-",
+                document.original, line, document.original_ends_with_newline);
           }
 
           break;
         case Diff::Operation::Type::Insert:
           for (auto line{operation.modified_start};
                line < operation.modified_end; ++line) {
-            write_diff_line(stream, '+', document.modified, line,
-                            document.modified_ends_with_newline);
+            write_diff_line(
+                stream, options, Diff::FormatOptions::LineType::Insert, "+",
+                document.modified, line, document.modified_ends_with_newline);
           }
 
           break;
@@ -151,7 +196,8 @@ inline auto stringify_diff_unified(const Diff &document, std::ostream &stream,
 
     for (auto line{operations[change_end - 1].original_end};
          line < original_end; ++line) {
-      write_diff_line(stream, ' ', document.original, line,
+      write_diff_line(stream, options, Diff::FormatOptions::LineType::Context,
+                      " ", document.original, line,
                       document.original_ends_with_newline);
     }
 

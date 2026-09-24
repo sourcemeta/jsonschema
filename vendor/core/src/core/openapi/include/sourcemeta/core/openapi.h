@@ -6,6 +6,7 @@
 #endif
 
 #include <sourcemeta/core/json.h>
+#include <sourcemeta/core/jsonpointer.h>
 #include <sourcemeta/core/jsonschema.h>
 
 // NOLINTBEGIN(misc-include-cleaner)
@@ -13,13 +14,14 @@
 // NOLINTEND(misc-include-cleaner)
 
 #include <cstdint>     // std::uint8_t, std::uint64_t
+#include <functional>  // std::function
 #include <limits>      // std::numeric_limits
 #include <memory>      // std::unique_ptr
 #include <optional>    // std::optional, std::nullopt
 #include <string_view> // std::string_view
 
 /// @defgroup openapi OpenAPI
-/// @brief A growing implementation of the OpenAPI Specification 3.1.
+/// @brief A growing implementation of the OpenAPI Specification.
 ///
 /// This module reports where an OpenAPI Description declares its JSON Schemas
 /// and leaves what is inside them to a JSON Schema implementation.
@@ -314,6 +316,188 @@ private:
 #pragma warning(pop)
 #endif
 };
+
+/// @ingroup openapi
+/// What a sourcemeta::core::OpenAPIResolver hands back: either a document it
+/// owns, or a reference to one that outlives the call
+using OpenAPIResolverResult = OwnedOrReference<JSON>;
+
+/// @ingroup openapi
+/// How bundling reaches the other documents that an OpenAPI Description is
+/// split across. Every document handed back must itself be an OpenAPI
+/// Description, and a URI that names nothing is reported by handing back no
+/// value. For example:
+///
+/// ```cpp
+/// #include <sourcemeta/core/json.h>
+/// #include <sourcemeta/core/openapi.h>
+/// #include <string_view>
+///
+/// static auto resolver(const std::string_view identifier)
+///     -> sourcemeta::core::OpenAPIResolverResult {
+///   if (identifier == "https://example.com/shared.json") {
+///     return sourcemeta::core::parse_json(R"JSON({
+///       "openapi": "3.1.1",
+///       "info": { "title": "Shared", "version": "1.0.0" },
+///       "components": {}
+///     })JSON");
+///   }
+///
+///   return std::nullopt;
+/// }
+/// ```
+using OpenAPIResolver = std::function<OpenAPIResolverResult(std::string_view)>;
+
+/// @ingroup openapi
+/// Everything bundling takes beyond the document and how to reach the rest
+struct OpenAPIBundleOptions {
+  /// A callback to report what bundling embedded, as the URI of the place it
+  /// came from and a pointer from the root of the document it landed at.
+  /// Bundling renames what it embeds to hold up as a component name, so this
+  /// is the only way to know which place became which component
+  using Callback =
+      std::function<void(JSON::StringView, const sourcemeta::core::Pointer &)>;
+
+  /// A callback to name what bundling embeds, given the URI of the place it
+  /// came from and the Components Object member it goes under. Whatever it
+  /// hands back is held to the keys that the specification admits and to
+  /// being one the description does not already give a meaning to, so it is
+  /// what bundling starts from rather than the last word
+  using Namer = std::function<JSON::String(JSON::StringView, JSON::StringView)>;
+
+  /// The URI the document was retrieved from, which every relative reference
+  /// it makes resolves against. A document that names itself takes that name
+  /// as its base instead, leaving this as the one a relative such name
+  /// resolves against
+  std::string_view default_base{};
+  /// The maximum number of locations that analysis may register. How many
+  /// documents bundling ends up reading follows from what the resolvers hand
+  /// back rather than from the document the caller passed in, and every walk
+  /// and every frame that bundling constructs spends from this one allowance,
+  /// throwing sourcemeta::core::OpenAPIBundleLimitError once it runs out.
+  ///
+  /// Bundling settles by reading what it has produced so far over and over
+  /// until a pass brings nothing new in, so this bounds the reading rather
+  /// than the result. One place counts once per pass that goes by it and once
+  /// more for each document brought in alongside it, which puts the allowance
+  /// a whole description needs well above the number of places it holds. Note
+  /// too that a document is read in full before anything charges for it, so
+  /// this bounds how many oversized documents are read rather than whether
+  /// one is
+  std::uint64_t max_locations{std::numeric_limits<std::uint64_t>::max()};
+  /// A callback to report each place that bundling embedded
+  Callback callback{};
+  /// A callback to name each place that bundling embeds
+  Namer namer{};
+};
+
+/// @ingroup openapi
+/// Bundle an OpenAPI Description by embedding everything it references from
+/// another document into its own Components Object. The walker and the
+/// resolver are what reading inside a Schema Object takes, and the OpenAPI
+/// resolver is how the rest of the description is reached. No document the
+/// description spans may declare a revision of the OpenAPI Specification other
+/// than the one the entry document declares, as what this produces is one
+/// document that declares one, and a revision neither holds every field of
+/// another nor reads what they share by the same rules. This overload mutates
+/// the input document. For example:
+///
+/// ```cpp
+/// #include <sourcemeta/core/json.h>
+/// #include <sourcemeta/core/openapi.h>
+/// #include <cassert>
+/// #include <string_view>
+///
+/// static auto resolver(const std::string_view identifier)
+///     -> sourcemeta::core::OpenAPIResolverResult {
+///   assert(identifier == "https://example.com/shared.json");
+///   return sourcemeta::core::parse_json(R"JSON({
+///     "openapi": "3.1.1",
+///     "info": { "title": "Shared", "version": "1.0.0" },
+///     "components": {
+///       "responses": { "NotFound": { "description": "Not found" } }
+///     }
+///   })JSON");
+/// }
+///
+/// auto document{sourcemeta::core::parse_json(R"JSON({
+///   "openapi": "3.1.1",
+///   "info": { "title": "Example", "version": "1.0.0" },
+///   "paths": {
+///     "/pets": {
+///       "get": {
+///         "responses": {
+///           "404": { "$ref": "shared.json#/components/responses/NotFound" }
+///         }
+///       }
+///     }
+///   }
+/// })JSON")};
+///
+/// sourcemeta::core::openapi_bundle(
+///     document, sourcemeta::core::schema_walker,
+///     sourcemeta::core::schema_resolver, resolver,
+///     {.default_base = "https://example.com/openapi.json"});
+///
+/// assert(document.at("components").at("responses").defines("NotFound"));
+/// ```
+SOURCEMETA_CORE_OPENAPI_EXPORT
+auto openapi_bundle(JSON &document, const SchemaWalker &walker,
+                    const SchemaResolver &schema_resolver,
+                    const OpenAPIResolver &resolver,
+                    const OpenAPIBundleOptions &options = {}) -> void;
+
+/// @ingroup openapi
+/// Bundle an OpenAPI Description by embedding everything it references from
+/// another document into its own Components Object. No document the description
+/// spans may declare a revision of the OpenAPI Specification other than the one
+/// the entry document declares. This overload returns a new document, without
+/// mutating the input. For example:
+///
+/// ```cpp
+/// #include <sourcemeta/core/json.h>
+/// #include <sourcemeta/core/openapi.h>
+/// #include <cassert>
+/// #include <string_view>
+///
+/// static auto resolver(const std::string_view identifier)
+///     -> sourcemeta::core::OpenAPIResolverResult {
+///   assert(identifier == "https://example.com/shared.json");
+///   return sourcemeta::core::parse_json(R"JSON({
+///     "openapi": "3.1.1",
+///     "info": { "title": "Shared", "version": "1.0.0" },
+///     "components": {
+///       "responses": { "NotFound": { "description": "Not found" } }
+///     }
+///   })JSON");
+/// }
+///
+/// const auto document{sourcemeta::core::parse_json(R"JSON({
+///   "openapi": "3.1.1",
+///   "info": { "title": "Example", "version": "1.0.0" },
+///   "paths": {
+///     "/pets": {
+///       "get": {
+///         "responses": {
+///           "404": { "$ref": "shared.json#/components/responses/NotFound" }
+///         }
+///       }
+///     }
+///   }
+/// })JSON")};
+///
+/// const auto result{sourcemeta::core::openapi_bundle(
+///     document, sourcemeta::core::schema_walker,
+///     sourcemeta::core::schema_resolver, resolver,
+///     {.default_base = "https://example.com/openapi.json"})};
+///
+/// assert(result.at("components").at("responses").defines("NotFound"));
+/// ```
+SOURCEMETA_CORE_OPENAPI_EXPORT
+auto openapi_bundle(const JSON &document, const SchemaWalker &walker,
+                    const SchemaResolver &schema_resolver,
+                    const OpenAPIResolver &resolver,
+                    const OpenAPIBundleOptions &options = {}) -> JSON;
 
 } // namespace sourcemeta::core
 
