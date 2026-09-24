@@ -170,6 +170,20 @@ private:
   std::filesystem::path path_;
 };
 
+class MultiDocumentInputError : public std::runtime_error {
+public:
+  MultiDocumentInputError(const std::string &message,
+                          std::filesystem::path path)
+      : std::runtime_error{message}, path_{std::move(path)} {}
+
+  [[nodiscard]] auto path() const noexcept -> const std::filesystem::path & {
+    return this->path_;
+  }
+
+private:
+  std::filesystem::path path_;
+};
+
 class UnsupportedOpenAPIFormatError : public std::runtime_error {
 public:
   UnsupportedOpenAPIFormatError()
@@ -1159,6 +1173,10 @@ inline auto try_catch(const sourcemeta::core::Options &options,
     print_exception(is_json, error);
     return EXIT_SCHEMA_INPUT_ERROR;
   } catch (const YAMLInputError &error) {
+    const auto is_json{options.contains("json")};
+    print_exception(is_json, error);
+    return EXIT_NOT_SUPPORTED;
+  } catch (const MultiDocumentInputError &error) {
     const auto is_json{options.contains("json")};
     print_exception(is_json, error);
     return EXIT_NOT_SUPPORTED;

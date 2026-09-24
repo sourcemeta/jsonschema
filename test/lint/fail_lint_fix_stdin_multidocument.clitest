@@ -1,0 +1,26 @@
+WRITE stdin_input UNTIL EOF
+{ "$schema": "http://json-schema.org/draft-06/schema#", "title": "A", "description": "d", "examples": [ "foo" ], "type": "string", "const": "foo" }
+{ "$schema": "http://json-schema.org/draft-06/schema#", "title": "B", "description": "d", "examples": [ "bar" ], "type": "string", "const": "bar" }
+EOF
+
+// Not supported
+RUN lint - --fix STDIN stdin_input IN . INTO result_0.txt EXPECTING 3
+
+WRITE expected_0.txt UNTIL EOF
+2> error: The --fix option is not supported for input with multiple documents
+2>   at file path tag:sourcemeta.com,2026:jsonschema/stdin
+EOF
+
+COMPARE result_0.txt AGAINST expected_0.txt
+
+// Not supported
+RUN lint - --fix --json STDIN stdin_input IN . INTO result_1.txt EXPECTING 3
+
+WRITE expected_1.txt UNTIL EOF
+1> {
+1>   "error": "The --fix option is not supported for input with multiple documents",
+1>   "filePath": "tag:sourcemeta.com,2026:jsonschema/stdin"
+1> }
+EOF
+
+COMPARE result_1.txt AGAINST expected_1.txt

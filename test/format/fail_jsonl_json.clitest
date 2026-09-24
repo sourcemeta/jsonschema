@@ -1,0 +1,18 @@
+WRITE schemas.jsonl UNTIL EOF
+{ "$schema": "https://json-schema.org/draft/2020-12/schema", "type": "string" }
+{ "$schema": "https://json-schema.org/draft/2020-12/schema", "type": "integer" }
+EOF
+
+// Not supported
+RUN fmt schemas.jsonl --json STDIN /dev/null IN . INTO result.txt EXPECTING 3
+
+REPLACE $CWD WITH '[CWD]' IN result.txt
+
+WRITE expected.txt UNTIL EOF
+1> {
+1>   "error": "This command does not support input with multiple documents",
+1>   "filePath": "[CWD]/schemas.jsonl"
+1> }
+EOF
+
+COMPARE result.txt AGAINST expected.txt

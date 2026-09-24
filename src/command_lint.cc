@@ -491,6 +491,13 @@ auto sourcemeta::jsonschema::lint(const sourcemeta::core::Options &options)
             entry.resolution_base};
       }
 
+      if (entry.multidocument) {
+        throw MultiDocumentInputError{
+            "The --fix option is not supported for input with multiple "
+            "documents",
+            entry.resolution_base};
+      }
+
       if (!entry.second.is_object() && !entry.second.is_boolean()) {
         throw NotSchemaError{entry.resolution_base};
       }
