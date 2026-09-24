@@ -228,11 +228,22 @@ inline auto parse_jobs(const sourcemeta::core::Options &options)
 
 inline auto parse_indentation(const sourcemeta::core::Options &options)
     -> std::size_t {
-  if (options.contains("indentation")) {
-    return std::stoull(std::string{options.at("indentation").front()});
+  if (!options.contains("indentation")) {
+    return 2;
   }
 
-  return 2;
+  const std::string value{options.at("indentation").front()};
+  if (value.empty() || !std::ranges::all_of(value, [](const char character) {
+        return std::isdigit(static_cast<unsigned char>(character));
+      })) {
+    throw InvalidIndentationError{};
+  }
+
+  try {
+    return std::stoull(value);
+  } catch (const std::out_of_range &) {
+    throw InvalidIndentationError{};
+  }
 }
 
 inline auto format_assertion_tweaks(const sourcemeta::core::Options &options)
