@@ -155,7 +155,7 @@ auto sourcemeta::jsonschema::fmt(const sourcemeta::core::Options &options)
     const auto display_path{stdin_path()};
 
     std::string raw_stdin;
-    auto parsed{read_from_stdin(&raw_stdin, InputFormatting::Preserve)};
+    const auto parsed{read_from_stdin(&raw_stdin, InputFormatting::Preserve)};
     const auto &document{parsed.document};
     const auto dialect{default_dialect(options, configuration)};
     const auto is_test_document =
@@ -240,7 +240,7 @@ auto sourcemeta::jsonschema::fmt(const sourcemeta::core::Options &options)
     }
   };
 
-  const auto handle_file_entry = [&](InputJSON &entry) {
+  const auto handle_file_entry = [&](const InputJSON &entry) {
     if (entry.multidocument) {
       throw MultiDocumentInputError{
           "This command does not support input with multiple documents",
@@ -349,8 +349,8 @@ auto sourcemeta::jsonschema::fmt(const sourcemeta::core::Options &options)
   // When no positional arguments are given, default to for_each_json(options)
   // which scans the current directory.
   if (options.positional().empty()) {
-    auto entries{for_each_json(options, InputFormatting::Preserve)};
-    for (auto &entry : entries) {
+    for (const auto &entry :
+         for_each_json(options, InputFormatting::Preserve)) {
       handle_file_entry(entry);
     }
   } else {
@@ -359,8 +359,8 @@ auto sourcemeta::jsonschema::fmt(const sourcemeta::core::Options &options)
       if (arg == "-") {
         handle_stdin();
       } else {
-        auto entries{for_each_json({arg}, options, InputFormatting::Preserve)};
-        for (auto &entry : entries) {
+        for (const auto &entry :
+             for_each_json({arg}, options, InputFormatting::Preserve)) {
           handle_file_entry(entry);
         }
       }

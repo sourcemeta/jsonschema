@@ -475,7 +475,7 @@ auto sourcemeta::jsonschema::lint(const sourcemeta::core::Options &options)
     auto entries = for_each_json(options, InputFormatting::Preserve);
     retag_openapi_stdin(entries);
 
-    for (auto &entry : entries) {
+    for (const auto &entry : entries) {
       const auto configuration_path{
           find_configuration(options, entry.resolution_base)};
       const auto &configuration{read_configuration(options, configuration_path,

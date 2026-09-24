@@ -164,11 +164,11 @@ inline auto format_schema(sourcemeta::core::JSON &schema,
 inline auto
 write_schema(const sourcemeta::core::JSON &schema, std::ostream &stream,
              const std::size_t indentation,
-             std::optional<sourcemeta::core::YAMLRoundTrip> &roundtrip)
+             const std::optional<sourcemeta::core::YAMLRoundTrip> &roundtrip)
     -> void {
   if (roundtrip.has_value()) {
-    roundtrip.value().indent_width = indentation;
-    sourcemeta::core::stringify_yaml(schema, stream, roundtrip.value());
+    sourcemeta::core::stringify_yaml(schema, stream, roundtrip.value(),
+                                     indentation);
     return;
   }
 
