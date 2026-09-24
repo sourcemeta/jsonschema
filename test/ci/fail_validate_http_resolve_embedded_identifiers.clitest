@@ -1,0 +1,148 @@
+// Only the identifier that a `--resolve` input declares at its own root may
+// be kept away from the network. Reaching any further would mean walking
+// into places whose meaning depends on the dialect, and the dialect of an
+// input that cannot be imported is precisely what is unknown. Each pair of
+// documents below embeds the custom meta-schema that the other one requires,
+// written absolute in the first pair and relative to its container in the
+// second, so neither identifier is claimed by the input that names it and
+// both runs must reach for the network. The cURL library cannot be loaded,
+// so the error below proves the request was attempted
+
+ENV SOURCEMETA_CORE_CURL_SO $CWD/does-not-exist.so
+
+WRITE schema.json UNTIL EOF
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "string"
+}
+EOF
+
+WRITE doc-a.json UNTIL EOF
+{
+  "$schema": "https://example.com/embedded-meta-b",
+  "$id": "https://example.com/doc-a",
+  "$defs": {
+    "meta": {
+      "$id": "https://example.com/embedded-meta-a",
+      "$vocabulary": {
+        "https://json-schema.org/draft/2020-12/vocab/core": true,
+        "https://json-schema.org/draft/2020-12/vocab/applicator": true,
+        "https://json-schema.org/draft/2020-12/vocab/validation": true
+      }
+    }
+  }
+}
+EOF
+
+WRITE doc-b.json UNTIL EOF
+{
+  "$schema": "https://example.com/embedded-meta-a",
+  "$id": "https://example.com/doc-b",
+  "$defs": {
+    "meta": {
+      "$id": "https://example.com/embedded-meta-b",
+      "$vocabulary": {
+        "https://json-schema.org/draft/2020-12/vocab/core": true,
+        "https://json-schema.org/draft/2020-12/vocab/applicator": true,
+        "https://json-schema.org/draft/2020-12/vocab/validation": true
+      }
+    }
+  }
+}
+EOF
+
+WRITE relative-a.json UNTIL EOF
+{
+  "$schema": "https://example.com/nested/embedded-meta-b",
+  "$id": "https://example.com/nested/relative-a",
+  "$defs": {
+    "meta": {
+      "$id": "embedded-meta-a",
+      "$vocabulary": {
+        "https://json-schema.org/draft/2020-12/vocab/core": true,
+        "https://json-schema.org/draft/2020-12/vocab/applicator": true,
+        "https://json-schema.org/draft/2020-12/vocab/validation": true
+      }
+    }
+  }
+}
+EOF
+
+WRITE relative-b.json UNTIL EOF
+{
+  "$schema": "https://example.com/nested/embedded-meta-a",
+  "$id": "https://example.com/nested/relative-b",
+  "$defs": {
+    "meta": {
+      "$id": "embedded-meta-b",
+      "$vocabulary": {
+        "https://json-schema.org/draft/2020-12/vocab/core": true,
+        "https://json-schema.org/draft/2020-12/vocab/applicator": true,
+        "https://json-schema.org/draft/2020-12/vocab/validation": true
+      }
+    }
+  }
+}
+EOF
+
+WRITE instance.json UNTIL EOF
+"hello"
+EOF
+
+// Not supported
+RUN validate schema.json instance.json --http --resolve doc-a.json --resolve doc-b.json STDIN /dev/null IN . INTO result_0.txt EXPECTING 3
+
+REPLACE $CWD WITH '[CWD]' IN result_0.txt
+
+WRITE expected_0.txt UNTIL EOF
+2> error: Could not load the cURL library from the configured path
+2>   with environment variable SOURCEMETA_CORE_CURL_SO
+2>   with paths
+2>   - [CWD]/does-not-exist.so
+EOF
+
+COMPARE result_0.txt AGAINST expected_0.txt
+
+// Not supported
+RUN validate schema.json instance.json --http --resolve doc-a.json --resolve doc-b.json --json STDIN /dev/null IN . INTO result_1.txt EXPECTING 3
+
+REPLACE $CWD WITH '[CWD]' IN result_1.txt
+
+WRITE expected_1.txt UNTIL EOF
+1> {
+1>   "error": "Could not load the cURL library from the configured path",
+1>   "environmentVariable": "SOURCEMETA_CORE_CURL_SO",
+1>   "paths": [ "[CWD]/does-not-exist.so" ]
+1> }
+EOF
+
+COMPARE result_1.txt AGAINST expected_1.txt
+
+// Not supported
+RUN validate schema.json instance.json --http --resolve relative-a.json --resolve relative-b.json STDIN /dev/null IN . INTO result_2.txt EXPECTING 3
+
+REPLACE $CWD WITH '[CWD]' IN result_2.txt
+
+WRITE expected_2.txt UNTIL EOF
+2> error: Could not load the cURL library from the configured path
+2>   with environment variable SOURCEMETA_CORE_CURL_SO
+2>   with paths
+2>   - [CWD]/does-not-exist.so
+EOF
+
+COMPARE result_2.txt AGAINST expected_2.txt
+
+// Not supported
+RUN validate schema.json instance.json --http --resolve relative-a.json --resolve relative-b.json --json STDIN /dev/null IN . INTO result_3.txt EXPECTING 3
+
+REPLACE $CWD WITH '[CWD]' IN result_3.txt
+
+WRITE expected_3.txt UNTIL EOF
+1> {
+1>   "error": "Could not load the cURL library from the configured path",
+1>   "environmentVariable": "SOURCEMETA_CORE_CURL_SO",
+1>   "paths": [ "[CWD]/does-not-exist.so" ]
+1> }
+EOF
+
+COMPARE result_3.txt AGAINST expected_3.txt

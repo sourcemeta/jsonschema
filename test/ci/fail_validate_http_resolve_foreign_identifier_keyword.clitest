@@ -1,11 +1,11 @@
-// Which keyword introduces a schema resource depends on the dialect that the
-// resource itself declares, and the other one carries no such meaning. The
-// `--resolve` documents below embed a resource that spells its identifier
-// with the keyword of a different dialect: a Draft 4 resource reaching for
-// `$id`, and a 2020-12 one reaching for `id`. Neither declares the
-// identifier that the document names as its own meta-schema, so both must
-// reach for the network. The cURL library cannot be loaded, so the error
-// below proves the request was attempted
+// Which of `$id` and `id` introduces a schema resource depends on the
+// dialect, and the other one carries no such meaning. The documents below
+// spell their root identifier with the keyword of a different dialect than
+// the one they declare: a 2020-12 document reaching for `id`, and a Draft 4
+// one reaching for `$id`. Neither declares the identifier that the other
+// input names as its own meta-schema, so both runs must reach for the
+// network. The cURL library cannot be loaded, so the error below proves the
+// request was attempted
 
 ENV SOURCEMETA_CORE_CURL_SO $CWD/does-not-exist.so
 
@@ -16,27 +16,35 @@ WRITE schema.json UNTIL EOF
 }
 EOF
 
-WRITE legacy-dialect.json UNTIL EOF
+WRITE orphan.json UNTIL EOF
 {
-  "$schema": "https://example.com/embedded-meta",
-  "$id": "https://example.com/legacy-dialect",
-  "$defs": {
-    "meta": {
-      "$schema": "http://json-schema.org/draft-04/schema#",
-      "$id": "https://example.com/embedded-meta"
-    }
-  }
+  "$schema": "https://example.com/target-meta",
+  "$id": "https://example.com/orphan",
+  "type": "string"
 }
 EOF
 
 WRITE modern-dialect.json UNTIL EOF
 {
-  "$schema": "https://example.com/embedded-meta",
-  "$id": "https://example.com/modern-dialect",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "id": "https://example.com/target-meta",
   "$defs": {
-    "meta": {
-      "$schema": "https://json-schema.org/draft/2020-12/schema",
-      "id": "https://example.com/embedded-meta"
+    "inner": {
+      "$schema": "https://example.com/orphan",
+      "$id": "https://example.com/inner"
+    }
+  }
+}
+EOF
+
+WRITE legacy-dialect.json UNTIL EOF
+{
+  "$schema": "http://json-schema.org/draft-04/schema#",
+  "$id": "https://example.com/target-meta",
+  "definitions": {
+    "inner": {
+      "$schema": "https://example.com/orphan",
+      "id": "https://example.com/inner"
     }
   }
 }
@@ -47,7 +55,7 @@ WRITE instance.json UNTIL EOF
 EOF
 
 // Not supported
-RUN validate schema.json instance.json --http --resolve legacy-dialect.json STDIN /dev/null IN . INTO result_0.txt EXPECTING 3
+RUN validate schema.json instance.json --http --resolve orphan.json --resolve modern-dialect.json STDIN /dev/null IN . INTO result_0.txt EXPECTING 3
 
 REPLACE $CWD WITH '[CWD]' IN result_0.txt
 
@@ -61,7 +69,7 @@ EOF
 COMPARE result_0.txt AGAINST expected_0.txt
 
 // Not supported
-RUN validate schema.json instance.json --http --resolve legacy-dialect.json --json STDIN /dev/null IN . INTO result_1.txt EXPECTING 3
+RUN validate schema.json instance.json --http --resolve orphan.json --resolve modern-dialect.json --json STDIN /dev/null IN . INTO result_1.txt EXPECTING 3
 
 REPLACE $CWD WITH '[CWD]' IN result_1.txt
 
@@ -76,7 +84,7 @@ EOF
 COMPARE result_1.txt AGAINST expected_1.txt
 
 // Not supported
-RUN validate schema.json instance.json --http --resolve modern-dialect.json STDIN /dev/null IN . INTO result_2.txt EXPECTING 3
+RUN validate schema.json instance.json --http --resolve orphan.json --resolve legacy-dialect.json STDIN /dev/null IN . INTO result_2.txt EXPECTING 3
 
 REPLACE $CWD WITH '[CWD]' IN result_2.txt
 
@@ -90,7 +98,7 @@ EOF
 COMPARE result_2.txt AGAINST expected_2.txt
 
 // Not supported
-RUN validate schema.json instance.json --http --resolve modern-dialect.json --json STDIN /dev/null IN . INTO result_3.txt EXPECTING 3
+RUN validate schema.json instance.json --http --resolve orphan.json --resolve legacy-dialect.json --json STDIN /dev/null IN . INTO result_3.txt EXPECTING 3
 
 REPLACE $CWD WITH '[CWD]' IN result_3.txt
 

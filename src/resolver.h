@@ -393,125 +393,6 @@ resolve_identifier(const sourcemeta::core::JSON &document,
   }
 }
 
-// The walker is what tells a keyword that carries subschemas apart from one
-// that carries instance data, but it answers in terms of the vocabularies in
-// effect, and those are exactly what a schema whose meta-schema cannot be
-// resolved does not reveal. Every vocabulary this implementation knows, taken
-// together, is the closest stand-in: whichever official dialect a custom one
-// builds on, the spelling of its subschema keywords is in here
-static inline auto known_vocabularies()
-    -> sourcemeta::core::SchemaVocabularies {
-  sourcemeta::core::SchemaVocabularies result;
-  for (std::size_t index = 0;
-       index < sourcemeta::core::SchemaVocabularies::KNOWN_VOCABULARY_COUNT;
-       index++) {
-    result.insert(
-        static_cast<sourcemeta::core::SchemaVocabularies::Known>(index), true);
-  }
-
-  return result;
-}
-
-// Where the subschemas of a keyword sit, if it holds any at all
-enum class KeywordContents : std::uint8_t { Opaque, Subschema, Members };
-
-static inline auto
-keyword_contents(const sourcemeta::core::JSON::String &keyword)
-    -> KeywordContents {
-  static const auto VOCABULARIES{known_vocabularies()};
-  switch (sourcemeta::core::schema_walker(keyword, VOCABULARIES).type) {
-    case sourcemeta::core::SchemaKeywordType::Unknown:
-    case sourcemeta::core::SchemaKeywordType::Assertion:
-    case sourcemeta::core::SchemaKeywordType::Annotation:
-    case sourcemeta::core::SchemaKeywordType::Reference:
-    case sourcemeta::core::SchemaKeywordType::Other:
-    case sourcemeta::core::SchemaKeywordType::Comment:
-      return KeywordContents::Opaque;
-    case sourcemeta::core::SchemaKeywordType::LocationMembers:
-    case sourcemeta::core::SchemaKeywordType::
-        ApplicatorMembersTraversePropertyStatic:
-    case sourcemeta::core::SchemaKeywordType::
-        ApplicatorMembersTraversePropertyRegex:
-    case sourcemeta::core::SchemaKeywordType::ApplicatorMembersInPlaceSome:
-      return KeywordContents::Members;
-    default:
-      return KeywordContents::Subschema;
-  }
-}
-
-// Framing a schema is what reveals the identifiers it declares, but framing
-// needs its meta-schema resolved first, which is precisely what an entry that
-// cannot be imported yet is missing. Walk for identifiers instead, keeping to
-// the places where a subschema can sit, as an identifier anywhere else is
-// part of an instance that some annotation carries rather than a resource the
-// user supplied, and shielding those from the network hides schemas that were
-// never imported. Only one of `$id` and `id` identifies a resource, and which
-// one depends on the dialect. Follow a chain of bases for each keyword, as
-// branching on every resource that declares both takes exponential time.
-// Where an official dialect is in effect, both chains resolve its keyword, so
-// that a resource switching dialects still resolves against its parent
-// whichever keyword identified it
-static inline auto
-collect_identifiers(const sourcemeta::core::JSON &document,
-                    const sourcemeta::core::URI &modern_base,
-                    const sourcemeta::core::URI &legacy_base,
-                    const IdentifierKeyword keyword,
-                    std::unordered_set<std::string> &accumulator) -> void {
-  if (document.is_object()) {
-    const auto *dialect{document.try_at("$schema")};
-    const auto effective_keyword{dialect != nullptr && dialect->is_string()
-                                     ? identifier_keyword(dialect->to_string())
-                                     : keyword};
-    const auto modern_resolved{resolve_identifier(
-        document, effective_keyword == IdentifierKeyword::Legacy ? "id" : "$id",
-        modern_base, accumulator)};
-
-    // Chains that share a base and follow the same keyword resolve alike
-    const auto shared{effective_keyword != IdentifierKeyword::Unknown &&
-                      &modern_base == &legacy_base};
-    const auto legacy_resolved{
-        shared
-            ? std::optional<sourcemeta::core::URI>{}
-            : resolve_identifier(
-                  document,
-                  effective_keyword == IdentifierKeyword::Modern ? "$id" : "id",
-                  legacy_base, accumulator)};
-
-    const auto &children_modern_base{
-        modern_resolved.has_value() ? modern_resolved.value() : modern_base};
-    const auto &children_legacy_base{shared ? children_modern_base
-                                            : (legacy_resolved.has_value()
-                                                   ? legacy_resolved.value()
-                                                   : legacy_base)};
-    for (const auto &entry : document.as_object()) {
-      switch (keyword_contents(entry.first)) {
-        case KeywordContents::Opaque:
-          break;
-        case KeywordContents::Subschema:
-          collect_identifiers(entry.second, children_modern_base,
-                              children_legacy_base, effective_keyword,
-                              accumulator);
-          break;
-        case KeywordContents::Members:
-          if (entry.second.is_object()) {
-            for (const auto &member : entry.second.as_object()) {
-              collect_identifiers(member.second, children_modern_base,
-                                  children_legacy_base, effective_keyword,
-                                  accumulator);
-            }
-          }
-
-          break;
-      }
-    }
-  } else if (document.is_array()) {
-    for (const auto &element : document.as_array()) {
-      collect_identifiers(element, modern_base, legacy_base, keyword,
-                          accumulator);
-    }
-  }
-}
-
 // Identifiers are stored canonicalized, as whoever asks for one may well have
 // resolved it against a base URI first and so spell it differently than the
 // document that declares it. Trying the identifier as given before parsing it
@@ -756,15 +637,44 @@ public:
   }
 
 private:
+  // Framing a schema is what reveals the identifiers it declares, but framing
+  // needs its meta-schema resolved first, which is precisely what an entry
+  // that cannot be imported is missing. Read the identifier it declares at
+  // its own root instead, as that is the only claim that can be read without
+  // knowing the dialect. An identifier that such an entry merely embeds stays
+  // out, as reaching it would mean walking into places whose meaning depends
+  // on the very vocabularies that are not known here, and mistaking the
+  // instance an annotation carries for a schema resource would keep a schema
+  // the user never supplied away from the network
   auto collect_pending_identifiers(const InputJSON &entry,
                                    const std::string_view default_dialect)
       -> void {
     sourcemeta::core::URI base{sourcemeta::jsonschema::default_id(entry)};
     base.canonicalize();
     this->pending_identifiers_.insert(base.recompose());
-    collect_identifiers(entry.second, base, base,
-                        identifier_keyword(default_dialect),
-                        this->pending_identifiers_);
+
+    if (!entry.second.is_object()) {
+      return;
+    }
+
+    const auto *dialect{entry.second.try_at("$schema")};
+    const auto keyword{dialect != nullptr && dialect->is_string()
+                           ? identifier_keyword(dialect->to_string())
+                           : identifier_keyword(default_dialect)};
+
+    // Only one of `$id` and `id` identifies a resource, and which one depends
+    // on the dialect. An entry that cannot be imported is one whose dialect
+    // could not be resolved, so it gets to claim whichever of the two it
+    // spells
+    if (keyword != IdentifierKeyword::Legacy) {
+      [[maybe_unused]] const auto modern{resolve_identifier(
+          entry.second, "$id", base, this->pending_identifiers_)};
+    }
+
+    if (keyword != IdentifierKeyword::Modern) {
+      [[maybe_unused]] const auto legacy{resolve_identifier(
+          entry.second, "id", base, this->pending_identifiers_)};
+    }
   }
 
   auto import_entry(const InputJSON &entry,

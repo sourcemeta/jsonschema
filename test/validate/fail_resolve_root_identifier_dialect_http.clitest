@@ -1,0 +1,79 @@
+// The identifier a `--resolve` input declares at its own root belongs to the
+// user and must be shielded from remote fetching, read through whichever of
+// `$id` and `id` the dialect that the input declares identifies with. The
+// document below is identified by `$id` under 2020-12 and cannot be imported
+// because a resource it embeds names a dialect that only the other input
+// declares, so neither can ever be imported. The run must terminate with the
+// local resolution diagnostic and no network round trip
+
+ENV SOURCEMETA_CORE_CURL_SO $CWD/does-not-exist.so
+
+WRITE schema.json UNTIL EOF
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "string"
+}
+EOF
+
+WRITE orphan.json UNTIL EOF
+{
+  "$schema": "https://example.com/target-meta",
+  "$id": "https://example.com/orphan",
+  "type": "string"
+}
+EOF
+
+WRITE target.json UNTIL EOF
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.com/target-meta",
+  "$defs": {
+    "inner": {
+      "$schema": "https://example.com/orphan",
+      "$id": "https://example.com/inner"
+    }
+  }
+}
+EOF
+
+WRITE instance.json UNTIL EOF
+"hello"
+EOF
+
+// Schema input error
+RUN validate schema.json instance.json --http --resolve orphan.json --resolve target.json STDIN /dev/null IN . INTO result_0.txt EXPECTING 4
+
+REPLACE $CWD WITH '[CWD]' IN result_0.txt
+REPLACE 'https://example.com/target-meta' WITH '[STUCK]' IN result_0.txt
+REPLACE 'https://example.com/orphan' WITH '[STUCK]' IN result_0.txt
+REPLACE '[CWD]/orphan.json' WITH '[INPUT]' IN result_0.txt
+REPLACE '[CWD]/target.json' WITH '[INPUT]' IN result_0.txt
+
+WRITE expected_0.txt UNTIL EOF
+2> error: Could not resolve the metaschema of the schema
+2>   at identifier [STUCK]
+2>   at file path [INPUT]
+2>
+2> This is likely because you forgot to import such schema using `--resolve/-r`
+EOF
+
+COMPARE result_0.txt AGAINST expected_0.txt
+
+// Schema input error
+RUN validate schema.json instance.json --http --resolve orphan.json --resolve target.json --json STDIN /dev/null IN . INTO result_1.txt EXPECTING 4
+
+REPLACE $CWD WITH '[CWD]' IN result_1.txt
+REPLACE 'https://example.com/target-meta' WITH '[STUCK]' IN result_1.txt
+REPLACE 'https://example.com/orphan' WITH '[STUCK]' IN result_1.txt
+REPLACE '[CWD]/orphan.json' WITH '[INPUT]' IN result_1.txt
+REPLACE '[CWD]/target.json' WITH '[INPUT]' IN result_1.txt
+
+WRITE expected_1.txt UNTIL EOF
+1> {
+1>   "error": "Could not resolve the metaschema of the schema",
+1>   "identifier": "[STUCK]",
+1>   "filePath": "[INPUT]"
+1> }
+EOF
+
+COMPARE result_1.txt AGAINST expected_1.txt
