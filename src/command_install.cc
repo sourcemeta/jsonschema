@@ -18,13 +18,24 @@
 #include "configuration.h"
 #include "error.h"
 #include "logger.h"
+#include "print.h"
 #include "resolver.h"
 
 namespace {
 
-auto padded_label(const std::string_view label) -> std::string {
+using sourcemeta::core::TerminalStyle;
+
+constexpr auto PROGRESS_STYLE{TerminalStyle::Bold | TerminalStyle::Cyan};
+constexpr auto SUCCESS_STYLE{TerminalStyle::Bold | TerminalStyle::Green};
+constexpr auto WARNING_STYLE{TerminalStyle::Bold | TerminalStyle::Yellow};
+constexpr auto FAILURE_STYLE{TerminalStyle::Bold | TerminalStyle::Red};
+
+auto padded_label(const std::string_view label,
+                  const sourcemeta::core::TerminalStyle style =
+                      sourcemeta::core::TerminalStyle::None) -> std::string {
   assert(label.size() <= 14);
-  std::string result{label};
+  auto result{sourcemeta::jsonschema::paint(
+      label, style, sourcemeta::core::TerminalStream::Stderr)};
   result.append(14 - label.size(), ' ');
   result += " : ";
   return result;
@@ -160,30 +171,41 @@ auto make_on_event(const sourcemeta::core::Options &options,
             if (is_json) {
               emit_json(events_array, "fetching", "uri", event.uri);
             } else {
-              std::cerr << padded_label("Fetching") << event.uri << "\n";
+              std::cerr << padded_label("Fetching", PROGRESS_STYLE) << event.uri
+                        << "\n";
             }
 
             break;
           case Type::FetchEnd:
             break;
-          case Type::BundleStart:
+          case Type::BundleStart: {
+            const auto effective_style{is_json ? TerminalStyle::None
+                                               : PROGRESS_STYLE};
             sourcemeta::jsonschema::LOG_VERBOSE(options)
-                << padded_label("Bundling") << event.uri << "\n";
+                << padded_label("Bundling", effective_style) << event.uri
+                << "\n";
             break;
+          }
           case Type::BundleEnd:
             break;
-          case Type::WriteStart:
+          case Type::WriteStart: {
+            const auto effective_style{is_json ? TerminalStyle::None
+                                               : PROGRESS_STYLE};
             sourcemeta::jsonschema::LOG_VERBOSE(options)
-                << padded_label("Writing") << event.path.generic_string()
-                << "\n";
+                << padded_label("Writing", effective_style)
+                << event.path.generic_string() << "\n";
             break;
+          }
           case Type::WriteEnd:
             break;
-          case Type::VerifyStart:
+          case Type::VerifyStart: {
+            const auto effective_style{is_json ? TerminalStyle::None
+                                               : PROGRESS_STYLE};
             sourcemeta::jsonschema::LOG_VERBOSE(options)
-                << padded_label("Verifying") << event.path.generic_string()
-                << "\n";
+                << padded_label("Verifying", effective_style)
+                << event.path.generic_string() << "\n";
             break;
+          }
           case Type::VerifyEnd:
             if (is_json) {
               auto json_event{sourcemeta::core::JSON::make_object()};
@@ -193,7 +215,7 @@ auto make_on_event(const sourcemeta::core::Options &options,
                   "path", sourcemeta::core::JSON{event.path.generic_string()});
               events_array.push_back(std::move(json_event));
             } else {
-              std::cerr << padded_label("Installed")
+              std::cerr << padded_label("Installed", SUCCESS_STYLE)
                         << event.path.generic_string() << "\n";
             }
 
@@ -202,7 +224,8 @@ auto make_on_event(const sourcemeta::core::Options &options,
             if (is_json) {
               emit_json(events_array, "up-to-date", "uri", event.uri);
             } else {
-              std::cerr << padded_label("Up to date") << event.uri << "\n";
+              std::cerr << padded_label("Up to date", SUCCESS_STYLE)
+                        << event.uri << "\n";
             }
 
             break;
@@ -211,7 +234,7 @@ auto make_on_event(const sourcemeta::core::Options &options,
               emit_json(events_array, "file-missing", "path",
                         event.path.generic_string());
             } else {
-              std::cerr << padded_label("File missing")
+              std::cerr << padded_label("File missing", WARNING_STYLE)
                         << event.path.generic_string() << "\n";
             }
 
@@ -221,7 +244,7 @@ auto make_on_event(const sourcemeta::core::Options &options,
               emit_json(events_array, "mismatched", "path",
                         event.path.generic_string());
             } else {
-              std::cerr << padded_label("Mismatched")
+              std::cerr << padded_label("Mismatched", WARNING_STYLE)
                         << event.path.generic_string() << "\n";
             }
 
@@ -230,7 +253,8 @@ auto make_on_event(const sourcemeta::core::Options &options,
             if (is_json) {
               emit_json(events_array, "path-mismatch", "uri", event.uri);
             } else {
-              std::cerr << padded_label("Path mismatch") << event.uri << "\n";
+              std::cerr << padded_label("Path mismatch", WARNING_STYLE)
+                        << event.uri << "\n";
             }
 
             break;
@@ -239,7 +263,8 @@ auto make_on_event(const sourcemeta::core::Options &options,
             if (is_json) {
               emit_json(events_array, "untracked", "uri", event.uri);
             } else {
-              std::cerr << padded_label("Untracked") << event.uri << "\n";
+              std::cerr << padded_label("Untracked", FAILURE_STYLE) << event.uri
+                        << "\n";
             }
 
             break;
@@ -247,7 +272,10 @@ auto make_on_event(const sourcemeta::core::Options &options,
             if (is_json) {
               emit_json(events_array, "orphaned", "uri", event.uri);
             } else {
-              std::cerr << padded_label("Orphaned") << event.uri << "\n";
+              const auto style{orphaned_behavior == OrphanedBehavior::Delete
+                                   ? WARNING_STYLE
+                                   : FAILURE_STYLE};
+              std::cerr << padded_label("Orphaned", style) << event.uri << "\n";
             }
 
             if (orphaned_behavior == OrphanedBehavior::Delete) {
@@ -381,8 +409,8 @@ auto sourcemeta::jsonschema::install(const sourcemeta::core::Options &options)
       json_event.assign("path", sourcemeta::core::JSON{relative_target});
       events_array.push_back(std::move(json_event));
     } else {
-      std::cerr << padded_label("Adding") << dependency_uri << " -> "
-                << relative_target << "\n";
+      std::cerr << padded_label("Adding", PROGRESS_STYLE) << dependency_uri
+                << " -> " << relative_target << "\n";
     }
   }
 

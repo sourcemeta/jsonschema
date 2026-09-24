@@ -1,0 +1,76 @@
+MAKE DIRECTORY source
+
+MAKE DIRECTORY project/vendor
+
+WRITE source/a.json UNTIL EOF
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.com/a",
+  "type": "string"
+}
+EOF
+
+WRITE source/b.json UNTIL EOF
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.com/b",
+  "type": "integer"
+}
+EOF
+
+WRITE project/jsonschema.json UNTIL EOF
+{
+  "dependencies": {
+    "[CWD_URI]/source/a.json": "./vendor/a.json",
+    "[CWD_URI]/source/b.json": "./vendor/b.json"
+  }
+}
+EOF
+
+REPLACE '[CWD_URI]' WITH $CWD_URI IN project/jsonschema.json
+
+RUN install STDIN /dev/null IN project INTO result_0.txt EXPECTING 0
+
+REPLACE $CWD_URI WITH '[CWD_URI]' IN result_0.txt
+REPLACE $CWD WITH '[CWD]' IN result_0.txt
+
+WRITE expected_0.txt UNTIL EOF
+2> Fetching       : [CWD_URI]/source/a.json
+2> Installed      : [CWD]/project/vendor/a.json
+2> Fetching       : [CWD_URI]/source/b.json
+2> Installed      : [CWD]/project/vendor/b.json
+EOF
+
+COMPARE result_0.txt AGAINST expected_0.txt
+
+WRITE project/jsonschema.json UNTIL EOF
+{
+  "dependencies": {
+    "[CWD_URI]/source/a.json": "./vendor/a.json"
+  }
+}
+EOF
+
+REPLACE '[CWD_URI]' WITH $CWD_URI IN project/jsonschema.json
+
+RUN install --color always STDIN /dev/null IN project INTO result_1.txt EXPECTING 0
+
+REPLACE $CWD_URI WITH '[CWD_URI]' IN result_1.txt
+REPLACE MATCHING '\x1B\[1;32m' WITH '[ANSI_BOLD_GREEN]' IN result_1.txt
+REPLACE MATCHING '\x1B\[1;33m' WITH '[ANSI_BOLD_YELLOW]' IN result_1.txt
+REPLACE MATCHING '\x1B\[0m' WITH '[ANSI_RESET]' IN result_1.txt
+
+WRITE expected_1.txt UNTIL EOF
+2> [ANSI_BOLD_GREEN]Up to date[ANSI_RESET]     : [CWD_URI]/source/a.json
+2> [ANSI_BOLD_YELLOW]Orphaned[ANSI_RESET]       : [CWD_URI]/source/b.json
+EOF
+
+COMPARE result_1.txt AGAINST expected_1.txt
+
+TREE project/vendor INTO listing.txt
+
+WRITE expected_listing.txt UNTIL EOF
+./a.json
+EOF
+
+COMPARE listing.txt AGAINST expected_listing.txt
