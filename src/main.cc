@@ -117,6 +117,7 @@ constexpr std::string_view USAGE_COMMANDS{R"EOF(   version / --version / -v
 
    upgrade <schema.json|.yaml>
            [--to/-t draft4|draft6|draft7|2019-09|2020-12]
+           [--indentation/-n <spaces>]
 
        Upgrade the given schema to a newer JSON Schema dialect.
        Defaults to the latest dialect (2020-12). Schemas that declare a
@@ -125,6 +126,7 @@ constexpr std::string_view USAGE_COMMANDS{R"EOF(   version / --version / -v
 
    bundle <schema.json|.yaml> [--extension/-e <extension>]
           [--ignore/-i <schemas-or-directories>] [--without-id/-w]
+          [--indentation/-n <spaces>]
 
        Perform JSON Schema Bundling on a schema to inline remote references,
        printing the result to standard output.
@@ -283,6 +285,7 @@ auto jsonschema_main(const std::string &program, const std::string &command,
     app.flag("without-id", {"w"});
     app.option("extension", {"e"});
     app.option("ignore", {"i"});
+    app.option("indentation", {"n"});
     parse_options(app, argc, argv, {.skip = 1});
     sourcemeta::jsonschema::bundle(app);
     return EXIT_SUCCESS;
@@ -387,6 +390,7 @@ auto jsonschema_main(const std::string &program, const std::string &command,
 
   if (command == "upgrade") {
     app.option("to", {"t"});
+    app.option("indentation", {"n"});
     parse_options(app, argc, argv, {.skip = 1});
     sourcemeta::jsonschema::upgrade(app);
     return EXIT_SUCCESS;

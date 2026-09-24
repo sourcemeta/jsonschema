@@ -216,6 +216,13 @@ public:
       : std::runtime_error{"The --jobs option must be a positive integer"} {}
 };
 
+class InvalidIndentationError : public std::runtime_error {
+public:
+  InvalidIndentationError()
+      : std::runtime_error{
+            "The --indentation option must be a non-negative integer"} {}
+};
+
 class InvalidLintRuleError : public std::runtime_error {
 public:
   InvalidLintRuleError(const std::string &message, std::string rule)
@@ -1649,6 +1656,10 @@ inline auto try_catch(const sourcemeta::core::Options &options,
     print_exception(is_json, error);
     return EXIT_INVALID_CLI_ARGUMENTS;
   } catch (const InvalidJobsError &error) {
+    const auto is_json{options.contains("json")};
+    print_exception(is_json, error);
+    return EXIT_INVALID_CLI_ARGUMENTS;
+  } catch (const InvalidIndentationError &error) {
     const auto is_json{options.contains("json")};
     print_exception(is_json, error);
     return EXIT_INVALID_CLI_ARGUMENTS;

@@ -22,6 +22,7 @@ auto sourcemeta::jsonschema::bundle(const sourcemeta::core::Options &options)
   }
 
   validate_http_headers(options);
+  const auto indentation{parse_indentation(options)};
 
   const std::filesystem::path schema_path{options.positional().front()};
   const bool schema_from_stdin = (schema_path == "-");
@@ -118,6 +119,6 @@ auto sourcemeta::jsonschema::bundle(const sourcemeta::core::Options &options)
         schema_display_path, error.what());
   }
 
-  sourcemeta::core::prettify(schema, std::cout);
+  sourcemeta::core::prettify(schema, std::cout, indentation);
   std::cout << "\n";
 }

@@ -8,6 +8,7 @@ jsonschema bundle <schema.json|.yaml>
   [--resolve/-r <schemas-or-directories> ...]
   [--extension/-e <extension>] [--ignore/-i <schemas-or-directories>]
   [--without-id/-w] [--default-dialect/-d <uri>] [--json/-j]
+  [--indentation/-n <spaces>]
   [--configuration/-C <path>] [--color auto|always|never]
 ```
 
@@ -24,6 +25,9 @@ to as
 to resolve remote references in advance and inline them into the given schema
 for local consumption or further distribution.  The JSON Schema CLI supports
 this functionality through the `bundle` command.
+
+Use `--indentation/-n` to set how many spaces each level of nesting of the
+result is laid out with, which defaults to two.
 
 > [!WARNING]
 > A popular use case for JSON Schema is providing auto-completion for code

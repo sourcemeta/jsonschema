@@ -7,7 +7,7 @@ jsonschema upgrade <schema.json|.yaml> [--to/-t draft4|draft6|draft7|2019-09|202
   [--header/-H "<name>: <value>"]
   [--resolve/-r <schemas-or-directories> ...]
   [--default-dialect/-d <uri>] [--configuration/-C <path>]
-  [--color auto|always|never]
+  [--indentation/-n <spaces>] [--color auto|always|never]
 ```
 
 > [!NOTE]
@@ -20,6 +20,9 @@ rewrites a schema to conform to a newer dialect, taking every subtletly across
 specifications into account, including re-writing references that point at
 locations whose path has changed. By default, schemas are upgraded to the
 latest supported dialect, and the result is printed to standard output.
+
+Use `--indentation/-n` to set how many spaces each level of nesting of the
+result is laid out with, which defaults to two.
 
 For example, consider the following Draft 3 schema:
 

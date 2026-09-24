@@ -115,6 +115,7 @@ WRITE expected.txt UNTIL EOF
 1>
 1>    upgrade <schema.json|.yaml>
 1>            [--to/-t draft4|draft6|draft7|2019-09|2020-12]
+1>            [--indentation/-n <spaces>]
 1>
 1>        Upgrade the given schema to a newer JSON Schema dialect.
 1>        Defaults to the latest dialect (2020-12). Schemas that declare a
@@ -123,6 +124,7 @@ WRITE expected.txt UNTIL EOF
 1>
 1>    bundle <schema.json|.yaml> [--extension/-e <extension>]
 1>           [--ignore/-i <schemas-or-directories>] [--without-id/-w]
+1>           [--indentation/-n <spaces>]
 1>
 1>        Perform JSON Schema Bundling on a schema to inline remote references,
 1>        printing the result to standard output.

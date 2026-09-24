@@ -159,6 +159,7 @@ auto sourcemeta::jsonschema::upgrade(const sourcemeta::core::Options &options)
   const auto target_value{options.contains("to") ? options.at("to").front()
                                                  : std::string_view{"2020-12"}};
   const auto target_dialect{parse_target_dialect(target_value)};
+  const auto indentation{parse_indentation(options)};
 
   const std::filesystem::path schema_path{options.positional().front()};
   const bool schema_from_stdin = (schema_path == "-");
@@ -197,6 +198,6 @@ auto sourcemeta::jsonschema::upgrade(const sourcemeta::core::Options &options)
 
   sourcemeta::jsonschema::format_schema(schema, custom_resolver, dialect);
 
-  sourcemeta::core::prettify(schema, std::cout);
+  sourcemeta::core::prettify(schema, std::cout, indentation);
   std::cout << "\n";
 }
