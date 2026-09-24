@@ -537,8 +537,9 @@ public:
                &callback = nullptr) -> bool {
     assert(schema.is_object() || schema.is_boolean());
 
-    // Registering the top-level schema is not enough. We need to check
-    // and register every embedded schema resource too
+    // Framing the whole document is what vets it, from the vocabularies every
+    // resource declares to the anchors it collides on, so the analysis stays
+    // as wide as the file. What gets registered does not
     const sourcemeta::core::SchemaFrame frame{
         sourcemeta::core::SchemaFrame::Mode::References,
         schema,
@@ -552,14 +553,21 @@ public:
         [this, &schema, &frame, &origin, &callback, &added_any_schema](
             const std::string_view uri,
             const sourcemeta::core::SchemaFrame::Location &entry) -> void {
-          auto subschema{sourcemeta::core::get(schema, entry.pointer)};
           // Reject a resource whose vocabularies we cannot make sense of
           // upfront, rather than at the point some consumer relies on them
           [[maybe_unused]] const auto &subschema_vocabularies{
               frame.vocabularies(entry, std::ref(*this))};
 
-          // Given we might be resolving embedded resources, we fully
-          // resolve their dialect and identifiers, otherwise the
+          // A file stands for the single schema it declares. A resource that
+          // the schema merely embeds is reachable from within that schema,
+          // and answering for it on its own would hand back a schema that the
+          // user never supplied as one
+          if (!entry.pointer.empty()) {
+            return;
+          }
+
+          auto subschema{sourcemeta::core::get(schema, entry.pointer)};
+          // Fully resolve the dialect and identifier, otherwise the
           // consumer might have no idea what to do with them
           subschema.assign("$schema", sourcemeta::core::JSON{entry.dialect});
           sourcemeta::core::schema_reidentify(subschema, uri,

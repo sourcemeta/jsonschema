@@ -1,12 +1,11 @@
-// Only the identifier that a `--resolve` input declares at its own root may
-// be kept away from the network. Reaching any further would mean walking
-// into places whose meaning depends on the dialect, and the dialect of an
-// input that cannot be imported is precisely what is unknown. Each pair of
-// documents below embeds the custom meta-schema that the other one requires,
-// written absolute in the first pair and relative to its container in the
-// second, so neither identifier is claimed by the input that names it and
-// both runs must reach for the network. The cURL library cannot be loaded,
-// so the error below proves the request was attempted
+// A `--resolve` input stands for the single schema it declares at its root,
+// so an identifier it merely embeds is not one it answers for. The first two
+// pairs of documents below embed the custom meta-schema that the other one
+// requires, written absolute in one and relative to its container in the
+// other, and the third supplies that meta-schema from a container that
+// imports cleanly. In every case the identifier belongs to no input, so the
+// run must reach for the network. The cURL library cannot be loaded, so the
+// error below proves the request was attempted
 
 ENV SOURCEMETA_CORE_CURL_SO $CWD/does-not-exist.so
 
@@ -85,6 +84,31 @@ WRITE relative-b.json UNTIL EOF
 }
 EOF
 
+WRITE leaf.json UNTIL EOF
+{
+  "$schema": "https://example.com/contained-meta",
+  "$id": "https://example.com/leaf",
+  "type": "string"
+}
+EOF
+
+WRITE container.json UNTIL EOF
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.com/container",
+  "$defs": {
+    "meta": {
+      "$id": "https://example.com/contained-meta",
+      "$vocabulary": {
+        "https://json-schema.org/draft/2020-12/vocab/core": true,
+        "https://json-schema.org/draft/2020-12/vocab/applicator": true,
+        "https://json-schema.org/draft/2020-12/vocab/validation": true
+      }
+    }
+  }
+}
+EOF
+
 WRITE instance.json UNTIL EOF
 "hello"
 EOF
@@ -146,3 +170,32 @@ WRITE expected_3.txt UNTIL EOF
 EOF
 
 COMPARE result_3.txt AGAINST expected_3.txt
+
+// Not supported
+RUN validate schema.json instance.json --http --resolve leaf.json --resolve container.json STDIN /dev/null IN . INTO result_4.txt EXPECTING 3
+
+REPLACE $CWD WITH '[CWD]' IN result_4.txt
+
+WRITE expected_4.txt UNTIL EOF
+2> error: Could not load the cURL library from the configured path
+2>   with environment variable SOURCEMETA_CORE_CURL_SO
+2>   with paths
+2>   - [CWD]/does-not-exist.so
+EOF
+
+COMPARE result_4.txt AGAINST expected_4.txt
+
+// Not supported
+RUN validate schema.json instance.json --http --resolve leaf.json --resolve container.json --json STDIN /dev/null IN . INTO result_5.txt EXPECTING 3
+
+REPLACE $CWD WITH '[CWD]' IN result_5.txt
+
+WRITE expected_5.txt UNTIL EOF
+1> {
+1>   "error": "Could not load the cURL library from the configured path",
+1>   "environmentVariable": "SOURCEMETA_CORE_CURL_SO",
+1>   "paths": [ "[CWD]/does-not-exist.so" ]
+1> }
+EOF
+
+COMPARE result_5.txt AGAINST expected_5.txt

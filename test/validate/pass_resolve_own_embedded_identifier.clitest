@@ -1,0 +1,40 @@
+// A schema reaches the resources it embeds itself. Registering a file under
+// the single identifier it declares does not cut the document off from its
+// own parts, so a reference from the root of a `--resolve` input to a
+// resource buried under its `$defs` still resolves, as does a reference from
+// another input to the identifier that input declares at its root
+
+WRITE schema.json UNTIL EOF
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$ref": "https://example.com/outer"
+}
+EOF
+
+WRITE outer.json UNTIL EOF
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.com/outer",
+  "$ref": "https://example.com/buried",
+  "$defs": {
+    "buried": {
+      "$id": "https://example.com/buried",
+      "type": "string"
+    }
+  }
+}
+EOF
+
+WRITE instance.json UNTIL EOF
+"hello"
+EOF
+
+RUN validate schema.json instance.json --resolve outer.json --verbose STDIN /dev/null IN . INTO result_0.txt EXPECTING 0
+
+WRITE expected_0.txt UNTIL EOF
+2> ok: instance.json
+2>
+2> 1 validated, 1 passed, 0 failed
+EOF
+
+COMPARE result_0.txt AGAINST expected_0.txt
