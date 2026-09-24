@@ -45,6 +45,12 @@ auto sourcemeta::jsonschema::bundle(const sourcemeta::core::Options &options)
                          ? read_from_stdin(nullptr, InputFormatting::Preserve)
                          : read_file(schema_path, InputFormatting::Preserve)};
 
+  if (parsed_schema.multidocument) {
+    throw MultiDocumentInputError{
+        "This command does not support input with multiple documents",
+        schema_display_path};
+  }
+
   if (!parsed_schema.document.is_object() &&
       !parsed_schema.document.is_boolean()) {
     throw NotSchemaError{schema_display_path};

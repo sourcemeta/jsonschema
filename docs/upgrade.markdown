@@ -133,7 +133,7 @@ jsonschema upgrade path/to/schema.json \
   --resolve path/to/imported.json
 ```
 
-### Upgrade a YAML JSON Schema (output is JSON)
+### Upgrade a YAML JSON Schema
 
 ```sh
 jsonschema upgrade path/to/schema.yaml
