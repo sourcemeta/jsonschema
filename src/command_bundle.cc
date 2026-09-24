@@ -22,7 +22,7 @@ auto sourcemeta::jsonschema::bundle(const sourcemeta::core::Options &options)
   }
 
   validate_http_headers(options);
-  const auto indentation{parse_indentation(options)};
+  const auto indentation{parse_optional_indentation(options)};
 
   const std::filesystem::path schema_path{options.positional().front()};
   const bool schema_from_stdin = (schema_path == "-");
@@ -41,8 +41,15 @@ auto sourcemeta::jsonschema::bundle(const sourcemeta::core::Options &options)
   const auto &configuration{
       read_configuration(options, configuration_path, schema_config_base)};
   const auto dialect{default_dialect(options, configuration)};
-  auto parsed_schema{schema_from_stdin ? read_from_stdin()
-                                       : read_file(schema_path)};
+  auto parsed_schema{schema_from_stdin
+                         ? read_from_stdin(nullptr, InputFormatting::Preserve)
+                         : read_file(schema_path, InputFormatting::Preserve)};
+
+  if (parsed_schema.multidocument) {
+    throw MultiDocumentInputError{
+        "This command does not support input with multiple documents",
+        schema_display_path};
+  }
 
   if (!parsed_schema.document.is_object() &&
       !parsed_schema.document.is_boolean()) {
@@ -119,6 +126,6 @@ auto sourcemeta::jsonschema::bundle(const sourcemeta::core::Options &options)
         schema_display_path, error.what());
   }
 
-  sourcemeta::core::prettify(schema, std::cout, indentation);
-  std::cout << "\n";
+  sourcemeta::jsonschema::write_schema(schema, std::cout, indentation,
+                                       parsed_schema.roundtrip);
 }

@@ -26,8 +26,10 @@ to resolve remote references in advance and inline them into the given schema
 for local consumption or further distribution.  The JSON Schema CLI supports
 this functionality through the `bundle` command.
 
-Use `--indentation/-n` to set how many spaces each level of nesting of the
-result is laid out with, which defaults to two.
+The result is printed in the format the input was written in: a YAML schema
+bundles into YAML and a JSON schema into JSON. A YAML result keeps the width
+each level of nesting was written with, while a JSON result is laid out with
+two spaces. Use `--indentation/-n` to set the width in either case.
 
 > [!WARNING]
 > A popular use case for JSON Schema is providing auto-completion for code

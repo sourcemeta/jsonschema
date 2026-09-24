@@ -183,7 +183,7 @@ inline auto format_schema(sourcemeta::core::JSON &schema,
 
 inline auto
 write_schema(const sourcemeta::core::JSON &schema, std::ostream &stream,
-             const std::size_t indentation,
+             const std::optional<std::size_t> indentation,
              const std::optional<sourcemeta::core::YAMLRoundTrip> &roundtrip)
     -> void {
   if (roundtrip.has_value()) {
@@ -192,7 +192,7 @@ write_schema(const sourcemeta::core::JSON &schema, std::ostream &stream,
     return;
   }
 
-  sourcemeta::core::prettify(schema, stream, indentation);
+  sourcemeta::core::prettify(schema, stream, indentation.value_or(2));
   stream << "\n";
 }
 
@@ -226,10 +226,12 @@ inline auto parse_jobs(const sourcemeta::core::Options &options)
                   static_cast<std::size_t>(1));
 }
 
-inline auto parse_indentation(const sourcemeta::core::Options &options)
-    -> std::size_t {
+// The width the user asked for, or nothing when they asked for none, which
+// leaves a document that carries a width of its own keeping it
+inline auto parse_optional_indentation(const sourcemeta::core::Options &options)
+    -> std::optional<std::size_t> {
   if (!options.contains("indentation")) {
-    return 2;
+    return std::nullopt;
   }
 
   const std::string value{options.at("indentation").front()};
@@ -244,6 +246,11 @@ inline auto parse_indentation(const sourcemeta::core::Options &options)
   } catch (const std::out_of_range &) {
     throw InvalidIndentationError{};
   }
+}
+
+inline auto parse_indentation(const sourcemeta::core::Options &options)
+    -> std::size_t {
+  return parse_optional_indentation(options).value_or(2);
 }
 
 inline auto format_assertion_tweaks(const sourcemeta::core::Options &options)

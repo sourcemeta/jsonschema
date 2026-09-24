@@ -21,8 +21,10 @@ specifications into account, including re-writing references that point at
 locations whose path has changed. By default, schemas are upgraded to the
 latest supported dialect, and the result is printed to standard output.
 
-Use `--indentation/-n` to set how many spaces each level of nesting of the
-result is laid out with, which defaults to two.
+The result is printed in the format the input was written in: a YAML schema
+upgrades into YAML and a JSON schema into JSON. A YAML result keeps the width
+each level of nesting was written with, while a JSON result is laid out with
+two spaces. Use `--indentation/-n` to set the width in either case.
 
 For example, consider the following Draft 3 schema:
 
@@ -132,7 +134,7 @@ jsonschema upgrade path/to/schema.json \
   --resolve path/to/imported.json
 ```
 
-### Upgrade a YAML JSON Schema (output is JSON)
+### Upgrade a YAML JSON Schema
 
 ```sh
 jsonschema upgrade path/to/schema.yaml

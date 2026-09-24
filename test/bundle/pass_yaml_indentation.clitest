@@ -1,0 +1,50 @@
+WRITE schema.yaml UNTIL EOF
+$schema: https://json-schema.org/draft/2020-12/schema
+$id: https://example.com
+$ref: nested
+properties:
+    foo:
+        type: string
+EOF
+
+WRITE remote.yaml UNTIL EOF
+$schema: https://json-schema.org/draft/2020-12/schema
+$id: https://example.com/nested
+type: string
+EOF
+
+RUN bundle schema.yaml --resolve remote.yaml STDIN /dev/null IN . INTO result_0.txt EXPECTING 0
+
+WRITE expected_0.txt UNTIL EOF
+1> $schema: https://json-schema.org/draft/2020-12/schema
+1> $id: https://example.com
+1> $ref: nested
+1> properties:
+1>     foo:
+1>         type: string
+1> $defs:
+1>     https://example.com/nested:
+1>         $schema: https://json-schema.org/draft/2020-12/schema
+1>         $id: https://example.com/nested
+1>         type: string
+EOF
+
+COMPARE result_0.txt AGAINST expected_0.txt
+
+RUN bundle schema.yaml --resolve remote.yaml --indentation 2 STDIN /dev/null IN . INTO result_1.txt EXPECTING 0
+
+WRITE expected_1.txt UNTIL EOF
+1> $schema: https://json-schema.org/draft/2020-12/schema
+1> $id: https://example.com
+1> $ref: nested
+1> properties:
+1>   foo:
+1>     type: string
+1> $defs:
+1>   https://example.com/nested:
+1>     $schema: https://json-schema.org/draft/2020-12/schema
+1>     $id: https://example.com/nested
+1>     type: string
+EOF
+
+COMPARE result_1.txt AGAINST expected_1.txt
