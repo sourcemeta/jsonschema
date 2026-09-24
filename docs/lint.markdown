@@ -39,13 +39,10 @@ automatically fix many of them.
 > rest of the description. If you are working with JSON Schema for API
 > specifications, you should make use of both linters together!
 
-**The `--fix/-f` option is not supported when passing YAML schemas.**
-
-**The `--format/-m` option requires `--fix/-f` to be set and is not supported
-for YAML schemas.** When `--format/-m` is set, the output file is always
-written with proper formatting (equivalent to running `fmt`), even if there
-are no lint issues to fix. Use `--keep-ordering/-k` with `--format/-m` to
-preserve key ordering during formatting.
+When `--format/-m` is set, the output file is always written with proper
+formatting (equivalent to running `fmt`), even if there are no lint issues to
+fix. Use `--keep-ordering/-k` with `--format/-m` to preserve key ordering
+during formatting.
 
 > [!NOTE]
 > There are linting rules that require compiling and validating instance
