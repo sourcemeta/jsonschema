@@ -1,0 +1,27 @@
+MAKE DIRECTORY instances
+
+WRITE schema.json UNTIL EOF
+{
+  "$schema": "http://json-schema.org/draft-04/schema#",
+  "title": "Test",
+  "description": "Test schema",
+  "properties": {
+    "name": {
+      "type": "string"
+    }
+  }
+}
+EOF
+
+WRITE instances/dataset.jsonl UNTIL EOF
+{ "name": "Charlie" }
+{ "name": "Diana" }
+EOF
+
+RUN validate schema.json instances --extension jsonl STDIN /dev/null IN . INTO result_0.txt EXPECTING 0
+
+WRITE expected_0.txt UNTIL EOF
+2> 2 validated, 2 passed, 0 failed
+EOF
+
+COMPARE result_0.txt AGAINST expected_0.txt

@@ -1,0 +1,36 @@
+WRITE stdin_input UNTIL EOF
+---
+$schema: http://json-schema.org/draft-06/schema#
+title: A
+description: d
+examples: [ foo ]
+type: string
+const: foo
+---
+$schema: http://json-schema.org/draft-06/schema#
+title: B
+description: d
+examples: [ bar ]
+type: string
+const: bar
+EOF
+
+// Validation failure
+RUN lint - STDIN stdin_input IN . INTO result_0.txt EXPECTING 2
+
+WRITE expected_0.txt UNTIL EOF
+1> tag:sourcemeta.com,2026:jsonschema/stdin:7:1:
+1>   Setting `type` alongside `const` is considered an anti-pattern, as the constant already implies its respective type (const_with_type)
+1>     at location "/const"
+1> tag:sourcemeta.com,2026:jsonschema/stdin:6:1:
+1>   Setting `type` alongside `const` is considered an anti-pattern, as the constant already implies its respective type (const_with_type)
+1>     at location "/type"
+1> tag:sourcemeta.com,2026:jsonschema/stdin:14:1:
+1>   Setting `type` alongside `const` is considered an anti-pattern, as the constant already implies its respective type (const_with_type)
+1>     at location "/const"
+1> tag:sourcemeta.com,2026:jsonschema/stdin:13:1:
+1>   Setting `type` alongside `const` is considered an anti-pattern, as the constant already implies its respective type (const_with_type)
+1>     at location "/type"
+EOF
+
+COMPARE result_0.txt AGAINST expected_0.txt
