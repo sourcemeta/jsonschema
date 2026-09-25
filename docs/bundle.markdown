@@ -64,15 +64,7 @@ rewritten to name where it landed. Any other revision, such as v3.0, is
 rejected rather than read as a schema.
 
 Use `--resolve/-r` for the other documents of the description exactly as you
-would for schemas. Each input is sorted by what it turns out to be, so one set
-of `--resolve` options may name both descriptions and schemas, and a Schema
-Object reaching an external schema is bundled as JSON Schema bundling would
-bundle it.
-
-> [!NOTE]
-> The `--without-id`/`-w` option is not supported for OpenAPI descriptions, as
-> removing identifiers is a schema operation and there is no description left to
-> read once its Schema Objects can no longer say who they are.
+would for schemas.
 
 Examples
 --------
