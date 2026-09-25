@@ -1,0 +1,28 @@
+WRITE schema.yaml UNTIL EOF
+$schema: https://json-schema.org/draft/2020-12/schema
+$id: https://example.com/root
+$ref: https://example.com/pet
+EOF
+
+WRITE pet.json UNTIL EOF
+{
+  "$id": "https://example.com/pet",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "integer"
+}
+EOF
+
+RUN bundle schema.yaml --resolve pet.json STDIN /dev/null IN . INTO result.txt EXPECTING 0
+
+WRITE expected.txt UNTIL EOF
+1> $schema: https://json-schema.org/draft/2020-12/schema
+1> $id: https://example.com/root
+1> $ref: https://example.com/pet
+1> $defs:
+1>   https://example.com/pet:
+1>     $schema: https://json-schema.org/draft/2020-12/schema
+1>     $id: https://example.com/pet
+1>     type: integer
+EOF
+
+COMPARE result.txt AGAINST expected.txt
