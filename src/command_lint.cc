@@ -170,17 +170,6 @@ static auto get_lint_callback(sourcemeta::core::JSON &errors_array,
   };
 }
 
-// An OpenAPI description declares no identifier of its own under the revisions
-// we support, so the one it is linted under is where it came from
-static auto openapi_default_id(const sourcemeta::jsonschema::InputJSON &entry)
-    -> std::string {
-  if (entry.from_stdin) {
-    return std::string{sourcemeta::jsonschema::STDIN_OPENAPI_DEFAULT_ID};
-  }
-
-  return sourcemeta::jsonschema::default_id(entry);
-}
-
 // An OpenAPI description that comes from standard input is not a schema, so it
 // goes by an identifier of its own wherever we report on it
 static auto
@@ -204,7 +193,7 @@ check_openapi(const sourcemeta::blaze::SchemaTransformer &bundle,
     -> std::pair<bool, std::uint8_t> {
   const sourcemeta::core::OpenAPIFrame frame{
       entry.second, sourcemeta::core::schema_walker, resolver,
-      openapi_default_id(entry)};
+      sourcemeta::jsonschema::openapi_default_id(entry)};
   return bundle.check(entry.second, frame.schemas(),
                       sourcemeta::core::schema_walker, resolver, callback,
                       sourcemeta::core::JSON::String{EXCLUDE_KEYWORD});
@@ -217,7 +206,7 @@ apply_openapi(const sourcemeta::blaze::SchemaTransformer &bundle,
               const sourcemeta::core::SchemaResolver &resolver,
               const sourcemeta::blaze::SchemaTransformer::Callback &callback)
     -> std::pair<bool, std::uint8_t> {
-  const auto default_base{openapi_default_id(entry)};
+  const auto default_base{sourcemeta::jsonschema::openapi_default_id(entry)};
   std::optional<sourcemeta::core::OpenAPIFrame> frame;
   return bundle.apply(
       document,

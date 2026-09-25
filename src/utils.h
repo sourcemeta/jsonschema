@@ -77,6 +77,21 @@ inline auto default_id(const InputJSON &entry) -> std::string {
   return default_id(entry.resolution_base, entry.from_stdin);
 }
 
+// An OpenAPI description declares no identifier of its own under the revisions
+// we support, so the one it is read under is where it came from
+inline auto openapi_default_id(const std::filesystem::path &schema_path,
+                               const bool from_stdin) -> std::string {
+  if (from_stdin) {
+    return std::string{STDIN_OPENAPI_DEFAULT_ID};
+  }
+
+  return default_id(schema_path, from_stdin);
+}
+
+inline auto openapi_default_id(const InputJSON &entry) -> std::string {
+  return openapi_default_id(entry.resolution_base, entry.from_stdin);
+}
+
 inline auto resolve_entrypoint(const sourcemeta::core::SchemaFrame &frame,
                                const std::string_view entrypoint)
     -> std::string {

@@ -1,0 +1,49 @@
+WRITE openapi.json UNTIL EOF
+{
+  "openapi": "3.2.0",
+  "info": { "title": "Example", "version": "1.0.0" },
+  "paths": {
+    "/pets": {
+      "get": {
+        "responses": {
+          "200": { "$ref": "https://example.com/shared#/components/responses/Ok" }
+        }
+      }
+    }
+  }
+}
+EOF
+
+// Schema input error
+RUN bundle openapi.json STDIN /dev/null IN . INTO result_0.txt EXPECTING 4
+
+REPLACE $CWD_URI WITH '[CWD_URI]' IN result_0.txt
+REPLACE $CWD WITH '[CWD]' IN result_0.txt
+
+WRITE expected_0.txt UNTIL EOF
+2> error: Could not resolve the reference to an external document
+2>   at identifier https://example.com/shared
+2>   at file path [CWD]/openapi.json
+2>   at location "/paths/~1pets/get/responses/200/$ref"
+2>   at base uri [CWD_URI]/openapi.json
+EOF
+
+COMPARE result_0.txt AGAINST expected_0.txt
+
+// Schema input error
+RUN bundle openapi.json --json STDIN /dev/null IN . INTO result_1.txt EXPECTING 4
+
+REPLACE $CWD_URI WITH '[CWD_URI]' IN result_1.txt
+REPLACE $CWD WITH '[CWD]' IN result_1.txt
+
+WRITE expected_1.txt UNTIL EOF
+1> {
+1>   "error": "Could not resolve the reference to an external document",
+1>   "identifier": "https://example.com/shared",
+1>   "filePath": "[CWD]/openapi.json",
+1>   "location": "/paths/~1pets/get/responses/200/$ref",
+1>   "baseURI": "[CWD_URI]/openapi.json"
+1> }
+EOF
+
+COMPARE result_1.txt AGAINST expected_1.txt

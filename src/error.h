@@ -178,6 +178,13 @@ public:
             "The --format option is not supported for OpenAPI descriptions"} {}
 };
 
+class UnsupportedOpenAPIWithoutIdError : public std::runtime_error {
+public:
+  UnsupportedOpenAPIWithoutIdError()
+      : std::runtime_error{"The --without-id option is not supported for "
+                           "OpenAPI descriptions"} {}
+};
+
 class UnsupportedOpenAPIVersionError : public std::runtime_error {
 public:
   UnsupportedOpenAPIVersionError(std::string value)
@@ -1034,6 +1041,20 @@ inline auto print_exception(const bool is_json, const Exception &exception)
     }
   }
 
+  // An OpenAPI error names which document of a description is at fault, which
+  // is not always the one the command was handed, and it spells that as a URI
+  // rather than holding one
+  if constexpr (requires(const Exception &current) {
+                  { current.base() } -> std::convertible_to<std::string_view>;
+                }) {
+    if (is_json) {
+      error_json.assign("baseURI",
+                        sourcemeta::core::JSON{std::string{exception.base()}});
+    } else {
+      std::cerr << "  at base uri " << exception.base() << "\n";
+    }
+  }
+
   if constexpr (requires(const Exception &current) {
                   current.base().recompose();
                 }) {
@@ -1191,6 +1212,11 @@ inline auto try_catch(const sourcemeta::core::Options &options,
     print_exception(is_json, error);
     return EXIT_NOT_SUPPORTED;
   } catch (const sourcemeta::core::FileError<UnsupportedOpenAPIVersionError>
+               &error) {
+    const auto is_json{options.contains("json")};
+    print_exception(is_json, error);
+    return EXIT_NOT_SUPPORTED;
+  } catch (const sourcemeta::core::FileError<UnsupportedOpenAPIWithoutIdError>
                &error) {
     const auto is_json{options.contains("json")};
     print_exception(is_json, error);
@@ -1511,7 +1537,8 @@ inline auto try_catch(const sourcemeta::core::Options &options,
     print_exception(is_json, error);
     if (!is_json) {
       if (error.identifier().starts_with("file://")) {
-        std::cerr << "\nThis is likely because the file does not exist\n";
+        std::cerr << "\nThis is likely because the file does not exist, or "
+                     "does not hold a JSON Schema\n";
       } else {
         std::cerr
             << "\nThis is likely because you forgot to import such schema "
@@ -1589,6 +1616,17 @@ inline auto try_catch(const sourcemeta::core::Options &options,
     return EXIT_SCHEMA_INPUT_ERROR;
   } catch (const sourcemeta::core::FileError<sourcemeta::core::OpenAPIError>
                &error) {
+    const auto is_json{options.contains("json")};
+    print_exception(is_json, error);
+    return EXIT_SCHEMA_INPUT_ERROR;
+  } catch (const sourcemeta::core::FileError<
+           sourcemeta::core::OpenAPIResolutionError> &error) {
+    const auto is_json{options.contains("json")};
+    print_exception(is_json, error);
+    return EXIT_SCHEMA_INPUT_ERROR;
+  } catch (
+      const sourcemeta::core::FileError<sourcemeta::core::OpenAPIReferenceError>
+          &error) {
     const auto is_json{options.contains("json")};
     print_exception(is_json, error);
     return EXIT_SCHEMA_INPUT_ERROR;
