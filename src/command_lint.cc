@@ -177,7 +177,7 @@ retag_openapi_stdin(std::vector<sourcemeta::jsonschema::InputJSON> &entries)
     -> void {
   for (auto &entry : entries) {
     if (entry.from_stdin &&
-        sourcemeta::core::openapi_version(entry.second).has_value()) {
+        sourcemeta::jsonschema::is_openapi_document(entry.second)) {
       entry.first =
           std::string{sourcemeta::jsonschema::STDIN_OPENAPI_DEFAULT_ID};
       entry.resolution_base = sourcemeta::jsonschema::openapi_stdin_path();

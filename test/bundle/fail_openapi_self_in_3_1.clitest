@@ -41,3 +41,20 @@ WRITE expected_0.txt UNTIL EOF
 EOF
 
 COMPARE result_0.txt AGAINST expected_0.txt
+
+// Schema input error
+RUN bundle entry.json --json STDIN /dev/null IN . INTO result_1.txt EXPECTING 4
+
+REPLACE $CWD_URI WITH '[CWD_URI]' IN result_1.txt
+REPLACE $CWD WITH '[CWD]' IN result_1.txt
+
+WRITE expected_1.txt UNTIL EOF
+1> {
+1>   "error": "The OpenAPI Object does not define this field",
+1>   "filePath": "[CWD]/entry.json",
+1>   "location": "/$self",
+1>   "baseURI": "[CWD_URI]/shared.json"
+1> }
+EOF
+
+COMPARE result_1.txt AGAINST expected_1.txt

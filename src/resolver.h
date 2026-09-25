@@ -715,7 +715,24 @@ public:
   // goes to the resolver above rather than being reported from here
   auto openapi(std::string_view identifier)
       -> sourcemeta::core::OpenAPIResolverResult {
-    const std::string target{canonical_resolve_key(identifier)};
+    // What a configuration remaps an identifier to holds for a description just
+    // as it does for a schema, so this is settled before anything is looked up
+    const std::string string_identifier{identifier};
+    const auto mapped_result = this->configuration_.and_then(
+        [this,
+         &string_identifier](const sourcemeta::blaze::Configuration &config)
+            -> std::optional<std::string> {
+          return resolve_map_uri(this->canonical_resolve_, config.base_path,
+                                 string_identifier);
+        });
+    if (mapped_result.has_value()) {
+      LOG_DEBUG(this->options_)
+          << "Resolving " << identifier << " as " << mapped_result.value()
+          << " given the configuration file\n";
+    }
+
+    const std::string target{canonical_resolve_key(
+        mapped_result.has_value() ? mapped_result.value() : string_identifier)};
 
     const auto match{this->descriptions_.find(target)};
     if (match != this->descriptions_.cend()) {

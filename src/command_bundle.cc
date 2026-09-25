@@ -46,10 +46,11 @@ auto sourcemeta::jsonschema::bundle(const sourcemeta::core::Options &options)
   // An OpenAPI description is not a schema, so what it goes by wherever we
   // report on it is an identity of its own rather than the one a schema from
   // the same place would take
+  const auto is_description{is_openapi_document(parsed_schema.document)};
   const auto is_openapi{
       sourcemeta::core::openapi_version(parsed_schema.document).has_value()};
   const auto schema_display_path{
-      schema_from_stdin ? (is_openapi ? openapi_stdin_path() : stdin_path())
+      schema_from_stdin ? (is_description ? openapi_stdin_path() : stdin_path())
                         : schema_path};
 
   if (parsed_schema.multidocument) {
@@ -76,6 +77,11 @@ auto sourcemeta::jsonschema::bundle(const sourcemeta::core::Options &options)
 
   const auto openapi_base{sourcemeta::jsonschema::openapi_default_id(
       schema_path, schema_from_stdin)};
+  // A description that names itself with `$self` answers to that rather than to
+  // where it was read from, and a fault in it reports that base, so both are
+  // what tells a fault of ours from one in a document bundling went and fetched
+  const auto openapi_self{
+      openapi_self_identity(parsed_schema.document, openapi_base)};
 
   const auto &custom_resolver{
       resolver(options, options.contains("http"), dialect, configuration)};
@@ -125,9 +131,11 @@ auto sourcemeta::jsonschema::bundle(const sourcemeta::core::Options &options)
     throw sourcemeta::core::FileError<sourcemeta::core::OpenAPIReferenceError>(
         schema_display_path, error);
   } catch (const sourcemeta::core::OpenAPIError &error) {
-    const auto position{error.base() == openapi_base
-                            ? parsed_schema.positions.get(error.location())
-                            : std::nullopt};
+    const auto ours{
+        error.base() == openapi_base ||
+        (openapi_self.has_value() && error.base() == openapi_self.value())};
+    const auto position{ours ? parsed_schema.positions.get(error.location())
+                             : std::nullopt};
     if (position.has_value()) {
       throw PositionError<
           sourcemeta::core::FileError<sourcemeta::core::OpenAPIError>>(
