@@ -136,6 +136,18 @@ inline auto unsupported_openapi_version(const sourcemeta::core::JSON &document)
                                                                  : version;
 }
 
+// A description of a revision we cannot read is no JSON Schema either, so it is
+// turned down rather than being taken for one
+inline auto reject_unsupported_openapi(const sourcemeta::core::JSON &document,
+                                       const std::filesystem::path &path)
+    -> void {
+  const auto *version{unsupported_openapi_version(document)};
+  if (version != nullptr) {
+    throw sourcemeta::core::FileError<UnsupportedOpenAPIVersionError>(
+        path, version->to_string());
+  }
+}
+
 inline auto default_dialect(
     const sourcemeta::core::Options &options,
     const std::optional<sourcemeta::blaze::Configuration> &configuration)

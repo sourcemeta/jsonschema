@@ -56,6 +56,8 @@ auto sourcemeta::jsonschema::bundle(const sourcemeta::core::Options &options)
     throw NotSchemaError{schema_display_path};
   }
 
+  reject_unsupported_openapi(parsed_schema.document, schema_display_path);
+
   auto &schema{parsed_schema.document};
 
   const auto &custom_resolver{

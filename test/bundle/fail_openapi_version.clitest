@@ -1,0 +1,35 @@
+WRITE openapi.json UNTIL EOF
+{
+  "openapi": "3.0.3",
+  "info": { "title": "Example", "version": "1.0.0" },
+  "paths": {}
+}
+EOF
+
+// Not supported
+RUN bundle openapi.json STDIN /dev/null IN . INTO result_0.txt EXPECTING 3
+
+REPLACE $CWD WITH '[CWD]' IN result_0.txt
+
+WRITE expected_0.txt UNTIL EOF
+2> error: This OpenAPI Specification revision is not supported
+2>   at value 3.0.3
+2>   at file path [CWD]/openapi.json
+EOF
+
+COMPARE result_0.txt AGAINST expected_0.txt
+
+// Not supported
+RUN bundle openapi.json --json STDIN /dev/null IN . INTO result_1.txt EXPECTING 3
+
+REPLACE $CWD WITH '[CWD]' IN result_1.txt
+
+WRITE expected_1.txt UNTIL EOF
+1> {
+1>   "error": "This OpenAPI Specification revision is not supported",
+1>   "value": "3.0.3",
+1>   "filePath": "[CWD]/openapi.json"
+1> }
+EOF
+
+COMPARE result_1.txt AGAINST expected_1.txt
