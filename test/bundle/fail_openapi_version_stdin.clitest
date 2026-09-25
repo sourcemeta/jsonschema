@@ -1,0 +1,31 @@
+WRITE stdin_input UNTIL EOF
+{
+  "openapi": "3.0.3",
+  "info": { "title": "Example", "version": "1.0.0" },
+  "paths": {}
+}
+EOF
+
+// Not supported
+RUN bundle - STDIN stdin_input IN . INTO result_0.txt EXPECTING 3
+
+WRITE expected_0.txt UNTIL EOF
+2> error: This OpenAPI Specification revision is not supported
+2>   at value 3.0.3
+2>   at file path tag:sourcemeta.com,2026:openapi/stdin
+EOF
+
+COMPARE result_0.txt AGAINST expected_0.txt
+
+// Not supported
+RUN bundle - --json STDIN stdin_input IN . INTO result_1.txt EXPECTING 3
+
+WRITE expected_1.txt UNTIL EOF
+1> {
+1>   "error": "This OpenAPI Specification revision is not supported",
+1>   "value": "3.0.3",
+1>   "filePath": "tag:sourcemeta.com,2026:openapi/stdin"
+1> }
+EOF
+
+COMPARE result_1.txt AGAINST expected_1.txt

@@ -1,0 +1,51 @@
+WRITE openapi.yaml UNTIL EOF
+openapi: 3.1.1
+info:
+  title: Example
+  version: 1.0.0
+paths:
+  /pets:
+    get:
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: https://example.com/schemas/pet
+EOF
+
+WRITE pet.json UNTIL EOF
+{
+  "$id": "https://example.com/schemas/pet",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "string"
+}
+EOF
+
+RUN bundle openapi.yaml --resolve pet.json STDIN /dev/null IN . INTO result.txt EXPECTING 0
+
+WRITE expected.txt UNTIL EOF
+1> openapi: 3.1.1
+1> info:
+1>   title: Example
+1>   version: 1.0.0
+1> paths:
+1>   /pets:
+1>     get:
+1>       responses:
+1>         '200':
+1>           description: OK
+1>           content:
+1>             application/json:
+1>               schema:
+1>                 $ref: https://example.com/schemas/pet
+1> components:
+1>   schemas:
+1>     pet:
+1>       $id: https://example.com/schemas/pet
+1>       $schema: https://json-schema.org/draft/2020-12/schema
+1>       type: string
+EOF
+
+COMPARE result.txt AGAINST expected.txt

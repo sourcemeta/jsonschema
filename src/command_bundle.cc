@@ -33,8 +33,6 @@ auto sourcemeta::jsonschema::bundle(const sourcemeta::core::Options &options)
 
   const auto schema_config_base{
       schema_from_stdin ? std::filesystem::current_path() : schema_path};
-  const auto schema_display_path{schema_from_stdin ? stdin_path()
-                                                   : schema_path};
 
   const auto configuration_path{
       find_configuration(options, schema_config_base)};
@@ -44,6 +42,16 @@ auto sourcemeta::jsonschema::bundle(const sourcemeta::core::Options &options)
   auto parsed_schema{schema_from_stdin
                          ? read_from_stdin(nullptr, InputFormatting::Preserve)
                          : read_file(schema_path, InputFormatting::Preserve)};
+
+  // An OpenAPI description is not a schema, so what it goes by wherever we
+  // report on it is an identity of its own rather than the one a schema from
+  // the same place would take
+  const auto is_description{is_openapi_document(parsed_schema.document)};
+  const auto is_openapi{
+      sourcemeta::core::openapi_version(parsed_schema.document).has_value()};
+  const auto schema_display_path{
+      schema_from_stdin ? (is_description ? openapi_stdin_path() : stdin_path())
+                        : schema_path};
 
   if (parsed_schema.multidocument) {
     throw MultiDocumentInputError{
@@ -58,12 +66,41 @@ auto sourcemeta::jsonschema::bundle(const sourcemeta::core::Options &options)
 
   reject_unsupported_openapi(parsed_schema.document, schema_display_path);
 
+  // Removing identifiers is a schema operation, and there is no description to
+  // read once the Schema Objects it holds can no longer say who they are
+  if (is_openapi && options.contains("without-id")) {
+    throw sourcemeta::core::FileError<UnsupportedOpenAPIWithoutIdError>(
+        schema_display_path);
+  }
+
   auto &schema{parsed_schema.document};
+
+  const auto openapi_base{sourcemeta::jsonschema::openapi_default_id(
+      schema_path, schema_from_stdin)};
+  // A description that names itself with `$self` answers to that rather than to
+  // where it was read from, and a fault in it reports that base, so both are
+  // what tells a fault of ours from one in a document bundling went and fetched
+  const auto openapi_self{
+      openapi_self_identity(parsed_schema.document, openapi_base)};
 
   const auto &custom_resolver{
       resolver(options, options.contains("http"), dialect, configuration)};
 
   try {
+    if (is_openapi) {
+      sourcemeta::core::openapi_bundle(
+          schema, sourcemeta::core::schema_walker, custom_resolver,
+          openapi_resolver(options, options.contains("http"), dialect,
+                           configuration),
+          {.default_base = openapi_base});
+      // TODO: Order the keys of a bundled description once Core grows the
+      // equivalent of `sourcemeta::core::schema_format` for one. The shell of
+      // a description has no ordering of its own to apply here
+      sourcemeta::jsonschema::write_schema(schema, std::cout, indentation,
+                                           parsed_schema.roundtrip);
+      return;
+    }
+
     sourcemeta::core::schema_bundle(
         schema, sourcemeta::core::schema_walker, custom_resolver, dialect,
         sourcemeta::jsonschema::default_id(schema_path, schema_from_stdin));
@@ -87,6 +124,27 @@ auto sourcemeta::jsonschema::bundle(const sourcemeta::core::Options &options)
     }
 
     sourcemeta::jsonschema::format_schema(schema, custom_resolver, dialect);
+  } catch (const sourcemeta::core::OpenAPIResolutionError &error) {
+    throw sourcemeta::core::FileError<sourcemeta::core::OpenAPIResolutionError>(
+        schema_display_path, error);
+  } catch (const sourcemeta::core::OpenAPIReferenceError &error) {
+    throw sourcemeta::core::FileError<sourcemeta::core::OpenAPIReferenceError>(
+        schema_display_path, error);
+  } catch (const sourcemeta::core::OpenAPIError &error) {
+    const auto ours{
+        error.base() == openapi_base ||
+        (openapi_self.has_value() && error.base() == openapi_self.value())};
+    const auto position{ours ? parsed_schema.positions.get(error.location())
+                             : std::nullopt};
+    if (position.has_value()) {
+      throw PositionError<
+          sourcemeta::core::FileError<sourcemeta::core::OpenAPIError>>(
+          std::get<0>(position.value()), std::get<1>(position.value()),
+          schema_display_path, error);
+    }
+
+    throw sourcemeta::core::FileError<sourcemeta::core::OpenAPIError>(
+        schema_display_path, error);
   } catch (const sourcemeta::core::SchemaKeywordError &error) {
     throw sourcemeta::core::FileError<sourcemeta::core::SchemaKeywordError>(
         schema_display_path, error);

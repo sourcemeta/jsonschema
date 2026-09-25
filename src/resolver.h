@@ -6,6 +6,7 @@
 #include <sourcemeta/core/io.h>
 #include <sourcemeta/core/json.h>
 #include <sourcemeta/core/jsonschema.h>
+#include <sourcemeta/core/openapi.h>
 #include <sourcemeta/core/options.h>
 #include <sourcemeta/core/uri.h>
 #include <sourcemeta/core/yaml.h>
@@ -408,6 +409,47 @@ declares_identifier(const std::unordered_set<std::string> &identifiers,
   return canonical != identifier && identifiers.contains(canonical);
 }
 
+// How resolution names what it reached is a URI, and a `file://` one names a
+// place on disk that whoever reads an error would rather see spelled as a path
+static inline auto identifier_path(const std::string &identifier)
+    -> std::filesystem::path {
+  std::optional<sourcemeta::core::URI> uri;
+  try {
+    uri.emplace(identifier);
+  } catch (const sourcemeta::core::URIParseError &) {
+    return std::filesystem::path{identifier};
+  }
+
+  return uri.value().is_file() ? uri.value().to_path()
+                               : std::filesystem::path{identifier};
+}
+
+// OpenAPI Specification 3.2.1, Section 4.1 lets a document name itself with
+// `$self`, "which also serves as its base URI", resolved against wherever the
+// document was retrieved from. RFC 3986 Section 5.2.2 never resolves a
+// reference against a fragment, so one written there is no part of the base
+static inline auto openapi_self_identity(const sourcemeta::core::JSON &document,
+                                         const std::string &retrieval)
+    -> std::optional<std::string> {
+  if (!document.is_object()) {
+    return std::nullopt;
+  }
+
+  const auto *self{document.try_at("$self")};
+  if (self == nullptr || !self->is_string()) {
+    return std::nullopt;
+  }
+
+  try {
+    sourcemeta::core::URI uri{self->to_string()};
+    uri.resolve_from(sourcemeta::core::URI{retrieval});
+    uri.canonicalize();
+    return uri.recompose_without_fragment();
+  } catch (const sourcemeta::core::URIParseError &) {
+    return std::nullopt;
+  }
+}
+
 class CustomResolver {
 public:
   CustomResolver(
@@ -597,7 +639,10 @@ public:
     return added_any_schema;
   }
 
-  auto operator()(std::string_view identifier) const
+  // An OpenAPI Description is never a schema, so this hands one back under no
+  // circumstance. What a fetch turns up that is one is deposited among the
+  // descriptions instead, where only the resolver below can reach it
+  auto operator()(std::string_view identifier)
       -> sourcemeta::core::SchemaResolverResult {
     const std::string string_identifier{identifier};
     const auto mapped_result = this->configuration_.and_then(
@@ -624,24 +669,87 @@ public:
       return std::nullopt;
     }
 
+    // An OpenAPI description is not a schema, so what was sorted among them is
+    // unavailable here
+    if (this->descriptions_.contains(target)) {
+      return std::nullopt;
+    }
+
+    const auto cached{this->fetched_.find(target)};
+    if (cached != this->fetched_.cend()) {
+      return cached->second;
+    }
+
     auto fetched{fetch_schema(this->options_, target, this->remote_)};
     if (!fetched.has_value()) {
       return fetched;
     }
 
-    // Only a schema that declares no identifier of its own needs one, and
-    // taking ownership just to set it would defeat handing schemas back by
-    // reference
-    const auto base_dialect{
-        anonymous_base_dialect(fetched.value(), std::ref(*this))};
-    if (!base_dialect.has_value()) {
-      return fetched;
+    auto document{std::move(fetched).to_owned()};
+    if (is_openapi_document(document)) {
+      this->descriptions_.emplace(target, std::move(document));
+      return std::nullopt;
     }
 
-    auto schema{std::move(fetched).to_owned()};
-    sourcemeta::core::schema_reidentify(schema, string_identifier,
-                                        base_dialect.value());
-    return schema;
+    // Only a schema that declares no identifier of its own needs one
+    const auto base_dialect{anonymous_base_dialect(document, std::ref(*this))};
+    if (base_dialect.has_value()) {
+      sourcemeta::core::schema_reidentify(document, string_identifier,
+                                          base_dialect.value());
+    }
+
+    return this->fetched_.emplace(target, std::move(document)).first->second;
+  }
+
+  // The other half of the split. An OpenAPI Description is what this hands
+  // back and the only thing it ever does, so a schema that a fetch turns up
+  // goes to the resolver above rather than being reported from here
+  auto openapi(std::string_view identifier)
+      -> sourcemeta::core::OpenAPIResolverResult {
+    // What a configuration remaps an identifier to holds for a description just
+    // as it does for a schema, so this is settled before anything is looked up
+    const std::string string_identifier{identifier};
+    const auto mapped_result = this->configuration_.and_then(
+        [this,
+         &string_identifier](const sourcemeta::blaze::Configuration &config)
+            -> std::optional<std::string> {
+          return resolve_map_uri(this->canonical_resolve_, config.base_path,
+                                 string_identifier);
+        });
+    if (mapped_result.has_value()) {
+      LOG_DEBUG(this->options_)
+          << "Resolving " << identifier << " as " << mapped_result.value()
+          << " given the configuration file\n";
+    }
+
+    const std::string target{canonical_resolve_key(
+        mapped_result.has_value() ? mapped_result.value() : string_identifier)};
+
+    const auto match{this->descriptions_.find(target)};
+    if (match != this->descriptions_.cend()) {
+      reject_unsupported_openapi(match->second, identifier_path(target));
+      return match->second;
+    }
+
+    if (this->fetched_.contains(target)) {
+      return std::nullopt;
+    }
+
+    auto fetched{fetch_schema(this->options_, target, this->remote_)};
+    if (!fetched.has_value()) {
+      return std::nullopt;
+    }
+
+    auto document{std::move(fetched).to_owned()};
+    if (!is_openapi_document(document)) {
+      this->fetched_.emplace(target, std::move(document));
+      return std::nullopt;
+    }
+
+    const auto &stored{
+        this->descriptions_.emplace(target, std::move(document)).first->second};
+    reject_unsupported_openapi(stored, identifier_path(target));
+    return stored;
   }
 
 private:
@@ -685,8 +793,53 @@ private:
     }
   }
 
+  // A description answers to the `$self` it declares, and to where it came
+  // from either way, mirroring how an installed dependency is registered both
+  // by the identifier it declares and by the URI it was imported under
+  auto import_description(const InputJSON &entry) -> void {
+    const auto retrieval{sourcemeta::jsonschema::default_id(entry)};
+    LOG_DEBUG(this->options_)
+        << "Importing OpenAPI description into the resolution context: "
+        << retrieval << "\n";
+
+    const auto self{openapi_self_identity(entry.second, retrieval)};
+    if (self.has_value()) {
+      this->register_description(canonical_resolve_key(self.value()), entry);
+    }
+
+    this->register_description(canonical_resolve_key(retrieval), entry);
+  }
+
+  // Two descriptions that answer to one identifier leave which of them a
+  // reference reaches to the order they happened to be given in, so this is
+  // reported rather than settled by whichever arrived first
+  auto register_description(const std::string &identifier,
+                            const InputJSON &entry) -> void {
+    const auto result{this->descriptions_.emplace(identifier, entry.second)};
+    if (!result.second && result.first->second != entry.second) {
+      const auto other{this->description_origins_.find(identifier)};
+      assert(other != this->description_origins_.cend());
+      throw sourcemeta::core::FileError<OpenAPIIdentifierConflictError>(
+          entry.resolution_base, identifier, other->second);
+    }
+
+    if (result.second) {
+      this->description_origins_.emplace(identifier, entry.resolution_base);
+    }
+  }
+
   auto import_entry(const InputJSON &entry,
                     const std::string_view default_dialect) -> void {
+    // What a description holds is the business of the OpenAPI resolver, and
+    // framing it as a schema would both fail and register nonsense. Only a
+    // revision we can read is taken, as one we cannot is no more a description
+    // we can answer for than a schema
+    if (is_openapi_document(entry.second)) {
+      reject_unsupported_openapi(entry.second, entry.resolution_base);
+      this->import_description(entry);
+      return;
+    }
+
     LOG_DEBUG(this->options_)
         << "Detecting schema resources from file: " << entry.first << "\n";
 
@@ -768,6 +921,13 @@ private:
   }
 
   std::map<std::string, sourcemeta::core::JSON> schemas_{};
+  // Kept wholly apart from the schemas above, so that neither resolver can
+  // reach what the other answers for
+  std::map<std::string, sourcemeta::core::JSON> descriptions_{};
+  std::map<std::string, std::filesystem::path> description_origins_{};
+  // What resolution has already retrieved and found not to be a description,
+  // so that one URL is fetched once however many times it is asked for
+  std::map<std::string, sourcemeta::core::JSON> fetched_{};
   std::map<std::string,
            std::pair<std::filesystem::path, sourcemeta::core::Pointer>>
       origins_{};
@@ -778,30 +938,76 @@ private:
   std::unordered_set<std::string> pending_identifiers_{};
 };
 
+using ResolverCacheKey = std::pair<bool, std::string>;
+
+// Both halves of the split answer from one of these, so that what the schemas
+// and what the descriptions were sorted into stays one set rather than two
+// that disagree
+inline auto resolver_instance(
+    const sourcemeta::core::Options &options, const bool remote,
+    const std::string_view default_dialect,
+    const std::optional<sourcemeta::blaze::Configuration> &configuration)
+    -> CustomResolver & {
+  static std::map<ResolverCacheKey, CustomResolver> resolver_cache;
+  const ResolverCacheKey cache_key{remote, std::string{default_dialect}};
+  const auto match{resolver_cache.find(cache_key)};
+  if (match != resolver_cache.cend()) {
+    return match->second;
+  }
+
+  return resolver_cache
+      .emplace(std::piecewise_construct, std::forward_as_tuple(cache_key),
+               std::forward_as_tuple(options, configuration, remote,
+                                     default_dialect))
+      .first->second;
+}
+
 inline auto
 resolver(const sourcemeta::core::Options &options, const bool remote,
          const std::string_view default_dialect,
          const std::optional<sourcemeta::blaze::Configuration> &configuration)
     -> const sourcemeta::core::SchemaResolver & {
-  using CacheKey = std::pair<bool, std::string>;
-  static std::map<CacheKey, CustomResolver> resolver_cache;
   // What callers get is a handle that refers back to the cached resolver,
   // as the resolver itself must never be copied into the callee
-  static std::map<CacheKey, sourcemeta::core::SchemaResolver> handle_cache;
-  const CacheKey cache_key{remote, std::string{default_dialect}};
+  static std::map<ResolverCacheKey, sourcemeta::core::SchemaResolver>
+      handle_cache;
+  const ResolverCacheKey cache_key{remote, std::string{default_dialect}};
 
   const auto handle{handle_cache.find(cache_key)};
   if (handle != handle_cache.cend()) {
     return handle->second;
   }
 
-  const auto iterator{
-      resolver_cache
-          .emplace(std::piecewise_construct, std::forward_as_tuple(cache_key),
-                   std::forward_as_tuple(options, configuration, remote,
-                                         default_dialect))
-          .first};
-  return handle_cache.emplace(cache_key, std::ref(iterator->second))
+  return handle_cache
+      .emplace(cache_key, std::ref(resolver_instance(
+                              options, remote, default_dialect, configuration)))
+      .first->second;
+}
+
+// The OpenAPI half, which answers from the same instance as the schema half
+// above and holds to the same separation: a schema is never reported from here
+inline auto openapi_resolver(
+    const sourcemeta::core::Options &options, const bool remote,
+    const std::string_view default_dialect,
+    const std::optional<sourcemeta::blaze::Configuration> &configuration)
+    -> const sourcemeta::core::OpenAPIResolver & {
+  static std::map<ResolverCacheKey, sourcemeta::core::OpenAPIResolver>
+      handle_cache;
+  const ResolverCacheKey cache_key{remote, std::string{default_dialect}};
+
+  const auto handle{handle_cache.find(cache_key)};
+  if (handle != handle_cache.cend()) {
+    return handle->second;
+  }
+
+  auto &instance{
+      resolver_instance(options, remote, default_dialect, configuration)};
+  return handle_cache
+      .emplace(cache_key,
+               [&instance](const std::string_view identifier)
+                   -> sourcemeta::core::OpenAPIResolverResult {
+                 return instance.openapi(identifier);
+               })
       .first->second;
 }
 

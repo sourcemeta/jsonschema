@@ -22,7 +22,7 @@ WRITE expected_0.txt UNTIL EOF
 2>   at identifier [CWD_URI]/schemas/other.json
 2>   at file path [CWD]/schema.json
 2>
-2> This is likely because the file does not exist
+2> This is likely because the file does not exist, or does not hold a JSON Schema
 EOF
 
 COMPARE result_0.txt AGAINST expected_0.txt

@@ -8,6 +8,7 @@ EOF
 // Schema input error
 RUN lint openapi.json STDIN /dev/null IN . INTO result_0.txt EXPECTING 4
 
+REPLACE $CWD_URI WITH '[CWD_URI]' IN result_0.txt
 REPLACE $CWD WITH '[CWD]' IN result_0.txt
 
 WRITE expected_0.txt UNTIL EOF
@@ -16,6 +17,7 @@ WRITE expected_0.txt UNTIL EOF
 2>   at column 1
 2>   at file path [CWD]/openapi.json
 2>   at location ""
+2>   at base uri [CWD_URI]/openapi.json
 EOF
 
 COMPARE result_0.txt AGAINST expected_0.txt
@@ -23,6 +25,7 @@ COMPARE result_0.txt AGAINST expected_0.txt
 // Schema input error
 RUN lint openapi.json --json STDIN /dev/null IN . INTO result_1.txt EXPECTING 4
 
+REPLACE $CWD_URI WITH '[CWD_URI]' IN result_1.txt
 REPLACE $CWD WITH '[CWD]' IN result_1.txt
 
 WRITE expected_1.txt UNTIL EOF
@@ -31,7 +34,8 @@ WRITE expected_1.txt UNTIL EOF
 1>   "line": 1,
 1>   "column": 1,
 1>   "filePath": "[CWD]/openapi.json",
-1>   "location": ""
+1>   "location": "",
+1>   "baseURI": "[CWD_URI]/openapi.json"
 1> }
 EOF
 
@@ -53,6 +57,7 @@ WRITE expected_2.txt UNTIL EOF
 2>   at column 1
 2>   at file path tag:sourcemeta.com,2026:openapi/stdin
 2>   at location ""
+2>   at base uri tag:sourcemeta.com,2026:openapi/stdin
 EOF
 
 COMPARE result_2.txt AGAINST expected_2.txt
@@ -66,7 +71,8 @@ WRITE expected_3.txt UNTIL EOF
 1>   "line": 1,
 1>   "column": 1,
 1>   "filePath": "tag:sourcemeta.com,2026:openapi/stdin",
-1>   "location": ""
+1>   "location": "",
+1>   "baseURI": "tag:sourcemeta.com,2026:openapi/stdin"
 1> }
 EOF
 

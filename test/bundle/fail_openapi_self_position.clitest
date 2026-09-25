@@ -1,0 +1,41 @@
+WRITE entry.json UNTIL EOF
+{
+  "openapi": "3.2.0",
+  "$self": "https://example.com/api",
+  "info": { "title": "Example", "version": "1.0.0" }
+}
+EOF
+
+// Schema input error
+RUN bundle entry.json STDIN /dev/null IN . INTO result_0.txt EXPECTING 4
+
+REPLACE $CWD WITH '[CWD]' IN result_0.txt
+
+WRITE expected_0.txt UNTIL EOF
+2> error: The OpenAPI Description must declare paths, components or webhooks
+2>   at line 1
+2>   at column 1
+2>   at file path [CWD]/entry.json
+2>   at location ""
+2>   at base uri https://example.com/api
+EOF
+
+COMPARE result_0.txt AGAINST expected_0.txt
+
+// Schema input error
+RUN bundle entry.json --json STDIN /dev/null IN . INTO result_1.txt EXPECTING 4
+
+REPLACE $CWD WITH '[CWD]' IN result_1.txt
+
+WRITE expected_1.txt UNTIL EOF
+1> {
+1>   "error": "The OpenAPI Description must declare paths, components or webhooks",
+1>   "line": 1,
+1>   "column": 1,
+1>   "filePath": "[CWD]/entry.json",
+1>   "location": "",
+1>   "baseURI": "https://example.com/api"
+1> }
+EOF
+
+COMPARE result_1.txt AGAINST expected_1.txt
