@@ -670,13 +670,8 @@ public:
     }
 
     // An OpenAPI description is not a schema, so what was sorted among them is
-    // unavailable here. Saying so is what tells a reference that goes looking
-    // for one apart from a reference to something nobody supplied
+    // unavailable here
     if (this->descriptions_.contains(target)) {
-      LOG_VERBOSE(this->options_)
-          << "Not available as a schema, as this was read as an OpenAPI "
-             "description: "
-          << target << "\n";
       return std::nullopt;
     }
 
@@ -692,10 +687,6 @@ public:
 
     auto document{std::move(fetched).to_owned()};
     if (is_openapi_document(document)) {
-      LOG_VERBOSE(this->options_)
-          << "Not available as a schema, as this was read as an OpenAPI "
-             "description: "
-          << target << "\n";
       this->descriptions_.emplace(target, std::move(document));
       return std::nullopt;
     }

@@ -160,3 +160,15 @@ jsonschema bundle path/to/my/schema.json \
 ```sh
 jsonschema bundle path/to/my/schema.json --resolve path/to/external.json --without-id
 ```
+
+### Bundle an OpenAPI description split across other documents
+
+```sh
+jsonschema bundle path/to/my/openapi.json
+```
+
+### Bundle an OpenAPI description importing a single local schema
+
+```sh
+jsonschema bundle path/to/my/openapi.json --resolve path/to/external.json
+```
