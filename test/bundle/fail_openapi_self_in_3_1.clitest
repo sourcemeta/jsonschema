@@ -1,0 +1,43 @@
+WRITE entry.json UNTIL EOF
+{
+  "openapi": "3.1.1",
+  "info": { "title": "Example", "version": "1.0.0" },
+  "paths": {
+    "/pets": {
+      "get": {
+        "responses": {
+          "200": { "$ref": "shared.json#/components/responses/Ok" }
+        }
+      }
+    }
+  }
+}
+EOF
+
+WRITE shared.json UNTIL EOF
+{
+  "openapi": "3.1.1",
+  "$self": "https://example.com/shared",
+  "info": { "title": "Shared", "version": "1.0.0" },
+  "components": {
+    "responses": {
+      "Ok": { "description": "All good" }
+    }
+  }
+}
+EOF
+
+// Schema input error
+RUN bundle entry.json STDIN /dev/null IN . INTO result_0.txt EXPECTING 4
+
+REPLACE $CWD_URI WITH '[CWD_URI]' IN result_0.txt
+REPLACE $CWD WITH '[CWD]' IN result_0.txt
+
+WRITE expected_0.txt UNTIL EOF
+2> error: The OpenAPI Object does not define this field
+2>   at file path [CWD]/entry.json
+2>   at location "/$self"
+2>   at base uri [CWD_URI]/shared.json
+EOF
+
+COMPARE result_0.txt AGAINST expected_0.txt

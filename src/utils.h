@@ -132,23 +132,33 @@ inline auto looks_like_test_document(const sourcemeta::core::JSON &document)
          document.defines("tests") && document.at("tests").is_array();
 }
 
+// Whether a document holds an OpenAPI Description at all, whichever revision it
+// declares. The `openapi` field is what the specification identifies one by,
+// and one we cannot read is a description all the same, so this is what tells a
+// description from a schema rather than what tells a readable one from the rest
+inline auto is_openapi_document(const sourcemeta::core::JSON &document)
+    -> bool {
+  if (!document.is_object()) {
+    return false;
+  }
+
+  const auto *version{document.try_at("openapi")};
+  return version != nullptr && version->is_string();
+}
+
 // The revision an OpenAPI description declares, when it is one we cannot read.
 // A document that declares the field as anything but a string is no OpenAPI
 // description by any reading of the specification, so it goes on being read as
 // a schema rather than being turned down here
 inline auto unsupported_openapi_version(const sourcemeta::core::JSON &document)
     -> const sourcemeta::core::JSON * {
-  if (!document.is_object()) {
+  if (!is_openapi_document(document)) {
     return nullptr;
   }
 
-  const auto *version{document.try_at("openapi")};
-  if (version == nullptr || !version->is_string()) {
-    return nullptr;
-  }
-
-  return sourcemeta::core::openapi_version(document).has_value() ? nullptr
-                                                                 : version;
+  return sourcemeta::core::openapi_version(document).has_value()
+             ? nullptr
+             : document.try_at("openapi");
 }
 
 // A description of a revision we cannot read is no JSON Schema either, so it is

@@ -92,6 +92,29 @@ private:
   sourcemeta::core::Pointer other_;
 };
 
+class OpenAPIIdentifierConflictError : public std::runtime_error {
+public:
+  OpenAPIIdentifierConflictError(std::string identifier,
+                                 std::filesystem::path other_path)
+      : std::runtime_error{"Conflicting OpenAPI descriptions for the same "
+                           "identifier"},
+        identifier_{std::move(identifier)}, other_path_{std::move(other_path)} {
+  }
+
+  [[nodiscard]] auto identifier() const noexcept -> const std::string & {
+    return this->identifier_;
+  }
+
+  [[nodiscard]] auto other_path() const noexcept
+      -> const std::filesystem::path & {
+    return this->other_path_;
+  }
+
+private:
+  std::string identifier_;
+  std::filesystem::path other_path_;
+};
+
 class PositionalArgumentError : public std::runtime_error {
 public:
   PositionalArgumentError(const std::string &message, std::string example)
@@ -1595,6 +1618,11 @@ inline auto try_catch(const sourcemeta::core::Options &options,
     return EXIT_SCHEMA_INPUT_ERROR;
   } catch (
       const sourcemeta::core::FileError<SchemaIdentifierConflictError> &error) {
+    const auto is_json{options.contains("json")};
+    print_exception(is_json, error);
+    return EXIT_SCHEMA_INPUT_ERROR;
+  } catch (const sourcemeta::core::FileError<OpenAPIIdentifierConflictError>
+               &error) {
     const auto is_json{options.contains("json")};
     print_exception(is_json, error);
     return EXIT_SCHEMA_INPUT_ERROR;

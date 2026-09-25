@@ -1,0 +1,84 @@
+WRITE entry.json UNTIL EOF
+{
+  "openapi": "3.1.1",
+  "info": { "title": "Example", "version": "1.0.0" },
+  "paths": {
+    "/pets": {
+      "get": {
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "https://example.com/a" }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
+EOF
+
+WRITE a.json UNTIL EOF
+{
+  "$id": "https://example.com/a",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$ref": "https://example.com/b"
+}
+EOF
+
+WRITE b.json UNTIL EOF
+{
+  "$id": "https://example.com/b",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "string"
+}
+EOF
+
+RUN bundle entry.json --resolve a.json --resolve b.json STDIN /dev/null IN . INTO result.txt EXPECTING 0
+
+WRITE expected.txt UNTIL EOF
+1> {
+1>   "openapi": "3.1.1",
+1>   "info": {
+1>     "title": "Example",
+1>     "version": "1.0.0"
+1>   },
+1>   "paths": {
+1>     "/pets": {
+1>       "get": {
+1>         "responses": {
+1>           "200": {
+1>             "description": "OK",
+1>             "content": {
+1>               "application/json": {
+1>                 "schema": {
+1>                   "$ref": "https://example.com/a"
+1>                 }
+1>               }
+1>             }
+1>           }
+1>         }
+1>       }
+1>     }
+1>   },
+1>   "components": {
+1>     "schemas": {
+1>       "b": {
+1>         "$id": "https://example.com/b",
+1>         "$schema": "https://json-schema.org/draft/2020-12/schema",
+1>         "type": "string"
+1>       },
+1>       "a": {
+1>         "$id": "https://example.com/a",
+1>         "$schema": "https://json-schema.org/draft/2020-12/schema",
+1>         "$ref": "https://example.com/b"
+1>       }
+1>     }
+1>   }
+1> }
+EOF
+
+COMPARE result.txt AGAINST expected.txt

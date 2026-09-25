@@ -1,0 +1,111 @@
+WRITE entry.json UNTIL EOF
+{
+  "openapi": "3.1.1",
+  "info": { "title": "Example", "version": "1.0.0" },
+  "paths": {
+    "/a": {
+      "get": {
+        "responses": {
+          "200": { "$ref": "shared.json#/components/responses/Ok" }
+        }
+      }
+    },
+    "/b": {
+      "get": {
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "https://example.com/withid" }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
+EOF
+
+WRITE shared.json UNTIL EOF
+{
+  "openapi": "3.1.1",
+  "info": { "title": "Shared", "version": "1.0.0" },
+  "components": {
+    "responses": {
+      "Ok": { "description": "All good" }
+    }
+  }
+}
+EOF
+
+WRITE withid.json UNTIL EOF
+{
+  "$id": "https://example.com/withid",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "string"
+}
+EOF
+
+WRITE noid.json UNTIL EOF
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "integer"
+}
+EOF
+
+RUN bundle entry.json --resolve shared.json --resolve withid.json --resolve noid.json STDIN /dev/null IN . INTO result.txt EXPECTING 0
+
+WRITE expected.txt UNTIL EOF
+1> {
+1>   "openapi": "3.1.1",
+1>   "info": {
+1>     "title": "Example",
+1>     "version": "1.0.0"
+1>   },
+1>   "paths": {
+1>     "/a": {
+1>       "get": {
+1>         "responses": {
+1>           "200": {
+1>             "$ref": "#/components/responses/Ok"
+1>           }
+1>         }
+1>       }
+1>     },
+1>     "/b": {
+1>       "get": {
+1>         "responses": {
+1>           "200": {
+1>             "description": "OK",
+1>             "content": {
+1>               "application/json": {
+1>                 "schema": {
+1>                   "$ref": "https://example.com/withid"
+1>                 }
+1>               }
+1>             }
+1>           }
+1>         }
+1>       }
+1>     }
+1>   },
+1>   "components": {
+1>     "responses": {
+1>       "Ok": {
+1>         "description": "All good"
+1>       }
+1>     },
+1>     "schemas": {
+1>       "withid": {
+1>         "$id": "https://example.com/withid",
+1>         "$schema": "https://json-schema.org/draft/2020-12/schema",
+1>         "type": "string"
+1>       }
+1>     }
+1>   }
+1> }
+EOF
+
+COMPARE result.txt AGAINST expected.txt

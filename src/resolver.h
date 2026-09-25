@@ -409,6 +409,21 @@ declares_identifier(const std::unordered_set<std::string> &identifiers,
   return canonical != identifier && identifiers.contains(canonical);
 }
 
+// How resolution names what it reached is a URI, and a `file://` one names a
+// place on disk that whoever reads an error would rather see spelled as a path
+static inline auto identifier_path(const std::string &identifier)
+    -> std::filesystem::path {
+  std::optional<sourcemeta::core::URI> uri;
+  try {
+    uri.emplace(identifier);
+  } catch (const sourcemeta::core::URIParseError &) {
+    return std::filesystem::path{identifier};
+  }
+
+  return uri.value().is_file() ? uri.value().to_path()
+                               : std::filesystem::path{identifier};
+}
+
 // OpenAPI Specification 3.2.1, Section 4.1 lets a document name itself with
 // `$self`, "which also serves as its base URI", resolved against wherever the
 // document was retrieved from. RFC 3986 Section 5.2.2 never resolves a
@@ -676,7 +691,7 @@ public:
     }
 
     auto document{std::move(fetched).to_owned()};
-    if (sourcemeta::core::openapi_version(document).has_value()) {
+    if (is_openapi_document(document)) {
       LOG_VERBOSE(this->options_)
           << "Not available as a schema, as this was read as an OpenAPI "
              "description: "
@@ -704,6 +719,7 @@ public:
 
     const auto match{this->descriptions_.find(target)};
     if (match != this->descriptions_.cend()) {
+      reject_unsupported_openapi(match->second, identifier_path(target));
       return match->second;
     }
 
@@ -717,13 +733,15 @@ public:
     }
 
     auto document{std::move(fetched).to_owned()};
-    if (!sourcemeta::core::openapi_version(document).has_value()) {
+    if (!is_openapi_document(document)) {
       this->fetched_.emplace(target, std::move(document));
       return std::nullopt;
     }
 
-    return this->descriptions_.emplace(target, std::move(document))
-        .first->second;
+    const auto &stored{
+        this->descriptions_.emplace(target, std::move(document)).first->second};
+    reject_unsupported_openapi(stored, identifier_path(target));
+    return stored;
   }
 
 private:
@@ -778,11 +796,28 @@ private:
 
     const auto self{openapi_self_identity(entry.second, retrieval)};
     if (self.has_value()) {
-      this->descriptions_.emplace(canonical_resolve_key(self.value()),
-                                  entry.second);
+      this->register_description(canonical_resolve_key(self.value()), entry);
     }
 
-    this->descriptions_.emplace(canonical_resolve_key(retrieval), entry.second);
+    this->register_description(canonical_resolve_key(retrieval), entry);
+  }
+
+  // Two descriptions that answer to one identifier leave which of them a
+  // reference reaches to the order they happened to be given in, so this is
+  // reported rather than settled by whichever arrived first
+  auto register_description(const std::string &identifier,
+                            const InputJSON &entry) -> void {
+    const auto result{this->descriptions_.emplace(identifier, entry.second)};
+    if (!result.second && result.first->second != entry.second) {
+      const auto other{this->description_origins_.find(identifier)};
+      assert(other != this->description_origins_.cend());
+      throw sourcemeta::core::FileError<OpenAPIIdentifierConflictError>(
+          entry.resolution_base, identifier, other->second);
+    }
+
+    if (result.second) {
+      this->description_origins_.emplace(identifier, entry.resolution_base);
+    }
   }
 
   auto import_entry(const InputJSON &entry,
@@ -791,12 +826,11 @@ private:
     // framing it as a schema would both fail and register nonsense. Only a
     // revision we can read is taken, as one we cannot is no more a description
     // we can answer for than a schema
-    if (sourcemeta::core::openapi_version(entry.second).has_value()) {
+    if (is_openapi_document(entry.second)) {
+      reject_unsupported_openapi(entry.second, entry.resolution_base);
       this->import_description(entry);
       return;
     }
-
-    reject_unsupported_openapi(entry.second, entry.resolution_base);
 
     LOG_DEBUG(this->options_)
         << "Detecting schema resources from file: " << entry.first << "\n";
@@ -882,6 +916,7 @@ private:
   // Kept wholly apart from the schemas above, so that neither resolver can
   // reach what the other answers for
   std::map<std::string, sourcemeta::core::JSON> descriptions_{};
+  std::map<std::string, std::filesystem::path> description_origins_{};
   // What resolution has already retrieved and found not to be a description,
   // so that one URL is fetched once however many times it is asked for
   std::map<std::string, sourcemeta::core::JSON> fetched_{};

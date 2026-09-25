@@ -1,0 +1,51 @@
+WRITE schema.json UNTIL EOF
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$ref": "description.json"
+}
+EOF
+
+WRITE description.json UNTIL EOF
+{
+  "openapi": "3.1.1",
+  "info": { "title": "Shared", "version": "1.0.0" },
+  "components": {
+    "responses": {
+      "Ok": { "description": "All good" }
+    }
+  }
+}
+EOF
+
+// Schema input error
+RUN bundle schema.json STDIN /dev/null IN . INTO result_0.txt EXPECTING 4
+
+REPLACE $CWD_URI WITH '[CWD_URI]' IN result_0.txt
+REPLACE $CWD WITH '[CWD]' IN result_0.txt
+
+WRITE expected_0.txt UNTIL EOF
+2> error: Could not resolve the reference to an external schema
+2>   at identifier [CWD_URI]/description.json
+2>   at file path [CWD]/schema.json
+2>
+2> This is likely because the file does not exist, or does not hold a JSON Schema
+EOF
+
+COMPARE result_0.txt AGAINST expected_0.txt
+
+// Schema input error
+RUN bundle schema.json --verbose STDIN /dev/null IN . INTO result_1.txt EXPECTING 4
+
+REPLACE $CWD_URI WITH '[CWD_URI]' IN result_1.txt
+REPLACE $CWD WITH '[CWD]' IN result_1.txt
+
+WRITE expected_1.txt UNTIL EOF
+2> Not available as a schema, as this was read as an OpenAPI description: [CWD_URI]/description.json
+2> error: Could not resolve the reference to an external schema
+2>   at identifier [CWD_URI]/description.json
+2>   at file path [CWD]/schema.json
+2>
+2> This is likely because the file does not exist, or does not hold a JSON Schema
+EOF
+
+COMPARE result_1.txt AGAINST expected_1.txt

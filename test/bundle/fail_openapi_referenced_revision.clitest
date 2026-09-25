@@ -1,0 +1,53 @@
+WRITE entry.json UNTIL EOF
+{
+  "openapi": "3.1.1",
+  "info": { "title": "Example", "version": "1.0.0" },
+  "paths": {
+    "/pets": {
+      "get": {
+        "responses": {
+          "200": { "$ref": "shared.json#/components/responses/Ok" }
+        }
+      }
+    }
+  }
+}
+EOF
+
+WRITE shared.json UNTIL EOF
+{
+  "openapi": "3.0.3",
+  "info": { "title": "Shared", "version": "1.0.0" },
+  "components": {
+    "responses": {
+      "Ok": { "description": "All good" }
+    }
+  }
+}
+EOF
+
+// Not supported
+RUN bundle entry.json STDIN /dev/null IN . INTO result_0.txt EXPECTING 3
+
+REPLACE $CWD WITH '[CWD]' IN result_0.txt
+
+WRITE expected_0.txt UNTIL EOF
+2> error: This OpenAPI Specification revision is not supported
+2>   at value 3.0.3
+2>   at file path [CWD]/shared.json
+EOF
+
+COMPARE result_0.txt AGAINST expected_0.txt
+
+// Not supported
+RUN bundle entry.json --resolve shared.json STDIN /dev/null IN . INTO result_1.txt EXPECTING 3
+
+REPLACE $CWD WITH '[CWD]' IN result_1.txt
+
+WRITE expected_1.txt UNTIL EOF
+2> error: This OpenAPI Specification revision is not supported
+2>   at value 3.0.3
+2>   at file path [CWD]/shared.json
+EOF
+
+COMPARE result_1.txt AGAINST expected_1.txt

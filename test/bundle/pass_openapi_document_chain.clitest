@@ -1,0 +1,74 @@
+WRITE entry.json UNTIL EOF
+{
+  "openapi": "3.1.1",
+  "info": { "title": "Example", "version": "1.0.0" },
+  "paths": {
+    "/pets": {
+      "get": {
+        "responses": {
+          "200": { "$ref": "middle.json#/components/responses/Middle" }
+        }
+      }
+    }
+  }
+}
+EOF
+
+WRITE middle.json UNTIL EOF
+{
+  "openapi": "3.1.1",
+  "info": { "title": "Middle", "version": "1.0.0" },
+  "components": {
+    "responses": {
+      "Middle": { "$ref": "last.json#/components/responses/Last" }
+    }
+  }
+}
+EOF
+
+WRITE last.json UNTIL EOF
+{
+  "openapi": "3.1.1",
+  "info": { "title": "Last", "version": "1.0.0" },
+  "components": {
+    "responses": {
+      "Last": { "description": "All good" }
+    }
+  }
+}
+EOF
+
+RUN bundle entry.json STDIN /dev/null IN . INTO result.txt EXPECTING 0
+
+WRITE expected.txt UNTIL EOF
+1> {
+1>   "openapi": "3.1.1",
+1>   "info": {
+1>     "title": "Example",
+1>     "version": "1.0.0"
+1>   },
+1>   "paths": {
+1>     "/pets": {
+1>       "get": {
+1>         "responses": {
+1>           "200": {
+1>             "$ref": "#/components/responses/Middle"
+1>           }
+1>         }
+1>       }
+1>     }
+1>   },
+1>   "components": {
+1>     "responses": {
+1>       "Middle": {
+1>         "$ref": "#/components/responses/Last"
+1>       },
+1>       "Last": {
+1>         "description": "All good"
+1>       }
+1>     }
+1>   }
+1> }
+EOF
+
+COMPARE result.txt AGAINST expected.txt
