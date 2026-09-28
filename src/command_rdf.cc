@@ -84,6 +84,17 @@ auto read_instances(const std::string_view instance_path_view,
   return result;
 }
 
+template <typename Error>
+[[noreturn]] auto throw_with_entry(const std::optional<std::size_t> &entry,
+                                   Error error) -> void {
+  if (entry.has_value()) {
+    throw sourcemeta::jsonschema::EntryError<Error>{entry.value(),
+                                                    std::move(error)};
+  }
+
+  throw std::move(error);
+}
+
 auto promote_entry(const sourcemeta::jsonschema::InputJSON &entry,
                    sourcemeta::blaze::Evaluator &evaluator,
                    const sourcemeta::blaze::Template &schema_template,
@@ -94,6 +105,9 @@ auto promote_entry(const sourcemeta::jsonschema::InputJSON &entry,
                    const sourcemeta::core::Options &options) -> void {
   const auto instance_display_path{
       sourcemeta::jsonschema::stdin_path_string(entry.resolution_base)};
+  const std::optional<std::size_t> entry_index{
+      multidocument ? std::optional<std::size_t>{entry.index + 1}
+                    : std::nullopt};
   auto outcome{
       sourcemeta::blaze::jsonld(evaluator, schema_template, entry.second)};
 
@@ -129,33 +143,29 @@ auto promote_entry(const sourcemeta::jsonschema::InputJSON &entry,
           outcome)) {
     auto &error{std::get<sourcemeta::blaze::JSONLDResolutionError>(outcome)};
     const auto position{entry.positions.get(error.instance_location)};
-    const std::optional<std::size_t> entry_index{
-        multidocument ? std::optional<std::size_t>{entry.index + 1}
-                      : std::nullopt};
     if (position.has_value()) {
-      throw sourcemeta::jsonschema::PositionError<
-          sourcemeta::jsonschema::RdfResolutionError>{
-          std::get<0>(position.value()),
-          std::get<1>(position.value()),
-          error.message,
-          std::string{sourcemeta::jsonschema::facet_name(error.facet)},
-          std::move(error.instance_location),
-          std::move(error.schema_location),
-          std::move(error.conflicting_schema_location),
-          std::move(error.inert_override_location),
-          entry.resolution_base,
-          entry_index};
+      throw_with_entry(
+          entry_index,
+          sourcemeta::jsonschema::PositionError<
+              sourcemeta::jsonschema::RdfResolutionError>{
+              std::get<0>(position.value()), std::get<1>(position.value()),
+              error.message,
+              std::string{sourcemeta::jsonschema::facet_name(error.facet)},
+              std::move(error.instance_location),
+              std::move(error.schema_location),
+              std::move(error.conflicting_schema_location),
+              std::move(error.inert_override_location), entry.resolution_base});
     }
 
-    throw sourcemeta::jsonschema::RdfResolutionError{
-        error.message,
-        std::string{sourcemeta::jsonschema::facet_name(error.facet)},
-        std::move(error.instance_location),
-        std::move(error.schema_location),
-        std::move(error.conflicting_schema_location),
-        std::move(error.inert_override_location),
-        entry.resolution_base,
-        entry_index};
+    throw_with_entry(
+        entry_index,
+        sourcemeta::jsonschema::RdfResolutionError{
+            error.message,
+            std::string{sourcemeta::jsonschema::facet_name(error.facet)},
+            std::move(error.instance_location),
+            std::move(error.schema_location),
+            std::move(error.conflicting_schema_location),
+            std::move(error.inert_override_location), entry.resolution_base});
   }
 
   auto document{std::get<sourcemeta::core::JSON>(std::move(outcome))};
@@ -166,15 +176,19 @@ auto promote_entry(const sourcemeta::jsonschema::InputJSON &entry,
           flatten ? sourcemeta::core::jsonld_flatten(document, context.value())
                   : sourcemeta::core::jsonld_compact(document, context.value());
     } catch (const sourcemeta::core::JSONLDError &error) {
-      throw sourcemeta::core::FileError<sourcemeta::core::JSONLDError>(
-          entry.resolution_base, error);
+      throw_with_entry(
+          entry_index,
+          sourcemeta::core::FileError<sourcemeta::core::JSONLDError>(
+              entry.resolution_base, error));
     }
   } else if (flatten) {
     try {
       document = sourcemeta::core::jsonld_flatten(document);
     } catch (const sourcemeta::core::JSONLDError &error) {
-      throw sourcemeta::core::FileError<sourcemeta::core::JSONLDError>(
-          entry.resolution_base, error);
+      throw_with_entry(
+          entry_index,
+          sourcemeta::core::FileError<sourcemeta::core::JSONLDError>(
+              entry.resolution_base, error));
     }
   }
 

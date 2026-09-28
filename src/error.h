@@ -57,6 +57,23 @@ private:
   std::uint64_t column_;
 };
 
+// Which document of a multi-document input an error came from. The libraries we
+// build on read one document at a time and have no notion of a dataset, so an
+// error that travels up from them is decorated here, where the enumeration
+// happens, rather than carrying the number itself
+template <typename T> class EntryError : public T {
+public:
+  EntryError(const std::size_t entry, T error)
+      : T{std::move(error)}, entry_{entry} {}
+
+  [[nodiscard]] auto entry() const noexcept -> std::size_t {
+    return this->entry_;
+  }
+
+private:
+  std::size_t entry_;
+};
+
 class SchemaIdentifierConflictError : public std::runtime_error {
 public:
   SchemaIdentifierConflictError(std::string identifier,
@@ -438,14 +455,13 @@ public:
                      std::string schema_location,
                      std::optional<std::string> conflicting_schema_location,
                      std::optional<std::string> inert_override_location,
-                     std::filesystem::path path,
-                     std::optional<std::size_t> entry = std::nullopt)
+                     std::filesystem::path path)
       : std::runtime_error{message}, facet_{std::move(facet)},
         instance_location_{std::move(instance_location)},
         schema_location_{std::move(schema_location)},
         conflicting_schema_location_{std::move(conflicting_schema_location)},
         inert_override_location_{std::move(inert_override_location)},
-        path_{std::move(path)}, entry_{entry} {}
+        path_{std::move(path)} {}
 
   [[nodiscard]] auto facet() const noexcept -> const std::string & {
     return this->facet_;
@@ -474,11 +490,6 @@ public:
     return this->path_;
   }
 
-  [[nodiscard]] auto entry() const noexcept
-      -> const std::optional<std::size_t> & {
-    return this->entry_;
-  }
-
 private:
   std::string facet_;
   sourcemeta::core::Pointer instance_location_;
@@ -486,7 +497,6 @@ private:
   std::optional<std::string> conflicting_schema_location_;
   std::optional<std::string> inert_override_location_;
   std::filesystem::path path_;
-  std::optional<std::size_t> entry_;
 };
 
 class UnsupportedDialectCodegenError : public std::runtime_error {
@@ -971,17 +981,12 @@ inline auto print_exception(const bool is_json, const Exception &exception)
   }
 
   if constexpr (requires(const Exception &current) {
-                  {
-                    current.entry()
-                  } -> std::convertible_to<const std::optional<std::size_t> &>;
+                  { current.entry() } -> std::convertible_to<std::size_t>;
                 }) {
-    const auto &entry_index{exception.entry()};
-    if (entry_index.has_value()) {
-      if (is_json) {
-        error_json.assign("entry", sourcemeta::core::JSON{entry_index.value()});
-      } else {
-        std::cerr << "  at entry #" << entry_index.value() << "\n";
-      }
+    if (is_json) {
+      error_json.assign("entry", sourcemeta::core::JSON{exception.entry()});
+    } else {
+      std::cerr << "  at entry #" << exception.entry() << "\n";
     }
   }
 
@@ -1208,6 +1213,26 @@ inline auto print_exception(const bool is_json, const Exception &exception)
   }
 }
 
+// A resolution error reaches us plain, positioned, entry-tagged, or both, and
+// every one of those needs a handler of its own for the decorated accessors to
+// take part in the output
+template <typename Error>
+inline auto print_rdf_resolution_error(const bool is_json, const Error &error)
+    -> int {
+  print_exception(is_json, error);
+  if (!is_json && error.inert_override_location().has_value()) {
+    std::cerr << "\nThe x-jsonld-override mark was ignored because it does "
+                 "not enclose the\n";
+    std::cerr << "conflicting annotation. Move the conflicting annotation, "
+                 "or the reference\n";
+    std::cerr << "that brings it in, inside the overriding object for the "
+                 "override to\n";
+    std::cerr << "take effect\n";
+  }
+
+  return EXIT_SCHEMA_INPUT_ERROR;
+}
+
 inline auto try_catch(const sourcemeta::core::Options &options,
                       const std::function<int()> &callback) noexcept -> int {
   try {
@@ -1285,34 +1310,14 @@ inline auto try_catch(const sourcemeta::core::Options &options,
     const auto is_json{options.contains("json")};
     print_exception(is_json, error);
     return EXIT_NOT_SUPPORTED;
+  } catch (const EntryError<PositionError<RdfResolutionError>> &error) {
+    return print_rdf_resolution_error(options.contains("json"), error);
   } catch (const PositionError<RdfResolutionError> &error) {
-    const auto is_json{options.contains("json")};
-    print_exception(is_json, error);
-    if (!is_json && error.inert_override_location().has_value()) {
-      std::cerr << "\nThe x-jsonld-override mark was ignored because it does "
-                   "not enclose the\n";
-      std::cerr << "conflicting annotation. Move the conflicting annotation, "
-                   "or the reference\n";
-      std::cerr << "that brings it in, inside the overriding object for the "
-                   "override to\n";
-      std::cerr << "take effect\n";
-    }
-
-    return EXIT_SCHEMA_INPUT_ERROR;
+    return print_rdf_resolution_error(options.contains("json"), error);
+  } catch (const EntryError<RdfResolutionError> &error) {
+    return print_rdf_resolution_error(options.contains("json"), error);
   } catch (const RdfResolutionError &error) {
-    const auto is_json{options.contains("json")};
-    print_exception(is_json, error);
-    if (!is_json && error.inert_override_location().has_value()) {
-      std::cerr << "\nThe x-jsonld-override mark was ignored because it does "
-                   "not enclose the\n";
-      std::cerr << "conflicting annotation. Move the conflicting annotation, "
-                   "or the reference\n";
-      std::cerr << "that brings it in, inside the overriding object for the "
-                   "override to\n";
-      std::cerr << "take effect\n";
-    }
-
-    return EXIT_SCHEMA_INPUT_ERROR;
+    return print_rdf_resolution_error(options.contains("json"), error);
   } catch (const UnsupportedDialectRdfError &error) {
     const auto is_json{options.contains("json")};
     print_exception(is_json, error);
@@ -1563,6 +1568,11 @@ inline auto try_catch(const sourcemeta::core::Options &options,
     return EXIT_OTHER_INPUT_ERROR;
   } catch (const sourcemeta::core::FileError<
            sourcemeta::blaze::ConfigurationParseError> &error) {
+    const auto is_json{options.contains("json")};
+    print_exception(is_json, error);
+    return EXIT_OTHER_INPUT_ERROR;
+  } catch (const EntryError<
+           sourcemeta::core::FileError<sourcemeta::core::JSONLDError>> &error) {
     const auto is_json{options.contains("json")};
     print_exception(is_json, error);
     return EXIT_OTHER_INPUT_ERROR;
