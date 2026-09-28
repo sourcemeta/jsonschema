@@ -36,3 +36,30 @@ WRITE expected_0.txt UNTIL EOF
 EOF
 
 COMPARE result_0.txt AGAINST expected_0.txt
+
+// Validation failure
+RUN rdf schema.json instances.jsonl --json STDIN /dev/null IN . INTO result_1.txt EXPECTING 2
+
+REPLACE $CWD_URI WITH '[CWD_URI]' IN result_1.txt
+
+WRITE expected_1.txt UNTIL EOF
+1> {
+1>   "valid": false,
+1>   "errors": [
+1>     {
+1>       "keywordLocation": "/properties/name/type",
+1>       "absoluteKeywordLocation": "[CWD_URI]/schema.json#/properties/name/type",
+1>       "instanceLocation": "/name",
+1>       "error": "The value was expected to be of type string but it was of type integer"
+1>     },
+1>     {
+1>       "keywordLocation": "/properties",
+1>       "absoluteKeywordLocation": "[CWD_URI]/schema.json#/properties",
+1>       "instanceLocation": "",
+1>       "error": "The object value was expected to validate against the single defined property subschema"
+1>     }
+1>   ]
+1> }
+EOF
+
+COMPARE result_1.txt AGAINST expected_1.txt

@@ -24,3 +24,18 @@ WRITE expected_0.txt UNTIL EOF
 EOF
 
 COMPARE result_0.txt AGAINST expected_0.txt
+
+// Other input error
+RUN rdf schema.json instances.jsonl --json STDIN /dev/null IN . INTO result_1.txt EXPECTING 6
+
+REPLACE $CWD WITH '[CWD]' IN result_1.txt
+
+WRITE expected_1.txt UNTIL EOF
+1> {
+1>   "error": "No input files found",
+1>   "filePath": "[CWD]/instances.jsonl"
+1> }
+2> warning: The JSONL file is empty
+EOF
+
+COMPARE result_1.txt AGAINST expected_1.txt

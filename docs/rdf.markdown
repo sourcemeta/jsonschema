@@ -52,10 +52,11 @@ Promoting a Dataset
 
 The instance may hold more than one document, as a [JSON Lines
 (JSONL)](https://jsonlines.org) dataset, a GZIP-compressed JSONL dataset, or a
-multi-document YAML file. Standard input is read the same way. Every document
-is validated and promoted in turn, and the output is JSONL: one JSON-LD
-document per line. That holds whatever the input was, as JSON-LD has no YAML
-serialization to fall back on.
+multi-document YAML file. Standard input may carry a JSONL dataset or a
+multi-document YAML stream, though not GZIP-compressed data, which is only
+read from a path. Every document is validated and promoted in turn, and the
+output is JSONL: one JSON-LD document per line. That holds whatever the input
+was, as JSON-LD has no YAML serialization to fall back on.
 
 ```sh
 jsonschema rdf path/to/schema.json path/to/instances.jsonl
@@ -71,8 +72,10 @@ a line rather than across the dataset, and `--compact/-c` repeats the context
 on every line, which is what keeps each line a self-contained JSON-LD
 document.
 
-Documents are written as they pass, and the command stops at the first one
-that fails. A run that exits non-zero may therefore have already written the
+The input is parsed up front, so a document that cannot be read at all fails
+the run before anything is written. Past that point, documents are written as
+they pass and the command stops at the first one that fails to validate or to
+promote. A run that exits non-zero may therefore have already written the
 documents that preceded the failure, so check the exit code rather than the
 presence of output.
 
