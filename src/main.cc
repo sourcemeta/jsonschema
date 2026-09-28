@@ -149,16 +149,18 @@ constexpr std::string_view USAGE_COMMANDS{R"EOF(   version / --version / -v
 
        Decode a JSON document or JSONL dataset using JSON BinPack.
 
-   rdf <schema.json|.yaml> <instance.json|.yaml> [--flatten/-l]
+   rdf <schema.json|.yaml> <instance.json|.jsonl|.jsonl.gz|.yaml> [--flatten/-l]
        [--compact/-c <context.json|.yaml>] [--fast/-f] [--format-assertion/-F]
        [--extension/-e <extension>] [--ignore/-i <schemas-or-directories>]
 
        Validate an instance against a schema annotated with x-jsonld-*
        keywords and, on success, print the instance promoted to expanded
        JSON-LD (Linked Data). Use --flatten/-l and/or --compact/-c to
-       post-process the output. As in `validate`, schemas compile in
-       exhaustive mode by default. Pass --fast/-f to optimise for speed at
-       the expense of validation error quality.
+       post-process the output. Given a JSONL dataset or a multi-document
+       YAML file, every document is promoted in turn and the output is JSONL,
+       stopping at the first document that fails. As in `validate`, schemas
+       compile in exhaustive mode by default. Pass --fast/-f to optimise for
+       speed at the expense of validation error quality.
 
    install [<uri> <path>] [--force/-f] [--frozen/-z]
 

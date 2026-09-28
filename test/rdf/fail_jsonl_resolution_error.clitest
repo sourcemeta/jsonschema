@@ -1,0 +1,57 @@
+WRITE schema.json UNTIL EOF
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "x-jsonld-type": "https://schema.org/Person",
+  "properties": {
+    "name": {
+      "type": "string",
+      "x-jsonld-id": "https://schema.org/name",
+      "x-jsonld-language": "not a tag!"
+    }
+  }
+}
+EOF
+
+WRITE instances.jsonl UNTIL EOF
+{}
+{ "name": "Ada" }
+EOF
+
+// Schema input error
+RUN rdf schema.json instances.jsonl STDIN /dev/null IN . INTO result_0.txt EXPECTING 4
+
+REPLACE $CWD_URI WITH '[CWD_URI]' IN result_0.txt
+REPLACE $CWD WITH '[CWD]' IN result_0.txt
+
+WRITE expected_0.txt UNTIL EOF
+1> [{"@type":["https://schema.org/Person"]}]
+2> error: The value of x-jsonld-language must be a canonical BCP 47 language tag
+2>   at instance location "/name"
+2>   at facet "language"
+2>   at schema location [CWD_URI]/schema.json#/properties/name/x-jsonld-language
+2>   at file path [CWD]/instances.jsonl
+2>   at entry #2
+EOF
+
+COMPARE result_0.txt AGAINST expected_0.txt
+
+// Schema input error
+RUN rdf schema.json instances.jsonl --json STDIN /dev/null IN . INTO result_1.txt EXPECTING 4
+
+REPLACE $CWD_URI WITH '[CWD_URI]' IN result_1.txt
+REPLACE $CWD WITH '[CWD]' IN result_1.txt
+
+WRITE expected_1.txt UNTIL EOF
+1> [{"@type":["https://schema.org/Person"]}]
+1> {
+1>   "error": "The value of x-jsonld-language must be a canonical BCP 47 language tag",
+1>   "instanceLocation": "/name",
+1>   "facet": "language",
+1>   "schemaLocation": "[CWD_URI]/schema.json#/properties/name/x-jsonld-language",
+1>   "filePath": "[CWD]/instances.jsonl",
+1>   "entry": 2
+1> }
+EOF
+
+COMPARE result_1.txt AGAINST expected_1.txt

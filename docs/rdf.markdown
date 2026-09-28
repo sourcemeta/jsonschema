@@ -2,7 +2,7 @@ Linked Data (RDF)
 =================
 
 ```sh
-jsonschema rdf <schema.json|.yaml> <instance.json|.yaml>
+jsonschema rdf <schema.json|.yaml> <instance.json|.jsonl|.jsonl.gz|.yaml>
   [--flatten/-l] [--compact/-c <context.json|.yaml>]
   [--fast/-f] [--format-assertion/-F]
   [--http/-h] [--verbose/-v] [--debug/-g]
@@ -46,6 +46,35 @@ idiomatic, human-friendly JSON-LD. Both options may be combined.
 As with [`validate`](./validate.markdown), schemas are compiled in exhaustive
 mode by default for better validation error messages. Pass `--fast/-f` to
 optimise for speed at the expense of error message quality.
+
+Promoting a Dataset
+-------------------
+
+The instance may hold more than one document, as a [JSON Lines
+(JSONL)](https://jsonlines.org) dataset, a GZIP-compressed JSONL dataset, or a
+multi-document YAML file. Standard input is read the same way. Every document
+is validated and promoted in turn, and the output is JSONL: one JSON-LD
+document per line. That holds whatever the input was, as JSON-LD has no YAML
+serialization to fall back on.
+
+```sh
+jsonschema rdf path/to/schema.json path/to/instances.jsonl
+```
+
+```json
+[{"@type":["https://schema.org/Person"],"https://schema.org/name":[{"@value":"Ada"}]}]
+[{"@type":["https://schema.org/Person"],"https://schema.org/name":[{"@value":"Alan"}]}]
+```
+
+Each document is promoted independently, so `--flatten/-l` labels nodes within
+a line rather than across the dataset, and `--compact/-c` repeats the context
+on every line, which is what keeps each line a self-contained JSON-LD
+document.
+
+Documents are written as they pass, and the command stops at the first one
+that fails. A run that exits non-zero may therefore have already written the
+documents that preceded the failure, so check the exit code rather than the
+presence of output.
 
 > [!NOTE]
 > Annotation collection is a JSON Schema 2019-09 and 2020-12 feature, so this
@@ -308,6 +337,30 @@ jsonschema rdf path/to/schema.json path/to/instance.yaml
 
 ```sh
 cat path/to/instance.json | jsonschema rdf path/to/schema.json -
+```
+
+### Turn a JSONL dataset into expanded JSON-LD
+
+```sh
+jsonschema rdf path/to/schema.json path/to/instances.jsonl
+```
+
+### Turn a GZIP-compressed JSONL dataset into expanded JSON-LD
+
+```sh
+jsonschema rdf path/to/schema.json path/to/instances.jsonl.gz
+```
+
+### Turn a multi-document YAML file into expanded JSON-LD
+
+```sh
+jsonschema rdf path/to/schema.json path/to/instances.yaml
+```
+
+### Turn a JSONL dataset from standard input into expanded JSON-LD
+
+```sh
+cat path/to/instances.jsonl | jsonschema rdf path/to/schema.json -
 ```
 
 ### Flatten the JSON-LD output

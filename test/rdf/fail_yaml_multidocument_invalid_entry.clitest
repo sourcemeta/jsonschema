@@ -1,0 +1,40 @@
+WRITE schema.json UNTIL EOF
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "x-jsonld-type": "https://schema.org/Person",
+  "properties": {
+    "name": { "type": "string", "x-jsonld-id": "https://schema.org/name" }
+  }
+}
+EOF
+
+WRITE instances.yaml UNTIL EOF
+name: Ada
+---
+name: 1
+EOF
+
+// Validation failure
+RUN rdf schema.json instances.yaml STDIN /dev/null IN . INTO result_0.txt EXPECTING 2
+
+REPLACE $CWD WITH '[CWD]' IN result_0.txt
+
+WRITE expected_0.txt UNTIL EOF
+1> [{"@type":["https://schema.org/Person"],"https://schema.org/name":[{"@value":"Ada"}]}]
+2> fail: [CWD]/instances.yaml (entry #2)
+2>
+2> {
+2>   "name": 1
+2> }
+2>
+2> error: Schema validation failure
+2>   The value was expected to be of type string but it was of type integer
+2>     at instance location "/name" (line 3, column 1)
+2>     at evaluate path "/properties/name/type"
+2>   The object value was expected to validate against the single defined property subschema
+2>     at instance location "" (line 3, column 1)
+2>     at evaluate path "/properties"
+EOF
+
+COMPARE result_0.txt AGAINST expected_0.txt

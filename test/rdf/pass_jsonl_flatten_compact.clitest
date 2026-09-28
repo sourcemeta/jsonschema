@@ -1,0 +1,30 @@
+WRITE schema.json UNTIL EOF
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "x-jsonld-type": "https://schema.org/Person",
+  "properties": {
+    "name": { "type": "string", "x-jsonld-id": "https://schema.org/name" }
+  }
+}
+EOF
+
+WRITE context.json UNTIL EOF
+{ "@context": { "@vocab": "https://schema.org/" } }
+EOF
+
+WRITE instances.jsonl UNTIL EOF
+{ "name": "Ada" }
+{ "name": "Alan" }
+{ "name": "Grace" }
+EOF
+
+RUN rdf schema.json instances.jsonl --flatten --compact context.json STDIN /dev/null IN . INTO result_0.txt EXPECTING 0
+
+WRITE expected_0.txt UNTIL EOF
+1> {"@id":"_:b0","@type":"Person","name":"Ada","@context":{"@vocab":"https://schema.org/"}}
+1> {"@id":"_:b0","@type":"Person","name":"Alan","@context":{"@vocab":"https://schema.org/"}}
+1> {"@id":"_:b0","@type":"Person","name":"Grace","@context":{"@vocab":"https://schema.org/"}}
+EOF
+
+COMPARE result_0.txt AGAINST expected_0.txt
