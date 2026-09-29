@@ -6,7 +6,7 @@
 
 #include <optional>    // std::optional, std::nullopt
 #include <string_view> // std::string_view
-#include <utility>     // std::move, std::unreachable
+#include <utility>     // std::move
 
 namespace {
 using namespace std::string_view_literals;
@@ -38,10 +38,10 @@ auto to_jwk_kind(const sourcemeta::core::JWK::Type type) noexcept
     case sourcemeta::core::JWK::Type::OctetKeyPair:
       return sourcemeta::core::JWKKind::OctetKeyPair;
     case sourcemeta::core::JWK::Type::Octet:
-      return sourcemeta::core::JWKKind::Octet;
+      break;
   }
 
-  std::unreachable();
+  return sourcemeta::core::JWKKind::Octet;
 }
 
 } // namespace

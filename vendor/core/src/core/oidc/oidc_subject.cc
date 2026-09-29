@@ -5,7 +5,6 @@
 #include <optional>    // std::optional, std::nullopt
 #include <string>      // std::string
 #include <string_view> // std::string_view
-#include <utility>     // std::unreachable
 
 namespace sourcemeta::core {
 
@@ -15,10 +14,10 @@ auto oidc_subject_type_name(const OIDCSubjectType type) noexcept
     case OIDCSubjectType::Public:
       return "public";
     case OIDCSubjectType::Pairwise:
-      return "pairwise";
+      break;
   }
 
-  std::unreachable();
+  return "pairwise";
 }
 
 auto to_oidc_subject_type(const std::string_view name) noexcept

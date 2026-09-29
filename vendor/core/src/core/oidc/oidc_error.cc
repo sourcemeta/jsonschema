@@ -2,7 +2,6 @@
 
 #include <optional>    // std::optional, std::nullopt
 #include <string_view> // std::string_view
-#include <utility>     // std::unreachable
 
 namespace sourcemeta::core {
 
@@ -26,10 +25,10 @@ auto oidc_error_code(const OIDCAuthenticationError error) noexcept
     case OIDCAuthenticationError::RequestURINotSupported:
       return "request_uri_not_supported";
     case OIDCAuthenticationError::RegistrationNotSupported:
-      return "registration_not_supported";
+      break;
   }
 
-  std::unreachable();
+  return "registration_not_supported";
 }
 
 auto to_oidc_authentication_error(const std::string_view code) noexcept

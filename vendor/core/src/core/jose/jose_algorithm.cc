@@ -4,7 +4,6 @@
 #include <cstdint>     // std::uint16_t
 #include <optional>    // std::optional, std::nullopt
 #include <string_view> // std::string_view
-#include <utility>     // std::unreachable
 
 namespace sourcemeta::core {
 
@@ -80,10 +79,10 @@ auto jws_algorithm_name(const JWSAlgorithm algorithm) noexcept
     case JWSAlgorithm::HS384:
       return "HS384";
     case JWSAlgorithm::HS512:
-      return "HS512";
+      break;
   }
 
-  std::unreachable();
+  return "HS512";
 }
 
 auto jws_algorithm_is_asymmetric(const JWSAlgorithm algorithm) noexcept
@@ -103,10 +102,10 @@ auto jws_algorithm_is_asymmetric(const JWSAlgorithm algorithm) noexcept
     case JWSAlgorithm::HS256:
     case JWSAlgorithm::HS384:
     case JWSAlgorithm::HS512:
-      return false;
+      break;
   }
 
-  std::unreachable();
+  return false;
 }
 
 auto jws_algorithm_digest_bits(const JWSAlgorithm algorithm) noexcept
@@ -127,10 +126,10 @@ auto jws_algorithm_digest_bits(const JWSAlgorithm algorithm) noexcept
     case JWSAlgorithm::ES512:
     case JWSAlgorithm::HS512:
     case JWSAlgorithm::EdDSA:
-      return 512;
+      break;
   }
 
-  std::unreachable();
+  return 512;
 }
 
 auto to_jwe_algorithm(const std::string_view value) noexcept
@@ -190,10 +189,10 @@ auto jwe_algorithm_name(const JWEAlgorithm algorithm) noexcept
     case JWEAlgorithm::A256KW:
       return "A256KW";
     case JWEAlgorithm::DIR:
-      return "dir";
+      break;
   }
 
-  std::unreachable();
+  return "dir";
 }
 
 auto to_jwe_encryption(const std::string_view value) noexcept
@@ -233,10 +232,10 @@ auto jwe_encryption_name(const JWEEncryption encryption) noexcept
     case JWEEncryption::A192CBC_HS384:
       return "A192CBC-HS384";
     case JWEEncryption::A256CBC_HS512:
-      return "A256CBC-HS512";
+      break;
   }
 
-  std::unreachable();
+  return "A256CBC-HS512";
 }
 
 auto jwe_algorithm_is_asymmetric(const JWEAlgorithm algorithm) noexcept
@@ -253,10 +252,10 @@ auto jwe_algorithm_is_asymmetric(const JWEAlgorithm algorithm) noexcept
     case JWEAlgorithm::A192KW:
     case JWEAlgorithm::A256KW:
     case JWEAlgorithm::DIR:
-      return false;
+      break;
   }
 
-  std::unreachable();
+  return false;
 }
 
 auto jwe_encryption_key_bytes(const JWEEncryption encryption) noexcept
@@ -275,10 +274,10 @@ auto jwe_encryption_key_bytes(const JWEEncryption encryption) noexcept
     case JWEEncryption::A192CBC_HS384:
       return 48;
     case JWEEncryption::A256CBC_HS512:
-      return 64;
+      break;
   }
 
-  std::unreachable();
+  return 64;
 }
 
 } // namespace sourcemeta::core

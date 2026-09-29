@@ -15,7 +15,6 @@
 #include <optional>    // std::optional, std::nullopt
 #include <string>      // std::string
 #include <string_view> // std::string_view
-#include <utility>     // std::unreachable
 
 namespace sourcemeta::core {
 
@@ -63,10 +62,10 @@ auto map_verification_error(const JWTVerificationError error)
     case JWTVerificationError::IssuedAt:
       return OAuthAssertionError::IssuedInFuture;
     case JWTVerificationError::Lifetime:
-      return OAuthAssertionError::Lifetime;
+      break;
   }
 
-  std::unreachable();
+  return OAuthAssertionError::Lifetime;
 }
 
 // RFC 7519 Section 4.1.3: the audience is a string or an array of strings, so

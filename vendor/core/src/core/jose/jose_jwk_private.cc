@@ -58,10 +58,10 @@ auto to_jwk_kind(const sourcemeta::core::JWKPrivate::Type type) noexcept
     case sourcemeta::core::JWKPrivate::Type::OctetKeyPair:
       return sourcemeta::core::JWKKind::OctetKeyPair;
     case sourcemeta::core::JWKPrivate::Type::Octet:
-      return sourcemeta::core::JWKKind::Octet;
+      break;
   }
 
-  std::unreachable();
+  return sourcemeta::core::JWKKind::Octet;
 }
 
 } // namespace

@@ -7,7 +7,6 @@
 #include <optional>    // std::optional, std::nullopt
 #include <string>      // std::string
 #include <string_view> // std::string_view
-#include <utility>     // std::unreachable
 
 namespace sourcemeta::core {
 
@@ -98,19 +97,18 @@ auto jws_sign(const JWSAlgorithm algorithm,
       return std::string{reinterpret_cast<const char *>(digest.data()),
                          digest.size()};
     }
-    case JWSAlgorithm::HS512: {
-      if (key.type() != JWKPrivate::Type::Octet ||
-          key.secret().size() < jws_hmac_minimum_secret_bytes(algorithm)) {
-        return std::nullopt;
-      }
-
-      const auto digest{hmac_sha512_digest(key.secret(), signing_input)};
-      return std::string{reinterpret_cast<const char *>(digest.data()),
-                         digest.size()};
-    }
+    case JWSAlgorithm::HS512:
+      break;
   }
 
-  std::unreachable();
+  if (key.type() != JWKPrivate::Type::Octet ||
+      key.secret().size() < jws_hmac_minimum_secret_bytes(algorithm)) {
+    return std::nullopt;
+  }
+
+  const auto digest{hmac_sha512_digest(key.secret(), signing_input)};
+  return std::string{reinterpret_cast<const char *>(digest.data()),
+                     digest.size()};
 }
 
 } // namespace sourcemeta::core

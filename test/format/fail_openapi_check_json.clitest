@@ -39,11 +39,17 @@ WRITE expected.txt UNTIL EOF
 1>         },
 1>         {
 1>           "type": "delete",
-1>           "lines": [ "    \"version\": \"1.0.0\",", "    \"title\": \"Example\"" ]
+1>           "lines": [
+1>             "    \"version\": \"1.0.0\",",
+1>             "    \"title\": \"Example\""
+1>           ]
 1>         },
 1>         {
 1>           "type": "insert",
-1>           "lines": [ "    \"title\": \"Example\",", "    \"version\": \"1.0.0\"" ]
+1>           "lines": [
+1>             "    \"title\": \"Example\",",
+1>             "    \"version\": \"1.0.0\""
+1>           ]
 1>         },
 1>         {
 1>           "type": "equal",

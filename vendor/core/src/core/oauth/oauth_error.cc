@@ -2,7 +2,6 @@
 
 #include <optional>    // std::optional, std::nullopt
 #include <string_view> // std::string_view
-#include <utility>     // std::unreachable
 
 namespace sourcemeta::core {
 
@@ -22,10 +21,10 @@ auto oauth_error_code(const OAuthAuthorizationError error) noexcept
     case OAuthAuthorizationError::ServerError:
       return "server_error";
     case OAuthAuthorizationError::TemporarilyUnavailable:
-      return "temporarily_unavailable";
+      break;
   }
 
-  std::unreachable();
+  return "temporarily_unavailable";
 }
 
 auto oauth_error_code(const OAuthTokenError error) noexcept
@@ -58,10 +57,10 @@ auto oauth_error_code(const OAuthTokenError error) noexcept
     case OAuthTokenError::UseDPoPNonce:
       return "use_dpop_nonce";
     case OAuthTokenError::UnsupportedTokenType:
-      return "unsupported_token_type";
+      break;
   }
 
-  std::unreachable();
+  return "unsupported_token_type";
 }
 
 auto oauth_error_code(const OAuthBearerError error) noexcept
@@ -76,10 +75,10 @@ auto oauth_error_code(const OAuthBearerError error) noexcept
     case OAuthBearerError::InvalidDPoPProof:
       return "invalid_dpop_proof";
     case OAuthBearerError::UseDPoPNonce:
-      return "use_dpop_nonce";
+      break;
   }
 
-  std::unreachable();
+  return "use_dpop_nonce";
 }
 
 auto oauth_error_code(const OAuthRegistrationError error) noexcept
@@ -92,10 +91,10 @@ auto oauth_error_code(const OAuthRegistrationError error) noexcept
     case OAuthRegistrationError::InvalidSoftwareStatement:
       return "invalid_software_statement";
     case OAuthRegistrationError::UnapprovedSoftwareStatement:
-      return "unapproved_software_statement";
+      break;
   }
 
-  std::unreachable();
+  return "unapproved_software_statement";
 }
 
 auto to_oauth_authorization_error(const std::string_view code) noexcept
@@ -234,10 +233,10 @@ auto oauth_bearer_error_status(const OAuthBearerError error) noexcept
     case OAuthBearerError::UseDPoPNonce:
       return HTTP_STATUS_UNAUTHORIZED;
     case OAuthBearerError::InsufficientScope:
-      return HTTP_STATUS_FORBIDDEN;
+      break;
   }
 
-  std::unreachable();
+  return HTTP_STATUS_FORBIDDEN;
 }
 
 } // namespace sourcemeta::core

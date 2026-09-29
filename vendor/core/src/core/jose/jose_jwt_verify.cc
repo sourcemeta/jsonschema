@@ -5,7 +5,6 @@
 #include <optional>    // std::optional, std::nullopt
 #include <span>        // std::span
 #include <string_view> // std::string_view
-#include <utility>     // std::unreachable
 
 namespace {
 
@@ -27,10 +26,10 @@ auto to_verification_error(const sourcemeta::core::JWTClaimError error)
     case JWTClaimError::IssuedAt:
       return JWTVerificationError::IssuedAt;
     case JWTClaimError::Lifetime:
-      return JWTVerificationError::Lifetime;
+      break;
   }
 
-  std::unreachable();
+  return JWTVerificationError::Lifetime;
 }
 
 } // namespace

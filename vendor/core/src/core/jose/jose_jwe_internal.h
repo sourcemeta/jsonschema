@@ -74,10 +74,10 @@ inline auto jwe_encryption_iv_bytes(const JWEEncryption encryption) noexcept
     case JWEEncryption::A128CBC_HS256:
     case JWEEncryption::A192CBC_HS384:
     case JWEEncryption::A256CBC_HS512:
-      return 16;
+      break;
   }
 
-  std::unreachable();
+  return 16;
 }
 
 // The AES Key Wrap key length for the wrapping algorithms, both the standalone
@@ -98,10 +98,10 @@ inline auto jwe_key_wrap_bytes(const JWEAlgorithm algorithm) noexcept
     case JWEAlgorithm::RSA_OAEP_256:
     case JWEAlgorithm::ECDH_ES:
     case JWEAlgorithm::DIR:
-      return std::nullopt;
+      break;
   }
 
-  std::unreachable();
+  return std::nullopt;
 }
 
 // The OAEP hash each RSA key-management algorithm uses (RFC 7518 Section 4.3)
@@ -149,19 +149,18 @@ inline auto jwe_content_encrypt(const JWEEncryption encryption,
     }
     case JWEEncryption::A128CBC_HS256:
     case JWEEncryption::A192CBC_HS384:
-    case JWEEncryption::A256CBC_HS512: {
-      auto result{aes_cbc_hmac_encrypt(key, iv, associated_data, plaintext)};
-      if (!result.has_value()) {
-        return std::nullopt;
-      }
-
-      const auto tag_bytes{result.value().tag_length};
-      return JWEContent{.data = std::move(result).value().data,
-                        .tag_bytes = tag_bytes};
-    }
+    case JWEEncryption::A256CBC_HS512:
+      break;
   }
 
-  std::unreachable();
+  auto result{aes_cbc_hmac_encrypt(key, iv, associated_data, plaintext)};
+  if (!result.has_value()) {
+    return std::nullopt;
+  }
+
+  const auto tag_bytes{result.value().tag_length};
+  return JWEContent{.data = std::move(result).value().data,
+                    .tag_bytes = tag_bytes};
 }
 
 // Open the ciphertext with the content encryption key, verifying the tag before
@@ -181,10 +180,10 @@ inline auto jwe_content_decrypt(const JWEEncryption encryption,
     case JWEEncryption::A128CBC_HS256:
     case JWEEncryption::A192CBC_HS384:
     case JWEEncryption::A256CBC_HS512:
-      return aes_cbc_hmac_decrypt(key, iv, associated_data, ciphertext, tag);
+      break;
   }
 
-  std::unreachable();
+  return aes_cbc_hmac_decrypt(key, iv, associated_data, ciphertext, tag);
 }
 
 } // namespace sourcemeta::core
