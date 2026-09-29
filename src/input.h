@@ -742,9 +742,10 @@ inline auto for_each_json(const std::vector<std::string_view> &arguments,
   return result;
 }
 
-// An empty dataset that leaves the caller with nothing to work on is reported
-// as missing input instead, so it is only worth a word of its own when the run
-// carries on regardless
+// An empty dataset is only worth a word of its own when nothing else reports
+// it. A caller that requires input already fails with a missing input error
+// naming the very same file, while one that does not would otherwise go
+// through the motions in silence
 inline auto report_empty_datasets(const std::size_t empty_datasets) -> void {
   for (std::size_t index = 0; index < empty_datasets; index++) {
     LOG_WARNING() << "The JSONL file is empty\n";
@@ -759,7 +760,7 @@ inline auto for_each_json(const std::vector<std::string_view> &arguments,
   std::size_t empty_datasets{0};
   auto result{for_each_json(arguments, options, requirement, formatting,
                             empty_datasets)};
-  if (!result.empty()) {
+  if (!result.empty() || requirement != InputRequirement::NonEmpty) {
     report_empty_datasets(empty_datasets);
   }
 

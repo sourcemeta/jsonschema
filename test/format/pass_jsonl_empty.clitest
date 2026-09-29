@@ -1,0 +1,15 @@
+WRITE schemas.jsonl UNTIL EOF
+EOF
+
+RUN fmt schemas.jsonl STDIN /dev/null IN . INTO result.txt EXPECTING 0
+
+WRITE expected.txt UNTIL EOF
+2> warning: The JSONL file is empty
+EOF
+
+COMPARE result.txt AGAINST expected.txt
+
+WRITE expected_file_0.txt UNTIL EOF
+EOF
+
+COMPARE schemas.jsonl AGAINST expected_file_0.txt
