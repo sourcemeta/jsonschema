@@ -24,8 +24,7 @@ using namespace std::string_view_literals;
 // A parent is given as one of the keys a location is held under rather than as
 // a bare pointer, so that following it is a lookup in the same map rather than
 // a key the reader has to rebuild
-auto parent_of(const std::map<sourcemeta::core::JSON::String,
-                              sourcemeta::core::OpenAPILocation> &locations,
+auto parent_of(const sourcemeta::core::OpenAPIFrame::Locations &locations,
                const sourcemeta::core::JSON::String &uri,
                const sourcemeta::core::OpenAPILocation &location)
     -> sourcemeta::core::JSON {
@@ -646,13 +645,13 @@ struct OpenAPIFrame::Internal {
   // Canonicalising means this no longer borrows from what the caller passed
   JSON::String base;
   bool standalone;
-  std::map<JSON::String, OpenAPILocation> locations;
-  std::map<JSON::String, OpenAPIReference> references;
+  OpenAPIFrame::Locations locations;
+  OpenAPIFrame::References references;
   std::vector<OpenAPIOperation> operations;
   // What a Discriminator Object names by URI, which is a reference the schemas
   // hold rather than one the shell around them does
   std::vector<OpenAPIDiscriminator> discriminators;
-  std::map<JSON::String, OpenAPIReference> security_references;
+  OpenAPIFrame::References security_references;
   // Reading inside a Schema Object is the business of whatever understands
   // JSON Schema, so this is that pass over every Schema Object position at
   // once. It is declared last so that it is destroyed first, as it holds
@@ -812,6 +811,50 @@ auto OpenAPIFrame::standalone() const noexcept -> bool {
 
 auto OpenAPIFrame::schemas() const noexcept -> const SchemaFrame & {
   return *(this->internal_->schemas);
+}
+
+auto OpenAPIFrame::locations() const noexcept -> const Locations & {
+  return this->internal_->locations;
+}
+
+auto OpenAPIFrame::references() const noexcept -> const References & {
+  return this->internal_->references;
+}
+
+auto OpenAPIFrame::security_references() const noexcept -> const References & {
+  return this->internal_->security_references;
+}
+
+auto OpenAPIFrame::operations() const noexcept
+    -> const std::vector<OpenAPIOperation> & {
+  return this->internal_->operations;
+}
+
+auto OpenAPIFrame::discriminators() const noexcept
+    -> const std::vector<OpenAPIDiscriminator> & {
+  return this->internal_->discriminators;
+}
+
+auto OpenAPIFrame::traverse(const JSON::StringView uri) const
+    -> const Location * {
+  const auto match{this->internal_->locations.find(uri)};
+  if (match == this->internal_->locations.cend()) {
+    return nullptr;
+  }
+
+  return &match->second;
+}
+
+auto OpenAPIFrame::uri(const Pointer &pointer) const -> JSON::String {
+  return openapi_location_uri(this->internal_->base, pointer);
+}
+
+auto OpenAPIFrame::object_count() const noexcept -> std::size_t {
+  return this->internal_->locations.size();
+}
+
+auto OpenAPIFrame::reference_count() const noexcept -> std::size_t {
+  return this->internal_->references.size();
 }
 
 auto OpenAPIFrame::to_json() const -> JSON {

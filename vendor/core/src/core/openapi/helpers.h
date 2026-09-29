@@ -10,6 +10,7 @@
 #include <array>            // std::array
 #include <cstddef>          // std::size_t
 #include <cstdint>          // std::uint8_t, std::uint64_t
+#include <functional>       // std::less
 #include <initializer_list> // std::initializer_list
 #include <limits>           // std::numeric_limits
 #include <map>              // std::map
@@ -24,68 +25,18 @@ namespace sourcemeta::core {
 
 using namespace std::string_view_literals;
 
-// OpenAPI Specification 3.1.1, Section 4.9: "The field name MUST begin with
-// `x-`, for example, `x-internal-id`"
-constexpr auto OPENAPI_EXTENSION_PREFIX{"x-"sv};
-constexpr auto OPENAPI_HASH_DEPRECATED{JSON::Object::hash("deprecated"sv)};
+// The walk builds what the frame will hand out, so each of these is one type
+// with the frame's own. They are spelled unqualified here because the walk
+// machinery is written against them throughout
+using OpenAPILocation = OpenAPIFrame::Location;
+using OpenAPIObjectKind = OpenAPIFrame::ObjectKind;
+using OpenAPIOperationKind = OpenAPIFrame::OperationKind;
+using OpenAPIReference = OpenAPIFrame::Reference;
+using OpenAPIOperation = OpenAPIFrame::Operation;
+using OpenAPIDiscriminator = OpenAPIFrame::Discriminator;
 
-constexpr auto OPENAPI_HASH_DESCRIPTION{JSON::Object::hash("description"sv)};
-constexpr auto OPENAPI_HASH_SUMMARY{JSON::Object::hash("summary"sv)};
-constexpr auto OPENAPI_HASH_URL{JSON::Object::hash("url"sv)};
-constexpr auto OPENAPI_HASH_NAME{JSON::Object::hash("name"sv)};
-constexpr auto OPENAPI_HASH_IN{JSON::Object::hash("in"sv)};
-constexpr auto OPENAPI_HASH_TAGS{JSON::Object::hash("tags"sv)};
-constexpr auto OPENAPI_HASH_SERVERS{JSON::Object::hash("servers"sv)};
-
-/// A fixed field name paired with the hash of that name, so that looking one
-/// up does not have to hash it again on every Object read
-struct OpenAPIField {
-  JSON::StringView name;
-  JSON::Object::hash_type hash;
-};
-
-// What a reference expects to find at the far end of itself, which is fixed by
-// where the reference sits rather than by anything the target says about
-// itself. OpenAPI Specification 3.1.1, Section 4.3.1 calls this "the expected
-// type of the reference", and it is what the place a reference lands on is
-// held to
-enum class OpenAPIObjectKind : std::uint8_t {
-  /// A whole OpenAPI Description, which is what the root of the document
-  /// framed is recorded as
-  Document,
-  // The eleven a reference may expect to find, the last of them only from 3.2
-  // onwards, which is where a `content` map and the Components Object both
-  // learn to hold a Reference Object in place of a Media Type Object
-  PathItem,
-  Parameter,
-  RequestBody,
-  Response,
-  Example,
-  Header,
-  Link,
-  Callbacks,
-  SecurityScheme,
-  MediaType,
-  // The rest are never referenced, but every Object gets a location
-  Info,
-  Contact,
-  License,
-  Server,
-  ServerVariable,
-  Components,
-  Paths,
-  Operation,
-  ExternalDocumentation,
-  Encoding,
-  Responses,
-  Tag,
-  Reference,
-  Schema,
-  OAuthFlows,
-  OAuthFlow,
-  SecurityRequirement
-};
-
+// What a frame exports each of these as, which is the name a fixture
+// records rather than the enumerator behind it
 inline auto openapi_kind_name(const OpenAPIObjectKind kind) noexcept
     -> JSON::StringView {
   switch (kind) {
@@ -149,6 +100,40 @@ inline auto openapi_kind_name(const OpenAPIObjectKind kind) noexcept
 
   std::unreachable();
 }
+inline auto
+openapi_operation_kind_name(const OpenAPIOperationKind kind) noexcept
+    -> JSON::StringView {
+  switch (kind) {
+    case OpenAPIOperationKind::Path:
+      return "path"sv;
+    case OpenAPIOperationKind::Webhook:
+      return "webhook"sv;
+    case OpenAPIOperationKind::Callback:
+      return "callback"sv;
+  }
+
+  std::unreachable();
+}
+
+// OpenAPI Specification 3.1.1, Section 4.9: "The field name MUST begin with
+// `x-`, for example, `x-internal-id`"
+constexpr auto OPENAPI_EXTENSION_PREFIX{"x-"sv};
+constexpr auto OPENAPI_HASH_DEPRECATED{JSON::Object::hash("deprecated"sv)};
+
+constexpr auto OPENAPI_HASH_DESCRIPTION{JSON::Object::hash("description"sv)};
+constexpr auto OPENAPI_HASH_SUMMARY{JSON::Object::hash("summary"sv)};
+constexpr auto OPENAPI_HASH_URL{JSON::Object::hash("url"sv)};
+constexpr auto OPENAPI_HASH_NAME{JSON::Object::hash("name"sv)};
+constexpr auto OPENAPI_HASH_IN{JSON::Object::hash("in"sv)};
+constexpr auto OPENAPI_HASH_TAGS{JSON::Object::hash("tags"sv)};
+constexpr auto OPENAPI_HASH_SERVERS{JSON::Object::hash("servers"sv)};
+
+/// A fixed field name paired with the hash of that name, so that looking one
+/// up does not have to hash it again on every Object read
+struct OpenAPIField {
+  JSON::StringView name;
+  JSON::Object::hash_type hash;
+};
 
 // OpenAPI Specification 3.1.1, Section 4.6: "Unless specified otherwise, all
 // fields that are URIs MAY be relative references as defined by RFC3986", and
@@ -187,51 +172,6 @@ inline auto openapi_embedded_uri_fields(const OpenAPIObjectKind kind) noexcept
     default:
       return {};
   }
-}
-
-/// Where an Object that stands in for another leads. OpenAPI Specification
-/// 3.1.1 has a Reference Object and a Path Item Object each declare at most
-/// one `$ref`, and a Schema Object's `$ref` never reaches here, so this is a
-/// field of the Object that makes it rather than a table of its own
-struct OpenAPIReference {
-  /// The value as the document wrote it
-  JSON::String original;
-  /// Where it points, resolved against the base and canonicalised. The
-  /// document it names and the fragment it carries are that string either side
-  /// of its `#`, so neither is repeated here
-  JSON::String destination;
-  /// Whether that destination is nowhere the frame holds, which is what makes
-  /// a description one that has to be made whole before it describes anything
-  bool dangling{false};
-  /// What the position that spells it expects to find at the far end, which
-  /// OpenAPI Specification 3.1.1, Section 4.3.1 fixes by where the reference
-  /// sits rather than by anything the target says about itself
-  OpenAPIObjectKind expected{OpenAPIObjectKind::Document};
-  /// Where the member that spells it sits, which is the one place a rewrite
-  /// of this reference has to write to
-  Pointer origin;
-};
-
-/// How an Operation Object is reached from the entry document. OpenAPI
-/// Specification 3.1.1, Section 4.3.3: "only the entry document's Paths Object
-/// contributes URLs to the described API", so what an operation is reached
-/// through is a property of the route to it rather than of where it is
-/// defined
-enum class OpenAPIOperationKind : std::uint8_t { Path, Webhook, Callback };
-
-inline auto
-openapi_operation_kind_name(const OpenAPIOperationKind kind) noexcept
-    -> JSON::StringView {
-  switch (kind) {
-    case OpenAPIOperationKind::Path:
-      return "path"sv;
-    case OpenAPIOperationKind::Webhook:
-      return "webhook"sv;
-    case OpenAPIOperationKind::Callback:
-      return "callback"sv;
-  }
-
-  std::unreachable();
 }
 
 /// What a Path Item Object declares that the endpoints reaching it need. Two
@@ -280,58 +220,6 @@ struct OpenAPIEndpoint {
   std::optional<JSON::String> parent{std::nullopt};
 };
 
-/// One operation of the described API, which is what an endpoint and the Path
-/// Item it reaches come to between them
-struct OpenAPIOperation {
-  OpenAPIOperationKind kind;
-  JSON::String path;
-  JSON::String method;
-  /// Where the Operation Object sits
-  JSON::String origin;
-  /// Where the Path Item Object that exposes it sits, which is the position
-  /// that gives it a URL rather than the one that defines it. The two differ
-  /// whenever a reference stands between them
-  JSON::String endpoint;
-  /// Where the Operation Object that a Callback Object hangs off sits, with no
-  /// value for an operation the Paths Object or the webhooks exposes. Section
-  /// 4.8.10 has a Callback Object be "a map of possible out-of band callbacks
-  /// related to the parent operation", and what the expression it is keyed by
-  /// evaluates against is that Object's request, so one Callback Object two
-  /// Operation Objects reach describes one callback for each of them
-  std::optional<JSON::String> parent{std::nullopt};
-  /// Where the Server Objects in force sit, empty when nothing declares any,
-  /// in which case Section 4.8.1 puts a single Server Object with a `url` of
-  /// `/` in their place
-  std::vector<JSON::String> servers;
-  /// Where the Security Requirement Objects in force sit
-  std::vector<JSON::String> security;
-  /// Where the Parameter Objects in force sit, which is what the Path Item
-  /// Object declares once anything the Operation Object overrides is taken
-  /// out, followed by what the Operation Object declares itself
-  std::vector<JSON::String> parameters;
-  /// Where the Tag Object each of its tags names sits, in the order the
-  /// operation wrote them, with no value where the entry document declares no
-  /// tag by that name. Section 4.8.1 permits exactly that: "Not all tags that
-  /// are used by the Operation Object must be declared"
-  std::vector<std::optional<JSON::String>> tags;
-};
-
-struct OpenAPILocation {
-  OpenAPIObjectKind type;
-  Pointer pointer;
-  /// Set on the root of a document and on every Schema Object position it
-  /// holds: the default `$schema` in force there, resolved against the base. A
-  /// Schema Object that declares its own overrides it, which is a matter for
-  /// whatever reads inside one
-  JSON::String dialect;
-  /// Set on a Schema Object position alone: the base its document keys every
-  /// location by, which is what a relative reference inside that schema
-  /// resolves against until an `$id` says otherwise. RFC 3986 Section 5.1.1
-  /// makes an `$id` the higher precedence source, so this is a default in the
-  /// same way the dialect above is
-  JSON::String base;
-};
-
 // What every check needs to reach beyond the Object in front of it: the
 // document it is reading, so an error can name it, and everything the checks
 // that only run once the walk is over will want. OpenAPI Specification 3.1.1,
@@ -371,12 +259,12 @@ struct OpenAPIWalk {
   /// as a fragment, or by the pointer alone when no base was established. The
   /// document an Object sits in is that key up to its fragment, so nothing
   /// records it a second time
-  std::map<JSON::String, OpenAPILocation> locations;
+  OpenAPIFrame::Locations locations;
   /// Every reference the description makes, whether or not it was followed,
   /// keyed by the location of the Object that makes it. Kept apart from the
   /// locations themselves only because reading one Object twice records it
   /// twice, and what it stands in for must survive that
-  std::map<JSON::String, OpenAPIReference> references;
+  OpenAPIFrame::References references;
   /// Every Path Item Object and Operation Object read, along with the Callback
   /// Objects that hold more of them, all keyed by where they sit. The
   /// projection that turns these into operations runs once the walk is over,
@@ -402,7 +290,7 @@ struct OpenAPIWalk {
   std::optional<std::vector<JSON::String>> security;
   /// The names the entry document declares as security schemes, which is what
   /// a Security Requirement Object anywhere in the description may name
-  std::set<JSON::String> security_schemes;
+  JSONPropertySet security_schemes;
   /// Where a Security Requirement Object names a Security Scheme Object by the
   /// URI of one rather than by the name of a component, and what each of those
   /// names leads to. OpenAPI Specification 3.2.1 admits both spellings. This
@@ -411,7 +299,7 @@ struct OpenAPIWalk {
   /// the Object that makes it, so each is keyed by the member that spells it
   /// instead. Reading one Object twice, which following a reference into the
   /// document being read does, must still record it once
-  std::map<JSON::String, OpenAPIReference> security_references;
+  OpenAPIFrame::References security_references;
   /// Whether an entry document is what the names above came from, which is
   /// what makes this a document the description reaches rather than the one
   /// that describes the API
@@ -660,10 +548,10 @@ inline auto openapi_within_document(const JSON::String &uri,
 // Where a problem found once the walk is over belongs. A location says which
 // base it is keyed by and where under it the Object sits, and a field hangs
 // off that when the problem is with one rather than with the Object holding it
-inline auto
-openapi_error_at(const std::map<JSON::String, OpenAPILocation> &locations,
-                 const JSON::String &location, const char *message,
-                 const JSON::StringView field = {}) -> OpenAPIError {
+inline auto openapi_error_at(const OpenAPIFrame::Locations &locations,
+                             const JSON::String &location, const char *message,
+                             const JSON::StringView field = {})
+    -> OpenAPIError {
   const auto match{locations.find(location)};
   auto pointer{match == locations.cend() ? EMPTY_POINTER
                                          : match->second.pointer};

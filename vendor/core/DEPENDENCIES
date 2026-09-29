@@ -5,7 +5,8 @@ yaml-test-suite https://github.com/yaml/yaml-test-suite data-2022-01-17
 uritemplate-test https://github.com/uri-templates/uritemplate-test 1eb27ab4462b9e5819dc47db99044f5fd1fa9bc7
 pyca-cryptography https://github.com/pyca/cryptography 9747d06e83764e7f1ea4c04daf134cb8f861700b
 wycheproof https://github.com/C2SP/wycheproof 6d7cccd0fcb1917368579adeeac10fe802f1b521
-pcre2 https://github.com/PCRE2Project/pcre2 pcre2-10.48
+pcre2 https://github.com/PCRE2Project/pcre2 pcre2-10.49
+sljit https://github.com/zherczeg/sljit 3908d4c1d46764b7f86e172411e28cec3d0d601c
 unicodetools https://github.com/unicode-org/unicodetools final-17.0-20250910
 jose-cookbook https://github.com/ietf-jose/cookbook 13692b68bfc18b99557a5b1ed311fd5077bfff04
 w3c-json-ld https://github.com/w3c/json-ld-api 8654ac22b6cf4f441d2fee915ae634d36b5a8067

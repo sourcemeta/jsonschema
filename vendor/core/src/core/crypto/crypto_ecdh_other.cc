@@ -6,7 +6,6 @@
 
 #include <optional> // std::optional, std::nullopt
 #include <string>   // std::string
-#include <utility>  // std::unreachable
 
 // A from-scratch ECDH primitive for the reference backend, over the shared
 // constant-time elliptic curve arithmetic. The shared secret is the affine x
@@ -23,10 +22,10 @@ auto to_curve_parameters(const EllipticCurve curve) -> EllipticCurveParameters {
     case EllipticCurve::P384:
       return curve_p384();
     case EllipticCurve::P521:
-      return curve_p521();
+      break;
   }
 
-  std::unreachable();
+  return curve_p521();
 }
 } // namespace
 

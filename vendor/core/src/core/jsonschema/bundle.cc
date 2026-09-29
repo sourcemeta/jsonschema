@@ -34,6 +34,46 @@ auto is_skippable_metaschema_reference(const SchemaBundleOptions::Mode mode,
          schema_is_official(destination);
 }
 
+// RFC 3986, section 4.4 calls a reference that leads back to the document
+// holding it a same-document reference, whose "most frequent examples [...] are
+// relative references that are empty or include only the number sign ('#')
+// separator followed by a fragment identifier". Those stay as spelled, as they
+// need no base URI beyond the one already in effect. Any other relative
+// reference names another document, so bundling restates it as the URI it
+// resolves to, which is what lets it keep naming its target once the bundled
+// document travels somewhere else
+//
+// A dynamic reference needs no exception here. JSON Schema 2020-12, section
+// 8.2.3.2 has it "resolved against the current URI base" like any other before
+// the dynamic scope is consulted, so the absolute form of that resolution is
+// what the document should spell, and framing only reports the anchor it ends
+// up at in place of that resolution when the two name the same place anyway.
+// JSON Schema 2019-09, section 8.2.4.2.1 defines the behavior of
+// `$recursiveRef` "only for the value `#`", which the rule below already spares
+auto spells_another_document_relatively(const SchemaFrame::Reference &reference)
+    -> bool {
+  if (reference.original == reference.destination) {
+    return false;
+  }
+
+  const URI original{reference.original};
+  return original.is_relative() && !original.is_fragment_only() &&
+         !original.empty();
+}
+
+// The absolute form of a reference whose target answers to an identifier other
+// than the URI it was resolved by
+auto rebase_reference(const JSON::String &base,
+                      const std::optional<std::string_view> &fragment)
+    -> JSON::String {
+  URI result{base};
+  if (fragment.has_value()) {
+    result.fragment(fragment.value());
+  }
+
+  return result.recompose();
+}
+
 // The dialect a schema declares, falling back to the given default
 auto declared_dialect(const JSON &schema,
                       const std::string_view default_dialect)
@@ -308,12 +348,12 @@ auto embed_references(
     if (bundled.contains(identifier)) {
       const auto &mapped_id{bundled.at(identifier)};
       if (mapped_id != identifier) {
-        URI rewrite_uri{mapped_id};
-        if (reference.fragment.has_value()) {
-          rewrite_uri.fragment(reference.fragment.value());
-        }
-
-        ref_rewrites.emplace_back(to_pointer(pointer), rewrite_uri.recompose());
+        ref_rewrites.emplace_back(
+            to_pointer(pointer),
+            rebase_reference(mapped_id, reference.fragment));
+      } else if (spells_another_document_relatively(reference)) {
+        ref_rewrites.emplace_back(to_pointer(pointer),
+                                  JSON::String{reference.destination});
       }
 
       return;
@@ -407,12 +447,12 @@ auto embed_references(
     }
 
     if (effective_id != identifier) {
-      URI rewrite_uri{effective_id};
-      if (reference.fragment.has_value()) {
-        rewrite_uri.fragment(reference.fragment.value());
-      }
-
-      ref_rewrites.emplace_back(to_pointer(pointer), rewrite_uri.recompose());
+      ref_rewrites.emplace_back(
+          to_pointer(pointer),
+          rebase_reference(effective_id, reference.fragment));
+    } else if (spells_another_document_relatively(reference)) {
+      ref_rewrites.emplace_back(to_pointer(pointer),
+                                JSON::String{reference.destination});
     }
 
     bundled.emplace(identifier, effective_id);
@@ -420,6 +460,22 @@ auto embed_references(
     deferred.emplace_back(std::move(remote), std::move(effective_id),
                           remote_base_dialect);
   });
+
+  // Whatever the walk above reaches is on its way into the document, so its
+  // spelling is settled there rather than here. What is left is a reference
+  // whose target the document already holds, which still has to name it in a
+  // way that does not depend on where the document came from
+  frame.for_each_reference(
+      [&](const auto, const auto &pointer, const auto &reference) -> void {
+        if (!frame.traverse(reference.destination).has_value()) {
+          return;
+        }
+
+        if (spells_another_document_relatively(reference)) {
+          ref_rewrites.emplace_back(to_pointer(pointer),
+                                    JSON::String{reference.destination});
+        }
+      });
 
   for (auto &[rewrite_pointer, rewrite_value] : ref_rewrites) {
     set(subschema, rewrite_pointer, JSON{rewrite_value});

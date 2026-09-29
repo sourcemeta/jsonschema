@@ -12,7 +12,6 @@
 #include <cstdint>     // std::uint8_t
 #include <string>      // std::string
 #include <string_view> // std::string_view
-#include <utility>     // std::unreachable
 
 namespace sourcemeta::core {
 
@@ -107,10 +106,10 @@ inline auto curve_field_bytes(const EllipticCurve curve) noexcept
     case EllipticCurve::P384:
       return 48;
     case EllipticCurve::P521:
-      return 66;
+      break;
   }
 
-  std::unreachable();
+  return 66;
 }
 
 // The group order of each NIST prime curve as big-endian octets (FIPS 186-4
@@ -126,13 +125,13 @@ inline auto curve_order_bytes(const EllipticCurve curve) -> std::string {
                           "c7634d81f4372ddf581a0db248b0a77aecec196accc52973")
           .value();
     case EllipticCurve::P521:
-      return hex_to_bytes("01fffffffffffffffffffffffffffffffffffffffffffffff"
-                          "ffffffffffffffffffa51868783bf2f966b7fcc0148f709a5"
-                          "d03bb5c9b8899c47aebb6fb71e91386409")
-          .value();
+      break;
   }
 
-  std::unreachable();
+  return hex_to_bytes("01fffffffffffffffffffffffffffffffffffffffffffffff"
+                      "ffffffffffffffffffa51868783bf2f966b7fcc0148f709a5"
+                      "d03bb5c9b8899c47aebb6fb71e91386409")
+      .value();
 }
 
 // Whether an elliptic curve private scalar lies in the valid range [1, n)
@@ -179,10 +178,10 @@ inline auto eddsa_public_key_bytes(const EdwardsCurve curve) noexcept
     case EdwardsCurve::Ed25519:
       return 32;
     case EdwardsCurve::Ed448:
-      return 57;
+      break;
   }
 
-  std::unreachable();
+  return 57;
 }
 
 inline auto digest_message(const SignatureHashFunction hash,
@@ -196,13 +195,12 @@ inline auto digest_message(const SignatureHashFunction hash,
       const auto digest{sha384_digest(message)};
       return {reinterpret_cast<const char *>(digest.data()), digest.size()};
     }
-    case SignatureHashFunction::SHA512: {
-      const auto digest{sha512_digest(message)};
-      return {reinterpret_cast<const char *>(digest.data()), digest.size()};
-    }
+    case SignatureHashFunction::SHA512:
+      break;
   }
 
-  std::unreachable();
+  const auto digest{sha512_digest(message)};
+  return {reinterpret_cast<const char *>(digest.data()), digest.size()};
 }
 
 // The same digest returned in wiping storage, for the secret-bearing hashing of
@@ -222,14 +220,13 @@ inline auto secure_digest_message(const SignatureHashFunction hash,
       const SecureBufferScope digest_scope{digest.data(), digest.size()};
       return {reinterpret_cast<const char *>(digest.data()), digest.size()};
     }
-    case SignatureHashFunction::SHA512: {
-      auto digest{sha512_digest(message)};
-      const SecureBufferScope digest_scope{digest.data(), digest.size()};
-      return {reinterpret_cast<const char *>(digest.data()), digest.size()};
-    }
+    case SignatureHashFunction::SHA512:
+      break;
   }
 
-  std::unreachable();
+  auto digest{sha512_digest(message)};
+  const SecureBufferScope digest_scope{digest.data(), digest.size()};
+  return {reinterpret_cast<const char *>(digest.data()), digest.size()};
 }
 
 } // namespace sourcemeta::core

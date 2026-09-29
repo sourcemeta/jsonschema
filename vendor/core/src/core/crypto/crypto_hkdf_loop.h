@@ -14,7 +14,6 @@
 #include <cstdint>     // std::uint8_t
 #include <string>      // std::string
 #include <string_view> // std::string_view
-#include <utility>     // std::unreachable
 
 namespace sourcemeta::core {
 
@@ -56,15 +55,14 @@ hkdf_loop_hmac(const KDFHash hash, const std::string_view key,
       secure_zero(digest.data(), digest.size());
       return digest.size();
     }
-    case KDFHash::SHA512: {
-      auto digest{hmac_sha512_digest(key, message)};
-      std::copy_n(digest.begin(), digest.size(), output.begin());
-      secure_zero(digest.data(), digest.size());
-      return digest.size();
-    }
+    case KDFHash::SHA512:
+      break;
   }
 
-  std::unreachable();
+  auto digest{hmac_sha512_digest(key, message)};
+  std::copy_n(digest.begin(), digest.size(), output.begin());
+  secure_zero(digest.data(), digest.size());
+  return digest.size();
 }
 
 // RFC 5869 Section 2.2: PRK = HMAC-Hash(salt, IKM), noting that the salt keys

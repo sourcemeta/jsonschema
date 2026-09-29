@@ -789,7 +789,17 @@ private:
     switch (current_token.type) {
       case TokenType::Scalar: {
         auto next{this->next_token()};
-        if (next.has_value() && next->type == TokenType::BlockMappingValue) {
+        // YAML 1.2.2 Section 7.4.2: the value of an entry of a flow collection
+        // is a single node, and a pair carrying no brackets of its own is a
+        // node only where a flow sequence takes its entries. Leaving the
+        // indicator unread in that position hands the scalar back on its own,
+        // which is what lets the caller report the separator the entry is
+        // really missing
+        const auto pair_without_brackets_allowed{
+            this->lexer_->flow_level() == 0 ||
+            context != JSON::ParseContext::Property};
+        if (next.has_value() && next->type == TokenType::BlockMappingValue &&
+            pair_without_brackets_allowed) {
           if (current_token.multiline) [[unlikely]] {
             throw YAMLParseError{current_token.line, current_token.column,
                                  "Multi-line implicit mapping key"};

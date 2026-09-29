@@ -514,10 +514,9 @@ inline auto openapi_check_document(const JSON &document, OpenAPIWalk &walk)
 // it references, so a parent naming a tag this one does not declare is only
 // missing where nothing is missing, and a cycle is a property of the tags held
 // rather than of any one tag
-inline auto openapi_check_tag_parents(
-    const OpenAPIWalk &walk,
-    const std::map<JSON::String, OpenAPILocation> &locations, const bool whole)
-    -> void {
+inline auto openapi_check_tag_parents(const OpenAPIWalk &walk,
+                                      const OpenAPIFrame::Locations &locations,
+                                      const bool whole) -> void {
   std::map<JSON::String, JSON::String> parents;
   for (const auto &[location, edge] : walk.tag_parents) {
     if (whole && !walk.tag_names.contains(edge.second)) {
@@ -558,8 +557,7 @@ inline auto openapi_check_tag_parents(
 // `operationId` to be unresolvable", so nothing is decided here until every
 // document of the description is held at once
 inline auto openapi_check_operation_id_links(
-    const OpenAPIWalk &walk,
-    const std::map<JSON::String, OpenAPILocation> &locations) -> void {
+    const OpenAPIWalk &walk, const OpenAPIFrame::Locations &locations) -> void {
   for (const auto &[location, identifier] : walk.operation_id_links) {
     // Section 4.8.20 goes on to say that an operation reached through a Path
     // Item referenced more than once "cannot be resolved unambiguously", and

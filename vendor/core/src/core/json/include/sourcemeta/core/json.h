@@ -8,6 +8,7 @@
 // NOLINTBEGIN(misc-include-cleaner)
 #include <sourcemeta/core/json_auto.h>
 #include <sourcemeta/core/json_error.h>
+#include <sourcemeta/core/json_property_set.h>
 #include <sourcemeta/core/json_value.h>
 // NOLINTEND(misc-include-cleaner)
 

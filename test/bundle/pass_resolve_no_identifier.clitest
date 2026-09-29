@@ -28,7 +28,7 @@ WRITE expected_0.txt UNTIL EOF
 1>   "$id": "[CWD_URI]/schema.json",
 1>   "title": "Test",
 1>   "description": "Test schema",
-1>   "$ref": "./nested.json",
+1>   "$ref": "[CWD_URI]/nested.json",
 1>   "$defs": {
 1>     "[CWD_URI]/nested.json": {
 1>       "$schema": "https://json-schema.org/draft/2020-12/schema",

@@ -62,8 +62,8 @@ public:
 
 private:
   // NOLINTNEXTLINE(cert-err58-cpp,bugprone-throwing-static-initialization)
-  static inline const std::array<std::string_view, 4> KEYWORDS{
-      {"const", "contains", "propertyNames", "examples"}};
+  static inline const std::array<std::string_view, 5> KEYWORDS{
+      {"$id", "const", "contains", "propertyNames", "examples"}};
 
   mutable std::unordered_map<std::string, std::string> renames_;
 };

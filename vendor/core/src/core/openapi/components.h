@@ -55,7 +55,7 @@ inline auto openapi_collect_security_schemes(const JSON &document,
   }
 
   for (const auto &entry : schemes->as_object()) {
-    walk.security_schemes.insert(entry.first);
+    walk.security_schemes.insert(entry.first, entry.hash);
   }
 }
 

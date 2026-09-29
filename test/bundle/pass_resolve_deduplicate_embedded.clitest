@@ -55,10 +55,10 @@ WRITE expected.txt UNTIL EOF
 1>   "$id": "https://example.com/entry",
 1>   "allOf": [
 1>     {
-1>       "$ref": "a"
+1>       "$ref": "https://example.com/a"
 1>     },
 1>     {
-1>       "$ref": "b"
+1>       "$ref": "https://example.com/b"
 1>     }
 1>   ],
 1>   "$defs": {
@@ -70,12 +70,12 @@ WRITE expected.txt UNTIL EOF
 1>     "https://example.com/a": {
 1>       "$schema": "https://json-schema.org/draft/2020-12/schema",
 1>       "$id": "https://example.com/a",
-1>       "$ref": "common"
+1>       "$ref": "https://example.com/common"
 1>     },
 1>     "https://example.com/b": {
 1>       "$schema": "https://json-schema.org/draft/2020-12/schema",
 1>       "$id": "https://example.com/b",
-1>       "$ref": "common"
+1>       "$ref": "https://example.com/common"
 1>     }
 1>   }
 1> }

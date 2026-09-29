@@ -14,7 +14,6 @@
 #include <optional>    // std::optional, std::nullopt
 #include <string>      // std::string
 #include <string_view> // std::string_view
-#include <utility>     // std::unreachable
 
 namespace sourcemeta::core {
 
@@ -46,11 +45,11 @@ auto digest_info_prefix(const SignatureHashFunction hash) -> std::string_view {
       return {reinterpret_cast<const char *>(DIGEST_INFO_SHA384.data()),
               DIGEST_INFO_SHA384.size()};
     case SignatureHashFunction::SHA512:
-      return {reinterpret_cast<const char *>(DIGEST_INFO_SHA512.data()),
-              DIGEST_INFO_SHA512.size()};
+      break;
   }
 
-  std::unreachable();
+  return {reinterpret_cast<const char *>(DIGEST_INFO_SHA512.data()),
+          DIGEST_INFO_SHA512.size()};
 }
 
 // EMSA-PKCS1-v1_5 encoding (RFC 8017 Section 9.2)
@@ -173,10 +172,10 @@ auto to_curve_parameters(const EllipticCurve curve) -> EllipticCurveParameters {
     case EllipticCurve::P384:
       return curve_p384();
     case EllipticCurve::P521:
-      return curve_p521();
+      break;
   }
 
-  std::unreachable();
+  return curve_p521();
 }
 
 // FIPS 186-4 Section 6.4 step 2, deriving the integer e from the leftmost bits
@@ -469,10 +468,10 @@ auto eddsa_verify(const PublicKey &key, const std::string_view message,
     case EdwardsCurve::Ed25519:
       return edwards25519_verify(internal->coordinate_x, message, signature);
     case EdwardsCurve::Ed448:
-      return edwards448_verify(internal->coordinate_x, message, signature);
+      break;
   }
 
-  std::unreachable();
+  return edwards448_verify(internal->coordinate_x, message, signature);
 }
 
 auto rsa_public_components(const PublicKey &key)

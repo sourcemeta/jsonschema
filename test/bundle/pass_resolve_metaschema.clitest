@@ -48,7 +48,7 @@ WRITE expected_0.txt UNTIL EOF
 1>   "$id": "https://example.com",
 1>   "title": "Test",
 1>   "description": "Test schema",
-1>   "$ref": "nested",
+1>   "$ref": "https://example.com/nested",
 1>   "$defs": {
 1>     "https://example.com/nested": {
 1>       "$schema": "https://json-schema.org/draft/2019-09/schema",

@@ -49,36 +49,17 @@ POSSIBILITY OF SUCH DAMAGE.
 
 #ifdef SUPPORT_JIT
 
-/* All-in-one: Since we use the JIT compiler only from here,
-we just include it. This way we don't need to touch the build
-system files. */
+/* The JIT code generator is built as a library of its own, and the build
+system sets its configuration on both sides of the interface, so that this
+translation unit and that library agree on the layout of the structures they
+pass between them. */
 
-#define SLJIT_CONFIG_AUTO 1
-#define SLJIT_CONFIG_STATIC 1
-#define SLJIT_VERBOSE 0
+#include "sljitLir.h"
 
-#ifdef PCRE2_DEBUG
-#define SLJIT_DEBUG 1
-#else
-#define SLJIT_DEBUG 0
-#endif
+/* A convenience that the code generator keeps private to its implementation,
+reproduced here in terms of the types that its header does publish. */
 
-#define SLJIT_MALLOC(size, allocator_data) pcre2_jit_malloc(size, allocator_data)
-#define SLJIT_FREE(ptr, allocator_data) pcre2_jit_free(ptr, allocator_data)
-
-static void * pcre2_jit_malloc(size_t size, void *allocator_data)
-{
-pcre2_memctl *allocator = ((pcre2_memctl*)allocator_data);
-return allocator->malloc(size, allocator->memory_data);
-}
-
-static void pcre2_jit_free(void *ptr, void *allocator_data)
-{
-pcre2_memctl *allocator = ((pcre2_memctl*)allocator_data);
-allocator->free(ptr, allocator->memory_data);
-}
-
-#include "../deps/sljit/sljit_src/sljitLir.c"
+#define SSIZE_OF(type) ((sljit_s32)sizeof(sljit_ ## type))
 
 #if defined SLJIT_CONFIG_UNSUPPORTED && SLJIT_CONFIG_UNSUPPORTED
 #error Unsupported architecture
@@ -99,7 +80,7 @@ Fast, but limited size. */
 
 /* Growth rate for stack allocated by the OS. Should be the multiply
 of page size. */
-#define STACK_GROWTH_RATE 8192
+#define STACK_GROWTH_RATE (sljit_sw)8192
 
 /* Enable to check that the allocation could destroy temporaries. */
 #if defined SLJIT_DEBUG && SLJIT_DEBUG
@@ -473,6 +454,8 @@ typedef struct compiler_common {
   BOOL local_quit_available;
   /* Currently in a positive assertion. */
   BOOL in_positive_assertion;
+  /* More than STACK_GROWTH_RATE / 2 stack memory is allocated. */
+  BOOL large_stack_allocation;
   /* Newline control. */
   int nltype;
   sljit_u32 nlmax;
@@ -3528,6 +3511,8 @@ static SLJIT_INLINE void allocate_stack(compiler_common *common, sljit_s32 size)
 DEFINE_COMPILER;
 
 SLJIT_ASSERT(size > 0);
+if (size > (STACK_GROWTH_RATE / (SSIZE_OF(sw) * 2)))
+  common->large_stack_allocation = TRUE;
 OP2(SLJIT_SUB, STACK_TOP, 0, STACK_TOP, 0, SLJIT_IMM, size * SSIZE_OF(sw));
 #ifdef DESTROY_REGISTERS
 OP1(SLJIT_MOV, TMP1, 0, SLJIT_IMM, 12345);
@@ -14085,7 +14070,20 @@ SLJIT_ASSERT(TMP1 == SLJIT_R0 && STR_PTR == SLJIT_R1);
 
 OP1(SLJIT_MOV, SLJIT_MEM1(SLJIT_SP), LOCAL1, STR_PTR, 0);
 OP1(SLJIT_MOV, SLJIT_R0, 0, ARGUMENTS, 0);
-OP2(SLJIT_SUB, SLJIT_R1, 0, STACK_LIMIT, 0, SLJIT_IMM, STACK_GROWTH_RATE);
+if (common->large_stack_allocation)
+  {
+  SLJIT_COMPILE_ASSERT((STACK_GROWTH_RATE & (STACK_GROWTH_RATE - 1)) == 0, stack_growth_must_be_power_of_2);
+  // Negative difference. The positive difference would also use the same amount
+  // of operations, but the last subtraction emits several instructions on x86.
+  OP2(SLJIT_SUB, SLJIT_R1, 0, STACK_TOP, 0, STACK_LIMIT, 0);
+  // Minimum extra space after allocation.
+  OP2(SLJIT_SUB, SLJIT_R1, 0, SLJIT_R1, 0, SLJIT_IMM, (STACK_GROWTH_RATE / 2));
+  // Rounds down negative numbers.
+  OP2(SLJIT_AND, SLJIT_R1, 0, SLJIT_R1, 0, SLJIT_IMM, ~(STACK_GROWTH_RATE - 1));
+  OP2(SLJIT_ADD, SLJIT_R1, 0, SLJIT_R1, 0, STACK_LIMIT, 0);
+  }
+else
+  OP2(SLJIT_SUB, SLJIT_R1, 0, STACK_LIMIT, 0, SLJIT_IMM, STACK_GROWTH_RATE);
 OP1(SLJIT_MOV, SLJIT_R0, 0, SLJIT_MEM1(SLJIT_R0), SLJIT_OFFSETOF(jit_arguments, stack));
 OP1(SLJIT_MOV, STACK_LIMIT, 0, TMP2, 0);
 
