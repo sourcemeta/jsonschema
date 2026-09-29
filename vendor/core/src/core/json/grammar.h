@@ -1,6 +1,7 @@
 #ifndef SOURCEMETA_CORE_JSON_GRAMMAR_H_
 #define SOURCEMETA_CORE_JSON_GRAMMAR_H_
 
+#include <array>       // std::array
 #include <string_view> // std::basic_string_view
 
 namespace sourcemeta::core::internal {
@@ -49,6 +50,25 @@ template <typename CharT>
 static constexpr CharT TOKEN_STRING_ESCAPE_TABULATION{'\u0074'};
 template <typename CharT>
 static constexpr CharT TOKEN_STRING_ESCAPE_UNICODE{'\u0075'};
+
+// If the code point is in the Basic Multilingual Plane (U+0000 through
+// U+FFFF), then it may be represented as a six-character sequence: a reverse
+// solidus, followed by the lowercase letter u, followed by four hexadecimal
+// digits that encode the code point.
+// See
+// https://www.ecma-international.org/wp-content/uploads/ECMA-404_2nd_edition_december_2017.pdf
+// The sequence that represents each of the control characters, indexed by the
+// character itself. Every other character that must be escaped is represented
+// by a reverse solidus followed by the character itself
+template <typename CharT, typename Traits>
+static constexpr std::array<std::basic_string_view<CharT, Traits>, 32>
+    CONSTANT_STRING_CONTROL_ESCAPES{
+        {"\\u0000", "\\u0001", "\\u0002", "\\u0003", "\\u0004", "\\u0005",
+         "\\u0006", "\\u0007", "\\b",     "\\t",     "\\n",     "\\u000B",
+         "\\f",     "\\r",     "\\u000E", "\\u000F", "\\u0010", "\\u0011",
+         "\\u0012", "\\u0013", "\\u0014", "\\u0015", "\\u0016", "\\u0017",
+         "\\u0018", "\\u0019", "\\u001A", "\\u001B", "\\u001C", "\\u001D",
+         "\\u001E", "\\u001F"}};
 
 // Array
 template <typename CharT> static constexpr CharT TOKEN_ARRAY_BEGIN{'\u005B'};

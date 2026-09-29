@@ -101,10 +101,10 @@ inline auto elliptic_curve_to_jwk(const EllipticCurve curve) noexcept
     case EllipticCurve::P384:
       return "P-384";
     case EllipticCurve::P521:
-      return "P-521";
+      break;
   }
 
-  std::unreachable();
+  return "P-521";
 }
 
 // The JWK curve name each Edwards curve carries (RFC 8037 Section 2), the
@@ -115,10 +115,10 @@ inline auto edwards_curve_to_jwk(const EdwardsCurve curve) noexcept
     case EdwardsCurve::Ed25519:
       return "Ed25519";
     case EdwardsCurve::Ed448:
-      return "Ed448";
+      break;
   }
 
-  std::unreachable();
+  return "Ed448";
 }
 
 // The RSA algorithms only require an RSA key, each ECDSA algorithm is tied to a
@@ -146,10 +146,10 @@ inline auto jwk_algorithm_matches_key(const JWSAlgorithm algorithm,
     case JWSAlgorithm::HS256:
     case JWSAlgorithm::HS384:
     case JWSAlgorithm::HS512:
-      return kind == JWKKind::Octet;
+      break;
   }
 
-  std::unreachable();
+  return kind == JWKKind::Octet;
 }
 
 // The hash function each RSA and ECDSA algorithm computes over the signing

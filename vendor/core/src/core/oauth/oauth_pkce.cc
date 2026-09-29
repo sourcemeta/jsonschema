@@ -12,7 +12,6 @@
 #include <span>        // std::span
 #include <string>      // std::string
 #include <string_view> // std::string_view
-#include <utility>     // std::unreachable
 
 namespace sourcemeta::core {
 
@@ -22,10 +21,10 @@ auto oauth_pkce_method_code(const OAuthPKCEMethod method) noexcept
     case OAuthPKCEMethod::S256:
       return "S256";
     case OAuthPKCEMethod::Plain:
-      return "plain";
+      break;
   }
 
-  std::unreachable();
+  return "plain";
 }
 
 auto to_oauth_pkce_method(const std::string_view value) noexcept
@@ -105,22 +104,21 @@ auto oauth_pkce_verify(const std::string_view verifier,
       // RFC 7636 Section 4.6: the plain method compares the two values directly
       return secure_equals(verifier, challenge) ? OAuthPKCEOutcome::Match
                                                 : OAuthPKCEOutcome::Mismatch;
-    case OAuthPKCEMethod::S256: {
-      // RFC 7636 Section 4.2: an S256 challenge is the base64url of a SHA-256
-      // digest, so it is always exactly 43 characters
-      if (challenge.size() != 43 || !oauth_is_pkce_challenge(challenge)) {
-        return OAuthPKCEOutcome::MalformedChallenge;
-      }
-
-      const auto computed{oauth_pkce_challenge(verifier)};
-      return secure_equals(std::string_view{computed.data(), computed.size()},
-                           challenge)
-                 ? OAuthPKCEOutcome::Match
-                 : OAuthPKCEOutcome::Mismatch;
-    }
+    case OAuthPKCEMethod::S256:
+      break;
   }
 
-  std::unreachable();
+  // RFC 7636 Section 4.2: an S256 challenge is the base64url of a SHA-256
+  // digest, so it is always exactly 43 characters
+  if (challenge.size() != 43 || !oauth_is_pkce_challenge(challenge)) {
+    return OAuthPKCEOutcome::MalformedChallenge;
+  }
+
+  const auto computed{oauth_pkce_challenge(verifier)};
+  return secure_equals(std::string_view{computed.data(), computed.size()},
+                       challenge)
+             ? OAuthPKCEOutcome::Match
+             : OAuthPKCEOutcome::Mismatch;
 }
 
 } // namespace sourcemeta::core
