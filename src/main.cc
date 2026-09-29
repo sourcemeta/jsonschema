@@ -156,11 +156,10 @@ constexpr std::string_view USAGE_COMMANDS{R"EOF(   version / --version / -v
        Validate an instance against a schema annotated with x-jsonld-*
        keywords and, on success, print the instance promoted to expanded
        JSON-LD (Linked Data). Use --flatten/-l and/or --compact/-c to
-       post-process the output. Given a JSONL dataset or a multi-document
-       YAML file, every document is promoted in turn and the output is JSONL,
-       stopping at the first document that fails. As in `validate`, schemas
-       compile in exhaustive mode by default. Pass --fast/-f to optimise for
-       speed at the expense of validation error quality.
+       post-process the output. Datasets are promoted entry by entry, as
+       JSONL. As in `validate`, schemas compile in exhaustive mode by
+       default. Pass --fast/-f to optimise for speed at the expense of
+       validation error quality.
 
    install [<uri> <path>] [--force/-f] [--frozen/-z]
 

@@ -72,13 +72,6 @@ a line rather than across the dataset, and `--compact/-c` repeats the context
 on every line, which is what keeps each line a self-contained JSON-LD
 document.
 
-The input is parsed up front, so a document that cannot be read at all fails
-the run before anything is written. Past that point, documents are written as
-they pass and the command stops at the first one that fails to validate or to
-promote. A run that exits non-zero may therefore have already written the
-documents that preceded the failure, so check the exit code rather than the
-presence of output.
-
 > [!NOTE]
 > Annotation collection is a JSON Schema 2019-09 and 2020-12 feature, so this
 > command requires the schema to have one of those dialects as its base

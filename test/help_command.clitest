@@ -166,11 +166,10 @@ WRITE expected.txt UNTIL EOF
 1>        Validate an instance against a schema annotated with x-jsonld-*
 1>        keywords and, on success, print the instance promoted to expanded
 1>        JSON-LD (Linked Data). Use --flatten/-l and/or --compact/-c to
-1>        post-process the output. Given a JSONL dataset or a multi-document
-1>        YAML file, every document is promoted in turn and the output is JSONL,
-1>        stopping at the first document that fails. As in `validate`, schemas
-1>        compile in exhaustive mode by default. Pass --fast/-f to optimise for
-1>        speed at the expense of validation error quality.
+1>        post-process the output. Datasets are promoted entry by entry, as
+1>        JSONL. As in `validate`, schemas compile in exhaustive mode by
+1>        default. Pass --fast/-f to optimise for speed at the expense of
+1>        validation error quality.
 1>
 1>    install [<uri> <path>] [--force/-f] [--frozen/-z]
 1>
