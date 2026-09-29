@@ -93,9 +93,8 @@ auto sourcemeta::jsonschema::bundle(const sourcemeta::core::Options &options)
           openapi_resolver(options, options.contains("http"), dialect,
                            configuration),
           {.default_base = openapi_base});
-      // TODO: Order the keys of a bundled description once Core grows the
-      // equivalent of `sourcemeta::core::schema_format` for one. The shell of
-      // a description has no ordering of its own to apply here
+      sourcemeta::jsonschema::format_openapi(schema, custom_resolver,
+                                             openapi_base);
       sourcemeta::jsonschema::write_schema(schema, std::cout, indentation,
                                            parsed_schema.roundtrip);
       return;

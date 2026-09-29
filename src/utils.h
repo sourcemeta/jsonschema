@@ -218,6 +218,16 @@ inline auto format_schema(sourcemeta::core::JSON &schema,
   sourcemeta::core::schema_format(schema, frame);
 }
 
+// A description declares no dialect of its own, so where it was read from is
+// what takes the place of the one a schema would be ordered against
+inline auto format_openapi(sourcemeta::core::JSON &document,
+                           const sourcemeta::core::SchemaResolver &resolver,
+                           const std::string_view default_base) -> void {
+  const sourcemeta::core::OpenAPIFrame frame{
+      document, sourcemeta::core::schema_walker, resolver, default_base};
+  sourcemeta::core::openapi_format(document, frame);
+}
+
 inline auto
 write_schema(const sourcemeta::core::JSON &schema, std::ostream &stream,
              const std::optional<std::size_t> indentation,

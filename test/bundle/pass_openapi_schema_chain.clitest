@@ -66,15 +66,15 @@ WRITE expected.txt UNTIL EOF
 1>   },
 1>   "components": {
 1>     "schemas": {
-1>       "b": {
-1>         "$id": "https://example.com/b",
-1>         "$schema": "https://json-schema.org/draft/2020-12/schema",
-1>         "type": "string"
-1>       },
 1>       "a": {
-1>         "$id": "https://example.com/a",
 1>         "$schema": "https://json-schema.org/draft/2020-12/schema",
+1>         "$id": "https://example.com/a",
 1>         "$ref": "https://example.com/b"
+1>       },
+1>       "b": {
+1>         "$schema": "https://json-schema.org/draft/2020-12/schema",
+1>         "$id": "https://example.com/b",
+1>         "type": "string"
 1>       }
 1>     }
 1>   }

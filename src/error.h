@@ -212,13 +212,6 @@ private:
   std::filesystem::path path_;
 };
 
-class UnsupportedOpenAPIFormatError : public std::runtime_error {
-public:
-  UnsupportedOpenAPIFormatError()
-      : std::runtime_error{
-            "The --format option is not supported for OpenAPI descriptions"} {}
-};
-
 class UnsupportedOpenAPIWithoutIdError : public std::runtime_error {
 public:
   UnsupportedOpenAPIWithoutIdError()
@@ -1274,11 +1267,6 @@ inline auto try_catch(const sourcemeta::core::Options &options,
     print_exception(is_json, error);
     return EXIT_SCHEMA_INPUT_ERROR;
   } catch (const MultiDocumentInputError &error) {
-    const auto is_json{options.contains("json")};
-    print_exception(is_json, error);
-    return EXIT_NOT_SUPPORTED;
-  } catch (
-      const sourcemeta::core::FileError<UnsupportedOpenAPIFormatError> &error) {
     const auto is_json{options.contains("json")};
     print_exception(is_json, error);
     return EXIT_NOT_SUPPORTED;

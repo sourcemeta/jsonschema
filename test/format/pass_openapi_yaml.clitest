@@ -1,0 +1,24 @@
+WRITE openapi.yaml UNTIL EOF
+paths: {}
+info:
+  version: 1.0.0
+  title: Example
+openapi: 3.1.1
+EOF
+
+RUN fmt openapi.yaml STDIN /dev/null IN . INTO result.txt EXPECTING 0
+
+WRITE expected.txt UNTIL EOF
+EOF
+
+COMPARE result.txt AGAINST expected.txt
+
+WRITE expected_file_0.txt UNTIL EOF
+openapi: 3.1.1
+info:
+  title: Example
+  version: 1.0.0
+paths: {}
+EOF
+
+COMPARE openapi.yaml AGAINST expected_file_0.txt

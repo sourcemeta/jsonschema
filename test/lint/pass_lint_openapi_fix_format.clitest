@@ -1,0 +1,51 @@
+WRITE openapi.json UNTIL EOF
+{
+  "paths": {},
+  "info": { "version": "1.0.0", "title": "Example" },
+  "openapi": "3.1.1",
+  "components": {
+    "schemas": {
+      "Pet": {
+        "type": "string",
+        "title": "Pet",
+        "description": "A pet in the store",
+        "examples": [ "dog" ],
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "const": "dog"
+      }
+    }
+  }
+}
+EOF
+
+RUN lint openapi.json --fix --format STDIN /dev/null IN . INTO result_0.txt EXPECTING 0
+
+WRITE expected_0.txt UNTIL EOF
+2> .
+EOF
+
+COMPARE result_0.txt AGAINST expected_0.txt
+
+WRITE expected_file_0.txt UNTIL EOF
+{
+  "openapi": "3.1.1",
+  "info": {
+    "title": "Example",
+    "version": "1.0.0"
+  },
+  "paths": {},
+  "components": {
+    "schemas": {
+      "Pet": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "title": "Pet",
+        "description": "A pet in the store",
+        "examples": [ "dog" ],
+        "const": "dog"
+      }
+    }
+  }
+}
+EOF
+
+COMPARE openapi.json AGAINST expected_file_0.txt

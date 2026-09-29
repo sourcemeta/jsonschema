@@ -1,36 +1,38 @@
 WRITE openapi.json UNTIL EOF
 {
-  "openapi": "3.1.1",
-  "info": { "title": "Example", "version": "1.0.0" },
   "paths": {
     "/pets": {
       "get": {
         "responses": {
           "200": {
-            "description": "OK",
             "content": {
               "application/json": {
                 "schema": { "$ref": "https://example.com/schemas/pet" }
               }
-            }
+            },
+            "description": "OK"
           }
         }
       }
     }
-  }
+  },
+  "info": { "version": "1.0.0", "title": "Example" },
+  "openapi": "3.1.1"
 }
 EOF
 
 WRITE pet.json UNTIL EOF
 {
-  "$id": "https://example.com/schemas/pet",
-  "$schema": "https://json-schema.org/draft/2020-12/schema",
   "type": "object",
-  "properties": { "name": { "type": "string" } }
+  "$id": "https://example.com/schemas/pet",
+  "title": "Pet",
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
 }
 EOF
 
 RUN bundle openapi.json --resolve pet.json STDIN /dev/null IN . INTO result.txt EXPECTING 0
+
+EXTRACT STDOUT FROM result.txt INTO bundled.json
 
 WRITE expected.txt UNTIL EOF
 1> {
@@ -62,12 +64,8 @@ WRITE expected.txt UNTIL EOF
 1>       "pet": {
 1>         "$schema": "https://json-schema.org/draft/2020-12/schema",
 1>         "$id": "https://example.com/schemas/pet",
-1>         "type": "object",
-1>         "properties": {
-1>           "name": {
-1>             "type": "string"
-1>           }
-1>         }
+1>         "title": "Pet",
+1>         "type": "object"
 1>       }
 1>     }
 1>   }
@@ -75,3 +73,10 @@ WRITE expected.txt UNTIL EOF
 EOF
 
 COMPARE result.txt AGAINST expected.txt
+
+WRITE silent.txt UNTIL EOF
+EOF
+
+RUN fmt bundled.json --check STDIN /dev/null IN . INTO checked.txt EXPECTING 0
+
+COMPARE checked.txt AGAINST silent.txt

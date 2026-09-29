@@ -170,6 +170,9 @@ under `components/schemas` or the `schema` of a parameter, request body, or
 response) is linted, and every warning reports its location from the root of
 the description.
 
+With `--format/-m`, the whole description is formatted, not only the Schema
+Objects the rules ran against.
+
 Examples
 --------
 

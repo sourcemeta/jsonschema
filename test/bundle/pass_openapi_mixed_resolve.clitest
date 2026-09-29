@@ -99,8 +99,8 @@ WRITE expected.txt UNTIL EOF
 1>     },
 1>     "schemas": {
 1>       "withid": {
-1>         "$id": "https://example.com/withid",
 1>         "$schema": "https://json-schema.org/draft/2020-12/schema",
+1>         "$id": "https://example.com/withid",
 1>         "type": "string"
 1>       }
 1>     }
