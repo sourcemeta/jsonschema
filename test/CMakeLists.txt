@@ -156,11 +156,13 @@ add_jsonschema_test(format/pass_check_json_color_always_verbose)
 add_jsonschema_test(format/pass_openapi)
 add_jsonschema_test(format/pass_openapi_check)
 add_jsonschema_test(format/fail_openapi_check)
+add_jsonschema_test(format/fail_openapi_check_json)
 add_jsonschema_test(format/pass_openapi_stdin)
 add_jsonschema_test(format/pass_openapi_yaml)
 add_jsonschema_test(format/pass_openapi_keep_ordering)
 add_jsonschema_test(format/pass_openapi_version_not_a_string)
 add_jsonschema_test(format/fail_openapi_version)
+add_jsonschema_test(format/fail_openapi_version_stdin)
 
 # Validate
 add_jsonschema_test(validate/fail_instance_enoent)

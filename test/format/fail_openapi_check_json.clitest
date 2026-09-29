@@ -1,0 +1,83 @@
+WRITE openapi.json UNTIL EOF
+{
+  "paths": {},
+  "info": {
+    "version": "1.0.0",
+    "title": "Example"
+  },
+  "openapi": "3.1.1"
+}
+EOF
+
+// Validation failure
+RUN fmt openapi.json --check --json STDIN /dev/null IN . INTO result.txt EXPECTING 2
+
+REPLACE $CWD WITH '[CWD]' IN result.txt
+
+WRITE expected.txt UNTIL EOF
+1> {
+1>   "valid": false,
+1>   "errors": [
+1>     {
+1>       "path": "[CWD]/openapi.json",
+1>       "diff": [
+1>         {
+1>           "type": "equal",
+1>           "lines": [ "{" ]
+1>         },
+1>         {
+1>           "type": "delete",
+1>           "lines": [ "  \"paths\": {}," ]
+1>         },
+1>         {
+1>           "type": "insert",
+1>           "lines": [ "  \"openapi\": \"3.1.1\"," ]
+1>         },
+1>         {
+1>           "type": "equal",
+1>           "lines": [ "  \"info\": {" ]
+1>         },
+1>         {
+1>           "type": "delete",
+1>           "lines": [ "    \"version\": \"1.0.0\",", "    \"title\": \"Example\"" ]
+1>         },
+1>         {
+1>           "type": "insert",
+1>           "lines": [ "    \"title\": \"Example\",", "    \"version\": \"1.0.0\"" ]
+1>         },
+1>         {
+1>           "type": "equal",
+1>           "lines": [ "  }," ]
+1>         },
+1>         {
+1>           "type": "delete",
+1>           "lines": [ "  \"openapi\": \"3.1.1\"" ]
+1>         },
+1>         {
+1>           "type": "insert",
+1>           "lines": [ "  \"paths\": {}" ]
+1>         },
+1>         {
+1>           "type": "equal",
+1>           "lines": [ "}" ]
+1>         }
+1>       ]
+1>     }
+1>   ]
+1> }
+EOF
+
+COMPARE result.txt AGAINST expected.txt
+
+WRITE expected_file_0.txt UNTIL EOF
+{
+  "paths": {},
+  "info": {
+    "version": "1.0.0",
+    "title": "Example"
+  },
+  "openapi": "3.1.1"
+}
+EOF
+
+COMPARE openapi.json AGAINST expected_file_0.txt
