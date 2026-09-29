@@ -1,0 +1,89 @@
+// A finite chain of locally supplied schemas must import no matter the order
+// the arguments come in, even when neither file can be read end to end before
+// the other. The orphan schema is described by the custom meta-schema, while
+// that meta-schema describes itself under 2020-12 yet embeds a resource that
+// the orphan describes in turn. Both orders import from the files the user
+// supplied alone, and the schema that comes out of it goes on to constrain
+// the instance. With `--http` enabled, the runs resolve without any network
+// round trip, so the outcome does not depend on network state.
+
+ENV SOURCEMETA_CORE_CURL_SO $CWD/does-not-exist.so
+
+WRITE schema.json UNTIL EOF
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$ref": "https://example.com/orphan"
+}
+EOF
+
+WRITE orphan.json UNTIL EOF
+{
+  "$schema": "https://example.com/target-meta",
+  "$id": "https://example.com/orphan",
+  "type": "string"
+}
+EOF
+
+WRITE target.json UNTIL EOF
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.com/target-meta",
+  "$vocabulary": {
+    "https://json-schema.org/draft/2020-12/vocab/core": true,
+    "https://json-schema.org/draft/2020-12/vocab/applicator": true,
+    "https://json-schema.org/draft/2020-12/vocab/validation": true
+  },
+  "$defs": {
+    "inner": {
+      "$schema": "https://example.com/orphan",
+      "$id": "https://example.com/inner"
+    }
+  }
+}
+EOF
+
+WRITE instance.json UNTIL EOF
+"hello"
+EOF
+
+WRITE number.json UNTIL EOF
+42
+EOF
+
+RUN validate schema.json instance.json --http --resolve orphan.json --resolve target.json --verbose STDIN /dev/null IN . INTO result_0.txt EXPECTING 0
+
+WRITE expected_0.txt UNTIL EOF
+2> ok: instance.json
+2>
+2> 1 validated, 1 passed, 0 failed
+EOF
+
+COMPARE result_0.txt AGAINST expected_0.txt
+
+RUN validate schema.json instance.json --http --resolve target.json --resolve orphan.json --verbose STDIN /dev/null IN . INTO result_1.txt EXPECTING 0
+
+WRITE expected_1.txt UNTIL EOF
+2> ok: instance.json
+2>
+2> 1 validated, 1 passed, 0 failed
+EOF
+
+COMPARE result_1.txt AGAINST expected_1.txt
+
+// Validation failure
+RUN validate schema.json number.json --http --resolve orphan.json --resolve target.json STDIN /dev/null IN . INTO result_2.txt EXPECTING 2
+
+WRITE expected_2.txt UNTIL EOF
+2> fail: number.json
+2> error: Schema validation failure
+2>   The value was expected to be of type string but it was of type integer
+2>     at instance location "" (line 1, column 1)
+2>     at evaluate path "/$ref/type"
+2>   The integer value was expected to validate against the referenced schema
+2>     at instance location "" (line 1, column 1)
+2>     at evaluate path "/$ref"
+2>
+2> 1 validated, 0 passed, 1 failed
+EOF
+
+COMPARE result_2.txt AGAINST expected_2.txt

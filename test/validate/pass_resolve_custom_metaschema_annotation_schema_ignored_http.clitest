@@ -1,0 +1,64 @@
+// Only what a `--resolve` input declares as a schema resource decides what
+// that input waits on. A `$schema` string sitting inside annotation data such
+// as `examples` belongs to the instance the keyword carries rather than to a
+// resource, so it must not make the file holding it wait on an input that was
+// never supplied. The meta-schema below carries an unknown identifier as a
+// `$schema` inside its `examples`, and the leaf schema it describes imports
+// in either argument order. With `--http` enabled, the runs resolve without
+// any network round trip, so the outcome does not depend on network state.
+
+ENV SOURCEMETA_CORE_CURL_SO $CWD/does-not-exist.so
+
+WRITE schema.json UNTIL EOF
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$ref": "https://example.com/leaf"
+}
+EOF
+
+WRITE meta-a.json UNTIL EOF
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.com/meta-a",
+  "$vocabulary": {
+    "https://json-schema.org/draft/2020-12/vocab/core": true,
+    "https://json-schema.org/draft/2020-12/vocab/applicator": true,
+    "https://json-schema.org/draft/2020-12/vocab/validation": true
+  },
+  "examples": [
+    { "$schema": "https://example.com/meta-b" }
+  ]
+}
+EOF
+
+WRITE leaf.json UNTIL EOF
+{
+  "$schema": "https://example.com/meta-a",
+  "$id": "https://example.com/leaf",
+  "type": "string"
+}
+EOF
+
+WRITE instance.json UNTIL EOF
+"hello"
+EOF
+
+RUN validate schema.json instance.json --http --resolve leaf.json --resolve meta-a.json --verbose STDIN /dev/null IN . INTO result_0.txt EXPECTING 0
+
+WRITE expected_0.txt UNTIL EOF
+2> ok: instance.json
+2>
+2> 1 validated, 1 passed, 0 failed
+EOF
+
+COMPARE result_0.txt AGAINST expected_0.txt
+
+RUN validate schema.json instance.json --http --resolve meta-a.json --resolve leaf.json --verbose STDIN /dev/null IN . INTO result_1.txt EXPECTING 0
+
+WRITE expected_1.txt UNTIL EOF
+2> ok: instance.json
+2>
+2> 1 validated, 1 passed, 0 failed
+EOF
+
+COMPARE result_1.txt AGAINST expected_1.txt

@@ -474,21 +474,24 @@ public:
       // be another one of the schemas that the user is importing. Rather than
       // forcing the user to declare their files in dependency order, keep
       // retrying the ones that cannot resolve yet for as long as every pass
-      // manages to import at least one more schema. Keep remote fetching
-      // disabled while the locally provided schemas can make progress, so
-      // that a schema imported before the local file that declares its
-      // meta-schema resolves against that local file instead of triggering
-      // a network fetch for it
+      // either imports one more schema or stages one more root. Keep remote
+      // fetching disabled while the locally provided schemas can make
+      // progress, so that a schema imported before the local file that
+      // declares its meta-schema resolves against that local file instead of
+      // triggering a network fetch for it
       const auto allow_remote{this->remote_};
 
       this->remote_ = false;
       while (!pending.empty()) {
         std::vector<std::size_t> deferred;
         std::exception_ptr failure;
+        bool progressed{false};
 
         for (const auto index : pending) {
           try {
-            this->import_entry(entries[index], default_dialect);
+            this->import_entry(entries[index], default_dialect,
+                               ImportMode::Complete);
+            progressed = true;
           } catch (const sourcemeta::core::FileError<
                    sourcemeta::core::SchemaResolutionError> &) {
             if (!failure) {
@@ -500,6 +503,10 @@ public:
                    "imported: "
                 << entries[index].first << "\n";
             deferred.push_back(index);
+
+            if (this->stage_entry_root(entries[index], default_dialect)) {
+              progressed = true;
+            }
           }
         }
 
@@ -508,7 +515,7 @@ public:
         // never retried. Note that when several entries remain stuck, the
         // one we report might be waiting on another stuck entry rather than
         // on the schema that is genuinely missing
-        if (deferred.size() == pending.size()) {
+        if (!progressed) {
           // Before giving up, let the remaining entries try their remote
           // fallback when the user enabled it
           if (allow_remote && !this->remote_) {
@@ -548,7 +555,8 @@ public:
         }
 
         try {
-          this->add(schema, dependency_path, default_dialect);
+          this->add(ImportMode::Complete, schema, dependency_path,
+                    default_dialect);
         } catch (...) {
           continue;
         }
@@ -571,7 +579,13 @@ public:
   auto operator=(CustomResolver &&) -> CustomResolver & = delete;
   ~CustomResolver() = default;
 
-  auto add(const sourcemeta::core::JSON &schema,
+  // How much of a file an import is allowed to read. Reading it end to end is
+  // what vets it, so that is what every import aims for. Staging settles for
+  // the resource the file declares at its root, which only asks for the root's
+  // own dialect chain to terminate in something already known
+  enum class ImportMode : std::uint8_t { Complete, Root };
+
+  auto add(const ImportMode mode, const sourcemeta::core::JSON &schema,
            const std::filesystem::path &origin,
            const std::string_view default_dialect = "",
            const std::string_view default_id = "",
@@ -580,10 +594,12 @@ public:
     assert(schema.is_object() || schema.is_boolean());
 
     // Framing the whole document is what vets it, from the vocabularies every
-    // resource declares to the anchors it collides on, so the analysis stays
-    // as wide as the file. What gets registered does not
+    // resource declares to the anchors it collides on, so a complete import
+    // keeps the analysis as wide as the file. What gets registered does not
     const sourcemeta::core::SchemaFrame frame{
-        sourcemeta::core::SchemaFrame::Mode::References,
+        mode == ImportMode::Complete
+            ? sourcemeta::core::SchemaFrame::Mode::References
+            : sourcemeta::core::SchemaFrame::Mode::Root,
         schema,
         sourcemeta::core::schema_walker,
         std::ref(*this),
@@ -828,8 +844,32 @@ private:
     }
   }
 
+  // A file that cannot be read end to end yet may still declare a root
+  // resource whose own dialect chain terminates in something already known.
+  // Registering that root alone lets the files waiting on it be read in full
+  // on a later pass, which is what turns a finite chain of locally supplied
+  // schemas into a resolvable one no matter the order the arguments come in.
+  // Report whether this got anywhere, as a pass that stages nothing new is a
+  // pass that cannot be followed by a better one
+  auto stage_entry_root(const InputJSON &entry,
+                        const std::string_view default_dialect) -> bool {
+    const auto before{this->schemas_.size()};
+    LOG_DEBUG(this->options_)
+        << "Staging the root schema resource of file: " << entry.first << "\n";
+
+    try {
+      this->import_entry(entry, default_dialect, ImportMode::Root);
+    } catch (const sourcemeta::core::FileError<
+             sourcemeta::core::SchemaResolutionError> &) {
+      return false;
+    }
+
+    return this->schemas_.size() > before;
+  }
+
   auto import_entry(const InputJSON &entry,
-                    const std::string_view default_dialect) -> void {
+                    const std::string_view default_dialect,
+                    const ImportMode mode) -> void {
     // What a description holds is the business of the OpenAPI resolver, and
     // framing it as a schema would both fail and register nonsense. Only a
     // revision we can read is taken, as one we cannot is no more a description
@@ -840,8 +880,10 @@ private:
       return;
     }
 
-    LOG_DEBUG(this->options_)
-        << "Detecting schema resources from file: " << entry.first << "\n";
+    if (mode == ImportMode::Complete) {
+      LOG_DEBUG(this->options_)
+          << "Detecting schema resources from file: " << entry.first << "\n";
+    }
 
     if (!entry.second.is_object() && !entry.second.is_boolean()) {
       throw sourcemeta::core::FileError<sourcemeta::core::SchemaError>(
@@ -851,14 +893,16 @@ private:
 
     try {
       const auto result =
-          this->add(entry.second, entry.resolution_base, default_dialect,
+          this->add(mode, entry.second, entry.resolution_base, default_dialect,
                     sourcemeta::jsonschema::default_id(entry),
                     [this](const auto &identifier) {
                       LOG_DEBUG(this->options_)
                           << "Importing schema into the resolution context: "
                           << identifier << "\n";
                     });
-      if (!result) {
+      // Staging a root is only ever half of an import, so a file that
+      // declares nothing is worth reporting once the complete read says so
+      if (!result && mode == ImportMode::Complete) {
         LOG_WARNING() << "No schema resources were imported from this file\n"
                       << "  at " << entry.first << "\n"
                       << "Are you sure this schema sets any identifiers?\n";
