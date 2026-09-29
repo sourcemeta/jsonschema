@@ -32,6 +32,10 @@ if(NOT SLJIT_FOUND)
   endif()
 
   if(SOURCEMETA_COMPILER_MSVC)
+    # Every entry point of this library opens by guarding on the error state of
+    # the compiler structure through a macro whose body is a loop that runs
+    # once, which some versions of this compiler read as a constant condition
+    target_compile_options(sljit PRIVATE /wd4127)
     target_compile_options(sljit PRIVATE /wd4701)
   endif()
 
