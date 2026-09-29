@@ -87,3 +87,32 @@ WRITE expected_2.txt UNTIL EOF
 EOF
 
 COMPARE result_2.txt AGAINST expected_2.txt
+
+// Validation failure
+RUN validate schema.json number.json --http --resolve orphan.json --resolve target.json --json STDIN /dev/null IN . INTO result_3.txt EXPECTING 2
+
+REPLACE $CWD_URI WITH '[CWD_URI]' IN result_3.txt
+
+WRITE expected_3.txt UNTIL EOF
+1> {
+1>   "valid": false,
+1>   "errors": [
+1>     {
+1>       "keywordLocation": "/$ref/type",
+1>       "absoluteKeywordLocation": "https://example.com/orphan#/type",
+1>       "instanceLocation": "",
+1>       "instancePosition": [ 1, 1, 1, 2 ],
+1>       "error": "The value was expected to be of type string but it was of type integer"
+1>     },
+1>     {
+1>       "keywordLocation": "/$ref",
+1>       "absoluteKeywordLocation": "[CWD_URI]/schema.json#/$ref",
+1>       "instanceLocation": "",
+1>       "instancePosition": [ 1, 1, 1, 2 ],
+1>       "error": "The integer value was expected to validate against the referenced schema"
+1>     }
+1>   ]
+1> }
+EOF
+
+COMPARE result_3.txt AGAINST expected_3.txt
