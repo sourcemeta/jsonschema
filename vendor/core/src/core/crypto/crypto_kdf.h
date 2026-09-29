@@ -4,7 +4,6 @@
 #include <cstddef>     // std::size_t
 #include <cstdint>     // std::uint8_t
 #include <string_view> // std::string_view
-#include <utility>     // std::unreachable
 
 namespace sourcemeta::core {
 
@@ -19,10 +18,10 @@ inline auto kdf_digest_bytes(const KDFHash hash) noexcept -> std::size_t {
     case KDFHash::SHA384:
       return 48;
     case KDFHash::SHA512:
-      return 64;
+      break;
   }
 
-  std::unreachable();
+  return 64;
 }
 
 // The widest digest any of the above produces, so a caller can hold one on the

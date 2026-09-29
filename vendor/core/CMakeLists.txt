@@ -184,6 +184,7 @@ if(SOURCEMETA_CORE_CRYPTO)
 endif()
 
 if(SOURCEMETA_CORE_REGEX)
+  find_package(SLJIT REQUIRED)
   find_package(PCRE2 REQUIRED)
   add_subdirectory(src/core/regex)
 endif()

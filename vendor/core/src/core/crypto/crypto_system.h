@@ -14,7 +14,7 @@
 #include <optional>    // std::optional, std::nullopt
 #include <string>      // std::string
 #include <string_view> // std::string_view
-#include <utility>     // std::pair, std::unreachable
+#include <utility>     // std::pair
 
 namespace sourcemeta::core {
 
@@ -46,10 +46,10 @@ inline auto curve_bit_length(const EllipticCurve curve) noexcept
     case EllipticCurve::P384:
       return 384;
     case EllipticCurve::P521:
-      return 521;
+      break;
   }
 
-  std::unreachable();
+  return 521;
 }
 
 // Identify a curve from its field width, the inverse of the mapping from a
@@ -76,10 +76,10 @@ inline auto eddsa_signature_bytes(const EdwardsCurve curve) noexcept
     case EdwardsCurve::Ed25519:
       return 64;
     case EdwardsCurve::Ed448:
-      return 114;
+      break;
   }
 
-  std::unreachable();
+  return 114;
 }
 
 // Read the modulus and public exponent from a PKCS#1 RSAPublicKey structure

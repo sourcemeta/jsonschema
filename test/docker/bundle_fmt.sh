@@ -29,7 +29,7 @@ cat << 'EOF' > "$TMP/expected.json"
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://example.com",
-  "$ref": "nested",
+  "$ref": "https://example.com/nested",
   "$defs": {
     "https://example.com/nested": {
       "$schema": "https://json-schema.org/draft/2020-12/schema",

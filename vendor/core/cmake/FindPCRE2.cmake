@@ -93,6 +93,12 @@ if(NOT PCRE2_FOUND)
   add_library(pcre2 OBJECT ${PCRE2_SOURCES})
   sourcemeta_add_default_options(PRIVATE pcre2)
 
+  # The code generator that the just-in-time compiler drives is a dependency
+  # of its own, which the caller is expected to have satisfied by now
+  # Public, as the translation unit that drives the code generator has to see
+  # the configuration it was built with to agree on its structure layouts
+  target_link_libraries(pcre2 PUBLIC SLJIT::sljit)
+
   if(SOURCEMETA_COMPILER_LLVM OR SOURCEMETA_COMPILER_GCC)
     target_compile_options(pcre2 PRIVATE -Wno-implicit-int-conversion)
     target_compile_options(pcre2 PRIVATE -Wno-sign-conversion)
@@ -126,8 +132,6 @@ if(NOT PCRE2_FOUND)
   target_compile_definitions(pcre2 PUBLIC PCRE2_CODE_UNIT_WIDTH=8)
   target_compile_definitions(pcre2 PRIVATE SUPPORT_PCRE2_8=1)
   target_compile_definitions(pcre2 PRIVATE SUPPORT_UNICODE=1)
-  # The just-in-time compiler brings its own code generator in as part of one
-  # of its translation units, so there is no second library to build for it
   target_compile_definitions(pcre2 PRIVATE SUPPORT_JIT=1)
   # Declarations of an import from a shared library of our own build of this
   # one, which no longer exists, would be unresolvable on Windows

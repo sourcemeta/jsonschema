@@ -578,6 +578,12 @@ public:
     const auto key_hash{this->hash(key)};
     const auto suffix_hash{this->hash(suffix)};
 
+    // The suffix can precede the key, so inserting on the first sight of it
+    // would add a second entry under a key the object already holds. The whole
+    // object is scanned for the key instead, remembering where the suffix sat,
+    // which keeps this to the single pass the caller pays for either way
+    auto insertion_point{this->data_.end()};
+
     if (this->HASHER.is_perfect(key_hash)) {
       for (auto iterator = this->data_.begin(); iterator != this->data_.end();
            ++iterator) {
@@ -586,9 +592,9 @@ public:
           iterator->second = value;
           return key_hash;
         }
-        if (iterator->hash == suffix_hash && iterator->first == suffix) {
-          this->data_.insert(iterator, {key, value, key_hash});
-          return key_hash;
+        if (insertion_point == this->data_.end() &&
+            iterator->hash == suffix_hash && iterator->first == suffix) {
+          insertion_point = iterator;
         }
       }
     } else {
@@ -598,14 +604,14 @@ public:
           iterator->second = value;
           return key_hash;
         }
-        if (iterator->hash == suffix_hash && iterator->first == suffix) {
-          this->data_.insert(iterator, {key, value, key_hash});
-          return key_hash;
+        if (insertion_point == this->data_.end() &&
+            iterator->hash == suffix_hash && iterator->first == suffix) {
+          insertion_point = iterator;
         }
       }
     }
 
-    this->data_.push_back({key, value, key_hash});
+    this->data_.insert(insertion_point, {key, value, key_hash});
     return key_hash;
   }
 

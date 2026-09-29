@@ -462,7 +462,7 @@ inline auto openapi_check_security_requirement(const JSON &value,
     // declared in the Security Schemes under the Components Object". This
     // Object declares no pattern but its names, so a member called `x-` is a
     // scheme name and is held to the same requirement
-    if (!walk.security_schemes.contains(entry.first)) {
+    if (!walk.security_schemes.contains(entry.first, entry.hash)) {
       openapi_check_security_scheme_name(
           entry.first, openapi_child(base, entry.first), walk);
     }

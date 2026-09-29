@@ -20,7 +20,7 @@
 #include <span>        // std::span
 #include <string>      // std::string
 #include <string_view> // std::string_view
-#include <utility>     // std::move, std::unreachable
+#include <utility>     // std::move, std::pair
 
 namespace sourcemeta::core {
 namespace {
@@ -46,11 +46,11 @@ auto digest_info_prefix(const SignatureHashFunction hash) -> std::string_view {
       return {reinterpret_cast<const char *>(DIGEST_INFO_SHA384.data()),
               DIGEST_INFO_SHA384.size()};
     case SignatureHashFunction::SHA512:
-      return {reinterpret_cast<const char *>(DIGEST_INFO_SHA512.data()),
-              DIGEST_INFO_SHA512.size()};
+      break;
   }
 
-  std::unreachable();
+  return {reinterpret_cast<const char *>(DIGEST_INFO_SHA512.data()),
+          DIGEST_INFO_SHA512.size()};
 }
 
 // EMSA-PKCS1-v1_5 encoding (RFC 8017 Section 9.2)
@@ -143,10 +143,10 @@ auto to_curve_parameters(const EllipticCurve curve) -> EllipticCurveParameters {
     case EllipticCurve::P384:
       return curve_p384();
     case EllipticCurve::P521:
-      return curve_p521();
+      break;
   }
 
-  std::unreachable();
+  return curve_p521();
 }
 
 struct HashSizes {
@@ -161,10 +161,10 @@ auto hash_sizes(const SignatureHashFunction hash) -> HashSizes {
     case SignatureHashFunction::SHA384:
       return {.block_bytes = 128, .output_bytes = 48};
     case SignatureHashFunction::SHA512:
-      return {.block_bytes = 128, .output_bytes = 64};
+      break;
   }
 
-  std::unreachable();
+  return {.block_bytes = 128, .output_bytes = 64};
 }
 
 // HMAC (RFC 2104) keyed on the signature hash function, the primitive that the
@@ -606,34 +606,32 @@ auto make_private_key(const std::string_view pem) -> std::optional<PrivateKey> {
                                    .coordinate_x = std::move(point.first),
                                    .coordinate_y = std::move(point.second)}};
     }
-    case PKCS8KeyKind::Edwards: {
-      const auto seed{der_read(parsed->key)};
-      if (!seed.has_value() || seed->tag != 0x04 ||
-          seed->content.size() !=
-              eddsa_public_key_bytes(parsed->edwards_curve)) {
-        return std::nullopt;
-      }
-
-      return PrivateKey{
-          new PrivateKey::Internal{.kind = PrivateKey::Type::Edwards,
-                                   .modulus = {},
-                                   .public_exponent = {},
-                                   .private_exponent = {},
-                                   .prime1 = {},
-                                   .prime2 = {},
-                                   .exponent1 = {},
-                                   .exponent2 = {},
-                                   .coefficient = {},
-                                   .scalar = {},
-                                   .elliptic_curve = {},
-                                   .edwards_seed = std::string{seed->content},
-                                   .edwards_curve = parsed->edwards_curve,
-                                   .coordinate_x = {},
-                                   .coordinate_y = {}}};
-    }
+    case PKCS8KeyKind::Edwards:
+      break;
   }
 
-  std::unreachable();
+  const auto seed{der_read(parsed->key)};
+  if (!seed.has_value() || seed->tag != 0x04 ||
+      seed->content.size() != eddsa_public_key_bytes(parsed->edwards_curve)) {
+    return std::nullopt;
+  }
+
+  return PrivateKey{
+      new PrivateKey::Internal{.kind = PrivateKey::Type::Edwards,
+                               .modulus = {},
+                               .public_exponent = {},
+                               .private_exponent = {},
+                               .prime1 = {},
+                               .prime2 = {},
+                               .exponent1 = {},
+                               .exponent2 = {},
+                               .coefficient = {},
+                               .scalar = {},
+                               .elliptic_curve = {},
+                               .edwards_seed = std::string{seed->content},
+                               .edwards_curve = parsed->edwards_curve,
+                               .coordinate_x = {},
+                               .coordinate_y = {}}};
 }
 
 auto make_ec_private_key(const EllipticCurve curve,
@@ -818,10 +816,10 @@ auto eddsa_sign(const PrivateKey &key, const std::string_view message)
     case EdwardsCurve::Ed25519:
       return edwards25519_sign(internal->edwards_seed, message);
     case EdwardsCurve::Ed448:
-      return edwards448_sign(internal->edwards_seed, message);
+      break;
   }
 
-  std::unreachable();
+  return edwards448_sign(internal->edwards_seed, message);
 }
 
 auto derive_public_key(const PrivateKey &key) -> std::optional<PublicKey> {
@@ -843,19 +841,18 @@ auto derive_public_key(const PrivateKey &key) -> std::optional<PublicKey> {
 
       return make_ec_public_key(internal->elliptic_curve,
                                 internal->coordinate_x, internal->coordinate_y);
-    case PrivateKey::Type::Edwards: {
-      const auto point{internal->edwards_curve == EdwardsCurve::Ed25519
-                           ? edwards25519_public_key(internal->edwards_seed)
-                           : edwards448_public_key(internal->edwards_seed)};
-      if (!point.has_value()) {
-        return std::nullopt;
-      }
-
-      return make_eddsa_public_key(internal->edwards_curve, point.value());
-    }
+    case PrivateKey::Type::Edwards:
+      break;
   }
 
-  std::unreachable();
+  const auto point{internal->edwards_curve == EdwardsCurve::Ed25519
+                       ? edwards25519_public_key(internal->edwards_seed)
+                       : edwards448_public_key(internal->edwards_seed)};
+  if (!point.has_value()) {
+    return std::nullopt;
+  }
+
+  return make_eddsa_public_key(internal->edwards_curve, point.value());
 }
 
 } // namespace sourcemeta::core

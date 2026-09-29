@@ -9,7 +9,7 @@
 #include <optional>    // std::optional, std::nullopt
 #include <string>      // std::string
 #include <string_view> // std::string_view
-#include <utility>     // std::move, std::unreachable
+#include <utility>     // std::move
 
 namespace sourcemeta::core {
 
@@ -58,25 +58,20 @@ auto authentication_tag(const std::size_t tag_length,
   message.append(iv);
   message.append(ciphertext);
   message.append(length_block);
-  switch (tag_length) {
-    case 16: {
-      const auto digest{hmac_sha256_digest(mac_key, message)};
-      return std::string{reinterpret_cast<const char *>(digest.data()),
-                         tag_length};
-    }
-    case 24: {
-      const auto digest{hmac_sha384_digest(mac_key, message)};
-      return std::string{reinterpret_cast<const char *>(digest.data()),
-                         tag_length};
-    }
-    case 32: {
-      const auto digest{hmac_sha512_digest(mac_key, message)};
-      return std::string{reinterpret_cast<const char *>(digest.data()),
-                         tag_length};
-    }
-    default:
-      std::unreachable();
+  if (tag_length == 16) {
+    const auto digest{hmac_sha256_digest(mac_key, message)};
+    return std::string{reinterpret_cast<const char *>(digest.data()),
+                       tag_length};
   }
+
+  if (tag_length == 24) {
+    const auto digest{hmac_sha384_digest(mac_key, message)};
+    return std::string{reinterpret_cast<const char *>(digest.data()),
+                       tag_length};
+  }
+
+  const auto digest{hmac_sha512_digest(mac_key, message)};
+  return std::string{reinterpret_cast<const char *>(digest.data()), tag_length};
 }
 } // namespace
 

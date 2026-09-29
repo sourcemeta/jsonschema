@@ -22,9 +22,6 @@ auto is_localhost_host(const std::string_view host) -> bool {
 
 auto append_raw_segment(std::optional<std::string> &path,
                         const std::string_view segment) -> void {
-  if (segment.empty()) {
-    return;
-  }
   if (!path.has_value()) {
     path = std::string{segment};
     return;
@@ -114,10 +111,18 @@ auto URI::from_path(const std::filesystem::path &path) -> URI {
   URI result{"file://"};
   auto iterator = final_path.begin();
 
-  // For UNC paths, the first segment is the hostname
-  if (is_unc) {
+  // For UNC paths, the first segment is the hostname, which a root made of
+  // nothing but separators does not have
+  if (is_unc && iterator != final_path.end()) {
     result.host_ = iterator->string();
     std::advance(iterator, 1);
+  }
+
+  // A path made of nothing but separators is the root itself, and the strip
+  // above leaves no segment for the loop to walk. RFC 8089 spells the root as
+  // an empty authority followed by "/", so it is set here rather than lost
+  if (normalized.empty()) {
+    result.path_ = "/";
   }
 
   // Process remaining path segments

@@ -15,7 +15,7 @@ RUN bundle - --resolve remote.yaml STDIN input.yaml IN . INTO result.txt EXPECTI
 WRITE expected.txt UNTIL EOF
 1> $schema: https://json-schema.org/draft/2020-12/schema
 1> $id: https://example.com
-1> $ref: nested
+1> $ref: https://example.com/nested
 1> $defs:
 1>   https://example.com/nested:
 1>     $schema: https://json-schema.org/draft/2020-12/schema

@@ -54,11 +54,11 @@ WRITE expected_schema.json UNTIL EOF
       "properties": {
         "id": {
           "description": "The response identifier",
-          "$ref": "./identifier"
+          "$ref": "https://schemas.sourcemeta.com/sourcemeta/std/v0/jsonrpc/v2.0/identifier"
         },
         "error": {
           "description": "The error object",
-          "$ref": "./error"
+          "$ref": "https://schemas.sourcemeta.com/sourcemeta/std/v0/jsonrpc/v2.0/error"
         },
         "jsonrpc": {
           "description": "The protocol version",
@@ -75,7 +75,7 @@ WRITE expected_schema.json UNTIL EOF
       "properties": {
         "id": {
           "description": "The response identifier",
-          "$ref": "./identifier"
+          "$ref": "https://schemas.sourcemeta.com/sourcemeta/std/v0/jsonrpc/v2.0/identifier"
         },
         "error": {
           "description": "Must not be included",
@@ -145,7 +145,7 @@ WRITE expected_schema.json UNTIL EOF
       "x-links": [ "https://www.jsonrpc.org/specification#error_object" ],
       "anyOf": [
         {
-          "$ref": "./code-predefined"
+          "$ref": "https://schemas.sourcemeta.com/sourcemeta/std/v0/jsonrpc/v2.0/code-predefined"
         },
         {
           "type": "integer"
@@ -181,7 +181,7 @@ WRITE expected_schema.json UNTIL EOF
       "properties": {
         "code": {
           "description": "The error type",
-          "$ref": "./code"
+          "$ref": "https://schemas.sourcemeta.com/sourcemeta/std/v0/jsonrpc/v2.0/code"
         },
         "data": {
           "description": "Additional error information"

@@ -13,12 +13,16 @@
 #include <sourcemeta/core/openapi_error.h>
 // NOLINTEND(misc-include-cleaner)
 
+#include <concepts>    // std::invocable, std::predicate
+#include <cstddef>     // std::size_t
 #include <cstdint>     // std::uint8_t, std::uint64_t
-#include <functional>  // std::function
+#include <functional>  // std::function, std::less
 #include <limits>      // std::numeric_limits
+#include <map>         // std::map
 #include <memory>      // std::unique_ptr
 #include <optional>    // std::optional, std::nullopt
 #include <string_view> // std::string_view
+#include <vector>      // std::vector
 
 /// @defgroup openapi OpenAPI
 /// @brief A growing implementation of the OpenAPI Specification.
@@ -146,6 +150,206 @@ struct OpenAPIInfo {
 /// is built where it is read.
 class SOURCEMETA_CORE_OPENAPI_EXPORT OpenAPIFrame {
 public:
+  /// What kind of Object an OpenAPI Description holds at a given position. For
+  /// a position a reference names, this is what it expects to find at the far
+  /// end of itself, which is fixed by where the reference sits rather than by
+  /// anything the target says about itself. OpenAPI Specification 3.1.1,
+  /// Section 4.3.1 calls this "the expected type of the reference", and it is
+  /// what the place a reference lands on is held to
+  enum class ObjectKind : std::uint8_t {
+    /// A whole OpenAPI Description, which is what the root of the document
+    /// framed is recorded as
+    Document,
+    // The eleven a reference may expect to find, the last of them only from 3.2
+    // onwards, which is where a `content` map and the Components Object both
+    // learn to hold a Reference Object in place of a Media Type Object
+    /// A Path Item Object, which describes the operations available on one path
+    PathItem,
+    /// A Parameter Object, which describes one parameter of an operation
+    Parameter,
+    /// A Request Body Object, which describes the body an operation takes
+    RequestBody,
+    /// A Response Object, which describes one response of an operation
+    Response,
+    /// An Example Object, which pairs an example value with its metadata
+    Example,
+    /// A Header Object, which describes one header of a response or an encoding
+    Header,
+    /// A Link Object, which names a design time relationship to an operation
+    Link,
+    /// A Callback Object, which maps runtime expressions to out of band
+    /// requests
+    Callbacks,
+    /// A Security Scheme Object, which describes one way of authenticating
+    SecurityScheme,
+    /// A Media Type Object, which describes one representation of a body
+    MediaType,
+    // The rest are never referenced, but every Object gets a location
+    /// An Info Object, which carries the metadata about the API
+    Info,
+    /// A Contact Object, which names who to reach about the API
+    Contact,
+    /// A License Object, which names the license the API is offered under
+    License,
+    /// A Server Object, which names a host the API is served from
+    Server,
+    /// A Server Variable Object, which describes one substitution a server URL
+    /// template takes
+    ServerVariable,
+    /// A Components Object, which holds the Objects a description reuses
+    Components,
+    /// A Paths Object, which maps path templates to what describes them
+    Paths,
+    /// An Operation Object, which describes one operation on a path
+    Operation,
+    /// An External Documentation Object, which points at documentation held
+    /// elsewhere
+    ExternalDocumentation,
+    /// An Encoding Object, which describes how one property of a body is
+    /// serialised
+    Encoding,
+    /// A Responses Object, which maps status codes to what describes them
+    Responses,
+    /// A Tag Object, which adds metadata to a tag that the operations name
+    Tag,
+    /// A Reference Object, which stands in for another Object
+    Reference,
+    /// A Schema Object, whose contents are JSON Schema's to make sense of
+    /// rather than this specification's
+    Schema,
+    /// An OAuth Flows Object, which holds the flows an OAuth scheme supports
+    OAuthFlows,
+    /// An OAuth Flow Object, which describes one flow a scheme supports
+    OAuthFlow,
+    /// A Security Requirement Object, which names the schemes that apply
+    SecurityRequirement
+  };
+
+  /// How an Operation Object is reached from the entry document. OpenAPI
+  /// Specification 3.1.1, Section 4.3.3: "only the entry document's Paths
+  /// Object contributes URLs to the described API", so what an operation is
+  /// reached through is a property of the route to it rather than of where it
+  /// is defined
+  enum class OperationKind : std::uint8_t {
+    /// Reached through the Paths Object of the entry document
+    Path,
+    /// Reached through the webhooks that the entry document declares
+    Webhook,
+    /// Reached through a Callback Object that an operation declares
+    Callback
+  };
+
+  /// Where an Object that stands in for another leads. OpenAPI Specification
+  /// 3.1.1 has a Reference Object and a Path Item Object each declare at most
+  /// one `$ref`, and a Schema Object's `$ref` never reaches here, so this is a
+  /// field of the Object that makes it rather than a table of its own
+  struct Reference {
+    /// The value as the document wrote it
+    JSON::String original;
+    /// Where it points, resolved against the base and canonicalised. The
+    /// document it names and the fragment it carries are that string either
+    /// side of its `#`, so neither is repeated here
+    JSON::String destination;
+    /// Whether that destination is nowhere the frame holds, which is what makes
+    /// a description one that has to be made whole before it describes anything
+    bool dangling{false};
+    /// What the position that spells it expects to find at the far end, which
+    /// OpenAPI Specification 3.1.1, Section 4.3.1 fixes by where the reference
+    /// sits rather than by anything the target says about itself
+    ObjectKind expected{ObjectKind::Document};
+    /// Where the member that spells it sits, which is the one place a rewrite
+    /// of this reference has to write to
+    Pointer origin;
+  };
+
+  /// One operation of the described API, which is what an endpoint and the Path
+  /// Item it reaches come to between them
+  struct Operation {
+    /// How the entry document exposes it
+    OperationKind kind;
+    /// The path template, the webhook name, or the runtime expression that
+    /// exposes it, according to how it is reached
+    JSON::String path;
+    /// The method it answers to, as the field that declares it is spelled
+    JSON::String method;
+    /// Where the Operation Object sits
+    JSON::String origin;
+    /// Where the Path Item Object that exposes it sits, which is the position
+    /// that gives it a URL rather than the one that defines it. The two differ
+    /// whenever a reference stands between them
+    JSON::String endpoint;
+    /// Where the Operation Object that a Callback Object hangs off sits, with
+    /// no value for an operation the Paths Object or the webhooks exposes.
+    /// Section 4.8.10 has a Callback Object be "a map of possible out-of band
+    /// callbacks related to the parent operation", and what the expression it
+    /// is keyed by evaluates against is that Object's request, so one Callback
+    /// Object two Operation Objects reach describes one callback for each of
+    /// them
+    std::optional<JSON::String> parent{std::nullopt};
+    /// Where the Server Objects in force sit, empty when nothing declares any,
+    /// in which case Section 4.8.1 puts a single Server Object with a `url` of
+    /// `/` in their place
+    std::vector<JSON::String> servers;
+    /// Where the Security Requirement Objects in force sit
+    std::vector<JSON::String> security;
+    /// Where the Parameter Objects in force sit, which is what the Path Item
+    /// Object declares once anything the Operation Object overrides is taken
+    /// out, followed by what the Operation Object declares itself
+    std::vector<JSON::String> parameters;
+    /// Where the Tag Object each of its tags names sits, in the order the
+    /// operation wrote them, with no value where the entry document declares no
+    /// tag by that name. Section 4.8.1 permits exactly that: "Not all tags that
+    /// are used by the Operation Object must be declared"
+    std::vector<std::optional<JSON::String>> tags;
+  };
+
+  /// Where a Discriminator Object names a schema, by the name of a component or
+  /// by URI. OpenAPI Specification 3.1.1, Section 4.3 lists the URI form of a
+  /// `mapping` among the fields that connect the documents of a description,
+  /// and Section 4.3.3 lists the name form among the connections it makes by
+  /// name, so either way one of these is a place the description reaches for
+  struct Discriminator {
+    /// Where the mapping value sits, as a pointer from the root of the document
+    Pointer origin;
+    /// Where it points, resolved and canonicalised
+    JSON::String destination;
+    /// What it resolved against, which is the nearest identifier an enclosing
+    /// schema declares for the URI form, and the description itself for the
+    /// name form
+    JSON::String scope;
+  };
+
+  /// Where an Object sits in a description, and what the frame knows
+  /// about it
+  struct Location {
+    /// What kind of Object sits here
+    ObjectKind type;
+    /// Where in the document it sits, as a pointer from the root
+    Pointer pointer;
+    /// Set on the root of a document and on every Schema Object position it
+    /// holds, empty elsewhere: the default `$schema` in force there, resolved
+    /// against the base. A
+    /// Schema Object that declares its own overrides it, which is a matter for
+    /// whatever reads inside one
+    JSON::String dialect;
+    /// Set on a Schema Object position alone, empty elsewhere: the base its
+    /// document keys every
+    /// location by, which is what a relative reference inside that schema
+    /// resolves against until an `$id` says otherwise. RFC 3986 Section 5.1.1
+    /// makes an `$id` the higher precedence source, so this is a default in the
+    /// same way the dialect above is
+    JSON::String base;
+  };
+
+  /// The Objects a frame holds, keyed by the URI addressing each one.
+  /// Comparison is transparent so that a lookup may take a view of a URI
+  /// without building a string of it
+  using Locations = std::map<JSON::String, Location, std::less<>>;
+
+  /// The references a frame holds, keyed by the URI of the Object that makes
+  /// each one
+  using References = std::map<JSON::String, Reference, std::less<>>;
+
   /// Frame an OpenAPI Description from a given document. That document must
   /// outlive the frame, as the metadata it reports borrows from it. The given
   /// base need not, as the frame canonicalises it into a string of its own
@@ -327,11 +531,275 @@ public:
   /// ```
   [[nodiscard]] auto schemas() const noexcept -> const SchemaFrame &;
 
-  /// Export the frame as JSON. This is the complete state of the frame, and
-  /// for now its only window. It asks the resolver the frame kept, so a
-  /// meta-schema that has gone out of reach since throws
-  /// sourcemeta::core::SchemaResolutionError here rather than at construction.
+  /// Every Object the description holds, keyed by the URI addressing each one
+  [[nodiscard]] auto locations() const noexcept -> const Locations &;
+
+  /// Every reference the description makes, keyed by the URI of the Object that
+  /// makes it rather than by its `$ref` member, so that where a reference comes
+  /// from is a location like any other
+  [[nodiscard]] auto references() const noexcept -> const References &;
+
+  /// Every scheme a Security Requirement Object names by the URI of one, which
+  /// OpenAPI Specification 3.2.1 admits alongside the name of a component.
+  /// These are kept apart from the references above because a single such
+  /// Object may name several, while every other way of naming an Object is
+  /// written down where the Object that makes it sits
+  [[nodiscard]] auto security_references() const noexcept -> const References &;
+
+  /// Every operation the described API exposes
+  [[nodiscard]] auto operations() const noexcept
+      -> const std::vector<Operation> &;
+
+  /// Every URI a Discriminator Object names, which is a reference the schemas
+  /// hold rather than one the shell around them does
+  [[nodiscard]] auto discriminators() const noexcept
+      -> const std::vector<Discriminator> &;
+
+  /// Iterate over every Object the description holds, along with the URI the
+  /// frame keys it by. For example:
+  ///
+  /// ```cpp
+  /// #include <sourcemeta/core/json.h>
+  /// #include <sourcemeta/core/openapi.h>
+  /// #include <iostream>
+  ///
+  /// const auto document{sourcemeta::core::parse_json(R"({
+  ///   "openapi": "3.1.1",
+  ///   "info": { "title": "Example", "version": "1.0.0" },
+  ///   "paths": {}
+  /// })")};
+  ///
+  /// const sourcemeta::core::OpenAPIFrame frame{
+  ///     document, sourcemeta::core::schema_walker,
+  ///     sourcemeta::core::schema_resolver};
+  ///
+  /// frame.for_each_object([](const auto &uri, const auto &location) {
+  ///   if (location.type ==
+  ///       sourcemeta::core::OpenAPIFrame::ObjectKind::Schema) {
+  ///     std::cout << "a schema at " << uri << "\n";
+  ///   }
+  /// });
+  /// ```
+  template <std::invocable<const JSON::String &, const Location &> F>
+  auto for_each_object(const F &callback) const -> void {
+    for (const auto &entry : this->locations()) {
+      callback(entry.first, entry.second);
+    }
+  }
+
+  /// Check whether any Object the description holds satisfies the predicate.
   /// For example:
+  ///
+  /// ```cpp
+  /// #include <sourcemeta/core/json.h>
+  /// #include <sourcemeta/core/openapi.h>
+  /// #include <cassert>
+  ///
+  /// const auto document{sourcemeta::core::parse_json(R"({
+  ///   "openapi": "3.1.1",
+  ///   "info": { "title": "Example", "version": "1.0.0" },
+  ///   "paths": {}
+  /// })")};
+  ///
+  /// const sourcemeta::core::OpenAPIFrame frame{
+  ///     document, sourcemeta::core::schema_walker,
+  ///     sourcemeta::core::schema_resolver};
+  ///
+  /// assert(frame.any_object([](const auto &, const auto &location) {
+  ///   return location.type ==
+  ///     sourcemeta::core::OpenAPIFrame::ObjectKind::Paths;
+  /// }));
+  /// ```
+  template <std::predicate<const JSON::String &, const Location &> F>
+  [[nodiscard]] auto any_object(const F &predicate) const -> bool {
+    for (const auto &entry : this->locations()) {
+      if (predicate(entry.first, entry.second)) {
+        return true;
+      }
+    }
+
+    return false;
+  }
+
+  /// Iterate over every reference the description makes, along with the URI of
+  /// the Object that makes it. For example:
+  ///
+  /// ```cpp
+  /// #include <sourcemeta/core/json.h>
+  /// #include <sourcemeta/core/openapi.h>
+  /// #include <iostream>
+  ///
+  /// const auto document{sourcemeta::core::parse_json(R"({
+  ///   "openapi": "3.1.1",
+  ///   "info": { "title": "Example", "version": "1.0.0" },
+  ///   "paths": { "/users": { "$ref": "#/components/pathItems/Users" } },
+  ///   "components": { "pathItems": { "Users": {} } }
+  /// })")};
+  ///
+  /// const sourcemeta::core::OpenAPIFrame frame{
+  ///     document, sourcemeta::core::schema_walker,
+  ///     sourcemeta::core::schema_resolver};
+  ///
+  /// frame.for_each_reference([](const auto &origin, const auto &reference) {
+  ///   std::cout << origin << " -> " << reference.destination << "\n";
+  /// });
+  /// ```
+  template <std::invocable<const JSON::String &, const Reference &> F>
+  auto for_each_reference(const F &callback) const -> void {
+    for (const auto &entry : this->references()) {
+      callback(entry.first, entry.second);
+    }
+  }
+
+  /// Iterate over every scheme a Security Requirement Object names by the URI
+  /// of one, along with the URI of the Object that names it. For example:
+  ///
+  /// ```cpp
+  /// #include <sourcemeta/core/json.h>
+  /// #include <sourcemeta/core/openapi.h>
+  /// #include <iostream>
+  ///
+  /// const auto document{sourcemeta::core::parse_json(R"({
+  ///   "openapi": "3.1.1",
+  ///   "info": { "title": "Example", "version": "1.0.0" },
+  ///   "paths": {}
+  /// })")};
+  ///
+  /// const sourcemeta::core::OpenAPIFrame frame{
+  ///     document, sourcemeta::core::schema_walker,
+  ///     sourcemeta::core::schema_resolver};
+  ///
+  /// frame.for_each_security_reference(
+  ///     [](const auto &origin, const auto &reference) {
+  ///       std::cout << origin << " -> " << reference.destination << "\n";
+  ///     });
+  /// ```
+  template <std::invocable<const JSON::String &, const Reference &> F>
+  auto for_each_security_reference(const F &callback) const -> void {
+    for (const auto &entry : this->security_references()) {
+      callback(entry.first, entry.second);
+    }
+  }
+
+  /// Iterate over every operation the described API exposes. For example:
+  ///
+  /// ```cpp
+  /// #include <sourcemeta/core/json.h>
+  /// #include <sourcemeta/core/openapi.h>
+  /// #include <iostream>
+  ///
+  /// const auto document{sourcemeta::core::parse_json(R"({
+  ///   "openapi": "3.1.1",
+  ///   "info": { "title": "Example", "version": "1.0.0" },
+  ///   "paths": { "/users": { "get": { "responses": {
+  ///     "200": { "description": "Some users" } } } } }
+  /// })")};
+  ///
+  /// const sourcemeta::core::OpenAPIFrame frame{
+  ///     document, sourcemeta::core::schema_walker,
+  ///     sourcemeta::core::schema_resolver};
+  ///
+  /// frame.for_each_operation([](const auto &operation) {
+  ///   std::cout << operation.method << " " << operation.path << "\n";
+  /// });
+  /// ```
+  template <std::invocable<const Operation &> F>
+  auto for_each_operation(const F &callback) const -> void {
+    for (const auto &operation : this->operations()) {
+      callback(operation);
+    }
+  }
+
+  /// Iterate over every URI a Discriminator Object names. For example:
+  ///
+  /// ```cpp
+  /// #include <sourcemeta/core/json.h>
+  /// #include <sourcemeta/core/openapi.h>
+  /// #include <iostream>
+  ///
+  /// const auto document{sourcemeta::core::parse_json(R"({
+  ///   "openapi": "3.1.1",
+  ///   "info": { "title": "Example", "version": "1.0.0" },
+  ///   "paths": {}
+  /// })")};
+  ///
+  /// const sourcemeta::core::OpenAPIFrame frame{
+  ///     document, sourcemeta::core::schema_walker,
+  ///     sourcemeta::core::schema_resolver};
+  ///
+  /// frame.for_each_discriminator([](const auto &discriminator) {
+  ///   std::cout << discriminator.destination << "\n";
+  /// });
+  /// ```
+  template <std::invocable<const Discriminator &> F>
+  auto for_each_discriminator(const F &callback) const -> void {
+    for (const auto &discriminator : this->discriminators()) {
+      callback(discriminator);
+    }
+  }
+
+  /// The Object a URI names, or nothing when the frame holds none. This is what
+  /// turns the destination of a reference into the Object it lands on, as every
+  /// destination is one of the URIs this frame addresses its Objects by. For
+  /// example:
+  ///
+  /// ```cpp
+  /// #include <sourcemeta/core/json.h>
+  /// #include <sourcemeta/core/openapi.h>
+  /// #include <cassert>
+  ///
+  /// const auto document{sourcemeta::core::parse_json(R"({
+  ///   "openapi": "3.1.1",
+  ///   "info": { "title": "Example", "version": "1.0.0" },
+  ///   "paths": {}
+  /// })")};
+  ///
+  /// const sourcemeta::core::OpenAPIFrame frame{
+  ///     document, sourcemeta::core::schema_walker,
+  ///     sourcemeta::core::schema_resolver,
+  ///     "https://example.com/openapi.json"};
+  ///
+  /// assert(frame.traverse("https://example.com/openapi.json#/info")->type ==
+  ///        sourcemeta::core::OpenAPIFrame::ObjectKind::Info);
+  /// ```
+  [[nodiscard]] auto traverse(const JSON::StringView uri) const
+      -> const Location *;
+
+  /// The URI this frame addresses the given position by, which is the inverse
+  /// of traversal. For example:
+  ///
+  /// ```cpp
+  /// #include <sourcemeta/core/json.h>
+  /// #include <sourcemeta/core/openapi.h>
+  /// #include <cassert>
+  ///
+  /// const auto document{sourcemeta::core::parse_json(R"({
+  ///   "openapi": "3.1.1",
+  ///   "info": { "title": "Example", "version": "1.0.0" },
+  ///   "paths": {}
+  /// })")};
+  ///
+  /// const sourcemeta::core::OpenAPIFrame frame{
+  ///     document, sourcemeta::core::schema_walker,
+  ///     sourcemeta::core::schema_resolver,
+  ///     "https://example.com/openapi.json"};
+  ///
+  /// assert(frame.uri(sourcemeta::core::Pointer{"info"}) ==
+  ///        "https://example.com/openapi.json#/info");
+  /// ```
+  [[nodiscard]] auto uri(const Pointer &pointer) const -> JSON::String;
+
+  /// How many Objects the description holds
+  [[nodiscard]] auto object_count() const noexcept -> std::size_t;
+
+  /// How many references the description makes, not counting what a Security
+  /// Requirement Object names by the URI of a scheme
+  [[nodiscard]] auto reference_count() const noexcept -> std::size_t;
+
+  /// Export the frame as JSON. This is the complete state of the frame. It asks
+  /// the resolver the frame kept, so a meta-schema that has gone out of reach
+  /// since throws sourcemeta::core::SchemaResolutionError here rather than at
+  /// construction. For example:
   ///
   /// ```cpp
   /// #include <sourcemeta/core/json.h>
@@ -397,6 +865,36 @@ using OpenAPIResolverResult = OwnedOrReference<JSON>;
 /// }
 /// ```
 using OpenAPIResolver = std::function<OpenAPIResolverResult(std::string_view)>;
+
+/// @ingroup openapi
+///
+/// This function reorders an OpenAPI Description in place, following an
+/// opinionated OpenAPI aware order, and hands every Schema Object it holds to
+/// the JSON Schema formatter. Note that doing so invalidates the given frame,
+/// as the locations it holds point into the document. For example:
+///
+/// ```cpp
+/// #include <sourcemeta/core/json.h>
+/// #include <sourcemeta/core/jsonschema.h>
+/// #include <sourcemeta/core/openapi.h>
+///
+/// #include <iostream>
+///
+/// auto document = sourcemeta::core::parse_json(R"JSON({
+///   "info": { "version": "1.0.0", "title": "Example" },
+///   "paths": {},
+///   "openapi": "3.1.1"
+/// })JSON");
+///
+/// const sourcemeta::core::OpenAPIFrame frame{
+///     document, sourcemeta::core::schema_walker,
+///     sourcemeta::core::schema_resolver};
+///
+/// sourcemeta::core::openapi_format(document, frame);
+/// sourcemeta::core::prettify(document, std::cout);
+/// ```
+SOURCEMETA_CORE_OPENAPI_EXPORT
+auto openapi_format(JSON &document, const OpenAPIFrame &frame) -> void;
 
 /// @ingroup openapi
 /// Everything bundling takes beyond the document and how to reach the rest

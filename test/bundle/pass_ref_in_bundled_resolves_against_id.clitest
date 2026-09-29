@@ -41,7 +41,7 @@ WRITE expected.txt UNTIL EOF
 1>     "https://example.com/schemas/parent": {
 1>       "$schema": "https://json-schema.org/draft/2020-12/schema",
 1>       "$id": "https://example.com/schemas/parent",
-1>       "$ref": "./child"
+1>       "$ref": "https://example.com/schemas/child"
 1>     }
 1>   }
 1> }

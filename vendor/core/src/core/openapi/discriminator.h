@@ -21,22 +21,6 @@ constexpr auto OPENAPI_HASH_DEFAULT_MAPPING{
     JSON::Object::hash("defaultMapping"sv)};
 constexpr auto OPENAPI_HASH_PROPERTY_NAME{JSON::Object::hash("propertyName"sv)};
 
-/// Where a Discriminator Object names a schema, by the name of a component or
-/// by URI. OpenAPI Specification 3.1.1, Section 4.3 lists the URI form of a
-/// `mapping` among the fields that connect the documents of a description, and
-/// Section 4.3.3 lists the name form among the connections it makes by name,
-/// so either way one of these is a place the description reaches for
-struct OpenAPIDiscriminator {
-  /// Where the mapping value sits, as a pointer from the root of the document
-  Pointer origin;
-  /// Where it points, resolved and canonicalised
-  JSON::String destination;
-  /// What it resolved against, which is the nearest identifier an enclosing
-  /// schema declares for the URI form, and the description itself for the
-  /// name form
-  JSON::String scope;
-};
-
 // OpenAPI Specification 3.1.1, Section 4.8.25: a `mapping` entry "maps a
 // specific property value to either a different schema component name, or to a
 // schema identified by a URI". Only the latter is a reference, as Section
