@@ -137,6 +137,21 @@ auto report_check_failure(const std::string &current,
   }
 }
 
+auto formatted_copy(const sourcemeta::core::JSON &document,
+                    const sourcemeta::core::SchemaResolver &resolver,
+                    const std::string_view dialect,
+                    const std::string_view openapi_base, const bool is_openapi)
+    -> sourcemeta::core::JSON {
+  auto copy{document};
+  if (is_openapi) {
+    sourcemeta::jsonschema::format_openapi(copy, resolver, openapi_base);
+  } else {
+    sourcemeta::jsonschema::format_schema(copy, resolver, dialect);
+  }
+
+  return copy;
+}
+
 } // namespace
 
 auto sourcemeta::jsonschema::fmt(const sourcemeta::core::Options &options)
@@ -152,11 +167,21 @@ auto sourcemeta::jsonschema::fmt(const sourcemeta::core::Options &options)
     const auto configuration_path{find_configuration(options, current_path)};
     const auto &configuration{
         read_configuration(options, configuration_path, current_path)};
-    const auto display_path{stdin_path()};
 
     std::string raw_stdin;
     const auto parsed{read_from_stdin(&raw_stdin, InputFormatting::Preserve)};
     const auto &document{parsed.document};
+
+    // An OpenAPI description is not a schema, so what it goes by wherever we
+    // report on it is an identity of its own rather than the one a schema from
+    // the same place would take
+    const auto display_path{is_openapi_document(document) ? openapi_stdin_path()
+                                                          : stdin_path()};
+    reject_unsupported_openapi(document, display_path);
+    const auto is_openapi{
+        sourcemeta::core::openapi_version(document).has_value()};
+    const auto openapi_base{openapi_default_id(current_path, true)};
+
     const auto dialect{default_dialect(options, configuration)};
     const auto is_test_document =
         dialect.empty() && looks_like_test_document(document);
@@ -177,11 +202,10 @@ auto sourcemeta::jsonschema::fmt(const sourcemeta::core::Options &options)
           sourcemeta::jsonschema::write_schema(document, expected, indentation,
                                                parsed.roundtrip);
         } else {
-          auto copy = document;
-          sourcemeta::jsonschema::format_schema(copy, custom_resolver,
-                                                effective_dialect);
-          sourcemeta::jsonschema::write_schema(copy, expected, indentation,
-                                               parsed.roundtrip);
+          sourcemeta::jsonschema::write_schema(
+              formatted_copy(document, custom_resolver, effective_dialect,
+                             openapi_base, is_openapi),
+              expected, indentation, parsed.roundtrip);
         }
 
         if (raw_stdin == expected.str()) {
@@ -199,13 +223,23 @@ auto sourcemeta::jsonschema::fmt(const sourcemeta::core::Options &options)
           sourcemeta::jsonschema::write_schema(document, std::cout, indentation,
                                                parsed.roundtrip);
         } else {
-          auto copy = document;
-          sourcemeta::jsonschema::format_schema(copy, custom_resolver,
-                                                effective_dialect);
-          sourcemeta::jsonschema::write_schema(copy, std::cout, indentation,
-                                               parsed.roundtrip);
+          sourcemeta::jsonschema::write_schema(
+              formatted_copy(document, custom_resolver, effective_dialect,
+                             openapi_base, is_openapi),
+              std::cout, indentation, parsed.roundtrip);
         }
       }
+    } catch (const sourcemeta::core::OpenAPIError &error) {
+      const auto position{parsed.positions.get(error.location())};
+      if (position.has_value()) {
+        throw PositionError<
+            sourcemeta::core::FileError<sourcemeta::core::OpenAPIError>>(
+            std::get<0>(position.value()), std::get<1>(position.value()),
+            display_path, error);
+      }
+
+      throw sourcemeta::core::FileError<sourcemeta::core::OpenAPIError>(
+          display_path, error);
     } catch (const sourcemeta::core::SchemaKeywordError &error) {
       throw sourcemeta::core::FileError<sourcemeta::core::SchemaKeywordError>(
           display_path, error);
@@ -251,6 +285,10 @@ auto sourcemeta::jsonschema::fmt(const sourcemeta::core::Options &options)
       throw NotSchemaError{entry.resolution_base};
     }
 
+    reject_unsupported_openapi(entry.second, entry.resolution_base);
+    const auto is_openapi{
+        sourcemeta::core::openapi_version(entry.second).has_value()};
+
     if (options.contains("check")) {
       LOG_VERBOSE(options) << "Checking: " << entry.first << "\n";
     } else {
@@ -278,11 +316,10 @@ auto sourcemeta::jsonschema::fmt(const sourcemeta::core::Options &options)
         sourcemeta::jsonschema::write_schema(entry.second, expected,
                                              indentation, entry.roundtrip);
       } else {
-        auto copy = entry.second;
-        sourcemeta::jsonschema::format_schema(copy, custom_resolver,
-                                              effective_dialect);
-        sourcemeta::jsonschema::write_schema(copy, expected, indentation,
-                                             entry.roundtrip);
+        sourcemeta::jsonschema::write_schema(
+            formatted_copy(entry.second, custom_resolver, effective_dialect,
+                           openapi_default_id(entry), is_openapi),
+            expected, indentation, entry.roundtrip);
       }
 
       const auto current{
@@ -305,6 +342,17 @@ auto sourcemeta::jsonschema::fmt(const sourcemeta::core::Options &options)
                                               expected.str());
         }
       }
+    } catch (const sourcemeta::core::OpenAPIError &error) {
+      const auto position{entry.positions.get(error.location())};
+      if (position.has_value()) {
+        throw PositionError<
+            sourcemeta::core::FileError<sourcemeta::core::OpenAPIError>>(
+            std::get<0>(position.value()), std::get<1>(position.value()),
+            entry.resolution_base, error);
+      }
+
+      throw sourcemeta::core::FileError<sourcemeta::core::OpenAPIError>(
+          entry.resolution_base, error);
     } catch (const sourcemeta::core::SchemaKeywordError &error) {
       throw sourcemeta::core::FileError<sourcemeta::core::SchemaKeywordError>(
           entry.resolution_base, error);

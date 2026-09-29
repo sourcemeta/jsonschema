@@ -1,0 +1,18 @@
+WRITE input.json UNTIL EOF
+{"paths":{},"info":{"version":"1.0.0","title":"Example"},"openapi":"3.1.1"}
+EOF
+
+RUN fmt - STDIN input.json IN . INTO result.txt EXPECTING 0
+
+WRITE expected.txt UNTIL EOF
+1> {
+1>   "openapi": "3.1.1",
+1>   "info": {
+1>     "title": "Example",
+1>     "version": "1.0.0"
+1>   },
+1>   "paths": {}
+1> }
+EOF
+
+COMPARE result.txt AGAINST expected.txt

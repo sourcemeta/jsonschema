@@ -220,6 +220,19 @@ apply_openapi(const sourcemeta::blaze::SchemaTransformer &bundle,
       sourcemeta::core::JSON::String{EXCLUDE_KEYWORD});
 }
 
+static auto format_document(sourcemeta::core::JSON &document,
+                            const sourcemeta::jsonschema::InputJSON &entry,
+                            const sourcemeta::core::SchemaResolver &resolver,
+                            const std::string_view dialect,
+                            const bool is_openapi) -> void {
+  if (is_openapi) {
+    sourcemeta::jsonschema::format_openapi(
+        document, resolver, sourcemeta::jsonschema::openapi_default_id(entry));
+  } else {
+    sourcemeta::jsonschema::format_schema(document, resolver, dialect);
+  }
+}
+
 static auto load_rule(sourcemeta::blaze::SchemaTransformer &bundle,
                       std::unordered_set<std::string> &rule_names,
                       const std::filesystem::path &rule_path,
@@ -489,10 +502,6 @@ auto sourcemeta::jsonschema::lint(const sourcemeta::core::Options &options)
 
       const auto is_openapi{
           sourcemeta::core::openapi_version(entry.second).has_value()};
-      if (is_openapi && format_output) {
-        throw sourcemeta::core::FileError<UnsupportedOpenAPIFormatError>(
-            entry.resolution_base);
-      }
 
       auto copy = entry.second;
       bool printed_progress{false};
@@ -677,8 +686,8 @@ auto sourcemeta::jsonschema::lint(const sourcemeta::core::Options &options)
         if (entry.from_stdin) {
           if (format_output) {
             if (!keep_ordering) {
-              sourcemeta::jsonschema::format_schema(copy, custom_resolver,
-                                                    dialect);
+              format_document(copy, entry, custom_resolver, dialect,
+                              is_openapi);
             }
           }
 
@@ -686,8 +695,7 @@ auto sourcemeta::jsonschema::lint(const sourcemeta::core::Options &options)
                                                entry.roundtrip);
         } else if (format_output) {
           if (!keep_ordering) {
-            sourcemeta::jsonschema::format_schema(copy, custom_resolver,
-                                                  dialect);
+            format_document(copy, entry, custom_resolver, dialect, is_openapi);
           }
 
           std::ostringstream expected;

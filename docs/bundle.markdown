@@ -62,6 +62,8 @@ as a schema, and bundles it as one: every other document the description spans
 is embedded into the Components Object, and every reference that reached one is
 rewritten to name where it landed. Any other revision, such as v3.0, is
 rejected rather than read as a schema.
+The result is ordered exactly as
+[`jsonschema fmt`](./format.markdown) would order it.
 
 Use `--resolve/-r` for the other documents of the description exactly as you
 would for schemas.

@@ -60,11 +60,11 @@ WRITE expected.txt UNTIL EOF
 1>   },
 1>   "components": {
 1>     "responses": {
-1>       "Middle": {
-1>         "$ref": "#/components/responses/Last"
-1>       },
 1>       "Last": {
 1>         "description": "All good"
+1>       },
+1>       "Middle": {
+1>         "$ref": "#/components/responses/Last"
 1>       }
 1>     }
 1>   }

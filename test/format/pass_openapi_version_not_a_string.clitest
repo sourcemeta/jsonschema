@@ -1,0 +1,26 @@
+WRITE schema.json UNTIL EOF
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "openapi": 3,
+  "type": "string",
+  "title": "Test"
+}
+EOF
+
+RUN fmt schema.json STDIN /dev/null IN . INTO result.txt EXPECTING 0
+
+WRITE expected.txt UNTIL EOF
+EOF
+
+COMPARE result.txt AGAINST expected.txt
+
+WRITE expected_file_0.txt UNTIL EOF
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Test",
+  "type": "string",
+  "openapi": 3
+}
+EOF
+
+COMPARE schema.json AGAINST expected_file_0.txt

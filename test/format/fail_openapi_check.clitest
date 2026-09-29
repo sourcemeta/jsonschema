@@ -1,0 +1,51 @@
+WRITE openapi.json UNTIL EOF
+{
+  "paths": {},
+  "info": {
+    "version": "1.0.0",
+    "title": "Example"
+  },
+  "openapi": "3.1.1"
+}
+EOF
+
+// Validation failure
+RUN fmt openapi.json --check STDIN /dev/null IN . INTO result.txt EXPECTING 2
+
+REPLACE $CWD WITH '[CWD]' IN result.txt
+
+WRITE expected.txt UNTIL EOF
+2> fail: [CWD]/openapi.json
+2> --- current
+2> +++ expected
+2> @@ -1,8 +1,8 @@
+2>  {
+2> -  "paths": {},
+2> +  "openapi": "3.1.1",
+2>    "info": {
+2> -    "version": "1.0.0",
+2> -    "title": "Example"
+2> +    "title": "Example",
+2> +    "version": "1.0.0"
+2>    },
+2> -  "openapi": "3.1.1"
+2> +  "paths": {}
+2>  }
+2>
+2> Run the `fmt` command without `--check/-c` to fix the formatting
+EOF
+
+COMPARE result.txt AGAINST expected.txt
+
+WRITE expected_file_0.txt UNTIL EOF
+{
+  "paths": {},
+  "info": {
+    "version": "1.0.0",
+    "title": "Example"
+  },
+  "openapi": "3.1.1"
+}
+EOF
+
+COMPARE openapi.json AGAINST expected_file_0.txt

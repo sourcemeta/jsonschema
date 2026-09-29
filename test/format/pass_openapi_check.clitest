@@ -1,0 +1,26 @@
+WRITE openapi.json UNTIL EOF
+{
+  "openapi": "3.1.1",
+  "info": {
+    "title": "Example",
+    "version": "1.0.0"
+  },
+  "paths": {},
+  "components": {
+    "schemas": {
+      "Pet": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "title": "Pet",
+        "type": "string"
+      }
+    }
+  }
+}
+EOF
+
+RUN fmt openapi.json --check STDIN /dev/null IN . INTO result.txt EXPECTING 0
+
+WRITE expected.txt UNTIL EOF
+EOF
+
+COMPARE result.txt AGAINST expected.txt
