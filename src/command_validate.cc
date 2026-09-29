@@ -448,6 +448,7 @@ auto sourcemeta::jsonschema::validate(const sourcemeta::core::Options &options)
     }
   } else {
     bool proceed{true};
+    std::size_t empty_datasets{0};
     for (auto argument{instance_arguments.cbegin()};
          argument != instance_arguments.cend(); ++argument) {
       const auto &instance_path_view{*argument};
@@ -476,7 +477,9 @@ auto sourcemeta::jsonschema::validate(const sourcemeta::core::Options &options)
           instance_path.string().ends_with(".jsonl.gz") ||
           instance_path.extension() == ".yaml" ||
           instance_path.extension() == ".yml") {
-        const auto entries{for_each_json({instance_path_view}, options)};
+        const auto entries{for_each_json(
+            {instance_path_view}, options, InputRequirement::Optional,
+            InputFormatting::Discard, empty_datasets)};
         for (auto entry{entries.cbegin()}; entry != entries.cend(); ++entry) {
           if (!process_entry(*entry, evaluator, schema_template, benchmark,
                              benchmark_loop, trace, fast_mode, json_output,
@@ -572,6 +575,8 @@ auto sourcemeta::jsonschema::validate(const sourcemeta::core::Options &options)
       throw sourcemeta::core::FileError<NoInputFilesError>(
           std::filesystem::path{instance_arguments.front()});
     }
+
+    report_empty_datasets(empty_datasets);
   }
 
   if (!json_output && !trace && !benchmark) {

@@ -1,0 +1,70 @@
+WRITE schema.json UNTIL EOF
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "x-jsonld-type": "https://schema.org/Person",
+  "properties": {
+    "name": { "type": "string", "x-jsonld-id": "https://schema.org/name" }
+  }
+}
+EOF
+
+WRITE instances.jsonl UNTIL EOF
+{ "name": "Ada" }
+{ "name": 1 }
+{ "name": "Grace" }
+EOF
+
+COMPRESS GZIP instances.jsonl INTO instances.jsonl.gz
+
+// Validation failure
+RUN rdf schema.json instances.jsonl.gz STDIN /dev/null IN . INTO result_0.txt EXPECTING 2
+
+REPLACE $CWD WITH '[CWD]' IN result_0.txt
+
+WRITE expected_0.txt UNTIL EOF
+1> [{"@type":["https://schema.org/Person"],"https://schema.org/name":[{"@value":"Ada"}]}]
+2> fail: [CWD]/instances.jsonl.gz (entry #2)
+2>
+2> {
+2>   "name": 1
+2> }
+2>
+2> error: Schema validation failure
+2>   The value was expected to be of type string but it was of type integer
+2>     at instance location "/name"
+2>     at evaluate path "/properties/name/type"
+2>   The object value was expected to validate against the single defined property subschema
+2>     at instance location ""
+2>     at evaluate path "/properties"
+EOF
+
+COMPARE result_0.txt AGAINST expected_0.txt
+
+// Validation failure
+RUN rdf schema.json instances.jsonl.gz --json STDIN /dev/null IN . INTO result_1.txt EXPECTING 2
+
+REPLACE $CWD_URI WITH '[CWD_URI]' IN result_1.txt
+
+WRITE expected_1.txt UNTIL EOF
+1> [{"@type":["https://schema.org/Person"],"https://schema.org/name":[{"@value":"Ada"}]}]
+1> {
+1>   "valid": false,
+1>   "errors": [
+1>     {
+1>       "keywordLocation": "/properties/name/type",
+1>       "absoluteKeywordLocation": "[CWD_URI]/schema.json#/properties/name/type",
+1>       "instanceLocation": "/name",
+1>       "error": "The value was expected to be of type string but it was of type integer"
+1>     },
+1>     {
+1>       "keywordLocation": "/properties",
+1>       "absoluteKeywordLocation": "[CWD_URI]/schema.json#/properties",
+1>       "instanceLocation": "",
+1>       "error": "The object value was expected to validate against the single defined property subschema"
+1>     }
+1>   ]
+1> }
+EOF
+
+COMPARE result_1.txt AGAINST expected_1.txt

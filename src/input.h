@@ -438,7 +438,8 @@ inline auto
 handle_input_file(const std::filesystem::path &canonical,
                   std::vector<sourcemeta::jsonschema::InputJSON> &result,
                   const sourcemeta::core::Options &options,
-                  const InputFormatting formatting) -> void {
+                  const InputFormatting formatting, std::size_t &empty_datasets)
+    -> void {
   const auto canonical_string{canonical.generic_string()};
   if (canonical_string.ends_with(".jsonl.gz")) {
     LOG_VERBOSE(options) << "Interpreting input as GZIP-compressed JSONL: "
@@ -469,7 +470,7 @@ handle_input_file(const std::filesystem::path &canonical,
     }
 
     if (index == 0) {
-      LOG_WARNING() << "The JSONL file is empty\n";
+      empty_datasets += 1;
     }
   } else if (canonical.extension() == ".jsonl") {
     LOG_VERBOSE(options) << "Interpreting input as JSONL: " << canonical_string
@@ -494,7 +495,7 @@ handle_input_file(const std::filesystem::path &canonical,
     }
 
     if (index == 0) {
-      LOG_WARNING() << "The JSONL file is empty\n";
+      empty_datasets += 1;
     }
   } else if (canonical.extension() == ".yaml" ||
              canonical.extension() == ".yml") {
@@ -559,7 +560,8 @@ handle_json_entry(const std::filesystem::path &entry_path,
                   const std::set<std::string> &extensions,
                   std::vector<sourcemeta::jsonschema::InputJSON> &result,
                   const sourcemeta::core::Options &options,
-                  const InputFormatting formatting) -> void {
+                  const InputFormatting formatting, std::size_t &empty_datasets)
+    -> void {
   if (entry_path == "-") {
     auto documents{
         read_stdin_documents(sourcemeta::core::read_stdin(), formatting)};
@@ -613,7 +615,8 @@ handle_json_entry(const std::filesystem::path &entry_path,
           continue;
         }
 
-        handle_input_file(canonical, result, options, formatting);
+        handle_input_file(canonical, result, options, formatting,
+                          empty_datasets);
       }
     }
   } else {
@@ -623,7 +626,7 @@ handle_json_entry(const std::filesystem::path &entry_path,
                        return sourcemeta::core::is_under_path(canonical,
                                                               prefix);
                      })) {
-      handle_input_file(canonical, result, options, formatting);
+      handle_input_file(canonical, result, options, formatting, empty_datasets);
     }
   }
 }
@@ -641,7 +644,8 @@ check_no_duplicate_stdin(const std::vector<std::string_view> &arguments)
 inline auto for_each_json(const std::vector<std::string_view> &arguments,
                           const sourcemeta::core::Options &options,
                           const InputRequirement requirement,
-                          const InputFormatting formatting)
+                          const InputFormatting formatting,
+                          std::size_t &empty_datasets)
     -> std::vector<InputJSON> {
   check_no_duplicate_stdin(arguments);
 
@@ -678,7 +682,7 @@ inline auto for_each_json(const std::vector<std::string_view> &arguments,
     const auto extensions{parse_extensions(options, configuration)};
 
     handle_json_entry(scan_path, blacklist, extensions, result, options,
-                      formatting);
+                      formatting, empty_datasets);
     if (result.empty() && requirement == InputRequirement::NonEmpty) {
       throw sourcemeta::core::FileError<NoInputFilesError>(scan_path);
     }
@@ -723,7 +727,7 @@ inline auto for_each_json(const std::vector<std::string_view> &arguments,
       const auto &extensions{parse_extensions(options, entry_configuration)};
       const auto before{result.size()};
       handle_json_entry(entry, blacklist, extensions, result, options,
-                        formatting);
+                        formatting, empty_datasets);
       std::sort(
           result.begin() + static_cast<std::ptrdiff_t>(before), result.end(),
           [](const auto &left, const auto &right) { return left < right; });
@@ -733,6 +737,31 @@ inline auto for_each_json(const std::vector<std::string_view> &arguments,
       throw sourcemeta::core::FileError<NoInputFilesError>(
           std::filesystem::path{arguments.front()});
     }
+  }
+
+  return result;
+}
+
+// An empty dataset is only worth a word of its own when nothing else reports
+// it. A caller that requires input already fails with a missing input error
+// naming the very same file, while one that does not would otherwise go
+// through the motions in silence
+inline auto report_empty_datasets(const std::size_t empty_datasets) -> void {
+  for (std::size_t index = 0; index < empty_datasets; index++) {
+    LOG_WARNING() << "The JSONL file is empty\n";
+  }
+}
+
+inline auto for_each_json(const std::vector<std::string_view> &arguments,
+                          const sourcemeta::core::Options &options,
+                          const InputRequirement requirement,
+                          const InputFormatting formatting)
+    -> std::vector<InputJSON> {
+  std::size_t empty_datasets{0};
+  auto result{for_each_json(arguments, options, requirement, formatting,
+                            empty_datasets)};
+  if (!result.empty() || requirement != InputRequirement::NonEmpty) {
+    report_empty_datasets(empty_datasets);
   }
 
   return result;

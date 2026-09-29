@@ -1,0 +1,54 @@
+WRITE schema.json UNTIL EOF
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "email": {
+      "type": "string",
+      "x-jsonld-id": "https://schema.org/email",
+      "x-jsonld-self": "mailto"
+    }
+  }
+}
+EOF
+
+WRITE context.json UNTIL EOF
+{ "@context": { "mailto": "https://example.com/mailto#" } }
+EOF
+
+WRITE instances.jsonl UNTIL EOF
+{}
+{ "email": "ada@example.com" }
+EOF
+
+// Other input error
+RUN rdf schema.json instances.jsonl --compact context.json STDIN /dev/null IN . INTO result_0.txt EXPECTING 6
+
+REPLACE $CWD WITH '[CWD]' IN result_0.txt
+
+WRITE expected_0.txt UNTIL EOF
+1> {"@context":{"mailto":"https://example.com/mailto#"}}
+2> error: IRI confused with prefix
+2>   at file path [CWD]/instances.jsonl
+2>   at entry #2
+2>   at document location ""
+EOF
+
+COMPARE result_0.txt AGAINST expected_0.txt
+
+// Other input error
+RUN rdf schema.json instances.jsonl --compact context.json --json STDIN /dev/null IN . INTO result_1.txt EXPECTING 6
+
+REPLACE $CWD WITH '[CWD]' IN result_1.txt
+
+WRITE expected_1.txt UNTIL EOF
+1> {"@context":{"mailto":"https://example.com/mailto#"}}
+1> {
+1>   "error": "IRI confused with prefix",
+1>   "filePath": "[CWD]/instances.jsonl",
+1>   "entry": 2,
+1>   "location": ""
+1> }
+EOF
+
+COMPARE result_1.txt AGAINST expected_1.txt

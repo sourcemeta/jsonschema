@@ -147,16 +147,17 @@ WRITE expected.txt UNTIL EOF
 1>
 1>        Decode a JSON document or JSONL dataset using JSON BinPack.
 1>
-1>    rdf <schema.json|.yaml> <instance.json|.yaml> [--flatten/-l]
+1>    rdf <schema.json|.yaml> <instance.json|.jsonl|.jsonl.gz|.yaml> [--flatten/-l]
 1>        [--compact/-c <context.json|.yaml>] [--fast/-f] [--format-assertion/-F]
 1>        [--extension/-e <extension>] [--ignore/-i <schemas-or-directories>]
 1>
 1>        Validate an instance against a schema annotated with x-jsonld-*
 1>        keywords and, on success, print the instance promoted to expanded
 1>        JSON-LD (Linked Data). Use --flatten/-l and/or --compact/-c to
-1>        post-process the output. As in `validate`, schemas compile in
-1>        exhaustive mode by default. Pass --fast/-f to optimise for speed at
-1>        the expense of validation error quality.
+1>        post-process the output. Datasets are promoted entry by entry, as
+1>        JSONL. As in `validate`, schemas compile in exhaustive mode by
+1>        default. Pass --fast/-f to optimise for speed at the expense of
+1>        validation error quality.
 1>
 1>    install [<uri> <path>] [--force/-f] [--frozen/-z]
 1>

@@ -11,17 +11,19 @@ WRITE schema.json UNTIL EOF
 }
 EOF
 
-WRITE instance.jsonl UNTIL EOF
+WRITE empty.jsonl UNTIL EOF
 EOF
 
-// Other input error
-RUN validate schema.json instance.jsonl STDIN /dev/null IN . INTO result_0.txt EXPECTING 6
+WRITE instance.jsonl UNTIL EOF
+{ "foo": "first" }
+{ "foo": "second" }
+EOF
 
-REPLACE $CWD WITH '[CWD]' IN result_0.txt
+RUN validate schema.json empty.jsonl instance.jsonl STDIN /dev/null IN . INTO result_0.txt EXPECTING 0
 
 WRITE expected_0.txt UNTIL EOF
-2> error: No input files found
-2>   at file path [CWD]/instance.jsonl
+2> warning: The JSONL file is empty
+2> 2 validated, 2 passed, 0 failed
 EOF
 
 COMPARE result_0.txt AGAINST expected_0.txt
