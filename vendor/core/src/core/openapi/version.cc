@@ -2,6 +2,7 @@
 
 #include <optional>    // std::optional, std::nullopt
 #include <string_view> // std::string_view
+#include <utility>     // std::unreachable
 
 namespace {
 using namespace std::string_view_literals;
@@ -62,6 +63,21 @@ auto is_openapi_minor(const sourcemeta::core::JSON::StringView version,
 } // namespace
 
 namespace sourcemeta::core {
+
+auto openapi_version_name(const OpenAPIVersion version) noexcept
+    -> JSON::StringView {
+  switch (version) {
+    // OpenAPI Specification 3.1.1, Section 4.1: "The `major`.`minor` portion
+    // of the version string (for example `3.1`) SHALL designate the OAS
+    // feature set"
+    case OpenAPIVersion::OPENAPI_3_1:
+      return "3.1"sv;
+    case OpenAPIVersion::OPENAPI_3_2:
+      return "3.2"sv;
+  }
+
+  std::unreachable();
+}
 
 auto openapi_version(const JSON &document) -> std::optional<OpenAPIVersion> {
   if (!document.is_object()) {
