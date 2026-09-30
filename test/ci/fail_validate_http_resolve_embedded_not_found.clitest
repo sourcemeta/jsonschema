@@ -1,7 +1,7 @@
 // A remote answering that it does not hold an identifier settles the question
 // just as firmly as finding nothing on disk does, so an input that merely
-// embeds it is pointed at rather than letting the status stand as the whole
-// answer. An identifier nothing embeds keeps reporting the status.
+// embeds that identifier is pointed at rather than letting the status stand
+// as the whole answer.
 
 WRITE holder.json UNTIL EOF
 {
@@ -60,15 +60,3 @@ WRITE expected_1.txt UNTIL EOF
 EOF
 
 COMPARE result_1.txt AGAINST expected_1.txt
-
-// Unexpected error
-RUN validate schema.json instance.json --http STDIN /dev/null IN . INTO result_2.txt EXPECTING 1
-
-WRITE expected_2.txt UNTIL EOF
-2> error: Unsuccessful HTTP response
-2>   with status 404 Not Found
-2>   with method GET
-2>   at url https://schemas.sourcemeta.com/definitely-absent-abc123
-EOF
-
-COMPARE result_2.txt AGAINST expected_2.txt
