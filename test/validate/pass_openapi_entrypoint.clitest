@@ -1,0 +1,95 @@
+// A description holds many schemas and no root one, so which to validate
+// against is named with `--entrypoint/-p`. It may be spelled as a JSON
+// Pointer, as a fragment, or as the identifier a Schema Object declares, and
+// it may name a subschema or an anchor just as it may for a schema on its own.
+
+WRITE openapi.json UNTIL EOF
+{
+  "openapi": "3.1.1",
+  "info": { "title": "Example", "version": "1.0.0" },
+  "paths": {},
+  "components": {
+    "schemas": {
+      "Person": {
+        "$id": "https://example.com/person",
+        "type": "object",
+        "required": [ "name" ],
+        "properties": { "name": { "$anchor": "name", "type": "string" } }
+      }
+    }
+  }
+}
+EOF
+
+WRITE instance.json UNTIL EOF
+{ "name": "ok" }
+EOF
+
+WRITE text.json UNTIL EOF
+"hello"
+EOF
+
+RUN validate openapi.json instance.json --entrypoint /components/schemas/Person --verbose STDIN /dev/null IN . INTO result_0.txt EXPECTING 0
+
+WRITE expected_0.txt UNTIL EOF
+2> ok: instance.json
+2>
+2> 1 validated, 1 passed, 0 failed
+EOF
+
+COMPARE result_0.txt AGAINST expected_0.txt
+
+RUN validate openapi.json instance.json --entrypoint '#/components/schemas/Person' --verbose STDIN /dev/null IN . INTO result_1.txt EXPECTING 0
+
+WRITE expected_1.txt UNTIL EOF
+2> ok: instance.json
+2>
+2> 1 validated, 1 passed, 0 failed
+EOF
+
+COMPARE result_1.txt AGAINST expected_1.txt
+
+RUN validate openapi.json instance.json --entrypoint https://example.com/person --verbose STDIN /dev/null IN . INTO result_2.txt EXPECTING 0
+
+WRITE expected_2.txt UNTIL EOF
+2> ok: instance.json
+2>
+2> 1 validated, 1 passed, 0 failed
+EOF
+
+COMPARE result_2.txt AGAINST expected_2.txt
+
+RUN validate openapi.json text.json --entrypoint /components/schemas/Person/properties/name --verbose STDIN /dev/null IN . INTO result_3.txt EXPECTING 0
+
+WRITE expected_3.txt UNTIL EOF
+2> ok: text.json
+2>
+2> 1 validated, 1 passed, 0 failed
+EOF
+
+COMPARE result_3.txt AGAINST expected_3.txt
+
+RUN validate openapi.json text.json --entrypoint https://example.com/person#name --verbose STDIN /dev/null IN . INTO result_4.txt EXPECTING 0
+
+WRITE expected_4.txt UNTIL EOF
+2> ok: text.json
+2>
+2> 1 validated, 1 passed, 0 failed
+EOF
+
+COMPARE result_4.txt AGAINST expected_4.txt
+
+// Validation failure
+RUN validate openapi.json text.json --entrypoint /components/schemas/Person STDIN /dev/null IN . INTO result_5.txt EXPECTING 2
+
+WRITE expected_5.txt UNTIL EOF
+2> fail: text.json
+2> error: Schema validation failure
+2>   The value was expected to be an object that defines the property "name"
+2>     at instance location "" (line 1, column 1)
+2>     at evaluate path "/required"
+2>
+2> 1 validated, 0 passed, 1 failed
+EOF
+
+COMPARE result_5.txt AGAINST expected_5.txt
