@@ -1,0 +1,39 @@
+// The schema an entry point names is what the instance is held to, so one
+// that does not satisfy it fails against that schema rather than any other.
+
+WRITE openapi.json UNTIL EOF
+{
+  "openapi": "3.1.1",
+  "info": { "title": "Example", "version": "1.0.0" },
+  "paths": {},
+  "components": {
+    "schemas": {
+      "Person": {
+        "$id": "https://example.com/person",
+        "type": "object",
+        "required": [ "name" ],
+        "properties": { "name": { "$anchor": "name", "type": "string" } }
+      }
+    }
+  }
+}
+EOF
+
+WRITE text.json UNTIL EOF
+"hello"
+EOF
+
+// Validation failure
+RUN validate openapi.json text.json --entrypoint /components/schemas/Person STDIN /dev/null IN . INTO result_0.txt EXPECTING 2
+
+WRITE expected_0.txt UNTIL EOF
+2> fail: text.json
+2> error: Schema validation failure
+2>   The value was expected to be an object that defines the property "name"
+2>     at instance location "" (line 1, column 1)
+2>     at evaluate path "/required"
+2>
+2> 1 validated, 0 passed, 1 failed
+EOF
+
+COMPARE result_0.txt AGAINST expected_0.txt

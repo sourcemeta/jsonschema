@@ -1,0 +1,29 @@
+// A description read from standard input goes by an identity of its own
+// rather than the one a schema from the same place would take, which is what
+// an entry point that misses is reported against.
+
+WRITE input.json UNTIL EOF
+{
+  "openapi": "3.1.1",
+  "info": { "title": "Example", "version": "1.0.0" },
+  "paths": {},
+  "components": { "schemas": { "S": { "type": "string" } } }
+}
+EOF
+
+WRITE instance.json UNTIL EOF
+"hello"
+EOF
+
+// Schema input error
+RUN validate - instance.json --entrypoint /nowhere STDIN input.json IN . INTO result.txt EXPECTING 4
+
+WRITE expected.txt UNTIL EOF
+2> error: The given entry point URI does not exist in the schema
+2>   at identifier tag:sourcemeta.com,2026:openapi/stdin#/nowhere
+2>   at file path tag:sourcemeta.com,2026:openapi/stdin
+2>
+2> Use the `inspect` command to find valid schema locations
+EOF
+
+COMPARE result.txt AGAINST expected.txt

@@ -1,0 +1,48 @@
+// Another description's schemas arrive with whatever Object an OpenAPI-layer
+// reference pulls in, and an entry point may name one of them.
+
+WRITE shared.json UNTIL EOF
+{
+  "openapi": "3.1.1",
+  "info": { "title": "Shared", "version": "1.0.0" },
+  "paths": {},
+  "components": {
+    "responses": {
+      "Ok": {
+        "description": "OK",
+        "content": {
+          "application/json": {
+            "schema": { "$id": "https://example.com/from-shared", "type": "string" }
+          }
+        }
+      }
+    }
+  }
+}
+EOF
+
+WRITE openapi.json UNTIL EOF
+{
+  "openapi": "3.1.1",
+  "info": { "title": "Example", "version": "1.0.0" },
+  "paths": {
+    "/p": {
+      "get": { "responses": { "200": { "$ref": "shared.json#/components/responses/Ok" } } }
+    }
+  }
+}
+EOF
+
+WRITE instance.json UNTIL EOF
+"hello"
+EOF
+
+RUN validate openapi.json instance.json --resolve shared.json --entrypoint https://example.com/from-shared --verbose STDIN /dev/null IN . INTO result_0.txt EXPECTING 0
+
+WRITE expected_0.txt UNTIL EOF
+2> ok: instance.json
+2>
+2> 1 validated, 1 passed, 0 failed
+EOF
+
+COMPARE result_0.txt AGAINST expected_0.txt

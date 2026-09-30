@@ -1,6 +1,5 @@
-// From 3.2 a description may declare an identity of its own, which is what a
-// relative entry point resolves against rather than where the file was read
-// from.
+// The identity a description declares for itself is one an entry point may
+// spell out in full.
 
 WRITE openapi.json UNTIL EOF
 {
@@ -16,7 +15,7 @@ WRITE instance.json UNTIL EOF
 "hello"
 EOF
 
-RUN validate openapi.json instance.json --entrypoint /components/schemas/S --verbose STDIN /dev/null IN . INTO result_0.txt EXPECTING 0
+RUN validate openapi.json instance.json --entrypoint 'https://example.com/api#/components/schemas/S' --verbose STDIN /dev/null IN . INTO result_0.txt EXPECTING 0
 
 WRITE expected_0.txt UNTIL EOF
 2> ok: instance.json

@@ -1,6 +1,5 @@
-// A description read from standard input goes by an identity of its own
-// rather than the one a schema from the same place would take, which is what
-// an entry point that misses is reported against.
+// A description read from standard input is validated against the same way
+// one read from a file is.
 
 WRITE input.json UNTIL EOF
 {
@@ -15,25 +14,12 @@ WRITE instance.json UNTIL EOF
 "hello"
 EOF
 
-RUN validate - instance.json --entrypoint /components/schemas/S --verbose STDIN input.json IN . INTO result_0.txt EXPECTING 0
+RUN validate - instance.json --entrypoint /components/schemas/S --verbose STDIN input.json IN . INTO result.txt EXPECTING 0
 
-WRITE expected_0.txt UNTIL EOF
+WRITE expected.txt UNTIL EOF
 2> ok: instance.json
 2>
 2> 1 validated, 1 passed, 0 failed
 EOF
 
-COMPARE result_0.txt AGAINST expected_0.txt
-
-// Schema input error
-RUN validate - instance.json --entrypoint /nowhere STDIN input.json IN . INTO result_1.txt EXPECTING 4
-
-WRITE expected_1.txt UNTIL EOF
-2> error: The given entry point URI does not exist in the schema
-2>   at identifier tag:sourcemeta.com,2026:openapi/stdin#/nowhere
-2>   at file path tag:sourcemeta.com,2026:openapi/stdin
-2>
-2> Use the `inspect` command to find valid schema locations
-EOF
-
-COMPARE result_1.txt AGAINST expected_1.txt
+COMPARE result.txt AGAINST expected.txt
