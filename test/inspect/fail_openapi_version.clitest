@@ -1,0 +1,23 @@
+// A description declaring a revision we cannot read is turned down rather
+// than being taken for a schema and framed as one.
+
+WRITE openapi.json UNTIL EOF
+{
+  "openapi": "2.0",
+  "info": { "title": "Example", "version": "1.0.0" },
+  "paths": {}
+}
+EOF
+
+// Not supported
+RUN inspect openapi.json STDIN /dev/null IN . INTO result.txt EXPECTING 3
+
+REPLACE $CWD WITH '[CWD]' IN result.txt
+
+WRITE expected.txt UNTIL EOF
+2> error: This OpenAPI Specification revision is not supported
+2>   at value 2.0
+2>   at file path [CWD]/openapi.json
+EOF
+
+COMPARE result.txt AGAINST expected.txt

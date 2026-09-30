@@ -1,0 +1,91 @@
+// From 3.2 onwards a Security Requirement Object may name the URI of a
+// Security Scheme Object rather than a scheme the Components Object declares.
+// A single such Object may name several, so where each one lands is recorded
+// apart from the references the rest of the description makes, and one naming
+// a scheme in a document this one does not hold lands nowhere.
+
+WRITE openapi.json UNTIL EOF
+{
+  "openapi": "3.2.0",
+  "info": { "title": "Example", "version": "1.0.0" },
+  "security": [
+    { "#/components/securitySchemes/apiKey": [] },
+    { "https://example.com/other.json#/components/securitySchemes/token": [] }
+  ],
+  "paths": {},
+  "components": {
+    "securitySchemes": {
+      "apiKey": { "type": "apiKey", "name": "key", "in": "header" }
+    }
+  }
+}
+EOF
+
+RUN inspect openapi.json STDIN /dev/null IN . INTO result_0.txt EXPECTING 0
+
+REPLACE $CWD_URI WITH '[CWD_URI]' IN result_0.txt
+
+WRITE expected_0.txt UNTIL EOF
+1> (OPENAPI) URI: [CWD_URI]/openapi.json
+1>     Pointer           :
+1>     File Position     : 1:1
+1>     Parent            : <NONE>
+1>     Dialect           : https://spec.openapis.org/oas/3.2/dialect/2025-09-17
+1>     Version           : 3.2
+1>     Base              : [CWD_URI]/openapi.json
+1>     Standalone        : no
+1>     Info              :
+1>       Title           : Example
+1>       Version         : 1.0.0
+1>       Summary         : <NONE>
+1>       Description     : <NONE>
+1>       Terms of Service: <NONE>
+1>       Contact         : <NONE>
+1>       License         : <NONE>
+1>
+1> (COMPONENTS) URI: [CWD_URI]/openapi.json#/components
+1>     Pointer           : /components
+1>     File Position     : 9:3
+1>     Parent            : [CWD_URI]/openapi.json
+1>
+1> (SECURITY-SCHEME) URI: [CWD_URI]/openapi.json#/components/securitySchemes/apiKey
+1>     Pointer           : /components/securitySchemes/apiKey
+1>     File Position     : 11:7
+1>     Parent            : [CWD_URI]/openapi.json#/components
+1>
+1> (INFO) URI: [CWD_URI]/openapi.json#/info
+1>     Pointer           : /info
+1>     File Position     : 3:3
+1>     Parent            : [CWD_URI]/openapi.json
+1>
+1> (PATHS) URI: [CWD_URI]/openapi.json#/paths
+1>     Pointer           : /paths
+1>     File Position     : 8:3
+1>     Parent            : [CWD_URI]/openapi.json
+1>
+1> (SECURITY-REQUIREMENT) URI: [CWD_URI]/openapi.json#/security/0
+1>     Pointer           : /security/0
+1>     File Position     : 5:5
+1>     Parent            : [CWD_URI]/openapi.json
+1>
+1> (SECURITY-REQUIREMENT) URI: [CWD_URI]/openapi.json#/security/1
+1>     Pointer           : /security/1
+1>     File Position     : 6:5
+1>     Parent            : [CWD_URI]/openapi.json
+1>
+1> (SECURITY-REFERENCE) URI: [CWD_URI]/openapi.json#/security/0/%23~1components~1securitySchemes~1apiKey
+1>     Pointer           : /security/0/#~1components~1securitySchemes~1apiKey
+1>     File Position     : 5:7
+1>     Original          : #/components/securitySchemes/apiKey
+1>     Destination       : [CWD_URI]/openapi.json#/components/securitySchemes/apiKey
+1>     Dangling          : no
+1>
+1> (SECURITY-REFERENCE) URI: [CWD_URI]/openapi.json#/security/1/https:~1~1example.com~1other.json%23~1components~1securitySchemes~1token
+1>     Pointer           : /security/1/https:~1~1example.com~1other.json#~1components~1securitySchemes~1token
+1>     File Position     : 6:7
+1>     Original          : https://example.com/other.json#/components/securitySchemes/token
+1>     Destination       : https://example.com/other.json#/components/securitySchemes/token
+1>     Dangling          : yes
+EOF
+
+COMPARE result_0.txt AGAINST expected_0.txt

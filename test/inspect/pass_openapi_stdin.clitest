@@ -1,0 +1,44 @@
+// A description read from standard input goes by an identity of its own
+// rather than the one a schema from the same place would take, as a
+// description is not a schema.
+
+WRITE input.json UNTIL EOF
+{
+  "openapi": "3.1.1",
+  "info": { "title": "Example", "version": "1.0.0" },
+  "paths": {}
+}
+EOF
+
+RUN inspect - STDIN input.json IN . INTO result.txt EXPECTING 0
+
+WRITE expected.txt UNTIL EOF
+1> (OPENAPI) URI: tag:sourcemeta.com,2026:openapi/stdin
+1>     Pointer           :
+1>     File Position     : 1:1
+1>     Parent            : <NONE>
+1>     Dialect           : https://spec.openapis.org/oas/3.1/dialect/base
+1>     Version           : 3.1
+1>     Base              : tag:sourcemeta.com,2026:openapi/stdin
+1>     Standalone        : yes
+1>     Info              :
+1>       Title           : Example
+1>       Version         : 1.0.0
+1>       Summary         : <NONE>
+1>       Description     : <NONE>
+1>       Terms of Service: <NONE>
+1>       Contact         : <NONE>
+1>       License         : <NONE>
+1>
+1> (INFO) URI: tag:sourcemeta.com,2026:openapi/stdin#/info
+1>     Pointer           : /info
+1>     File Position     : 3:3
+1>     Parent            : tag:sourcemeta.com,2026:openapi/stdin
+1>
+1> (PATHS) URI: tag:sourcemeta.com,2026:openapi/stdin#/paths
+1>     Pointer           : /paths
+1>     File Position     : 4:3
+1>     Parent            : tag:sourcemeta.com,2026:openapi/stdin
+EOF
+
+COMPARE result.txt AGAINST expected.txt

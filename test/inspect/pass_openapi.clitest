@@ -1,0 +1,100 @@
+// An OpenAPI description is inspected as what it is rather than being turned
+// down for not being a schema. What the description says about itself as a
+// whole sits on the root Object, as that is the one position standing for all
+// of it, and every other Object it holds gets an entry of its own.
+
+WRITE openapi.json UNTIL EOF
+{
+  "openapi": "3.1.1",
+  "info": { "title": "Example", "version": "1.0.0" },
+  "paths": {}
+}
+EOF
+
+RUN inspect openapi.json STDIN /dev/null IN . INTO result_0.txt EXPECTING 0
+
+REPLACE $CWD_URI WITH '[CWD_URI]' IN result_0.txt
+
+WRITE expected_0.txt UNTIL EOF
+1> (OPENAPI) URI: [CWD_URI]/openapi.json
+1>     Pointer           :
+1>     File Position     : 1:1
+1>     Parent            : <NONE>
+1>     Dialect           : https://spec.openapis.org/oas/3.1/dialect/base
+1>     Version           : 3.1
+1>     Base              : [CWD_URI]/openapi.json
+1>     Standalone        : yes
+1>     Info              :
+1>       Title           : Example
+1>       Version         : 1.0.0
+1>       Summary         : <NONE>
+1>       Description     : <NONE>
+1>       Terms of Service: <NONE>
+1>       Contact         : <NONE>
+1>       License         : <NONE>
+1>
+1> (INFO) URI: [CWD_URI]/openapi.json#/info
+1>     Pointer           : /info
+1>     File Position     : 3:3
+1>     Parent            : [CWD_URI]/openapi.json
+1>
+1> (PATHS) URI: [CWD_URI]/openapi.json#/paths
+1>     Pointer           : /paths
+1>     File Position     : 4:3
+1>     Parent            : [CWD_URI]/openapi.json
+EOF
+
+COMPARE result_0.txt AGAINST expected_0.txt
+
+RUN inspect openapi.json --json STDIN /dev/null IN . INTO result_1.txt EXPECTING 0
+
+REPLACE $CWD_URI WITH '[CWD_URI]' IN result_1.txt
+
+WRITE expected_1.txt UNTIL EOF
+1> {
+1>   "version": "3.1",
+1>   "base": "[CWD_URI]/openapi.json",
+1>   "standalone": true,
+1>   "schemas": {
+1>     "mode": "references",
+1>     "locations": {
+1>       "static": {},
+1>       "dynamic": {}
+1>     },
+1>     "references": []
+1>   },
+1>   "info": {
+1>     "title": "Example",
+1>     "version": "1.0.0",
+1>     "summary": null,
+1>     "description": null,
+1>     "termsOfService": null,
+1>     "contact": null,
+1>     "license": null
+1>   },
+1>   "locations": {
+1>     "[CWD_URI]/openapi.json": {
+1>       "type": "openapi",
+1>       "pointer": "",
+1>       "position": [ 1, 1, 5, 1 ],
+1>       "parent": null,
+1>       "dialect": "https://spec.openapis.org/oas/3.1/dialect/base"
+1>     },
+1>     "[CWD_URI]/openapi.json#/info": {
+1>       "type": "info",
+1>       "pointer": "/info",
+1>       "position": [ 3, 3, 3, 52 ],
+1>       "parent": "[CWD_URI]/openapi.json"
+1>     },
+1>     "[CWD_URI]/openapi.json#/paths": {
+1>       "type": "paths",
+1>       "pointer": "/paths",
+1>       "position": [ 4, 3, 4, 13 ],
+1>       "parent": "[CWD_URI]/openapi.json"
+1>     }
+1>   },
+1>   "operations": []
+1> }
+EOF
+
+COMPARE result_1.txt AGAINST expected_1.txt

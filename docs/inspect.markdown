@@ -2,7 +2,8 @@ Inspect
 =======
 
 ```sh
-jsonschema inspect <schema.json|.yaml> [--json/-j] [--verbose/-v] [--debug/-g]
+jsonschema inspect <schema.json|.yaml|openapi.json|.yaml> [--json/-j]
+  [--verbose/-v] [--debug/-g]
   [--default-dialect/-d <uri>] [--configuration/-C <path>]
   [--color auto|always|never]
 ```
@@ -12,6 +13,15 @@ dialects and keywords in use, walk over its valid subschemas, and resolve URI
 references between them. The JSON Schema CLI offers a `inspect` command so you
 can "see through the eyes" of a JSON Schema implementation previous to the
 evaluation step. This is often useful for debugging purposes.
+
+OpenAPI Descriptions
+--------------------
+
+If the input is an OpenAPI spec v3.1 or v3.2, the `inspect` command treats it as
+an [OpenAPI](https://spec.openapis.org/oas/latest.html) description rather than
+as a schema, and inspects it in a similar fashion, reporting on the Objects it
+holds, the operations it exposes, and the Schema Objects within it. Any other
+revision, such as v3.0, is rejected rather than read as a schema.
 
 Examples
 --------
@@ -63,6 +73,12 @@ reference:
 
 ```sh
 jsonschema inspect path/to/my/schema.json
+```
+
+### Inspect an OpenAPI description
+
+```sh
+jsonschema inspect path/to/my/openapi.json
 ```
 
 ### Inspect a JSON Schema and output result as a JSON document

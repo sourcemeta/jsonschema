@@ -1,0 +1,138 @@
+// A Discriminator Object names a schema by component name or by URI, which is
+// a place the description reaches for just as a reference is. One naming
+// nothing the frame holds has nowhere to land.
+
+WRITE openapi.json UNTIL EOF
+{
+  "openapi": "3.1.1",
+  "info": { "title": "Example", "version": "1.0.0" },
+  "paths": {},
+  "components": {
+    "schemas": {
+      "Pet": {
+        "discriminator": {
+          "propertyName": "kind",
+          "mapping": { "dog": "#/components/schemas/Dog", "cat": "#/components/schemas/Missing" }
+        }
+      },
+      "Dog": { "type": "object" }
+    }
+  }
+}
+EOF
+
+RUN inspect openapi.json STDIN /dev/null IN . INTO result_0.txt EXPECTING 0
+
+REPLACE $CWD_URI WITH '[CWD_URI]' IN result_0.txt
+
+WRITE expected_0.txt UNTIL EOF
+1> (OPENAPI) URI: [CWD_URI]/openapi.json
+1>     Pointer           :
+1>     File Position     : 1:1
+1>     Parent            : <NONE>
+1>     Dialect           : https://spec.openapis.org/oas/3.1/dialect/base
+1>     Version           : 3.1
+1>     Base              : [CWD_URI]/openapi.json
+1>     Standalone        : no
+1>     Info              :
+1>       Title           : Example
+1>       Version         : 1.0.0
+1>       Summary         : <NONE>
+1>       Description     : <NONE>
+1>       Terms of Service: <NONE>
+1>       Contact         : <NONE>
+1>       License         : <NONE>
+1>
+1> (COMPONENTS) URI: [CWD_URI]/openapi.json#/components
+1>     Pointer           : /components
+1>     File Position     : 5:3
+1>     Parent            : [CWD_URI]/openapi.json
+1>
+1> (SCHEMA) URI: [CWD_URI]/openapi.json#/components/schemas/Dog
+1>     Pointer           : /components/schemas/Dog
+1>     File Position     : 13:7
+1>     Parent            : [CWD_URI]/openapi.json#/components
+1>     Dialect           : https://spec.openapis.org/oas/3.1/dialect/base
+1>     Base              : [CWD_URI]/openapi.json
+1>
+1> (SCHEMA) URI: [CWD_URI]/openapi.json#/components/schemas/Pet
+1>     Pointer           : /components/schemas/Pet
+1>     File Position     : 7:7
+1>     Parent            : [CWD_URI]/openapi.json#/components
+1>     Dialect           : https://spec.openapis.org/oas/3.1/dialect/base
+1>     Base              : [CWD_URI]/openapi.json
+1>
+1> (INFO) URI: [CWD_URI]/openapi.json#/info
+1>     Pointer           : /info
+1>     File Position     : 3:3
+1>     Parent            : [CWD_URI]/openapi.json
+1>
+1> (PATHS) URI: [CWD_URI]/openapi.json#/paths
+1>     Pointer           : /paths
+1>     File Position     : 4:3
+1>     Parent            : [CWD_URI]/openapi.json
+1>
+1> (DISCRIMINATOR) URI: [CWD_URI]/openapi.json#/components/schemas/Pet/discriminator/mapping/dog
+1>     Pointer           : /components/schemas/Pet/discriminator/mapping/dog
+1>     File Position     : 10:24
+1>     Destination       : [CWD_URI]/openapi.json#/components/schemas/Dog
+1>     Scope             : [CWD_URI]/openapi.json
+1>     Dangling          : no
+1>
+1> (DISCRIMINATOR) URI: [CWD_URI]/openapi.json#/components/schemas/Pet/discriminator/mapping/cat
+1>     Pointer           : /components/schemas/Pet/discriminator/mapping/cat
+1>     File Position     : 10:59
+1>     Destination       : [CWD_URI]/openapi.json#/components/schemas/Missing
+1>     Scope             : [CWD_URI]/openapi.json
+1>     Dangling          : yes
+1>
+1> (SUBSCHEMA) URI: [CWD_URI]/openapi.json#/components/schemas/Dog
+1>     Type              : Static
+1>     Root              : <ANONYMOUS>
+1>     Pointer           : /components/schemas/Dog
+1>     File Position     : 13:7
+1>     Base              : [CWD_URI]/openapi.json
+1>     Relative Pointer  : /components/schemas/Dog
+1>     Dialect           : https://spec.openapis.org/oas/3.1/dialect/base
+1>     Base Dialect      : https://json-schema.org/draft/2020-12/schema
+1>     Parent            : <NONE>
+1>     Property Name     : no
+1>     Orphan            : no
+1>     Referenced        : no
+1>     Referenced Within : no
+1>     Vocabularies      :
+1>       https://json-schema.org/draft/2020-12/vocab/core (required)
+1>       https://json-schema.org/draft/2020-12/vocab/applicator (required)
+1>       https://json-schema.org/draft/2020-12/vocab/unevaluated (required)
+1>       https://json-schema.org/draft/2020-12/vocab/validation (required)
+1>       https://json-schema.org/draft/2020-12/vocab/meta-data (required)
+1>       https://json-schema.org/draft/2020-12/vocab/format-annotation (required)
+1>       https://json-schema.org/draft/2020-12/vocab/content (required)
+1>       https://spec.openapis.org/oas/3.1/vocab/base (optional)
+1>
+1> (SUBSCHEMA) URI: [CWD_URI]/openapi.json#/components/schemas/Pet
+1>     Type              : Static
+1>     Root              : <ANONYMOUS>
+1>     Pointer           : /components/schemas/Pet
+1>     File Position     : 7:7
+1>     Base              : [CWD_URI]/openapi.json
+1>     Relative Pointer  : /components/schemas/Pet
+1>     Dialect           : https://spec.openapis.org/oas/3.1/dialect/base
+1>     Base Dialect      : https://json-schema.org/draft/2020-12/schema
+1>     Parent            : <NONE>
+1>     Property Name     : no
+1>     Orphan            : no
+1>     Referenced        : no
+1>     Referenced Within : no
+1>     Vocabularies      :
+1>       https://json-schema.org/draft/2020-12/vocab/core (required)
+1>       https://json-schema.org/draft/2020-12/vocab/applicator (required)
+1>       https://json-schema.org/draft/2020-12/vocab/unevaluated (required)
+1>       https://json-schema.org/draft/2020-12/vocab/validation (required)
+1>       https://json-schema.org/draft/2020-12/vocab/meta-data (required)
+1>       https://json-schema.org/draft/2020-12/vocab/format-annotation (required)
+1>       https://json-schema.org/draft/2020-12/vocab/content (required)
+1>       https://spec.openapis.org/oas/3.1/vocab/base (optional)
+EOF
+
+COMPARE result_0.txt AGAINST expected_0.txt

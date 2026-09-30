@@ -1,0 +1,125 @@
+// Every operation the described API exposes gets an entry naming how it is
+// reached, which the specification fixes by the route to it rather than by
+// where it is defined. An operation may name a tag that nothing declares,
+// which keeps its slot rather than being dropped.
+
+WRITE openapi.json UNTIL EOF
+{
+  "openapi": "3.1.1",
+  "info": { "title": "Example", "version": "1.0.0" },
+  "tags": [ { "name": "people" } ],
+  "webhooks": {
+    "newPerson": { "post": { "responses": { "200": { "description": "ok" } } } }
+  },
+  "paths": {
+    "/people": {
+      "get": {
+        "tags": [ "people", "ghost" ],
+        "responses": { "200": { "description": "ok" } }
+      }
+    }
+  }
+}
+EOF
+
+RUN inspect openapi.json STDIN /dev/null IN . INTO result_0.txt EXPECTING 0
+
+REPLACE $CWD_URI WITH '[CWD_URI]' IN result_0.txt
+
+WRITE expected_0.txt UNTIL EOF
+1> (OPENAPI) URI: [CWD_URI]/openapi.json
+1>     Pointer           :
+1>     File Position     : 1:1
+1>     Parent            : <NONE>
+1>     Dialect           : https://spec.openapis.org/oas/3.1/dialect/base
+1>     Version           : 3.1
+1>     Base              : [CWD_URI]/openapi.json
+1>     Standalone        : yes
+1>     Info              :
+1>       Title           : Example
+1>       Version         : 1.0.0
+1>       Summary         : <NONE>
+1>       Description     : <NONE>
+1>       Terms of Service: <NONE>
+1>       Contact         : <NONE>
+1>       License         : <NONE>
+1>
+1> (INFO) URI: [CWD_URI]/openapi.json#/info
+1>     Pointer           : /info
+1>     File Position     : 3:3
+1>     Parent            : [CWD_URI]/openapi.json
+1>
+1> (PATHS) URI: [CWD_URI]/openapi.json#/paths
+1>     Pointer           : /paths
+1>     File Position     : 8:3
+1>     Parent            : [CWD_URI]/openapi.json
+1>
+1> (PATH-ITEM) URI: [CWD_URI]/openapi.json#/paths/~1people
+1>     Pointer           : /paths/~1people
+1>     File Position     : 9:5
+1>     Parent            : [CWD_URI]/openapi.json#/paths
+1>
+1> (OPERATION) URI: [CWD_URI]/openapi.json#/paths/~1people/get
+1>     Pointer           : /paths/~1people/get
+1>     File Position     : 10:7
+1>     Parent            : [CWD_URI]/openapi.json#/paths/~1people
+1>
+1> (RESPONSES) URI: [CWD_URI]/openapi.json#/paths/~1people/get/responses
+1>     Pointer           : /paths/~1people/get/responses
+1>     File Position     : 12:9
+1>     Parent            : [CWD_URI]/openapi.json#/paths/~1people/get
+1>
+1> (RESPONSE) URI: [CWD_URI]/openapi.json#/paths/~1people/get/responses/200
+1>     Pointer           : /paths/~1people/get/responses/200
+1>     File Position     : 12:24
+1>     Parent            : [CWD_URI]/openapi.json#/paths/~1people/get/responses
+1>
+1> (TAG) URI: [CWD_URI]/openapi.json#/tags/0
+1>     Pointer           : /tags/0
+1>     File Position     : 4:13
+1>     Parent            : [CWD_URI]/openapi.json
+1>
+1> (PATH-ITEM) URI: [CWD_URI]/openapi.json#/webhooks/newPerson
+1>     Pointer           : /webhooks/newPerson
+1>     File Position     : 6:5
+1>     Parent            : [CWD_URI]/openapi.json
+1>
+1> (OPERATION) URI: [CWD_URI]/openapi.json#/webhooks/newPerson/post
+1>     Pointer           : /webhooks/newPerson/post
+1>     File Position     : 6:20
+1>     Parent            : [CWD_URI]/openapi.json#/webhooks/newPerson
+1>
+1> (RESPONSES) URI: [CWD_URI]/openapi.json#/webhooks/newPerson/post/responses
+1>     Pointer           : /webhooks/newPerson/post/responses
+1>     File Position     : 6:30
+1>     Parent            : [CWD_URI]/openapi.json#/webhooks/newPerson/post
+1>
+1> (RESPONSE) URI: [CWD_URI]/openapi.json#/webhooks/newPerson/post/responses/200
+1>     Pointer           : /webhooks/newPerson/post/responses/200
+1>     File Position     : 6:45
+1>     Parent            : [CWD_URI]/openapi.json#/webhooks/newPerson/post/responses
+1>
+1> (PATH) URI: [CWD_URI]/openapi.json#/paths/~1people/get
+1>     Path              : /people
+1>     Method            : get
+1>     Endpoint          : [CWD_URI]/openapi.json#/paths/~1people
+1>     Parent            : <NONE>
+1>     Tags              :
+1>       [CWD_URI]/openapi.json#/tags/0
+1>       <NONE>
+1>     Servers           : <NONE>
+1>     Security          : <NONE>
+1>     Parameters        : <NONE>
+1>
+1> (WEBHOOK) URI: [CWD_URI]/openapi.json#/webhooks/newPerson/post
+1>     Path              : newPerson
+1>     Method            : post
+1>     Endpoint          : [CWD_URI]/openapi.json#/webhooks/newPerson
+1>     Parent            : <NONE>
+1>     Tags              : <NONE>
+1>     Servers           : <NONE>
+1>     Security          : <NONE>
+1>     Parameters        : <NONE>
+EOF
+
+COMPARE result_0.txt AGAINST expected_0.txt
