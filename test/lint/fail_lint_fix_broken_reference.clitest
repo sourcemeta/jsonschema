@@ -32,6 +32,8 @@ REPLACE $CWD WITH '[CWD]' IN result.txt
 WRITE expected.txt UNTIL EOF
 2> .
 2> error: Could not autofix the schema without breaking its internal references
+2>   at line 13
+2>   at column 7
 2>   at file path [CWD]/schema.json
 2>   at location "/properties/bar/$ref"
 2>

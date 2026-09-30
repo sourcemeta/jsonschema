@@ -352,13 +352,10 @@ auto sourcemeta::jsonschema::install(const sourcemeta::core::Options &options)
     const bool has_existing_config{configuration_path.has_value()};
     if (has_existing_config) {
       try {
-        add_configuration = sourcemeta::blaze::Configuration::read_json(
-            configuration_path.value(),
-            sourcemeta::core::read_file_to_string<>);
-      } catch (const sourcemeta::blaze::ConfigurationParseError &error) {
-        throw sourcemeta::core::FileError<
-            sourcemeta::blaze::ConfigurationParseError>(
-            configuration_path.value(), error.what(), error.location());
+        sourcemeta::core::PointerPositionTracker positions;
+        auto property_storage = std::make_shared<std::deque<std::string>>();
+        add_configuration = read_configuration_file(
+            configuration_path.value(), positions, property_storage);
       } catch (const sourcemeta::core::JSONParseError &error) {
         throw sourcemeta::core::JSONFileParseError(configuration_path.value(),
                                                    error);
@@ -383,6 +380,8 @@ auto sourcemeta::jsonschema::install(const sourcemeta::core::Options &options)
           "The given URI is not valid",
           "jsonschema install https://example.com/schema ./vendor/schema.json"};
     } catch (const sourcemeta::blaze::ConfigurationParseError &error) {
+      // No position, as what is at fault is the dependency being added rather
+      // than anything the file already spells
       throw sourcemeta::core::FileError<
           sourcemeta::blaze::ConfigurationParseError>(
           configuration_path.value(), error.what(), error.location());
@@ -424,12 +423,10 @@ auto sourcemeta::jsonschema::install(const sourcemeta::core::Options &options)
 
   sourcemeta::blaze::Configuration configuration;
   try {
-    configuration = sourcemeta::blaze::Configuration::read_json(
-        configuration_path.value(), sourcemeta::core::read_file_to_string<>);
-  } catch (const sourcemeta::blaze::ConfigurationParseError &error) {
-    throw sourcemeta::core::FileError<
-        sourcemeta::blaze::ConfigurationParseError>(
-        configuration_path.value(), error.what(), error.location());
+    sourcemeta::core::PointerPositionTracker positions;
+    auto property_storage = std::make_shared<std::deque<std::string>>();
+    configuration = read_configuration_file(configuration_path.value(),
+                                            positions, property_storage);
   } catch (const sourcemeta::core::JSONParseError &error) {
     throw sourcemeta::core::JSONFileParseError(configuration_path.value(),
                                                error);

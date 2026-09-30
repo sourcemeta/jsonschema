@@ -1226,6 +1226,23 @@ inline auto print_rdf_resolution_error(const bool is_json, const Error &error)
   return EXIT_SCHEMA_INPUT_ERROR;
 }
 
+// What an auto-fix failure tells the user to do next, which is the same
+// whether or not we could point at where in the file it happened
+inline auto print_lint_autofix_guidance() -> void {
+  std::cerr << "\n";
+  std::cerr << "This is an unexpected error, as making the auto-fix "
+               "functionality work in all\n";
+  std::cerr << "cases is tricky. We are working hard to improve the "
+               "auto-fixing functionality\n";
+  std::cerr << "to handle all possible edge cases, but for now, try again "
+               "without `--fix/-f`\n";
+  std::cerr << "and apply the suggestions by hand.\n\n";
+  std::cerr << "Also consider consider reporting this problematic case to "
+               "the issue tracker,\n";
+  std::cerr << "so we can add it to the test suite and fix it:\n\n";
+  std::cerr << "https://github.com/sourcemeta/jsonschema/issues\n";
+}
+
 inline auto try_catch(const sourcemeta::core::Options &options,
                       const std::function<int()> &callback) noexcept -> int {
   try {
@@ -1267,6 +1284,12 @@ inline auto try_catch(const sourcemeta::core::Options &options,
     print_exception(is_json, error);
     return EXIT_SCHEMA_INPUT_ERROR;
   } catch (const MultiDocumentInputError &error) {
+    const auto is_json{options.contains("json")};
+    print_exception(is_json, error);
+    return EXIT_NOT_SUPPORTED;
+  } catch (
+      const PositionError<
+          sourcemeta::core::FileError<UnsupportedOpenAPIVersionError>> &error) {
     const auto is_json{options.contains("json")};
     print_exception(is_json, error);
     return EXIT_NOT_SUPPORTED;
@@ -1345,22 +1368,19 @@ inline auto try_catch(const sourcemeta::core::Options &options,
     const auto is_json{options.contains("json")};
     print_exception(is_json, error);
     return EXIT_INVALID_CLI_ARGUMENTS;
+  } catch (const PositionError<LintAutoFixError> &error) {
+    const auto is_json{options.contains("json")};
+    print_exception(is_json, error);
+    if (!is_json) {
+      print_lint_autofix_guidance();
+    }
+
+    return EXIT_UNEXPECTED_ERROR;
   } catch (const LintAutoFixError &error) {
     const auto is_json{options.contains("json")};
     print_exception(is_json, error);
     if (!is_json) {
-      std::cerr << "\n";
-      std::cerr << "This is an unexpected error, as making the auto-fix "
-                   "functionality work in all\n";
-      std::cerr << "cases is tricky. We are working hard to improve the "
-                   "auto-fixing functionality\n";
-      std::cerr << "to handle all possible edge cases, but for now, try again "
-                   "without `--fix/-f`\n";
-      std::cerr << "and apply the suggestions by hand.\n\n";
-      std::cerr << "Also consider consider reporting this problematic case to "
-                   "the issue tracker,\n";
-      std::cerr << "so we can add it to the test suite and fix it:\n\n";
-      std::cerr << "https://github.com/sourcemeta/jsonschema/issues\n";
+      print_lint_autofix_guidance();
     }
 
     return EXIT_UNEXPECTED_ERROR;
@@ -1673,8 +1693,18 @@ inline auto try_catch(const sourcemeta::core::Options &options,
     const auto is_json{options.contains("json")};
     print_exception(is_json, error);
     return EXIT_SCHEMA_INPUT_ERROR;
+  } catch (const PositionError<sourcemeta::core::FileError<
+               sourcemeta::core::OpenAPIResolutionError>> &error) {
+    const auto is_json{options.contains("json")};
+    print_exception(is_json, error);
+    return EXIT_SCHEMA_INPUT_ERROR;
   } catch (const sourcemeta::core::FileError<
            sourcemeta::core::OpenAPIResolutionError> &error) {
+    const auto is_json{options.contains("json")};
+    print_exception(is_json, error);
+    return EXIT_SCHEMA_INPUT_ERROR;
+  } catch (const PositionError<sourcemeta::core::FileError<
+               sourcemeta::core::OpenAPIReferenceError>> &error) {
     const auto is_json{options.contains("json")};
     print_exception(is_json, error);
     return EXIT_SCHEMA_INPUT_ERROR;

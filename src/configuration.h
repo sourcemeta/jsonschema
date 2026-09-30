@@ -52,6 +52,50 @@ inline auto find_configuration(const sourcemeta::core::Options &options,
   return sourcemeta::blaze::Configuration::find(path);
 }
 
+// Reading a configuration file with its positions on hand, so that whatever
+// is wrong with it is pointed at rather than merely named. The tracker and the
+// storage behind it belong to the caller, as a caller that goes on to report
+// against the same file needs them to outlive this
+inline auto read_configuration_file(
+    const std::filesystem::path &configuration_path,
+    sourcemeta::core::PointerPositionTracker &positions,
+    const std::shared_ptr<std::deque<std::string>> &property_storage)
+    -> sourcemeta::blaze::Configuration {
+  try {
+    const auto contents{
+        sourcemeta::core::read_file_to_string(configuration_path)};
+    sourcemeta::core::JSON config_json{nullptr};
+    sourcemeta::core::parse_json(
+        contents, config_json,
+        [&positions, &property_storage](
+            const sourcemeta::core::JSON::ParsePhase phase,
+            const sourcemeta::core::JSON::Type type, const std::uint64_t line,
+            const std::uint64_t column,
+            const sourcemeta::core::JSON::ParseContext context,
+            const std::size_t index,
+            const sourcemeta::core::JSON::String &property) {
+          property_storage->emplace_back(property);
+          positions(phase, type, line, column, context, index,
+                    property_storage->back());
+        });
+    return sourcemeta::blaze::Configuration::from_json(
+        config_json, configuration_path.parent_path());
+  } catch (const sourcemeta::blaze::ConfigurationParseError &error) {
+    const auto position{positions.get(error.location())};
+    if (position.has_value()) {
+      throw PositionError<sourcemeta::core::FileError<
+          sourcemeta::blaze::ConfigurationParseError>>(
+          std::get<0>(position.value()), std::get<1>(position.value()),
+          configuration_path, error);
+    }
+
+    throw sourcemeta::core::FileError<
+        sourcemeta::blaze::ConfigurationParseError>(configuration_path, error);
+  } catch (const sourcemeta::core::JSONParseError &error) {
+    throw sourcemeta::core::JSONFileParseError(configuration_path, error);
+  }
+}
+
 inline auto load_configuration(
     const sourcemeta::core::Options &options,
     const std::optional<std::filesystem::path> &configuration_path)
@@ -79,41 +123,8 @@ inline auto load_configuration(
     }
     sourcemeta::core::PointerPositionTracker positions;
     auto property_storage = std::make_shared<std::deque<std::string>>();
-    try {
-      const auto contents{
-          sourcemeta::core::read_file_to_string(configuration_path.value())};
-      sourcemeta::core::JSON config_json{nullptr};
-      sourcemeta::core::parse_json(
-          contents, config_json,
-          [&positions, &property_storage](
-              const sourcemeta::core::JSON::ParsePhase phase,
-              const sourcemeta::core::JSON::Type type, const std::uint64_t line,
-              const std::uint64_t column,
-              const sourcemeta::core::JSON::ParseContext context,
-              const std::size_t index,
-              const sourcemeta::core::JSON::String &property) {
-            property_storage->emplace_back(property);
-            positions(phase, type, line, column, context, index,
-                      property_storage->back());
-          });
-      result = sourcemeta::blaze::Configuration::from_json(
-          config_json, configuration_path.value().parent_path());
-    } catch (const sourcemeta::blaze::ConfigurationParseError &error) {
-      const auto position{positions.get(error.location())};
-      if (position.has_value()) {
-        throw PositionError<sourcemeta::core::FileError<
-            sourcemeta::blaze::ConfigurationParseError>>(
-            std::get<0>(position.value()), std::get<1>(position.value()),
-            configuration_path.value(), error);
-      }
-
-      throw sourcemeta::core::FileError<
-          sourcemeta::blaze::ConfigurationParseError>(
-          configuration_path.value(), error);
-    } catch (const sourcemeta::core::JSONParseError &error) {
-      throw sourcemeta::core::JSONFileParseError(configuration_path.value(),
-                                                 error);
-    }
+    result = read_configuration_file(configuration_path.value(), positions,
+                                     property_storage);
 
     assert(result.has_value());
     for (const auto &[resolve_uri, resolve_value] : result.value().resolve) {

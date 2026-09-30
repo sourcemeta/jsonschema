@@ -92,6 +92,14 @@ auto sourcemeta::jsonschema::compile(const sourcemeta::core::Options &options)
     throw sourcemeta::core::FileError<
         sourcemeta::blaze::CompilerInvalidEntryPoint>(schema_path, error);
   } catch (const sourcemeta::blaze::CompilerInvalidRegexError &error) {
+    const auto position{parsed_schema.positions.get(error.location())};
+    if (position.has_value()) {
+      throw PositionError<sourcemeta::core::FileError<
+          sourcemeta::blaze::CompilerInvalidRegexError>>(
+          std::get<0>(position.value()), std::get<1>(position.value()),
+          schema_path, error);
+    }
+
     throw sourcemeta::core::FileError<
         sourcemeta::blaze::CompilerInvalidRegexError>(schema_path, error);
   } catch (const sourcemeta::blaze::CompilerError &error) {
@@ -107,6 +115,14 @@ auto sourcemeta::jsonschema::compile(const sourcemeta::core::Options &options)
         schema_path, error);
   } catch (
       const sourcemeta::blaze::CompilerReferenceTargetNotSchemaError &error) {
+    const auto position{parsed_schema.positions.get(error.location())};
+    if (position.has_value()) {
+      throw PositionError<sourcemeta::core::FileError<
+          sourcemeta::blaze::CompilerReferenceTargetNotSchemaError>>(
+          std::get<0>(position.value()), std::get<1>(position.value()),
+          schema_path, error);
+    }
+
     throw sourcemeta::core::FileError<
         sourcemeta::blaze::CompilerReferenceTargetNotSchemaError>(schema_path,
                                                                   error);

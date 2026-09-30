@@ -24,6 +24,8 @@ REPLACE $CWD WITH '[CWD]' IN result_0.txt
 WRITE expected_0.txt UNTIL EOF
 2> error: Could not resolve schema reference
 2>   at identifier [CWD_URI]/schema.json#/definitions/i-dont-exist
+2>   at line 7
+2>   at column 7
 2>   at file path [CWD]/schema.json
 2>   at location "/properties/foo/$ref"
 EOF
@@ -40,6 +42,8 @@ WRITE expected_1.txt UNTIL EOF
 1> {
 1>   "error": "Could not resolve schema reference",
 1>   "identifier": "[CWD_URI]/schema.json#/definitions/i-dont-exist",
+1>   "line": 7,
+1>   "column": 7,
 1>   "filePath": "[CWD]/schema.json",
 1>   "location": "/properties/foo/$ref"
 1> }

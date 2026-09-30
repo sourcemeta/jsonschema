@@ -19,6 +19,8 @@ REPLACE $CWD WITH '[CWD]' IN result_0.txt
 WRITE expected_0.txt UNTIL EOF
 2> error: The JSON document is not a valid JSON Schema
 2>   at identifier https://schemas.sourcemeta.com/self/v1/api/schemas/stats/jsonschema/2020-12/schema
+2>   at line 5
+2>   at column 16
 2>   at file path [CWD]/schema.json
 2>   at location "/allOf/0/$ref"
 EOF

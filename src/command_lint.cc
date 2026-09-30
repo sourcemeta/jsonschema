@@ -554,12 +554,30 @@ auto sourcemeta::jsonschema::lint(const sourcemeta::core::Options &options)
                 std::cerr << "\n";
               }
 
+              const auto position{entry.positions.get(error.location())};
+              if (position.has_value()) {
+                throw PositionError<LintAutoFixError>{
+                    std::get<0>(position.value()),
+                    std::get<1>(position.value()), error.what(),
+                    entry.resolution_base, error.location()};
+              }
+
               throw LintAutoFixError{error.what(), entry.resolution_base,
                                      error.location()};
             } catch (
                 const sourcemeta::blaze::SchemaBrokenReferenceError &error) {
               if (printed_progress) {
                 std::cerr << "\n";
+              }
+
+              const auto position{entry.positions.get(error.location())};
+              if (position.has_value()) {
+                throw PositionError<LintAutoFixError>{
+                    std::get<0>(position.value()),
+                    std::get<1>(position.value()),
+                    "Could not autofix the schema without breaking its "
+                    "internal references",
+                    entry.resolution_base, error.location()};
               }
 
               throw LintAutoFixError{
@@ -570,6 +588,15 @@ auto sourcemeta::jsonschema::lint(const sourcemeta::core::Options &options)
                 const sourcemeta::blaze::CompilerInvalidRegexError &error) {
               if (printed_progress) {
                 std::cerr << "\n";
+              }
+
+              const auto position{entry.positions.get(error.location())};
+              if (position.has_value()) {
+                throw PositionError<sourcemeta::core::FileError<
+                    sourcemeta::blaze::CompilerInvalidRegexError>>(
+                    std::get<0>(position.value()),
+                    std::get<1>(position.value()), entry.resolution_base,
+                    error);
               }
 
               throw sourcemeta::core::FileError<
@@ -781,6 +808,15 @@ auto sourcemeta::jsonschema::lint(const sourcemeta::core::Options &options)
                   entry.resolution_base, error);
             } catch (
                 const sourcemeta::blaze::CompilerInvalidRegexError &error) {
+              const auto position{entry.positions.get(error.location())};
+              if (position.has_value()) {
+                throw PositionError<sourcemeta::core::FileError<
+                    sourcemeta::blaze::CompilerInvalidRegexError>>(
+                    std::get<0>(position.value()),
+                    std::get<1>(position.value()), entry.resolution_base,
+                    error);
+              }
+
               throw sourcemeta::core::FileError<
                   sourcemeta::blaze::CompilerInvalidRegexError>(
                   entry.resolution_base, error);

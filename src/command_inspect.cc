@@ -566,7 +566,7 @@ auto sourcemeta::jsonschema::inspect(const sourcemeta::core::Options &options)
       schema_from_stdin ? (is_openapi ? openapi_stdin_path() : stdin_path())
                         : schema_path};
 
-  reject_unsupported_openapi(schema, schema_resolution_base);
+  reject_unsupported_openapi(schema, schema_resolution_base, &positions);
 
   if (!is_openapi && !schema.is_object() && !schema.is_boolean()) {
     throw NotSchemaError{schema_resolution_base};
