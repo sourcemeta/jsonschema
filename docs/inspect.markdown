@@ -2,8 +2,7 @@ Inspect
 =======
 
 ```sh
-jsonschema inspect <schema.json|.yaml|openapi.json|.yaml> [--json/-j]
-  [--verbose/-v] [--debug/-g]
+jsonschema inspect <schema.json|.yaml> [--json/-j] [--verbose/-v] [--debug/-g]
   [--default-dialect/-d <uri>] [--configuration/-C <path>]
   [--color auto|always|never]
 ```

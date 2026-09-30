@@ -486,6 +486,9 @@ auto inspect_openapi(const sourcemeta::core::Options &options,
 
     throw sourcemeta::core::FileError<
         sourcemeta::core::SchemaAnchorCollisionError>(display_path, error);
+  } catch (const sourcemeta::core::SchemaReferenceError &error) {
+    throw sourcemeta::core::FileError<sourcemeta::core::SchemaReferenceError>(
+        display_path, error.identifier(), error.location(), error.what());
   } catch (
       const sourcemeta::core::SchemaRelativeMetaschemaResolutionError &error) {
     throw sourcemeta::core::FileError<
@@ -605,6 +608,10 @@ auto sourcemeta::jsonschema::inspect(const sourcemeta::core::Options &options)
     throw sourcemeta::core::FileError<
         sourcemeta::core::SchemaAnchorCollisionError>(schema_resolution_base,
                                                       error);
+  } catch (const sourcemeta::core::SchemaReferenceError &error) {
+    throw sourcemeta::core::FileError<sourcemeta::core::SchemaReferenceError>(
+        schema_resolution_base, error.identifier(), error.location(),
+        error.what());
   } catch (
       const sourcemeta::core::SchemaRelativeMetaschemaResolutionError &error) {
     throw sourcemeta::core::FileError<
