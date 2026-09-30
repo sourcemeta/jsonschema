@@ -18,6 +18,8 @@ REPLACE $CWD WITH '[CWD]' IN result_0.txt
 WRITE expected_0.txt UNTIL EOF
 2> error: Invalid recursive reference
 2>   at identifier https://example.com/recursive
+2>   at line 4
+2>   at column 3
 2>   at file path [CWD]/schema.json
 2>   at location "/$recursiveRef"
 EOF
@@ -33,6 +35,8 @@ WRITE expected_1.txt UNTIL EOF
 1> {
 1>   "error": "Invalid recursive reference",
 1>   "identifier": "https://example.com/recursive",
+1>   "line": 4,
+1>   "column": 3,
 1>   "filePath": "[CWD]/schema.json",
 1>   "location": "/$recursiveRef"
 1> }

@@ -487,6 +487,14 @@ auto inspect_openapi(const sourcemeta::core::Options &options,
     throw sourcemeta::core::FileError<
         sourcemeta::core::SchemaAnchorCollisionError>(display_path, error);
   } catch (const sourcemeta::core::SchemaReferenceError &error) {
+    const auto position{positions.get(error.location())};
+    if (position.has_value()) {
+      throw sourcemeta::jsonschema::PositionError<
+          sourcemeta::core::FileError<sourcemeta::core::SchemaReferenceError>>(
+          std::get<0>(position.value()), std::get<1>(position.value()),
+          display_path, error.identifier(), error.location(), error.what());
+    }
+
     throw sourcemeta::core::FileError<sourcemeta::core::SchemaReferenceError>(
         display_path, error.identifier(), error.location(), error.what());
   } catch (
@@ -609,6 +617,15 @@ auto sourcemeta::jsonschema::inspect(const sourcemeta::core::Options &options)
         sourcemeta::core::SchemaAnchorCollisionError>(schema_resolution_base,
                                                       error);
   } catch (const sourcemeta::core::SchemaReferenceError &error) {
+    const auto position{positions.get(error.location())};
+    if (position.has_value()) {
+      throw PositionError<
+          sourcemeta::core::FileError<sourcemeta::core::SchemaReferenceError>>(
+          std::get<0>(position.value()), std::get<1>(position.value()),
+          schema_resolution_base, error.identifier(), error.location(),
+          error.what());
+    }
+
     throw sourcemeta::core::FileError<sourcemeta::core::SchemaReferenceError>(
         schema_resolution_base, error.identifier(), error.location(),
         error.what());
