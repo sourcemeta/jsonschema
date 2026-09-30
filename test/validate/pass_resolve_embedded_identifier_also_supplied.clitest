@@ -1,0 +1,75 @@
+// An identifier that one input embeds and another declares at its root
+// belongs to the one that declares it. What a file merely embeds is only ever
+// remembered to explain a miss, so it must never stand in the way of an input
+// that answers for the same identifier, whichever order they come in.
+
+WRITE container.json UNTIL EOF
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.com/container",
+  "$defs": {
+    "dup": { "$id": "https://example.com/shared", "type": "integer" }
+  }
+}
+EOF
+
+WRITE shared.json UNTIL EOF
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.com/shared",
+  "type": "string"
+}
+EOF
+
+WRITE schema.json UNTIL EOF
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$ref": "https://example.com/shared"
+}
+EOF
+
+WRITE instance.json UNTIL EOF
+"hello"
+EOF
+
+RUN validate schema.json instance.json --resolve container.json --resolve shared.json --verbose STDIN /dev/null IN . INTO result_0.txt EXPECTING 0
+
+WRITE expected_0.txt UNTIL EOF
+2> ok: instance.json
+2>
+2> 1 validated, 1 passed, 0 failed
+EOF
+
+COMPARE result_0.txt AGAINST expected_0.txt
+
+RUN validate schema.json instance.json --resolve shared.json --resolve container.json --verbose STDIN /dev/null IN . INTO result_1.txt EXPECTING 0
+
+WRITE expected_1.txt UNTIL EOF
+2> ok: instance.json
+2>
+2> 1 validated, 1 passed, 0 failed
+EOF
+
+COMPARE result_1.txt AGAINST expected_1.txt
+
+WRITE number.json UNTIL EOF
+42
+EOF
+
+// Validation failure
+RUN validate schema.json number.json --resolve container.json --resolve shared.json STDIN /dev/null IN . INTO result_2.txt EXPECTING 2
+
+WRITE expected_2.txt UNTIL EOF
+2> fail: number.json
+2> error: Schema validation failure
+2>   The value was expected to be of type string but it was of type integer
+2>     at instance location "" (line 1, column 1)
+2>     at evaluate path "/$ref/type"
+2>   The integer value was expected to validate against the referenced schema
+2>     at instance location "" (line 1, column 1)
+2>     at evaluate path "/$ref"
+2>
+2> 1 validated, 0 passed, 1 failed
+EOF
+
+COMPARE result_2.txt AGAINST expected_2.txt

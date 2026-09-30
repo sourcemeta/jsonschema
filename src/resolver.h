@@ -532,7 +532,21 @@ public:
 
             this->remote_ = true;
           } else {
-            std::rethrow_exception(failure);
+            // Giving up for real now, so an identifier that one of the
+            // inputs merely embeds is worth explaining rather than being
+            // reported as one nobody supplied
+            try {
+              std::rethrow_exception(failure);
+            } catch (const sourcemeta::core::FileError<
+                     sourcemeta::core::SchemaResolutionError> &error) {
+              const std::string identifier{error.identifier()};
+              const auto embedded{this->embedded_.find(identifier)};
+              if (embedded == this->embedded_.cend()) {
+                throw;
+              }
+
+              this->report_embedded(embedded->second, identifier);
+            }
           }
         }
 
@@ -727,16 +741,7 @@ public:
       const auto embedded{this->importing_ ? this->embedded_.cend()
                                            : this->embedded_.find(target)};
       if (embedded != this->embedded_.cend()) {
-        if (embedded->second.position.has_value()) {
-          throw PositionError<
-              sourcemeta::core::FileError<SchemaEmbeddedResourceError>>(
-              embedded->second.position.value().first,
-              embedded->second.position.value().second, embedded->second.origin,
-              target, embedded->second.location);
-        }
-
-        throw sourcemeta::core::FileError<SchemaEmbeddedResourceError>(
-            embedded->second.origin, target, embedded->second.location);
+        this->report_embedded(embedded->second, target);
       }
 
       return fetched;
@@ -908,6 +913,31 @@ private:
     return this->schemas_.size() > before;
   }
 
+  // What an imported file embeds rather than declares at its root. Never
+  // answered with, as that is the point, but kept so that naming one of these
+  // from the outside gets an explanation rather than a shrug
+  struct EmbeddedResource {
+    std::filesystem::path origin;
+    sourcemeta::core::Pointer location;
+    std::optional<std::pair<std::uint64_t, std::uint64_t>> position;
+  };
+
+  // Naming a resource that an input merely embeds gets an explanation rather
+  // than the advice to import what is already imported
+  [[noreturn]] auto report_embedded(const EmbeddedResource &embedded,
+                                    const std::string &identifier) const
+      -> void {
+    if (embedded.position.has_value()) {
+      throw PositionError<
+          sourcemeta::core::FileError<SchemaEmbeddedResourceError>>(
+          embedded.position.value().first, embedded.position.value().second,
+          embedded.origin, identifier, embedded.location);
+    }
+
+    throw sourcemeta::core::FileError<SchemaEmbeddedResourceError>(
+        embedded.origin, identifier, embedded.location);
+  }
+
   auto import_entry(const InputJSON &entry,
                     const std::string_view default_dialect,
                     const ImportMode mode) -> void {
@@ -1014,15 +1044,6 @@ private:
           entry.resolution_base, error.what());
     }
   }
-
-  // What an imported file embeds rather than declares at its root. Never
-  // answered with, as that is the point, but kept so that naming one of these
-  // from the outside gets an explanation rather than a shrug
-  struct EmbeddedResource {
-    std::filesystem::path origin;
-    sourcemeta::core::Pointer location;
-    std::optional<std::pair<std::uint64_t, std::uint64_t>> position;
-  };
 
   std::map<std::string, EmbeddedResource> embedded_{};
   std::map<std::string, sourcemeta::core::JSON> schemas_{};
