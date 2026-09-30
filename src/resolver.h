@@ -482,6 +482,7 @@ public:
       const auto allow_remote{this->remote_};
 
       this->remote_ = false;
+      this->importing_ = true;
       while (!pending.empty()) {
         std::vector<std::size_t> deferred;
         std::exception_ptr failure;
@@ -531,7 +532,21 @@ public:
 
             this->remote_ = true;
           } else {
-            std::rethrow_exception(failure);
+            // Giving up for real now, so an identifier that one of the
+            // inputs merely embeds is worth explaining rather than being
+            // reported as one nobody supplied
+            try {
+              std::rethrow_exception(failure);
+            } catch (const sourcemeta::core::FileError<
+                     sourcemeta::core::SchemaResolutionError> &error) {
+              const std::string identifier{error.identifier()};
+              const auto embedded{this->embedded_.find(identifier)};
+              if (embedded == this->embedded_.cend()) {
+                throw;
+              }
+
+              this->report_embedded(embedded->second, identifier);
+            }
           }
         }
 
@@ -539,6 +554,7 @@ public:
       }
 
       this->pending_identifiers_.clear();
+      this->importing_ = false;
       this->remote_ = allow_remote;
     }
 
@@ -590,7 +606,9 @@ public:
            const std::string_view default_dialect = "",
            const std::string_view default_id = "",
            const std::function<void(const sourcemeta::core::JSON::String &)>
-               &callback = nullptr) -> bool {
+               &callback = nullptr,
+           const sourcemeta::core::PointerPositionTracker *positions = nullptr)
+      -> bool {
     assert(schema.is_object() || schema.is_boolean());
 
     // Framing the whole document is what vets it, from the vocabularies every
@@ -608,7 +626,8 @@ public:
 
     bool added_any_schema{false};
     frame.for_each_resource(
-        [this, &schema, &frame, &origin, &callback, &added_any_schema](
+        [this, &schema, &frame, &origin, &callback, &positions,
+         &added_any_schema](
             const std::string_view uri,
             const sourcemeta::core::SchemaFrame::Location &entry) -> void {
           // Reject a resource whose vocabularies we cannot make sense of
@@ -619,8 +638,23 @@ public:
           // A file stands for the single schema it declares. A resource that
           // the schema merely embeds is reachable from within that schema,
           // and answering for it on its own would hand back a schema that the
-          // user never supplied as one
+          // user never supplied as one. Remember it all the same, as knowing
+          // where an identifier sits is what tells someone who names it from
+          // the outside why nothing came back
           if (!entry.pointer.empty()) {
+            auto location{sourcemeta::core::to_pointer(entry.pointer)};
+            const auto position{
+                positions == nullptr ? std::nullopt : positions->get(location)};
+            this->embedded_.emplace(
+                std::string{uri},
+                EmbeddedResource{.origin = origin,
+                                 .location = std::move(location),
+                                 .position =
+                                     position.has_value()
+                                         ? std::make_optional(std::make_pair(
+                                               std::get<0>(position.value()),
+                                               std::get<1>(position.value())))
+                                         : std::nullopt});
             return;
           }
 
@@ -696,8 +730,20 @@ public:
       return cached->second;
     }
 
-    auto fetched{fetch_schema(this->options_, target, this->remote_)};
+    auto fetched{this->fetch_or_explain(target)};
     if (!fetched.has_value()) {
+      // Nothing anywhere holds this. An imported file that merely embeds it
+      // is the one case worth explaining, as the usual advice to import it
+      // would have the user import what they already did
+      // Not while the imports are still settling, as remote resolution is
+      // deliberately held back there and an entry that cannot resolve yet is
+      // meant to be deferred rather than given up on
+      const auto embedded{this->importing_ ? this->embedded_.cend()
+                                           : this->embedded_.find(target)};
+      if (embedded != this->embedded_.cend()) {
+        this->report_embedded(embedded->second, target);
+      }
+
       return fetched;
     }
 
@@ -867,6 +913,54 @@ private:
     return this->schemas_.size() > before;
   }
 
+  // What an imported file embeds rather than declares at its root. Never
+  // answered with, as that is the point, but kept so that naming one of these
+  // from the outside gets an explanation rather than a shrug
+  struct EmbeddedResource {
+    std::filesystem::path origin;
+    sourcemeta::core::Pointer location;
+    std::optional<std::pair<std::uint64_t, std::uint64_t>> position;
+  };
+
+  // Fetching, with one thing added: a remote that says it does not have this
+  // settles the question just as firmly as finding nothing locally does, so
+  // an input that merely embeds the identifier is worth pointing at rather
+  // than letting the status stand as the whole answer
+  auto fetch_or_explain(const std::string &target)
+      -> sourcemeta::core::SchemaResolverResult {
+    try {
+      return fetch_schema(this->options_, target, this->remote_);
+    } catch (const sourcemeta::core::HTTPStatusError &error) {
+      if (this->importing_ ||
+          error.status() != sourcemeta::core::HTTP_STATUS_NOT_FOUND) {
+        throw;
+      }
+
+      const auto embedded{this->embedded_.find(target)};
+      if (embedded == this->embedded_.cend()) {
+        throw;
+      }
+
+      this->report_embedded(embedded->second, target);
+    }
+  }
+
+  // Naming a resource that an input merely embeds gets an explanation rather
+  // than the advice to import what is already imported
+  [[noreturn]] auto report_embedded(const EmbeddedResource &embedded,
+                                    const std::string &identifier) const
+      -> void {
+    if (embedded.position.has_value()) {
+      throw PositionError<
+          sourcemeta::core::FileError<SchemaEmbeddedResourceError>>(
+          embedded.position.value().first, embedded.position.value().second,
+          embedded.origin, identifier, embedded.location);
+    }
+
+    throw sourcemeta::core::FileError<SchemaEmbeddedResourceError>(
+        embedded.origin, identifier, embedded.location);
+  }
+
   auto import_entry(const InputJSON &entry,
                     const std::string_view default_dialect,
                     const ImportMode mode) -> void {
@@ -892,14 +986,15 @@ private:
     }
 
     try {
-      const auto result =
-          this->add(mode, entry.second, entry.resolution_base, default_dialect,
-                    sourcemeta::jsonschema::default_id(entry),
-                    [this](const auto &identifier) {
-                      LOG_DEBUG(this->options_)
-                          << "Importing schema into the resolution context: "
-                          << identifier << "\n";
-                    });
+      const auto result = this->add(
+          mode, entry.second, entry.resolution_base, default_dialect,
+          sourcemeta::jsonschema::default_id(entry),
+          [this](const auto &identifier) {
+            LOG_DEBUG(this->options_)
+                << "Importing schema into the resolution context: "
+                << identifier << "\n";
+          },
+          &entry.positions);
       // Staging a root is only ever half of an import, so a file that
       // declares nothing is worth reporting once the complete read says so
       if (!result && mode == ImportMode::Complete) {
@@ -973,6 +1068,7 @@ private:
     }
   }
 
+  std::map<std::string, EmbeddedResource> embedded_{};
   std::map<std::string, sourcemeta::core::JSON> schemas_{};
   // Kept wholly apart from the schemas above, so that neither resolver can
   // reach what the other answers for
@@ -988,6 +1084,9 @@ private:
   const std::optional<sourcemeta::blaze::Configuration> configuration_;
   const std::unordered_map<std::string, std::string> canonical_resolve_;
   bool remote_{false};
+  // Whether the `--resolve` inputs are still being imported, during which a
+  // miss means "not yet" rather than "nowhere"
+  bool importing_{false};
   std::unordered_set<std::string> pending_identifiers_{};
 };
 

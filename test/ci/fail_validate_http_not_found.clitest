@@ -1,0 +1,40 @@
+// A reference to a document the remote does not hold reports the status it
+// answered with, which is what tells apart a schema nobody serves from one
+// that could not be reached at all.
+
+WRITE schema.json UNTIL EOF
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$ref": "https://schemas.sourcemeta.com/definitely-absent-abc123"
+}
+EOF
+
+WRITE instance.json UNTIL EOF
+"hello"
+EOF
+
+// Unexpected error
+RUN validate schema.json instance.json --http STDIN /dev/null IN . INTO result_0.txt EXPECTING 1
+
+WRITE expected_0.txt UNTIL EOF
+2> error: Unsuccessful HTTP response
+2>   with status 404 Not Found
+2>   with method GET
+2>   at url https://schemas.sourcemeta.com/definitely-absent-abc123
+EOF
+
+COMPARE result_0.txt AGAINST expected_0.txt
+
+// Unexpected error
+RUN validate schema.json instance.json --http --json STDIN /dev/null IN . INTO result_1.txt EXPECTING 1
+
+WRITE expected_1.txt UNTIL EOF
+1> {
+1>   "error": "Unsuccessful HTTP response",
+1>   "status": 404,
+1>   "method": "GET",
+1>   "url": "https://schemas.sourcemeta.com/definitely-absent-abc123"
+1> }
+EOF
+
+COMPARE result_1.txt AGAINST expected_1.txt

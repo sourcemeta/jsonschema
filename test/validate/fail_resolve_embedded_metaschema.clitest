@@ -1,0 +1,71 @@
+// The same holds for a meta-schema an input names. Deferring the imports is
+// what lets them be given in any order, so a meta-schema that nothing has
+// imported yet is waited for rather than reported. Once the waiting is over,
+// one that another input merely embeds is told where it sits.
+
+WRITE holder.json UNTIL EOF
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.com/holder",
+  "$defs": {
+    "meta": {
+      "$id": "https://example.com/inner-meta",
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "$vocabulary": { "https://json-schema.org/draft/2020-12/vocab/core": true }
+    }
+  }
+}
+EOF
+
+WRITE leaf.json UNTIL EOF
+{
+  "$schema": "https://example.com/inner-meta",
+  "$id": "https://example.com/leaf",
+  "type": "string"
+}
+EOF
+
+WRITE schema.json UNTIL EOF
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$ref": "https://example.com/leaf"
+}
+EOF
+
+WRITE instance.json UNTIL EOF
+"hello"
+EOF
+
+// Schema input error
+RUN validate schema.json instance.json --resolve leaf.json --resolve holder.json STDIN /dev/null IN . INTO result_0.txt EXPECTING 4
+
+REPLACE $CWD WITH '[CWD]' IN result_0.txt
+
+WRITE expected_0.txt UNTIL EOF
+2> error: This identifier is embedded in an imported schema, so only that schema can reach it
+2>   at identifier https://example.com/inner-meta
+2>   at line 5
+2>   at column 5
+2>   at file path [CWD]/holder.json
+2>   at location "/$defs/meta"
+EOF
+
+COMPARE result_0.txt AGAINST expected_0.txt
+
+// Schema input error
+RUN validate schema.json instance.json --resolve leaf.json --resolve holder.json --json STDIN /dev/null IN . INTO result_1.txt EXPECTING 4
+
+REPLACE $CWD WITH '[CWD]' IN result_1.txt
+
+WRITE expected_1.txt UNTIL EOF
+1> {
+1>   "error": "This identifier is embedded in an imported schema, so only that schema can reach it",
+1>   "identifier": "https://example.com/inner-meta",
+1>   "line": 5,
+1>   "column": 5,
+1>   "filePath": "[CWD]/holder.json",
+1>   "location": "/$defs/meta"
+1> }
+EOF
+
+COMPARE result_1.txt AGAINST expected_1.txt

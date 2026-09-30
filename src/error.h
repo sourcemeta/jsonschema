@@ -110,6 +110,33 @@ private:
   sourcemeta::core::Pointer other_;
 };
 
+// An identifier that an imported schema merely embeds is reachable from within
+// that schema and from nowhere else, so naming it from the outside finds
+// nothing even though the file holding it was imported. Saying that outright
+// beats the generic diagnostic, which would advise importing what is already
+// imported
+class SchemaEmbeddedResourceError : public std::runtime_error {
+public:
+  SchemaEmbeddedResourceError(std::string identifier,
+                              sourcemeta::core::Pointer location)
+      : std::runtime_error{"This identifier is embedded in an imported schema, "
+                           "so only that schema can reach it"},
+        identifier_{std::move(identifier)}, location_{std::move(location)} {}
+
+  [[nodiscard]] auto identifier() const noexcept -> const std::string & {
+    return this->identifier_;
+  }
+
+  [[nodiscard]] auto location() const noexcept
+      -> const sourcemeta::core::Pointer & {
+    return this->location_;
+  }
+
+private:
+  std::string identifier_;
+  sourcemeta::core::Pointer location_;
+};
+
 class OpenAPIIdentifierConflictError : public std::runtime_error {
 public:
   OpenAPIIdentifierConflictError(std::string identifier,
@@ -1627,6 +1654,16 @@ inline auto try_catch(const sourcemeta::core::Options &options,
     return EXIT_OTHER_INPUT_ERROR;
   } catch (const sourcemeta::core::FileError<
            sourcemeta::core::SchemaRelativeMetaschemaResolutionError> &error) {
+    const auto is_json{options.contains("json")};
+    print_exception(is_json, error);
+    return EXIT_SCHEMA_INPUT_ERROR;
+  } catch (const PositionError<
+           sourcemeta::core::FileError<SchemaEmbeddedResourceError>> &error) {
+    const auto is_json{options.contains("json")};
+    print_exception(is_json, error);
+    return EXIT_SCHEMA_INPUT_ERROR;
+  } catch (
+      const sourcemeta::core::FileError<SchemaEmbeddedResourceError> &error) {
     const auto is_json{options.contains("json")};
     print_exception(is_json, error);
     return EXIT_SCHEMA_INPUT_ERROR;
