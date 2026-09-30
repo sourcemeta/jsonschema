@@ -730,7 +730,7 @@ public:
       return cached->second;
     }
 
-    auto fetched{fetch_schema(this->options_, target, this->remote_)};
+    auto fetched{this->fetch_or_explain(target)};
     if (!fetched.has_value()) {
       // Nothing anywhere holds this. An imported file that merely embeds it
       // is the one case worth explaining, as the usual advice to import it
@@ -921,6 +921,29 @@ private:
     sourcemeta::core::Pointer location;
     std::optional<std::pair<std::uint64_t, std::uint64_t>> position;
   };
+
+  // Fetching, with one thing added: a remote that says it does not have this
+  // settles the question just as firmly as finding nothing locally does, so
+  // an input that merely embeds the identifier is worth pointing at rather
+  // than letting the status stand as the whole answer
+  auto fetch_or_explain(const std::string &target)
+      -> sourcemeta::core::SchemaResolverResult {
+    try {
+      return fetch_schema(this->options_, target, this->remote_);
+    } catch (const sourcemeta::core::HTTPStatusError &error) {
+      if (this->importing_ ||
+          error.status() != sourcemeta::core::HTTP_STATUS_NOT_FOUND) {
+        throw;
+      }
+
+      const auto embedded{this->embedded_.find(target)};
+      if (embedded == this->embedded_.cend()) {
+        throw;
+      }
+
+      this->report_embedded(embedded->second, target);
+    }
+  }
 
   // Naming a resource that an input merely embeds gets an explanation rather
   // than the advice to import what is already imported
