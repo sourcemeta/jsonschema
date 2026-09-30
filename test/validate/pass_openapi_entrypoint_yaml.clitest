@@ -1,5 +1,5 @@
-// A description written in YAML is validated against the same way one written
-// in JSON is.
+// A description written in YAML is validated the same way one written in
+// JSON is.
 
 WRITE openapi.yaml UNTIL EOF
 openapi: "3.1.1"

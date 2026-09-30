@@ -252,18 +252,65 @@ inline auto format_openapi(sourcemeta::core::JSON &document,
   sourcemeta::core::openapi_format(document, frame);
 }
 
+// OpenAPI Specification 3.2.1, Section 4.1 lets a document name itself with
+// `$self`, "which also serves as its base URI", resolved against wherever the
+// document was retrieved from. RFC 3986 Section 5.2.2 never resolves a
+// reference against a fragment, so one written there is no part of the base
+inline auto openapi_self_identity(const sourcemeta::core::JSON &document,
+                                  const std::string &retrieval)
+    -> std::optional<std::string> {
+  if (!document.is_object()) {
+    return std::nullopt;
+  }
+
+  // 3.2 is where the field gains that meaning. Before it, `$self` is no part
+  // of the specification and names nothing, so a document that spells one
+  // goes by where it was retrieved from like any other
+  if (sourcemeta::core::openapi_version(document) !=
+      sourcemeta::core::OpenAPIVersion::OPENAPI_3_2) {
+    return std::nullopt;
+  }
+
+  const auto *self{document.try_at("$self")};
+  if (self == nullptr || !self->is_string()) {
+    return std::nullopt;
+  }
+
+  try {
+    sourcemeta::core::URI uri{self->to_string()};
+    uri.resolve_from(sourcemeta::core::URI{retrieval});
+    uri.canonicalize();
+    return uri.recompose_without_fragment();
+  } catch (const sourcemeta::core::URIParseError &) {
+    return std::nullopt;
+  }
+}
+
 // Every way of reading an OpenAPI description answers for the same failures,
 // whether it is being made whole or merely looked at, so they are settled here
 // once and each caller runs its own work through this
 template <typename Function>
 auto with_openapi_diagnostics(
+    const sourcemeta::core::JSON &document, const std::string_view entry_base,
     const std::filesystem::path &display_path,
     const sourcemeta::core::PointerPositionTracker &positions,
     const Function &callback) -> decltype(callback()) {
+  // Only a place within the entry document is one our positions describe, as
+  // a description may span others that we never read
+  const auto entry_self{
+      openapi_self_identity(document, std::string{entry_base})};
+  const auto describes = [&entry_base,
+                          &entry_self](const std::string_view base) -> bool {
+    return base == entry_base ||
+           (entry_self.has_value() && base == entry_self.value());
+  };
+
   try {
     return callback();
   } catch (const sourcemeta::core::OpenAPIError &error) {
-    const auto position{positions.get(error.location())};
+    const auto position{describes(error.base())
+                            ? positions.get(error.location())
+                            : std::nullopt};
     if (position.has_value()) {
       throw PositionError<
           sourcemeta::core::FileError<sourcemeta::core::OpenAPIError>>(
@@ -274,9 +321,29 @@ auto with_openapi_diagnostics(
     throw sourcemeta::core::FileError<sourcemeta::core::OpenAPIError>(
         display_path, error);
   } catch (const sourcemeta::core::OpenAPIResolutionError &error) {
+    const auto position{describes(error.base())
+                            ? positions.get(error.location())
+                            : std::nullopt};
+    if (position.has_value()) {
+      throw PositionError<sourcemeta::core::FileError<
+          sourcemeta::core::OpenAPIResolutionError>>(
+          std::get<0>(position.value()), std::get<1>(position.value()),
+          display_path, error);
+    }
+
     throw sourcemeta::core::FileError<sourcemeta::core::OpenAPIResolutionError>(
         display_path, error);
   } catch (const sourcemeta::core::OpenAPIReferenceError &error) {
+    const auto position{describes(error.base())
+                            ? positions.get(error.location())
+                            : std::nullopt};
+    if (position.has_value()) {
+      throw PositionError<
+          sourcemeta::core::FileError<sourcemeta::core::OpenAPIReferenceError>>(
+          std::get<0>(position.value()), std::get<1>(position.value()),
+          display_path, error);
+    }
+
     throw sourcemeta::core::FileError<sourcemeta::core::OpenAPIReferenceError>(
         display_path, error);
   } catch (const sourcemeta::core::SchemaKeywordError &error) {
@@ -336,11 +403,12 @@ inline auto openapi_bundle_for_evaluation(
     const std::string_view default_base,
     const std::filesystem::path &display_path,
     const sourcemeta::core::PointerPositionTracker &positions) -> void {
-  with_openapi_diagnostics(display_path, positions, [&]() {
-    sourcemeta::core::openapi_bundle(
-        document, sourcemeta::core::schema_walker, resolver, openapi_resolver,
-        {.default_base = std::string{default_base}});
-  });
+  with_openapi_diagnostics(
+      document, default_base, display_path, positions, [&]() {
+        sourcemeta::core::openapi_bundle(
+            document, sourcemeta::core::schema_walker, resolver,
+            openapi_resolver, {.default_base = std::string{default_base}});
+      });
 }
 
 // Framing a description is what reaches both what it says of itself and the
@@ -352,10 +420,11 @@ inline auto openapi_frame_for_evaluation(
     const std::filesystem::path &display_path,
     const sourcemeta::core::PointerPositionTracker &positions)
     -> sourcemeta::core::OpenAPIFrame {
-  return with_openapi_diagnostics(display_path, positions, [&]() {
-    return sourcemeta::core::OpenAPIFrame{
-        document, sourcemeta::core::schema_walker, resolver, default_base};
-  });
+  return with_openapi_diagnostics(
+      document, default_base, display_path, positions, [&]() {
+        return sourcemeta::core::OpenAPIFrame{
+            document, sourcemeta::core::schema_walker, resolver, default_base};
+      });
 }
 
 inline auto

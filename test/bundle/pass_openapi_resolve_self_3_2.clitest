@@ -1,0 +1,52 @@
+// From 3.2 a description may name itself with `$self`, and that name is what
+// another description reaches it by.
+
+WRITE other.json UNTIL EOF
+{
+  "openapi": "3.2.0",
+  "$self": "https://example.com/declared",
+  "info": { "title": "Shared", "version": "1.0.0" },
+  "paths": {},
+  "components": { "responses": { "Ok": { "description": "OK" } } }
+}
+EOF
+
+WRITE openapi.json UNTIL EOF
+{
+  "openapi": "3.2.0",
+  "info": { "title": "Example", "version": "1.0.0" },
+  "paths": { "/p": { "get": { "responses": { "200": { "$ref": "https://example.com/declared#/components/responses/Ok" } } } } }
+}
+EOF
+
+RUN bundle openapi.json --resolve other.json STDIN /dev/null IN . INTO result.txt EXPECTING 0
+
+WRITE expected.txt UNTIL EOF
+1> {
+1>   "openapi": "3.2.0",
+1>   "info": {
+1>     "title": "Example",
+1>     "version": "1.0.0"
+1>   },
+1>   "paths": {
+1>     "/p": {
+1>       "get": {
+1>         "responses": {
+1>           "200": {
+1>             "$ref": "#/components/responses/Ok"
+1>           }
+1>         }
+1>       }
+1>     }
+1>   },
+1>   "components": {
+1>     "responses": {
+1>       "Ok": {
+1>         "description": "OK"
+1>       }
+1>     }
+1>   }
+1> }
+EOF
+
+COMPARE result.txt AGAINST expected.txt

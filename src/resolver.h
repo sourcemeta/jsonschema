@@ -424,32 +424,6 @@ static inline auto identifier_path(const std::string &identifier)
                                : std::filesystem::path{identifier};
 }
 
-// OpenAPI Specification 3.2.1, Section 4.1 lets a document name itself with
-// `$self`, "which also serves as its base URI", resolved against wherever the
-// document was retrieved from. RFC 3986 Section 5.2.2 never resolves a
-// reference against a fragment, so one written there is no part of the base
-static inline auto openapi_self_identity(const sourcemeta::core::JSON &document,
-                                         const std::string &retrieval)
-    -> std::optional<std::string> {
-  if (!document.is_object()) {
-    return std::nullopt;
-  }
-
-  const auto *self{document.try_at("$self")};
-  if (self == nullptr || !self->is_string()) {
-    return std::nullopt;
-  }
-
-  try {
-    sourcemeta::core::URI uri{self->to_string()};
-    uri.resolve_from(sourcemeta::core::URI{retrieval});
-    uri.canonicalize();
-    return uri.recompose_without_fragment();
-  } catch (const sourcemeta::core::URIParseError &) {
-    return std::nullopt;
-  }
-}
-
 class CustomResolver {
 public:
   CustomResolver(
