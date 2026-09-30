@@ -162,15 +162,30 @@ inline auto unsupported_openapi_version(const sourcemeta::core::JSON &document)
 }
 
 // A description of a revision we cannot read is no JSON Schema either, so it is
-// turned down rather than being taken for one
-inline auto reject_unsupported_openapi(const sourcemeta::core::JSON &document,
-                                       const std::filesystem::path &path)
+// turned down rather than being taken for one. The caller that knows where the
+// document came from hands over its positions, so that the revision we cannot
+// read is pointed at rather than merely named
+inline auto reject_unsupported_openapi(
+    const sourcemeta::core::JSON &document, const std::filesystem::path &path,
+    const sourcemeta::core::PointerPositionTracker *positions = nullptr)
     -> void {
   const auto *version{unsupported_openapi_version(document)};
-  if (version != nullptr) {
-    throw sourcemeta::core::FileError<UnsupportedOpenAPIVersionError>(
-        path, version->to_string());
+  if (version == nullptr) {
+    return;
   }
+
+  if (positions != nullptr) {
+    const auto position{positions->get(sourcemeta::core::Pointer{"openapi"})};
+    if (position.has_value()) {
+      throw PositionError<
+          sourcemeta::core::FileError<UnsupportedOpenAPIVersionError>>(
+          std::get<0>(position.value()), std::get<1>(position.value()), path,
+          version->to_string());
+    }
+  }
+
+  throw sourcemeta::core::FileError<UnsupportedOpenAPIVersionError>(
+      path, version->to_string());
 }
 
 inline auto default_dialect(
@@ -345,6 +360,14 @@ bundle_for_evaluation(const sourcemeta::core::JSON &schema,
     throw sourcemeta::core::FileError<
         sourcemeta::core::SchemaAnchorCollisionError>(resolution_base, error);
   } catch (const sourcemeta::core::SchemaReferenceError &error) {
+    const auto position{positions.get(error.location())};
+    if (position.has_value()) {
+      throw PositionError<
+          sourcemeta::core::FileError<sourcemeta::core::SchemaReferenceError>>(
+          std::get<0>(position.value()), std::get<1>(position.value()),
+          resolution_base, error.identifier(), error.location(), error.what());
+    }
+
     throw sourcemeta::core::FileError<sourcemeta::core::SchemaReferenceError>(
         resolution_base, error.identifier(), error.location(), error.what());
   } catch (
@@ -404,6 +427,14 @@ frame_for_evaluation(const sourcemeta::core::JSON &bundled,
     throw sourcemeta::core::FileError<
         sourcemeta::core::SchemaAnchorCollisionError>(resolution_base, error);
   } catch (const sourcemeta::core::SchemaReferenceError &error) {
+    const auto position{positions.get(error.location())};
+    if (position.has_value()) {
+      throw PositionError<
+          sourcemeta::core::FileError<sourcemeta::core::SchemaReferenceError>>(
+          std::get<0>(position.value()), std::get<1>(position.value()),
+          resolution_base, error.identifier(), error.location(), error.what());
+    }
+
     throw sourcemeta::core::FileError<sourcemeta::core::SchemaReferenceError>(
         resolution_base, error.identifier(), error.location(), error.what());
   } catch (
@@ -444,6 +475,14 @@ inline auto compile_for_evaluation(
     throw sourcemeta::core::FileError<
         sourcemeta::blaze::CompilerInvalidEntryPoint>(resolution_base, error);
   } catch (const sourcemeta::blaze::CompilerInvalidRegexError &error) {
+    const auto position{positions.get(error.location())};
+    if (position.has_value()) {
+      throw PositionError<sourcemeta::core::FileError<
+          sourcemeta::blaze::CompilerInvalidRegexError>>(
+          std::get<0>(position.value()), std::get<1>(position.value()),
+          resolution_base, error);
+    }
+
     throw sourcemeta::core::FileError<
         sourcemeta::blaze::CompilerInvalidRegexError>(resolution_base, error);
   } catch (const sourcemeta::blaze::CompilerError &error) {
@@ -459,6 +498,14 @@ inline auto compile_for_evaluation(
         resolution_base, error);
   } catch (
       const sourcemeta::blaze::CompilerReferenceTargetNotSchemaError &error) {
+    const auto position{positions.get(error.location())};
+    if (position.has_value()) {
+      throw PositionError<sourcemeta::core::FileError<
+          sourcemeta::blaze::CompilerReferenceTargetNotSchemaError>>(
+          std::get<0>(position.value()), std::get<1>(position.value()),
+          resolution_base, error);
+    }
+
     throw sourcemeta::core::FileError<
         sourcemeta::blaze::CompilerReferenceTargetNotSchemaError>(
         resolution_base, error);
@@ -480,6 +527,14 @@ inline auto compile_for_evaluation(
     throw sourcemeta::core::FileError<
         sourcemeta::core::SchemaAnchorCollisionError>(resolution_base, error);
   } catch (const sourcemeta::core::SchemaReferenceError &error) {
+    const auto position{positions.get(error.location())};
+    if (position.has_value()) {
+      throw PositionError<
+          sourcemeta::core::FileError<sourcemeta::core::SchemaReferenceError>>(
+          std::get<0>(position.value()), std::get<1>(position.value()),
+          resolution_base, error.identifier(), error.location(), error.what());
+    }
+
     throw sourcemeta::core::FileError<sourcemeta::core::SchemaReferenceError>(
         resolution_base, error.identifier(), error.location(), error.what());
   } catch (

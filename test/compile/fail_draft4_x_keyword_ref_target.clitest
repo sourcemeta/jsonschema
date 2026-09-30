@@ -29,6 +29,8 @@ REPLACE $CWD WITH '[CWD]' IN result.txt
 WRITE expected_0.txt UNTIL EOF
 2> error: The referenced schema is not considered to be a valid subschema given the dialect and vocabularies in use
 2>   at identifier [CWD_URI]/schema.json#/allOf/1/additionalProperties/x-this-is-invalid/$defs/test
+2>   at line 9
+2>   at column 9
 2>   at file path [CWD]/schema.json
 2>   at location "/allOf/1/additionalProperties/x-this-is-invalid"
 2>
@@ -47,6 +49,8 @@ WRITE expected_1.txt UNTIL EOF
 1> {
 1>   "error": "The referenced schema is not considered to be a valid subschema given the dialect and vocabularies in use",
 1>   "identifier": "[CWD_URI]/schema.json#/allOf/1/additionalProperties/x-this-is-invalid/$defs/test",
+1>   "line": 9,
+1>   "column": 9,
 1>   "filePath": "[CWD]/schema.json",
 1>   "location": "/allOf/1/additionalProperties/x-this-is-invalid"
 1> }

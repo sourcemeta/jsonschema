@@ -1,0 +1,54 @@
+// A Schema Object of a description is held to JSON Schema, so one breaking a
+// rule of the dialect it declares is reported against the file that holds it
+// rather than escaping as an error with no source.
+
+WRITE openapi.json UNTIL EOF
+{
+  "openapi": "3.1.1",
+  "info": { "title": "Example", "version": "1.0.0" },
+  "jsonSchemaDialect": "https://json-schema.org/draft/2019-09/schema",
+  "paths": {},
+  "components": {
+    "schemas": {
+      "Recursive": {
+        "$id": "https://example.com/recursive",
+        "$recursiveRef": "#/$defs/nowhere"
+      }
+    }
+  }
+}
+EOF
+
+// Schema input error
+RUN inspect openapi.json STDIN /dev/null IN . INTO result_0.txt EXPECTING 4
+
+REPLACE $CWD WITH '[CWD]' IN result_0.txt
+
+WRITE expected_0.txt UNTIL EOF
+2> error: Invalid recursive reference
+2>   at identifier https://example.com/recursive
+2>   at line 10
+2>   at column 9
+2>   at file path [CWD]/openapi.json
+2>   at location "/components/schemas/Recursive/$recursiveRef"
+EOF
+
+COMPARE result_0.txt AGAINST expected_0.txt
+
+// Schema input error
+RUN inspect openapi.json --json STDIN /dev/null IN . INTO result_1.txt EXPECTING 4
+
+REPLACE $CWD WITH '[CWD]' IN result_1.txt
+
+WRITE expected_1.txt UNTIL EOF
+1> {
+1>   "error": "Invalid recursive reference",
+1>   "identifier": "https://example.com/recursive",
+1>   "line": 10,
+1>   "column": 9,
+1>   "filePath": "[CWD]/openapi.json",
+1>   "location": "/components/schemas/Recursive/$recursiveRef"
+1> }
+EOF
+
+COMPARE result_1.txt AGAINST expected_1.txt

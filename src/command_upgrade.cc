@@ -124,6 +124,15 @@ auto upgrade_schema(sourcemeta::core::JSON &schema,
         sourcemeta::core::SchemaAnchorCollisionError>(schema_display_path,
                                                       error);
   } catch (const sourcemeta::core::SchemaReferenceError &error) {
+    const auto position{positions.get(error.location())};
+    if (position.has_value()) {
+      throw sourcemeta::jsonschema::PositionError<
+          sourcemeta::core::FileError<sourcemeta::core::SchemaReferenceError>>(
+          std::get<0>(position.value()), std::get<1>(position.value()),
+          schema_display_path, error.identifier(), error.location(),
+          error.what());
+    }
+
     throw sourcemeta::core::FileError<sourcemeta::core::SchemaReferenceError>(
         schema_display_path, error.identifier(), error.location(),
         error.what());

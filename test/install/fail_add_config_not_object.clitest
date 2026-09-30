@@ -11,6 +11,8 @@ REPLACE $CWD WITH '[CWD]' IN result_0.txt
 
 WRITE expected_0.txt UNTIL EOF
 2> error: The configuration must be an object
+2>   at line 1
+2>   at column 1
 2>   at file path [CWD]/project/jsonschema.json
 2>   at location ""
 EOF
@@ -25,6 +27,8 @@ REPLACE $CWD WITH '[CWD]' IN result_1.txt
 WRITE expected_1.txt UNTIL EOF
 1> {
 1>   "error": "The configuration must be an object",
+1>   "line": 1,
+1>   "column": 1,
 1>   "filePath": "[CWD]/project/jsonschema.json",
 1>   "location": ""
 1> }

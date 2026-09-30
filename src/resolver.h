@@ -939,6 +939,15 @@ private:
           sourcemeta::core::SchemaAnchorCollisionError>(entry.resolution_base,
                                                         error);
     } catch (const sourcemeta::core::SchemaReferenceError &error) {
+      const auto position{entry.positions.get(error.location())};
+      if (position.has_value()) {
+        throw PositionError<sourcemeta::core::FileError<
+            sourcemeta::core::SchemaReferenceError>>(
+            std::get<0>(position.value()), std::get<1>(position.value()),
+            entry.resolution_base, error.identifier(), error.location(),
+            error.what());
+      }
+
       throw sourcemeta::core::FileError<sourcemeta::core::SchemaReferenceError>(
           entry.resolution_base, error.identifier(), error.location(),
           error.what());
