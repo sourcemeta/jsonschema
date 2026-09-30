@@ -50,5 +50,22 @@ EOF
 
 COMPARE result.txt AGAINST expected.txt
 
+// Other error
+RUN lint schema.json --fix --json STDIN /dev/null IN . INTO result_json.txt EXPECTING 1
+
+REPLACE $CWD WITH '[CWD]' IN result_json.txt
+
+WRITE expected_json.txt UNTIL EOF
+1> {
+1>   "error": "Could not autofix the schema without breaking its internal references",
+1>   "line": 13,
+1>   "column": 7,
+1>   "filePath": "[CWD]/schema.json",
+1>   "location": "/properties/bar/$ref"
+1> }
+EOF
+
+COMPARE result_json.txt AGAINST expected_json.txt
+
 // The schema must not have been modified
 COMPARE schema.json AGAINST original.json

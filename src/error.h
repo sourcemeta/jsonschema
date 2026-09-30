@@ -1226,6 +1226,31 @@ inline auto print_rdf_resolution_error(const bool is_json, const Error &error)
   return EXIT_SCHEMA_INPUT_ERROR;
 }
 
+// What an invalid regular expression tells the user to do next, which is the
+// same whether or not we could point at where in the file it happened
+inline auto print_invalid_regex_guidance() -> void {
+  std::cerr << "\nRegular expressions in JSON Schema are expected to follow "
+               "ECMA-262,\nexcluding the Annex B extensions that only web "
+               "browsers implement\n"
+               "Try tools like https://regex101.com to debug further\n";
+}
+
+// The same, for a reference that lands on something that is no schema
+inline auto
+print_reference_target_guidance(const sourcemeta::core::Pointer &location)
+    -> void {
+  std::cerr << "\n";
+
+  if (!location.empty() && location.back().is_property() &&
+      location.back().to_property() == "$defs") {
+    std::cerr << "Maybe you meant to use `definitions` instead of `$defs` "
+                 "in this dialect?\n";
+  } else {
+    std::cerr << "Are you sure the reported location is a valid JSON "
+                 "Schema keyword in this dialect?\n";
+  }
+}
+
 // What an auto-fix failure tells the user to do next, which is the same
 // whether or not we could point at where in the file it happened
 inline auto print_lint_autofix_guidance() -> void {
@@ -1498,21 +1523,22 @@ inline auto try_catch(const sourcemeta::core::Options &options,
     }
 
     return EXIT_OTHER_INPUT_ERROR;
+  } catch (
+      const PositionError<sourcemeta::core::FileError<
+          sourcemeta::blaze::CompilerReferenceTargetNotSchemaError>> &error) {
+    const auto is_json{options.contains("json")};
+    print_exception(is_json, error);
+    if (!is_json) {
+      print_reference_target_guidance(error.location());
+    }
+
+    return EXIT_SCHEMA_INPUT_ERROR;
   } catch (const sourcemeta::core::FileError<
            sourcemeta::blaze::CompilerReferenceTargetNotSchemaError> &error) {
     const auto is_json{options.contains("json")};
     print_exception(is_json, error);
     if (!is_json) {
-      std::cerr << "\n";
-
-      if (!error.location().empty() && error.location().back().is_property() &&
-          error.location().back().to_property() == "$defs") {
-        std::cerr << "Maybe you meant to use `definitions` instead of `$defs` "
-                     "in this dialect?\n";
-      } else {
-        std::cerr << "Are you sure the reported location is a valid JSON "
-                     "Schema keyword in this dialect?\n";
-      }
+      print_reference_target_guidance(error.location());
     }
 
     return EXIT_SCHEMA_INPUT_ERROR;
@@ -1526,16 +1552,21 @@ inline auto try_catch(const sourcemeta::core::Options &options,
     }
 
     return EXIT_SCHEMA_INPUT_ERROR;
+  } catch (const PositionError<sourcemeta::core::FileError<
+               sourcemeta::blaze::CompilerInvalidRegexError>> &error) {
+    const auto is_json{options.contains("json")};
+    print_exception(is_json, error);
+    if (!is_json) {
+      print_invalid_regex_guidance();
+    }
+
+    return EXIT_SCHEMA_INPUT_ERROR;
   } catch (const sourcemeta::core::FileError<
            sourcemeta::blaze::CompilerInvalidRegexError> &error) {
     const auto is_json{options.contains("json")};
     print_exception(is_json, error);
     if (!is_json) {
-      std::cerr
-          << "\nRegular expressions in JSON Schema are expected to follow "
-             "ECMA-262,\nexcluding the Annex B extensions that only web "
-             "browsers implement\n"
-             "Try tools like https://regex101.com to debug further\n";
+      print_invalid_regex_guidance();
     }
 
     return EXIT_SCHEMA_INPUT_ERROR;

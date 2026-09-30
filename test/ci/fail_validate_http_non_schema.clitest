@@ -26,3 +26,21 @@ WRITE expected_0.txt UNTIL EOF
 EOF
 
 COMPARE result_0.txt AGAINST expected_0.txt
+
+// Schema input error
+RUN validate schema.json instance.json --http --json STDIN /dev/null IN . INTO result_1.txt EXPECTING 4
+
+REPLACE $CWD WITH '[CWD]' IN result_1.txt
+
+WRITE expected_1.txt UNTIL EOF
+1> {
+1>   "error": "The JSON document is not a valid JSON Schema",
+1>   "identifier": "https://schemas.sourcemeta.com/self/v1/api/schemas/stats/jsonschema/2020-12/schema",
+1>   "line": 5,
+1>   "column": 16,
+1>   "filePath": "[CWD]/schema.json",
+1>   "location": "/allOf/0/$ref"
+1> }
+EOF
+
+COMPARE result_1.txt AGAINST expected_1.txt
