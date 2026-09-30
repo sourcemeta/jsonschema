@@ -124,14 +124,12 @@ EOF
 
 COMPARE result_0.txt AGAINST expected_0.txt
 
-RUN inspect openapi.json --json STDIN /dev/null IN . INTO result_1.txt EXPECTING 0
-
-REPLACE $CWD_URI WITH '[CWD_URI]' IN result_1.txt
+RUN inspect - --json STDIN openapi.json IN . INTO result_1.txt EXPECTING 0
 
 WRITE expected_1.txt UNTIL EOF
 1> {
 1>   "version": "3.1",
-1>   "base": "[CWD_URI]/openapi.json",
+1>   "base": "tag:sourcemeta.com,2026:openapi/stdin",
 1>   "standalone": true,
 1>   "schemas": {
 1>     "mode": "references",
@@ -151,78 +149,78 @@ WRITE expected_1.txt UNTIL EOF
 1>     "license": null
 1>   },
 1>   "locations": {
-1>     "[CWD_URI]/openapi.json": {
+1>     "tag:sourcemeta.com,2026:openapi/stdin": {
 1>       "type": "openapi",
 1>       "pointer": "",
 1>       "position": [ 1, 1, 16, 1 ],
 1>       "parent": null,
 1>       "dialect": "https://spec.openapis.org/oas/3.1/dialect/base"
 1>     },
-1>     "[CWD_URI]/openapi.json#/info": {
+1>     "tag:sourcemeta.com,2026:openapi/stdin#/info": {
 1>       "type": "info",
 1>       "pointer": "/info",
 1>       "position": [ 3, 3, 3, 52 ],
-1>       "parent": "[CWD_URI]/openapi.json"
+1>       "parent": "tag:sourcemeta.com,2026:openapi/stdin"
 1>     },
-1>     "[CWD_URI]/openapi.json#/paths": {
+1>     "tag:sourcemeta.com,2026:openapi/stdin#/paths": {
 1>       "type": "paths",
 1>       "pointer": "/paths",
 1>       "position": [ 8, 3, 15, 3 ],
-1>       "parent": "[CWD_URI]/openapi.json"
+1>       "parent": "tag:sourcemeta.com,2026:openapi/stdin"
 1>     },
-1>     "[CWD_URI]/openapi.json#/paths/~1people": {
+1>     "tag:sourcemeta.com,2026:openapi/stdin#/paths/~1people": {
 1>       "type": "path-item",
 1>       "pointer": "/paths/~1people",
 1>       "position": [ 9, 5, 14, 5 ],
-1>       "parent": "[CWD_URI]/openapi.json#/paths"
+1>       "parent": "tag:sourcemeta.com,2026:openapi/stdin#/paths"
 1>     },
-1>     "[CWD_URI]/openapi.json#/paths/~1people/get": {
+1>     "tag:sourcemeta.com,2026:openapi/stdin#/paths/~1people/get": {
 1>       "type": "operation",
 1>       "pointer": "/paths/~1people/get",
 1>       "position": [ 10, 7, 13, 7 ],
-1>       "parent": "[CWD_URI]/openapi.json#/paths/~1people"
+1>       "parent": "tag:sourcemeta.com,2026:openapi/stdin#/paths/~1people"
 1>     },
-1>     "[CWD_URI]/openapi.json#/paths/~1people/get/responses": {
+1>     "tag:sourcemeta.com,2026:openapi/stdin#/paths/~1people/get/responses": {
 1>       "type": "responses",
 1>       "pointer": "/paths/~1people/get/responses",
 1>       "position": [ 12, 9, 12, 55 ],
-1>       "parent": "[CWD_URI]/openapi.json#/paths/~1people/get"
+1>       "parent": "tag:sourcemeta.com,2026:openapi/stdin#/paths/~1people/get"
 1>     },
-1>     "[CWD_URI]/openapi.json#/paths/~1people/get/responses/200": {
+1>     "tag:sourcemeta.com,2026:openapi/stdin#/paths/~1people/get/responses/200": {
 1>       "type": "response",
 1>       "pointer": "/paths/~1people/get/responses/200",
 1>       "position": [ 12, 24, 12, 53 ],
-1>       "parent": "[CWD_URI]/openapi.json#/paths/~1people/get/responses"
+1>       "parent": "tag:sourcemeta.com,2026:openapi/stdin#/paths/~1people/get/responses"
 1>     },
-1>     "[CWD_URI]/openapi.json#/tags/0": {
+1>     "tag:sourcemeta.com,2026:openapi/stdin#/tags/0": {
 1>       "type": "tag",
 1>       "pointer": "/tags/0",
 1>       "position": [ 4, 13, 4, 32 ],
-1>       "parent": "[CWD_URI]/openapi.json"
+1>       "parent": "tag:sourcemeta.com,2026:openapi/stdin"
 1>     },
-1>     "[CWD_URI]/openapi.json#/webhooks/newPerson": {
+1>     "tag:sourcemeta.com,2026:openapi/stdin#/webhooks/newPerson": {
 1>       "type": "path-item",
 1>       "pointer": "/webhooks/newPerson",
 1>       "position": [ 6, 5, 6, 80 ],
-1>       "parent": "[CWD_URI]/openapi.json"
+1>       "parent": "tag:sourcemeta.com,2026:openapi/stdin"
 1>     },
-1>     "[CWD_URI]/openapi.json#/webhooks/newPerson/post": {
+1>     "tag:sourcemeta.com,2026:openapi/stdin#/webhooks/newPerson/post": {
 1>       "type": "operation",
 1>       "pointer": "/webhooks/newPerson/post",
 1>       "position": [ 6, 20, 6, 78 ],
-1>       "parent": "[CWD_URI]/openapi.json#/webhooks/newPerson"
+1>       "parent": "tag:sourcemeta.com,2026:openapi/stdin#/webhooks/newPerson"
 1>     },
-1>     "[CWD_URI]/openapi.json#/webhooks/newPerson/post/responses": {
+1>     "tag:sourcemeta.com,2026:openapi/stdin#/webhooks/newPerson/post/responses": {
 1>       "type": "responses",
 1>       "pointer": "/webhooks/newPerson/post/responses",
 1>       "position": [ 6, 30, 6, 76 ],
-1>       "parent": "[CWD_URI]/openapi.json#/webhooks/newPerson/post"
+1>       "parent": "tag:sourcemeta.com,2026:openapi/stdin#/webhooks/newPerson/post"
 1>     },
-1>     "[CWD_URI]/openapi.json#/webhooks/newPerson/post/responses/200": {
+1>     "tag:sourcemeta.com,2026:openapi/stdin#/webhooks/newPerson/post/responses/200": {
 1>       "type": "response",
 1>       "pointer": "/webhooks/newPerson/post/responses/200",
 1>       "position": [ 6, 45, 6, 74 ],
-1>       "parent": "[CWD_URI]/openapi.json#/webhooks/newPerson/post/responses"
+1>       "parent": "tag:sourcemeta.com,2026:openapi/stdin#/webhooks/newPerson/post/responses"
 1>     }
 1>   },
 1>   "operations": [
@@ -230,12 +228,9 @@ WRITE expected_1.txt UNTIL EOF
 1>       "type": "path",
 1>       "path": "/people",
 1>       "method": "get",
-1>       "origin": "[CWD_URI]/openapi.json#/paths/~1people/get",
-1>       "endpoint": "[CWD_URI]/openapi.json#/paths/~1people",
-1>       "tags": [
-1>         "[CWD_URI]/openapi.json#/tags/0",
-1>         null
-1>       ],
+1>       "origin": "tag:sourcemeta.com,2026:openapi/stdin#/paths/~1people/get",
+1>       "endpoint": "tag:sourcemeta.com,2026:openapi/stdin#/paths/~1people",
+1>       "tags": [ "tag:sourcemeta.com,2026:openapi/stdin#/tags/0", null ],
 1>       "servers": [],
 1>       "security": [],
 1>       "parameters": []
@@ -244,8 +239,8 @@ WRITE expected_1.txt UNTIL EOF
 1>       "type": "webhook",
 1>       "path": "newPerson",
 1>       "method": "post",
-1>       "origin": "[CWD_URI]/openapi.json#/webhooks/newPerson/post",
-1>       "endpoint": "[CWD_URI]/openapi.json#/webhooks/newPerson",
+1>       "origin": "tag:sourcemeta.com,2026:openapi/stdin#/webhooks/newPerson/post",
+1>       "endpoint": "tag:sourcemeta.com,2026:openapi/stdin#/webhooks/newPerson",
 1>       "tags": [],
 1>       "servers": [],
 1>       "security": [],
