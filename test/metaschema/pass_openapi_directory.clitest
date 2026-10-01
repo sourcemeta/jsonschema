@@ -1,0 +1,32 @@
+// A directory may hold schemas and descriptions side by side, and every
+// schema in it is checked whichever kind of file it came from.
+
+MAKE DIRECTORY schemas
+
+WRITE schemas/schema.json UNTIL EOF
+{ "$schema": "https://json-schema.org/draft/2020-12/schema", "type": "string" }
+EOF
+
+WRITE schemas/openapi.json UNTIL EOF
+{
+  "openapi": "3.1.1",
+  "info": { "title": "Example", "version": "1.0.0" },
+  "paths": {},
+  "components": { "schemas": { "A": { "type": "string" }, "B": { "type": "integer" } } }
+}
+EOF
+
+RUN metaschema schemas --verbose STDIN /dev/null IN . INTO result.txt EXPECTING 0
+
+WRITE expected.txt UNTIL EOF
+2> ok: schemas/openapi.json#/components/schemas/A
+2>   matches https://spec.openapis.org/oas/3.1/dialect/base
+2> ok: schemas/openapi.json#/components/schemas/B
+2>   matches https://spec.openapis.org/oas/3.1/dialect/base
+2> ok: schemas/schema.json
+2>   matches https://json-schema.org/draft/2020-12/schema
+2>
+2> 3 validated, 3 passed, 0 failed
+EOF
+
+COMPARE result.txt AGAINST expected.txt

@@ -12,8 +12,7 @@ EOF
 RUN metaschema openapi.json STDIN /dev/null IN . INTO result_0.txt EXPECTING 0
 
 WRITE expected_0.txt UNTIL EOF
-2> warning: No schema objects were found in this description
-2>   at openapi.json
+2> warning: No schema objects were found in openapi.json
 2> 0 validated, 0 passed, 0 failed
 EOF
 

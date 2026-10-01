@@ -176,9 +176,8 @@ auto check_openapi_description(
 
   if (schemas.empty()) {
     sourcemeta::jsonschema::LOG_WARNING()
-        << "No schema objects were found in this description\n"
-        << "  at " << sourcemeta::jsonschema::relative_path_string(display_path)
-        << "\n";
+        << "No schema objects were found in "
+        << sourcemeta::jsonschema::relative_path_string(display_path) << "\n";
     return;
   }
 
