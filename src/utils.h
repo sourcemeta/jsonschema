@@ -441,7 +441,10 @@ auto with_openapi_entrypoint(
     const Function &callback)
     -> decltype(callback(std::declval<const sourcemeta::core::SchemaFrame &>(),
                          std::declval<const std::string &>())) {
-  if (!options.contains("entrypoint") || options.at("entrypoint").empty()) {
+  // An entry point given as an empty string is one nobody means, as an unset
+  // variable reaches us that way, so it counts as not having passed one at all
+  if (!options.contains("entrypoint") || options.at("entrypoint").empty() ||
+      options.at("entrypoint").front().empty()) {
     throw OptionConflictError{
         "You must pass an entry point using the `--entrypoint/-p` option when "
         "the input is an OpenAPI description"};
