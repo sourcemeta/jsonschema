@@ -1,0 +1,24 @@
+// The refusal does not turn on which revision the description declares, as
+// no description can have code generated for it yet.
+
+WRITE openapi.json UNTIL EOF
+{
+  "openapi": "3.0.3",
+  "info": { "title": "Example", "version": "1.0.0" },
+  "paths": {}
+}
+EOF
+
+// Not supported
+RUN codegen openapi.json --target typescript --json STDIN /dev/null IN . INTO result.txt EXPECTING 3
+
+REPLACE $CWD WITH '[CWD]' IN result.txt
+
+WRITE expected.txt UNTIL EOF
+1> {
+1>   "error": "Generating code for OpenAPI descriptions is not supported yet",
+1>   "filePath": "[CWD]/openapi.json"
+1> }
+EOF
+
+COMPARE result.txt AGAINST expected.txt
