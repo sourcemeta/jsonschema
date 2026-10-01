@@ -1,0 +1,43 @@
+// A description holds many schemas and no root one, so which of them the
+// instance is read through is given as a JSON Pointer into the description.
+
+WRITE openapi.json UNTIL EOF
+{
+  "openapi": "3.1.1",
+  "info": { "title": "Example", "version": "1.0.0" },
+  "paths": {},
+  "components": {
+    "schemas": {
+      "Person": {
+        "$schema": "https://json-schema.org/draft/2019-09/schema",
+        "type": "object",
+        "x-jsonld-type": "https://schema.org/Person",
+        "properties": {
+          "name": { "type": "string", "x-jsonld-id": "https://schema.org/name" }
+        }
+      }
+    }
+  }
+}
+EOF
+
+WRITE instance.json UNTIL EOF
+{ "name": "Ada" }
+EOF
+
+RUN rdf openapi.json instance.json --entrypoint /components/schemas/Person STDIN /dev/null IN . INTO result.txt EXPECTING 0
+
+WRITE expected.txt UNTIL EOF
+1> [
+1>   {
+1>     "@type": [ "https://schema.org/Person" ],
+1>     "https://schema.org/name": [
+1>       {
+1>         "@value": "Ada"
+1>       }
+1>     ]
+1>   }
+1> ]
+EOF
+
+COMPARE result.txt AGAINST expected.txt

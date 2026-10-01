@@ -398,6 +398,7 @@ auto jsonschema_main(const std::string &program, const std::string &command,
   }
 
   if (command == "rdf") {
+    app.option("entrypoint", {"p"});
     app.flag("fast", {"f"});
     app.flag("flatten", {"l"});
     app.flag("format-assertion", {"F"});

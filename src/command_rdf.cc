@@ -32,10 +32,16 @@ namespace {
 
 auto assert_annotations_support(
     const sourcemeta::core::SchemaFrame &frame,
+    const std::string &entrypoint_uri,
     const std::filesystem::path &schema_resolution_base) -> void {
-  const auto root_location{frame.root_location()};
-  assert(root_location.has_value());
-  switch (root_location.value().get().base_dialect) {
+  // An entry point naming nothing is not ours to report on, as compiling it
+  // says so in the terms the caller asked in
+  const auto location{frame.traverse(entrypoint_uri)};
+  if (!location.has_value()) {
+    return;
+  }
+
+  switch (location.value().get().base_dialect) {
     case sourcemeta::core::SchemaBaseDialect::JSON_SCHEMA_2020_12:
     case sourcemeta::core::SchemaBaseDialect::JSON_SCHEMA_2020_12_HYPER:
     case sourcemeta::core::SchemaBaseDialect::JSON_SCHEMA_2019_09:
@@ -43,9 +49,51 @@ auto assert_annotations_support(
       return;
     default:
       throw sourcemeta::jsonschema::UnsupportedDialectRdfError{
-          schema_resolution_base,
-          std::string{root_location.value().get().dialect}};
+          schema_resolution_base, std::string{location.value().get().dialect}};
   }
+}
+
+// The plain path makes a whole schema of its own before compiling, which a
+// description does not need, as reading one already draws in every document it
+// spans
+auto compile_plain_schema(
+    const sourcemeta::core::JSON &schema,
+    const sourcemeta::core::Options &options,
+    const sourcemeta::core::SchemaResolver &resolver,
+    const std::string &dialect, const std::string &schema_default_id,
+    const std::filesystem::path &schema_resolution_base,
+    const sourcemeta::core::PointerPositionTracker &positions,
+    const bool fast_mode, const sourcemeta::blaze::Tweaks &tweaks)
+    -> sourcemeta::blaze::Template {
+  const auto bundled{sourcemeta::jsonschema::bundle_for_evaluation(
+      schema, resolver, dialect, schema_default_id, schema_resolution_base,
+      positions)};
+
+  const auto frame{sourcemeta::jsonschema::frame_for_evaluation(
+      bundled, resolver, dialect, schema_default_id, schema_resolution_base,
+      positions)};
+
+  // A schema has a root to fall back on, unlike a description, but a caller
+  // may still single out one of the subschemas it holds
+  std::string entrypoint_uri{frame.root()};
+  if (options.contains("entrypoint") && !options.at("entrypoint").empty()) {
+    try {
+      entrypoint_uri = sourcemeta::jsonschema::resolve_entrypoint(
+          frame, options.at("entrypoint").front());
+    } catch (const sourcemeta::blaze::CompilerInvalidEntryPoint &error) {
+      throw sourcemeta::core::FileError<
+          sourcemeta::blaze::CompilerInvalidEntryPoint>(schema_resolution_base,
+                                                        error);
+    }
+  }
+
+  assert_annotations_support(frame, entrypoint_uri, schema_resolution_base);
+
+  return sourcemeta::jsonschema::compile_for_evaluation(
+      bundled, resolver, frame, entrypoint_uri,
+      fast_mode ? sourcemeta::blaze::Mode::FastValidation
+                : sourcemeta::blaze::Mode::Exhaustive,
+      tweaks, schema_resolution_base, positions);
 }
 
 // Only these inputs can hold more than one document. Every other instance
@@ -258,10 +306,19 @@ auto sourcemeta::jsonschema::rdf(const sourcemeta::core::Options &options)
   auto parsed_schema{schema_from_stdin ? read_from_stdin()
                                        : read_file(schema_path)};
 
-  if (!parsed_schema.document.is_object() &&
+  // An OpenAPI description is not a schema, so what it goes by wherever we
+  // report on it is an identity of its own rather than the one a schema from
+  // the same place would take
+  const auto is_openapi{is_openapi_document(parsed_schema.document)};
+  const auto display_path{
+      schema_from_stdin ? (is_openapi ? openapi_stdin_path() : stdin_path())
+                        : schema_resolution_base};
+
+  reject_unsupported_openapi(parsed_schema.document, display_path);
+
+  if (!is_openapi && !parsed_schema.document.is_object() &&
       !parsed_schema.document.is_boolean()) {
-    throw NotSchemaError{schema_from_stdin ? stdin_path()
-                                           : schema_resolution_base};
+    throw NotSchemaError{display_path};
   }
 
   const auto &schema{parsed_schema.document};
@@ -271,27 +328,35 @@ auto sourcemeta::jsonschema::rdf(const sourcemeta::core::Options &options)
   const auto schema_default_id{sourcemeta::jsonschema::default_id(
       schema_resolution_base, schema_from_stdin)};
 
-  const auto bundled{
-      bundle_for_evaluation(schema, custom_resolver, dialect, schema_default_id,
-                            schema_resolution_base, parsed_schema.positions)};
-
-  const auto frame{
-      frame_for_evaluation(bundled, custom_resolver, dialect, schema_default_id,
-                           schema_resolution_base, parsed_schema.positions)};
-
-  assert_annotations_support(frame, schema_resolution_base);
-
   auto tweaks{
       format_assertion_tweaks(options).value_or(sourcemeta::blaze::Tweaks{})};
   tweaks.annotations = std::unordered_set<sourcemeta::core::JSON::StringView>(
       sourcemeta::blaze::JSONLD_KEYWORDS.begin(),
       sourcemeta::blaze::JSONLD_KEYWORDS.end());
 
-  const auto schema_template{compile_for_evaluation(
-      bundled, custom_resolver, frame, std::string{frame.root()},
-      fast_mode ? sourcemeta::blaze::Mode::FastValidation
-                : sourcemeta::blaze::Mode::Exhaustive,
-      tweaks, schema_resolution_base, parsed_schema.positions)};
+  const auto schema_template{
+      is_openapi
+          ? with_openapi_entrypoint(
+                parsed_schema.document, options, custom_resolver,
+                sourcemeta::jsonschema::openapi_resolver(
+                    options, options.contains("http"), dialect, configuration),
+                sourcemeta::jsonschema::openapi_default_id(
+                    schema_resolution_base, schema_from_stdin),
+                display_path, parsed_schema.positions,
+                [&](const sourcemeta::core::SchemaFrame &frame,
+                    const std::string &entrypoint_uri) {
+                  assert_annotations_support(frame, entrypoint_uri,
+                                             display_path);
+                  return compile_for_evaluation(
+                      parsed_schema.document, custom_resolver, frame,
+                      entrypoint_uri,
+                      fast_mode ? sourcemeta::blaze::Mode::FastValidation
+                                : sourcemeta::blaze::Mode::Exhaustive,
+                      tweaks, display_path, parsed_schema.positions);
+                })
+          : compile_plain_schema(schema, options, custom_resolver, dialect,
+                                 schema_default_id, schema_resolution_base,
+                                 parsed_schema.positions, fast_mode, tweaks)};
 
   const auto entries{read_instances(instance_path_view, instance_path,
                                     instance_from_stdin, options)};
