@@ -353,16 +353,15 @@ public:
     std::optional<JSON::StringView> parent{std::nullopt};
     /// Set on the root of a document and on every Schema Object position it
     /// holds, empty elsewhere: the default `$schema` in force there, resolved
-    /// against the base. A
-    /// Schema Object that declares its own overrides it, which is a matter for
-    /// whatever reads inside one
-    JSON::String dialect;
+    /// against the base. A Schema Object that declares its own overrides it, so
+    /// this is not what that schema is written in. The frame of the schemas a
+    /// description holds answers that
+    JSON::String default_dialect;
     /// Set on a Schema Object position alone, empty elsewhere: the base its
-    /// document keys every
-    /// location by, which is what a relative reference inside that schema
-    /// resolves against until an `$id` says otherwise. RFC 3986 Section 5.1.1
-    /// makes an `$id` the higher precedence source, so this is a default in the
-    /// same way the dialect above is
+    /// document keys every location by, which is what a relative reference
+    /// inside that schema resolves against until an `$id` says otherwise. RFC
+    /// 3986 Section 5.1.1 makes an `$id` the higher precedence source, so this
+    /// is a default in the same way the dialect above is
     JSON::String base;
   };
 

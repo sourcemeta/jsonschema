@@ -7,6 +7,7 @@
 #include "oauth_json.h"
 #include "oauth_syntax.h"
 
+#include <cassert>     // assert
 #include <chrono>      // std::chrono::seconds
 #include <cstdint>     // std::int64_t
 #include <optional>    // std::optional, std::nullopt
@@ -67,10 +68,7 @@ auto array_member_contains_or_default(const JSON &data,
                                       const JSON::Object::hash_type hash,
                                       const std::string_view value,
                                       const std::string_view fallback) -> bool {
-  if (!data.is_object()) {
-    return value == fallback;
-  }
-
+  assert(data.is_object());
   const auto *member{data.try_at(name, hash)};
   if (member == nullptr || !member->is_array()) {
     return value == fallback;
@@ -358,12 +356,13 @@ auto oauth_make_registration_error_response(
 
 auto oauth_registration_grant_response_consistent(
     const OAuthClientMetadata &metadata) -> bool {
+  // Client metadata is rejected at construction unless it is an object, so
+  // every read below is a read of an object
   const auto &data{metadata.data()};
+  assert(data.is_object());
   const bool grant_types_present{
-      data.is_object() &&
       array_member_is_present(data, "grant_types"sv, HASH_GRANT_TYPES)};
   const bool response_types_present{
-      data.is_object() &&
       array_member_is_present(data, "response_types"sv, HASH_RESPONSE_TYPES)};
   const bool grants_authorization_code{data.array_member_contains(
       "grant_types"sv, HASH_GRANT_TYPES, "authorization_code"sv)};

@@ -101,25 +101,6 @@ inline auto is_keyword(const JSON::StringView value) -> bool {
          value == KEYWORD_VOCAB;
 }
 
-inline auto is_keyword(const JSON::StringView value,
-                       const JSON::Object::hash_type hash) -> bool {
-  if (value.size() < 2 || value.front() != '@') {
-    return false;
-  }
-  return hash == KEYWORD_BASE_HASH || hash == KEYWORD_CONTAINER_HASH ||
-         hash == KEYWORD_CONTEXT_HASH || hash == KEYWORD_DIRECTION_HASH ||
-         hash == KEYWORD_GRAPH_HASH || hash == KEYWORD_ID_HASH ||
-         hash == KEYWORD_IMPORT_HASH || hash == KEYWORD_INCLUDED_HASH ||
-         hash == KEYWORD_INDEX_HASH || hash == KEYWORD_JSON_HASH ||
-         hash == KEYWORD_LANGUAGE_HASH || hash == KEYWORD_LIST_HASH ||
-         hash == KEYWORD_NEST_HASH || hash == KEYWORD_NONE_HASH ||
-         hash == KEYWORD_PREFIX_HASH || hash == KEYWORD_PROPAGATE_HASH ||
-         hash == KEYWORD_PROTECTED_HASH || hash == KEYWORD_REVERSE_HASH ||
-         hash == KEYWORD_SET_HASH || hash == KEYWORD_TYPE_HASH ||
-         hash == KEYWORD_VALUE_HASH || hash == KEYWORD_VERSION_HASH ||
-         hash == KEYWORD_VOCAB_HASH;
-}
-
 // Whether the given value has the generic form of a keyword (an `@` followed by
 // one or more letters), which the algorithms treat as a reserved token even
 // when it is not a defined keyword.

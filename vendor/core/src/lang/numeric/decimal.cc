@@ -374,28 +374,16 @@ auto parse_decimal_string(const char *input, std::size_t length)
   auto significant_digits = digit_count_total - leading_zeros;
 
   if (significant_digits <= 18) {
-    std::int64_t coefficient = 0;
-    for (std::uint32_t index = leading_zeros; index < digit_count_total;
-         index++) {
-      coefficient = (coefficient * 10) + (digit_buffer[index] - '0');
-    }
-
-    result.coefficient = coefficient;
+    result.coefficient = static_cast<std::int64_t>(
+        fold_digits(digit_buffer + leading_zeros, significant_digits));
   } else if (significant_digits <= 36) {
     auto low_start = leading_zeros + significant_digits -
                      static_cast<std::uint32_t>(BASE_DIGITS);
-    std::uint64_t low_word = 0;
-    for (std::uint32_t index = low_start;
-         index < leading_zeros + significant_digits; index++) {
-      low_word = (low_word * 10) +
-                 static_cast<std::uint64_t>(digit_buffer[index] - '0');
-    }
-
-    std::uint64_t high_word = 0;
-    for (std::uint32_t index = leading_zeros; index < low_start; index++) {
-      high_word = (high_word * 10) +
-                  static_cast<std::uint64_t>(digit_buffer[index] - '0');
-    }
+    const auto low_word{
+        fold_digits(digit_buffer + low_start,
+                    leading_zeros + significant_digits - low_start)};
+    const auto high_word{
+        fold_digits(digit_buffer + leading_zeros, low_start - leading_zeros)};
 
     result.coefficient = static_cast<std::int64_t>(low_word);
     result.coefficient_high = high_word;

@@ -37,24 +37,30 @@ struct SecureDigestScope {
   std::array<std::uint8_t, KDF_MAXIMUM_DIGEST_BYTES> &target;
 };
 
+// A digest handed over to the output buffer and wiped where it was computed, so
+// that each arm of the dispatch below is a single expression over the digest it
+// names. The parameter binds the caller's temporary rather than copying it, so
+// the wipe lands on the only buffer the digest ever occupied
+template <std::size_t Size>
+inline auto
+take_digest(std::array<std::uint8_t, Size> &&digest,
+            std::array<std::uint8_t, KDF_MAXIMUM_DIGEST_BYTES> &output)
+    -> std::size_t {
+  std::copy_n(digest.begin(), digest.size(), output.begin());
+  secure_zero(digest.data(), digest.size());
+  return digest.size();
+}
+
 inline auto
 hkdf_loop_hmac(const KDFHash hash, const std::string_view key,
                const std::string_view message,
                std::array<std::uint8_t, KDF_MAXIMUM_DIGEST_BYTES> &output)
     -> std::size_t {
   switch (hash) {
-    case KDFHash::SHA256: {
-      auto digest{hmac_sha256_digest(key, message)};
-      std::copy_n(digest.begin(), digest.size(), output.begin());
-      secure_zero(digest.data(), digest.size());
-      return digest.size();
-    }
-    case KDFHash::SHA384: {
-      auto digest{hmac_sha384_digest(key, message)};
-      std::copy_n(digest.begin(), digest.size(), output.begin());
-      secure_zero(digest.data(), digest.size());
-      return digest.size();
-    }
+    case KDFHash::SHA256:
+      return take_digest(hmac_sha256_digest(key, message), output);
+    case KDFHash::SHA384:
+      return take_digest(hmac_sha384_digest(key, message), output);
     case KDFHash::SHA512:
       break;
   }

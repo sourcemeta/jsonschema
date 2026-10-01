@@ -19,11 +19,110 @@
 #include <utility>          // std::exchange, std::move
 #include <vector>           // std::vector
 
+// Searching a run of hashes for one value tests many lanes at once on any
+// vector unit. The wider of the two x86 extensions is only present when the
+// build asks for it, while the narrower one and the ARM vector unit belong to
+// every 64-bit baseline, so each is gated on what its architecture guarantees
+// rather than on the flags this project happens to pass, which do not reach a
+// consumer that builds this library as a subproject of its own
+#if defined(__AVX2__)
+#define SOURCEMETA_CORE_JSON_SCAN_AVX2 1
+#elif defined(__SSE4_1__)
+#define SOURCEMETA_CORE_JSON_SCAN_SSE41 1
+#elif defined(__aarch64__) || defined(_M_ARM64)
+// The horizontal reduction that answers whether any lane matched at all is only
+// defined for the 64-bit form of the instruction set
+#define SOURCEMETA_CORE_JSON_SCAN_NEON 1
+#endif
+
+#if defined(SOURCEMETA_CORE_JSON_SCAN_AVX2) ||                                 \
+    defined(SOURCEMETA_CORE_JSON_SCAN_SSE41)
+#include <immintrin.h> // __m256i, _mm256_cmpeq_epi64, __m128i, _mm_cmpeq_epi64
+#endif
+
+#ifdef SOURCEMETA_CORE_JSON_SCAN_NEON
+#include <arm_neon.h> // uint64x2_t, vceqq_u64, vorrq_u64, vmaxvq_u32
+#endif
+
 namespace sourcemeta::core {
 
 static constexpr auto TRIM_WHITESPACE = " \t\n\r\v\f";
 
 namespace {
+
+// Report how far into a run of hashes the first one equal to the given value
+// lies, or the length of the run when none of them is. The caller has already
+// ruled out the first position, so the answer is never zero. The vector loop
+// only narrows the search down to the block that holds a match, and the scalar
+// tail that follows both pinpoints it within that block and covers the last
+// partial one, so a match anywhere in a block costs one test of the whole block
+auto scan_hashes(const std::uint64_t *const data, const std::size_t size,
+                 const std::uint64_t needle) noexcept -> std::size_t {
+  std::size_t offset{0};
+
+#if defined(SOURCEMETA_CORE_JSON_SCAN_AVX2)
+  const auto target{_mm256_set1_epi64x(static_cast<long long>(needle))};
+  while (offset + 8 <= size) {
+    const auto lower{_mm256_cmpeq_epi64(
+        _mm256_loadu_si256(reinterpret_cast<const __m256i *>(data + offset)),
+        target)};
+    const auto upper{
+        _mm256_cmpeq_epi64(_mm256_loadu_si256(reinterpret_cast<const __m256i *>(
+                               data + offset + 4)),
+                           target)};
+    const auto matches{_mm256_or_si256(lower, upper)};
+    if (_mm256_testz_si256(matches, matches) == 0) {
+      break;
+    }
+
+    offset += 8;
+  }
+#elif defined(SOURCEMETA_CORE_JSON_SCAN_SSE41)
+  const auto target{_mm_set1_epi64x(static_cast<long long>(needle))};
+  while (offset + 8 <= size) {
+    const auto first{_mm_cmpeq_epi64(
+        _mm_loadu_si128(reinterpret_cast<const __m128i *>(data + offset)),
+        target)};
+    const auto second{_mm_cmpeq_epi64(
+        _mm_loadu_si128(reinterpret_cast<const __m128i *>(data + offset + 2)),
+        target)};
+    const auto third{_mm_cmpeq_epi64(
+        _mm_loadu_si128(reinterpret_cast<const __m128i *>(data + offset + 4)),
+        target)};
+    const auto fourth{_mm_cmpeq_epi64(
+        _mm_loadu_si128(reinterpret_cast<const __m128i *>(data + offset + 6)),
+        target)};
+    const auto matches{
+        _mm_or_si128(_mm_or_si128(first, second), _mm_or_si128(third, fourth))};
+    if (_mm_testz_si128(matches, matches) == 0) {
+      break;
+    }
+
+    offset += 8;
+  }
+#elif defined(SOURCEMETA_CORE_JSON_SCAN_NEON)
+  const auto target{vdupq_n_u64(needle)};
+  while (offset + 8 <= size) {
+    const auto first{vceqq_u64(vld1q_u64(data + offset), target)};
+    const auto second{vceqq_u64(vld1q_u64(data + offset + 2), target)};
+    const auto third{vceqq_u64(vld1q_u64(data + offset + 4), target)};
+    const auto fourth{vceqq_u64(vld1q_u64(data + offset + 6), target)};
+    const auto matches{
+        vorrq_u64(vorrq_u64(first, second), vorrq_u64(third, fourth))};
+    if (vmaxvq_u32(vreinterpretq_u32_u64(matches)) != 0) {
+      break;
+    }
+
+    offset += 8;
+  }
+#endif
+
+  while (offset < size && data[offset] != needle) {
+    offset += 1;
+  }
+
+  return offset;
+}
 
 // Reverse the direction of a comparison result
 auto reverse_ordering(const std::strong_ordering ordering)
@@ -926,11 +1025,30 @@ JSON::defines_any(std::initializer_list<JSON::String> keys) const -> bool {
     cache[index] = items[index].fast_hash();
   }
 
-  for (std::size_t index = 0; index < size; index++) {
-    for (std::size_t subindex = index + 1; subindex < size; subindex++) {
-      if (cache[index] == cache[subindex] && items[index] == items[subindex]) {
-        return false;
+  // Two items can only be equal when their hashes are, so the search for a
+  // repeated item is a search for a repeated hash first, and only the positions
+  // that survive it are worth comparing in full. Comparing in full and skipping
+  // ahead are kept in separate loops so that an array whose items nearly all
+  // share one hash never reaches the skip, and pays exactly what it would have
+  // paid for a plain scan
+  const auto *const hashes{cache.data()};
+  for (std::size_t index = 0; index + 1 < size; index++) {
+    const auto needle{hashes[index]};
+    auto subindex{index + 1};
+    while (subindex < size) {
+      while (subindex < size && hashes[subindex] == needle) {
+        if (items[index] == items[subindex]) {
+          return false;
+        }
+
+        subindex += 1;
       }
+
+      if (subindex >= size) {
+        break;
+      }
+
+      subindex += scan_hashes(hashes + subindex, size - subindex, needle);
     }
   }
 

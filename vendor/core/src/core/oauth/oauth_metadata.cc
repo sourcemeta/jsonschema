@@ -7,6 +7,7 @@
 #include "oauth_syntax.h"
 
 #include <algorithm> // std::ranges::find, std::ranges::any_of, std::ranges::all_of
+#include <cassert>     // assert
 #include <optional>    // std::optional, std::nullopt
 #include <span>        // std::span
 #include <string>      // std::string
@@ -72,19 +73,36 @@ constexpr auto HASH_DPOP_SIGNING_ALGS{
 constexpr auto HASH_PROTECTED_RESOURCES{
     JSON::Object::hash("protected_resources"sv)};
 
+// Both documents are rejected at construction unless they are objects, so
+// every accessor below reads an object and none of them has to say so again
 auto string_member(const JSON &data, const JSON::StringView name,
                    const JSON::Object::hash_type hash)
     -> std::optional<std::string_view> {
-  if (!data.is_object()) {
-    return std::nullopt;
-  }
-
+  assert(data.is_object());
   const auto *member{data.try_at(name, hash)};
   if (member == nullptr || !member->is_string()) {
     return std::nullopt;
   }
 
   return std::string_view{member->to_string()};
+}
+
+// A member that advertises a capability, which is on only when it is present
+// and is the boolean true
+auto boolean_member(const JSON &data, const JSON::StringView name,
+                    const JSON::Object::hash_type hash) -> bool {
+  assert(data.is_object());
+  const auto *member{data.try_at(name, hash)};
+  return member != nullptr && member->is_boolean() && member->to_boolean();
+}
+
+// A member that lists what the document supports, which falls back to the
+// caller's default when it is absent or is not a list
+auto listed_member(const JSON &data, const JSON::StringView name,
+                   const JSON::Object::hash_type hash) -> const JSON * {
+  assert(data.is_object());
+  const auto *member{data.try_at(name, hash)};
+  return member != nullptr && member->is_array() ? member : nullptr;
 }
 
 // An advertised endpoint is a location the client dereferences with its
@@ -529,24 +547,15 @@ auto OAuthServerMetadata::pushed_authorization_request_endpoint() const
 
 auto OAuthServerMetadata::require_pushed_authorization_requests() const
     -> bool {
-  if (!this->data_.is_object()) {
-    return false;
-  }
-
-  const auto *member{this->data_.try_at(
-      "require_pushed_authorization_requests"sv, HASH_REQUIRE_PAR)};
-  return member != nullptr && member->is_boolean() && member->to_boolean();
+  return boolean_member(this->data_, "require_pushed_authorization_requests"sv,
+                        HASH_REQUIRE_PAR);
 }
 
 auto OAuthServerMetadata::authorization_response_iss_parameter_supported() const
     -> bool {
-  if (!this->data_.is_object()) {
-    return false;
-  }
-
-  const auto *member{this->data_.try_at(
-      "authorization_response_iss_parameter_supported"sv, HASH_ISS_SUPPORTED)};
-  return member != nullptr && member->is_boolean() && member->to_boolean();
+  return boolean_member(this->data_,
+                        "authorization_response_iss_parameter_supported"sv,
+                        HASH_ISS_SUPPORTED);
 }
 
 auto OAuthServerMetadata::supports_response_type(
@@ -558,10 +567,8 @@ auto OAuthServerMetadata::supports_response_type(
 auto OAuthServerMetadata::supports_grant_type(
     const std::string_view value) const -> bool {
   const auto *member{
-      this->data_.is_object()
-          ? this->data_.try_at("grant_types_supported"sv, HASH_GRANT_TYPES)
-          : nullptr};
-  if (member == nullptr || !member->is_array()) {
+      listed_member(this->data_, "grant_types_supported"sv, HASH_GRANT_TYPES)};
+  if (member == nullptr) {
     // RFC 8414 Section 2: the default is the authorization code and implicit
     // grants
     return value == "authorization_code" || value == "implicit";
@@ -580,12 +587,10 @@ auto OAuthServerMetadata::supports_code_challenge_method(
 
 auto OAuthServerMetadata::supports_token_endpoint_auth_method(
     const std::string_view value) const -> bool {
-  const auto *member{
-      this->data_.is_object()
-          ? this->data_.try_at("token_endpoint_auth_methods_supported"sv,
-                               HASH_TOKEN_AUTH_METHODS)
-          : nullptr};
-  if (member == nullptr || !member->is_array()) {
+  const auto *member{listed_member(this->data_,
+                                   "token_endpoint_auth_methods_supported"sv,
+                                   HASH_TOKEN_AUTH_METHODS)};
+  if (member == nullptr) {
     // RFC 8414 Section 2: the default is client_secret_basic
     return value == "client_secret_basic";
   }
@@ -620,10 +625,6 @@ auto OAuthResourceMetadata::resource() const -> std::string_view {
 
 auto OAuthResourceMetadata::first_authorization_server() const
     -> std::optional<std::string_view> {
-  if (!this->data_.is_object()) {
-    return std::nullopt;
-  }
-
   const auto *member{this->data_.try_at("authorization_servers"sv,
                                         HASH_AUTHORIZATION_SERVERS)};
   if (member == nullptr) {
@@ -660,13 +661,8 @@ auto OAuthResourceMetadata::supports_scope(const std::string_view value) const
 }
 
 auto OAuthResourceMetadata::dpop_bound_access_tokens_required() const -> bool {
-  if (!this->data_.is_object()) {
-    return false;
-  }
-
-  const auto *member{this->data_.try_at("dpop_bound_access_tokens_required"sv,
-                                        HASH_DPOP_BOUND_REQUIRED)};
-  return member != nullptr && member->is_boolean() && member->to_boolean();
+  return boolean_member(this->data_, "dpop_bound_access_tokens_required"sv,
+                        HASH_DPOP_BOUND_REQUIRED);
 }
 
 auto OAuthResourceMetadata::resource_name() const
@@ -694,14 +690,9 @@ auto OAuthResourceMetadata::resource_tos_uri() const
 
 auto OAuthResourceMetadata::tls_client_certificate_bound_access_tokens() const
     -> bool {
-  if (!this->data_.is_object()) {
-    return false;
-  }
-
-  const auto *member{
-      this->data_.try_at("tls_client_certificate_bound_access_tokens"sv,
-                         HASH_TLS_CLIENT_CERTIFICATE_BOUND)};
-  return member != nullptr && member->is_boolean() && member->to_boolean();
+  return boolean_member(this->data_,
+                        "tls_client_certificate_bound_access_tokens"sv,
+                        HASH_TLS_CLIENT_CERTIFICATE_BOUND);
 }
 
 auto OAuthResourceMetadata::supports_resource_signing_alg(

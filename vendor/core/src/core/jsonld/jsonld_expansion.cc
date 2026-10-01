@@ -71,6 +71,39 @@ auto expand_type(ExpansionState &state, const ActiveContext &type_context,
   return type.has_value() ? JSON{type.value()} : JSON{nullptr};
 }
 
+// The entry of the input map that expanded into the given key of the result.
+// Value objects and set or list objects are validated once expanded, while the
+// reported position belongs to the input document, where a keyword may appear
+// under an alias: "Within node objects, value objects, graph objects, list
+// objects, set objects, and nested properties keyword aliases MAY be used
+// instead of the corresponding keyword" (JSON-LD 1.1 Section 9.16)
+auto offending_entry(ExpansionState &state, ActiveContext &active_context,
+                     const JSON &element, const JSON::StringView name)
+    -> const JSON::String * {
+  for (const auto &entry : sorted_entries(element)) {
+    const auto expanded{expand_iri(state, active_context, *entry.first, false,
+                                   true, nullptr, nullptr, EMPTY_WEAK_POINTER)};
+    if (expanded.has_value() && expanded.value() == name) {
+      return entry.first;
+    }
+  }
+  return nullptr;
+}
+
+// Locate a violation at the entry that caused it, falling back to the map
+// itself when that entry was merged in from a nested map instead.
+auto offending_pointer(ExpansionState &state, ActiveContext &active_context,
+                       const JSON &element, const WeakPointer &pointer,
+                       const JSON::StringView name) -> Pointer {
+  auto result{to_pointer(pointer)};
+  const auto *const entry{
+      offending_entry(state, active_context, element, name)};
+  if (entry != nullptr) {
+    result.push_back(*entry);
+  }
+  return result;
+}
+
 // Expand the direct (and deferred @nest) entries of a map into the result,
 // mutating it in place. Mutually recursive with expand_object.
 auto expand_entries(ExpansionState &state, ActiveContext &active_context,
@@ -147,12 +180,16 @@ auto expand_object(ExpansionState &state, ActiveContext active_context,
           !entry.key_equals(KEYWORD_LANGUAGE, KEYWORD_LANGUAGE_HASH) &&
           !entry.key_equals(KEYWORD_INDEX, KEYWORD_INDEX_HASH) &&
           !entry.key_equals(KEYWORD_DIRECTION, KEYWORD_DIRECTION_HASH)) {
-        throw JSONLDError("Invalid value object", pointer);
+        throw JSONLDError("Invalid value object",
+                          offending_pointer(state, active_context, element,
+                                            pointer, entry.first));
       }
       if ((entry.key_equals(KEYWORD_LANGUAGE, KEYWORD_LANGUAGE_HASH) ||
            entry.key_equals(KEYWORD_DIRECTION, KEYWORD_DIRECTION_HASH)) &&
           has_type) {
-        throw JSONLDError("Invalid value object", pointer);
+        throw JSONLDError("Invalid value object",
+                          offending_pointer(state, active_context, element,
+                                            pointer, entry.first));
       }
     }
     const auto &content{*value_entry};
@@ -161,15 +198,21 @@ auto expand_object(ExpansionState &state, ActiveContext active_context,
     }
     if (result.defines(KEYWORD_LANGUAGE, KEYWORD_LANGUAGE_HASH) &&
         !content.is_string()) {
-      throw JSONLDError("Invalid language-tagged value", pointer);
+      throw JSONLDError("Invalid language-tagged value",
+                        offending_pointer(state, active_context, element,
+                                          pointer, KEYWORD_VALUE));
     }
     if (has_type && (type_string == nullptr || type_string->starts_with("_:") ||
                      type_string->contains(' '))) {
-      throw JSONLDError("Invalid typed value", pointer);
+      throw JSONLDError("Invalid typed value",
+                        offending_pointer(state, active_context, element,
+                                          pointer, KEYWORD_TYPE));
     }
     if (!is_json && !content.is_string() && !content.is_number() &&
         !content.is_boolean()) {
-      throw JSONLDError("Invalid value object value", pointer);
+      throw JSONLDError("Invalid value object value",
+                        offending_pointer(state, active_context, element,
+                                          pointer, KEYWORD_VALUE));
     }
   } else if (const auto *type_entry{
                  result.try_at(KEYWORD_TYPE, KEYWORD_TYPE_HASH)};
@@ -186,7 +229,9 @@ auto expand_object(ExpansionState &state, ActiveContext active_context,
       if (!entry.key_equals(KEYWORD_LIST, KEYWORD_LIST_HASH) &&
           !entry.key_equals(KEYWORD_SET, KEYWORD_SET_HASH) &&
           !entry.key_equals(KEYWORD_INDEX, KEYWORD_INDEX_HASH)) {
-        throw JSONLDError("Invalid set or list object", pointer);
+        throw JSONLDError("Invalid set or list object",
+                          offending_pointer(state, active_context, element,
+                                            pointer, entry.first));
       }
     }
   }
@@ -276,6 +321,10 @@ auto expand_entries(ExpansionState &state, ActiveContext &active_context,
       continue;
     }
 
+    // JSON-LD 1.1 allows no keyword apart from `@context` in a reverse
+    // property map, which the loop skips before reaching here. This is the only
+    // place the rule needs enforcing, as the map is expanded entry by entry
+    // through here before anything reads the keys it produced
     if (is_keyword(name) && active_property.has_value() &&
         active_property.value() == KEYWORD_REVERSE) {
       throw JSONLDError("Invalid reverse property map", entry_pointer);
@@ -467,8 +516,6 @@ auto expand_entries(ExpansionState &state, ActiveContext &active_context,
               merge(result, JSON::StringView{forward.first},
                     into_array(JSON{forward.second}));
             }
-          } else if (is_keyword(reverse_property, reverse_entry.hash)) {
-            throw JSONLDError("Invalid reverse property map", entry_pointer);
           } else {
             const auto reverse_values{into_array(JSON{reverse_entry.second})};
             for (const auto &item : reverse_values.as_array()) {

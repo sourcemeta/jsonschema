@@ -3,11 +3,26 @@
 #include <sourcemeta/core/crypto.h>
 #include <sourcemeta/core/jose.h>
 
+#include <array>       // std::array
+#include <cstddef>     // std::size_t
 #include <cstdint>     // std::uint8_t
 #include <optional>    // std::optional, std::nullopt
 #include <span>        // std::span
 #include <string>      // std::string
 #include <string_view> // std::string_view
+
+namespace {
+
+// The left-most half of a digest, base64url encoded, which is what the binding
+// of a token to an identity token is made of
+template <std::size_t Size>
+auto encode_left_half(const std::array<std::uint8_t, Size> &digest)
+    -> std::string {
+  return sourcemeta::core::base64url_encode(
+      std::span<const std::uint8_t>{digest.data(), Size / 2});
+}
+
+} // namespace
 
 namespace sourcemeta::core {
 
@@ -26,18 +41,12 @@ auto oidc_token_hash(const std::string_view token, const JWSAlgorithm algorithm)
   // of the hash and base64url-encode it". The digest is selected by an explicit
   // table rather than by slicing the algorithm name
   switch (jws_algorithm_digest_bits(algorithm)) {
-    case 256: {
-      const auto digest{sha256_digest(token)};
-      return base64url_encode(std::span<const std::uint8_t>{digest.data(), 16});
-    }
-    case 384: {
-      const auto digest{sha384_digest(token)};
-      return base64url_encode(std::span<const std::uint8_t>{digest.data(), 24});
-    }
-    case 512: {
-      const auto digest{sha512_digest(token)};
-      return base64url_encode(std::span<const std::uint8_t>{digest.data(), 32});
-    }
+    case 256:
+      return encode_left_half(sha256_digest(token));
+    case 384:
+      return encode_left_half(sha384_digest(token));
+    case 512:
+      return encode_left_half(sha512_digest(token));
     default:
       // A defensive fallback for a future algorithm whose digest size is not
       // one of the three the currently defined algorithms use
