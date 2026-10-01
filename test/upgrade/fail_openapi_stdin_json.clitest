@@ -1,0 +1,28 @@
+// A description read from standard input is refused like any other, and
+// goes by an identity of its own rather than the one a schema from the
+// same place would take.
+
+WRITE openapi.json UNTIL EOF
+{
+  "openapi": "3.1.1",
+  "info": { "title": "Example", "version": "1.0.0" },
+  "paths": {},
+  "components": {
+    "schemas": {
+      "Person": { "$schema": "http://json-schema.org/draft-07/schema#", "type": "string" }
+    }
+  }
+}
+EOF
+
+// Not supported
+RUN upgrade - --to 2020-12 --json STDIN openapi.json IN . INTO result.txt EXPECTING 3
+
+WRITE expected.txt UNTIL EOF
+1> {
+1>   "error": "Upgrading OpenAPI descriptions is not supported yet",
+1>   "filePath": "tag:sourcemeta.com,2026:openapi/stdin"
+1> }
+EOF
+
+COMPARE result.txt AGAINST expected.txt

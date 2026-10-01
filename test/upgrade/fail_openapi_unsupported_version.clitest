@@ -1,0 +1,22 @@
+// The refusal does not turn on which revision the description declares, as
+// no description can be upgraded yet.
+
+WRITE openapi.json UNTIL EOF
+{
+  "openapi": "3.0.3",
+  "info": { "title": "Example", "version": "1.0.0" },
+  "paths": {}
+}
+EOF
+
+// Not supported
+RUN upgrade openapi.json --to 2020-12 STDIN /dev/null IN . INTO result.txt EXPECTING 3
+
+REPLACE $CWD WITH '[CWD]' IN result.txt
+
+WRITE expected.txt UNTIL EOF
+2> error: Upgrading OpenAPI descriptions is not supported yet
+2>   at file path [CWD]/openapi.json
+EOF
+
+COMPARE result.txt AGAINST expected.txt

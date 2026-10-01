@@ -197,6 +197,14 @@ auto sourcemeta::jsonschema::upgrade(const sourcemeta::core::Options &options)
         schema_display_path};
   }
 
+  // An OpenAPI description is not a schema, so what it goes by wherever we
+  // report on it is an identity of its own rather than the one a schema from
+  // the same place would take
+  if (is_openapi_document(parsed_schema.document)) {
+    throw sourcemeta::core::FileError<UnsupportedOpenAPIUpgradeError>(
+        schema_from_stdin ? openapi_stdin_path() : schema_path);
+  }
+
   if (!parsed_schema.document.is_object() &&
       !parsed_schema.document.is_boolean()) {
     throw NotSchemaError{schema_display_path};

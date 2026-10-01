@@ -264,6 +264,16 @@ private:
   std::string identifier_;
 };
 
+// Upgrading a description means moving every Schema Object it holds and the
+// revision it declares, which is a larger piece of work than upgrading a
+// schema, so it is turned down outright rather than half done
+class UnsupportedOpenAPIUpgradeError : public std::runtime_error {
+public:
+  UnsupportedOpenAPIUpgradeError()
+      : std::runtime_error{"Upgrading OpenAPI descriptions is not supported "
+                           "yet"} {}
+};
+
 class UnsupportedOpenAPIVersionError : public std::runtime_error {
 public:
   UnsupportedOpenAPIVersionError(std::string value)
@@ -1364,6 +1374,11 @@ inline auto try_catch(const sourcemeta::core::Options &options,
     print_exception(is_json, error);
     return EXIT_NOT_SUPPORTED;
   } catch (const sourcemeta::core::FileError<UnsupportedOpenAPIVersionError>
+               &error) {
+    const auto is_json{options.contains("json")};
+    print_exception(is_json, error);
+    return EXIT_NOT_SUPPORTED;
+  } catch (const sourcemeta::core::FileError<UnsupportedOpenAPIUpgradeError>
                &error) {
     const auto is_json{options.contains("json")};
     print_exception(is_json, error);
