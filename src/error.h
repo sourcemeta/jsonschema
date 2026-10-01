@@ -274,6 +274,16 @@ public:
                            "yet"} {}
 };
 
+// Generating code for a description means a type for every Schema Object it
+// holds, and a way to name each one, which is a larger piece of work than
+// generating for a schema, so it is turned down outright rather than half done
+class UnsupportedOpenAPICodegenError : public std::runtime_error {
+public:
+  UnsupportedOpenAPICodegenError()
+      : std::runtime_error{"Generating code for OpenAPI descriptions is not "
+                           "supported yet"} {}
+};
+
 class UnsupportedOpenAPIVersionError : public std::runtime_error {
 public:
   UnsupportedOpenAPIVersionError(std::string value)
@@ -1379,6 +1389,11 @@ inline auto try_catch(const sourcemeta::core::Options &options,
     print_exception(is_json, error);
     return EXIT_NOT_SUPPORTED;
   } catch (const sourcemeta::core::FileError<UnsupportedOpenAPIUpgradeError>
+               &error) {
+    const auto is_json{options.contains("json")};
+    print_exception(is_json, error);
+    return EXIT_NOT_SUPPORTED;
+  } catch (const sourcemeta::core::FileError<UnsupportedOpenAPICodegenError>
                &error) {
     const auto is_json{options.contains("json")};
     print_exception(is_json, error);

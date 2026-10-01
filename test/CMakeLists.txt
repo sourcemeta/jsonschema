@@ -952,6 +952,9 @@ add_jsonschema_test(compile/pass_bundled_metaschema)
 
 # Codegen
 add_jsonschema_test(codegen/pass_typescript_name)
+add_jsonschema_test(codegen/fail_openapi)
+add_jsonschema_test(codegen/fail_openapi_json)
+add_jsonschema_test(codegen/fail_openapi_unsupported_version)
 add_jsonschema_test(codegen/pass_typescript_name_short)
 add_jsonschema_test(codegen/pass_typescript_explicit)
 add_jsonschema_test(codegen/pass_typescript_explicit_short)

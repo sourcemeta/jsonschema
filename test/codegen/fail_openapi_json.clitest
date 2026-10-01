@@ -1,0 +1,30 @@
+// Generating code for a description means a type for every Schema Object it
+// holds, and a way to name each one, which is more than generating for a
+// schema, so it is turned down outright rather than half done.
+
+WRITE openapi.json UNTIL EOF
+{
+  "openapi": "3.1.1",
+  "info": { "title": "Example", "version": "1.0.0" },
+  "paths": {},
+  "components": {
+    "schemas": {
+      "Person": { "type": "object", "properties": { "name": { "type": "string" } } }
+    }
+  }
+}
+EOF
+
+// Not supported
+RUN codegen openapi.json --target typescript --json STDIN /dev/null IN . INTO result.txt EXPECTING 3
+
+REPLACE $CWD WITH '[CWD]' IN result.txt
+
+WRITE expected.txt UNTIL EOF
+1> {
+1>   "error": "Generating code for OpenAPI descriptions is not supported yet",
+1>   "filePath": "[CWD]/openapi.json"
+1> }
+EOF
+
+COMPARE result.txt AGAINST expected.txt
