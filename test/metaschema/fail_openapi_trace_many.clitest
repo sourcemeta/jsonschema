@@ -1,0 +1,20 @@
+// The trace carries no heading of its own, so more than one of them would
+// run together into a stream nobody could attribute.
+
+WRITE openapi.json UNTIL EOF
+{
+  "openapi": "3.1.1",
+  "info": { "title": "Example", "version": "1.0.0" },
+  "paths": {},
+  "components": { "schemas": { "A": { "type": "string" }, "B": { "type": "integer" } } }
+}
+EOF
+
+// Invalid CLI arguments
+RUN metaschema openapi.json --trace STDIN /dev/null IN . INTO result_0.txt EXPECTING 5
+
+WRITE expected_0.txt UNTIL EOF
+2> error: The `--trace/-t` option is only allowed given a single schema, and this OpenAPI description holds more than one
+EOF
+
+COMPARE result_0.txt AGAINST expected_0.txt

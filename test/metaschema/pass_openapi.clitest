@@ -1,0 +1,36 @@
+// A description is not one schema but many, so each Schema Object it holds
+// is checked against the dialect it is written in, and each is named by
+// where it sits.
+
+WRITE openapi.json UNTIL EOF
+{
+  "openapi": "3.1.1",
+  "info": { "title": "Example", "version": "1.0.0" },
+  "paths": {
+    "/p": {
+      "get": {
+        "responses": {
+          "200": {
+            "description": "ok",
+            "content": { "application/json": { "schema": { "type": "object" } } }
+          }
+        }
+      }
+    }
+  },
+  "components": { "schemas": { "Person": { "type": "string" } } }
+}
+EOF
+
+RUN metaschema openapi.json --verbose STDIN /dev/null IN . INTO result_0.txt EXPECTING 0
+
+WRITE expected_0.txt UNTIL EOF
+2> ok: openapi.json#/components/schemas/Person
+2>   matches https://spec.openapis.org/oas/3.1/dialect/base
+2> ok: openapi.json#/paths/~1p/get/responses/200/content/application~1json/schema
+2>   matches https://spec.openapis.org/oas/3.1/dialect/base
+2>
+2> 2 validated, 2 passed, 0 failed
+EOF
+
+COMPARE result_0.txt AGAINST expected_0.txt

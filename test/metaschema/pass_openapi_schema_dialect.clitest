@@ -1,0 +1,31 @@
+// A Schema Object that declares its own dialect is held to that one rather
+// than to whatever the description had in force. An array of schemas under
+// `items` is how the older dialect spells a tuple, and the newer one does
+// not admit it, so this passing is what shows which dialect was used.
+
+WRITE openapi.json UNTIL EOF
+{
+  "openapi": "3.1.1",
+  "info": { "title": "Example", "version": "1.0.0" },
+  "paths": {},
+  "components": {
+    "schemas": {
+      "Tuple": {
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "items": [ { "type": "string" }, { "type": "integer" } ]
+      }
+    }
+  }
+}
+EOF
+
+RUN metaschema openapi.json --verbose STDIN /dev/null IN . INTO result_0.txt EXPECTING 0
+
+WRITE expected_0.txt UNTIL EOF
+2> ok: openapi.json#/components/schemas/Tuple
+2>   matches http://json-schema.org/draft-07/schema#
+2>
+2> 1 validated, 1 passed, 0 failed
+EOF
+
+COMPARE result_0.txt AGAINST expected_0.txt

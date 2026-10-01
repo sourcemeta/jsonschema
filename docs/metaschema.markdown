@@ -44,6 +44,32 @@ code 2.
 > output carries no per schema header that would tell you which schema a line
 > belongs to.
 
+OpenAPI Descriptions
+--------------------
+
+If the input is an OpenAPI spec v3.1 or v3.2, the `metaschema` command treats it
+as an [OpenAPI](https://spec.openapis.org/oas/latest.html) description rather
+than as a schema, and checks every Schema Object it holds against the
+meta-schema of the dialect that schema is written in. Any other revision, such
+as v3.0, is rejected rather than read as a schema.
+
+A Schema Object that declares its own `$schema` is held to that dialect rather
+than to the one the description has in force, so a description mixing dialects
+is checked correctly throughout. Each result names where the schema sits:
+
+```
+ok: openapi.json#/components/schemas/Person
+  matches https://json-schema.org/draft/2020-12/schema
+```
+
+Because a description holds many schemas, the counts in the summary are of
+Schema Objects rather than of files, and stopping at the first failure stops at
+the first failing Schema Object.
+
+```sh
+jsonschema metaschema path/to/my/openapi.json
+```
+
 Examples
 --------
 

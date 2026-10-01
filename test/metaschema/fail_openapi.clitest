@@ -1,0 +1,123 @@
+// A Schema Object that does not satisfy its dialect is reported against the
+// place it sits rather than against the description as a whole.
+
+WRITE openapi.json UNTIL EOF
+{
+  "openapi": "3.1.1",
+  "info": { "title": "Example", "version": "1.0.0" },
+  "paths": {},
+  "components": { "schemas": { "Broken": { "type": 42 } } }
+}
+EOF
+
+// Validation failure
+RUN metaschema openapi.json STDIN /dev/null IN . INTO result_0.txt EXPECTING 2
+
+WRITE expected_0.txt UNTIL EOF
+2> fail: openapi.json#/components/schemas/Broken
+2> error: Schema validation failure
+2>   The integer value 42 was expected to equal one of the following values: "array", "boolean", "integer", "null", "number", "object", and "string"
+2>     at instance location "/type"
+2>     at evaluate path "/allOf/0/$ref/allOf/3/$ref/properties/type/anyOf/0/$ref/enum"
+2>   The integer value was expected to validate against the referenced schema
+2>     at instance location "/type"
+2>     at evaluate path "/allOf/0/$ref/allOf/3/$ref/properties/type/anyOf/0/$ref"
+2>   The value was expected to be of type array but it was of type integer
+2>     at instance location "/type"
+2>     at evaluate path "/allOf/0/$ref/allOf/3/$ref/properties/type/anyOf/1/type"
+2>   The integer value was expected to validate against at least one of the 2 given subschemas
+2>     at instance location "/type"
+2>     at evaluate path "/allOf/0/$ref/allOf/3/$ref/properties/type/anyOf"
+2>   The object value was expected to validate against the 20 defined properties subschemas
+2>     at instance location "" (line 1, column 1)
+2>     at evaluate path "/allOf/0/$ref/allOf/3/$ref/properties"
+2>   The object value was expected to validate against the referenced schema
+2>     at instance location "" (line 1, column 1)
+2>     at evaluate path "/allOf/0/$ref/allOf/3/$ref"
+2>   The object value was expected to validate against the 7 given subschemas
+2>     at instance location "" (line 1, column 1)
+2>     at evaluate path "/allOf/0/$ref/allOf"
+2>   The object value was expected to validate against the referenced schema
+2>     at instance location "" (line 1, column 1)
+2>     at evaluate path "/allOf/0/$ref"
+2>   The object value was expected to validate against the 2 given subschemas
+2>     at instance location "" (line 1, column 1)
+2>     at evaluate path "/allOf"
+2>
+2> 1 validated, 0 passed, 1 failed
+EOF
+
+COMPARE result_0.txt AGAINST expected_0.txt
+
+// Validation failure
+RUN metaschema openapi.json --json STDIN /dev/null IN . INTO result_1.txt EXPECTING 2
+
+WRITE expected_1.txt UNTIL EOF
+1> {
+1>   "valid": false,
+1>   "errors": [
+1>     {
+1>       "keywordLocation": "/allOf/0/$ref/allOf/3/$ref/properties/type/anyOf/0/$ref/enum",
+1>       "absoluteKeywordLocation": "https://json-schema.org/draft/2020-12/meta/validation#/$defs/simpleTypes/enum",
+1>       "instanceLocation": "/type",
+1>       "error": "The integer value 42 was expected to equal one of the following values: \"array\", \"boolean\", \"integer\", \"null\", \"number\", \"object\", and \"string\""
+1>     },
+1>     {
+1>       "keywordLocation": "/allOf/0/$ref/allOf/3/$ref/properties/type/anyOf/0/$ref",
+1>       "absoluteKeywordLocation": "https://json-schema.org/draft/2020-12/meta/validation#/properties/type/anyOf/0/$ref",
+1>       "instanceLocation": "/type",
+1>       "error": "The integer value was expected to validate against the referenced schema"
+1>     },
+1>     {
+1>       "keywordLocation": "/allOf/0/$ref/allOf/3/$ref/properties/type/anyOf/1/type",
+1>       "absoluteKeywordLocation": "https://json-schema.org/draft/2020-12/meta/validation#/properties/type/anyOf/1/type",
+1>       "instanceLocation": "/type",
+1>       "error": "The value was expected to be of type array but it was of type integer"
+1>     },
+1>     {
+1>       "keywordLocation": "/allOf/0/$ref/allOf/3/$ref/properties/type/anyOf",
+1>       "absoluteKeywordLocation": "https://json-schema.org/draft/2020-12/meta/validation#/properties/type/anyOf",
+1>       "instanceLocation": "/type",
+1>       "error": "The integer value was expected to validate against at least one of the 2 given subschemas"
+1>     },
+1>     {
+1>       "keywordLocation": "/allOf/0/$ref/allOf/3/$ref/properties",
+1>       "absoluteKeywordLocation": "https://json-schema.org/draft/2020-12/meta/validation#/properties",
+1>       "instanceLocation": "",
+1>       "instancePosition": [ 1, 1, 6, 1 ],
+1>       "error": "The object value was expected to validate against the 20 defined properties subschemas"
+1>     },
+1>     {
+1>       "keywordLocation": "/allOf/0/$ref/allOf/3/$ref",
+1>       "absoluteKeywordLocation": "https://json-schema.org/draft/2020-12/schema#/allOf/3/$ref",
+1>       "instanceLocation": "",
+1>       "instancePosition": [ 1, 1, 6, 1 ],
+1>       "error": "The object value was expected to validate against the referenced schema"
+1>     },
+1>     {
+1>       "keywordLocation": "/allOf/0/$ref/allOf",
+1>       "absoluteKeywordLocation": "https://json-schema.org/draft/2020-12/schema#/allOf",
+1>       "instanceLocation": "",
+1>       "instancePosition": [ 1, 1, 6, 1 ],
+1>       "error": "The object value was expected to validate against the 7 given subschemas"
+1>     },
+1>     {
+1>       "keywordLocation": "/allOf/0/$ref",
+1>       "absoluteKeywordLocation": "https://spec.openapis.org/oas/3.1/dialect/base#/allOf/0/$ref",
+1>       "instanceLocation": "",
+1>       "instancePosition": [ 1, 1, 6, 1 ],
+1>       "error": "The object value was expected to validate against the referenced schema"
+1>     },
+1>     {
+1>       "keywordLocation": "/allOf",
+1>       "absoluteKeywordLocation": "https://spec.openapis.org/oas/3.1/dialect/base#/allOf",
+1>       "instanceLocation": "",
+1>       "instancePosition": [ 1, 1, 6, 1 ],
+1>       "error": "The object value was expected to validate against the 2 given subschemas"
+1>     }
+1>   ]
+1> }
+2> openapi.json#/components/schemas/Broken
+EOF
+
+COMPARE result_1.txt AGAINST expected_1.txt
