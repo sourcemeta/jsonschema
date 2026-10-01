@@ -1,0 +1,35 @@
+// An entry point naming a place the description does not hold is reported
+// against the file it was looked for in.
+
+WRITE openapi.json UNTIL EOF
+{
+  "openapi": "3.1.1",
+  "info": { "title": "Example", "version": "1.0.0" },
+  "paths": {},
+  "components": {
+    "schemas": {
+      "Person": {
+        "type": "object",
+        "required": [ "name" ],
+        "properties": { "name": { "type": "string" } }
+      }
+    }
+  }
+}
+EOF
+
+// An entry point naming a place the description does not hold is reported
+RUN compile openapi.json --entrypoint /components/schemas/Nope --json STDIN /dev/null IN . INTO result.txt EXPECTING 4
+
+REPLACE $CWD_URI WITH '[CWD_URI]' IN result.txt
+REPLACE $CWD WITH '[CWD]' IN result.txt
+
+WRITE expected.txt UNTIL EOF
+1> {
+1>   "error": "The given entry point URI does not name a Schema Object of the OpenAPI description",
+1>   "identifier": "[CWD_URI]/openapi.json#/components/schemas/Nope",
+1>   "filePath": "[CWD]/openapi.json"
+1> }
+EOF
+
+COMPARE result.txt AGAINST expected.txt

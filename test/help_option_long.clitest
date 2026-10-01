@@ -153,10 +153,13 @@ WRITE expected.txt UNTIL EOF
 1>    [ANSI_BOLD_CYAN]rdf[ANSI_RESET] <schema.json|.yaml> <instance.json|.jsonl|.jsonl.gz|.yaml> [--flatten/-l]
 1>        [--compact/-c <context.json|.yaml>] [--fast/-f] [--format-assertion/-F]
 1>        [--extension/-e <extension>] [--ignore/-i <schemas-or-directories>]
+1>        [--entrypoint/-p <pointer|uri>]
 1>
 1>        Validate an instance against a schema annotated with x-jsonld-*
 1>        keywords and, on success, print the instance promoted to expanded
-1>        JSON-LD (Linked Data). Use --flatten/-l and/or --compact/-c to
+1>        JSON-LD (Linked Data). Use --entrypoint/-p to read the instance
+1>        through a subschema by JSON Pointer or URI.
+1>        Use --flatten/-l and/or --compact/-c to
 1>        post-process the output. Datasets are promoted entry by entry, as
 1>        JSONL. As in `validate`, schemas compile in exhaustive mode by
 1>        default. Pass --fast/-f to optimise for speed at the expense of

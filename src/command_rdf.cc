@@ -392,7 +392,6 @@ auto sourcemeta::jsonschema::rdf(const sourcemeta::core::Options &options)
 
   for (const auto &entry : entries) {
     promote_entry(entry, evaluator, schema_template, context, flatten,
-                  fast_mode, json_output, multidocument, schema_resolution_base,
-                  options);
+                  fast_mode, json_output, multidocument, display_path, options);
   }
 }

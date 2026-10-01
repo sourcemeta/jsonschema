@@ -152,6 +152,7 @@ constexpr std::string_view USAGE_COMMANDS{R"EOF(   version / --version / -v
    rdf <schema.json|.yaml> <instance.json|.jsonl|.jsonl.gz|.yaml> [--flatten/-l]
        [--compact/-c <context.json|.yaml>] [--fast/-f] [--format-assertion/-F]
        [--extension/-e <extension>] [--ignore/-i <schemas-or-directories>]
+       [--entrypoint/-p <pointer|uri>]
 
        Validate an instance against a schema annotated with x-jsonld-*
        keywords and, on success, print the instance promoted to expanded
