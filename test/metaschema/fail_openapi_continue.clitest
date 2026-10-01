@@ -17,6 +17,7 @@ RUN metaschema openapi.json --continue STDIN /dev/null IN . INTO result_0.txt EX
 
 WRITE expected_0.txt UNTIL EOF
 2> fail: openapi.json#/components/schemas/A
+2>   against https://spec.openapis.org/oas/3.1/dialect/base
 2> error: Schema validation failure
 2>   The integer value 42 was expected to equal one of the following values: "array", "boolean", "integer", "null", "number", "object", and "string"
 2>     at instance location "/type"
@@ -46,6 +47,7 @@ WRITE expected_0.txt UNTIL EOF
 2>     at instance location "" (line 1, column 1)
 2>     at evaluate path "/allOf"
 2> fail: openapi.json#/components/schemas/B
+2>   against https://spec.openapis.org/oas/3.1/dialect/base
 2> error: Schema validation failure
 2>   The integer value 42 was expected to equal one of the following values: "array", "boolean", "integer", "null", "number", "object", and "string"
 2>     at instance location "/type"

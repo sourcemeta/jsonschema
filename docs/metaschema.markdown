@@ -64,7 +64,9 @@ ok: openapi.json#/components/schemas/Person
 
 Because a description holds many schemas, the counts in the summary are of
 Schema Objects rather than of files, and stopping at the first failure stops at
-the first failing Schema Object.
+the first failing Schema Object. The `--trace/-t` option is not available
+for a description, as a trace would have to be read against a schema the
+output never names.
 
 ```sh
 jsonschema metaschema path/to/my/openapi.json

@@ -131,9 +131,16 @@ auto check_against_metaschema(
     return true;
   }
 
+  // Which meta-schema turned it down is not something the failure itself
+  // says, and one description may hold schemas in several dialects, so there
+  // is nothing else to read it off
   std::cerr << sourcemeta::jsonschema::format_validation_status(
                    sourcemeta::jsonschema::ValidationStatus::Fail)
-            << " " << subject << "\n";
+            << " " << subject << "\n  against "
+            << sourcemeta::jsonschema::paint(
+                   dialect, sourcemeta::core::TerminalStyle::Cyan,
+                   sourcemeta::core::TerminalStream::Stderr)
+            << "\n";
   sourcemeta::jsonschema::print(output, positions, std::cerr);
   return false;
 }
@@ -165,14 +172,6 @@ auto check_openapi_description(
         sourcemeta::core::OpenAPIFrame::ObjectKind::Schema) {
       schemas.emplace_back(location);
     }
-  }
-
-  // The trace carries no header of its own, so more than one of them would
-  // make an unattributable stream just as more than one input would
-  if (trace && schemas.size() > 1) {
-    throw sourcemeta::jsonschema::OptionConflictError{
-        "The `--trace/-t` option is only allowed given a single schema, and "
-        "this OpenAPI description holds more than one"};
   }
 
   if (schemas.empty()) {
@@ -250,6 +249,16 @@ auto sourcemeta::jsonschema::metaschema(
                          : entry.resolution_base};
 
     reject_unsupported_openapi(entry.second, display_path);
+
+    // A description is a collection of schemas rather than one, so whatever a
+    // trace of it showed would have to be read against a schema the output
+    // never names. Refused however many it holds, as a rule that depends on
+    // the count is a rule nobody can predict
+    if (is_openapi && trace) {
+      throw OptionConflictError{
+          "The `--trace/-t` option is not available when the input is an "
+          "OpenAPI description"};
+    }
 
     if (!is_openapi && !entry.second.is_object() &&
         !entry.second.is_boolean()) {
