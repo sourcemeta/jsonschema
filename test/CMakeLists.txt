@@ -1314,6 +1314,9 @@ add_jsonschema_test(install/pass_color_never_verbose)
 
 # Upgrade
 add_jsonschema_test(upgrade/pass_default_target)
+add_jsonschema_test(upgrade/fail_openapi)
+add_jsonschema_test(upgrade/fail_openapi_json)
+add_jsonschema_test(upgrade/fail_openapi_unsupported_version)
 add_jsonschema_test(upgrade/pass_draft3_to_draft4)
 add_jsonschema_test(upgrade/pass_draft3_to_draft6)
 add_jsonschema_test(upgrade/pass_draft3_to_draft7)
