@@ -88,6 +88,37 @@ auto metaschema_template(
 
 // Checking one schema against its dialect and saying how it went, which is the
 // same work whether the schema stands on its own or sits inside a description
+// Blaze resolves instance locations against the tracker itself, and what it
+// reports is relative to the schema that was validated rather than to the file
+// it came out of, so for a Schema Object of a description the positions have to
+// be put in afterwards against the place that schema sits
+//
+// TODO: Doing this here is wrong. It repeats a lookup Blaze already did, and
+// the shape it writes back is Blaze's to define, so the two drift apart the
+// moment that format changes. Validating a subtree is the general case and
+// Blaze should take the base pointer and resolve against it, after which this
+// whole function goes away. See `blaze-standard-subtree-positions`
+auto rebase_positions(sourcemeta::core::JSON &output,
+                      const sourcemeta::core::PointerPositionTracker &positions,
+                      const sourcemeta::core::Pointer &base) -> void {
+  for (const auto &property : {"errors", "annotations"}) {
+    if (!output.defines(property)) {
+      continue;
+    }
+
+    for (auto &unit : output.at(property).as_array()) {
+      assert(unit.defines("instanceLocation"));
+      const auto position{
+          positions.get(base.concat(sourcemeta::core::to_pointer(
+              unit.at("instanceLocation").to_string())))};
+      if (position.has_value()) {
+        unit.assign("instancePosition",
+                    sourcemeta::core::to_json(position.value()));
+      }
+    }
+  }
+}
+
 auto check_against_metaschema(
     sourcemeta::blaze::Evaluator &evaluator,
     const sourcemeta::blaze::Template &schema_template,
@@ -108,9 +139,12 @@ auto check_against_metaschema(
     // Otherwise its impossible to correlate the output
     // when validating i.e. a directory of schemas
     std::cerr << subject << "\n";
-    const auto output{sourcemeta::blaze::standard(
+    auto output{sourcemeta::blaze::standard(
         evaluator, schema_template, schema,
         sourcemeta::blaze::StandardOutput::Basic, positions)};
+    if (!base.empty()) {
+      rebase_positions(output, positions, base);
+    }
     assert(output.is_object());
     assert(output.defines("valid"));
     assert(output.at("valid").is_boolean());

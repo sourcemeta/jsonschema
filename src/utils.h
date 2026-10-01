@@ -780,6 +780,11 @@ inline auto facet_name(const sourcemeta::blaze::JSONLDFacet facet)
 // validated, so when that is a subtree of the tracked document, as a Schema
 // Object of an OpenAPI description is, the tracker only answers once the
 // position of that subtree is put back in front
+//
+// TODO: Every caller validating a subtree has to know to pass this, and one
+// that forgets silently loses every position rather than failing. Core could
+// hand out a tracker rebased on a pointer instead, which would make the base
+// impossible to omit and let this parameter go
 template <typename Entries>
 inline auto print(const Entries &output,
                   const sourcemeta::core::PointerPositionTracker &tracker,
