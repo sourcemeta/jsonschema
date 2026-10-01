@@ -249,7 +249,8 @@ inline auto bignum_reduce(BasicBignum<Capacity> &value,
   const auto divisor_words{modulus.size};
 
   // A zero modulus defines no residue to reduce into, and the division below
-  // reads the top two divisor words
+  // reads the top two divisor words. An RSA modulus is only bounded from above
+  // on import, so a key carrying a one- or two-octet modulus reaches here
   if (divisor_words == 0) {
     return;
   }

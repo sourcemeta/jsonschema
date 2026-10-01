@@ -818,9 +818,9 @@ OpenAPIFrame::OpenAPIFrame(const JSON &document, const SchemaWalker &walker,
   try {
     this->internal_->schemas = std::make_unique<SchemaFrame>(
         SchemaFrame::Mode::References, document, walker, resolver,
-        root->second.dialect, "", SchemaFrame::IdentifierMode::Additional,
-        this->internal_->schema_paths, this->internal_->base,
-        max_locations - walk_locations);
+        root->second.default_dialect, "",
+        SchemaFrame::IdentifierMode::Additional, this->internal_->schema_paths,
+        this->internal_->base, max_locations - walk_locations);
   } catch (const SchemaFrameLimitError &) {
     // Framing the schemas was handed what was left rather than the whole, so
     // the allowance it reports is not the one the caller set
@@ -963,9 +963,12 @@ auto OpenAPIFrame::to_json(
 
     entry.assign_assume_new("parent",
                             sourcemeta::core::to_json(location.second.parent));
-    // Only the root of a document and a Schema Object carry one
-    if (!location.second.dialect.empty()) {
-      entry.assign_assume_new("dialect", JSON{location.second.dialect});
+    // Only the root of a document and a Schema Object carry one. The effective
+    // dialect of a Schema Object is the business of the schema frame, which
+    // exports its own under the same name one level down
+    if (!location.second.default_dialect.empty()) {
+      entry.assign_assume_new("defaultDialect",
+                              JSON{location.second.default_dialect});
     }
 
     // A Schema Object position alone carries the other half of what whatever

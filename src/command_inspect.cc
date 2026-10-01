@@ -285,9 +285,11 @@ auto print_openapi_location(
     stream << "    Parent            : <NONE>\n";
   }
 
-  // The root of a document and a Schema Object carry one, nothing else does
-  if (!location.dialect.empty()) {
-    stream << "    Dialect           : " << location.dialect << "\n";
+  // The root of a document and a Schema Object carry one, nothing else does.
+  // What a Schema Object is written in is its own business, so this is only
+  // what was in force before it spoke for itself
+  if (!location.default_dialect.empty()) {
+    stream << "    Default Dialect   : " << location.default_dialect << "\n";
   }
 
   // A Schema Object alone carries one, where an empty base is as much an

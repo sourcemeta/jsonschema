@@ -8,6 +8,7 @@
 #include <sourcemeta/core/crypto_verify.h>
 #include <sourcemeta/core/text.h>
 
+#include <array>       // std::array
 #include <cstddef>     // std::size_t
 #include <cstdint>     // std::uint8_t
 #include <string>      // std::string
@@ -184,49 +185,53 @@ inline auto eddsa_public_key_bytes(const EdwardsCurve curve) noexcept
   return 57;
 }
 
+// The bytes of a fixed-size digest array as a string, so that each arm of the
+// dispatch below is a single expression over the digest it names
+template <std::size_t Size>
+inline auto digest_bytes(const std::array<std::uint8_t, Size> &digest)
+    -> std::string {
+  return {reinterpret_cast<const char *>(digest.data()), digest.size()};
+}
+
+// The same, in wiping storage, for the secret-bearing hashing where the message
+// and the result derive from the private key. The parameter binds the caller's
+// temporary rather than copying it, so the wipe lands on the only buffer the
+// digest ever occupied
+template <std::size_t Size>
+inline auto secure_digest_bytes(std::array<std::uint8_t, Size> &&digest)
+    -> SecureString {
+  const SecureBufferScope digest_scope{digest.data(), digest.size()};
+  return {reinterpret_cast<const char *>(digest.data()), digest.size()};
+}
+
 inline auto digest_message(const SignatureHashFunction hash,
                            const std::string_view message) -> std::string {
   switch (hash) {
-    case SignatureHashFunction::SHA256: {
-      const auto digest{sha256_digest(message)};
-      return {reinterpret_cast<const char *>(digest.data()), digest.size()};
-    }
-    case SignatureHashFunction::SHA384: {
-      const auto digest{sha384_digest(message)};
-      return {reinterpret_cast<const char *>(digest.data()), digest.size()};
-    }
+    case SignatureHashFunction::SHA256:
+      return digest_bytes(sha256_digest(message));
+    case SignatureHashFunction::SHA384:
+      return digest_bytes(sha384_digest(message));
     case SignatureHashFunction::SHA512:
       break;
   }
 
-  const auto digest{sha512_digest(message)};
-  return {reinterpret_cast<const char *>(digest.data()), digest.size()};
+  return digest_bytes(sha512_digest(message));
 }
 
-// The same digest returned in wiping storage, for the secret-bearing hashing of
-// the deterministic nonce generator, where the message and the result derive
-// from the private key
+// The digest of the deterministic nonce generator, which the private key feeds
 inline auto secure_digest_message(const SignatureHashFunction hash,
                                   const std::string_view message)
     -> SecureString {
   switch (hash) {
-    case SignatureHashFunction::SHA256: {
-      auto digest{sha256_digest(message)};
-      const SecureBufferScope digest_scope{digest.data(), digest.size()};
-      return {reinterpret_cast<const char *>(digest.data()), digest.size()};
-    }
-    case SignatureHashFunction::SHA384: {
-      auto digest{sha384_digest(message)};
-      const SecureBufferScope digest_scope{digest.data(), digest.size()};
-      return {reinterpret_cast<const char *>(digest.data()), digest.size()};
-    }
+    case SignatureHashFunction::SHA256:
+      return secure_digest_bytes(sha256_digest(message));
+    case SignatureHashFunction::SHA384:
+      return secure_digest_bytes(sha384_digest(message));
     case SignatureHashFunction::SHA512:
       break;
   }
 
-  auto digest{sha512_digest(message)};
-  const SecureBufferScope digest_scope{digest.data(), digest.size()};
-  return {reinterpret_cast<const char *>(digest.data()), digest.size()};
+  return secure_digest_bytes(sha512_digest(message));
 }
 
 } // namespace sourcemeta::core

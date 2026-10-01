@@ -6,7 +6,6 @@
 
 #include <cassert>  // assert
 #include <optional> // std::optional
-#include <sstream>  // std::ostringstream
 #include <string>   // std::string
 #include <utility>  // std::pair, std::to_underlying
 #include <vector>   // std::vector
@@ -282,15 +281,11 @@ auto sourcemeta::core::SchemaVocabularies::throw_if_any_unsupported(
       continue;
     }
 
-    // Slow fallback: convert to string URI and check if it was passed as string
-    std::ostringstream stream;
-    stream << vocabulary;
-    const auto &uri{stream.str()};
+    // Slow fallback: the supported set may spell a known vocabulary as its
+    // string URI, which costs a lookup the enumerator would have avoided
+    const sourcemeta::core::JSON::String uri{vocabulary_uri(vocabulary)};
 
     if (supported.contains(uri)) {
-      // As a debug build check: Going through this branch is slow. If it is a
-      // known vocabulary, the consumer should be passing it as an enum class
-      assert(false);
       continue;
     }
 

@@ -40,18 +40,13 @@ auto hash_length(const RSAOAEPHash hash) -> std::size_t {
 auto oaep_hash(const RSAOAEPHash hash, const std::string_view input)
     -> std::string {
   switch (hash) {
-    case RSAOAEPHash::SHA1: {
-      const auto digest{sha1_digest(input)};
-      return std::string{reinterpret_cast<const char *>(digest.data()),
-                         digest.size()};
-    }
+    case RSAOAEPHash::SHA1:
+      return digest_bytes(sha1_digest(input));
     case RSAOAEPHash::SHA256:
       break;
   }
 
-  const auto digest{sha256_digest(input)};
-  return std::string{reinterpret_cast<const char *>(digest.data()),
-                     digest.size()};
+  return digest_bytes(sha256_digest(input));
 }
 
 // The mask generation function (RFC 8017 Appendix B.2.1)

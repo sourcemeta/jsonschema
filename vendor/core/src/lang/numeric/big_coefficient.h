@@ -3,6 +3,7 @@
 
 #include <algorithm>   // std::max, std::copy, std::fill
 #include <array>       // std::array
+#include <bit>         // std::endian
 #include <cstdint>     // std::int32_t, std::int64_t, std::uint32_t,
                        // std::uint64_t, std::uintptr_t, std::uint8_t
 #include <cstring>     // std::memcpy
@@ -50,6 +51,49 @@ constexpr std::array<std::uint64_t, 20> POWERS_OF_10 = {{
 
 constexpr std::uint64_t BASE = 1000000000000000000ULL; // 10^18
 constexpr std::int32_t BASE_DIGITS = 18;
+
+// How many digits are taken in one go, and what folding that many of them
+// scales the running value by
+constexpr std::uint32_t GATHERED_DIGITS = 8;
+constexpr std::uint64_t GATHERED_SCALE = 100000000ULL; // 10^8
+
+// Take eight digits in one go. Every byte of the word holds one digit once the
+// bias that makes it a character is taken away, and the three multiplications
+// fold the bytes into pairs, the pairs into quadruples, and the quadruples into
+// the whole. Where the bytes of a word land is what makes the folding line up,
+// so only the layout this is written for may use it
+inline auto gather_digits(const char *digits) noexcept -> std::uint64_t {
+  std::uint64_t word = 0;
+  std::memcpy(&word, digits, sizeof(word));
+  word -= static_cast<std::uint64_t>('0') * 0x0101010101010101ULL;
+  const auto pairs = ((word * ((10ULL << 8) + 1)) >> 8) & 0x00FF00FF00FF00FFULL;
+  const auto quadruples =
+      ((pairs * ((100ULL << 16) + 1)) >> 16) & 0x0000FFFF0000FFFFULL;
+  return (quadruples * ((10000ULL << 32) + 1)) >> 32;
+}
+
+// Fold a run of digits into one value. Folding one digit at a time makes every
+// digit wait on the one before it, so as much of the run as possible is taken
+// eight at a time instead, which both shortens the chain and does fewer
+// multiplications. The caller guarantees the run holds nothing but digits
+inline auto fold_digits(const char *digits, const std::uint32_t count) noexcept
+    -> std::uint64_t {
+  std::uint64_t value = 0;
+  std::uint32_t index = 0;
+  if constexpr (std::endian::native == std::endian::little) {
+    while (index + GATHERED_DIGITS <= count) {
+      value = (value * GATHERED_SCALE) + gather_digits(digits + index);
+      index += GATHERED_DIGITS;
+    }
+  }
+
+  while (index < count) {
+    value = (value * 10) + static_cast<std::uint64_t>(digits[index] - '0');
+    index += 1;
+  }
+
+  return value;
+}
 constexpr std::int64_t COMPACT_MAX =
     static_cast<std::int64_t>(BASE - 1); // 999999999999999999
 
@@ -614,10 +658,8 @@ public:
           end_position > static_cast<std::uint32_t>(BASE_DIGITS)
               ? end_position - static_cast<std::uint32_t>(BASE_DIGITS)
               : 0U;
-      for (auto position = start_position; position < end_position;
-           position++) {
-        word = (word * 10) + static_cast<std::uint64_t>(digits[position] - '0');
-      }
+      word =
+          fold_digits(digits + start_position, end_position - start_position);
       result.words[word_index] = word;
     }
 

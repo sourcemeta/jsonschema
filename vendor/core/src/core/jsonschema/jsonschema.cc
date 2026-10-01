@@ -476,50 +476,32 @@ auto core_vocabulary_known(
   }
 }
 
-auto dialect_to_known(const std::string_view dialect)
+// The exhaustive list of official dialects in the pre-vocabulary world. A
+// hyper-schema dialect is deliberately absent, as it names its own base dialect
+// and is answered through that instead
+auto pre_vocabulary_dialect_to_known(const std::string_view dialect)
     -> std::optional<sourcemeta::core::SchemaVocabularies::Known> {
   using sourcemeta::core::SchemaVocabularies;
   if (dialect == "http://json-schema.org/draft-07/schema#") {
     return SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_7;
   }
-  if (dialect == "http://json-schema.org/draft-07/hyper-schema#") {
-    return SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_7_HYPER;
-  }
   if (dialect == "http://json-schema.org/draft-06/schema#") {
     return SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_6;
-  }
-  if (dialect == "http://json-schema.org/draft-06/hyper-schema#") {
-    return SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_6_HYPER;
   }
   if (dialect == "http://json-schema.org/draft-04/schema#") {
     return SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_4;
   }
-  if (dialect == "http://json-schema.org/draft-04/hyper-schema#") {
-    return SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_4_HYPER;
-  }
   if (dialect == "http://json-schema.org/draft-03/schema#") {
     return SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_3;
-  }
-  if (dialect == "http://json-schema.org/draft-03/hyper-schema#") {
-    return SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_3_HYPER;
   }
   if (dialect == "http://json-schema.org/draft-02/schema#") {
     return SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_2;
   }
-  if (dialect == "http://json-schema.org/draft-02/hyper-schema#") {
-    return SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_2_HYPER;
-  }
   if (dialect == "http://json-schema.org/draft-01/schema#") {
     return SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_1;
   }
-  if (dialect == "http://json-schema.org/draft-01/hyper-schema#") {
-    return SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_1_HYPER;
-  }
   if (dialect == "http://json-schema.org/draft-00/schema#") {
     return SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_0;
-  }
-  if (dialect == "http://json-schema.org/draft-00/hyper-schema#") {
-    return SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_0_HYPER;
   }
   return std::nullopt;
 }
@@ -654,20 +636,9 @@ auto sourcemeta::core::vocabularies(const SchemaResolver &resolver,
    * dialect itself is conceptually the only vocabulary
    */
 
-  // This is an exhaustive list of all official dialects in the pre-vocabulary
-  // world
-  if (dialect == "http://json-schema.org/draft-07/schema#" ||
-      dialect == "http://json-schema.org/draft-06/schema#" ||
-      dialect == "http://json-schema.org/draft-04/schema#" ||
-      dialect == "http://json-schema.org/draft-03/schema#" ||
-      dialect == "http://json-schema.org/draft-02/schema#" ||
-      dialect == "http://json-schema.org/draft-01/schema#" ||
-      dialect == "http://json-schema.org/draft-00/schema#") {
-    const auto known = dialect_to_known(dialect);
-    if (known.has_value()) {
-      return SchemaVocabularies{{known.value(), true}};
-    }
-    return SchemaVocabularies{{std::string{dialect}, true}};
+  const auto known{pre_vocabulary_dialect_to_known(dialect)};
+  if (known.has_value()) {
+    return SchemaVocabularies{{known.value(), true}};
   }
 
   /*

@@ -540,8 +540,8 @@ inline auto openapi_canonical_base(const std::string_view input)
 // so. What a reference reaches twice as the same kind is no conflict
 inline auto openapi_record(OpenAPIWalk &walk, const Pointer &pointer,
                            const OpenAPIObjectKind kind,
-                           JSON::String dialect = {}, JSON::String base = {})
-    -> void {
+                           JSON::String default_dialect = {},
+                           JSON::String base = {}) -> void {
   auto uri{openapi_location_uri(walk.base, pointer)};
   const auto known{walk.locations.find(uri)};
   // Reading one place twice records it once, so what an allowance is spent on
@@ -559,11 +559,12 @@ inline auto openapi_record(OpenAPIWalk &walk, const Pointer &pointer,
                        "This place is read as more than one kind of Object"};
   }
 
-  walk.locations.insert_or_assign(std::move(uri),
-                                  OpenAPILocation{.type = kind,
-                                                  .pointer = pointer,
-                                                  .dialect = std::move(dialect),
-                                                  .base = std::move(base)});
+  walk.locations.insert_or_assign(
+      std::move(uri),
+      OpenAPILocation{.type = kind,
+                      .pointer = pointer,
+                      .default_dialect = std::move(default_dialect),
+                      .base = std::move(base)});
 }
 
 inline auto openapi_expect_object(const JSON &value, const Pointer &location,

@@ -15,6 +15,7 @@
 
 #include <algorithm> // std::ranges::find, std::ranges::all_of, std::ranges::count_if
 #include <array>       // std::array
+#include <cassert>     // assert
 #include <chrono>      // std::chrono::seconds, std::chrono::duration_cast
 #include <cstdint>     // std::int64_t, std::uint8_t
 #include <mutex>       // std::scoped_lock
@@ -203,11 +204,10 @@ auto oauth_dpop_proof_thumbprint(const std::string_view proof)
     return std::nullopt;
   }
 
+  // Parsing a token rejects a header that is not an object, so every read of
+  // one past that point is a read of an object
   const auto &header{token.value().header()};
-  if (!header.is_object()) {
-    return std::nullopt;
-  }
-
+  assert(header.is_object());
   const auto *key{header.try_at("jwk"sv, HASH_JWK)};
   if (key == nullptr || !key->is_object()) {
     return std::nullopt;
@@ -267,8 +267,8 @@ auto oauth_dpop_verify(const std::string_view proof,
 
   // Check 3: all required header parameters and claims are present
   const auto &header{parsed.header()};
-  const auto *key{header.is_object() ? header.try_at("jwk"sv, HASH_JWK)
-                                     : nullptr};
+  assert(header.is_object());
+  const auto *key{header.try_at("jwk"sv, HASH_JWK)};
   if (key == nullptr || !key->is_object()) {
     return OAuthDPoPError::MissingClaim;
   }

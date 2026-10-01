@@ -10,6 +10,7 @@
 #include <sourcemeta/core/uri.h>
 
 #include <algorithm>   // std::ranges::find_if, std::clamp
+#include <cassert>     // assert
 #include <chrono>      // std::chrono::seconds, std::chrono::duration_cast
 #include <cstdint>     // std::int64_t
 #include <optional>    // std::optional, std::nullopt
@@ -73,10 +74,8 @@ auto map_verification_error(const JWTVerificationError error)
 // rejected for (RFC 7523 Section 3 check 10) rather than accepted because
 // another element happens to match
 auto audience_is_well_formed(const JWT &token) -> bool {
-  if (!token.payload().is_object()) {
-    return false;
-  }
-
+  // Parsing a token rejects a payload that is not an object
+  assert(token.payload().is_object());
   const auto *audience{token.payload().try_at("aud"sv, HASH_AUD)};
   if (audience == nullptr || audience->is_string()) {
     return true;

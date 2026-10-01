@@ -5,6 +5,7 @@
 #include <sourcemeta/core/oidc_error.h>
 #include <sourcemeta/core/uri.h>
 
+#include <cassert>     // assert
 #include <optional>    // std::optional, std::nullopt
 #include <string_view> // std::string_view
 #include <utility>     // std::move
@@ -59,13 +60,12 @@ constexpr auto HASH_REQUEST_URI_PARAMETER{
 constexpr auto HASH_REQUIRE_REQUEST_URI_REGISTRATION{
     JSON::Object::hash("require_request_uri_registration"sv)};
 
+// Every caller reads the document of a validated server metadata, which is
+// rejected at construction unless it is an object
 auto string_member(const JSON &data, const JSON::StringView name,
                    const JSON::Object::hash_type hash)
     -> std::optional<std::string_view> {
-  if (!data.is_object()) {
-    return std::nullopt;
-  }
-
+  assert(data.is_object());
   const auto *member{data.try_at(name, hash)};
   if (member == nullptr || !member->is_string()) {
     return std::nullopt;

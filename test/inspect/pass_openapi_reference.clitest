@@ -29,7 +29,7 @@ WRITE expected_0.txt UNTIL EOF
 1>     Pointer           :
 1>     File Position     : 1:1
 1>     Parent            : <NONE>
-1>     Dialect           : https://spec.openapis.org/oas/3.1/dialect/base
+1>     Default Dialect   : https://spec.openapis.org/oas/3.1/dialect/base
 1>     Version           : 3.1
 1>     Base              : [CWD_URI]/openapi.json
 1>     Standalone        : yes
@@ -71,7 +71,7 @@ WRITE expected_0.txt UNTIL EOF
 1>     Pointer           : /components/schemas/Person
 1>     File Position     : 11:18
 1>     Parent            : [CWD_URI]/openapi.json#/components
-1>     Dialect           : https://spec.openapis.org/oas/3.1/dialect/base
+1>     Default Dialect   : https://spec.openapis.org/oas/3.1/dialect/base
 1>     Base              : [CWD_URI]/openapi.json
 1>
 1> (INFO) URI: [CWD_URI]/openapi.json#/info

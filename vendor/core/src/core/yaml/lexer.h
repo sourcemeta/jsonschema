@@ -567,7 +567,10 @@ private:
         blank_line = false;
         const auto comment_line{this->line_};
         const auto comment_start{this->position_};
-        while (this->position_ < this->input_.size() && this->peek() != '\n') {
+        // YAML 1.2.2 Section 6.6 ends a comment at a line break, and Section
+        // 5.4 counts a lone carriage return as one
+        while (this->position_ < this->input_.size() && this->peek() != '\n' &&
+               this->peek() != '\r') {
           this->advance(1);
         }
         if (this->roundtrip_) {
@@ -1218,7 +1221,10 @@ private:
         this->advance(1);
       } else if (current == '#' && seen_header_whitespace) {
         const auto comment_start{this->position_};
-        while (this->position_ < this->input_.size() && this->peek() != '\n') {
+        // YAML 1.2.2 Section 6.6 ends a comment at a line break, and Section
+        // 5.4 counts a lone carriage return as one
+        while (this->position_ < this->input_.size() && this->peek() != '\n' &&
+               this->peek() != '\r') {
           this->advance(1);
         }
         if (this->roundtrip_) {

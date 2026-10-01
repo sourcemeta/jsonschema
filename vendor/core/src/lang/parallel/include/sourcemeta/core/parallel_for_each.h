@@ -44,7 +44,8 @@ inline unsigned __stdcall parallel_for_each_windows_thread_start(
 ///
 /// Process a collection in parallel. If the parallelism is set to zero, the
 /// function will run using the available number of cores. If the stack size is
-/// set to zero, the platform default applies. For example:
+/// set to zero, the platform default applies, and a stack size the platform
+/// cannot honour throws. For example:
 ///
 /// ```c++
 /// #include <sourcemeta/core/parallel.h>
@@ -181,8 +182,16 @@ auto parallel_for_each(
     // size
     pthread_attr_t attr;
     pthread_attr_init(&attr);
-    if (stack_size_bytes > 0) {
-      pthread_attr_setstacksize(&attr, stack_size_bytes);
+    // A stack size the platform cannot honour, such as one below its minimum
+    // or one that is not a multiple of its page size, must be reported rather
+    // than dropped in favour of the default, as the caller asked for it to
+    // bound how deep the work it hands over may recurse
+    if (stack_size_bytes > 0 &&
+        pthread_attr_setstacksize(&attr, stack_size_bytes) != 0) {
+      pthread_attr_destroy(&attr);
+      creation_error = "The requested stack size is not supported by this "
+                       "platform";
+      break;
     }
 
     auto *heap_function = new std::function<void()>(worker_callable);
