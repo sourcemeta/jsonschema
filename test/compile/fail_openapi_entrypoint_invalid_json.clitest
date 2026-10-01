@@ -18,7 +18,7 @@ WRITE openapi.json UNTIL EOF
 }
 EOF
 
-// An entry point naming a place the description does not hold is reported
+// Schema input error
 RUN compile openapi.json --entrypoint /components/schemas/Nope --json STDIN /dev/null IN . INTO result.txt EXPECTING 4
 
 REPLACE $CWD_URI WITH '[CWD_URI]' IN result.txt

@@ -25,7 +25,7 @@ WRITE instance.json UNTIL EOF
 { "name": "Ada" }
 EOF
 
-// Whether a schema can carry annotations is a question about the schema the
+// Schema input error
 RUN rdf openapi.json instance.json --entrypoint /components/schemas/Person --json STDIN /dev/null IN . INTO result.txt EXPECTING 4
 
 REPLACE $CWD WITH '[CWD]' IN result.txt

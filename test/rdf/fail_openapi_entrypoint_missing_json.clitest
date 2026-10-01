@@ -25,7 +25,7 @@ WRITE instance.json UNTIL EOF
 { "name": "Ada" }
 EOF
 
-// Nothing in a description stands out as the one schema to read through, so
+// Invalid CLI arguments
 RUN rdf openapi.json instance.json --json STDIN /dev/null IN . INTO result.txt EXPECTING 5
 
 WRITE expected.txt UNTIL EOF

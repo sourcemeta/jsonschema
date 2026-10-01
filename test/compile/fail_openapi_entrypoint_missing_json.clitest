@@ -18,7 +18,7 @@ WRITE openapi.json UNTIL EOF
 }
 EOF
 
-// Nothing in a description stands out as the one schema to compile, so
+// Invalid CLI arguments
 RUN compile openapi.json --json STDIN /dev/null IN . INTO result.txt EXPECTING 5
 
 WRITE expected.txt UNTIL EOF

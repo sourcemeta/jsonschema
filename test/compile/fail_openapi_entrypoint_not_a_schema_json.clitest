@@ -11,7 +11,7 @@ WRITE openapi.json UNTIL EOF
 }
 EOF
 
-// An entry point reaching a part of the description that is not a schema is
+// Schema input error
 RUN compile openapi.json --entrypoint /info/title --json STDIN /dev/null IN . INTO result.txt EXPECTING 4
 
 REPLACE $CWD_URI WITH '[CWD_URI]' IN result.txt
