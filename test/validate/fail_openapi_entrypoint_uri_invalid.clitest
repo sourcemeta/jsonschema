@@ -1,5 +1,5 @@
-// The schema an entry point names is what the instance is held to, and the
-// failure names that schema rather than any other the description holds.
+// An entry point naming the identifier a Schema Object declares reaches that
+// schema, which is what the failure is reported against.
 
 WRITE openapi.json UNTIL EOF
 {
@@ -24,7 +24,7 @@ WRITE instance.json UNTIL EOF
 EOF
 
 // Validation failure
-RUN validate openapi.json instance.json --entrypoint /components/schemas/Person STDIN /dev/null IN . INTO result_0.txt EXPECTING 2
+RUN validate openapi.json instance.json --entrypoint https://example.com/person STDIN /dev/null IN . INTO result_0.txt EXPECTING 2
 
 WRITE expected_0.txt UNTIL EOF
 2> fail: instance.json
@@ -39,7 +39,7 @@ EOF
 COMPARE result_0.txt AGAINST expected_0.txt
 
 // Validation failure
-RUN validate openapi.json instance.json --entrypoint /components/schemas/Person --json STDIN /dev/null IN . INTO result_1.txt EXPECTING 2
+RUN validate openapi.json instance.json --entrypoint https://example.com/person --json STDIN /dev/null IN . INTO result_1.txt EXPECTING 2
 
 WRITE expected_1.txt UNTIL EOF
 1> {

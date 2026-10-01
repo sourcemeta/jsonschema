@@ -1,5 +1,5 @@
-// The schema an entry point names is what the instance is held to, and the
-// failure names that schema rather than any other the description holds.
+// An entry point naming an anchor is held to the subschema that anchor sits
+// on rather than to the Schema Object that declares it.
 
 WRITE openapi.json UNTIL EOF
 {
@@ -20,18 +20,18 @@ WRITE openapi.json UNTIL EOF
 EOF
 
 WRITE instance.json UNTIL EOF
-"not an object"
+42
 EOF
 
 // Validation failure
-RUN validate openapi.json instance.json --entrypoint /components/schemas/Person STDIN /dev/null IN . INTO result_0.txt EXPECTING 2
+RUN validate openapi.json instance.json --entrypoint https://example.com/person#name STDIN /dev/null IN . INTO result_0.txt EXPECTING 2
 
 WRITE expected_0.txt UNTIL EOF
 2> fail: instance.json
 2> error: Schema validation failure
-2>   The value was expected to be an object that defines the property "name"
+2>   The value was expected to be of type string but it was of type integer
 2>     at instance location "" (line 1, column 1)
-2>     at evaluate path "/required"
+2>     at evaluate path "/type"
 2>
 2> 1 validated, 0 passed, 1 failed
 EOF
@@ -39,18 +39,18 @@ EOF
 COMPARE result_0.txt AGAINST expected_0.txt
 
 // Validation failure
-RUN validate openapi.json instance.json --entrypoint /components/schemas/Person --json STDIN /dev/null IN . INTO result_1.txt EXPECTING 2
+RUN validate openapi.json instance.json --entrypoint https://example.com/person#name --json STDIN /dev/null IN . INTO result_1.txt EXPECTING 2
 
 WRITE expected_1.txt UNTIL EOF
 1> {
 1>   "valid": false,
 1>   "errors": [
 1>     {
-1>       "keywordLocation": "/required",
-1>       "absoluteKeywordLocation": "https://example.com/person#/required",
+1>       "keywordLocation": "/type",
+1>       "absoluteKeywordLocation": "https://example.com/person#/properties/name/type",
 1>       "instanceLocation": "",
-1>       "instancePosition": [ 1, 1, 1, 15 ],
-1>       "error": "The value was expected to be an object that defines the property \"name\""
+1>       "instancePosition": [ 1, 1, 1, 2 ],
+1>       "error": "The value was expected to be of type string but it was of type integer"
 1>     }
 1>   ]
 1> }
