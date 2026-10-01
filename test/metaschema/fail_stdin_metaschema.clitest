@@ -10,6 +10,7 @@ RUN metaschema - STDIN input.json IN . INTO result.txt EXPECTING 2
 
 WRITE expected.txt UNTIL EOF
 2> fail: tag:sourcemeta.com,2026:jsonschema/stdin
+2>   against http://json-schema.org/draft-04/schema#
 2> error: Schema validation failure
 2>   The integer value 1 was expected to equal one of the following values: "array", "boolean", "integer", "null", "number", "object", and "string"
 2>     at instance location "/type" (line 3, column 3)

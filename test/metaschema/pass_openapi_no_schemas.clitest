@@ -1,0 +1,19 @@
+// A description holding no Schema Objects is nothing to check, which is
+// said rather than left as a bare count of nothing.
+
+WRITE openapi.json UNTIL EOF
+{
+  "openapi": "3.1.1",
+  "info": { "title": "Example", "version": "1.0.0" },
+  "paths": {}
+}
+EOF
+
+RUN metaschema openapi.json STDIN /dev/null IN . INTO result_0.txt EXPECTING 0
+
+WRITE expected_0.txt UNTIL EOF
+2> warning: No schema objects were found in openapi.json
+2> 0 validated, 0 passed, 0 failed
+EOF
+
+COMPARE result_0.txt AGAINST expected_0.txt

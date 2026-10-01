@@ -50,6 +50,171 @@ auto effective_dialect(const sourcemeta::core::JSON &schema,
 
 } // namespace
 
+// Resolving, bundling and compiling a meta-schema is the expensive part of
+// this, and one dialect usually governs everything being checked, so it
+// happens once per dialect rather than once per schema
+auto metaschema_template(
+    std::map<std::string, sourcemeta::blaze::Template> &cache,
+    const sourcemeta::core::JSON &schema, const std::string &dialect,
+    const std::string_view framing_dialect,
+    const sourcemeta::core::SchemaResolver &resolver,
+    const sourcemeta::core::Options &options)
+    -> const sourcemeta::blaze::Template & {
+  const auto match{cache.find(dialect)};
+  if (match != cache.cend()) {
+    return match->second;
+  }
+
+  const sourcemeta::core::SchemaFrame schema_frame{
+      sourcemeta::core::SchemaFrame::Mode::Root, schema,
+      sourcemeta::core::schema_walker, resolver, framing_dialect};
+  const sourcemeta::core::JSON bundled{sourcemeta::core::schema_bundle(
+      schema_frame.metaschema(resolver), sourcemeta::core::schema_walker,
+      resolver, framing_dialect, "",
+      sourcemeta::jsonschema::bundle_references_options())};
+  const sourcemeta::core::SchemaFrame frame{
+      sourcemeta::core::SchemaFrame::Mode::References, bundled,
+      sourcemeta::core::schema_walker, resolver, framing_dialect};
+
+  return cache
+      .insert({dialect,
+               sourcemeta::blaze::compile(
+                   bundled, sourcemeta::core::schema_walker, resolver,
+                   sourcemeta::blaze::default_schema_compiler, frame,
+                   frame.root(), sourcemeta::blaze::Mode::Exhaustive,
+                   sourcemeta::jsonschema::format_assertion_tweaks(options))})
+      .first->second;
+}
+
+// Checking one schema against its dialect and saying how it went, which is the
+// same work whether the schema stands on its own or sits inside a description
+auto check_against_metaschema(
+    sourcemeta::blaze::Evaluator &evaluator,
+    const sourcemeta::blaze::Template &schema_template,
+    const sourcemeta::core::JSON &schema, const std::string &subject,
+    const std::string &dialect,
+    const sourcemeta::core::PointerPositionTracker &positions,
+    const sourcemeta::core::Options &options, const bool trace,
+    const bool json_output, const sourcemeta::core::Pointer &base = {})
+    -> bool {
+  if (trace) {
+    sourcemeta::blaze::TraceOutput output{
+        schema_template,
+        sourcemeta::jsonschema::trace_callback(positions, std::cout)};
+    return evaluator.validate(schema_template, schema, std::ref(output));
+  }
+
+  if (json_output) {
+    // Otherwise its impossible to correlate the output
+    // when validating i.e. a directory of schemas
+    std::cerr << subject << "\n";
+    const auto output{sourcemeta::blaze::standard(
+        evaluator, schema_template, schema,
+        sourcemeta::blaze::StandardOutput::Basic, positions, base)};
+    assert(output.is_object());
+    assert(output.defines("valid"));
+    assert(output.at("valid").is_boolean());
+    sourcemeta::core::prettify(output, std::cout);
+    std::cout << "\n";
+    return output.at("valid").to_boolean();
+  }
+
+  sourcemeta::blaze::SimpleOutput output{schema};
+  if (evaluator.validate(schema_template, schema, std::ref(output))) {
+    sourcemeta::jsonschema::LOG_VERBOSE(options)
+        << sourcemeta::jsonschema::format_validation_status(
+               sourcemeta::jsonschema::ValidationStatus::Pass)
+        << " " << subject << "\n  matches "
+        << sourcemeta::jsonschema::paint(
+               dialect, sourcemeta::core::TerminalStyle::Cyan,
+               sourcemeta::core::TerminalStream::Stderr)
+        << "\n";
+    return true;
+  }
+
+  // Which meta-schema turned it down is not something the failure itself
+  // says, and one description may hold schemas in several dialects, so there
+  // is nothing else to read it off
+  std::cerr << sourcemeta::jsonschema::format_validation_status(
+                   sourcemeta::jsonschema::ValidationStatus::Fail)
+            << " " << subject << "\n  against "
+            << sourcemeta::jsonschema::paint(
+                   dialect, sourcemeta::core::TerminalStyle::Cyan,
+                   sourcemeta::core::TerminalStream::Stderr)
+            << "\n";
+  sourcemeta::jsonschema::print(output, positions, std::cerr, "error:", base);
+  return false;
+}
+
+// Every Schema Object a description holds, checked against whatever dialect
+// it is written in. Which positions are Schema Objects is the description's
+// frame to say, while what dialect each is written in is the frame of the
+// schemas it holds, as a Schema Object declaring its own `$schema` overrides
+// whatever the description had in force
+auto check_openapi_description(
+    sourcemeta::blaze::Evaluator &evaluator,
+    std::map<std::string, sourcemeta::blaze::Template> &cache,
+    const sourcemeta::jsonschema::InputJSON &entry,
+    const std::filesystem::path &display_path,
+    const sourcemeta::core::SchemaResolver &resolver,
+    const sourcemeta::core::Options &options,
+    sourcemeta::jsonschema::ValidationSummary &summary, const bool trace,
+    const bool json_output, const bool continue_on_error) -> void {
+  const auto frame{sourcemeta::jsonschema::openapi_frame_for_evaluation(
+      entry.second, resolver, sourcemeta::jsonschema::openapi_default_id(entry),
+      display_path, entry.positions)};
+
+  std::vector<std::reference_wrapper<
+      const std::pair<const sourcemeta::core::JSON::String,
+                      sourcemeta::core::OpenAPIFrame::Location>>>
+      schemas;
+  for (const auto &location : frame.locations()) {
+    if (location.second.type ==
+        sourcemeta::core::OpenAPIFrame::ObjectKind::Schema) {
+      schemas.emplace_back(location);
+    }
+  }
+
+  if (schemas.empty()) {
+    sourcemeta::jsonschema::LOG_WARNING()
+        << "No schema objects were found in "
+        << sourcemeta::jsonschema::relative_path_string(display_path) << "\n";
+    return;
+  }
+
+  for (auto iterator{schemas.cbegin()}; iterator != schemas.cend();
+       ++iterator) {
+    const auto &location{*iterator};
+    const auto &uri{location.get().first};
+    const auto &pointer{location.get().second.pointer};
+    const auto effective{frame.schemas().traverse(uri)};
+    assert(effective.has_value());
+    const std::string dialect{effective.value().get().dialect};
+    const auto &schema{sourcemeta::core::get(entry.second, pointer)};
+
+    summary.validated += 1;
+    const auto &schema_template{metaschema_template(
+        cache, schema, dialect, dialect, resolver, options)};
+
+    std::ostringstream subject;
+    subject << sourcemeta::jsonschema::relative_path_string(display_path)
+            << "#";
+    sourcemeta::core::stringify(pointer, subject);
+    if (!check_against_metaschema(evaluator, schema_template, schema,
+                                  subject.str(), dialect, entry.positions,
+                                  options, trace, json_output, pointer)) {
+      summary.failed += 1;
+
+      // One description holds many schemas, so stopping at the first failure
+      // has to mean the first of those rather than the first file
+      if (!continue_on_error) {
+        summary.stopped = std::next(iterator) != schemas.cend();
+        return;
+      }
+    }
+  }
+}
+
 auto sourcemeta::jsonschema::metaschema(
     const sourcemeta::core::Options &options) -> void {
   validate_http_headers(options);
@@ -75,10 +240,33 @@ auto sourcemeta::jsonschema::metaschema(
        ++iterator) {
     const auto &entry{*iterator};
     const auto failures_before{summary.failed};
-    summary.validated += 1;
-    if (!entry.second.is_object() && !entry.second.is_boolean()) {
-      throw NotSchemaError{entry.from_stdin ? stdin_path()
-                                            : entry.resolution_base};
+    // An OpenAPI description is not a schema, so what it goes by wherever we
+    // report on it is an identity of its own rather than the one a schema from
+    // the same place would take
+    const auto is_openapi{is_openapi_document(entry.second)};
+    const auto display_path{
+        entry.from_stdin ? (is_openapi ? openapi_stdin_path() : stdin_path())
+                         : entry.resolution_base};
+
+    reject_unsupported_openapi(entry.second, display_path);
+
+    // A description is a collection of schemas rather than one, so whatever a
+    // trace of it showed would have to be read against a schema the output
+    // never names. Refused however many it holds, as a rule that depends on
+    // the count is a rule nobody can predict
+    if (is_openapi && trace) {
+      throw OptionConflictError{
+          "The `--trace/-t` option is not available when the input is an "
+          "OpenAPI description"};
+    }
+
+    if (!is_openapi && !entry.second.is_object() &&
+        !entry.second.is_boolean()) {
+      throw NotSchemaError{display_path};
+    }
+
+    if (!is_openapi) {
+      summary.validated += 1;
     }
 
     const auto configuration_path{
@@ -92,75 +280,29 @@ auto sourcemeta::jsonschema::metaschema(
                                          configuration)};
 
     try {
-      const auto dialect{
-          effective_dialect(entry.second, default_dialect_option)};
-      if (dialect.empty()) {
-        throw sourcemeta::core::FileError<
-            sourcemeta::core::SchemaUnknownBaseDialectError>(
-            entry.resolution_base);
-      }
-
-      const sourcemeta::core::SchemaFrame schema_frame{
-          sourcemeta::core::SchemaFrame::Mode::Root, entry.second,
-          sourcemeta::core::schema_walker, custom_resolver,
-          default_dialect_option};
-      const sourcemeta::core::JSON bundled{sourcemeta::core::schema_bundle(
-          schema_frame.metaschema(custom_resolver),
-          sourcemeta::core::schema_walker, custom_resolver,
-          default_dialect_option, "",
-          sourcemeta::jsonschema::bundle_references_options())};
-      const sourcemeta::core::SchemaFrame frame{
-          sourcemeta::core::SchemaFrame::Mode::References, bundled,
-          sourcemeta::core::schema_walker, custom_resolver,
-          default_dialect_option};
-
-      if (!cache.contains(std::string{dialect})) {
-        const auto metaschema_template{sourcemeta::blaze::compile(
-            bundled, sourcemeta::core::schema_walker, custom_resolver,
-            sourcemeta::blaze::default_schema_compiler, frame, frame.root(),
-            sourcemeta::blaze::Mode::Exhaustive,
-            sourcemeta::jsonschema::format_assertion_tweaks(options))};
-        cache.insert({std::string{dialect}, metaschema_template});
-      }
-
-      if (trace) {
-        sourcemeta::blaze::TraceOutput output{
-            cache.at(std::string{dialect}),
-            trace_callback(entry.positions, std::cout)};
-        if (!evaluator.validate(cache.at(std::string{dialect}), entry.second,
-                                std::ref(output))) {
-          summary.failed += 1;
-        }
-      } else if (json_output) {
-        // Otherwise its impossible to correlate the output
-        // when validating i.e. a directory of schemas
-        std::cerr << relative_path_string(entry.resolution_base) << "\n";
-        const auto output{sourcemeta::blaze::standard(
-            evaluator, cache.at(std::string{dialect}), entry.second,
-            sourcemeta::blaze::StandardOutput::Basic, entry.positions)};
-        assert(output.is_object());
-        assert(output.defines("valid"));
-        assert(output.at("valid").is_boolean());
-        if (!output.at("valid").to_boolean()) {
-          summary.failed += 1;
-        }
-
-        sourcemeta::core::prettify(output, std::cout);
-        std::cout << "\n";
+      // A description holds many schemas rather than being one, so each of
+      // them is checked against whatever dialect it is written in
+      if (is_openapi) {
+        check_openapi_description(evaluator, cache, entry, display_path,
+                                  custom_resolver, options, summary, trace,
+                                  json_output, continue_on_error);
       } else {
-        sourcemeta::blaze::SimpleOutput output{entry.second};
-        if (evaluator.validate(cache.at(std::string{dialect}), entry.second,
-                               std::ref(output))) {
-          LOG_VERBOSE(options)
-              << format_validation_status(ValidationStatus::Pass) << " "
-              << relative_path_string(entry.resolution_base) << "\n  matches "
-              << paint(dialect, sourcemeta::core::TerminalStyle::Cyan,
-                       sourcemeta::core::TerminalStream::Stderr)
-              << "\n";
-        } else {
-          std::cerr << format_validation_status(ValidationStatus::Fail) << " "
-                    << relative_path_string(entry.resolution_base) << "\n";
-          print(output, entry.positions, std::cerr);
+        const auto dialect{
+            effective_dialect(entry.second, default_dialect_option)};
+        if (dialect.empty()) {
+          throw sourcemeta::core::FileError<
+              sourcemeta::core::SchemaUnknownBaseDialectError>(display_path);
+        }
+
+        const auto &schema_template{metaschema_template(
+            cache, entry.second, std::string{dialect}, default_dialect_option,
+            custom_resolver, options)};
+
+        if (!check_against_metaschema(
+                evaluator, schema_template, entry.second,
+                relative_path_string(entry.resolution_base),
+                std::string{dialect}, entry.positions, options, trace,
+                json_output)) {
           summary.failed += 1;
         }
       }
@@ -219,7 +361,10 @@ auto sourcemeta::jsonschema::metaschema(
     }
 
     if (summary.failed > failures_before && !continue_on_error) {
-      summary.stopped = std::next(iterator) != entries.cend();
+      // A description may already have stopped partway through the schemas it
+      // holds, which is just as much having stopped as leaving files unread
+      summary.stopped =
+          summary.stopped || std::next(iterator) != entries.cend();
       break;
     }
   }

@@ -11,6 +11,7 @@ RUN metaschema schema.json --format-assertion STDIN /dev/null IN . INTO result.t
 
 WRITE expected.txt UNTIL EOF
 2> fail: schema.json
+2>   against https://json-schema.org/draft/2020-12/schema
 2> error: Schema validation failure
 2>   The string value "has spaces in it" was expected to represent a valid URI reference
 2>     at instance location "/$dynamicRef" (line 3, column 3)

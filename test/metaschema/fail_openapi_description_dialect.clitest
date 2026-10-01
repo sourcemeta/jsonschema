@@ -1,0 +1,62 @@
+// The same Schema Object without a dialect of its own falls to the one the
+// description has in force, which does not admit an array of schemas under
+// `items`, so it fails where the other passes.
+
+WRITE openapi.json UNTIL EOF
+{
+  "openapi": "3.1.1",
+  "info": { "title": "Example", "version": "1.0.0" },
+  "paths": {},
+  "components": {
+    "schemas": {
+      "Tuple": { "items": [ { "type": "string" }, { "type": "integer" } ] }
+    }
+  }
+}
+EOF
+
+// Validation failure
+RUN metaschema openapi.json STDIN /dev/null IN . INTO result_0.txt EXPECTING 2
+
+WRITE expected_0.txt UNTIL EOF
+2> fail: openapi.json#/components/schemas/Tuple
+2>   against https://spec.openapis.org/oas/3.1/dialect/base
+2> error: Schema validation failure
+2>   The value was expected to be of type boolean, or object but it was of type array
+2>     at instance location "/items" (line 7, column 18)
+2>     at evaluate path "/allOf/0/$ref/allOf/1/$ref/properties/items/$dynamicRef/allOf/0/$ref/allOf/0/$ref/type"
+2>   The array value was expected to validate against the referenced schema
+2>     at instance location "/items" (line 7, column 18)
+2>     at evaluate path "/allOf/0/$ref/allOf/1/$ref/properties/items/$dynamicRef/allOf/0/$ref/allOf/0/$ref"
+2>   The array value was expected to validate against the 7 given subschemas
+2>     at instance location "/items" (line 7, column 18)
+2>     at evaluate path "/allOf/0/$ref/allOf/1/$ref/properties/items/$dynamicRef/allOf/0/$ref/allOf"
+2>   The array value was expected to validate against the referenced schema
+2>     at instance location "/items" (line 7, column 18)
+2>     at evaluate path "/allOf/0/$ref/allOf/1/$ref/properties/items/$dynamicRef/allOf/0/$ref"
+2>   The array value was expected to validate against the 2 given subschemas
+2>     at instance location "/items" (line 7, column 18)
+2>     at evaluate path "/allOf/0/$ref/allOf/1/$ref/properties/items/$dynamicRef/allOf"
+2>   The array value was expected to validate against the first subschema in scope that declared the dynamic anchor "meta"
+2>     at instance location "/items" (line 7, column 18)
+2>     at evaluate path "/allOf/0/$ref/allOf/1/$ref/properties/items/$dynamicRef"
+2>   The object value was expected to validate against the 15 defined properties subschemas
+2>     at instance location "" (line 7, column 7)
+2>     at evaluate path "/allOf/0/$ref/allOf/1/$ref/properties"
+2>   The object value was expected to validate against the referenced schema
+2>     at instance location "" (line 7, column 7)
+2>     at evaluate path "/allOf/0/$ref/allOf/1/$ref"
+2>   The object value was expected to validate against the 7 given subschemas
+2>     at instance location "" (line 7, column 7)
+2>     at evaluate path "/allOf/0/$ref/allOf"
+2>   The object value was expected to validate against the referenced schema
+2>     at instance location "" (line 7, column 7)
+2>     at evaluate path "/allOf/0/$ref"
+2>   The object value was expected to validate against the 2 given subschemas
+2>     at instance location "" (line 7, column 7)
+2>     at evaluate path "/allOf"
+2>
+2> 1 validated, 0 passed, 1 failed
+EOF
+
+COMPARE result_0.txt AGAINST expected_0.txt

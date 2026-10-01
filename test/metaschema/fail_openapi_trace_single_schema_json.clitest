@@ -1,0 +1,22 @@
+// The refusal does not depend on how many schemas the description holds, as
+// a rule that turned on the count is one nobody could predict.
+
+WRITE openapi.json UNTIL EOF
+{
+  "openapi": "3.1.1",
+  "info": { "title": "Example", "version": "1.0.0" },
+  "paths": {},
+  "components": { "schemas": { "A": { "type": "string" } } }
+}
+EOF
+
+// Invalid CLI arguments
+RUN metaschema openapi.json --trace --json STDIN /dev/null IN . INTO result.txt EXPECTING 5
+
+WRITE expected.txt UNTIL EOF
+1> {
+1>   "error": "The `--trace/-t` option is not available when the input is an OpenAPI description"
+1> }
+EOF
+
+COMPARE result.txt AGAINST expected.txt

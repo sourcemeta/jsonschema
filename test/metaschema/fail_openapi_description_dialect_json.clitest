@@ -1,0 +1,107 @@
+// The same Schema Object without a dialect of its own falls to the one the
+// description has in force, which does not admit an array of schemas under
+// `items`, so it fails where the other passes.
+
+WRITE openapi.json UNTIL EOF
+{
+  "openapi": "3.1.1",
+  "info": { "title": "Example", "version": "1.0.0" },
+  "paths": {},
+  "components": {
+    "schemas": {
+      "Tuple": { "items": [ { "type": "string" }, { "type": "integer" } ] }
+    }
+  }
+}
+EOF
+
+// Validation failure
+RUN metaschema openapi.json --json STDIN /dev/null IN . INTO result.txt EXPECTING 2
+
+WRITE expected.txt UNTIL EOF
+1> {
+1>   "valid": false,
+1>   "errors": [
+1>     {
+1>       "keywordLocation": "/allOf/0/$ref/allOf/1/$ref/properties/items/$dynamicRef/allOf/0/$ref/allOf/0/$ref/type",
+1>       "absoluteKeywordLocation": "https://json-schema.org/draft/2020-12/meta/core#/type",
+1>       "instanceLocation": "/items",
+1>       "instancePosition": [ 7, 18, 7, 73 ],
+1>       "error": "The value was expected to be of type boolean, or object but it was of type array"
+1>     },
+1>     {
+1>       "keywordLocation": "/allOf/0/$ref/allOf/1/$ref/properties/items/$dynamicRef/allOf/0/$ref/allOf/0/$ref",
+1>       "absoluteKeywordLocation": "https://json-schema.org/draft/2020-12/schema#/allOf/0/$ref",
+1>       "instanceLocation": "/items",
+1>       "instancePosition": [ 7, 18, 7, 73 ],
+1>       "error": "The array value was expected to validate against the referenced schema"
+1>     },
+1>     {
+1>       "keywordLocation": "/allOf/0/$ref/allOf/1/$ref/properties/items/$dynamicRef/allOf/0/$ref/allOf",
+1>       "absoluteKeywordLocation": "https://json-schema.org/draft/2020-12/schema#/allOf",
+1>       "instanceLocation": "/items",
+1>       "instancePosition": [ 7, 18, 7, 73 ],
+1>       "error": "The array value was expected to validate against the 7 given subschemas"
+1>     },
+1>     {
+1>       "keywordLocation": "/allOf/0/$ref/allOf/1/$ref/properties/items/$dynamicRef/allOf/0/$ref",
+1>       "absoluteKeywordLocation": "https://spec.openapis.org/oas/3.1/dialect/base#/allOf/0/$ref",
+1>       "instanceLocation": "/items",
+1>       "instancePosition": [ 7, 18, 7, 73 ],
+1>       "error": "The array value was expected to validate against the referenced schema"
+1>     },
+1>     {
+1>       "keywordLocation": "/allOf/0/$ref/allOf/1/$ref/properties/items/$dynamicRef/allOf",
+1>       "absoluteKeywordLocation": "https://spec.openapis.org/oas/3.1/dialect/base#/allOf",
+1>       "instanceLocation": "/items",
+1>       "instancePosition": [ 7, 18, 7, 73 ],
+1>       "error": "The array value was expected to validate against the 2 given subschemas"
+1>     },
+1>     {
+1>       "keywordLocation": "/allOf/0/$ref/allOf/1/$ref/properties/items/$dynamicRef",
+1>       "absoluteKeywordLocation": "https://json-schema.org/draft/2020-12/meta/applicator#/properties/items/$dynamicRef",
+1>       "instanceLocation": "/items",
+1>       "instancePosition": [ 7, 18, 7, 73 ],
+1>       "error": "The array value was expected to validate against the first subschema in scope that declared the dynamic anchor \"meta\""
+1>     },
+1>     {
+1>       "keywordLocation": "/allOf/0/$ref/allOf/1/$ref/properties",
+1>       "absoluteKeywordLocation": "https://json-schema.org/draft/2020-12/meta/applicator#/properties",
+1>       "instanceLocation": "",
+1>       "instancePosition": [ 7, 7, 7, 75 ],
+1>       "error": "The object value was expected to validate against the 15 defined properties subschemas"
+1>     },
+1>     {
+1>       "keywordLocation": "/allOf/0/$ref/allOf/1/$ref",
+1>       "absoluteKeywordLocation": "https://json-schema.org/draft/2020-12/schema#/allOf/1/$ref",
+1>       "instanceLocation": "",
+1>       "instancePosition": [ 7, 7, 7, 75 ],
+1>       "error": "The object value was expected to validate against the referenced schema"
+1>     },
+1>     {
+1>       "keywordLocation": "/allOf/0/$ref/allOf",
+1>       "absoluteKeywordLocation": "https://json-schema.org/draft/2020-12/schema#/allOf",
+1>       "instanceLocation": "",
+1>       "instancePosition": [ 7, 7, 7, 75 ],
+1>       "error": "The object value was expected to validate against the 7 given subschemas"
+1>     },
+1>     {
+1>       "keywordLocation": "/allOf/0/$ref",
+1>       "absoluteKeywordLocation": "https://spec.openapis.org/oas/3.1/dialect/base#/allOf/0/$ref",
+1>       "instanceLocation": "",
+1>       "instancePosition": [ 7, 7, 7, 75 ],
+1>       "error": "The object value was expected to validate against the referenced schema"
+1>     },
+1>     {
+1>       "keywordLocation": "/allOf",
+1>       "absoluteKeywordLocation": "https://spec.openapis.org/oas/3.1/dialect/base#/allOf",
+1>       "instanceLocation": "",
+1>       "instancePosition": [ 7, 7, 7, 75 ],
+1>       "error": "The object value was expected to validate against the 2 given subschemas"
+1>     }
+1>   ]
+1> }
+2> openapi.json#/components/schemas/Tuple
+EOF
+
+COMPARE result.txt AGAINST expected.txt

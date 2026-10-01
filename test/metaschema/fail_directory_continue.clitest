@@ -19,6 +19,7 @@ RUN metaschema schemas --continue --verbose STDIN /dev/null IN . INTO result_0.t
 
 WRITE expected_0.txt UNTIL EOF
 2> fail: schemas/schema_1.json
+2>   against http://json-schema.org/draft-04/schema#
 2> error: Schema validation failure
 2>   The value was expected to be of type number but it was of type string
 2>     at instance location "/minimum" (line 3, column 3)

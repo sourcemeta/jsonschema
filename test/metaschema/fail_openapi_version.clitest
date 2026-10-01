@@ -1,0 +1,23 @@
+// A description declaring a revision we cannot read is turned down rather
+// than being taken for a schema and checked as one.
+
+WRITE openapi.json UNTIL EOF
+{
+  "openapi": "3.0.3",
+  "info": { "title": "Example", "version": "1.0.0" },
+  "paths": {}
+}
+EOF
+
+// Not supported
+RUN metaschema openapi.json STDIN /dev/null IN . INTO result_0.txt EXPECTING 3
+
+REPLACE $CWD WITH '[CWD]' IN result_0.txt
+
+WRITE expected_0.txt UNTIL EOF
+2> error: This OpenAPI Specification revision is not supported
+2>   at value 3.0.3
+2>   at file path [CWD]/openapi.json
+EOF
+
+COMPARE result_0.txt AGAINST expected_0.txt
