@@ -166,9 +166,7 @@ WRITE expected.txt UNTIL EOF
 1>
 1>        Validate an instance against a schema annotated with x-jsonld-*
 1>        keywords and, on success, print the instance promoted to expanded
-1>        JSON-LD (Linked Data). Use --entrypoint/-p to read the instance
-1>        through a subschema by JSON Pointer or URI.
-1>        Use --flatten/-l and/or --compact/-c to
+1>        JSON-LD (Linked Data). Use --flatten/-l and/or --compact/-c to
 1>        post-process the output. Datasets are promoted entry by entry, as
 1>        JSONL. As in `validate`, schemas compile in exhaustive mode by
 1>        default. Pass --fast/-f to optimise for speed at the expense of
