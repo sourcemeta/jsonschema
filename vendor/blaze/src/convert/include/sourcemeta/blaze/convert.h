@@ -49,7 +49,13 @@ enum class ConvertTarget : std::uint8_t {
 /// is. A document that describes itself or that carries the meta-schema
 /// something in it declares raises `ConvertUnsupportedMetaschemaError`, and one
 /// that sits on a dialect outside the official ladder raises
-/// `ConvertUnsupportedDialectError`. For example:
+/// `ConvertUnsupportedDialectError`. Note that a document whose dialect cannot
+/// be resolved or framed at all fails before any of those apply, propagating
+/// the error that resolution or framing raised rather than one of this
+/// module's, so a caller that must not fault on hostile input catches more than
+/// the `Convert*Error` family. Conversion mutates in place and does not roll
+/// back, so a document that raises part way through is left half converted. For
+/// example:
 ///
 /// ```cpp
 /// #include <sourcemeta/blaze/convert.h>

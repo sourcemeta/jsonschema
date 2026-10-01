@@ -7,6 +7,7 @@
 #include <cassert>    // assert
 #include <functional> // std::ref, std::reference_wrapper
 #include <map>        // std::map
+#include <optional>   // std::optional
 #include <string>     // std::string
 #include <tuple>      // std::tie
 #include <vector>     // std::vector
@@ -50,10 +51,23 @@ auto group_annotations(const SimpleOutput &output)
   return result;
 }
 
+auto lookup_position(const sourcemeta::core::PointerPositionTracker &tracker,
+                     const sourcemeta::core::Pointer &base,
+                     const sourcemeta::core::WeakPointer &instance_location)
+    -> std::optional<sourcemeta::core::PointerPositionTracker::Position> {
+  const auto pointer{sourcemeta::core::to_pointer(instance_location)};
+  if (base.empty()) {
+    return tracker.get(pointer);
+  }
+
+  return tracker.get(base.concat(pointer));
+}
+
 auto handle_standard(Evaluator &evaluator, const Template &schema,
                      const sourcemeta::core::JSON &instance,
                      const StandardOutput format,
-                     const sourcemeta::core::PointerPositionTracker *tracker)
+                     const sourcemeta::core::PointerPositionTracker *tracker,
+                     const sourcemeta::core::Pointer &base)
     -> sourcemeta::core::JSON {
   // We avoid a callback for this specific case for performance reasons
   if (format == StandardOutput::Flag) {
@@ -83,8 +97,8 @@ auto handle_standard(Evaluator &evaluator, const Template &schema,
                                  annotation.first.instance_location)});
 
       if (tracker != nullptr) {
-        const auto position{tracker->get(
-            sourcemeta::core::to_pointer(annotation.first.instance_location))};
+        const auto position{lookup_position(
+            *tracker, base, annotation.first.instance_location)};
         if (position.has_value()) {
           unit.assign_assume_new("instancePosition",
                                  sourcemeta::core::to_json(position.value()));
@@ -125,7 +139,7 @@ auto handle_standard(Evaluator &evaluator, const Template &schema,
 
     if (tracker != nullptr) {
       const auto position{
-          tracker->get(sourcemeta::core::to_pointer(entry.instance_location))};
+          lookup_position(*tracker, base, entry.instance_location)};
       if (position.has_value()) {
         unit.assign_assume_new("instancePosition",
                                sourcemeta::core::to_json(position.value()));
@@ -146,16 +160,17 @@ auto handle_standard(Evaluator &evaluator, const Template &schema,
 auto standard(Evaluator &evaluator, const Template &schema,
               const sourcemeta::core::JSON &instance,
               const StandardOutput format) -> sourcemeta::core::JSON {
-  return handle_standard(evaluator, schema, instance, format, nullptr);
+  return handle_standard(evaluator, schema, instance, format, nullptr, {});
 }
 
 auto standard(Evaluator &evaluator, const Template &schema,
               const sourcemeta::core::JSON &instance,
               const StandardOutput format,
-              const sourcemeta::core::PointerPositionTracker &instance_tracker)
+              const sourcemeta::core::PointerPositionTracker &instance_tracker,
+              const sourcemeta::core::Pointer &instance_base)
     -> sourcemeta::core::JSON {
-  return handle_standard(evaluator, schema, instance, format,
-                         &instance_tracker);
+  return handle_standard(evaluator, schema, instance, format, &instance_tracker,
+                         instance_base);
 }
 
 } // namespace sourcemeta::blaze

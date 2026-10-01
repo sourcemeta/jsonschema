@@ -19,8 +19,11 @@ public:
     const bool root_via_default_dialect =
         location.pointer.empty() && !schema.defines("$schema");
 
+    this->stray_required_ =
+        has_stray_required_boolean(schema, location.pointer);
+
     ONLY_CONTINUE_IF(has_pending_draft_3_pattern(schema) ||
-                     root_via_default_dialect);
+                     this->stray_required_ || root_via_default_dialect);
 
     if (frame.any_subschema_under(
             location.pointer,
@@ -30,11 +33,13 @@ public:
                   sourcemeta::core::to_pointer(entry.pointer)};
               const auto &entry_schema{
                   sourcemeta::core::get(root, entry_pointer)};
-              if (entry_schema.is_object() && entry_schema.defines("$ref")) {
-                return false;
-              }
 
-              return has_pending_draft_3_pattern(entry_schema);
+              // A Draft 3 spelling beside a `$ref` is dead weight for
+              // validation, but Draft 4 does not accept it as a value at all,
+              // so it has to be upgraded before the dialect moves rather than
+              // being left for the target meta-schema to reject
+              return has_pending_draft_3_pattern(entry_schema) ||
+                     has_stray_required_boolean(entry_schema, entry.pointer);
             })) {
       return false;
     }
@@ -48,14 +53,22 @@ public:
     rewrite_disallow(schema);
     rewrite_extends(schema);
     rewrite_divisible_by(schema);
+    // Dropping the stray boolean first leaves the lift free to write its array
+    // under the same name. The other way round the lift's array is what gets
+    // erased, and the properties it named stop being required
+    if (this->stray_required_) {
+      schema.erase("required");
+    }
+
     rewrite_required_property_booleans(schema);
     rewrite_dependencies_string_form(schema);
+    normalize_dependency_arrays(schema);
     rewrite_format(schema);
 
     if (schema.defines("$schema") && schema.at("$schema").is_string() &&
         schema.at("$schema").to_string() == DRAFT_3_URL) {
       schema.assign("$schema", sourcemeta::core::JSON{DRAFT_4_URL});
-      drop_dialect_overrides(schema, true, DRAFT_4_URL);
+      drop_dialect_overrides(schema, DRAFT_4_URL, this->subschemas());
     } else {
       mark_dialect_override(schema, DRAFT_4_URL);
     }
@@ -69,9 +82,12 @@ private:
   static inline const std::string DRAFT_4_URL{
       "http://json-schema.org/draft-04/schema#"};
 
+  mutable bool stray_required_{false};
+
   static auto
   has_pending_draft_3_pattern(const sourcemeta::core::JSON &subschema) -> bool {
-    if (!subschema.is_object()) {
+    if (!subschema.is_object() ||
+        declares_newer_dialect(subschema, DRAFT_3_URL)) {
       return false;
     }
 
@@ -127,7 +143,9 @@ private:
     const auto *dependencies{subschema.try_at("dependencies")};
     if (dependencies != nullptr && dependencies->is_object()) {
       for (const auto &entry : dependencies->as_object()) {
-        if (entry.second.is_string()) {
+        if (entry.second.is_string() ||
+            (entry.second.is_array() &&
+             (entry.second.empty() || has_repeated_name(entry.second)))) {
           return true;
         }
       }
@@ -294,6 +312,12 @@ private:
     schema.erase("extends");
 
     if (value.is_array()) {
+      // Draft 3 satisfies an empty `extends` vacuously, while Draft 4 asks
+      // `allOf` for at least one element, so there is nothing to carry over
+      if (value.empty()) {
+        return;
+      }
+
       schema.assign("allOf", std::move(value));
       return;
     }
@@ -366,6 +390,88 @@ private:
       }
       existing.push_back(sourcemeta::core::JSON{name});
       already.insert(name);
+    }
+  }
+
+  // Draft 3 reads this keyword as whether the instance it sits on has to be
+  // present, which is a question only the enclosing `properties` can answer.
+  // One directly under `properties` is that enclosing schema's to lift, so
+  // only one anywhere else is stray
+  static auto
+  has_stray_required_boolean(const sourcemeta::core::JSON &subschema,
+                             const sourcemeta::core::WeakPointer &pointer)
+      -> bool {
+    if (!subschema.is_object() ||
+        declares_newer_dialect(subschema, DRAFT_3_URL)) {
+      return false;
+    }
+
+    const auto *required{subschema.try_at("required")};
+    if (required == nullptr || !required->is_boolean()) {
+      return false;
+    }
+
+    return pointer.size() < 2 ||
+           !pointer.at(pointer.size() - 2).is_property() ||
+           pointer.at(pointer.size() - 2).to_property() != "properties";
+  }
+
+  static auto has_repeated_name(const sourcemeta::core::JSON &names) -> bool {
+    std::set<std::string> already;
+    for (const auto &name : names.as_array()) {
+      if (name.is_string() && !already.insert(name.to_string()).second) {
+        return true;
+      }
+    }
+
+    return false;
+  }
+
+  // Draft 3 satisfies an empty property dependency vacuously and asks for the
+  // same property twice when a name repeats, while Draft 4 asks such an array
+  // for at least one element and for its elements to be unique
+  static auto normalize_dependency_arrays(sourcemeta::core::JSON &schema)
+      -> void {
+    if (!schema.defines("dependencies") ||
+        !schema.at("dependencies").is_object()) {
+      return;
+    }
+
+    auto &dependencies{schema.at("dependencies")};
+    std::vector<std::string> vacuous_keys;
+    std::vector<std::string> repeating_keys;
+    for (const auto &entry : dependencies.as_object()) {
+      if (!entry.second.is_array()) {
+        continue;
+      }
+
+      if (entry.second.empty()) {
+        vacuous_keys.push_back(entry.first);
+      } else if (has_repeated_name(entry.second)) {
+        repeating_keys.push_back(entry.first);
+      }
+    }
+
+    for (const auto &key : repeating_keys) {
+      auto fresh{sourcemeta::core::JSON::make_array()};
+      std::set<std::string> already;
+      for (const auto &name : dependencies.at(key).as_array()) {
+        if (name.is_string() && !already.insert(name.to_string()).second) {
+          continue;
+        }
+
+        fresh.push_back(name);
+      }
+
+      dependencies.assign(key, std::move(fresh));
+    }
+
+    for (const auto &key : vacuous_keys) {
+      dependencies.erase(key);
+    }
+
+    if (dependencies.empty()) {
+      schema.erase("dependencies");
     }
   }
 
