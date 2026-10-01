@@ -80,10 +80,17 @@ standard(Evaluator &evaluator, const Template &schema,
 ///
 /// An overload of the standard output function that includes line and column
 /// position information as an extension.
+///
+/// When validating a subtree of the document the given tracker was populated
+/// from, set `instance_base` to the location of that subtree within the
+/// document. The reported instance locations remain relative to the instance
+/// that was validated, as the specification mandates, while positions are
+/// looked up from the base, as they refer to the document as a whole.
 auto SOURCEMETA_BLAZE_OUTPUT_EXPORT
 standard(Evaluator &evaluator, const Template &schema,
          const sourcemeta::core::JSON &instance, const StandardOutput format,
-         const sourcemeta::core::PointerPositionTracker &instance_tracker)
+         const sourcemeta::core::PointerPositionTracker &instance_tracker,
+         const sourcemeta::core::Pointer &instance_base = {})
     -> sourcemeta::core::JSON;
 
 } // namespace sourcemeta::blaze

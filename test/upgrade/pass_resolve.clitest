@@ -19,7 +19,7 @@ RUN upgrade --resolve string.json schema.json STDIN /dev/null IN . INTO result.t
 WRITE expected.txt UNTIL EOF
 1> {
 1>   "$schema": "https://json-schema.org/draft/2020-12/schema",
-1>   "$id": "https://example.com/main",
+1>   "x-$id": "https://example.com/main",
 1>   "$ref": "https://example.com/string"
 1> }
 EOF

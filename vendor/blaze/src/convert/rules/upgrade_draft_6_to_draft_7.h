@@ -33,7 +33,7 @@ public:
     if (schema.defines("$schema") && schema.at("$schema").is_string() &&
         schema.at("$schema").to_string() == DRAFT_6_URL) {
       schema.assign("$schema", sourcemeta::core::JSON{DRAFT_7_URL});
-      drop_dialect_overrides(schema, true, DRAFT_7_URL);
+      drop_dialect_overrides(schema, DRAFT_7_URL, this->subschemas());
     } else {
       mark_dialect_override(schema, DRAFT_7_URL);
     }
@@ -56,7 +56,8 @@ private:
 
   static auto has_pending_pattern(const sourcemeta::core::JSON &subschema)
       -> bool {
-    if (!subschema.is_object()) {
+    if (!subschema.is_object() ||
+        declares_newer_dialect(subschema, DRAFT_6_URL)) {
       return false;
     }
 

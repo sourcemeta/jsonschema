@@ -49,7 +49,7 @@ public:
     }
 
     this->is_inside_contains_wrapper_ =
-        location_inside_contains_wrapper(location);
+        location_inside_contains_wrapper(schema, location);
 
     if (any_descendant_has_pending_pattern(root, frame, location)) {
       return false;
@@ -173,7 +173,7 @@ public:
     if (schema.defines("$schema") && schema.at("$schema").is_string() &&
         schema.at("$schema").to_string() == DRAFT_2019_09_URL) {
       schema.assign("$schema", sourcemeta::core::JSON{DRAFT_2020_12_URL});
-      drop_dialect_overrides(schema, true, DRAFT_2020_12_URL);
+      drop_dialect_overrides(schema, DRAFT_2020_12_URL, this->subschemas());
     } else {
       mark_dialect_override(schema, DRAFT_2020_12_URL);
     }
@@ -387,7 +387,30 @@ private:
     return true;
   }
 
+  // The wrapper this rule builds holds nothing but the `contains` it moved and
+  // the two bounds that go with it, so a double negation the document wrote
+  // itself can be told apart by what sits beside them. Reading the position
+  // alone would mistake an authored `not` of a `not` for the rule's own output
+  // and leave the `contains` inside it bare
+  static auto
+  subschema_is_contains_wrapper(const sourcemeta::core::JSON &subschema)
+      -> bool {
+    if (!subschema.is_object() || !subschema.defines("contains")) {
+      return false;
+    }
+
+    for (const auto &entry : subschema.as_object()) {
+      if (entry.first != "contains" && entry.first != "minContains" &&
+          entry.first != "maxContains") {
+        return false;
+      }
+    }
+
+    return true;
+  }
+
   static auto location_inside_contains_wrapper(
+      const sourcemeta::core::JSON &subschema,
       const sourcemeta::core::SchemaFrame::Location &location) -> bool {
     if (location.pointer.size() < 2) {
       return false;
@@ -400,14 +423,15 @@ private:
     if (!second_last.is_property() || second_last.to_property() != "not") {
       return false;
     }
-    return true;
+    return subschema_is_contains_wrapper(subschema);
   }
 
   static auto
   has_pending_pattern(const sourcemeta::core::JSON &subschema,
                       const sourcemeta::core::SchemaFrame::Location &location)
       -> bool {
-    if (!subschema.is_object()) {
+    if (!subschema.is_object() ||
+        declares_newer_dialect(subschema, DRAFT_2019_09_URL)) {
       return false;
     }
     if (!subschema.defines_any({"$schema", "$recursiveAnchor", "$recursiveRef",
@@ -427,7 +451,7 @@ private:
       return true;
     }
     if (subschema.defines("contains") &&
-        !location_inside_contains_wrapper(location)) {
+        !location_inside_contains_wrapper(subschema, location)) {
       return true;
     }
     if (vocabulary_has_mappable_uri(subschema)) {

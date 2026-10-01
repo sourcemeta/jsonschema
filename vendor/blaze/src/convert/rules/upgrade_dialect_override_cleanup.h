@@ -14,16 +14,25 @@ public:
     ONLY_CONTINUE_IF(location.pointer.empty() && schema.is_object());
     this->redundant_.clear();
 
+    // Only a marker naming a dialect the ladder walks through is one the ladder
+    // wrote, and only that one can be materialised and then cleared. Firing on
+    // any other value would leave `transform` with nothing to do and the
+    // condition still true
     const auto *override_value{schema.try_at(DIALECT_OVERRIDE_KEYWORD)};
-    if (override_value != nullptr && override_value->is_string()) {
+    if (override_value != nullptr && is_own_dialect_override(*override_value)) {
       return true;
     }
 
     // A document that names a dialect of its own never bumps a `$schema` the
     // ladder recognises, so nothing there will ever clear the markers that
     // subschemas below it left behind. Every other document clears them when
-    // it bumps, and taking them early would strip state the ladder still needs
-    ONLY_CONTINUE_IF(dialect_position(declared_dialect(schema)) == 0);
+    // it bumps, and taking them early would strip state the ladder still needs.
+    // A document that names no dialect at all is one of those others: it takes
+    // the dialect from the caller and materialises a `$schema` of its own in
+    // the branch above, so its markers are still the only record of how far
+    // each subschema has come
+    ONLY_CONTINUE_IF(!declared_dialect(schema).empty() &&
+                     dialect_position(declared_dialect(schema)) == 0);
 
     [[maybe_unused]] const auto visited{frame.any_subschema_under(
         location.pointer,
@@ -83,7 +92,7 @@ public:
       }
     }
 
-    drop_dialect_overrides(schema, true, dialect);
+    drop_dialect_overrides(schema, dialect, this->subschemas());
   }
 
 private:

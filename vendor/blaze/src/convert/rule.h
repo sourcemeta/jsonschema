@@ -37,8 +37,24 @@ public:
 
   virtual auto transform(sourcemeta::core::JSON &schema) const -> void = 0;
 
+  /// The schemas the frame knows about under the one being transformed, as the
+  /// driver saw them just before the transform ran. A transform has no frame of
+  /// its own, and the ladder's marker only ever sits on a schema, so this is
+  /// how a rule clears markers without walking into the caller's own data
+  auto prepare(const sourcemeta::core::SchemaFrame &frame,
+               const sourcemeta::core::SchemaFrame::Location &location)
+      -> void {
+    this->subschemas_ = subschema_pointers_under(frame, location);
+  }
+
+  [[nodiscard]] auto subschemas() const noexcept
+      -> const std::vector<sourcemeta::core::Pointer> & {
+    return this->subschemas_;
+  }
+
 private:
   const std::string name_{};
+  std::vector<sourcemeta::core::Pointer> subschemas_;
 };
 
 #endif
