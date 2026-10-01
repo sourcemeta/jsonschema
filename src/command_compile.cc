@@ -35,7 +35,15 @@ auto sourcemeta::jsonschema::compile(const sourcemeta::core::Options &options)
 
   auto parsed_schema{read_file(schema_path)};
 
-  if (!parsed_schema.document.is_object() &&
+  // An OpenAPI description is not a schema, so what it goes by wherever we
+  // report on it is an identity of its own rather than the one a schema from
+  // the same place would take
+  const auto is_openapi{is_openapi_document(parsed_schema.document)};
+  const std::filesystem::path display_path{schema_path};
+
+  reject_unsupported_openapi(parsed_schema.document, display_path);
+
+  if (!is_openapi && !parsed_schema.document.is_object() &&
       !parsed_schema.document.is_boolean()) {
     throw NotSchemaError{schema_path};
   }
@@ -50,7 +58,25 @@ auto sourcemeta::jsonschema::compile(const sourcemeta::core::Options &options)
 
   sourcemeta::blaze::Template schema_template;
   try {
-    if (options.contains("entrypoint") && !options.at("entrypoint").empty()) {
+    if (is_openapi) {
+      schema_template = with_openapi_entrypoint(
+          parsed_schema.document, options, custom_resolver,
+          sourcemeta::jsonschema::openapi_resolver(
+              options, options.contains("http"), dialect, configuration),
+          sourcemeta::jsonschema::openapi_default_id(schema_path, false),
+          display_path, parsed_schema.positions,
+          [&](const sourcemeta::core::SchemaFrame &frame,
+              const std::string &entrypoint_uri) {
+            return sourcemeta::blaze::compile(
+                parsed_schema.document, sourcemeta::core::schema_walker,
+                custom_resolver, sourcemeta::blaze::default_schema_compiler,
+                frame, entrypoint_uri,
+                fast_mode ? sourcemeta::blaze::Mode::FastValidation
+                          : sourcemeta::blaze::Mode::Exhaustive,
+                sourcemeta::jsonschema::format_assertion_tweaks(options));
+          });
+    } else if (options.contains("entrypoint") &&
+               !options.at("entrypoint").empty()) {
       const sourcemeta::core::JSON bundled{sourcemeta::core::schema_bundle(
           schema, sourcemeta::core::schema_walker, custom_resolver, dialect,
           schema_default_id,

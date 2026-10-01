@@ -19,7 +19,7 @@ EOF
 RUN validate - instance.json --entrypoint /nowhere STDIN input.json IN . INTO result.txt EXPECTING 4
 
 WRITE expected.txt UNTIL EOF
-2> error: The given entry point URI does not exist in the schema
+2> error: The given entry point URI does not name a Schema Object of the OpenAPI description
 2>   at identifier tag:sourcemeta.com,2026:openapi/stdin#/nowhere
 2>   at file path tag:sourcemeta.com,2026:openapi/stdin
 2>

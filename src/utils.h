@@ -427,6 +427,54 @@ inline auto openapi_frame_for_evaluation(
       });
 }
 
+// A description holds many schemas and no root one, so which of them to work
+// from is the caller's to say. Everything up to that point is the same whoever
+// asks, and the frame cannot be handed back, as it is neither copyable nor
+// movable, so the caller's work comes here instead
+template <typename Function>
+auto with_openapi_entrypoint(
+    sourcemeta::core::JSON &document, const sourcemeta::core::Options &options,
+    const sourcemeta::core::SchemaResolver &resolver,
+    const sourcemeta::core::OpenAPIResolver &openapi_resolver,
+    const std::string &openapi_base, const std::filesystem::path &display_path,
+    const sourcemeta::core::PointerPositionTracker &positions,
+    const Function &callback)
+    -> decltype(callback(std::declval<const sourcemeta::core::SchemaFrame &>(),
+                         std::declval<const std::string &>())) {
+  // An entry point given as an empty string is one nobody means, as an unset
+  // variable reaches us that way, so it counts as not having passed one at all
+  if (!options.contains("entrypoint") || options.at("entrypoint").empty() ||
+      options.at("entrypoint").front().empty()) {
+    throw OptionConflictError{
+        "You must pass an entry point using the `--entrypoint/-p` option when "
+        "the input is an OpenAPI description"};
+  }
+
+  openapi_bundle_for_evaluation(document, resolver, openapi_resolver,
+                                openapi_base, display_path, positions);
+
+  const auto frame{openapi_frame_for_evaluation(
+      document, resolver, openapi_base, display_path, positions)};
+
+  std::string entrypoint_uri;
+  try {
+    entrypoint_uri =
+        resolve_entrypoint(frame.base(), options.at("entrypoint").front());
+  } catch (const sourcemeta::blaze::CompilerInvalidEntryPoint &error) {
+    throw sourcemeta::core::FileError<
+        sourcemeta::blaze::CompilerInvalidEntryPoint>(display_path, error);
+  }
+
+  // Asking first means the miss is reported in the description's own terms,
+  // rather than by whatever compiles it next, which only knows about schemas
+  if (!frame.schemas().traverse(entrypoint_uri).has_value()) {
+    throw sourcemeta::core::FileError<OpenAPIEntryPointError>(
+        display_path, OpenAPIEntryPointError{entrypoint_uri});
+  }
+
+  return callback(frame.schemas(), entrypoint_uri);
+}
+
 inline auto
 write_schema(const sourcemeta::core::JSON &schema, std::ostream &stream,
              const std::optional<std::size_t> indentation,

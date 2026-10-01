@@ -1,0 +1,41 @@
+// An entry point naming a place the schema does not hold is reported
+// against the file it was looked for in.
+
+WRITE schema.json UNTIL EOF
+{
+  "$schema": "https://json-schema.org/draft/2019-09/schema",
+  "type": "object",
+  "x-jsonld-type": "https://schema.org/Thing",
+  "properties": {
+    "name": { "type": "string", "x-jsonld-id": "https://schema.org/alternateName" }
+  },
+  "$defs": {
+    "Person": {
+      "type": "object",
+      "x-jsonld-type": "https://schema.org/Person",
+      "properties": {
+        "name": { "type": "string", "x-jsonld-id": "https://schema.org/name" }
+      }
+    }
+  }
+}
+EOF
+
+WRITE instance.json UNTIL EOF
+{ "name": "Ada" }
+EOF
+
+// Schema input error
+RUN rdf schema.json instance.json --entrypoint /$$defs/Missing STDIN /dev/null IN . INTO result.txt EXPECTING 4
+
+REPLACE $CWD WITH '[CWD]' IN result.txt
+
+WRITE expected.txt UNTIL EOF
+2> error: The given entry point URI does not exist in the schema
+2>   at identifier file://[CWD]/schema.json#/$defs/Missing
+2>   at file path [CWD]/schema.json
+2>
+2> Use the `inspect` command to find valid schema locations
+EOF
+
+COMPARE result.txt AGAINST expected.txt

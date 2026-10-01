@@ -4,7 +4,7 @@ Linked Data (RDF)
 ```sh
 jsonschema rdf <schema.json|.yaml> <instance.json|.jsonl|.jsonl.gz|.yaml>
   [--flatten/-l] [--compact/-c <context.json|.yaml>]
-  [--fast/-f] [--format-assertion/-F]
+  [--fast/-f] [--format-assertion/-F] [--entrypoint/-p <pointer|uri>]
   [--http/-h] [--verbose/-v] [--debug/-g]
   [--header/-H "<name>: <value>"]
   [--resolve/-r <schemas-or-directories> ...]
@@ -312,6 +312,27 @@ The resulting document would look like this:
     "sameAs": { "@id": "https://schema.org/sameAs", "@type": "@id" }
   }
 }
+```
+
+OpenAPI Descriptions
+--------------------
+
+If the input is an OpenAPI spec v3.1 or v3.2, the `rdf` command treats it as an
+[OpenAPI](https://spec.openapis.org/oas/latest.html) description rather than as a
+schema. Any other revision, such as v3.0, is rejected rather than read as a schema.
+
+A description declares many schemas and no root one, so you must say which to
+use with `--entrypoint/-p`, given as a JSON Pointer into the description or as
+the identifier a Schema Object declares. A schema that came from another
+document is named by its identifier, as where it ends up in the Components
+Object is not yours to choose.
+
+The `--entrypoint/-p` option works on a plain JSON Schema too, where it reads
+the instance through the subschema it names instead of through the root.
+
+```sh
+jsonschema rdf path/to/my/openapi.json path/to/my/instance.json \
+  --entrypoint '/components/schemas/Person'
 ```
 
 Examples

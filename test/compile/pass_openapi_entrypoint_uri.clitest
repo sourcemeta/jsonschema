@@ -1,0 +1,39 @@
+// A description that says who it is can have its schemas named by the
+// absolute URI that identity gives them.
+
+WRITE openapi.json UNTIL EOF
+{
+  "openapi": "3.2.0",
+  "$self": "https://example.com/api",
+  "info": { "title": "Example", "version": "1.0.0" },
+  "paths": {},
+  "components": { "schemas": { "Person": { "type": "string" } } }
+}
+EOF
+
+RUN compile openapi.json --entrypoint https://example.com/api#/components/schemas/Person STDIN /dev/null IN . INTO result.txt EXPECTING 0
+
+WRITE expected.txt UNTIL EOF
+1> [
+1>   7,
+1>   false,
+1>   true,
+1>   [
+1>     [
+1>       [
+1>         11,
+1>         [ "type" ],
+1>         [],
+1>         "https://example.com/api#/components/schemas/Person/type",
+1>         1,
+1>         1,
+1>         [ 8, 4 ]
+1>       ]
+1>     ]
+1>   ],
+1>   [],
+1>   [ "https://json-schema.org/draft/2020-12/vocab/validation" ]
+1> ]
+EOF
+
+COMPARE result.txt AGAINST expected.txt

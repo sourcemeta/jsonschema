@@ -246,6 +246,24 @@ public:
                            "OpenAPI descriptions"} {}
 };
 
+// What a description holds are Schema Objects rather than one schema with
+// subschemas, so an entry point that reaches neither is told apart in those
+// terms rather than in the ones a plain schema would be
+class OpenAPIEntryPointError : public std::runtime_error {
+public:
+  OpenAPIEntryPointError(std::string identifier)
+      : std::runtime_error{"The given entry point URI does not name a Schema "
+                           "Object of the OpenAPI description"},
+        identifier_{std::move(identifier)} {}
+
+  [[nodiscard]] auto identifier() const noexcept -> const std::string & {
+    return this->identifier_;
+  }
+
+private:
+  std::string identifier_;
+};
+
 class UnsupportedOpenAPIVersionError : public std::runtime_error {
 public:
   UnsupportedOpenAPIVersionError(std::string value)
@@ -1566,6 +1584,15 @@ inline auto try_catch(const sourcemeta::core::Options &options,
     print_exception(is_json, error);
     if (!is_json) {
       print_reference_target_guidance(error.location());
+    }
+
+    return EXIT_SCHEMA_INPUT_ERROR;
+  } catch (const sourcemeta::core::FileError<OpenAPIEntryPointError> &error) {
+    const auto is_json{options.contains("json")};
+    print_exception(is_json, error);
+    if (!is_json) {
+      std::cerr
+          << "\nUse the `inspect` command to find valid schema locations\n";
     }
 
     return EXIT_SCHEMA_INPUT_ERROR;

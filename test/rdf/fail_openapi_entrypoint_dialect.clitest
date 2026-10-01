@@ -1,0 +1,43 @@
+// Whether a schema can carry annotations is a question about the schema the
+// entry point names, not about the description it sits in.
+
+WRITE openapi.json UNTIL EOF
+{
+  "openapi": "3.1.1",
+  "info": { "title": "Example", "version": "1.0.0" },
+  "paths": {},
+  "components": {
+    "schemas": {
+      "Person": {
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "type": "object",
+        "x-jsonld-type": "https://schema.org/Person",
+        "properties": {
+          "name": { "type": "string", "x-jsonld-id": "https://schema.org/name" }
+        }
+      }
+    }
+  }
+}
+EOF
+
+WRITE instance.json UNTIL EOF
+{ "name": "Ada" }
+EOF
+
+// Schema input error
+RUN rdf openapi.json instance.json --entrypoint /components/schemas/Person STDIN /dev/null IN . INTO result.txt EXPECTING 4
+
+REPLACE $CWD WITH '[CWD]' IN result.txt
+
+WRITE expected.txt UNTIL EOF
+2> error: This command requires the schema to declare JSON Schema 2019-09 or newer
+2>   at identifier http://json-schema.org/draft-07/schema#
+2>   at file path [CWD]/openapi.json
+2>
+2> The x-jsonld-* keywords rely on annotation collection, which JSON Schema
+2> only introduced in the 2019-09 dialect. Consider running the `upgrade`
+2> command to move your schema to a newer dialect
+EOF
+
+COMPARE result.txt AGAINST expected.txt

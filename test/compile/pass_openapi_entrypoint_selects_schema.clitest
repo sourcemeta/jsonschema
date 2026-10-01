@@ -1,0 +1,54 @@
+// The entry point picks out one schema of the several a description holds,
+// so compiling the second gives what the second says and not the first.
+
+WRITE openapi.json UNTIL EOF
+{
+  "openapi": "3.1.1",
+  "info": { "title": "Example", "version": "1.0.0" },
+  "paths": {},
+  "components": {
+    "schemas": {
+      "First": { "type": "string", "minLength": 3 },
+      "Second": { "type": "integer", "minimum": 10 }
+    }
+  }
+}
+EOF
+
+RUN compile openapi.json --entrypoint /components/schemas/Second STDIN /dev/null IN . INTO result.txt EXPECTING 0
+
+REPLACE $CWD WITH '[CWD]' IN result.txt
+
+WRITE expected.txt UNTIL EOF
+1> [
+1>   7,
+1>   false,
+1>   true,
+1>   [
+1>     [
+1>       [
+1>         9,
+1>         [ "type" ],
+1>         [],
+1>         "file://[CWD]/openapi.json#/components/schemas/Second/type",
+1>         1,
+1>         1,
+1>         [ 8, 2 ]
+1>       ],
+1>       [
+1>         30,
+1>         [ "minimum" ],
+1>         [],
+1>         "file://[CWD]/openapi.json#/components/schemas/Second/minimum",
+1>         1,
+1>         1,
+1>         [ 1, 10 ]
+1>       ]
+1>     ]
+1>   ],
+1>   [],
+1>   [ "https://json-schema.org/draft/2020-12/vocab/validation" ]
+1> ]
+EOF
+
+COMPARE result.txt AGAINST expected.txt

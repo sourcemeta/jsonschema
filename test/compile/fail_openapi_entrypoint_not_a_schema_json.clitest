@@ -1,0 +1,28 @@
+// An entry point reaching a part of the description that is not a schema is
+// told apart in the description's own terms, rather than by whatever would
+// have compiled it, which only knows about schemas.
+
+WRITE openapi.json UNTIL EOF
+{
+  "openapi": "3.1.1",
+  "info": { "title": "Example", "version": "1.0.0" },
+  "paths": {},
+  "components": { "schemas": { "Person": { "type": "string" } } }
+}
+EOF
+
+// Schema input error
+RUN compile openapi.json --entrypoint /info/title --json STDIN /dev/null IN . INTO result.txt EXPECTING 4
+
+REPLACE $CWD_URI WITH '[CWD_URI]' IN result.txt
+REPLACE $CWD WITH '[CWD]' IN result.txt
+
+WRITE expected.txt UNTIL EOF
+1> {
+1>   "error": "The given entry point URI does not name a Schema Object of the OpenAPI description",
+1>   "identifier": "[CWD_URI]/openapi.json#/info/title",
+1>   "filePath": "[CWD]/openapi.json"
+1> }
+EOF
+
+COMPARE result.txt AGAINST expected.txt

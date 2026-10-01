@@ -1,0 +1,37 @@
+// Nothing in a description stands out as the one schema to read through, so
+// leaving the entry point out is refused rather than guessed at.
+
+WRITE openapi.json UNTIL EOF
+{
+  "openapi": "3.1.1",
+  "info": { "title": "Example", "version": "1.0.0" },
+  "paths": {},
+  "components": {
+    "schemas": {
+      "Person": {
+        "$schema": "https://json-schema.org/draft/2019-09/schema",
+        "type": "object",
+        "x-jsonld-type": "https://schema.org/Person",
+        "properties": {
+          "name": { "type": "string", "x-jsonld-id": "https://schema.org/name" }
+        }
+      }
+    }
+  }
+}
+EOF
+
+WRITE instance.json UNTIL EOF
+{ "name": "Ada" }
+EOF
+
+// Invalid CLI arguments
+RUN rdf openapi.json instance.json --json STDIN /dev/null IN . INTO result.txt EXPECTING 5
+
+WRITE expected.txt UNTIL EOF
+1> {
+1>   "error": "You must pass an entry point using the `--entrypoint/-p` option when the input is an OpenAPI description"
+1> }
+EOF
+
+COMPARE result.txt AGAINST expected.txt
