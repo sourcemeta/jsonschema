@@ -1,0 +1,28 @@
+// A description written in YAML is validated the same way one written in
+// JSON is.
+
+WRITE openapi.yaml UNTIL EOF
+openapi: "3.1.1"
+info:
+  title: Example
+  version: "1.0.0"
+paths: {}
+components:
+  schemas:
+    S:
+      type: string
+EOF
+
+WRITE instance.json UNTIL EOF
+"hello"
+EOF
+
+RUN validate openapi.yaml instance.json --entrypoint /components/schemas/S --verbose STDIN /dev/null IN . INTO result_0.txt EXPECTING 0
+
+WRITE expected_0.txt UNTIL EOF
+2> ok: instance.json
+2>
+2> 1 validated, 1 passed, 0 failed
+EOF
+
+COMPARE result_0.txt AGAINST expected_0.txt

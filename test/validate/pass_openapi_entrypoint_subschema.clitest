@@ -1,0 +1,34 @@
+// An entry point may name a subschema of a Schema Object, just as it may for
+// a schema given on its own.
+
+WRITE openapi.json UNTIL EOF
+{
+  "openapi": "3.1.1",
+  "info": { "title": "Example", "version": "1.0.0" },
+  "paths": {},
+  "components": {
+    "schemas": {
+      "Person": {
+        "$id": "https://example.com/person",
+        "type": "object",
+        "required": [ "name" ],
+        "properties": { "name": { "$anchor": "name", "type": "string" } }
+      }
+    }
+  }
+}
+EOF
+
+WRITE text.json UNTIL EOF
+"hello"
+EOF
+
+RUN validate openapi.json text.json --entrypoint /components/schemas/Person/properties/name --verbose STDIN /dev/null IN . INTO result_0.txt EXPECTING 0
+
+WRITE expected_0.txt UNTIL EOF
+2> ok: text.json
+2>
+2> 1 validated, 1 passed, 0 failed
+EOF
+
+COMPARE result_0.txt AGAINST expected_0.txt

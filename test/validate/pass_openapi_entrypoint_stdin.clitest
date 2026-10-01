@@ -1,0 +1,25 @@
+// A description read from standard input is validated against the same way
+// one read from a file is.
+
+WRITE input.json UNTIL EOF
+{
+  "openapi": "3.1.1",
+  "info": { "title": "Example", "version": "1.0.0" },
+  "paths": {},
+  "components": { "schemas": { "S": { "type": "string" } } }
+}
+EOF
+
+WRITE instance.json UNTIL EOF
+"hello"
+EOF
+
+RUN validate - instance.json --entrypoint /components/schemas/S --verbose STDIN input.json IN . INTO result.txt EXPECTING 0
+
+WRITE expected.txt UNTIL EOF
+2> ok: instance.json
+2>
+2> 1 validated, 1 passed, 0 failed
+EOF
+
+COMPARE result.txt AGAINST expected.txt

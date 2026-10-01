@@ -1,0 +1,39 @@
+// Making a description whole only adds to its Components Object, so a
+// component the entry document already declares keeps the pointer it had
+// even when what arrives has to be renamed around it.
+
+WRITE pet.json UNTIL EOF
+{
+  "$id": "https://example.com/pet",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "string"
+}
+EOF
+
+WRITE openapi.json UNTIL EOF
+{
+  "openapi": "3.1.1",
+  "info": { "title": "Example", "version": "1.0.0" },
+  "paths": {},
+  "components": {
+    "schemas": {
+      "pet": { "type": "integer" },
+      "Uses": { "$ref": "https://example.com/pet" }
+    }
+  }
+}
+EOF
+
+WRITE number.json UNTIL EOF
+42
+EOF
+
+RUN validate openapi.json number.json --resolve pet.json --entrypoint /components/schemas/pet --verbose STDIN /dev/null IN . INTO result_0.txt EXPECTING 0
+
+WRITE expected_0.txt UNTIL EOF
+2> ok: number.json
+2>
+2> 1 validated, 1 passed, 0 failed
+EOF
+
+COMPARE result_0.txt AGAINST expected_0.txt

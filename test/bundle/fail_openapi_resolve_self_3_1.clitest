@@ -1,0 +1,60 @@
+// Only from 3.2 does `$self` give a document an identity, so a 3.1
+// description that spells one is not reachable by it. The reference finds
+// nothing and is reported where it is written, rather than resolving and
+// then faulting the document it landed on.
+
+WRITE other.json UNTIL EOF
+{
+  "openapi": "3.1.1",
+  "$self": "https://example.com/declared",
+  "info": { "title": "Shared", "version": "1.0.0" },
+  "paths": {},
+  "components": { "responses": { "Ok": { "description": "OK" } } }
+}
+EOF
+
+WRITE openapi.json UNTIL EOF
+{
+  "openapi": "3.1.1",
+  "info": { "title": "Example", "version": "1.0.0" },
+  "paths": { "/p": { "get": { "responses": { "200": { "$ref": "https://example.com/declared#/components/responses/Ok" } } } } }
+}
+EOF
+
+// Schema input error
+RUN bundle openapi.json --resolve other.json STDIN /dev/null IN . INTO result_0.txt EXPECTING 4
+
+REPLACE $CWD_URI WITH '[CWD_URI]' IN result_0.txt
+REPLACE $CWD WITH '[CWD]' IN result_0.txt
+
+WRITE expected_0.txt UNTIL EOF
+2> error: Could not resolve the reference to an external document
+2>   at identifier https://example.com/declared
+2>   at line 4
+2>   at column 55
+2>   at file path [CWD]/openapi.json
+2>   at location "/paths/~1p/get/responses/200/$ref"
+2>   at base uri [CWD_URI]/openapi.json
+EOF
+
+COMPARE result_0.txt AGAINST expected_0.txt
+
+// Schema input error
+RUN bundle openapi.json --resolve other.json --json STDIN /dev/null IN . INTO result_1.txt EXPECTING 4
+
+REPLACE $CWD_URI WITH '[CWD_URI]' IN result_1.txt
+REPLACE $CWD WITH '[CWD]' IN result_1.txt
+
+WRITE expected_1.txt UNTIL EOF
+1> {
+1>   "error": "Could not resolve the reference to an external document",
+1>   "identifier": "https://example.com/declared",
+1>   "line": 4,
+1>   "column": 55,
+1>   "filePath": "[CWD]/openapi.json",
+1>   "location": "/paths/~1p/get/responses/200/$ref",
+1>   "baseURI": "[CWD_URI]/openapi.json"
+1> }
+EOF
+
+COMPARE result_1.txt AGAINST expected_1.txt

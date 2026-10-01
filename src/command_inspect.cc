@@ -447,80 +447,14 @@ auto inspect_openapi(const sourcemeta::core::Options &options,
                      const sourcemeta::core::PointerPositionTracker &positions,
                      const std::filesystem::path &display_path,
                      const std::string &default_base) -> void {
-  std::optional<sourcemeta::core::OpenAPIFrame> frame;
-
-  try {
-    frame.emplace(document, sourcemeta::core::schema_walker, resolver,
-                  default_base);
-  } catch (const sourcemeta::core::OpenAPIError &error) {
-    const auto position{positions.get(error.location())};
-    if (position.has_value()) {
-      throw sourcemeta::jsonschema::PositionError<
-          sourcemeta::core::FileError<sourcemeta::core::OpenAPIError>>(
-          std::get<0>(position.value()), std::get<1>(position.value()),
-          display_path, error);
-    }
-
-    throw sourcemeta::core::FileError<sourcemeta::core::OpenAPIError>(
-        display_path, error);
-  } catch (const sourcemeta::core::OpenAPIResolutionError &error) {
-    throw sourcemeta::core::FileError<sourcemeta::core::OpenAPIResolutionError>(
-        display_path, error);
-  } catch (const sourcemeta::core::OpenAPIReferenceError &error) {
-    throw sourcemeta::core::FileError<sourcemeta::core::OpenAPIReferenceError>(
-        display_path, error);
-  } catch (const sourcemeta::core::SchemaKeywordError &error) {
-    throw sourcemeta::core::FileError<sourcemeta::core::SchemaKeywordError>(
-        display_path, error);
-  } catch (const sourcemeta::core::SchemaFrameError &error) {
-    throw sourcemeta::core::FileError<sourcemeta::core::SchemaFrameError>(
-        display_path, error);
-  } catch (const sourcemeta::core::SchemaAnchorCollisionError &error) {
-    const auto position{positions.get(error.location())};
-    if (position.has_value()) {
-      throw sourcemeta::jsonschema::PositionError<sourcemeta::core::FileError<
-          sourcemeta::core::SchemaAnchorCollisionError>>(
-          std::get<0>(position.value()), std::get<1>(position.value()),
-          display_path, error);
-    }
-
-    throw sourcemeta::core::FileError<
-        sourcemeta::core::SchemaAnchorCollisionError>(display_path, error);
-  } catch (const sourcemeta::core::SchemaReferenceError &error) {
-    const auto position{positions.get(error.location())};
-    if (position.has_value()) {
-      throw sourcemeta::jsonschema::PositionError<
-          sourcemeta::core::FileError<sourcemeta::core::SchemaReferenceError>>(
-          std::get<0>(position.value()), std::get<1>(position.value()),
-          display_path, error.identifier(), error.location(), error.what());
-    }
-
-    throw sourcemeta::core::FileError<sourcemeta::core::SchemaReferenceError>(
-        display_path, error.identifier(), error.location(), error.what());
-  } catch (
-      const sourcemeta::core::SchemaRelativeMetaschemaResolutionError &error) {
-    throw sourcemeta::core::FileError<
-        sourcemeta::core::SchemaRelativeMetaschemaResolutionError>(display_path,
-                                                                   error);
-  } catch (const sourcemeta::core::SchemaResolutionError &error) {
-    throw sourcemeta::core::FileError<sourcemeta::core::SchemaResolutionError>(
-        display_path, error);
-  } catch (const sourcemeta::core::SchemaUnknownBaseDialectError &) {
-    throw sourcemeta::core::FileError<
-        sourcemeta::core::SchemaUnknownBaseDialectError>(display_path);
-  } catch (const sourcemeta::core::SchemaUnknownDialectError &) {
-    throw sourcemeta::core::FileError<
-        sourcemeta::core::SchemaUnknownDialectError>(display_path);
-  } catch (const sourcemeta::core::SchemaError &error) {
-    throw sourcemeta::core::FileError<sourcemeta::core::SchemaError>(
-        display_path, error.what());
-  }
+  const auto frame{sourcemeta::jsonschema::openapi_frame_for_evaluation(
+      document, resolver, default_base, display_path, positions)};
 
   if (options.contains("json")) {
-    sourcemeta::core::prettify(frame.value().to_json(positions), std::cout);
+    sourcemeta::core::prettify(frame.to_json(positions), std::cout);
     std::cout << "\n";
   } else {
-    print_openapi_frame(std::cout, frame.value(), resolver, positions);
+    print_openapi_frame(std::cout, frame, resolver, positions);
   }
 }
 

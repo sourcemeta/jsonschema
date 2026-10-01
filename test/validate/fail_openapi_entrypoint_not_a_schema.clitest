@@ -1,0 +1,47 @@
+// An entry point naming a place the description holds that is no schema is
+// told so, rather than being reported as a place that does not exist.
+
+WRITE openapi.json UNTIL EOF
+{
+  "openapi": "3.1.1",
+  "info": { "title": "Example", "version": "1.0.0" },
+  "paths": {},
+  "components": { "schemas": { "Person": { "type": "string" } } }
+}
+EOF
+
+WRITE instance.json UNTIL EOF
+"hello"
+EOF
+
+// Schema input error
+RUN validate openapi.json instance.json --entrypoint /info/title STDIN /dev/null IN . INTO result_0.txt EXPECTING 4
+
+REPLACE $CWD_URI WITH '[CWD_URI]' IN result_0.txt
+REPLACE $CWD WITH '[CWD]' IN result_0.txt
+
+WRITE expected_0.txt UNTIL EOF
+2> error: The given entry point URI is not a valid subschema
+2>   at identifier [CWD_URI]/openapi.json#/info/title
+2>   at file path [CWD]/openapi.json
+2>
+2> Use the `inspect` command to find valid schema locations
+EOF
+
+COMPARE result_0.txt AGAINST expected_0.txt
+
+// Schema input error
+RUN validate openapi.json instance.json --entrypoint /info/title --json STDIN /dev/null IN . INTO result_1.txt EXPECTING 4
+
+REPLACE $CWD_URI WITH '[CWD_URI]' IN result_1.txt
+REPLACE $CWD WITH '[CWD]' IN result_1.txt
+
+WRITE expected_1.txt UNTIL EOF
+1> {
+1>   "error": "The given entry point URI is not a valid subschema",
+1>   "identifier": "[CWD_URI]/openapi.json#/info/title",
+1>   "filePath": "[CWD]/openapi.json"
+1> }
+EOF
+
+COMPARE result_1.txt AGAINST expected_1.txt

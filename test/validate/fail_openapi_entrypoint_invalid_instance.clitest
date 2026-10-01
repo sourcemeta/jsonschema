@@ -1,0 +1,59 @@
+// The schema an entry point names is what the instance is held to, and the
+// failure names that schema rather than any other the description holds.
+
+WRITE openapi.json UNTIL EOF
+{
+  "openapi": "3.1.1",
+  "info": { "title": "Example", "version": "1.0.0" },
+  "paths": {},
+  "components": {
+    "schemas": {
+      "Person": {
+        "$id": "https://example.com/person",
+        "type": "object",
+        "required": [ "name" ],
+        "properties": { "name": { "$anchor": "name", "type": "string" } }
+      }
+    }
+  }
+}
+EOF
+
+WRITE instance.json UNTIL EOF
+"not an object"
+EOF
+
+// Validation failure
+RUN validate openapi.json instance.json --entrypoint /components/schemas/Person STDIN /dev/null IN . INTO result_0.txt EXPECTING 2
+
+WRITE expected_0.txt UNTIL EOF
+2> fail: instance.json
+2> error: Schema validation failure
+2>   The value was expected to be an object that defines the property "name"
+2>     at instance location "" (line 1, column 1)
+2>     at evaluate path "/required"
+2>
+2> 1 validated, 0 passed, 1 failed
+EOF
+
+COMPARE result_0.txt AGAINST expected_0.txt
+
+// Validation failure
+RUN validate openapi.json instance.json --entrypoint /components/schemas/Person --json STDIN /dev/null IN . INTO result_1.txt EXPECTING 2
+
+WRITE expected_1.txt UNTIL EOF
+1> {
+1>   "valid": false,
+1>   "errors": [
+1>     {
+1>       "keywordLocation": "/required",
+1>       "absoluteKeywordLocation": "https://example.com/person#/required",
+1>       "instanceLocation": "",
+1>       "instancePosition": [ 1, 1, 1, 15 ],
+1>       "error": "The value was expected to be an object that defines the property \"name\""
+1>     }
+1>   ]
+1> }
+EOF
+
+COMPARE result_1.txt AGAINST expected_1.txt
