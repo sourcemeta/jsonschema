@@ -1,5 +1,5 @@
 // An entry point resolved against the identity a description declares for
-// itself reaches the schema it names, which the failure is reported against.
+// itself is held to the schema it names.
 
 WRITE openapi.json UNTIL EOF
 {

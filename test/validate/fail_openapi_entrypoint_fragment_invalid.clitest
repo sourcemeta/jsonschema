@@ -1,6 +1,5 @@
 // An entry point spelled as a fragment reaches the same schema the bare
-// pointer does, which the schema it is held to shows when the instance does
-// not satisfy it.
+// pointer does, and is held to it.
 
 WRITE openapi.json UNTIL EOF
 {

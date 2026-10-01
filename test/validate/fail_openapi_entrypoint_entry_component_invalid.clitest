@@ -1,5 +1,6 @@
-// A component the entry document declares is the one its own pointer names,
-// rather than whatever was brought in beside it.
+// An entry point naming a component by pointer is held to the one the entry
+// document declares, not to a schema brought in beside it that asked for the
+// same name.
 
 WRITE pet.json UNTIL EOF
 {

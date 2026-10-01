@@ -1,5 +1,6 @@
-// A schema that came in with an Object an OpenAPI-layer reference pulled in
-// is the one an entry point naming it is held to.
+// Another description's schemas arrive with whatever Object an OpenAPI-layer
+// reference pulls in. An entry point naming one of them is held to that
+// schema.
 
 WRITE shared.json UNTIL EOF
 {

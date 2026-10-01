@@ -1,5 +1,5 @@
-// Spelling out the identity a description declares for itself reaches the
-// same schema the relative form does, which the failure names.
+// Spelling that identity out in full reaches the same schema the relative
+// form does, and is held to it.
 
 WRITE openapi.json UNTIL EOF
 {

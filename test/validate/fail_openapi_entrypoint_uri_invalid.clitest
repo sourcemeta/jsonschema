@@ -1,5 +1,5 @@
-// An entry point naming the identifier a Schema Object declares reaches that
-// schema, which is what the failure is reported against.
+// An entry point naming the identifier a Schema Object declares is held to
+// that schema.
 
 WRITE openapi.json UNTIL EOF
 {
