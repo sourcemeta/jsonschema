@@ -21,11 +21,12 @@ EOF
 // Schema input error
 RUN compile openapi.json --entrypoint /components/schemas/Nope STDIN /dev/null IN . INTO result.txt EXPECTING 4
 
+REPLACE $CWD_URI WITH '[CWD_URI]' IN result.txt
 REPLACE $CWD WITH '[CWD]' IN result.txt
 
 WRITE expected.txt UNTIL EOF
-2> error: The given entry point URI does not exist in the schema
-2>   at identifier file://[CWD]/openapi.json#/components/schemas/Nope
+2> error: The given entry point URI does not name a Schema Object of the OpenAPI description
+2>   at identifier [CWD_URI]/openapi.json#/components/schemas/Nope
 2>   at file path [CWD]/openapi.json
 2>
 2> Use the `inspect` command to find valid schema locations

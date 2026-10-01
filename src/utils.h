@@ -462,6 +462,13 @@ auto with_openapi_entrypoint(
         sourcemeta::blaze::CompilerInvalidEntryPoint>(display_path, error);
   }
 
+  // Asking first means the miss is reported in the description's own terms,
+  // rather than by whatever compiles it next, which only knows about schemas
+  if (!frame.schemas().traverse(entrypoint_uri).has_value()) {
+    throw sourcemeta::core::FileError<OpenAPIEntryPointError>(
+        display_path, OpenAPIEntryPointError{entrypoint_uri});
+  }
+
   return callback(frame.schemas(), entrypoint_uri);
 }
 

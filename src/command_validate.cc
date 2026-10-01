@@ -130,33 +130,16 @@ auto get_openapi_schema_template(
     const std::filesystem::path &display_path,
     const sourcemeta::core::PointerPositionTracker &positions,
     const bool fast_mode) -> sourcemeta::blaze::Template {
-  if (!options.contains("entrypoint") || options.at("entrypoint").empty()) {
-    throw sourcemeta::jsonschema::OptionConflictError{
-        "You must pass an entry point using the `--entrypoint/-p` option when "
-        "the input is an OpenAPI description"};
-  }
-
-  sourcemeta::jsonschema::openapi_bundle_for_evaluation(
-      document, resolver,
+  return sourcemeta::jsonschema::with_openapi_entrypoint(
+      document, options, resolver,
       sourcemeta::jsonschema::openapi_resolver(
           options, options.contains("http"), dialect, configuration),
-      openapi_base, display_path, positions);
-
-  const auto frame{sourcemeta::jsonschema::openapi_frame_for_evaluation(
-      document, resolver, openapi_base, display_path, positions)};
-
-  std::string entrypoint_uri;
-  try {
-    entrypoint_uri = sourcemeta::jsonschema::resolve_entrypoint(
-        frame.base(), options.at("entrypoint").front());
-  } catch (const sourcemeta::blaze::CompilerInvalidEntryPoint &error) {
-    throw sourcemeta::core::FileError<
-        sourcemeta::blaze::CompilerInvalidEntryPoint>(display_path, error);
-  }
-
-  return get_schema_template(document, resolver, frame.schemas(),
-                             entrypoint_uri, fast_mode, options, display_path,
-                             positions);
+      openapi_base, display_path, positions,
+      [&](const sourcemeta::core::SchemaFrame &frame,
+          const std::string &entrypoint_uri) {
+        return get_schema_template(document, resolver, frame, entrypoint_uri,
+                                   fast_mode, options, display_path, positions);
+      });
 }
 
 auto parse_loop(const sourcemeta::core::Options &options) -> std::uint64_t {
