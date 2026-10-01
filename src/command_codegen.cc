@@ -67,6 +67,14 @@ auto sourcemeta::jsonschema::codegen(const sourcemeta::core::Options &options)
 
   const std::filesystem::path schema_path{options.positional().front()};
   auto parsed_schema{read_file(schema_path)};
+
+  // An OpenAPI description is not a schema, so it is turned down rather than
+  // read as one, which would fail over the dialect it does not declare
+  if (is_openapi_document(parsed_schema.document)) {
+    throw sourcemeta::core::FileError<UnsupportedOpenAPICodegenError>(
+        schema_path);
+  }
+
   const auto &schema{parsed_schema.document};
 
   const auto configuration_path{find_configuration(options, schema_path)};
