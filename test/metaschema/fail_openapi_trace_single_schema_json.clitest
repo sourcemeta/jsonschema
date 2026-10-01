@@ -11,10 +11,12 @@ WRITE openapi.json UNTIL EOF
 EOF
 
 // Invalid CLI arguments
-RUN metaschema openapi.json --trace STDIN /dev/null IN . INTO result_0.txt EXPECTING 5
+RUN metaschema openapi.json --trace --json STDIN /dev/null IN . INTO result.txt EXPECTING 5
 
-WRITE expected_0.txt UNTIL EOF
-2> error: The `--trace/-t` option is not available when the input is an OpenAPI description
+WRITE expected.txt UNTIL EOF
+1> {
+1>   "error": "The `--trace/-t` option is not available when the input is an OpenAPI description"
+1> }
 EOF
 
-COMPARE result_0.txt AGAINST expected_0.txt
+COMPARE result.txt AGAINST expected.txt

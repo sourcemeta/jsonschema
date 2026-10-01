@@ -95,7 +95,8 @@ auto check_against_metaschema(
     const std::string &dialect,
     const sourcemeta::core::PointerPositionTracker &positions,
     const sourcemeta::core::Options &options, const bool trace,
-    const bool json_output) -> bool {
+    const bool json_output, const sourcemeta::core::Pointer &base = {})
+    -> bool {
   if (trace) {
     sourcemeta::blaze::TraceOutput output{
         schema_template,
@@ -141,7 +142,7 @@ auto check_against_metaschema(
                    dialect, sourcemeta::core::TerminalStyle::Cyan,
                    sourcemeta::core::TerminalStream::Stderr)
             << "\n";
-  sourcemeta::jsonschema::print(output, positions, std::cerr);
+  sourcemeta::jsonschema::print(output, positions, std::cerr, "error:", base);
   return false;
 }
 
@@ -201,7 +202,7 @@ auto check_openapi_description(
     sourcemeta::core::stringify(pointer, subject);
     if (!check_against_metaschema(evaluator, schema_template, schema,
                                   subject.str(), dialect, entry.positions,
-                                  options, trace, json_output)) {
+                                  options, trace, json_output, pointer)) {
       summary.failed += 1;
 
       // One description holds many schemas, so stopping at the first failure

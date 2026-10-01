@@ -59,7 +59,9 @@ is checked correctly throughout. Each result names where the schema sits:
 
 ```
 ok: openapi.json#/components/schemas/Person
-  matches https://json-schema.org/draft/2020-12/schema
+  matches https://spec.openapis.org/oas/3.1/dialect/base
+ok: openapi.json#/components/schemas/Legacy
+  matches http://json-schema.org/draft-07/schema#
 ```
 
 Because a description holds many schemas, the counts in the summary are of

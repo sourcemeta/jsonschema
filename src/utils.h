@@ -776,11 +776,16 @@ inline auto facet_name(const sourcemeta::blaze::JSONLDFacet facet)
   }
 }
 
+// The instance locations an evaluation reports are relative to whatever was
+// validated, so when that is a subtree of the tracked document, as a Schema
+// Object of an OpenAPI description is, the tracker only answers once the
+// position of that subtree is put back in front
 template <typename Entries>
 inline auto print(const Entries &output,
                   const sourcemeta::core::PointerPositionTracker &tracker,
                   std::ostream &stream,
-                  const std::string_view error_label = "error:") -> void {
+                  const std::string_view error_label = "error:",
+                  const sourcemeta::core::Pointer &base = {}) -> void {
   stream << error_label << " Schema validation failure\n";
   for (const auto &entry : output) {
     stream << "  " << entry.message << "\n";
@@ -788,8 +793,8 @@ inline auto print(const Entries &output,
     sourcemeta::core::stringify(entry.instance_location, stream);
     stream << "\"";
 
-    const auto position{
-        tracker.get(sourcemeta::core::to_pointer(entry.instance_location))};
+    const auto position{tracker.get(
+        base.concat(sourcemeta::core::to_pointer(entry.instance_location)))};
     if (position.has_value()) {
       const auto [line, column, end_line, end_column] = position.value();
       stream << " (line " << line << ", column " << column << ")";
