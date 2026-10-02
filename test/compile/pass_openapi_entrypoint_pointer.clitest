@@ -20,7 +20,7 @@ EOF
 
 RUN compile openapi.json --entrypoint /components/schemas/Person STDIN /dev/null IN . INTO result.txt EXPECTING 0
 
-REPLACE $CWD WITH '[CWD]' IN result.txt
+REPLACE $CWD_URI WITH '[CWD_URI]' IN result.txt
 
 WRITE expected.txt UNTIL EOF
 1> [
@@ -33,7 +33,7 @@ WRITE expected.txt UNTIL EOF
 1>         2,
 1>         [ "required" ],
 1>         [],
-1>         "file://[CWD]/openapi.json#/components/schemas/Person/required",
+1>         "[CWD_URI]/openapi.json#/components/schemas/Person/required",
 1>         1,
 1>         1,
 1>         [
@@ -48,7 +48,7 @@ WRITE expected.txt UNTIL EOF
 1>         61,
 1>         [ "properties" ],
 1>         [],
-1>         "file://[CWD]/openapi.json#/components/schemas/Person/properties",
+1>         "[CWD_URI]/openapi.json#/components/schemas/Person/properties",
 1>         1,
 1>         2,
 1>         [ 8, 6 ],
@@ -57,7 +57,7 @@ WRITE expected.txt UNTIL EOF
 1>             11,
 1>             [ "name", "type" ],
 1>             [ "name" ],
-1>             "file://[CWD]/openapi.json#/components/schemas/Person/properties/name/type",
+1>             "[CWD_URI]/openapi.json#/components/schemas/Person/properties/name/type",
 1>             1,
 1>             1,
 1>             [ 8, 4 ]
@@ -66,7 +66,7 @@ WRITE expected.txt UNTIL EOF
 1>             51,
 1>             [],
 1>             [],
-1>             "file://[CWD]/openapi.json#/components/schemas/Person/properties",
+1>             "[CWD_URI]/openapi.json#/components/schemas/Person/properties",
 1>             1,
 1>             2,
 1>             [ 1, "name" ]
@@ -77,7 +77,7 @@ WRITE expected.txt UNTIL EOF
 1>         11,
 1>         [ "type" ],
 1>         [],
-1>         "file://[CWD]/openapi.json#/components/schemas/Person/type",
+1>         "[CWD_URI]/openapi.json#/components/schemas/Person/type",
 1>         1,
 1>         1,
 1>         [ 8, 6 ]
