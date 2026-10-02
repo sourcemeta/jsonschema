@@ -4,7 +4,9 @@
 
 #include <sourcemeta/core/json.h>
 #include <sourcemeta/core/jsonpointer.h>
+#include <sourcemeta/core/jsonschema.h>
 #include <sourcemeta/core/parallel.h>
+#include <sourcemeta/core/uri.h>
 
 // The parallel module includes windows.h, which defines DELETE as a macro
 // that would otherwise break parsing the HTTPMethod enumeration that the
@@ -13,13 +15,14 @@
 #undef DELETE
 #endif
 
-#include <algorithm> // std::find, std::distance, std::min, std::max
+#include <algorithm> // std::min, std::max
 #include <atomic>    // std::atomic
 #include <chrono>    // std::chrono
 #include <cstddef>   // std::size_t
 #include <cstdint>   // std::uint8_t
 #include <exception> // std::exception_ptr, std::current_exception, std::rethrow_exception
 #include <iostream>    // std::cout
+#include <memory>      // std::unique_ptr, std::make_unique
 #include <mutex>       // std::mutex, std::scoped_lock
 #include <optional>    // std::optional
 #include <sstream>     // std::ostringstream
@@ -154,11 +157,59 @@ auto print_rdf_failure(const sourcemeta::jsonschema::InputJSON &entry,
   }
 }
 
+// A test suite borrows the document and the frame that each of its targets
+// resolved to, so whatever holds those must outlive it
+struct TestTargets {
+  std::vector<std::unique_ptr<sourcemeta::core::JSON>> documents;
+  std::vector<std::unique_ptr<sourcemeta::core::SchemaFrame>> frames;
+};
+
+// Reaching what a target names is ours to do, as the test module knows nothing
+// about where a schema comes from. Everything the schema spans is bundled in
+// first, as compiling never reaches for what a reference names
+auto resolve_test_target(
+    const sourcemeta::core::SchemaResolver &schema_resolver,
+    const std::string &dialect, const sourcemeta::core::JSON::String &target,
+    TestTargets &targets) -> sourcemeta::blaze::TestTarget {
+  // RFC 3986 Section 3.5 makes a fragment address a place within a resource
+  // rather than a resource of its own, so what the target names is looked up
+  // under the base that precedes it
+  const sourcemeta::core::URI target_uri{target};
+  const auto base{target_uri.recompose_without_fragment().value_or(target)};
+
+  const auto schema{schema_resolver(base)};
+  if (!schema.has_value()) {
+    throw sourcemeta::core::SchemaResolutionError{
+        base, "Could not resolve the reference to an external schema"};
+  }
+
+  const auto &document{*targets.documents.emplace_back(
+      std::make_unique<sourcemeta::core::JSON>(sourcemeta::core::schema_bundle(
+          schema.value(), sourcemeta::core::schema_walker, schema_resolver,
+          dialect, base,
+          sourcemeta::jsonschema::bundle_references_options())))};
+
+  const auto &frame{*targets.frames.emplace_back(
+      std::make_unique<sourcemeta::core::SchemaFrame>(
+          sourcemeta::core::SchemaFrame::Mode::References, document,
+          sourcemeta::core::schema_walker, schema_resolver, dialect, base))};
+
+  // Asking here reports a target that nothing locates as the schema under test
+  // that could not be reached, rather than as an entry point that whatever
+  // compiles it next does not know how to talk about
+  if (!frame.traverse(target).has_value()) {
+    throw sourcemeta::core::SchemaResolutionError{
+        target, "Could not resolve schema under test"};
+  }
+
+  return {.document = document, .frame = frame, .entrypoint = target};
+}
+
 auto parse_test_suite(const sourcemeta::jsonschema::InputJSON &entry,
                       const sourcemeta::core::SchemaResolver &schema_resolver,
-                      const std::string_view dialect,
-                      const std::optional<sourcemeta::blaze::Tweaks> &tweaks)
-    -> sourcemeta::blaze::TestSuite {
+                      const std::string &dialect,
+                      const std::optional<sourcemeta::blaze::Tweaks> &tweaks,
+                      TestTargets &targets) -> sourcemeta::blaze::TestSuite {
   try {
     return sourcemeta::blaze::TestSuite::parse(
         entry.second, entry.positions,
@@ -167,8 +218,12 @@ auto parse_test_suite(const sourcemeta::jsonschema::InputJSON &entry,
         // `dataPath` and `rdfPath` entries are opened from it
         entry.from_stdin ? std::filesystem::current_path()
                          : entry.resolution_base.parent_path(),
+        [&schema_resolver, &dialect,
+         &targets](const sourcemeta::core::JSON::String &target) {
+          return resolve_test_target(schema_resolver, dialect, target, targets);
+        },
         schema_resolver, sourcemeta::core::schema_walker,
-        sourcemeta::blaze::default_schema_compiler, dialect, "", tweaks);
+        sourcemeta::blaze::default_schema_compiler, tweaks);
   } catch (const sourcemeta::blaze::TestParseError &error) {
     throw sourcemeta::core::FileError<sourcemeta::blaze::TestParseError>{
         entry.resolution_base, error.what(), error.location(), error.line(),
@@ -186,6 +241,12 @@ auto parse_test_suite(const sourcemeta::jsonschema::InputJSON &entry,
     // No position, as what compiles here is the schema the document targets
     // while the positions on hand describe the test document itself
     throw sourcemeta::core::FileError<sourcemeta::blaze::CompilerError>{
+        entry.resolution_base, error};
+  } catch (const sourcemeta::core::SchemaKeywordError &error) {
+    throw sourcemeta::core::FileError<sourcemeta::core::SchemaKeywordError>{
+        entry.resolution_base, error};
+  } catch (const sourcemeta::core::SchemaFrameError &error) {
+    throw sourcemeta::core::FileError<sourcemeta::core::SchemaFrameError>{
         entry.resolution_base, error};
   } catch (
       const sourcemeta::core::SchemaRelativeMetaschemaResolutionError &error) {
@@ -210,6 +271,16 @@ auto parse_test_suite(const sourcemeta::jsonschema::InputJSON &entry,
     throw sourcemeta::core::FileError<
         sourcemeta::core::SchemaAnchorCollisionError>{entry.resolution_base,
                                                       error};
+  } catch (const sourcemeta::core::SchemaReferenceError &error) {
+    // No position, as what compiles here is the schema the document targets
+    // while the positions on hand describe the test document itself
+    throw sourcemeta::core::FileError<sourcemeta::core::SchemaReferenceError>{
+        entry.resolution_base, error.identifier(), error.location(),
+        error.what()};
+  } catch (const sourcemeta::core::SchemaReferenceObjectResourceError &error) {
+    throw sourcemeta::core::FileError<
+        sourcemeta::core::SchemaReferenceObjectResourceError>{
+        entry.resolution_base, error.identifier()};
   }
 }
 
@@ -258,9 +329,10 @@ auto run_suite_as_text(const sourcemeta::core::Options &options,
         options, options.contains("http"), dialect, configuration)};
     const auto trace{options.contains("trace")};
 
+    TestTargets targets;
     auto test_suite{parse_test_suite(
         entry, schema_resolver, dialect,
-        sourcemeta::jsonschema::format_assertion_tweaks(options))};
+        sourcemeta::jsonschema::format_assertion_tweaks(options), targets)};
 
     stream << sourcemeta::jsonschema::paint(
                   entry.first, HEADING_STYLE,
@@ -271,8 +343,9 @@ auto run_suite_as_text(const sourcemeta::core::Options &options,
     std::optional<sourcemeta::core::JSON::String> last_target_header;
 
     const auto suite_result{test_suite.run(
-        [&](const sourcemeta::core::JSON::String &target, std::size_t index,
-            std::size_t total, const sourcemeta::blaze::TestCase &test_case,
+        [&](const sourcemeta::core::JSON::String &target,
+            std::size_t target_index, std::size_t index, std::size_t total,
+            const sourcemeta::blaze::TestCase &test_case,
             const sourcemeta::blaze::TestOutcome &outcome,
             sourcemeta::blaze::TestTimestamp,
             sourcemeta::blaze::TestTimestamp) {
@@ -310,13 +383,7 @@ auto run_suite_as_text(const sourcemeta::core::Options &options,
               stream << "\n";
             }
           } else if (!outcome.valid) {
-            const std::string ref{"$ref"};
-            sourcemeta::blaze::SimpleOutput output{test_case.data,
-                                                   {std::cref(ref)}};
-            const auto target_index{static_cast<std::size_t>(
-                std::distance(test_suite.targets.cbegin(),
-                              std::find(test_suite.targets.cbegin(),
-                                        test_suite.targets.cend(), target)))};
+            sourcemeta::blaze::SimpleOutput output{test_case.data};
             test_suite.evaluator.validate(test_suite.exhaustive(target_index),
                                           test_case.data, std::ref(output));
 
@@ -484,15 +551,17 @@ auto run_suite_as_ctrf(const sourcemeta::core::Options &options,
     const auto &schema_resolver{sourcemeta::jsonschema::resolver(
         options, options.contains("http"), dialect, configuration)};
 
+    TestTargets targets;
     auto test_suite{parse_test_suite(
         entry, schema_resolver, dialect,
-        sourcemeta::jsonschema::format_assertion_tweaks(options))};
+        sourcemeta::jsonschema::format_assertion_tweaks(options), targets)};
 
     const auto file_path{entry.first};
 
     const auto suite_result{test_suite.run(
-        [&](const sourcemeta::core::JSON::String &target, std::size_t index,
-            std::size_t, const sourcemeta::blaze::TestCase &test_case,
+        [&](const sourcemeta::core::JSON::String &target,
+            std::size_t target_index, std::size_t index, std::size_t,
+            const sourcemeta::blaze::TestCase &test_case,
             const sourcemeta::blaze::TestOutcome &outcome,
             sourcemeta::blaze::TestTimestamp start,
             sourcemeta::blaze::TestTimestamp end) {
@@ -534,13 +603,7 @@ auto run_suite_as_ctrf(const sourcemeta::core::Options &options,
                                                         "expected to fail"});
             } else if (!outcome.valid) {
               std::ostringstream trace_stream;
-              const std::string ref{"$ref"};
-              sourcemeta::blaze::SimpleOutput output{test_case.data,
-                                                     {std::cref(ref)}};
-              const auto target_index{static_cast<std::size_t>(
-                  std::distance(test_suite.targets.cbegin(),
-                                std::find(test_suite.targets.cbegin(),
-                                          test_suite.targets.cend(), target)))};
+              sourcemeta::blaze::SimpleOutput output{test_case.data};
               test_suite.evaluator.validate(test_suite.exhaustive(target_index),
                                             test_case.data, std::ref(output));
               sourcemeta::jsonschema::print(output, test_case.tracker,

@@ -33,25 +33,15 @@ WRITE expected_0.txt UNTIL EOF
 1>     at instance location ""
 1>     at evaluate path "/type"
 1>
-1> -> (push) "/$ref" (ControlJump)
-1>    at instance location ""
-1>    at keyword location "#/$ref"
-1>    at vocabulary "https://json-schema.org/draft/2020-12/vocab/core"
-1>
-1> -> (push) "/$ref/type" (AssertionTypeStrict)
+1> -> (push) "/type" (AssertionTypeStrict)
 1>    at instance location ""
 1>    at keyword location "https://example.com#/type"
 1>    at vocabulary "http://json-schema.org/draft-04/schema#"
 1>
-1> <- (fail) "/$ref/type" (AssertionTypeStrict)
+1> <- (fail) "/type" (AssertionTypeStrict)
 1>    at instance location ""
 1>    at keyword location "https://example.com#/type"
 1>    at vocabulary "http://json-schema.org/draft-04/schema#"
-1>
-1> <- (fail) "/$ref" (ControlJump)
-1>    at instance location ""
-1>    at keyword location "#/$ref"
-1>    at vocabulary "https://json-schema.org/draft/2020-12/vocab/core"
 EOF
 
 COMPARE result_0.txt AGAINST expected_0.txt

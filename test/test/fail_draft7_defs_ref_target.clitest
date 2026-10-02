@@ -36,7 +36,7 @@ WRITE expected_0.txt UNTIL EOF
 2> error: The referenced schema is not considered to be a valid subschema given the dialect and vocabularies in use
 2>   at identifier https://example.com/draft7-defs-schema#/$defs/not-a-schema
 2>   at file path [CWD]/test.json
-2>   at location "/$defs/https:~1~1example.com~1draft7-defs-schema/$defs"
+2>   at location "/$defs"
 2>
 2> Maybe you meant to use `definitions` instead of `$defs` in this dialect?
 EOF
@@ -53,7 +53,7 @@ WRITE expected_1.txt UNTIL EOF
 1>   "error": "The referenced schema is not considered to be a valid subschema given the dialect and vocabularies in use",
 1>   "identifier": "https://example.com/draft7-defs-schema#/$defs/not-a-schema",
 1>   "filePath": "[CWD]/test.json",
-1>   "location": "/$defs/https:~1~1example.com~1draft7-defs-schema/$defs"
+1>   "location": "/$defs"
 1> }
 EOF
 

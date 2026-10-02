@@ -1,0 +1,37 @@
+WRITE schema.json UNTIL EOF
+{
+  "$id": "https://example.com/dangling-reference-schema",
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "allOf": [
+    { "$ref": "#/definitions/missing" }
+  ]
+}
+EOF
+
+WRITE test.json UNTIL EOF
+{
+  "target": "https://example.com/dangling-reference-schema",
+  "tests": [
+    {
+      "description": "Test case",
+      "valid": true,
+      "data": "hello"
+    }
+  ]
+}
+EOF
+
+// Schema input error
+RUN test test.json --resolve schema.json STDIN /dev/null IN . INTO result_0.txt EXPECTING 4
+
+REPLACE $CWD WITH '[CWD]' IN result_0.txt
+
+WRITE expected_0.txt UNTIL EOF
+1> [CWD]/test.json:
+2> error: Could not resolve schema reference
+2>   at identifier https://example.com/dangling-reference-schema#/definitions/missing
+2>   at file path [CWD]/test.json
+2>   at location "/allOf/0/$ref"
+EOF
+
+COMPARE result_0.txt AGAINST expected_0.txt

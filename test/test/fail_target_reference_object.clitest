@@ -1,0 +1,37 @@
+WRITE schema.json UNTIL EOF
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$ref": "#/definitions/string",
+  "definitions": {
+    "string": { "type": "string" }
+  }
+}
+EOF
+
+WRITE test.json UNTIL EOF
+{
+  "target": "./schema.json",
+  "tests": [
+    {
+      "description": "Test case",
+      "valid": true,
+      "data": "hello"
+    }
+  ]
+}
+EOF
+
+// Schema input error
+RUN test test.json STDIN /dev/null IN . INTO result_0.txt EXPECTING 4
+
+REPLACE $CWD_URI WITH '[CWD_URI]' IN result_0.txt
+REPLACE $CWD WITH '[CWD]' IN result_0.txt
+
+WRITE expected_0.txt UNTIL EOF
+1> [CWD]/test.json:
+2> error: A schema with a top-level `$ref` in JSON Schema Draft 7 and older dialects ignores every sibling keywords (like identifiers and meta-schema declarations) and therefore many operations, like bundling, are not possible without undefined behavior
+2>   at identifier [CWD_URI]/schema.json
+2>   at file path [CWD]/test.json
+EOF
+
+COMPARE result_0.txt AGAINST expected_0.txt

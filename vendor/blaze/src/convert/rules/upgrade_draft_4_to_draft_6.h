@@ -12,73 +12,35 @@ public:
             const sourcemeta::core::SchemaFrame::Location &location,
             const sourcemeta::core::SchemaWalker &,
             const sourcemeta::core::SchemaResolver &) const -> bool override {
-    this->sanitize_pending_ = false;
-
     ONLY_CONTINUE_IF(
         vocabularies.contains(SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_4) &&
         schema.is_object());
 
-    const bool is_resource_scope =
-        location.type ==
-            sourcemeta::core::SchemaFrame::LocationType::Resource ||
-        location.pointer.empty();
-
-    const bool sanitization_branch =
-        is_resource_scope && resource_needs_anchor_sanitization(schema);
-
-    const bool other_branch = has_pending_draft_4_pattern(schema);
-
     const bool root_via_default_dialect =
         location.pointer.empty() && !schema.defines("$schema");
 
-    ONLY_CONTINUE_IF(sanitization_branch || other_branch ||
+    ONLY_CONTINUE_IF(has_pending_draft_4_pattern(schema, location.dialect) ||
                      root_via_default_dialect);
 
-    if (!sanitization_branch && other_branch &&
-        enclosing_resource_has_pending_sanitization(location, root, frame)) {
-      return false;
-    }
+    // Anchors are renamed document-wide by a rule of its own, and bumping the
+    // dialect is what stops `id` from identifying anything, so this waits for
+    // that to finish rather than deciding which resource ought to do it
+    ONLY_CONTINUE_IF(!has_unsanitized_draft_4_anchor(root, frame));
 
-    if (!sanitization_branch) {
-      if (frame.any_subschema_under(
-              location.pointer,
-              [&root](const sourcemeta::core::SchemaFrame::Location &entry)
-                  -> bool {
-                const auto entry_pointer{
-                    sourcemeta::core::to_pointer(entry.pointer)};
-                const auto &entry_schema{
-                    sourcemeta::core::get(root, entry_pointer)};
-                if (entry_schema.is_object() && entry_schema.defines("$ref")) {
-                  return false;
-                }
+    return !frame.any_subschema_under(
+        location.pointer,
+        [&root](const sourcemeta::core::SchemaFrame::Location &entry) -> bool {
+          const auto entry_pointer{sourcemeta::core::to_pointer(entry.pointer)};
+          const auto &entry_schema{sourcemeta::core::get(root, entry_pointer)};
+          if (entry_schema.is_object() && entry_schema.defines("$ref")) {
+            return false;
+          }
 
-                return has_pending_draft_4_pattern(entry_schema);
-              })) {
-        return false;
-      }
-    }
-
-    this->sanitize_pending_ = sanitization_branch;
-    return true;
+          return has_pending_draft_4_pattern(entry_schema, entry.dialect);
+        });
   }
 
   auto transform(sourcemeta::core::JSON &schema) const -> void override {
-    if (this->sanitize_pending_) {
-      const auto renames{build_resource_rename_map(schema)};
-      std::optional<std::string> resource_base;
-      if (schema.defines("id") && schema.at("id").is_string()) {
-        const sourcemeta::core::URI uri{schema.at("id").to_string()};
-        const auto without_fragment{uri.recompose_without_fragment()};
-        if (without_fragment.has_value() && !without_fragment.value().empty()) {
-          resource_base = without_fragment.value();
-        }
-      }
-      apply_anchor_renames_in_resource(schema, true, renames, resource_base);
-      if (resource_has_descendant_with_pending_pattern(schema, true)) {
-        return;
-      }
-    }
-
     if (schema.defines("id") && schema.at("id").is_string()) {
       schema.rename("id", "$id");
     }
@@ -123,12 +85,19 @@ private:
   static inline const std::array<std::string_view, 4> PROMOTED_KEYWORDS{
       {"const", "contains", "propertyNames", "examples"}};
 
-  mutable bool sanitize_pending_{false};
-
   static auto
-  has_pending_draft_4_pattern(const sourcemeta::core::JSON &subschema) -> bool {
-    if (!subschema.is_object() ||
-        declares_newer_dialect(subschema, DRAFT_4_URL)) {
+  has_pending_draft_4_pattern(const sourcemeta::core::JSON &subschema,
+                              const std::string_view dialect) -> bool {
+    if (!subschema.is_object()) {
+      return false;
+    }
+
+    // What framing reads is what decides whether this rung still has work
+    // here. A `$schema` that framing does not read declares nothing, and
+    // taking it at its word would put the subschema out of reach while it is
+    // still waiting to be converted, letting an ancestor move the dialect out
+    // from under it
+    if (dialect_position(dialect) > dialect_position(DRAFT_4_URL)) {
       return false;
     }
 
@@ -138,9 +107,9 @@ private:
     }
 
     if (subschema.defines("id") && subschema.at("id").is_string()) {
-      const auto fragment{extract_id_fragment(subschema.at("id"))};
+      const auto fragment{identifier_fragment(subschema.at("id"))};
       if (!fragment.has_value() || fragment.value().empty() ||
-          is_strict_plain_name(fragment.value())) {
+          is_draft_6_plain_name(fragment.value())) {
         return true;
       }
     }
@@ -161,444 +130,25 @@ private:
       }
     }
 
-    return has_stray_identifier(subschema);
+    return has_stray_identifier(subschema, dialect);
   }
 
   // Draft 4 does not know `$id`, so one written there is inert data that
   // Draft 6 would read as the identifier, and it has to be shadowed before
   // `id` takes that name. It is also the one Draft 6 addition this rule
   // produces itself, so unlike every other promoted keyword its presence only
-  // means work is pending while the subschema is still on Draft 4 or older
-  static auto has_stray_identifier(const sourcemeta::core::JSON &subschema)
-      -> bool {
+  // means work is pending while the subschema is still on Draft 4 or older.
+  //
+  // How the subschema is read counts as well as what it declares. A resource
+  // around it may have moved on while leaving it declaring nothing, and the
+  // `$id` is then the identifier doing its job rather than data awaiting a
+  // shadow. Asking only what it declares leaves an ancestor waiting on a
+  // subschema that nothing is going to change again
+  static auto has_stray_identifier(const sourcemeta::core::JSON &subschema,
+                                   const std::string_view dialect) -> bool {
     return subschema.defines("$id") &&
+           dialect_position(dialect) <= dialect_position(DRAFT_4_URL) &&
            dialect_position(declared_dialect(subschema)) <=
                dialect_position(DRAFT_4_URL);
-  }
-
-  static auto is_strict_plain_name_first_char(const char character) -> bool {
-    return (character >= 'A' && character <= 'Z') ||
-           (character >= 'a' && character <= 'z');
-  }
-
-  static auto is_strict_plain_name_body_char(const char character) -> bool {
-    return (character >= 'A' && character <= 'Z') ||
-           (character >= 'a' && character <= 'z') ||
-           (character >= '0' && character <= '9') || character == '_' ||
-           character == ':' || character == '.' || character == '-';
-  }
-
-  static auto is_strict_plain_name(const std::string_view fragment) -> bool {
-    if (fragment.empty()) {
-      return false;
-    }
-    if (!is_strict_plain_name_first_char(fragment.front())) {
-      return false;
-    }
-    for (std::size_t index{1}; index < fragment.size(); ++index) {
-      if (!is_strict_plain_name_body_char(fragment[index])) {
-        return false;
-      }
-    }
-    return true;
-  }
-
-  static auto sanitize_anchor_name(const std::string_view original,
-                                   const std::set<std::string> &existing_names)
-      -> std::string {
-    static const AnchorCharPolicy POLICY{
-        .is_valid_first = &is_strict_plain_name_first_char,
-        .is_valid_body = &is_strict_plain_name_body_char};
-    return sanitize_anchor_with_policy(original, existing_names, POLICY);
-  }
-
-  static auto extract_id_fragment(const sourcemeta::core::JSON &id_value)
-      -> std::optional<std::string> {
-    if (!id_value.is_string()) {
-      return std::nullopt;
-    }
-    const sourcemeta::core::URI uri{id_value.to_string()};
-    const auto fragment{uri.fragment()};
-    if (!fragment.has_value()) {
-      return std::nullopt;
-    }
-    return std::string{fragment.value()};
-  }
-
-  static auto
-  subschema_id_fragment_is_invalid(const sourcemeta::core::JSON &subschema)
-      -> bool {
-    if (!subschema.is_object() || !subschema.defines("id") ||
-        !subschema.at("id").is_string()) {
-      return false;
-    }
-    const auto fragment{extract_id_fragment(subschema.at("id"))};
-    if (!fragment.has_value() || fragment.value().empty()) {
-      return false;
-    }
-    return !is_strict_plain_name(fragment.value());
-  }
-
-  static auto
-  subschema_starts_sub_resource(const sourcemeta::core::JSON &subschema)
-      -> bool {
-    if (!subschema.is_object() || !subschema.defines("id") ||
-        !subschema.at("id").is_string()) {
-      return false;
-    }
-    const sourcemeta::core::URI uri{subschema.at("id").to_string()};
-    if (uri.is_fragment_only()) {
-      return false;
-    }
-    const auto without_fragment{uri.recompose_without_fragment()};
-    return without_fragment.has_value() && !without_fragment.value().empty();
-  }
-
-  static auto collect_resource_anchors(const sourcemeta::core::JSON &subschema,
-                                       const bool is_root,
-                                       std::set<std::string> &result) -> void {
-    if (!subschema.is_object()) {
-      return;
-    }
-
-    if (!is_root && subschema_starts_sub_resource(subschema)) {
-      return;
-    }
-
-    if (subschema.defines("id") && subschema.at("id").is_string()) {
-      const auto fragment{extract_id_fragment(subschema.at("id"))};
-      if (fragment.has_value() && !fragment.value().empty()) {
-        result.insert(fragment.value());
-      }
-    }
-
-    for (const std::string_view object_keyword :
-         {"definitions", "properties", "patternProperties", "dependencies"}) {
-      if (subschema.defines(object_keyword) &&
-          subschema.at(object_keyword).is_object()) {
-        for (const auto &entry : subschema.at(object_keyword).as_object()) {
-          collect_resource_anchors(entry.second, false, result);
-        }
-      }
-    }
-
-    for (const std::string_view array_keyword : {"allOf", "anyOf", "oneOf"}) {
-      if (subschema.defines(array_keyword) &&
-          subschema.at(array_keyword).is_array()) {
-        for (const auto &item : subschema.at(array_keyword).as_array()) {
-          collect_resource_anchors(item, false, result);
-        }
-      }
-    }
-
-    for (const std::string_view single_keyword :
-         {"additionalProperties", "additionalItems", "not"}) {
-      if (subschema.defines(single_keyword)) {
-        collect_resource_anchors(subschema.at(single_keyword), false, result);
-      }
-    }
-
-    if (subschema.defines("items")) {
-      const auto &items{subschema.at("items")};
-      if (items.is_array()) {
-        for (const auto &item : items.as_array()) {
-          collect_resource_anchors(item, false, result);
-        }
-      } else {
-        collect_resource_anchors(items, false, result);
-      }
-    }
-  }
-
-  static auto collect_invalid_anchors(const sourcemeta::core::JSON &subschema,
-                                      const bool is_root,
-                                      std::vector<std::string> &result)
-      -> void {
-    if (!subschema.is_object()) {
-      return;
-    }
-
-    if (!is_root && subschema_starts_sub_resource(subschema)) {
-      return;
-    }
-
-    if (subschema_id_fragment_is_invalid(subschema)) {
-      const auto fragment{extract_id_fragment(subschema.at("id"))};
-      result.push_back(fragment.value());
-    }
-
-    for (const std::string_view object_keyword :
-         {"definitions", "properties", "patternProperties", "dependencies"}) {
-      if (subschema.defines(object_keyword) &&
-          subschema.at(object_keyword).is_object()) {
-        for (const auto &entry : subschema.at(object_keyword).as_object()) {
-          collect_invalid_anchors(entry.second, false, result);
-        }
-      }
-    }
-
-    for (const std::string_view array_keyword : {"allOf", "anyOf", "oneOf"}) {
-      if (subschema.defines(array_keyword) &&
-          subschema.at(array_keyword).is_array()) {
-        for (const auto &item : subschema.at(array_keyword).as_array()) {
-          collect_invalid_anchors(item, false, result);
-        }
-      }
-    }
-
-    for (const std::string_view single_keyword :
-         {"additionalProperties", "additionalItems", "not"}) {
-      if (subschema.defines(single_keyword)) {
-        collect_invalid_anchors(subschema.at(single_keyword), false, result);
-      }
-    }
-
-    if (subschema.defines("items")) {
-      const auto &items{subschema.at("items")};
-      if (items.is_array()) {
-        for (const auto &item : items.as_array()) {
-          collect_invalid_anchors(item, false, result);
-        }
-      } else {
-        collect_invalid_anchors(items, false, result);
-      }
-    }
-  }
-
-  static auto
-  build_resource_rename_map(const sourcemeta::core::JSON &resource_root)
-      -> std::map<std::string, std::string> {
-    std::set<std::string> existing;
-    collect_resource_anchors(resource_root, true, existing);
-
-    std::vector<std::string> invalid;
-    collect_invalid_anchors(resource_root, true, invalid);
-
-    std::map<std::string, std::string> renames;
-    std::set<std::string> in_use{existing};
-    for (const auto &original : invalid) {
-      if (renames.contains(original)) {
-        continue;
-      }
-      in_use.erase(original);
-      const auto sanitized{sanitize_anchor_name(original, in_use)};
-      renames.emplace(original, sanitized);
-      in_use.insert(sanitized);
-    }
-    return renames;
-  }
-
-  static auto resource_has_descendant_with_pending_pattern(
-      const sourcemeta::core::JSON &subschema, const bool is_root) -> bool {
-    if (!subschema.is_object()) {
-      return false;
-    }
-    if (!is_root && subschema_starts_sub_resource(subschema)) {
-      return false;
-    }
-    if (!is_root && has_pending_draft_4_pattern(subschema)) {
-      return true;
-    }
-
-    for (const std::string_view object_keyword :
-         {"definitions", "properties", "patternProperties", "dependencies"}) {
-      if (subschema.defines(object_keyword) &&
-          subschema.at(object_keyword).is_object()) {
-        for (const auto &entry : subschema.at(object_keyword).as_object()) {
-          if (resource_has_descendant_with_pending_pattern(entry.second,
-                                                           false)) {
-            return true;
-          }
-        }
-      }
-    }
-
-    for (const std::string_view array_keyword : {"allOf", "anyOf", "oneOf"}) {
-      if (subschema.defines(array_keyword) &&
-          subschema.at(array_keyword).is_array()) {
-        for (const auto &item : subschema.at(array_keyword).as_array()) {
-          if (resource_has_descendant_with_pending_pattern(item, false)) {
-            return true;
-          }
-        }
-      }
-    }
-
-    for (const std::string_view single_keyword :
-         {"additionalProperties", "additionalItems", "not"}) {
-      if (subschema.defines(single_keyword)) {
-        if (resource_has_descendant_with_pending_pattern(
-                subschema.at(single_keyword), false)) {
-          return true;
-        }
-      }
-    }
-
-    if (subschema.defines("items")) {
-      const auto &items{subschema.at("items")};
-      if (items.is_array()) {
-        for (const auto &item : items.as_array()) {
-          if (resource_has_descendant_with_pending_pattern(item, false)) {
-            return true;
-          }
-        }
-      } else if (resource_has_descendant_with_pending_pattern(items, false)) {
-        return true;
-      }
-    }
-
-    return false;
-  }
-
-  static auto apply_anchor_renames_in_resource(
-      sourcemeta::core::JSON &subschema, const bool is_root,
-      const std::map<std::string, std::string> &renames,
-      const std::optional<std::string> &resource_base) -> void {
-    if (!subschema.is_object()) {
-      return;
-    }
-
-    if (!is_root && subschema_starts_sub_resource(subschema)) {
-      return;
-    }
-
-    if (subschema.defines("id") && subschema.at("id").is_string()) {
-      const auto &id_string{subschema.at("id").to_string()};
-      const sourcemeta::core::URI uri{id_string};
-      const auto fragment{uri.fragment()};
-      if (fragment.has_value() && !fragment.value().empty()) {
-        const auto rename_iter{renames.find(std::string{fragment.value()})};
-        if (rename_iter != renames.end()) {
-          if (uri.is_fragment_only()) {
-            subschema.assign("id",
-                             sourcemeta::core::JSON{"#" + rename_iter->second});
-          } else {
-            const auto without_fragment{uri.recompose_without_fragment()};
-            subschema.assign(
-                "id", sourcemeta::core::JSON{(without_fragment.has_value()
-                                                  ? without_fragment.value()
-                                                  : std::string{}) +
-                                             "#" + rename_iter->second});
-          }
-        }
-      }
-    }
-
-    if (subschema.defines("$ref") && subschema.at("$ref").is_string()) {
-      const auto &ref_string{subschema.at("$ref").to_string()};
-      const sourcemeta::core::URI ref_uri{ref_string};
-      const auto fragment{ref_uri.fragment()};
-      if (fragment.has_value() &&
-          renames.contains(std::string{fragment.value()})) {
-        const auto without_fragment{ref_uri.recompose_without_fragment()};
-        const bool same_base =
-            ref_uri.is_fragment_only() ||
-            (resource_base.has_value() && without_fragment.has_value() &&
-             without_fragment.value() == resource_base.value());
-        if (same_base) {
-          const auto &new_name{renames.at(std::string{fragment.value()})};
-          subschema.assign(
-              "$ref", sourcemeta::core::JSON{
-                          ref_uri.is_fragment_only()
-                              ? "#" + new_name
-                              : (without_fragment.value() + "#" + new_name)});
-        }
-      }
-    }
-
-    for (const std::string_view object_keyword :
-         {"definitions", "properties", "patternProperties", "dependencies"}) {
-      if (subschema.defines(object_keyword) &&
-          subschema.at(object_keyword).is_object()) {
-        std::vector<std::string> keys;
-        keys.reserve(subschema.at(object_keyword).size());
-        for (const auto &entry : subschema.at(object_keyword).as_object()) {
-          keys.push_back(entry.first);
-        }
-        for (const auto &key : keys) {
-          apply_anchor_renames_in_resource(subschema.at(object_keyword).at(key),
-                                           false, renames, resource_base);
-        }
-      }
-    }
-
-    for (const std::string_view array_keyword : {"allOf", "anyOf", "oneOf"}) {
-      if (subschema.defines(array_keyword) &&
-          subschema.at(array_keyword).is_array()) {
-        auto &array_value{subschema.at(array_keyword)};
-        for (std::size_t index{0}; index < array_value.size(); ++index) {
-          apply_anchor_renames_in_resource(array_value.at(index), false,
-                                           renames, resource_base);
-        }
-      }
-    }
-
-    for (const std::string_view single_keyword :
-         {"additionalProperties", "additionalItems", "not"}) {
-      if (subschema.defines(single_keyword)) {
-        apply_anchor_renames_in_resource(subschema.at(single_keyword), false,
-                                         renames, resource_base);
-      }
-    }
-
-    if (subschema.defines("items")) {
-      auto &items{subschema.at("items")};
-      if (items.is_array()) {
-        for (std::size_t index{0}; index < items.size(); ++index) {
-          apply_anchor_renames_in_resource(items.at(index), false, renames,
-                                           resource_base);
-        }
-      } else {
-        apply_anchor_renames_in_resource(items, false, renames, resource_base);
-      }
-    }
-  }
-
-  static auto resource_needs_anchor_sanitization(
-      const sourcemeta::core::JSON &resource_root) -> bool {
-    std::vector<std::string> invalid;
-    collect_invalid_anchors(resource_root, true, invalid);
-    return !invalid.empty();
-  }
-
-  static auto enclosing_resource_has_pending_sanitization(
-      const sourcemeta::core::SchemaFrame::Location &location,
-      const sourcemeta::core::JSON &root,
-      const sourcemeta::core::SchemaFrame &frame) -> bool {
-    std::optional<sourcemeta::core::WeakPointer> closest;
-    frame.for_each_location(
-        [&](const sourcemeta::core::SchemaReferenceType, const std::string_view,
-            const sourcemeta::core::SchemaFrame::Location &entry) -> void {
-          const bool entry_is_resource_scope =
-              entry.type ==
-                  sourcemeta::core::SchemaFrame::LocationType::Resource ||
-              entry.pointer.empty();
-          if (!entry_is_resource_scope) {
-            return;
-          }
-          if (entry.pointer.size() > location.pointer.size()) {
-            return;
-          }
-          bool is_ancestor{true};
-          for (std::size_t index{0}; index < entry.pointer.size(); ++index) {
-            if (!(entry.pointer.at(index) == location.pointer.at(index))) {
-              is_ancestor = false;
-              break;
-            }
-          }
-          if (!is_ancestor) {
-            return;
-          }
-          if (!closest.has_value() ||
-              entry.pointer.size() > closest.value().size()) {
-            closest = entry.pointer;
-          }
-        });
-    if (!closest.has_value()) {
-      return false;
-    }
-    const auto closest_pointer{sourcemeta::core::to_pointer(closest.value())};
-    const auto &resource_schema{sourcemeta::core::get(root, closest_pointer)};
-    return resource_needs_anchor_sanitization(resource_schema);
   }
 };

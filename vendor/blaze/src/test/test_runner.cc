@@ -64,7 +64,8 @@ auto TestSuite::run(const Callback &callback) -> Result {
           evaluate_test_case(this->evaluator, schema_fast, test_case)};
       const auto end{std::chrono::steady_clock::now()};
       step += 1;
-      callback(target, step, total, test_case, outcome, start, end);
+      callback(target, target_index, step, total, test_case, outcome, start,
+               end);
       if (outcome.passed) {
         result.passed += 1;
       }

@@ -30,7 +30,7 @@ WRITE expected_0.txt UNTIL EOF
 2> error: Invalid regular expression
 2>   at regex [invalid(
 2>   at file path [CWD]/test.json
-2>   at location "/$defs/https:~1~1example.com~1invalid-regex-schema/pattern"
+2>   at location "/pattern"
 2>   at base uri https://example.com/invalid-regex-schema
 2>
 2> Regular expressions in JSON Schema are expected to follow ECMA-262,
@@ -50,7 +50,7 @@ WRITE expected_1.txt UNTIL EOF
 1>   "error": "Invalid regular expression",
 1>   "regex": "[invalid(",
 1>   "filePath": "[CWD]/test.json",
-1>   "location": "/$defs/https:~1~1example.com~1invalid-regex-schema/pattern",
+1>   "location": "/pattern",
 1>   "baseURI": "https://example.com/invalid-regex-schema"
 1> }
 EOF

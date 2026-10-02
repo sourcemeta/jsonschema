@@ -1887,16 +1887,16 @@ auto compiler_draft3_applicator_additionalitems_with_options(
 
   assert(schema_context.schema.is_object());
 
-  // Nothing to do here
+  // This keyword only has a say alongside an `items` array, as every other
+  // form of `items` already applies to every element. Draft 6 made a boolean a
+  // schema in its own right, so `items: true` is one of those forms rather
+  // than an absent `items`
   if (!schema_context.schema.defines("items") ||
-      schema_context.schema.at("items").is_object()) {
+      !schema_context.schema.at("items").is_array()) {
     return {};
   }
 
-  const auto cursor{(schema_context.schema.defines("items") &&
-                     schema_context.schema.at("items").is_array())
-                        ? schema_context.schema.at("items").size()
-                        : 0};
+  const auto cursor{schema_context.schema.at("items").size()};
 
   return compiler_draft3_applicator_additionalitems_from_cursor(
       context, schema_context, dynamic_context, cursor, annotate,
