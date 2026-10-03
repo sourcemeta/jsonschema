@@ -137,6 +137,31 @@ private:
   sourcemeta::core::Pointer location_;
 };
 
+// The counterpart for a description, whose Schema Objects declare their
+// identifiers within it in just the same way
+class OpenAPIEmbeddedResourceError : public std::runtime_error {
+public:
+  OpenAPIEmbeddedResourceError(std::string identifier,
+                               sourcemeta::core::Pointer location)
+      : std::runtime_error{"This identifier is declared by a Schema Object of "
+                           "an imported OpenAPI description, so only that "
+                           "description can reach it"},
+        identifier_{std::move(identifier)}, location_{std::move(location)} {}
+
+  [[nodiscard]] auto identifier() const noexcept -> const std::string & {
+    return this->identifier_;
+  }
+
+  [[nodiscard]] auto location() const noexcept
+      -> const sourcemeta::core::Pointer & {
+    return this->location_;
+  }
+
+private:
+  std::string identifier_;
+  sourcemeta::core::Pointer location_;
+};
+
 class OpenAPIIdentifierConflictError : public std::runtime_error {
 public:
   OpenAPIIdentifierConflictError(std::string identifier,
@@ -1805,6 +1830,26 @@ inline auto try_catch(const sourcemeta::core::Options &options,
       const sourcemeta::core::FileError<SchemaEmbeddedResourceError> &error) {
     const auto is_json{options.contains("json")};
     print_exception(is_json, error);
+    return EXIT_SCHEMA_INPUT_ERROR;
+  } catch (const PositionError<
+           sourcemeta::core::FileError<OpenAPIEmbeddedResourceError>> &error) {
+    const auto is_json{options.contains("json")};
+    print_exception(is_json, error);
+    if (!is_json) {
+      std::cerr << "\nName a Schema Object of the description instead, as in "
+                   "`#/components/schemas/MySchema`\n";
+    }
+
+    return EXIT_SCHEMA_INPUT_ERROR;
+  } catch (
+      const sourcemeta::core::FileError<OpenAPIEmbeddedResourceError> &error) {
+    const auto is_json{options.contains("json")};
+    print_exception(is_json, error);
+    if (!is_json) {
+      std::cerr << "\nName a Schema Object of the description instead, as in "
+                   "`#/components/schemas/MySchema`\n";
+    }
+
     return EXIT_SCHEMA_INPUT_ERROR;
   } catch (
       const sourcemeta::core::FileError<sourcemeta::core::SchemaResolutionError>

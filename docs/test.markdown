@@ -70,8 +70,8 @@ as JSON files that follow a specific format:
 
 > [!IMPORTANT]
 > A `target` is a URI, fragment included, so a character that a URI fragment
-> cannot carry is written percent-encoded. This comes up for a Schema Object
-> that sits under a templated path, whose braces become `%7B` and `%7D`:
+> cannot carry is written percent-encoded. This often comes up for a Schema
+> Object that sits under a templated path, whose braces become `%7B` and `%7D`:
 > `./openapi.json#/paths/~1pets~1%7BpetId%7D/get/requestBody/content/application~1json/schema`.
 
 Every item in the `tests` array must be an object with the following
@@ -150,10 +150,6 @@ the Schema Object that the fragment names:
 }
 ```
 
-A description that names itself with `$self` answers to that name rather than
-to where it was read from, so a `target` may spell either. Any other revision,
-such as v3.0, is rejected rather than read as a schema.
-
 > [!IMPORTANT]
 > A Schema Object is named by a pointer into the description that holds it, even
 > when it declares an `$id` of its own. What answers to a URI is a document,
@@ -165,20 +161,6 @@ Use `--resolve/-r` for the other documents a description spans, and for the
 description itself when a `target` names it by URI, exactly as you would for
 schemas. One suite may mix the two kinds of target freely, as each `target` is
 resolved on its own.
-
-A reference written as a relative file path needs no importing at all, as it is
-resolved against the description that spells it and read from disk. That holds
-whether a Schema Object reaches another schema or the description reaches
-another description. A schema that arrives through a reference is named where it
-lands rather than where it was written, since a `target` addresses the
-description once everything it spans has been embedded into it. So a Path Item
-brought in from another document is reached under the Components Object:
-
-```json
-{
-  "target": "./openapi.json#/components/pathItems/people/get/requestBody/content/application~1json/schema"
-}
-```
 
 Examples
 --------

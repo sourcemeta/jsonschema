@@ -39,11 +39,14 @@ REPLACE $CWD WITH '[CWD]' IN result_0.txt
 
 WRITE expected_0.txt UNTIL EOF
 1> [CWD]/test.json:
-2> error: Could not resolve the reference to an external schema
+2> error: This identifier is declared by a Schema Object of an imported OpenAPI description, so only that description can reach it
 2>   at identifier https://example.com/person
-2>   at file path [CWD]/test.json
+2>   at line 7
+2>   at column 7
+2>   at file path [CWD]/openapi.json
+2>   at location "/components/schemas/Person"
 2>
-2> This is likely because you forgot to import such schema using `--resolve/-r`
+2> Name a Schema Object of the description instead, as in `#/components/schemas/MySchema`
 EOF
 
 COMPARE result_0.txt AGAINST expected_0.txt

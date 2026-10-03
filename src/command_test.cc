@@ -230,6 +230,7 @@ auto target_not_schema(const sourcemeta::core::JSON &document,
 // reaches for what a reference names
 auto resolve_base(const sourcemeta::core::SchemaResolver &schema_resolver,
                   const sourcemeta::core::OpenAPIResolver &openapi_resolver,
+                  sourcemeta::jsonschema::CustomResolver &custom_resolver,
                   const std::string &dialect,
                   const sourcemeta::core::JSON::String &base)
     -> TestTargets::Entry {
@@ -256,13 +257,10 @@ auto resolve_base(const sourcemeta::core::SchemaResolver &schema_resolver,
 
   const auto description{openapi_resolver(base)};
   if (!description.has_value()) {
-    // TODO: An identifier that a Schema Object of an imported description
-    // declares lands here, where the only thing left to say is that nothing
-    // answers to it. The schema half of the resolver explains that case with
-    // `SchemaEmbeddedResourceError`, naming the file and the place within it,
-    // because importing a schema frames it. Doing the same for a description
-    // means framing one on import, which is what importing one deliberately
-    // avoids, so the better message waits on that trade being settled
+    // An imported description that declares this identifier within it is the
+    // one case worth explaining, as the usual advice to import whatever names
+    // it would have the user import what they already did
+    custom_resolver.report_description_resource(base);
     throw sourcemeta::core::SchemaResolutionError{
         base, "Could not resolve the reference to an external schema"};
   }
@@ -286,6 +284,7 @@ auto resolve_base(const sourcemeta::core::SchemaResolver &schema_resolver,
 auto resolve_test_target(
     const sourcemeta::core::SchemaResolver &schema_resolver,
     const sourcemeta::core::OpenAPIResolver &openapi_resolver,
+    sourcemeta::jsonschema::CustomResolver &custom_resolver,
     const std::string &dialect, const sourcemeta::core::JSON::String &target,
     TestTargets &targets) -> sourcemeta::blaze::TestTarget {
   // RFC 3986 Section 3.5 makes a fragment address a place within a resource
@@ -298,7 +297,7 @@ auto resolve_test_target(
   if (match == targets.bases.cend()) {
     match = targets.bases
                 .emplace(base, resolve_base(schema_resolver, openapi_resolver,
-                                            dialect, base))
+                                            custom_resolver, dialect, base))
                 .first;
   }
 
@@ -320,6 +319,7 @@ auto resolve_test_target(
 auto parse_test_suite(const sourcemeta::jsonschema::InputJSON &entry,
                       const sourcemeta::core::SchemaResolver &schema_resolver,
                       const sourcemeta::core::OpenAPIResolver &openapi_resolver,
+                      sourcemeta::jsonschema::CustomResolver &custom_resolver,
                       const std::string &dialect,
                       const std::optional<sourcemeta::blaze::Tweaks> &tweaks,
                       TestTargets &targets) -> sourcemeta::blaze::TestSuite {
@@ -331,10 +331,10 @@ auto parse_test_suite(const sourcemeta::jsonschema::InputJSON &entry,
         // `dataPath` and `rdfPath` entries are opened from it
         entry.from_stdin ? std::filesystem::current_path()
                          : entry.resolution_base.parent_path(),
-        [&schema_resolver, &openapi_resolver, &dialect,
+        [&schema_resolver, &openapi_resolver, &custom_resolver, &dialect,
          &targets](const sourcemeta::core::JSON::String &target) {
-          return resolve_test_target(schema_resolver, openapi_resolver, dialect,
-                                     target, targets);
+          return resolve_test_target(schema_resolver, openapi_resolver,
+                                     custom_resolver, dialect, target, targets);
         },
         schema_resolver, sourcemeta::core::schema_walker,
         sourcemeta::blaze::default_schema_compiler, tweaks);
@@ -474,11 +474,13 @@ auto run_suite_as_text(const sourcemeta::core::Options &options,
         options, options.contains("http"), dialect, configuration)};
     const auto &openapi_resolver{sourcemeta::jsonschema::openapi_resolver(
         options, options.contains("http"), dialect, configuration)};
+    auto &custom_resolver{sourcemeta::jsonschema::resolver_instance(
+        options, options.contains("http"), dialect, configuration)};
     const auto trace{options.contains("trace")};
 
     TestTargets targets;
     auto test_suite{parse_test_suite(
-        entry, schema_resolver, openapi_resolver, dialect,
+        entry, schema_resolver, openapi_resolver, custom_resolver, dialect,
         sourcemeta::jsonschema::format_assertion_tweaks(options), targets)};
 
     stream << sourcemeta::jsonschema::paint(
@@ -699,10 +701,12 @@ auto run_suite_as_ctrf(const sourcemeta::core::Options &options,
         options, options.contains("http"), dialect, configuration)};
     const auto &openapi_resolver{sourcemeta::jsonschema::openapi_resolver(
         options, options.contains("http"), dialect, configuration)};
+    auto &custom_resolver{sourcemeta::jsonschema::resolver_instance(
+        options, options.contains("http"), dialect, configuration)};
 
     TestTargets targets;
     auto test_suite{parse_test_suite(
-        entry, schema_resolver, openapi_resolver, dialect,
+        entry, schema_resolver, openapi_resolver, custom_resolver, dialect,
         sourcemeta::jsonschema::format_assertion_tweaks(options), targets)};
 
     const auto file_path{entry.first};

@@ -788,6 +788,72 @@ public:
     return stored;
   }
 
+  // Where a place of a file sits, for a file that was read without keeping
+  // track. Nothing is reported rather than guessed when it cannot be read back
+  static auto read_position(const std::filesystem::path &path,
+                            const sourcemeta::core::Pointer &location)
+      -> std::optional<std::pair<std::uint64_t, std::uint64_t>> {
+    sourcemeta::core::PointerPositionTracker positions;
+    sourcemeta::core::JSON document{nullptr};
+    try {
+      sourcemeta::core::read_yaml_or_json(path, document, std::ref(positions));
+    } catch (...) {
+      return std::nullopt;
+    }
+
+    const auto position{positions.get(location)};
+    if (!position.has_value()) {
+      return std::nullopt;
+    }
+
+    return std::make_pair(std::get<0>(position.value()),
+                          std::get<1>(position.value()));
+  }
+
+  // A Schema Object that a description holds declares its identifier within
+  // that description, so nothing outside it ever answers to that name. What
+  // reveals those identifiers is framing, and importing a description
+  // deliberately does not frame one, so this looks only once both halves have
+  // already failed to answer, where knowing beats what it costs to find out
+  auto report_description_resource(const std::string_view identifier) -> void {
+    for (const auto &[retrieval, description] : this->descriptions_) {
+      std::optional<sourcemeta::core::OpenAPIFrame> frame;
+      try {
+        frame.emplace(description, sourcemeta::core::schema_walker,
+                      std::ref(*this), retrieval);
+      } catch (...) {
+        // Whatever keeps a description from being framed is not what we came
+        // to report, and it has nothing to say about this identifier either
+        continue;
+      }
+
+      const auto match{frame.value().schemas().traverse(identifier)};
+      if (!match.has_value()) {
+        continue;
+      }
+
+      const auto origin{this->description_origins_.find(retrieval)};
+      const auto path{origin == this->description_origins_.cend()
+                          ? identifier_path(retrieval)
+                          : origin->second};
+      auto location{sourcemeta::core::to_pointer(match.value().get().pointer)};
+
+      // Importing a description keeps the document rather than where each part
+      // of it was written, so where to point is read back here, on a path that
+      // ends in a failure either way
+      const auto position{read_position(path, location)};
+      if (position.has_value()) {
+        throw PositionError<
+            sourcemeta::core::FileError<OpenAPIEmbeddedResourceError>>(
+            position.value().first, position.value().second, path,
+            std::string{identifier}, std::move(location));
+      }
+
+      throw sourcemeta::core::FileError<OpenAPIEmbeddedResourceError>(
+          path, std::string{identifier}, std::move(location));
+    }
+  }
+
 private:
   // Framing a schema is what reveals the identifiers it declares, but framing
   // needs its meta-schema resolved first, which is precisely what an entry
