@@ -25,8 +25,7 @@ WRITE expected_0.txt UNTIL EOF
 2>   at value ./openapi.json#/paths/~1pets~1{petId}/get/responses/200
 2>   at file path [CWD]/test.json
 2>
-2> A template expression of a path is spelled with percent-encoded braces,
-2> as in `%7BpetId%7D`
+2> A path template is spelled with percent-encoded braces, as in `%7BpetId%7D`
 EOF
 
 COMPARE result_0.txt AGAINST expected_0.txt

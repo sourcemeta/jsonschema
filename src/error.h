@@ -1647,10 +1647,8 @@ inline auto try_catch(const sourcemeta::core::Options &options,
     const auto is_json{options.contains("json")};
     print_exception(is_json, error);
     if (!is_json && error.templated()) {
-      std::cerr << "\n";
-      std::cerr << "A template expression of a path is spelled with "
-                   "percent-encoded braces,\n";
-      std::cerr << "as in `%7BpetId%7D`\n";
+      std::cerr << "\nA path template is spelled with percent-encoded braces, "
+                   "as in `%7BpetId%7D`\n";
     }
 
     return EXIT_OTHER_INPUT_ERROR;
