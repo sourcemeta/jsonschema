@@ -12,6 +12,11 @@ public:
   auto operator=(const SchemaTransformRule &) -> SchemaTransformRule & = delete;
   auto operator=(SchemaTransformRule &&) -> SchemaTransformRule & = delete;
 
+  /// Whether this rule writes outside the subschema it fires on. Such a rule
+  /// is offered a subschema the ladder does not name, because what it is
+  /// allowed to rewrite is its own business rather than the driver's
+  using writes_outside_itself = std::false_type;
+
   [[nodiscard]] auto name() const noexcept -> std::string_view {
     return this->name_;
   }

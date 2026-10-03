@@ -16,6 +16,9 @@ public:
         vocabularies.contains(SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_3) &&
         schema.is_object());
 
+    ONLY_CONTINUE_IF(
+        promoted_keyword_is_author_data(schema, PROMOTING_DIALECT));
+
     for (const auto &keyword : KEYWORDS) {
       if (schema.defines(keyword)) {
         return true;
@@ -61,6 +64,9 @@ public:
   }
 
 private:
+  static constexpr std::string_view PROMOTING_DIALECT{
+      "http://json-schema.org/draft-04/schema#"};
+
   // NOLINTNEXTLINE(cert-err58-cpp,bugprone-throwing-static-initialization)
   static inline const std::array<std::string_view, 7> KEYWORDS{
       {"multipleOf", "maxProperties", "minProperties", "allOf", "anyOf",

@@ -275,6 +275,24 @@ static auto load_rule(sourcemeta::blaze::SchemaTransformer &bundle,
     throw sourcemeta::core::FileError<
         sourcemeta::blaze::CompilerReferenceTargetNotSchemaError>(rule_path,
                                                                   error);
+  } catch (const sourcemeta::blaze::CompilerInvalidRegexError &error) {
+    throw sourcemeta::core::FileError<
+        sourcemeta::blaze::CompilerInvalidRegexError>(rule_path, error);
+  } catch (const sourcemeta::blaze::CompilerError &error) {
+    throw sourcemeta::core::FileError<sourcemeta::blaze::CompilerError>(
+        rule_path, error);
+  } catch (const sourcemeta::core::SchemaKeywordError &error) {
+    throw sourcemeta::core::FileError<sourcemeta::core::SchemaKeywordError>(
+        rule_path, error);
+  } catch (const sourcemeta::core::SchemaFrameError &error) {
+    throw sourcemeta::core::FileError<sourcemeta::core::SchemaFrameError>(
+        rule_path, error);
+  } catch (const sourcemeta::core::SchemaAnchorCollisionError &error) {
+    throw sourcemeta::core::FileError<
+        sourcemeta::core::SchemaAnchorCollisionError>(rule_path, error);
+  } catch (const sourcemeta::core::SchemaReferenceError &error) {
+    throw sourcemeta::core::FileError<sourcemeta::core::SchemaReferenceError>(
+        rule_path, error.identifier(), error.location(), error.what());
   } catch (const sourcemeta::core::SchemaUnknownBaseDialectError &) {
     throw sourcemeta::core::FileError<
         sourcemeta::core::SchemaUnknownBaseDialectError>(rule_path);
@@ -284,9 +302,21 @@ static auto load_rule(sourcemeta::blaze::SchemaTransformer &bundle,
   } catch (const sourcemeta::core::SchemaVocabularyError &error) {
     throw sourcemeta::core::FileError<sourcemeta::core::SchemaVocabularyError>(
         rule_path, error.uri(), error.what());
+  } catch (
+      const sourcemeta::core::SchemaRelativeMetaschemaResolutionError &error) {
+    throw sourcemeta::core::FileError<
+        sourcemeta::core::SchemaRelativeMetaschemaResolutionError>(rule_path,
+                                                                   error);
   } catch (const sourcemeta::core::SchemaResolutionError &error) {
     throw sourcemeta::core::FileError<sourcemeta::core::SchemaResolutionError>(
         rule_path, error);
+  } catch (const sourcemeta::core::SchemaReferenceObjectResourceError &error) {
+    throw sourcemeta::core::FileError<
+        sourcemeta::core::SchemaReferenceObjectResourceError>(
+        rule_path, error.identifier());
+  } catch (const sourcemeta::core::SchemaError &error) {
+    throw sourcemeta::core::FileError<sourcemeta::core::SchemaError>(
+        rule_path, error.what());
   }
 }
 
@@ -695,6 +725,15 @@ auto sourcemeta::jsonschema::lint(const sourcemeta::core::Options &options)
               throw sourcemeta::core::FileError<
                   sourcemeta::core::SchemaResolutionError>(
                   entry.resolution_base, error);
+            } catch (const sourcemeta::core::SchemaReferenceObjectResourceError
+                         &error) {
+              if (printed_progress) {
+                std::cerr << "\n";
+              }
+
+              throw sourcemeta::core::FileError<
+                  sourcemeta::core::SchemaReferenceObjectResourceError>(
+                  entry.resolution_base, error.identifier());
             } catch (...) {
               if (printed_progress) {
                 std::cerr << "\n";
@@ -877,6 +916,11 @@ auto sourcemeta::jsonschema::lint(const sourcemeta::core::Options &options)
               throw sourcemeta::core::FileError<
                   sourcemeta::core::SchemaResolutionError>(
                   entry.resolution_base, error);
+            } catch (const sourcemeta::core::SchemaReferenceObjectResourceError
+                         &error) {
+              throw sourcemeta::core::FileError<
+                  sourcemeta::core::SchemaReferenceObjectResourceError>(
+                  entry.resolution_base, error.identifier());
             }
           });
 

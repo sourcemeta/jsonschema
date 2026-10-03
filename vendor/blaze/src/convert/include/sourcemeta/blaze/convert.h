@@ -47,15 +47,17 @@ enum class ConvertTarget : std::uint8_t {
 /// Convert the given schema, in place, to the given dialect. Only upgrades are
 /// supported, so a schema already on that dialect or a newer one is left as
 /// is. A document that describes itself or that carries the meta-schema
-/// something in it declares raises `ConvertUnsupportedMetaschemaError`, and one
+/// something in it declares raises `ConvertUnsupportedMetaschemaError`. One
 /// that sits on a dialect outside the official ladder raises
-/// `ConvertUnsupportedDialectError`. Note that a document whose dialect cannot
-/// be resolved or framed at all fails before any of those apply, propagating
-/// the error that resolution or framing raised rather than one of this
-/// module's, so a caller that must not fault on hostile input catches more than
-/// the `Convert*Error` family. Conversion mutates in place and does not roll
-/// back, so a document that raises part way through is left half converted. For
-/// example:
+/// `ConvertUnsupportedDialectError` whatever the requested target is, as this
+/// conversion has no rules for moving a schema off such a dialect and will not
+/// convert the document around one either. Note
+/// that a document whose dialect cannot be resolved or framed at all fails
+/// before any of those apply, propagating the error that resolution or framing
+/// raised rather than one of this module's, so a caller that must not fault on
+/// hostile input catches more than the `Convert*Error` family. Conversion
+/// mutates in place and does not roll back, so a document that raises part way
+/// through is left half converted. For example:
 ///
 /// ```cpp
 /// #include <sourcemeta/blaze/convert.h>

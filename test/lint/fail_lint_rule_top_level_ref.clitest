@@ -1,0 +1,47 @@
+WRITE rule.json UNTIL EOF
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "my_rule",
+  "description": "Test rule",
+  "$ref": "#/definitions/check",
+  "definitions": {
+    "check": { "not": { "type": "string" } }
+  }
+}
+EOF
+
+WRITE schema.json UNTIL EOF
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Test",
+  "description": "Test schema",
+  "examples": [ "foo" ],
+  "type": "string"
+}
+EOF
+
+// Schema input error
+RUN lint --rule rule.json schema.json STDIN /dev/null IN . INTO result_0.txt EXPECTING 4
+
+REPLACE $CWD WITH '[CWD]' IN result_0.txt
+
+WRITE expected_0.txt UNTIL EOF
+2> error: Cannot bundle a JSON Schema Draft 7 or older with a top-level `$ref` (which overrides sibling keywords) without introducing undefined behavior
+2>   at file path [CWD]/rule.json
+EOF
+
+COMPARE result_0.txt AGAINST expected_0.txt
+
+// Schema input error
+RUN lint --rule rule.json --json schema.json STDIN /dev/null IN . INTO result_1.txt EXPECTING 4
+
+REPLACE $CWD WITH '[CWD]' IN result_1.txt
+
+WRITE expected_1.txt UNTIL EOF
+1> {
+1>   "error": "Cannot bundle a JSON Schema Draft 7 or older with a top-level `$ref` (which overrides sibling keywords) without introducing undefined behavior",
+1>   "filePath": "[CWD]/rule.json"
+1> }
+EOF
+
+COMPARE result_1.txt AGAINST expected_1.txt

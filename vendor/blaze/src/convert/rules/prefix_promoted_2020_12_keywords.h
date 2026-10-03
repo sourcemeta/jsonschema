@@ -16,6 +16,9 @@ public:
                          SchemaVocabularies::Known::JSON_SCHEMA_2019_09_CORE) &&
                      schema.is_object());
 
+    ONLY_CONTINUE_IF(
+        promoted_keyword_is_author_data(schema, PROMOTING_DIALECT));
+
     return schema.defines_any({"prefixItems", "$dynamicAnchor", "$dynamicRef"});
   }
 
@@ -55,6 +58,9 @@ public:
   }
 
 private:
+  static constexpr std::string_view PROMOTING_DIALECT{
+      "https://json-schema.org/draft/2020-12/schema"};
+
   // NOLINTNEXTLINE(cert-err58-cpp,bugprone-throwing-static-initialization)
   static inline const std::array<std::string_view, 3> KEYWORDS{
       {"prefixItems", "$dynamicAnchor", "$dynamicRef"}};

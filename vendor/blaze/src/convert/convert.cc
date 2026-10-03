@@ -34,13 +34,14 @@ namespace {
 #include "helpers.h"
 #include "rule.h"
 
-using Rule = std::tuple<std::unique_ptr<SchemaTransformRule>, bool>;
+using Rule = std::tuple<std::unique_ptr<SchemaTransformRule>, bool, bool>;
 
 /// Construct a rule entry for the given rule type
 template <std::derived_from<SchemaTransformRule> T>
 [[nodiscard]] auto make_rule() -> Rule {
   return {std::make_unique<T>(),
-          std::is_same_v<typename T::reframe_after_transform, std::true_type>};
+          std::is_same_v<typename T::reframe_after_transform, std::true_type>,
+          std::is_same_v<typename T::writes_outside_itself, std::true_type>};
 }
 
 /// A reference that lands on something other than a schema is not a reference
@@ -62,8 +63,8 @@ auto assert_schema_references(const core::SchemaFrame &frame) -> void {
 /// Conversion renames keywords, while a meta-schema names those same keywords
 /// as ordinary data that nothing renames alongside them. Until the two can be
 /// told apart, a document that describes itself or that carries the
-/// meta-schema something in it declares is refused. A dialect the ladder does
-/// not name is refused too, as there are no rules for moving a schema off it
+/// meta-schema something in it declares is refused, and so is any resource
+/// read as a dialect the ladder does not name
 auto assert_convertible_dialects(const core::JSON &schema,
                                  const core::SchemaFrame &frame,
                                  const std::string_view default_id) -> void {
@@ -75,19 +76,69 @@ auto assert_convertible_dialects(const core::JSON &schema,
                                             core::EMPTY_POINTER};
   }
 
+  // A bundled meta-schema is what the resources naming it are refused for, so
+  // it is looked for across the whole document before any of them is reported.
+  // Otherwise whichever the frame happened to reach first would decide, and a
+  // document carrying its own meta-schema would be reported against the
+  // resource using it rather than against the meta-schema it cannot move
   frame.for_each_subschema(
       [&schema, &frame](const core::SchemaFrame::Location &location) -> void {
         auto pointer{core::to_pointer(location.pointer)};
-        if (is_metaschema_target(core::get(schema, pointer), frame,
-                                 location.pointer)) {
-          throw ConvertUnsupportedMetaschemaError{location.dialect,
-                                                  std::move(pointer)};
+        const auto &subschema{core::get(schema, pointer)};
+        if (!is_metaschema_target(subschema, frame, location.pointer)) {
+          return;
         }
 
-        if (!names_ladder_dialect(location.dialect)) {
-          throw ConvertUnsupportedDialectError{location.dialect,
-                                               std::move(pointer)};
+        // The meta-schema that cannot be moved is what the error names. The
+        // dialect that meta-schema is itself written in is an official one
+        // the conversion supports perfectly well, so naming that instead
+        // would report the evidence rather than the reason
+        const auto *identifier{subschema.try_at(
+            core::schema_identifier_keyword(location.base_dialect))};
+        throw ConvertUnsupportedMetaschemaError{
+            identifier != nullptr && identifier->is_string()
+                ? std::string_view{identifier->to_string()}
+                : location.dialect,
+            std::move(pointer)};
+      });
+
+  // A dialect the ladder does not name has no rules for moving a schema off
+  // it, and this conversion does not go near one. Carrying it along to the
+  // targets it happens to outrank would convert the document around it and
+  // leave the author to work out which parts moved, so a custom dialect is
+  // refused outright whatever the target is
+  frame.for_each_subschema(
+      [&schema](const core::SchemaFrame::Location &location) -> void {
+        auto pointer{core::to_pointer(location.pointer)};
+
+        // What a subschema says about itself counts even where framing does
+        // not read it that way. The ladder's own marker is read ahead of
+        // `$schema`, so a document naming a custom meta-schema and carrying a
+        // marker beside it frames as whatever the marker says, and asking
+        // framing alone would let it through to be rewritten and have the
+        // marker cleaned away underneath it.
+        //
+        // Only where a resource begins, though. A `$schema` deeper inside one
+        // declares nothing, which is what both Draft 7 core 7 and 2019-09
+        // core 8.1.1 say, so refusing over it would turn a string the author
+        // left behind into an unconvertible document
+        const auto &subschema{core::get(schema, pointer)};
+        if (subschema.is_object() &&
+            location.pointer.size() == location.relative_pointer) {
+          const auto *declared{subschema.try_at("$schema")};
+          if (declared != nullptr && declared->is_string() &&
+              !names_ladder_dialect(declared->to_string())) {
+            throw ConvertUnsupportedDialectError{declared->to_string(),
+                                                 std::move(pointer)};
+          }
         }
+
+        if (names_ladder_dialect(location.dialect)) {
+          return;
+        }
+
+        throw ConvertUnsupportedDialectError{location.dialect,
+                                             std::move(pointer)};
       });
 }
 
@@ -103,9 +154,13 @@ auto assert_convertible_metaschema(const core::JSON &schema,
     return;
   }
 
-  // Naming a dialect is what every schema does and says nothing about
-  // extending it. Only a reference that pulls the other document's keywords in
-  // is the one that cannot be carried over
+  // Declaring `$vocabulary` is what makes a schema a meta-schema here, and a
+  // meta-schema that names an official one anywhere other than in its own
+  // `$schema` is refused wherever that reference sits. Where the reference
+  // appears does not soften it: the conversion cannot know whether the author
+  // meant the schemas it describes to move dialect alongside it, and silently
+  // bumping the meta-schema while leaving the reference on the old dialect
+  // would decide that for them
   const auto extends_official{frame.any_reference(
       [](const core::SchemaReferenceType, const core::WeakPointer &origin,
          const core::SchemaFrame::Reference &reference) -> bool {
@@ -125,7 +180,8 @@ auto assert_convertible_metaschema(const core::JSON &schema,
   frame.for_each_subschema(
       [&schema](const core::SchemaFrame::Location &location) -> void {
         auto pointer{core::to_pointer(location.pointer)};
-        if (core::get(schema, pointer).defines("$vocabulary")) {
+        const auto &subschema{core::get(schema, pointer)};
+        if (subschema.is_object() && subschema.defines("$vocabulary")) {
           throw ConvertUnsupportedMetaschemaError{location.dialect,
                                                   std::move(pointer)};
         }
@@ -203,7 +259,21 @@ auto apply(const std::vector<Rule> &rules, sourcemeta::core::JSON &schema,
           const auto current_vocabularies{
               frame->vocabularies(location, resolver)};
 
-          for (const auto &[rule, reframe_after_transform] : rules) {
+          for (const auto &[rule, reframe_after_transform, writes_outside] :
+               rules) {
+            // A dialect the ladder does not name has no rules for moving a
+            // schema off it, so nothing may rewrite a subschema that is read
+            // as one. Leaving this to each rule's own vocabulary gate does not
+            // hold: core derives a pre-2019-09 dialect's vocabularies from its
+            // base dialect, so an off-ladder resource does carry the rung's
+            // vocabulary and does match those gates. A rule that writes
+            // outside itself answers for what it touches, and an empty dialect
+            // is the caller's to supply and is not off the ladder
+            if (!writes_outside && !location.dialect.empty() &&
+                !names_ladder_dialect(location.dialect)) {
+              continue;
+            }
+
             const auto outcome{rule->condition(current, schema,
                                                current_vocabularies, *frame,
                                                location, walker, resolver)};
@@ -233,14 +303,24 @@ auto apply(const std::vector<Rule> &rules, sourcemeta::core::JSON &schema,
                 return;
               }
 
-              const auto &target{destination.value().get()};
+              const auto &landing{destination.value().get()};
+
+              // A fragment shaped like a pointer is not necessarily one. Draft
+              // 4 placed no restriction on the fragment an identifier carries,
+              // so an anchor may be named something like `/definitions/x`, and
+              // framing hands that name the URI the pointer would otherwise
+              // have had. Such a reference follows the anchor when it moves
+              // rather than keeping the location it looks like it names
+              if (landing.type == core::SchemaFrame::LocationType::Anchor) {
+                return;
+              }
               potentially_broken_references.push_back(
                   {.origin = core::to_pointer(origin),
                    .original = core::JSON::String{reference.original},
                    .destination = reference.destination,
                    .fragment = core::JSON::String{reference.fragment.value()},
-                   .target_pointer = core::to_pointer(target.pointer),
-                   .target_relative_pointer = target.relative_pointer});
+                   .target_pointer = core::to_pointer(landing.pointer),
+                   .target_relative_pointer = landing.relative_pointer});
             });
 
             rule->prepare(*frame, location);
@@ -363,11 +443,14 @@ auto apply(const std::vector<Rule> &rules, sourcemeta::core::JSON &schema,
 #include "rules/empty_object_as_true.h"
 #include "rules/enum_to_const.h"
 #include "rules/modern_official_dialect_with_empty_fragment.h"
+#include "rules/modern_official_dialect_with_http.h"
 #include "rules/prefix_promoted_2020_12_keywords.h"
 #include "rules/prefix_promoted_draft_2019_09_keywords.h"
 #include "rules/prefix_promoted_draft_4_keywords.h"
 #include "rules/prefix_promoted_draft_6_keywords.h"
 #include "rules/prefix_promoted_draft_7_keywords.h"
+#include "rules/sanitize_draft_4_anchors.h"
+#include "rules/shadow_stray_dialect_declaration.h"
 #include "rules/upgrade_2019_09_to_2020_12.h"
 #include "rules/upgrade_dialect_override_cleanup.h"
 #include "rules/upgrade_draft_3_to_draft_4.h"
@@ -385,10 +468,12 @@ auto convert(sourcemeta::core::JSON &schema,
              const ConvertTarget target, const std::string_view default_dialect,
              const std::string_view default_id) -> void {
   std::vector<Rule> rules;
-  rules.reserve(20);
+  rules.reserve(21);
+  rules.push_back(make_rule<ShadowStrayDialectDeclaration>());
   rules.push_back(make_rule<DraftOfficialDialectWithHttps>());
   rules.push_back(make_rule<DraftOfficialDialectWithoutEmptyFragment>());
   rules.push_back(make_rule<ModernOfficialDialectWithEmptyFragment>());
+  rules.push_back(make_rule<ModernOfficialDialectWithHttp>());
   rules.push_back(make_rule<PrefixPromotedDraft4Keywords>());
   rules.push_back(make_rule<UpgradeDraft3ToDraft4>());
 
@@ -396,6 +481,7 @@ auto convert(sourcemeta::core::JSON &schema,
       target == ConvertTarget::Draft201909 ||
       target == ConvertTarget::Draft202012) {
     rules.push_back(make_rule<PrefixPromotedDraft6Keywords>());
+    rules.push_back(make_rule<SanitizeDraft4Anchors>());
     rules.push_back(make_rule<UpgradeDraft4ToDraft6>());
     rules.push_back(make_rule<EmptyObjectAsTrue>());
     rules.push_back(make_rule<EnumToConst>());

@@ -1,0 +1,41 @@
+WRITE schema.json UNTIL EOF
+{
+  "$id": "https://example.com/shared-base-schema",
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "definitions": {
+    "foo": { "type": "string" },
+    "bar": { "type": "string" }
+  }
+}
+EOF
+
+WRITE test.json UNTIL EOF
+{
+  "target": [
+    "https://example.com/shared-base-schema#/definitions/foo",
+    "https://example.com/shared-base-schema#/definitions/bar"
+  ],
+  "tests": [
+    {
+      "description": "String is valid",
+      "valid": true,
+      "data": "foo"
+    },
+    {
+      "description": "Object is invalid",
+      "valid": false,
+      "data": {}
+    }
+  ]
+}
+EOF
+
+RUN test test.json --resolve schema.json STDIN /dev/null IN . INTO result_0.txt EXPECTING 0
+
+REPLACE $CWD WITH '[CWD]' IN result_0.txt
+
+WRITE expected_0.txt UNTIL EOF
+1> [CWD]/test.json: PASS 4/4
+EOF
+
+COMPARE result_0.txt AGAINST expected_0.txt

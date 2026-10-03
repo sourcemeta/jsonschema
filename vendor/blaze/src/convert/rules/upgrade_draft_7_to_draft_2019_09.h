@@ -68,6 +68,8 @@ public:
   }
 
 private:
+  static constexpr std::string_view DRAFT_3_URL{
+      "http://json-schema.org/draft-03/schema#"};
   static constexpr std::string_view DRAFT_4_URL{
       "http://json-schema.org/draft-04/schema#"};
   static constexpr std::string_view DRAFT_6_URL{
@@ -335,11 +337,22 @@ private:
            has_actionable_ref_siblings(subschema);
   }
 
+  static auto names_legacy_identifier(const std::string_view dialect) -> bool {
+    return dialect == DRAFT_3_URL || dialect == DRAFT_4_URL;
+  }
+
   static auto
   has_descendant_pending_pattern(const sourcemeta::core::JSON &subschema,
                                  const std::string_view descendant_dialect)
       -> bool {
     if (!subschema.is_object()) {
+      return false;
+    }
+
+    // A descendant read as a dialect the ladder does not name is never
+    // rewritten by anything, so it can never stop having work pending and
+    // waiting for it would block this upgrade for good
+    if (!names_ladder_dialect(descendant_dialect)) {
       return false;
     }
 
@@ -351,19 +364,27 @@ private:
       }
     }
 
-    if (subschema.defines("id") && subschema.at("id").is_string() &&
-        !subschema.defines("$id")) {
-      return true;
-    }
+    // Both of these name a keyword whose meaning depends on the dialect the
+    // descendant is read as. `id` identifies a resource through Draft 4 and is
+    // ordinary data from Draft 6 on, and the exclusive bounds are booleans over
+    // the same span and numbers afterwards. A descendant on a later dialect
+    // carrying either one is holding data that no rule will ever rewrite, so
+    // waiting for it would block this upgrade for good
+    if (names_legacy_identifier(descendant_dialect)) {
+      if (subschema.defines("id") && subschema.at("id").is_string() &&
+          !subschema.defines("$id")) {
+        return true;
+      }
 
-    const auto *exclusive_minimum{subschema.try_at("exclusiveMinimum")};
-    if (exclusive_minimum != nullptr && exclusive_minimum->is_boolean()) {
-      return true;
-    }
+      const auto *exclusive_minimum{subschema.try_at("exclusiveMinimum")};
+      if (exclusive_minimum != nullptr && exclusive_minimum->is_boolean()) {
+        return true;
+      }
 
-    const auto *exclusive_maximum{subschema.try_at("exclusiveMaximum")};
-    if (exclusive_maximum != nullptr && exclusive_maximum->is_boolean()) {
-      return true;
+      const auto *exclusive_maximum{subschema.try_at("exclusiveMaximum")};
+      if (exclusive_maximum != nullptr && exclusive_maximum->is_boolean()) {
+        return true;
+      }
     }
 
     if (descendant_dialect == DRAFT_4_URL) {
