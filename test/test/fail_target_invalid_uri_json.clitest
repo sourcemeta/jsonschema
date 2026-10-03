@@ -1,0 +1,27 @@
+WRITE test.json UNTIL EOF
+{
+  "target": "./openapi.json#/paths/~1pets~1{petId}/get/responses/200",
+  "tests": [
+    {
+      "description": "A string",
+      "valid": true,
+      "data": "foo"
+    }
+  ]
+}
+EOF
+
+// Other input error
+RUN test test.json --json STDIN /dev/null IN . INTO result_0.txt EXPECTING 6
+
+REPLACE $CWD WITH '[CWD]' IN result_0.txt
+
+WRITE expected_0.txt UNTIL EOF
+1> {
+1>   "error": "The test document `target` property is not a valid URI",
+1>   "value": "./openapi.json#/paths/~1pets~1{petId}/get/responses/200",
+1>   "filePath": "[CWD]/test.json"
+1> }
+EOF
+
+COMPARE result_0.txt AGAINST expected_0.txt

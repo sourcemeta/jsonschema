@@ -1,0 +1,47 @@
+// A description that names itself answers to that name, so a target spells it
+// rather than where the file happens to sit.
+
+WRITE openapi.json UNTIL EOF
+{
+  "openapi": "3.2.0",
+  "$self": "https://example.com/api",
+  "info": { "title": "Example", "version": "1.0.0" },
+  "paths": {},
+  "components": {
+    "schemas": {
+      "Person": {
+        "type": "object",
+        "required": [ "name" ]
+      }
+    }
+  }
+}
+EOF
+
+WRITE test.json UNTIL EOF
+{
+  "target": "https://example.com/api#/components/schemas/Person",
+  "tests": [
+    {
+      "description": "A person",
+      "valid": true,
+      "data": { "name": "Juan" }
+    },
+    {
+      "description": "Missing name",
+      "valid": false,
+      "data": {}
+    }
+  ]
+}
+EOF
+
+RUN test test.json --resolve openapi.json STDIN /dev/null IN . INTO result_0.txt EXPECTING 0
+
+REPLACE $CWD WITH '[CWD]' IN result_0.txt
+
+WRITE expected_0.txt UNTIL EOF
+1> [CWD]/test.json: PASS 2/2
+EOF
+
+COMPARE result_0.txt AGAINST expected_0.txt
