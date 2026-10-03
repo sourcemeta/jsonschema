@@ -22,6 +22,7 @@
 #include <cstdint>   // std::uint8_t
 #include <exception> // std::exception_ptr, std::current_exception, std::rethrow_exception
 #include <iostream>    // std::cout
+#include <map>         // std::map
 #include <memory>      // std::unique_ptr, std::make_unique
 #include <mutex>       // std::mutex, std::scoped_lock
 #include <optional>    // std::optional
@@ -29,7 +30,7 @@
 #include <string>      // std::string
 #include <string_view> // std::string_view
 #include <thread>      // std::this_thread
-#include <utility>     // std::unreachable
+#include <utility>     // std::unreachable, std::move
 #include <vector>      // std::vector
 
 #include "command.h"
@@ -158,10 +159,16 @@ auto print_rdf_failure(const sourcemeta::jsonschema::InputJSON &entry,
 }
 
 // A test suite borrows the document and the frame that each of its targets
-// resolved to, so whatever holds those must outlive it
+// resolved to, so whatever holds those must outlive it. Targets that share a
+// base share the one entry, as all that sets them apart is where in it the
+// schema under test sits
 struct TestTargets {
-  std::vector<std::unique_ptr<sourcemeta::core::JSON>> documents;
-  std::vector<std::unique_ptr<sourcemeta::core::SchemaFrame>> frames;
+  struct Entry {
+    std::unique_ptr<sourcemeta::core::JSON> document;
+    std::unique_ptr<sourcemeta::core::SchemaFrame> frame;
+  };
+
+  std::map<sourcemeta::core::JSON::String, Entry> bases;
 };
 
 // Reaching what a target names is ours to do, as the test module knows nothing
@@ -177,32 +184,43 @@ auto resolve_test_target(
   const sourcemeta::core::URI target_uri{target};
   const auto base{target_uri.recompose_without_fragment().value_or(target)};
 
-  const auto schema{schema_resolver(base)};
-  if (!schema.has_value()) {
-    throw sourcemeta::core::SchemaResolutionError{
-        base, "Could not resolve the reference to an external schema"};
+  auto match{targets.bases.find(base)};
+  if (match == targets.bases.cend()) {
+    const auto schema{schema_resolver(base)};
+    if (!schema.has_value()) {
+      throw sourcemeta::core::SchemaResolutionError{
+          base, "Could not resolve the reference to an external schema"};
+    }
+
+    auto document{std::make_unique<sourcemeta::core::JSON>(
+        sourcemeta::core::schema_bundle(
+            schema.value(), sourcemeta::core::schema_walker, schema_resolver,
+            dialect, base,
+            sourcemeta::jsonschema::bundle_references_options()))};
+
+    auto frame{std::make_unique<sourcemeta::core::SchemaFrame>(
+        sourcemeta::core::SchemaFrame::Mode::References, *document,
+        sourcemeta::core::schema_walker, schema_resolver, dialect, base)};
+
+    match =
+        targets.bases
+            .emplace(base, TestTargets::Entry{.document = std::move(document),
+                                              .frame = std::move(frame)})
+            .first;
   }
 
-  const auto &document{*targets.documents.emplace_back(
-      std::make_unique<sourcemeta::core::JSON>(sourcemeta::core::schema_bundle(
-          schema.value(), sourcemeta::core::schema_walker, schema_resolver,
-          dialect, base,
-          sourcemeta::jsonschema::bundle_references_options())))};
-
-  const auto &frame{*targets.frames.emplace_back(
-      std::make_unique<sourcemeta::core::SchemaFrame>(
-          sourcemeta::core::SchemaFrame::Mode::References, document,
-          sourcemeta::core::schema_walker, schema_resolver, dialect, base))};
+  const auto &entry{match->second};
 
   // Asking here reports a target that nothing locates as the schema under test
   // that could not be reached, rather than as an entry point that whatever
   // compiles it next does not know how to talk about
-  if (!frame.traverse(target).has_value()) {
+  if (!entry.frame->traverse(target).has_value()) {
     throw sourcemeta::core::SchemaResolutionError{
         target, "Could not resolve schema under test"};
   }
 
-  return {.document = document, .frame = frame, .entrypoint = target};
+  return {
+      .document = *entry.document, .frame = *entry.frame, .entrypoint = target};
 }
 
 auto parse_test_suite(const sourcemeta::jsonschema::InputJSON &entry,
@@ -281,6 +299,9 @@ auto parse_test_suite(const sourcemeta::jsonschema::InputJSON &entry,
     throw sourcemeta::core::FileError<
         sourcemeta::core::SchemaReferenceObjectResourceError>{
         entry.resolution_base, error.identifier()};
+  } catch (const sourcemeta::core::SchemaError &error) {
+    throw sourcemeta::core::FileError<sourcemeta::core::SchemaError>{
+        entry.resolution_base, error.what()};
   }
 }
 
