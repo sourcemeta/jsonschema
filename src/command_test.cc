@@ -266,15 +266,21 @@ auto resolve_base(const sourcemeta::core::SchemaResolver &schema_resolver,
   }
 
   auto document{std::make_unique<sourcemeta::core::JSON>(description.value())};
+
+  // A description that names itself with `$self` answers to that as well as to
+  // where it was read from, and a target may spell either. What a relative
+  // identity and relative references resolve against is where it was read
+  // from, so that is the base rather than whichever of the two got us here
+  const auto retrieval{custom_resolver.description_retrieval(base)};
+  const auto &default_base{retrieval.has_value() ? retrieval.value() : base};
+
   sourcemeta::core::openapi_bundle(*document, sourcemeta::core::schema_walker,
                                    schema_resolver, openapi_resolver,
-                                   {.default_base = base});
+                                   {.default_base = default_base});
 
-  // A description that names itself with `$self` answers to that rather than
-  // to where it was read from, and a target names it by whichever of the two
-  // it was resolved against, so framing keeps the base that got us here
   auto frame{std::make_unique<sourcemeta::core::OpenAPIFrame>(
-      *document, sourcemeta::core::schema_walker, schema_resolver, base)};
+      *document, sourcemeta::core::schema_walker, schema_resolver,
+      default_base)};
 
   return {.document = std::move(document),
           .schema = nullptr,
