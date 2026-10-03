@@ -1,0 +1,59 @@
+// A fragment is part of the URI a target is, so a Schema Object under a
+// templated path is named with the braces percent-encoded.
+
+WRITE openapi.json UNTIL EOF
+{
+  "openapi": "3.1.0",
+  "info": { "title": "Example", "version": "1.0.0" },
+  "paths": {
+    "/pets/{petId}": {
+      "get": {
+        "parameters": [
+          {
+            "name": "petId",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": { "type": "string" }
+            }
+          }
+        },
+        "responses": { "200": { "description": "A pet" } }
+      }
+    }
+  }
+}
+EOF
+
+WRITE test.json UNTIL EOF
+{
+  "target": "./openapi.json#/paths/~1pets~1%7BpetId%7D/get/requestBody/content/application~1json/schema",
+  "tests": [
+    {
+      "description": "A string",
+      "valid": true,
+      "data": "foo"
+    },
+    {
+      "description": "Not a string",
+      "valid": false,
+      "data": 1
+    }
+  ]
+}
+EOF
+
+RUN test test.json STDIN /dev/null IN . INTO result_0.txt EXPECTING 0
+
+REPLACE $CWD WITH '[CWD]' IN result_0.txt
+
+WRITE expected_0.txt UNTIL EOF
+1> [CWD]/test.json: PASS 2/2
+EOF
+
+COMPARE result_0.txt AGAINST expected_0.txt

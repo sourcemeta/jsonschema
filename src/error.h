@@ -209,6 +209,23 @@ private:
   std::string value_;
 };
 
+// A target names the schema under test by URI, and a fragment is part of that
+// URI, so a Schema Object under a templated path is named percent-encoded
+class InvalidTestTargetError : public std::runtime_error {
+public:
+  InvalidTestTargetError(std::string value)
+      : std::runtime_error{"The test document `target` property is not a valid "
+                           "URI"},
+        value_{std::move(value)} {}
+
+  [[nodiscard]] auto value() const noexcept -> const std::string & {
+    return this->value_;
+  }
+
+private:
+  std::string value_;
+};
+
 class NotSchemaError : public std::runtime_error {
 public:
   NotSchemaError(std::filesystem::path path)
@@ -1586,6 +1603,17 @@ inline auto try_catch(const sourcemeta::core::Options &options,
     }
 
     return EXIT_SCHEMA_INPUT_ERROR;
+  } catch (const sourcemeta::core::FileError<InvalidTestTargetError> &error) {
+    const auto is_json{options.contains("json")};
+    print_exception(is_json, error);
+    if (!is_json) {
+      std::cerr << "\n";
+      std::cerr << "A template expression of a path is spelled with "
+                   "percent-encoded braces,\n";
+      std::cerr << "as in `%7BpetId%7D`\n";
+    }
+
+    return EXIT_OTHER_INPUT_ERROR;
   } catch (const sourcemeta::core::FileError<sourcemeta::blaze::TestParseError>
                &error) {
     const auto is_json{options.contains("json")};

@@ -1,0 +1,58 @@
+// Everything a description spans is imported the same way it would be for a
+// schema, as compiling never reaches for what a reference names.
+
+WRITE external.json UNTIL EOF
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.com/external",
+  "type": "string",
+  "minLength": 2
+}
+EOF
+
+WRITE openapi.json UNTIL EOF
+{
+  "openapi": "3.1.0",
+  "info": { "title": "Example", "version": "1.0.0" },
+  "paths": {},
+  "components": {
+    "schemas": {
+      "Person": {
+        "type": "object",
+        "required": [ "name" ],
+        "properties": {
+          "name": { "$ref": "https://example.com/external" }
+        }
+      }
+    }
+  }
+}
+EOF
+
+WRITE test.json UNTIL EOF
+{
+  "target": "./openapi.json#/components/schemas/Person",
+  "tests": [
+    {
+      "description": "A long enough name",
+      "valid": true,
+      "data": { "name": "Juan" }
+    },
+    {
+      "description": "Too short a name",
+      "valid": false,
+      "data": { "name": "J" }
+    }
+  ]
+}
+EOF
+
+RUN test test.json --resolve external.json STDIN /dev/null IN . INTO result_0.txt EXPECTING 0
+
+REPLACE $CWD WITH '[CWD]' IN result_0.txt
+
+WRITE expected_0.txt UNTIL EOF
+1> [CWD]/test.json: PASS 2/2
+EOF
+
+COMPARE result_0.txt AGAINST expected_0.txt

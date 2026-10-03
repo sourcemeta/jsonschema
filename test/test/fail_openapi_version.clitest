@@ -1,0 +1,42 @@
+// A description declaring a revision we cannot read is turned down rather than
+// being taken for a schema and compiled as one.
+
+WRITE openapi.json UNTIL EOF
+{
+  "openapi": "3.0.3",
+  "info": { "title": "Example", "version": "1.0.0" },
+  "paths": {},
+  "components": {
+    "schemas": {
+      "Person": { "type": "object" }
+    }
+  }
+}
+EOF
+
+WRITE test.json UNTIL EOF
+{
+  "target": "./openapi.json#/components/schemas/Person",
+  "tests": [
+    {
+      "description": "An object",
+      "valid": true,
+      "data": {}
+    }
+  ]
+}
+EOF
+
+// Not supported
+RUN test test.json STDIN /dev/null IN . INTO result_0.txt EXPECTING 3
+
+REPLACE $CWD WITH '[CWD]' IN result_0.txt
+
+WRITE expected_0.txt UNTIL EOF
+1> [CWD]/test.json:
+2> error: This OpenAPI Specification revision is not supported
+2>   at value 3.0.3
+2>   at file path [CWD]/openapi.json
+EOF
+
+COMPARE result_0.txt AGAINST expected_0.txt

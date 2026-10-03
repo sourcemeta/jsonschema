@@ -1,0 +1,49 @@
+// A target that the description does not hold is reported as the schema under
+// test that could not be reached.
+
+WRITE openapi.json UNTIL EOF
+{
+  "openapi": "3.1.0",
+  "info": { "title": "Example", "version": "1.0.0" },
+  "paths": {},
+  "components": {
+    "schemas": {
+      "Person": {
+        "type": "object",
+        "required": [ "name" ],
+        "properties": { "name": { "type": "string" } }
+      }
+    }
+  }
+}
+EOF
+
+WRITE test.json UNTIL EOF
+{
+  "target": "./openapi.json#/components/schemas/Nowhere",
+  "tests": [
+    {
+      "description": "A person",
+      "valid": true,
+      "data": { "name": "Juan" }
+    }
+  ]
+}
+EOF
+
+// Schema input error
+RUN test test.json STDIN /dev/null IN . INTO result_0.txt EXPECTING 4
+
+REPLACE $CWD_URI WITH '[CWD_URI]' IN result_0.txt
+REPLACE $CWD WITH '[CWD]' IN result_0.txt
+
+WRITE expected_0.txt UNTIL EOF
+1> [CWD]/test.json:
+2> error: Could not resolve schema under test
+2>   at identifier [CWD_URI]/openapi.json#/components/schemas/Nowhere
+2>   at file path [CWD]/test.json
+2>
+2> This is likely because the file does not exist, or does not hold a JSON Schema
+EOF
+
+COMPARE result_0.txt AGAINST expected_0.txt
