@@ -1,0 +1,62 @@
+// A Schema Object may reach a Schema Object of another description, as what a
+// reference names is looked for wherever that kind of document is kept.
+
+WRITE other.json UNTIL EOF
+{
+  "openapi": "3.1.0",
+  "info": { "title": "Other", "version": "1.0.0" },
+  "paths": {},
+  "components": {
+    "schemas": {
+      "Name": { "type": "string", "minLength": 2 }
+    }
+  }
+}
+EOF
+
+WRITE openapi.json UNTIL EOF
+{
+  "openapi": "3.1.0",
+  "info": { "title": "Example", "version": "1.0.0" },
+  "paths": {},
+  "components": {
+    "schemas": {
+      "Person": {
+        "type": "object",
+        "required": [ "name" ],
+        "properties": {
+          "name": { "$ref": "./other.json#/components/schemas/Name" }
+        }
+      }
+    }
+  }
+}
+EOF
+
+WRITE test.json UNTIL EOF
+{
+  "target": "./openapi.json#/components/schemas/Person",
+  "tests": [
+    {
+      "description": "A long enough name",
+      "valid": true,
+      "data": { "name": "Juan" }
+    },
+    {
+      "description": "Too short a name",
+      "valid": false,
+      "data": { "name": "J" }
+    }
+  ]
+}
+EOF
+
+RUN test test.json STDIN /dev/null IN . INTO result_0.txt EXPECTING 0
+
+REPLACE $CWD WITH '[CWD]' IN result_0.txt
+
+WRITE expected_0.txt UNTIL EOF
+1> [CWD]/test.json: PASS 2/2
+EOF
+
+COMPARE result_0.txt AGAINST expected_0.txt

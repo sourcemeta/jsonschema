@@ -1,0 +1,67 @@
+// A description may reach another description by relative file path, and a
+// schema that arrives that way is named where it lands rather than where it was
+// written, as what the target addresses is the description once everything it
+// spans has been embedded into it.
+
+WRITE other.json UNTIL EOF
+{
+  "openapi": "3.1.0",
+  "info": { "title": "Other", "version": "1.0.0" },
+  "paths": {
+    "/people": {
+      "get": {
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [ "nickname" ],
+                "properties": { "nickname": { "type": "string" } }
+              }
+            }
+          }
+        },
+        "responses": { "200": { "description": "A person" } }
+      }
+    }
+  }
+}
+EOF
+
+WRITE openapi.json UNTIL EOF
+{
+  "openapi": "3.1.0",
+  "info": { "title": "Example", "version": "1.0.0" },
+  "paths": {
+    "/people": { "$ref": "./other.json#/paths/~1people" }
+  }
+}
+EOF
+
+WRITE test.json UNTIL EOF
+{
+  "target": "./openapi.json#/components/pathItems/people/get/requestBody/content/application~1json/schema",
+  "tests": [
+    {
+      "description": "A nickname",
+      "valid": true,
+      "data": { "nickname": "Juan" }
+    },
+    {
+      "description": "Missing nickname",
+      "valid": false,
+      "data": {}
+    }
+  ]
+}
+EOF
+
+RUN test test.json STDIN /dev/null IN . INTO result_0.txt EXPECTING 0
+
+REPLACE $CWD WITH '[CWD]' IN result_0.txt
+
+WRITE expected_0.txt UNTIL EOF
+1> [CWD]/test.json: PASS 2/2
+EOF
+
+COMPARE result_0.txt AGAINST expected_0.txt
