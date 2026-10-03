@@ -1,0 +1,119 @@
+// A trace attributes every step to the document that holds the keyword, so a
+// schema the description reaches by reference answers for its own keywords
+// rather than for the place that brought it in.
+
+WRITE external.json UNTIL EOF
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "zip": { "type": "string" }
+  }
+}
+EOF
+
+WRITE openapi.json UNTIL EOF
+{
+  "openapi": "3.1.0",
+  "info": { "title": "Example", "version": "1.0.0" },
+  "paths": {},
+  "components": {
+    "schemas": {
+      "Person": {
+        "type": "object",
+        "properties": {
+          "address": { "$ref": "./external.json" }
+        }
+      }
+    }
+  }
+}
+EOF
+
+WRITE instance.json UNTIL EOF
+{
+  "address": {
+    "zip": 12345
+  }
+}
+EOF
+
+WRITE test.json UNTIL EOF
+{
+  "target": "./openapi.json#/components/schemas/Person",
+  "tests": [
+    {
+      "description": "Nested failure across documents",
+      "valid": true,
+      "dataPath": "./instance.json"
+    }
+  ]
+}
+EOF
+
+// Test assertion failure
+RUN test test.json --trace STDIN /dev/null IN . INTO result_0.txt EXPECTING 2
+
+REPLACE $CWD_URI WITH '[CWD_URI]' IN result_0.txt
+REPLACE $CWD WITH '[CWD]' IN result_0.txt
+
+WRITE expected_0.txt UNTIL EOF
+1> [CWD]/test.json:
+1>   1/1 FAIL Nested failure across documents
+1>
+1> error: Schema validation failure
+1>   The value was expected to be of type string but it was of type integer
+1>     at instance location "/address/zip" (line 3, column 5)
+1>     at evaluate path "/properties/address/$ref/properties/zip/type"
+1>   The object value was expected to validate against the single defined property subschema
+1>     at instance location "/address" (line 2, column 3)
+1>     at evaluate path "/properties/address/$ref/properties"
+1>   The object value was expected to validate against the referenced schema
+1>     at instance location "/address" (line 2, column 3)
+1>     at evaluate path "/properties/address/$ref"
+1>   The object value was expected to validate against the single defined property subschema
+1>     at instance location "" (line 1, column 1)
+1>     at evaluate path "/properties"
+1>
+1> -> (push) "/properties" (LogicalWhenType)
+1>    at instance location "" (line 1, column 1)
+1>    at keyword location "[CWD_URI]/openapi.json#/components/schemas/Person/properties"
+1>    at vocabulary "https://json-schema.org/draft/2020-12/vocab/applicator"
+1>
+1> -> (push) "/properties/address/$ref" (ControlJump)
+1>    at instance location "/address" (line 2, column 3)
+1>    at keyword location "[CWD_URI]/openapi.json#/components/schemas/Person/properties/address/$ref"
+1>    at vocabulary "https://json-schema.org/draft/2020-12/vocab/core"
+1>
+1> -> (push) "/properties/address/$ref/properties" (LogicalWhenType)
+1>    at instance location "/address" (line 2, column 3)
+1>    at keyword location "[CWD_URI]/external.json#/properties"
+1>    at vocabulary "https://json-schema.org/draft/2020-12/vocab/applicator"
+1>
+1> -> (push) "/properties/address/$ref/properties/zip/type" (AssertionTypeStrict)
+1>    at instance location "/address/zip" (line 3, column 5)
+1>    at keyword location "[CWD_URI]/external.json#/properties/zip/type"
+1>    at vocabulary "https://json-schema.org/draft/2020-12/vocab/validation"
+1>
+1> <- (fail) "/properties/address/$ref/properties/zip/type" (AssertionTypeStrict)
+1>    at instance location "/address/zip" (line 3, column 5)
+1>    at keyword location "[CWD_URI]/external.json#/properties/zip/type"
+1>    at vocabulary "https://json-schema.org/draft/2020-12/vocab/validation"
+1>
+1> <- (fail) "/properties/address/$ref/properties" (LogicalWhenType)
+1>    at instance location "/address" (line 2, column 3)
+1>    at keyword location "[CWD_URI]/external.json#/properties"
+1>    at vocabulary "https://json-schema.org/draft/2020-12/vocab/applicator"
+1>
+1> <- (fail) "/properties/address/$ref" (ControlJump)
+1>    at instance location "/address" (line 2, column 3)
+1>    at keyword location "[CWD_URI]/openapi.json#/components/schemas/Person/properties/address/$ref"
+1>    at vocabulary "https://json-schema.org/draft/2020-12/vocab/core"
+1>
+1> <- (fail) "/properties" (LogicalWhenType)
+1>    at instance location "" (line 1, column 1)
+1>    at keyword location "[CWD_URI]/openapi.json#/components/schemas/Person/properties"
+1>    at vocabulary "https://json-schema.org/draft/2020-12/vocab/applicator"
+EOF
+
+COMPARE result_0.txt AGAINST expected_0.txt

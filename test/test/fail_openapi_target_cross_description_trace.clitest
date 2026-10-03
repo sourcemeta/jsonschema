@@ -1,0 +1,97 @@
+// A schema that another description holds is embedded into the one under test,
+// so a trace answers for it where it landed rather than naming the document it
+// was written in.
+
+WRITE other.json UNTIL EOF
+{
+  "openapi": "3.1.0",
+  "info": { "title": "Other", "version": "1.0.0" },
+  "paths": {
+    "/people": {
+      "get": {
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": { "zip": { "type": "string" } }
+              }
+            }
+          }
+        },
+        "responses": { "200": { "description": "A person" } }
+      }
+    }
+  }
+}
+EOF
+
+WRITE openapi.json UNTIL EOF
+{
+  "openapi": "3.1.0",
+  "info": { "title": "Example", "version": "1.0.0" },
+  "paths": {
+    "/people": { "$ref": "./other.json#/paths/~1people" }
+  }
+}
+EOF
+
+WRITE instance.json UNTIL EOF
+{
+  "zip": 12345
+}
+EOF
+
+WRITE test.json UNTIL EOF
+{
+  "target": "./openapi.json#/components/pathItems/people/get/requestBody/content/application~1json/schema",
+  "tests": [
+    {
+      "description": "Failure in a schema from another description",
+      "valid": true,
+      "dataPath": "./instance.json"
+    }
+  ]
+}
+EOF
+
+// Test assertion failure
+RUN test test.json --trace STDIN /dev/null IN . INTO result_0.txt EXPECTING 2
+
+REPLACE $CWD_URI WITH '[CWD_URI]' IN result_0.txt
+REPLACE $CWD WITH '[CWD]' IN result_0.txt
+
+WRITE expected_0.txt UNTIL EOF
+1> [CWD]/test.json:
+1>   1/1 FAIL Failure in a schema from another description
+1>
+1> error: Schema validation failure
+1>   The value was expected to be of type string but it was of type integer
+1>     at instance location "/zip" (line 2, column 3)
+1>     at evaluate path "/properties/zip/type"
+1>   The object value was expected to validate against the single defined property subschema
+1>     at instance location "" (line 1, column 1)
+1>     at evaluate path "/properties"
+1>
+1> -> (push) "/properties" (LogicalWhenType)
+1>    at instance location "" (line 1, column 1)
+1>    at keyword location "[CWD_URI]/openapi.json#/components/pathItems/people/get/requestBody/content/application~1json/schema/properties"
+1>    at vocabulary "https://json-schema.org/draft/2020-12/vocab/applicator"
+1>
+1> -> (push) "/properties/zip/type" (AssertionTypeStrict)
+1>    at instance location "/zip" (line 2, column 3)
+1>    at keyword location "[CWD_URI]/openapi.json#/components/pathItems/people/get/requestBody/content/application~1json/schema/properties/zip/type"
+1>    at vocabulary "https://json-schema.org/draft/2020-12/vocab/validation"
+1>
+1> <- (fail) "/properties/zip/type" (AssertionTypeStrict)
+1>    at instance location "/zip" (line 2, column 3)
+1>    at keyword location "[CWD_URI]/openapi.json#/components/pathItems/people/get/requestBody/content/application~1json/schema/properties/zip/type"
+1>    at vocabulary "https://json-schema.org/draft/2020-12/vocab/validation"
+1>
+1> <- (fail) "/properties" (LogicalWhenType)
+1>    at instance location "" (line 1, column 1)
+1>    at keyword location "[CWD_URI]/openapi.json#/components/pathItems/people/get/requestBody/content/application~1json/schema/properties"
+1>    at vocabulary "https://json-schema.org/draft/2020-12/vocab/applicator"
+EOF
+
+COMPARE result_0.txt AGAINST expected_0.txt

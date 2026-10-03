@@ -1,0 +1,78 @@
+// A failure in a schema that the description reaches by reference spells the
+// hop into it on the evaluate path, and still reports where in the instance
+// file the failing value sits.
+
+WRITE external.json UNTIL EOF
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "zip": { "type": "string" }
+  }
+}
+EOF
+
+WRITE openapi.json UNTIL EOF
+{
+  "openapi": "3.1.0",
+  "info": { "title": "Example", "version": "1.0.0" },
+  "paths": {},
+  "components": {
+    "schemas": {
+      "Person": {
+        "type": "object",
+        "properties": {
+          "address": { "$ref": "./external.json" }
+        }
+      }
+    }
+  }
+}
+EOF
+
+WRITE instance.json UNTIL EOF
+{
+  "address": {
+    "zip": 12345
+  }
+}
+EOF
+
+WRITE test.json UNTIL EOF
+{
+  "target": "./openapi.json#/components/schemas/Person",
+  "tests": [
+    {
+      "description": "Nested failure across documents",
+      "valid": true,
+      "dataPath": "./instance.json"
+    }
+  ]
+}
+EOF
+
+// Test assertion failure
+RUN test test.json STDIN /dev/null IN . INTO result_0.txt EXPECTING 2
+
+REPLACE $CWD WITH '[CWD]' IN result_0.txt
+
+WRITE expected_0.txt UNTIL EOF
+1> [CWD]/test.json:
+1>   1/1 FAIL Nested failure across documents
+1>
+1> error: Schema validation failure
+1>   The value was expected to be of type string but it was of type integer
+1>     at instance location "/address/zip" (line 3, column 5)
+1>     at evaluate path "/properties/address/$ref/properties/zip/type"
+1>   The object value was expected to validate against the single defined property subschema
+1>     at instance location "/address" (line 2, column 3)
+1>     at evaluate path "/properties/address/$ref/properties"
+1>   The object value was expected to validate against the referenced schema
+1>     at instance location "/address" (line 2, column 3)
+1>     at evaluate path "/properties/address/$ref"
+1>   The object value was expected to validate against the single defined property subschema
+1>     at instance location "" (line 1, column 1)
+1>     at evaluate path "/properties"
+EOF
+
+COMPARE result_0.txt AGAINST expected_0.txt
