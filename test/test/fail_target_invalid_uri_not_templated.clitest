@@ -1,0 +1,29 @@
+// A target that is no URI for a reason other than spelling a path template is
+// reported without the guidance that only a path template calls for.
+
+WRITE test.json UNTIL EOF
+{
+  "target": "http://example.com:notaport/schema",
+  "tests": [
+    {
+      "description": "A string",
+      "valid": true,
+      "data": "foo"
+    }
+  ]
+}
+EOF
+
+// Other input error
+RUN test test.json STDIN /dev/null IN . INTO result_0.txt EXPECTING 6
+
+REPLACE $CWD WITH '[CWD]' IN result_0.txt
+
+WRITE expected_0.txt UNTIL EOF
+1> [CWD]/test.json:
+2> error: The test document `target` property is not a valid URI
+2>   at value http://example.com:notaport/schema
+2>   at file path [CWD]/test.json
+EOF
+
+COMPARE result_0.txt AGAINST expected_0.txt

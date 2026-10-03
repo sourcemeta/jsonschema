@@ -198,6 +198,32 @@ struct TestTargets {
   std::map<sourcemeta::core::JSON::String, Entry> bases;
 };
 
+// The document was read, so what is reported is how it failed to answer to the
+// target rather than anything about reaching it. Which of the three it is tells
+// the user whether to look at the document, at the place the fragment names, or
+// at the fragment being there at all
+auto target_not_schema(const sourcemeta::core::JSON &document,
+                       const bool description,
+                       const sourcemeta::core::URI &target_uri,
+                       const sourcemeta::core::JSON::String &target)
+    -> sourcemeta::jsonschema::TestTargetNotSchemaError {
+  if (!target_uri.fragment().has_value() ||
+      target_uri.fragment().value().empty()) {
+    return {"This target names a document rather than a schema within it",
+            target, description, true};
+  }
+
+  const auto pointer{sourcemeta::core::fragment_to_pointer(target_uri)};
+  if (pointer.has_value() &&
+      sourcemeta::core::try_get(document, pointer.value()) != nullptr) {
+    return {"This target names a place of the document that is not a schema",
+            target, description, false};
+  }
+
+  return {"This target names a place that the document does not hold", target,
+          description, false};
+}
+
 // What a target names is reached the same way whatever holds it, by bundling
 // the document in and framing it under the base the target was resolved
 // against. Everything it spans has to be bundled in first, as compiling never
@@ -230,6 +256,13 @@ auto resolve_base(const sourcemeta::core::SchemaResolver &schema_resolver,
 
   const auto description{openapi_resolver(base)};
   if (!description.has_value()) {
+    // TODO: An identifier that a Schema Object of an imported description
+    // declares lands here, where the only thing left to say is that nothing
+    // answers to it. The schema half of the resolver explains that case with
+    // `SchemaEmbeddedResourceError`, naming the file and the place within it,
+    // because importing a schema frames it. Doing the same for a description
+    // means framing one on import, which is what importing one deliberately
+    // avoids, so the better message waits on that trade being settled
     throw sourcemeta::core::SchemaResolutionError{
         base, "Could not resolve the reference to an external schema"};
   }
@@ -271,12 +304,12 @@ auto resolve_test_target(
 
   const auto &entry{match->second};
 
-  // Asking here reports a target that nothing locates as the schema under test
-  // that could not be reached, rather than as an entry point that whatever
-  // compiles it next does not know how to talk about
+  // Asking here reports a target that nothing locates in terms of the document
+  // that was read for it, rather than as an entry point that whatever compiles
+  // it next does not know how to talk about
   if (!entry.frame().traverse(target).has_value()) {
-    throw sourcemeta::core::SchemaResolutionError{
-        target, "Could not resolve schema under test"};
+    throw target_not_schema(*entry.document, entry.schema == nullptr,
+                            target_uri, target);
   }
 
   return {.document = *entry.document,
@@ -312,10 +345,19 @@ auto parse_test_suite(const sourcemeta::jsonschema::InputJSON &entry,
     throw sourcemeta::core::FileError<
         sourcemeta::jsonschema::InvalidTestTargetError>{
         entry.resolution_base, format_target(entry.second)};
+  } catch (const sourcemeta::jsonschema::TestTargetNotSchemaError &error) {
+    throw sourcemeta::core::FileError<
+        sourcemeta::jsonschema::TestTargetNotSchemaError>{entry.resolution_base,
+                                                          error};
   } catch (const sourcemeta::core::OpenAPIResolutionError &error) {
     throw sourcemeta::core::FileError<sourcemeta::core::OpenAPIResolutionError>{
         entry.resolution_base, error};
   } catch (const sourcemeta::core::OpenAPIReferenceError &error) {
+    // TODO: A reference of the description itself that names a plain schema
+    // reports "This reference must name a place within the document it points
+    // at", which never says that what it had to point at is another
+    // description. The message belongs to Core, so sharpening it is upstream's
+    // to do
     throw sourcemeta::core::FileError<sourcemeta::core::OpenAPIReferenceError>{
         entry.resolution_base, error};
   } catch (const sourcemeta::core::OpenAPIError &error) {
