@@ -71,7 +71,8 @@ as JSON files that follow a specific format:
 > [!IMPORTANT]
 > A `target` is a URI, fragment included, so a character that a URI fragment
 > cannot carry is written percent-encoded. This often comes up for a Schema
-> Object that sits under a templated path, whose braces become `%7B` and `%7D`:
+> Object that sits under a templated path, whose braces become `%7B` and `%7D`.
+> For example:
 > `./openapi.json#/paths/~1pets~1%7BpetId%7D/get/requestBody/content/application~1json/schema`.
 
 Every item in the `tests` array must be an object with the following
