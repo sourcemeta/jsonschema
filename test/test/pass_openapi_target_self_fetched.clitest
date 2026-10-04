@@ -1,10 +1,10 @@
-// A description may name itself with a relative reference, which resolves
-// against where it was read from, and a target spells the result.
+// A description read from where the target points needs no importing, and the
+// name it gives itself does not stand in the way of reaching it that way.
 
 WRITE openapi.json UNTIL EOF
 {
   "openapi": "3.2.0",
-  "$self": "sub/api",
+  "$self": "https://example.com/api",
   "info": { "title": "Example", "version": "1.0.0" },
   "paths": {},
   "components": {
@@ -20,7 +20,7 @@ EOF
 
 WRITE test.json UNTIL EOF
 {
-  "target": "./sub/api#/components/schemas/Person",
+  "target": "./openapi.json#/components/schemas/Person",
   "tests": [
     {
       "description": "A person",
@@ -36,7 +36,7 @@ WRITE test.json UNTIL EOF
 }
 EOF
 
-RUN test test.json --resolve openapi.json STDIN /dev/null IN . INTO result_0.txt EXPECTING 0
+RUN test test.json STDIN /dev/null IN . INTO result_0.txt EXPECTING 0
 
 REPLACE $CWD WITH '[CWD]' IN result_0.txt
 

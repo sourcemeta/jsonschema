@@ -1,8 +1,6 @@
 // A relative self-declared name resolves against where the description was
 // read from, and a target reaches it by that name or by the file itself.
 
-MAKE DIRECTORY sub
-
 WRITE openapi.json UNTIL EOF
 {
   "openapi": "3.2.0",
