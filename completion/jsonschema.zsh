@@ -158,7 +158,7 @@ _jsonschema() {
         upgrade)
           _arguments \
             ${global_options[@]} \
-            '(--to -t)'{--to,-t}'[Target JSON Schema dialect]:dialect:(draft4 draft6 draft7 2019-09 2020-12)' \
+            '(--to -t)'{--to,-t}'[Target dialect]:dialect:(draft4 draft6 draft7 2019-09 2020-12 openapi3.1 openapi3.2)' \
             '1:schema file:_files -g "*.json *.yaml *.yml"'
           ;;
         rdf)
