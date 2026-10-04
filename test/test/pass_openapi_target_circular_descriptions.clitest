@@ -1,0 +1,66 @@
+// Two descriptions that reach into each other are read once each, so a cycle
+// between them settles rather than running away.
+
+WRITE other.json UNTIL EOF
+{
+  "openapi": "3.1.0",
+  "info": { "title": "Other", "version": "1.0.0" },
+  "paths": {},
+  "components": {
+    "schemas": {
+      "Other": {
+        "type": "object",
+        "properties": {
+          "back": { "$ref": "./openapi.json#/components/schemas/Person" }
+        }
+      }
+    }
+  }
+}
+EOF
+
+WRITE openapi.json UNTIL EOF
+{
+  "openapi": "3.1.0",
+  "info": { "title": "Example", "version": "1.0.0" },
+  "paths": {},
+  "components": {
+    "schemas": {
+      "Person": {
+        "type": "object",
+        "properties": {
+          "other": { "$ref": "./other.json#/components/schemas/Other" }
+        }
+      }
+    }
+  }
+}
+EOF
+
+WRITE test.json UNTIL EOF
+{
+  "target": "./openapi.json#/components/schemas/Person",
+  "tests": [
+    {
+      "description": "Nested both ways",
+      "valid": true,
+      "data": { "other": { "back": { "other": {} } } }
+    },
+    {
+      "description": "Not an object",
+      "valid": false,
+      "data": "foo"
+    }
+  ]
+}
+EOF
+
+RUN test test.json STDIN /dev/null IN . INTO result_0.txt EXPECTING 0
+
+REPLACE $CWD WITH '[CWD]' IN result_0.txt
+
+WRITE expected_0.txt UNTIL EOF
+1> [CWD]/test.json: PASS 2/2
+EOF
+
+COMPARE result_0.txt AGAINST expected_0.txt

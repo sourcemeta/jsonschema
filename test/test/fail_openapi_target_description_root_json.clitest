@@ -1,0 +1,44 @@
+WRITE openapi.json UNTIL EOF
+{
+  "openapi": "3.1.0",
+  "info": { "title": "Example", "version": "1.0.0" },
+  "paths": {},
+  "components": {
+    "schemas": {
+      "Person": {
+        "type": "object",
+        "required": [ "name" ]
+      }
+    }
+  }
+}
+EOF
+
+WRITE test.json UNTIL EOF
+{
+  "target": "./openapi.json",
+  "tests": [
+    {
+      "description": "A person",
+      "valid": true,
+      "data": { "name": "Juan" }
+    }
+  ]
+}
+EOF
+
+// Schema input error
+RUN test test.json --json STDIN /dev/null IN . INTO result_0.txt EXPECTING 4
+
+REPLACE $CWD_URI WITH '[CWD_URI]' IN result_0.txt
+REPLACE $CWD WITH '[CWD]' IN result_0.txt
+
+WRITE expected_0.txt UNTIL EOF
+1> {
+1>   "error": "This target names a document rather than a schema within it",
+1>   "identifier": "[CWD_URI]/openapi.json",
+1>   "filePath": "[CWD]/test.json"
+1> }
+EOF
+
+COMPARE result_0.txt AGAINST expected_0.txt

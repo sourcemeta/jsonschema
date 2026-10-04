@@ -1,0 +1,40 @@
+WRITE openapi.json UNTIL EOF
+{
+  "openapi": "3.0.3",
+  "info": { "title": "Example", "version": "1.0.0" },
+  "paths": {},
+  "components": {
+    "schemas": {
+      "Person": { "type": "object" }
+    }
+  }
+}
+EOF
+
+WRITE test.json UNTIL EOF
+{
+  "target": "./openapi.json#/components/schemas/Person",
+  "tests": [
+    {
+      "description": "An object",
+      "valid": true,
+      "data": {}
+    }
+  ]
+}
+EOF
+
+// Not supported
+RUN test test.json --json STDIN /dev/null IN . INTO result_0.txt EXPECTING 3
+
+REPLACE $CWD WITH '[CWD]' IN result_0.txt
+
+WRITE expected_0.txt UNTIL EOF
+1> {
+1>   "error": "This OpenAPI Specification revision is not supported",
+1>   "value": "3.0.3",
+1>   "filePath": "[CWD]/openapi.json"
+1> }
+EOF
+
+COMPARE result_0.txt AGAINST expected_0.txt

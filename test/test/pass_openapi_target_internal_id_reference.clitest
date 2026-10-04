@@ -1,0 +1,48 @@
+// A Schema Object that declares an identifier is reachable by it from within
+// the description that holds it, even though a target may not name it that way.
+
+WRITE openapi.json UNTIL EOF
+{
+  "openapi": "3.1.0",
+  "info": { "title": "Example", "version": "1.0.0" },
+  "paths": {},
+  "components": {
+    "schemas": {
+      "Named": {
+        "$id": "https://example.com/named",
+        "type": "object",
+        "required": [ "name" ]
+      },
+      "Person": { "$ref": "https://example.com/named" }
+    }
+  }
+}
+EOF
+
+WRITE test.json UNTIL EOF
+{
+  "target": "./openapi.json#/components/schemas/Person",
+  "tests": [
+    {
+      "description": "A person",
+      "valid": true,
+      "data": { "name": "Juan" }
+    },
+    {
+      "description": "Missing name",
+      "valid": false,
+      "data": {}
+    }
+  ]
+}
+EOF
+
+RUN test test.json STDIN /dev/null IN . INTO result_0.txt EXPECTING 0
+
+REPLACE $CWD WITH '[CWD]' IN result_0.txt
+
+WRITE expected_0.txt UNTIL EOF
+1> [CWD]/test.json: PASS 2/2
+EOF
+
+COMPARE result_0.txt AGAINST expected_0.txt

@@ -137,6 +137,31 @@ private:
   sourcemeta::core::Pointer location_;
 };
 
+// The counterpart for a description, whose Schema Objects declare their
+// identifiers within it in just the same way
+class OpenAPIEmbeddedResourceError : public std::runtime_error {
+public:
+  OpenAPIEmbeddedResourceError(std::string identifier,
+                               sourcemeta::core::Pointer location)
+      : std::runtime_error{"This identifier is declared by a Schema Object of "
+                           "an imported OpenAPI description, so only that "
+                           "description can reach it"},
+        identifier_{std::move(identifier)}, location_{std::move(location)} {}
+
+  [[nodiscard]] auto identifier() const noexcept -> const std::string & {
+    return this->identifier_;
+  }
+
+  [[nodiscard]] auto location() const noexcept
+      -> const sourcemeta::core::Pointer & {
+    return this->location_;
+  }
+
+private:
+  std::string identifier_;
+  sourcemeta::core::Pointer location_;
+};
+
 class OpenAPIIdentifierConflictError : public std::runtime_error {
 public:
   OpenAPIIdentifierConflictError(std::string identifier,
@@ -207,6 +232,63 @@ public:
 
 private:
   std::string value_;
+};
+
+// A target names the schema under test by URI, and a fragment is part of that
+// URI, so a Schema Object under a templated path is named percent-encoded
+class InvalidTestTargetError : public std::runtime_error {
+public:
+  InvalidTestTargetError(std::string value)
+      : std::runtime_error{"The test document `target` property is not a valid "
+                           "URI"},
+        value_{std::move(value)} {}
+
+  [[nodiscard]] auto value() const noexcept -> const std::string & {
+    return this->value_;
+  }
+
+  // Braces are what a path template spells and are legal nowhere in a URI, so
+  // one that carries them is the case worth guiding the user through. Saying
+  // nothing beats guessing wrong for every other way of not being a URI
+  [[nodiscard]] auto templated() const noexcept -> bool {
+    return this->value_.find('{') != std::string::npos ||
+           this->value_.find('}') != std::string::npos;
+  }
+
+private:
+  std::string value_;
+};
+
+// The document that holds what a target names was read, so what went wrong is
+// that nothing within it answers to the target rather than anything about
+// reaching the document itself
+class TestTargetNotSchemaError : public std::runtime_error {
+public:
+  TestTargetNotSchemaError(const char *message, std::string identifier,
+                           const bool description, const bool names_document)
+      : std::runtime_error{message}, identifier_{std::move(identifier)},
+        description_{description}, names_document_{names_document} {}
+
+  [[nodiscard]] auto identifier() const noexcept -> const std::string & {
+    return this->identifier_;
+  }
+
+  // Whether an OpenAPI description is what holds the place the target names,
+  // which is what decides how the user is pointed at a schema within it
+  [[nodiscard]] auto description() const noexcept -> bool {
+    return this->description_;
+  }
+
+  // Whether the target settled for the document itself rather than for a place
+  // within it, which is the one case where there is no place to go looking at
+  [[nodiscard]] auto names_document() const noexcept -> bool {
+    return this->names_document_;
+  }
+
+private:
+  std::string identifier_;
+  bool description_;
+  bool names_document_;
 };
 
 class NotSchemaError : public std::runtime_error {
@@ -1586,6 +1668,31 @@ inline auto try_catch(const sourcemeta::core::Options &options,
     }
 
     return EXIT_SCHEMA_INPUT_ERROR;
+  } catch (const sourcemeta::core::FileError<InvalidTestTargetError> &error) {
+    const auto is_json{options.contains("json")};
+    print_exception(is_json, error);
+    if (!is_json && error.templated()) {
+      std::cerr << "\nA path template is spelled with percent-encoded braces, "
+                   "as in `%7BpetId%7D`\n";
+    }
+
+    return EXIT_OTHER_INPUT_ERROR;
+  } catch (const sourcemeta::core::FileError<TestTargetNotSchemaError> &error) {
+    const auto is_json{options.contains("json")};
+    print_exception(is_json, error);
+    if (!is_json) {
+      if (error.names_document() && error.description()) {
+        std::cerr << "\nAn OpenAPI description holds many schemas and none of "
+                     "itself, so name\n";
+        std::cerr << "a Schema Object within it, as in "
+                     "`#/components/schemas/MySchema`\n";
+      } else {
+        std::cerr
+            << "\nUse the `inspect` command to find valid schema locations\n";
+      }
+    }
+
+    return EXIT_SCHEMA_INPUT_ERROR;
   } catch (const sourcemeta::core::FileError<sourcemeta::blaze::TestParseError>
                &error) {
     const auto is_json{options.contains("json")};
@@ -1723,6 +1830,26 @@ inline auto try_catch(const sourcemeta::core::Options &options,
       const sourcemeta::core::FileError<SchemaEmbeddedResourceError> &error) {
     const auto is_json{options.contains("json")};
     print_exception(is_json, error);
+    return EXIT_SCHEMA_INPUT_ERROR;
+  } catch (const PositionError<
+           sourcemeta::core::FileError<OpenAPIEmbeddedResourceError>> &error) {
+    const auto is_json{options.contains("json")};
+    print_exception(is_json, error);
+    if (!is_json) {
+      std::cerr << "\nName a Schema Object of the description instead, as in "
+                   "`#/components/schemas/MySchema`\n";
+    }
+
+    return EXIT_SCHEMA_INPUT_ERROR;
+  } catch (
+      const sourcemeta::core::FileError<OpenAPIEmbeddedResourceError> &error) {
+    const auto is_json{options.contains("json")};
+    print_exception(is_json, error);
+    if (!is_json) {
+      std::cerr << "\nName a Schema Object of the description instead, as in "
+                   "`#/components/schemas/MySchema`\n";
+    }
+
     return EXIT_SCHEMA_INPUT_ERROR;
   } catch (
       const sourcemeta::core::FileError<sourcemeta::core::SchemaResolutionError>

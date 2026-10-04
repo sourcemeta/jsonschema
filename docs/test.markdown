@@ -68,6 +68,13 @@ as JSON files that follow a specific format:
 > that contains a JSON Pointer in the `target` property. For example:
 > `https://example.com/my-big-schema#/definitions/foo`.
 
+> [!IMPORTANT]
+> A `target` is a URI, fragment included, so a character that a URI fragment
+> cannot carry is written percent-encoded. This often comes up for a Schema
+> Object that sits under a templated path, whose braces become `%7B` and `%7D`.
+> For example:
+> `./openapi.json#/paths/~1pets~1%7BpetId%7D/get/requestBody/content/application~1json/schema`.
+
 Every item in the `tests` array must be an object with the following
 properties:
 
@@ -121,6 +128,43 @@ properties (`foo` and `bar`) to successfully validate against the target schema
   ]
 }
 ```
+
+OpenAPI Descriptions
+--------------------
+
+A `target` names the schema under test wherever it lives, so the document at
+its base does not have to be a schema itself. If it is an
+[OpenAPI](https://spec.openapis.org/oas/latest.html) spec v3.1 or v3.2
+description, the `test` command reads it as one and runs the test cases against
+the Schema Object that the fragment names:
+
+```json
+{
+  "target": "./openapi.json#/components/schemas/Person",
+  "tests": [
+    {
+      "description": "I expect to pass",
+      "valid": true,
+      "data": { "name": "Juan" }
+    }
+  ]
+}
+```
+
+> [!IMPORTANT]
+> A Schema Object is named by a pointer into the description that holds it, even
+> when it declares an `$id` of its own. What answers to a URI is a document,
+> not a schema sitting inside one, so `"target": "https://example.com/person"`
+> finds nothing unless a schema of that identifier was imported in its own
+> right.
+
+A description that names itself with `$self` answers to that name as well as to
+where it was read from, so a `target` may spell either.
+
+Use `--resolve/-r` for the other documents a description spans, and for the
+description itself when a `target` names it by URI, exactly as you would for
+schemas. One suite may mix the two kinds of target freely, as each `target` is
+resolved on its own.
 
 Examples
 --------
@@ -216,6 +260,18 @@ jsonschema test path/to/test.json --resolve path/to/external.json
 
 ```sh
 jsonschema test path/to/test.json --resolve path/to/schemas --extension schema.json
+```
+
+### Run a single test definition targeting a schema of an OpenAPI description
+
+```sh
+jsonschema test path/to/my/test.json
+```
+
+### Run a single test definition targeting an OpenAPI description by URI
+
+```sh
+jsonschema test path/to/my/test.json --resolve path/to/my/openapi.json
 ```
 
 ### Run a single test definition forcing every `format` to assert

@@ -35,11 +35,11 @@ REPLACE $CWD WITH '[CWD]' IN result_0.txt
 WRITE expected_0.txt UNTIL EOF
 1> [CWD]/test.json:
 2> Using parallelism: 1
-2> error: Could not resolve schema under test
+2> error: This target names a place that the document does not hold
 2>   at identifier https://example.com#/foo
 2>   at file path [CWD]/test.json
 2>
-2> This is likely because you forgot to import such schema using `--resolve/-r`
+2> Use the `inspect` command to find valid schema locations
 EOF
 
 COMPARE result_0.txt AGAINST expected_0.txt

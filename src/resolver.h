@@ -16,10 +16,11 @@
 #include "logger.h"
 #include "utils.h"
 
-#include <cassert> // assert
-#include <chrono>  // std::chrono::seconds
-#include <cstddef> // std::size_t
-#include <cstdint> // std::uint8_t
+#include <algorithm> // std::ranges::find
+#include <cassert>   // assert
+#include <chrono>    // std::chrono::seconds
+#include <cstddef>   // std::size_t
+#include <cstdint>   // std::uint8_t
 #include <exception> // std::exception_ptr, std::current_exception, std::rethrow_exception
 #include <filesystem>    // std::filesystem
 #include <functional>    // std::function, std::ref
@@ -788,6 +789,99 @@ public:
     return stored;
   }
 
+  // Where a place of a file sits, for a file that was read without keeping
+  // track. Nothing is reported rather than guessed when it cannot be read back
+  static auto read_position(const std::filesystem::path &path,
+                            const sourcemeta::core::Pointer &location)
+      -> std::optional<std::pair<std::uint64_t, std::uint64_t>> {
+    sourcemeta::core::PointerPositionTracker positions;
+    sourcemeta::core::JSON document{nullptr};
+    try {
+      sourcemeta::core::read_yaml_or_json(path, document, std::ref(positions));
+    } catch (...) {
+      return std::nullopt;
+    }
+
+    const auto position{positions.get(location)};
+    if (!position.has_value()) {
+      return std::nullopt;
+    }
+
+    return std::make_pair(std::get<0>(position.value()),
+                          std::get<1>(position.value()));
+  }
+
+  // Where an imported description was retrieved from, which is what a relative
+  // identity of its own and its relative references resolve against. One that
+  // answers to an identity it declares is still read from where it was found,
+  // so the two part ways and only this one may be built upon
+  [[nodiscard]] auto
+  description_retrieval(const std::string_view identifier) const
+      -> std::optional<std::string> {
+    const auto match{
+        this->description_retrievals_.find(canonical_resolve_key(identifier))};
+    if (match == this->description_retrievals_.cend()) {
+      return std::nullopt;
+    }
+
+    return match->second;
+  }
+
+  // A Schema Object that a description holds declares its identifier within
+  // that description, so nothing outside it ever answers to that name. What
+  // reveals those identifiers is framing, and importing a description
+  // deliberately does not frame one, so this looks only once both halves have
+  // already failed to answer, where knowing beats what it costs to find out
+  auto report_description_resource(const std::string_view identifier) -> void {
+    // The same description answers to every identity it was registered under,
+    // so what it was read from is what tells one apart from the next
+    std::vector<std::filesystem::path> seen;
+    for (const auto &[identity, description] : this->descriptions_) {
+      const auto origin{this->description_origins_.find(identity)};
+      const auto path{origin == this->description_origins_.cend()
+                          ? identifier_path(identity)
+                          : origin->second};
+      if (std::ranges::find(seen, path) != seen.cend()) {
+        continue;
+      }
+
+      seen.push_back(path);
+      const auto retrieval{this->description_retrieval(identity)};
+      const auto &base{retrieval.has_value() ? retrieval.value() : identity};
+
+      std::optional<sourcemeta::core::OpenAPIFrame> frame;
+      try {
+        frame.emplace(description, sourcemeta::core::schema_walker,
+                      std::ref(*this), base);
+      } catch (...) {
+        // Whatever keeps a description from being framed is not what we came
+        // to report, and it has nothing to say about this identifier either
+        continue;
+      }
+
+      const auto match{frame.value().schemas().traverse(identifier)};
+      if (!match.has_value()) {
+        continue;
+      }
+
+      auto location{sourcemeta::core::to_pointer(match.value().get().pointer)};
+
+      // Importing a description keeps the document rather than where each part
+      // of it was written, so where to point is read back here, on a path that
+      // ends in a failure either way
+      const auto position{read_position(path, location)};
+      if (position.has_value()) {
+        throw PositionError<
+            sourcemeta::core::FileError<OpenAPIEmbeddedResourceError>>(
+            position.value().first, position.value().second, path,
+            std::string{identifier}, std::move(location));
+      }
+
+      throw sourcemeta::core::FileError<OpenAPIEmbeddedResourceError>(
+          path, std::string{identifier}, std::move(location));
+    }
+  }
+
 private:
   // Framing a schema is what reveals the identifiers it declares, but framing
   // needs its meta-schema resolved first, which is precisely what an entry
@@ -840,10 +934,14 @@ private:
 
     const auto self{openapi_self_identity(entry.second, retrieval)};
     if (self.has_value()) {
-      this->register_description(canonical_resolve_key(self.value()), entry);
+      const auto identity{canonical_resolve_key(self.value())};
+      this->register_description(identity, entry);
+      this->description_retrievals_.emplace(identity, retrieval);
     }
 
-    this->register_description(canonical_resolve_key(retrieval), entry);
+    const auto identity{canonical_resolve_key(retrieval)};
+    this->register_description(identity, entry);
+    this->description_retrievals_.emplace(identity, retrieval);
   }
 
   // Two descriptions that answer to one identifier leave which of them a
@@ -1048,6 +1146,10 @@ private:
   // reach what the other answers for
   std::map<std::string, sourcemeta::core::JSON> descriptions_{};
   std::map<std::string, std::filesystem::path> description_origins_{};
+  // What a description was read from, kept apart from the identities it
+  // answers to, as a relative identity resolves against this rather than
+  // against itself
+  std::map<std::string, std::string> description_retrievals_{};
   // What resolution has already retrieved and found not to be a description,
   // so that one URL is fetched once however many times it is asked for
   std::map<std::string, sourcemeta::core::JSON> fetched_{};

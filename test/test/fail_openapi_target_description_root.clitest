@@ -1,0 +1,49 @@
+// A description holds many schemas and none of itself, so naming one without
+// saying which schema within it reaches nothing.
+
+WRITE openapi.json UNTIL EOF
+{
+  "openapi": "3.1.0",
+  "info": { "title": "Example", "version": "1.0.0" },
+  "paths": {},
+  "components": {
+    "schemas": {
+      "Person": {
+        "type": "object",
+        "required": [ "name" ]
+      }
+    }
+  }
+}
+EOF
+
+WRITE test.json UNTIL EOF
+{
+  "target": "./openapi.json",
+  "tests": [
+    {
+      "description": "A person",
+      "valid": true,
+      "data": { "name": "Juan" }
+    }
+  ]
+}
+EOF
+
+// Schema input error
+RUN test test.json STDIN /dev/null IN . INTO result_0.txt EXPECTING 4
+
+REPLACE $CWD_URI WITH '[CWD_URI]' IN result_0.txt
+REPLACE $CWD WITH '[CWD]' IN result_0.txt
+
+WRITE expected_0.txt UNTIL EOF
+1> [CWD]/test.json:
+2> error: This target names a document rather than a schema within it
+2>   at identifier [CWD_URI]/openapi.json
+2>   at file path [CWD]/test.json
+2>
+2> An OpenAPI description holds many schemas and none of itself, so name
+2> a Schema Object within it, as in `#/components/schemas/MySchema`
+EOF
+
+COMPARE result_0.txt AGAINST expected_0.txt

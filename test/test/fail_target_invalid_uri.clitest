@@ -1,0 +1,31 @@
+// A target is a URI, fragment included, so one that does not parse as a URI is
+// reported against the test document that spells it.
+
+WRITE test.json UNTIL EOF
+{
+  "target": "./openapi.json#/paths/~1pets~1{petId}/get/responses/200",
+  "tests": [
+    {
+      "description": "A string",
+      "valid": true,
+      "data": "foo"
+    }
+  ]
+}
+EOF
+
+// Other input error
+RUN test test.json STDIN /dev/null IN . INTO result_0.txt EXPECTING 6
+
+REPLACE $CWD WITH '[CWD]' IN result_0.txt
+
+WRITE expected_0.txt UNTIL EOF
+1> [CWD]/test.json:
+2> error: The test document `target` property is not a valid URI
+2>   at value ./openapi.json#/paths/~1pets~1{petId}/get/responses/200
+2>   at file path [CWD]/test.json
+2>
+2> A path template is spelled with percent-encoded braces, as in `%7BpetId%7D`
+EOF
+
+COMPARE result_0.txt AGAINST expected_0.txt

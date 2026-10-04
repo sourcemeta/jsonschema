@@ -1,0 +1,64 @@
+// A schema that arrives from another document is reachable where it lands
+// rather than where the reference that brought it in was written, as that place
+// goes on holding the reference.
+
+WRITE other.json UNTIL EOF
+{
+  "openapi": "3.1.0",
+  "info": { "title": "Other", "version": "1.0.0" },
+  "paths": {
+    "/people": {
+      "get": {
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": { "type": "object", "required": [ "nickname" ] }
+            }
+          }
+        },
+        "responses": { "200": { "description": "A person" } }
+      }
+    }
+  }
+}
+EOF
+
+WRITE openapi.json UNTIL EOF
+{
+  "openapi": "3.1.0",
+  "info": { "title": "Example", "version": "1.0.0" },
+  "paths": {
+    "/people": { "$ref": "./other.json#/paths/~1people" }
+  }
+}
+EOF
+
+WRITE test.json UNTIL EOF
+{
+  "target": "./openapi.json#/paths/~1people/get/requestBody/content/application~1json/schema",
+  "tests": [
+    {
+      "description": "A nickname",
+      "valid": true,
+      "data": { "nickname": "Juan" }
+    }
+  ]
+}
+EOF
+
+// Schema input error
+RUN test test.json STDIN /dev/null IN . INTO result_0.txt EXPECTING 4
+
+REPLACE $CWD_URI WITH '[CWD_URI]' IN result_0.txt
+REPLACE $CWD WITH '[CWD]' IN result_0.txt
+
+WRITE expected_0.txt UNTIL EOF
+1> [CWD]/test.json:
+2> error: This target names a place that the document does not hold
+2>   at identifier [CWD_URI]/openapi.json#/paths/~1people/get/requestBody/content/application~1json/schema
+2>   at file path [CWD]/test.json
+2>
+2> Use the `inspect` command to find valid schema locations
+EOF
+
+COMPARE result_0.txt AGAINST expected_0.txt
