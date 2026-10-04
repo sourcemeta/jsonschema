@@ -16,7 +16,7 @@
 namespace sourcemeta::core {
 
 // The Rijndael substitution box (FIPS 197 Figure 7)
-inline constexpr std::array<std::uint8_t, 256> aes_substitution{
+inline constexpr std::array<std::uint8_t, 256> AES_SUBSTITUTION{
     {0x63, 0x7c, 0x77, 0x7b, 0xf2, 0x6b, 0x6f, 0xc5, 0x30, 0x01, 0x67, 0x2b,
      0xfe, 0xd7, 0xab, 0x76, 0xca, 0x82, 0xc9, 0x7d, 0xfa, 0x59, 0x47, 0xf0,
      0xad, 0xd4, 0xa2, 0xaf, 0x9c, 0xa4, 0x72, 0xc0, 0xb7, 0xfd, 0x93, 0x26,
@@ -41,7 +41,7 @@ inline constexpr std::array<std::uint8_t, 256> aes_substitution{
      0xb0, 0x54, 0xbb, 0x16}};
 
 // The inverse of the Rijndael substitution box (FIPS 197 Figure 14)
-inline constexpr std::array<std::uint8_t, 256> aes_inverse_substitution{
+inline constexpr std::array<std::uint8_t, 256> AES_INVERSE_SUBSTITUTION{
     {0x52, 0x09, 0x6a, 0xd5, 0x30, 0x36, 0xa5, 0x38, 0xbf, 0x40, 0xa3, 0x9e,
      0x81, 0xf3, 0xd7, 0xfb, 0x7c, 0xe3, 0x39, 0x82, 0x9b, 0x2f, 0xff, 0x87,
      0x34, 0x8e, 0x43, 0x44, 0xc4, 0xde, 0xe9, 0xcb, 0x54, 0x7b, 0x94, 0x32,
@@ -84,19 +84,30 @@ inline auto aes_xtime(const std::uint8_t value) -> std::uint8_t {
                                    (((value & 0x80u) != 0) ? 0x1bu : 0x00u));
 }
 
-inline auto aes_field_multiply(const std::uint8_t left,
-                               const std::uint8_t right) -> std::uint8_t {
-  std::uint8_t product{0};
-  std::uint8_t factor{left};
-  for (std::uint8_t bit{right}; bit != 0; bit >>= 1u) {
-    if ((bit & 1u) != 0) {
-      product ^= factor;
+// Multiply by one of the coefficients that the column transformations use
+// (FIPS 197 Sections 5.1.3 and 5.3.3), each one composed out of repeated
+// doubling rather than walking the bits of a value the caller already knows
+template <std::uint8_t Coefficient>
+inline auto aes_field_multiply(const std::uint8_t value) -> std::uint8_t {
+  const auto doubled{aes_xtime(value)};
+  if constexpr (Coefficient == 2) {
+    return doubled;
+  } else if constexpr (Coefficient == 3) {
+    return static_cast<std::uint8_t>(doubled ^ value);
+  } else {
+    const auto quadrupled{aes_xtime(doubled)};
+    const auto octupled{aes_xtime(quadrupled)};
+    if constexpr (Coefficient == 9) {
+      return static_cast<std::uint8_t>(octupled ^ value);
+    } else if constexpr (Coefficient == 11) {
+      return static_cast<std::uint8_t>(octupled ^ doubled ^ value);
+    } else if constexpr (Coefficient == 13) {
+      return static_cast<std::uint8_t>(octupled ^ quadrupled ^ value);
+    } else {
+      static_assert(Coefficient == 14);
+      return static_cast<std::uint8_t>(octupled ^ quadrupled ^ doubled);
     }
-
-    factor = aes_xtime(factor);
   }
-
-  return product;
 }
 
 // AES key expansion (FIPS 197 Section 5.2) over a 128, 192, or 256-bit key
@@ -121,15 +132,15 @@ inline auto aes_expand_key(const std::string_view key) -> AesKeySchedule {
     const auto position{index / 4};
     if (position % key_words == 0) {
       const auto first{word[0]};
-      word[0] = aes_substitution[word[1]] ^ round_constant;
-      word[1] = aes_substitution[word[2]];
-      word[2] = aes_substitution[word[3]];
-      word[3] = aes_substitution[first];
+      word[0] = AES_SUBSTITUTION[word[1]] ^ round_constant;
+      word[1] = AES_SUBSTITUTION[word[2]];
+      word[2] = AES_SUBSTITUTION[word[3]];
+      word[3] = AES_SUBSTITUTION[first];
       round_constant = aes_xtime(round_constant);
     } else if (key_words > 6 && position % key_words == 4) {
       // The extra substitution mid-schedule applies only to the 256-bit key
       for (auto &byte : word) {
-        byte = aes_substitution[byte];
+        byte = AES_SUBSTITUTION[byte];
       }
     }
 
@@ -154,7 +165,7 @@ inline auto aes_encrypt_block(const AesKeySchedule &schedule, AesBlock state)
   add_round_key(0);
   for (std::size_t round = 1; round <= schedule.rounds; ++round) {
     for (auto &byte : state) {
-      byte = aes_substitution[byte];
+      byte = AES_SUBSTITUTION[byte];
     }
 
     // ShiftRows over the column-major state (FIPS 197 Section 5.1.2)
@@ -172,14 +183,14 @@ inline auto aes_encrypt_block(const AesKeySchedule &schedule, AesBlock state)
         const auto second{state[base + 1]};
         const auto third{state[base + 2]};
         const auto fourth{state[base + 3]};
-        state[base] = aes_field_multiply(first, 2) ^
-                      aes_field_multiply(second, 3) ^ third ^ fourth;
-        state[base + 1] = first ^ aes_field_multiply(second, 2) ^
-                          aes_field_multiply(third, 3) ^ fourth;
-        state[base + 2] = first ^ second ^ aes_field_multiply(third, 2) ^
-                          aes_field_multiply(fourth, 3);
-        state[base + 3] = aes_field_multiply(first, 3) ^ second ^ third ^
-                          aes_field_multiply(fourth, 2);
+        state[base] = aes_field_multiply<2>(first) ^
+                      aes_field_multiply<3>(second) ^ third ^ fourth;
+        state[base + 1] = first ^ aes_field_multiply<2>(second) ^
+                          aes_field_multiply<3>(third) ^ fourth;
+        state[base + 2] = first ^ second ^ aes_field_multiply<2>(third) ^
+                          aes_field_multiply<3>(fourth);
+        state[base + 3] = aes_field_multiply<3>(first) ^ second ^ third ^
+                          aes_field_multiply<2>(fourth);
       }
     }
 
@@ -208,7 +219,7 @@ inline auto aes_decrypt_block(const AesKeySchedule &schedule, AesBlock state)
     state = shifted;
 
     for (auto &byte : state) {
-      byte = aes_inverse_substitution[byte];
+      byte = AES_INVERSE_SUBSTITUTION[byte];
     }
 
     add_round_key(round);
@@ -222,17 +233,17 @@ inline auto aes_decrypt_block(const AesKeySchedule &schedule, AesBlock state)
         const auto third{state[base + 2]};
         const auto fourth{state[base + 3]};
         state[base] =
-            aes_field_multiply(first, 0x0e) ^ aes_field_multiply(second, 0x0b) ^
-            aes_field_multiply(third, 0x0d) ^ aes_field_multiply(fourth, 0x09);
+            aes_field_multiply<14>(first) ^ aes_field_multiply<11>(second) ^
+            aes_field_multiply<13>(third) ^ aes_field_multiply<9>(fourth);
         state[base + 1] =
-            aes_field_multiply(first, 0x09) ^ aes_field_multiply(second, 0x0e) ^
-            aes_field_multiply(third, 0x0b) ^ aes_field_multiply(fourth, 0x0d);
+            aes_field_multiply<9>(first) ^ aes_field_multiply<14>(second) ^
+            aes_field_multiply<11>(third) ^ aes_field_multiply<13>(fourth);
         state[base + 2] =
-            aes_field_multiply(first, 0x0d) ^ aes_field_multiply(second, 0x09) ^
-            aes_field_multiply(third, 0x0e) ^ aes_field_multiply(fourth, 0x0b);
+            aes_field_multiply<13>(first) ^ aes_field_multiply<9>(second) ^
+            aes_field_multiply<14>(third) ^ aes_field_multiply<11>(fourth);
         state[base + 3] =
-            aes_field_multiply(first, 0x0b) ^ aes_field_multiply(second, 0x0d) ^
-            aes_field_multiply(third, 0x09) ^ aes_field_multiply(fourth, 0x0e);
+            aes_field_multiply<11>(first) ^ aes_field_multiply<13>(second) ^
+            aes_field_multiply<9>(third) ^ aes_field_multiply<14>(fourth);
       }
     }
   }

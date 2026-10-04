@@ -1,5 +1,6 @@
 #include "crypto_aes.h"
 #include "crypto_aes_block.h"
+#include "crypto_ghash.h"
 
 #include <cassert>     // assert
 #include <cstddef>     // std::size_t
@@ -14,49 +15,6 @@
 
 namespace sourcemeta::core {
 namespace {
-
-// Multiply two blocks in GF(2^128) with the GCM reduction polynomial (NIST SP
-// 800-38D Section 6.3)
-auto gf_multiply(const AesBlock &left, const AesBlock &right) -> AesBlock {
-  AesBlock product{};
-  AesBlock value{left};
-  for (std::size_t bit = 0; bit < 128; ++bit) {
-    if (((right[bit / 8] >> (7 - (bit % 8))) & 1u) != 0) {
-      for (std::size_t index = 0; index < 16; ++index) {
-        product[index] ^= value[index];
-      }
-    }
-
-    const auto carry_out{static_cast<std::uint8_t>(value[15] & 1u)};
-    std::uint8_t carry_in{0};
-    for (auto &byte : value) {
-      const auto next_carry{static_cast<std::uint8_t>(byte & 1u)};
-      byte = static_cast<std::uint8_t>((byte >> 1u) | (carry_in << 7u));
-      carry_in = next_carry;
-    }
-
-    if (carry_out != 0) {
-      value[0] ^= 0xe1u;
-    }
-  }
-
-  return product;
-}
-
-// GHASH the data padded to whole blocks (NIST SP 800-38D Section 6.4)
-auto ghash(const AesBlock &key, const std::string_view data,
-           AesBlock accumulator) -> AesBlock {
-  for (std::size_t offset = 0; offset < data.size(); offset += 16) {
-    for (std::size_t index = 0; index < 16 && offset + index < data.size();
-         ++index) {
-      accumulator[index] ^= static_cast<std::uint8_t>(data[offset + index]);
-    }
-
-    accumulator = gf_multiply(accumulator, key);
-  }
-
-  return accumulator;
-}
 
 struct Context {
   AesKeySchedule schedule;

@@ -1,69 +1,30 @@
 class UpgradeDraft3ToDraft4 final : public SchemaTransformRule {
 public:
-  using reframe_after_transform = std::true_type;
   UpgradeDraft3ToDraft4()
       : SchemaTransformRule{"upgrade_draft_3_to_draft_4"} {};
 
   [[nodiscard]] auto
   condition(const sourcemeta::core::JSON &schema,
-            const sourcemeta::core::JSON &root,
+            const sourcemeta::core::JSON &,
             const sourcemeta::core::SchemaVocabularies &vocabularies,
-            const sourcemeta::core::SchemaFrame &frame,
-            const sourcemeta::core::SchemaFrame::Location &location,
-            const sourcemeta::core::SchemaWalker &,
+            const Site &site, const sourcemeta::core::SchemaWalker &,
             const sourcemeta::core::SchemaResolver &) const -> bool override {
     ONLY_CONTINUE_IF(
         vocabularies.contains(SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_3) &&
         schema.is_object());
 
-    const bool root_via_default_dialect =
-        location.pointer.empty() && !schema.defines("$schema");
+    this->stray_required_ = has_stray_required_boolean(schema, site.pointer);
 
-    this->stray_required_ =
-        has_stray_required_boolean(schema, location.pointer);
-
-    ONLY_CONTINUE_IF(has_pending_draft_3_pattern(schema, location.dialect) ||
-                     this->stray_required_ || root_via_default_dialect);
-
-    if (frame.any_subschema_under(
-            location.pointer,
-            [&root](
-                const sourcemeta::core::SchemaFrame::Location &entry) -> bool {
-              const auto entry_pointer{
-                  sourcemeta::core::to_pointer(entry.pointer)};
-              const auto &entry_schema{
-                  sourcemeta::core::get(root, entry_pointer)};
-
-              // A Draft 3 spelling beside a `$ref` is dead weight for
-              // validation, but Draft 4 does not accept it as a value at all,
-              // so it has to be upgraded before the dialect moves rather than
-              // being left for the target meta-schema to reject
-              return has_pending_draft_3_pattern(entry_schema, entry.dialect) ||
-                     has_stray_required_boolean(entry_schema, entry.pointer);
-            })) {
-      return false;
-    }
-
-    return true;
+    return has_pending_draft_3_pattern(schema, site.dialect) ||
+           this->stray_required_ || at_dialect_declaration(schema, site);
   }
 
-  [[nodiscard]] auto rereference(const std::string_view,
-                                 const sourcemeta::core::Pointer &,
-                                 const sourcemeta::core::Pointer &target,
-                                 const sourcemeta::core::Pointer &current) const
-      -> std::optional<sourcemeta::core::Pointer> override {
-    for (const auto &[old_pointer, new_pointer] : this->renames_) {
-      const auto result{target.rebase(current.concat(old_pointer),
-                                      current.concat(new_pointer))};
-      if (result != target) {
-        return result;
-      }
-    }
-
-    return target;
+  [[nodiscard]] auto relocations() const -> std::vector<Relocation> override {
+    return {this->renames_.cbegin(), this->renames_.cend()};
   }
 
-  auto transform(sourcemeta::core::JSON &schema) const -> void override {
+  auto transform(sourcemeta::core::JSON &schema, const Site &site) const
+      -> void override {
     this->renames_.clear();
     rewrite_type_any(schema);
     rewrite_type_array_with_subschemas(schema, this->renames_);
@@ -83,13 +44,7 @@ public:
     normalize_dependency_arrays(schema);
     rewrite_format(schema);
 
-    if (schema.defines("$schema") && schema.at("$schema").is_string() &&
-        schema.at("$schema").to_string() == DRAFT_3_URL) {
-      schema.assign("$schema", sourcemeta::core::JSON{DRAFT_4_URL});
-      drop_dialect_overrides(schema, DRAFT_4_URL, this->subschemas());
-    } else {
-      mark_dialect_override(schema, DRAFT_4_URL);
-    }
+    bump_dialect(schema, site, DRAFT_4_URL);
   }
 
 private:
@@ -382,12 +337,6 @@ private:
                            sourcemeta::core::Pointer{"not"});
     }
 
-    // The wrapper is a subschema this rule just wrote, and the keywords it
-    // holds are Draft 4 spellings rather than the author's data. Saying so
-    // keeps the rule that shadows a promoted keyword from reading them as
-    // something inert that has to be moved out of the way
-    mark_dialect_override(negated, DRAFT_4_URL);
-
     schema.erase("disallow");
     schema.assign("not", std::move(negated));
   }
@@ -579,8 +528,7 @@ private:
   // only one anywhere else is stray
   static auto
   has_stray_required_boolean(const sourcemeta::core::JSON &subschema,
-                             const sourcemeta::core::WeakPointer &pointer)
-      -> bool {
+                             const sourcemeta::core::Pointer &pointer) -> bool {
     if (!subschema.is_object() ||
         declares_dialect_out_of_reach(subschema, DRAFT_3_URL)) {
       return false;

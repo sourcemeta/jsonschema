@@ -1,7 +1,7 @@
-class PrefixPromotedDraft6Keywords final : public SchemaTransformRule {
+class PrefixPromotedOpenAPI31Keywords final : public SchemaTransformRule {
 public:
-  PrefixPromotedDraft6Keywords()
-      : SchemaTransformRule{"prefix_promoted_draft_6_keywords"} {};
+  PrefixPromotedOpenAPI31Keywords()
+      : SchemaTransformRule{"prefix_promoted_openapi_3_1_keywords"} {};
 
   [[nodiscard]] auto
   condition(const sourcemeta::core::JSON &schema,
@@ -9,20 +9,23 @@ public:
             const sourcemeta::core::SchemaVocabularies &vocabularies,
             const Site &, const sourcemeta::core::SchemaWalker &,
             const sourcemeta::core::SchemaResolver &) const -> bool override {
-    ONLY_CONTINUE_IF(
-        vocabularies.contains(SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_4) &&
-        schema.is_object());
+    // The OpenAPI dialect requires every 2020-12 vocabulary, so the core
+    // vocabulary alone cannot tell the two rungs apart. Without the second
+    // half, a subschema of a document already on the OpenAPI dialect declares
+    // no dialect of its own, reads as sitting below the rung, and has the
+    // keyword that is doing its job renamed out from under it
+    ONLY_CONTINUE_IF(vocabularies.contains(
+                         SchemaVocabularies::Known::JSON_SCHEMA_2020_12_CORE) &&
+                     !vocabularies.contains_any(
+                         {SchemaVocabularies::Known::OPENAPI_3_1_BASE,
+                          SchemaVocabularies::Known::OPENAPI_3_2_BASE}) &&
+                     schema.is_object());
 
     ONLY_CONTINUE_IF(
-        promoted_keyword_is_author_data(schema, PROMOTING_DIALECT));
+        promoted_keyword_is_author_data(schema, OPENAPI_3_1_DIALECT));
 
-    for (const auto &keyword : KEYWORDS) {
-      if (schema.defines(keyword)) {
-        return true;
-      }
-    }
-
-    return false;
+    return schema.defines_any(
+        {"example", "discriminator", "externalDocs", "xml"});
   }
 
   auto transform(sourcemeta::core::JSON &schema, const Site &) const
@@ -56,12 +59,9 @@ public:
   }
 
 private:
-  static constexpr std::string_view PROMOTING_DIALECT{
-      "http://json-schema.org/draft-06/schema#"};
-
   // NOLINTNEXTLINE(cert-err58-cpp,bugprone-throwing-static-initialization)
-  static inline const std::array<std::string_view, 5> KEYWORDS{
-      {"$id", "const", "contains", "propertyNames", "examples"}};
+  static inline const std::array<std::string_view, 4> KEYWORDS{
+      {"example", "discriminator", "externalDocs", "xml"}};
 
   mutable std::unordered_map<std::string, std::string> renames_;
 };

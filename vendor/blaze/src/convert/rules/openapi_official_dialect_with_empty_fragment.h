@@ -1,8 +1,8 @@
-class ModernOfficialDialectWithEmptyFragment final
+class OpenAPIOfficialDialectWithEmptyFragment final
     : public SchemaTransformRule {
 public:
-  ModernOfficialDialectWithEmptyFragment()
-      : SchemaTransformRule{"modern_official_dialect_with_empty_fragment"} {};
+  OpenAPIOfficialDialectWithEmptyFragment()
+      : SchemaTransformRule{"openapi_official_dialect_with_empty_fragment"} {};
 
   [[nodiscard]] auto condition(const sourcemeta::core::JSON &schema,
                                const sourcemeta::core::JSON &,
@@ -15,11 +15,15 @@ public:
     const auto *schema_keyword{schema.try_at("$schema")};
     ONLY_CONTINUE_IF(schema_keyword && schema_keyword->is_string());
     const auto &dialect{schema_keyword->to_string()};
+    // Only the spellings this rule owns. The dated 3.1 URIs are absent on
+    // purpose: `OpenAPIOfficialDialectWithDate` is registered ahead of this
+    // rule and strips the empty fragment before comparing, so it settles one
+    // of those onto the undated URI whether or not a fragment was written,
+    // and this rule's condition is asked again right before its transform.
+    // Listing them here would be a branch nothing can reach
     ONLY_CONTINUE_IF(
-        dialect == "https://json-schema.org/draft/2019-09/schema#" ||
-        dialect == "https://json-schema.org/draft/2019-09/hyper-schema#" ||
-        dialect == "https://json-schema.org/draft/2020-12/schema#" ||
-        dialect == "https://json-schema.org/draft/2020-12/hyper-schema#");
+        dialect == "https://spec.openapis.org/oas/3.1/dialect/base#" ||
+        dialect == "https://spec.openapis.org/oas/3.2/dialect/2025-09-17#");
     return true;
   }
 

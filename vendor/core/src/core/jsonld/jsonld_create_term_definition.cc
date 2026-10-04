@@ -3,8 +3,9 @@
 
 #include <sourcemeta/core/uri.h>
 
-#include <optional> // std::optional
-#include <utility>  // std::move
+#include <algorithm> // std::ranges::sort
+#include <optional>  // std::optional
+#include <utility>   // std::move
 
 namespace sourcemeta::core {
 
@@ -55,6 +56,25 @@ auto finalize_definition(ExpansionState &state, ActiveContext &active_context,
   defined[term] = true;
 }
 
+// The mapping a term settles on must name a keyword, an IRI or a blank node,
+// and may not stand in for the keyword that carries a context (JSON-LD 1.1 API
+// Section 5.1.1 step 16.2.3)
+auto check_iri_mapping(const ActiveContext &active_context,
+                       const std::optional<JSON::String> &mapping,
+                       const WeakPointer &term_pointer,
+                       const std::initializer_list<JSON::StringView> children)
+    -> void {
+  if (!mapping.has_value() ||
+      (!is_keyword(mapping.value()) && !mapping.value().contains(':') &&
+       !active_context.vocabulary.has_value())) {
+    throw JSONLDError("Invalid IRI mapping", term_pointer, children);
+  }
+
+  if (mapping.value() == KEYWORD_CONTEXT) {
+    throw JSONLDError("Invalid keyword alias", term_pointer, children);
+  }
+}
+
 } // namespace
 
 // Create Term Definition (JSON-LD 1.1 API Section 5.1.1)
@@ -72,7 +92,7 @@ auto create_term_definition(ExpansionState &state,
   }
 
   if (term.empty()) {
-    throw JSONLDError("Invalid term definition", context_pointer);
+    throw JSONLDError("Invalid term definition", context_pointer.concat(term));
   }
 
   defined[term] = false;
@@ -223,6 +243,11 @@ auto create_term_definition(ExpansionState &state,
           }
         }
       }
+
+      // A string definition stands for a map carrying that value under @id
+      // (JSON-LD 1.1 API Section 5.1.1 step 10), so its mapping is held to the
+      // same account as the spelled-out form
+      check_iri_mapping(active_context, definition.iri, term_pointer, {});
     }
   } else if (value.is_object()) {
     const bool has_id{id_entry != nullptr};
@@ -264,14 +289,7 @@ auto create_term_definition(ExpansionState &state,
       definition.iri = expand_iri(state, active_context, id_value, false, true,
                                   &local_context, &defined, context_pointer);
       const auto &mapping{definition.iri};
-      if (!mapping.has_value() ||
-          (!is_keyword(mapping.value()) && !mapping.value().contains(':') &&
-           !active_context.vocabulary.has_value())) {
-        throw JSONLDError("Invalid IRI mapping", term_pointer, {KEYWORD_ID});
-      }
-      if (mapping.has_value() && mapping.value() == KEYWORD_CONTEXT) {
-        throw JSONLDError("Invalid keyword alias", term_pointer, {KEYWORD_ID});
-      }
+      check_iri_mapping(active_context, mapping, term_pointer, {KEYWORD_ID});
       // In 1.1, a term that itself has the form of an IRI (a colon other than
       // at the edges, or a slash) must expand to its IRI mapping.
       if (!state.processing_1_0 && mapping.has_value()) {
@@ -387,6 +405,13 @@ auto create_term_definition(ExpansionState &state,
         throw JSONLDError("Invalid container mapping", term_pointer,
                           {KEYWORD_CONTAINER});
       }
+
+      // The combinations that may name several keywords accept them in any
+      // order, so the same set spelled either way is the same mapping, and
+      // storing it in one order is what lets a protected term be redefined
+      // with the same mapping written differently
+      std::ranges::sort(definition.container);
+
       if (definition.reverse) {
         for (const auto &item : definition.container) {
           if (item != KEYWORD_SET && item != KEYWORD_INDEX) {
@@ -419,15 +444,16 @@ auto create_term_definition(ExpansionState &state,
           container_type = true;
         }
       }
-      // Valid array combinations (JSON-LD 1.1 API Section 5.1.1 step 19.1): a
+      // Valid array combinations (JSON-LD 1.1 API Section 5.1.1 step 21.1): a
       // single keyword, or @graph with exactly one of @id or @index optionally
-      // with @set, or @set combined with any of @index, @graph, @id, @type, or
-      // @language.
+      // with @set, or @set combined with any one of @index, @graph, @id,
+      // @type, or @language.
       if (!reverse_null_container && definition.container.size() != 1) {
         const bool graph_form{
             container_graph && (container_id != container_index) &&
             !container_list && !container_type && !container_language};
-        const bool set_form{container_set && !container_list};
+        const bool set_form{container_set && definition.container.size() == 2 &&
+                            !container_list};
         if (!graph_form && !set_form) {
           throw JSONLDError("Invalid container mapping", term_pointer,
                             {KEYWORD_CONTAINER});
@@ -496,9 +522,12 @@ auto create_term_definition(ExpansionState &state,
         state.protected_override = saved_override;
         state.context_protected = saved_context_protected;
         const JSON::StringView code{error.what()};
+        // Every way the remote load can fail leaves the scoped context
+        // dropped rather than the term undefined
         if (code != "Loading remote context failed" &&
+            code != "Loading document failed" &&
             code != "Recursive context inclusion" &&
-            code != "Invalid remote context") {
+            code != "Context overflow" && code != "Invalid remote context") {
           throw JSONLDError("Invalid scoped context", term_pointer,
                             {KEYWORD_CONTEXT});
         }
@@ -601,7 +630,8 @@ auto create_term_definition(ExpansionState &state,
           !entry.key_equals(KEYWORD_PREFIX, KEYWORD_PREFIX_HASH) &&
           !entry.key_equals(KEYWORD_PROTECTED, KEYWORD_PROTECTED_HASH) &&
           !entry.key_equals(KEYWORD_TYPE, KEYWORD_TYPE_HASH)) {
-        throw JSONLDError("Invalid term definition", term_pointer);
+        throw JSONLDError("Invalid term definition", term_pointer,
+                          {entry.first});
       }
     }
   } else {

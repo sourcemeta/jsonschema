@@ -195,9 +195,9 @@ inline auto walk_describe_fragment(const SerializedNode *nodes,
 
   while (true) {
     const char *segment_start = position;
-    while (position < fragment_end && *position != '/') {
-      ++position;
-    }
+    const auto *const separator = static_cast<const char *>(std::memchr(
+        position, '/', static_cast<std::size_t>(fragment_end - position)));
+    position = separator == nullptr ? fragment_end : separator;
     const auto segment_length =
         static_cast<std::uint32_t>(position - segment_start);
 
@@ -610,9 +610,9 @@ auto URITemplateRouterView::match(
 
   while (true) {
     const char *segment_start = position;
-    while (position < path_end && *position != '/') {
-      ++position;
-    }
+    const auto *const separator = static_cast<const char *>(std::memchr(
+        position, '/', static_cast<std::size_t>(path_end - position)));
+    position = separator == nullptr ? path_end : separator;
     const auto segment_length =
         static_cast<std::uint32_t>(position - segment_start);
 

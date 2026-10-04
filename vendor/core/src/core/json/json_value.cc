@@ -905,7 +905,18 @@ auto JSON::operator-=(const JSON &substractive) -> JSON & {
 
   if (this->is_integer() && divisor.is_integer()) {
     const auto divisor_value{divisor.to_integer()};
-    return divisor_value != 0 && this->to_integer() % divisor_value == 0;
+    if (divisor_value == 0) {
+      return false;
+    }
+
+    // Every integer is a multiple of one, which is settled here because the
+    // remainder below is undefined when the quotient leaves the type, as it
+    // does for the smallest integer over minus one
+    if (divisor_value == 1 || divisor_value == -1) {
+      return true;
+    }
+
+    return this->to_integer() % divisor_value == 0;
   }
 
   // Reading an integer operand as a real rounds it once it no longer fits the
@@ -939,13 +950,10 @@ auto JSON::operator-=(const JSON &substractive) -> JSON & {
       return true;
     }
 
-    const auto division{dividend_value / divisor_value};
-    Real integral = 0;
-    if (!std::isinf(division) && !std::isnan(division) &&
-        std::modf(division, &integral) == 0.0) {
-      return true;
-    }
-
+    // Dividing in binary rounds the quotient, which lands on a whole number
+    // for operands that do not divide at all once the quotient outgrows the
+    // significand or falls below the smallest subnormal, so the question is
+    // settled exactly instead
     return Decimal::strict_from(dividend_value)
         .divisible_by(Decimal::strict_from(divisor_value));
   }

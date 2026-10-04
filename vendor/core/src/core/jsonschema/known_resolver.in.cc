@@ -68,6 +68,10 @@ enum class KnownSchema : std::uint8_t {
 
   OAS_3_1_DIALECT_BASE,
   OAS_3_1_META_BASE,
+  OAS_3_1_DIALECT_2024_11_10,
+  OAS_3_1_META_2024_11_10,
+  OAS_3_1_DIALECT_2024_10_25,
+  OAS_3_1_META_2024_10_25,
 
   UNKNOWN
 };
@@ -419,6 +423,31 @@ static auto parse_identifier(const std::string_view identifier) -> KnownSchema {
     return KnownSchema::OAS_3_1_META_BASE;
   }
 
+  // Alongside the undated pair the specification names, the OpenAPI Initiative
+  // publishes a dated revision of the v3.1 dialect and of the vocabulary it
+  // builds on for every iteration those two schemas go through. A date
+  // identifies a revision rather than a patch release, and the latest date of
+  // a minor release is the correct schema for every patch release of it, so a
+  // description is free to name any of them and each has to resolve to the
+  // revision it names. Both dated revisions describe the same keywords the
+  // undated pair does, and differ from it in nothing but the identifiers they
+  // go by and the order they write their members in
+  if (identifier == "https://spec.openapis.org/oas/3.1/dialect/2024-11-10") {
+    return KnownSchema::OAS_3_1_DIALECT_2024_11_10;
+  }
+
+  if (identifier == "https://spec.openapis.org/oas/3.1/meta/2024-11-10") {
+    return KnownSchema::OAS_3_1_META_2024_11_10;
+  }
+
+  if (identifier == "https://spec.openapis.org/oas/3.1/dialect/2024-10-25") {
+    return KnownSchema::OAS_3_1_DIALECT_2024_10_25;
+  }
+
+  if (identifier == "https://spec.openapis.org/oas/3.1/meta/2024-10-25") {
+    return KnownSchema::OAS_3_1_META_2024_10_25;
+  }
+
   return KnownSchema::UNKNOWN;
 }
 
@@ -700,6 +729,26 @@ auto sourcemeta::core::schema_resolver(const std::string_view identifier)
           sourcemeta::core::parse_json(R"EOF(@OPENAPI_OAS_3_1_META_BASE@)EOF")};
       return SCHEMA;
     }
+    case KnownSchema::OAS_3_1_DIALECT_2024_11_10: {
+      static const auto SCHEMA{sourcemeta::core::parse_json(
+          R"EOF(@OPENAPI_OAS_3_1_DIALECT_2024_11_10@)EOF")};
+      return SCHEMA;
+    }
+    case KnownSchema::OAS_3_1_META_2024_11_10: {
+      static const auto SCHEMA{sourcemeta::core::parse_json(
+          R"EOF(@OPENAPI_OAS_3_1_META_2024_11_10@)EOF")};
+      return SCHEMA;
+    }
+    case KnownSchema::OAS_3_1_DIALECT_2024_10_25: {
+      static const auto SCHEMA{sourcemeta::core::parse_json(
+          R"EOF(@OPENAPI_OAS_3_1_DIALECT_2024_10_25@)EOF")};
+      return SCHEMA;
+    }
+    case KnownSchema::OAS_3_1_META_2024_10_25: {
+      static const auto SCHEMA{sourcemeta::core::parse_json(
+          R"EOF(@OPENAPI_OAS_3_1_META_2024_10_25@)EOF")};
+      return SCHEMA;
+    }
     case KnownSchema::UNKNOWN:
       return std::nullopt;
   }
@@ -771,6 +820,10 @@ auto sourcemeta::core::schema_is_official(
     case KnownSchema::OAS_3_2_META_2025_09_17:
     case KnownSchema::OAS_3_1_DIALECT_BASE:
     case KnownSchema::OAS_3_1_META_BASE:
+    case KnownSchema::OAS_3_1_DIALECT_2024_11_10:
+    case KnownSchema::OAS_3_1_META_2024_11_10:
+    case KnownSchema::OAS_3_1_DIALECT_2024_10_25:
+    case KnownSchema::OAS_3_1_META_2024_10_25:
     case KnownSchema::UNKNOWN:
       return false;
   }
