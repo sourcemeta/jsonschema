@@ -126,13 +126,14 @@ WRITE expected.txt UNTIL EOF
 1>        against the document root.
 1>
 1>    upgrade <schema.json|.yaml>
-1>            [--to/-t draft4|draft6|draft7|2019-09|2020-12]
+1>            [--to/-t draft4|draft6|draft7|2019-09|2020-12|openapi3.1|openapi3.2]
 1>            [--indentation/-n <spaces>]
 1>
-1>        Upgrade the given schema to a newer JSON Schema dialect.
-1>        Defaults to the latest dialect (2020-12). Schemas that declare a
-1>        custom meta-schema and schemas that are meta-schemas themselves
-1>        cannot be upgraded by this command.
+1>        Upgrade the given schema to a newer JSON Schema dialect, or to one
+1>        of the OpenAPI Schema Object dialects. Defaults to the latest JSON
+1>        Schema dialect (2020-12). Schemas that declare a custom meta-schema
+1>        and schemas that are meta-schemas themselves cannot be upgraded by
+1>        this command.
 1>
 1>    bundle <schema.json|.yaml> [--extension/-e <extension>]
 1>           [--ignore/-i <schemas-or-directories>] [--without-id/-w]
