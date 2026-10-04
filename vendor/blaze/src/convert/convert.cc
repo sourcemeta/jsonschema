@@ -7,10 +7,10 @@
 
 #include <algorithm> // std::ranges::any_of, std::ranges::find
 #include <array>     // std::array
-#include <cassert>   // assert
-#include <concepts>  // std::derived_from
-#include <cstddef>   // std::size_t
-#include <cstdint>   // std::uint64_t
+#include <cassert>
+#include <concepts> // std::derived_from
+#include <cstddef>  // std::size_t
+#include <cstdint>  // std::uint64_t
 #include <functional> // std::cref, std::function, std::hash, std::reference_wrapper
 #include <map>        // std::map
 #include <memory>     // std::make_unique, std::unique_ptr
@@ -34,13 +34,12 @@ namespace {
 #include "helpers.h"
 #include "rule.h"
 
-using Rule = std::tuple<std::unique_ptr<SchemaTransformRule>, bool, bool>;
+using Rule = std::tuple<std::unique_ptr<SchemaTransformRule>, bool>;
 
 /// Construct a rule entry for the given rule type
 template <std::derived_from<SchemaTransformRule> T>
 [[nodiscard]] auto make_rule() -> Rule {
   return {std::make_unique<T>(),
-          std::is_same_v<typename T::reframe_after_transform, std::true_type>,
           std::is_same_v<typename T::writes_outside_itself, std::true_type>};
 }
 
@@ -188,275 +187,336 @@ auto assert_convertible_metaschema(const core::JSON &schema,
       });
 }
 
-/// Apply the given rules top-down to every subschema until none of them applies
+/// Follows every reference whose destination stopped resolving to wherever the
+/// pass moved it. A reference breaks only when its destination stops
+/// resolving: a target sitting at a different position is not enough, since a
+/// resource that moved as a whole keeps resolving the fragments its own
+/// identifier is the base of.
+template <typename Snapshot, typename Relocation>
+auto repair_references(sourcemeta::core::JSON &schema,
+                       const std::vector<Snapshot> &snapshots,
+                       const std::vector<Relocation> &journal,
+                       const sourcemeta::core::SchemaWalker &walker,
+                       const sourcemeta::core::SchemaResolver &resolver,
+                       const std::string_view default_dialect,
+                       const std::string_view default_id) -> void {
+  if (snapshots.empty() || journal.empty() || schema.is_boolean()) {
+    return;
+  }
+
+  const core::SchemaFrame frame{
+      core::SchemaFrame::Mode::References,
+      schema,
+      walker,
+      resolver,
+      default_dialect,
+      default_id,
+      sourcemeta::core::SchemaFrame::IdentifierMode::Fallback};
+
+  for (const auto &snapshot : snapshots) {
+    if (frame.traverse(snapshot.destination).has_value()) {
+      continue;
+    }
+
+    // The resource the fragment is written relative to can move in the same
+    // pass as the target does, so where that resource now begins is followed
+    // too. Slicing the moved target by where it used to begin would count
+    // tokens of the new position as part of the old prefix
+    auto target{snapshot.target};
+    auto origin{snapshot.origin};
+    auto base{snapshot.target.slice(0, snapshot.target_offset)};
+    for (const auto &[before, after] : journal) {
+      target = target.rebase(before, after);
+      origin = origin.rebase(before, after);
+      base = base.rebase(before, after);
+    }
+
+    // A pass is free to drop the subschema a reference was written in, and a
+    // reference that is no longer in the document has nothing left to point
+    // anywhere, so there is nothing to repair rather than anything broken
+    if (core::try_get(schema, origin.initial()) == nullptr) {
+      continue;
+    }
+
+    // Nothing the pass recorded accounts for where the target went, so the
+    // reference cannot be followed
+    if (target == snapshot.target) {
+      throw ConvertBrokenReferenceError{snapshot.destination, snapshot.origin};
+    }
+
+    const auto relative{target.slice(base.size())};
+    const auto fragment{snapshot.fragment == core::to_string(snapshot.target)
+                            ? base.concat(relative)
+                            : relative};
+
+    core::URI original{snapshot.original};
+    // The stringified pointer is literal text, so a token that already reads
+    // as an escape must be encoded rather than taken as one
+    original.unescaped_fragment(core::to_string(fragment));
+    core::set(schema, origin, core::JSON{original.recompose()});
+  }
+}
+
+/// Each pass frames the document once, decides every edit the pass will make
+/// from that one frame, applies them deepest position first, and only then
+/// repairs the references that the edits moved. Nothing re-frames in the
+/// middle of a pass.
+///
+/// Applying the deepest position first is what lets a rule stop asking whether
+/// the subschemas below it are still waiting to be rewritten: by the time a
+/// position is reached, everything under it has already been handled in this
+/// same pass.
 auto apply(const std::vector<Rule> &rules, sourcemeta::core::JSON &schema,
            const sourcemeta::core::SchemaWalker &walker,
            const sourcemeta::core::SchemaResolver &resolver,
            const std::string_view default_dialect,
-           const std::string_view default_id) -> void {
+           const std::string_view default_id, const bool assert_convertible)
+    -> void {
   assert(!rules.empty());
 
-  struct ProcessedRuleHasher {
-    auto operator()(const std::tuple<core::Pointer, std::string_view,
-                                     core::JSON> &value) const noexcept
-        -> std::size_t {
-      return core::Pointer::Hasher{}(std::get<0>(value)) ^
-             (std::hash<std::string_view>{}(std::get<1>(value)) << 1) ^
-             (std::hash<std::uint64_t>{}(std::get<2>(value).fast_hash()) << 2);
-    }
+  struct Scheduled {
+    Site site;
+    core::SchemaVocabularies vocabularies;
+    std::size_t rule;
+    std::size_t depth;
+    bool writes_outside;
   };
 
-  std::unordered_set<std::tuple<core::Pointer, std::string_view, core::JSON>,
-                     ProcessedRuleHasher>
-      processed_rules;
-
-  std::optional<core::SchemaFrame> frame;
-
-  struct PotentiallyBrokenReference {
+  struct Snapshot {
     core::Pointer origin;
     core::JSON::String original;
     core::JSON::String destination;
     core::JSON::String fragment;
-    core::Pointer target_pointer;
-    std::size_t target_relative_pointer;
+    core::Pointer target;
+    std::size_t target_offset;
   };
 
-  std::vector<PotentiallyBrokenReference> potentially_broken_references;
+  // Where a rule moved a position, in absolute terms, so that a reference
+  // naming anything under it can be followed without asking which rule did it
+  std::vector<SchemaTransformRule::Relocation> journal;
+
   bool asserted{false};
 
+  // A pass that leaves the document as it found it has nothing left to
+  // contribute, and running another would schedule the very same work and
+  // decline it again. Ending the loop on that rather than on a count is what
+  // makes a rule whose condition claims work its transform then declines
+  // impossible to spin on
+  core::JSON previous{sourcemeta::core::JSON::make_object()};
+  bool first_pass{true};
+
+  // One pass per rung, plus a pass for what the ladder leaves behind, is the
+  // most a correct set of rules can need. Reaching this means two passes are
+  // undoing each other, which the check above cannot see, so it is worth
+  // saying out loud where the asserts are compiled in
+  constexpr auto MAXIMUM_PASSES{LADDER_DIALECTS.size() + 2};
+  std::size_t passes{0};
+
   while (true) {
-    if (!frame.has_value()) {
-      if (schema.is_boolean()) {
-        break;
-      }
-
-      frame.emplace(core::SchemaFrame::Mode::References, schema, walker,
-                    resolver, default_dialect, default_id,
-                    sourcemeta::core::SchemaFrame::IdentifierMode::Fallback);
-
-      if (!asserted) {
-        assert_convertible_dialects(schema, frame.value(), default_id);
-        assert_convertible_metaschema(schema, frame.value());
-        assert_schema_references(frame.value());
-        asserted = true;
-      }
+    if (schema.is_boolean()) {
+      break;
     }
 
-    std::unordered_set<core::Pointer, core::Pointer::Hasher> visited;
-    bool applied{false};
+    if (!first_pass && schema == previous) {
+      break;
+    }
 
-    // Stopping the traversal stands in for the restart that the
-    // rules request once they mutate the schema
-    [[maybe_unused]] const auto restarted{frame->any_subschema(
-        [&](const core::SchemaFrame::Location &location) -> bool {
-          const auto [visited_iterator, inserted] =
-              visited.insert(core::to_pointer(location.pointer));
-          if (!inserted) {
-            return false;
-          }
-          const auto &entry_pointer{*visited_iterator};
-          auto &current{core::get(schema, entry_pointer)};
-          const auto current_vocabularies{
-              frame->vocabularies(location, resolver)};
+    previous = schema;
+    first_pass = false;
 
-          for (const auto &[rule, reframe_after_transform, writes_outside] :
-               rules) {
-            // A dialect the ladder does not name has no rules for moving a
-            // schema off it, so nothing may rewrite a subschema that is read
-            // as one. Leaving this to each rule's own vocabulary gate does not
-            // hold: core derives a pre-2019-09 dialect's vocabularies from its
-            // base dialect, so an off-ladder resource does carry the rung's
-            // vocabulary and does match those gates. A rule that writes
-            // outside itself answers for what it touches, and an empty dialect
-            // is the caller's to supply and is not off the ladder
-            if (!writes_outside && !location.dialect.empty() &&
-                !names_ladder_dialect(location.dialect)) {
-              continue;
+    passes += 1;
+    assert(passes <= MAXIMUM_PASSES);
+    if (passes > MAXIMUM_PASSES) {
+      break;
+    }
+
+    std::vector<Scheduled> scheduled;
+    std::vector<Snapshot> snapshots;
+
+    // Everything the frame has to say is taken down here, while it still
+    // describes the document in front of it. A `SchemaFrame::Location` hands
+    // out views into the frame and the document, so reading one after an edit
+    // is not a stale answer but a dangling one, and the same goes for asking
+    // the frame anything else. Past this block nothing consults it
+    {
+      const core::SchemaFrame frame{
+          core::SchemaFrame::Mode::References,
+          schema,
+          walker,
+          resolver,
+          default_dialect,
+          default_id,
+          sourcemeta::core::SchemaFrame::IdentifierMode::Fallback};
+
+      if (assert_convertible && !asserted) {
+        assert_convertible_dialects(schema, frame, default_id);
+        assert_convertible_metaschema(schema, frame);
+        assert_schema_references(frame);
+        asserted = true;
+      }
+
+      for (const auto &[rule, writes_outside] : rules) {
+        rule->begin_pass();
+      }
+
+      std::unordered_set<core::Pointer, core::Pointer::Hasher> visited;
+      frame.for_each_subschema(
+          [&](const core::SchemaFrame::Location &location) -> void {
+            auto pointer{core::to_pointer(location.pointer)};
+            if (!visited.insert(pointer).second) {
+              return;
             }
 
-            const auto outcome{rule->condition(current, schema,
-                                               current_vocabularies, *frame,
-                                               location, walker, resolver)};
+            const auto &current{core::get(schema, pointer)};
+            const auto &vocabularies{frame.vocabularies(location, resolver)};
+            Site site{.pointer = std::move(pointer),
+                      .dialect = core::JSON::String{location.dialect},
+                      .base_dialect = location.base_dialect,
+                      .type = location.type,
+                      .relative_pointer = location.relative_pointer};
 
-            if (!outcome) {
-              continue;
-            }
+            for (std::size_t index = 0; index < rules.size(); index += 1) {
+              const auto &[rule, writes_outside] = rules.at(index);
 
-            // A rule that already produced this exact state here has nothing
-            // left to contribute, and applying it again would be a cycle. The
-            // asserts below say a correct rule never gets this far, so this is
-            // what keeps a faulty one from spinning where they are compiled out
-            if (processed_rules.contains(
-                    std::tuple<core::Pointer, std::string_view, core::JSON>{
-                        entry_pointer, rule->name(), current})) {
-              continue;
-            }
-
-            potentially_broken_references.clear();
-            frame->for_each_reference([&](const core::SchemaReferenceType,
-                                          const core::WeakPointer &origin,
-                                          const core::SchemaFrame::Reference
-                                              &reference) -> void {
-              const auto destination{frame->traverse(reference.destination)};
-              if (!destination.has_value() || !reference.fragment.has_value() ||
-                  !reference.fragment.value().starts_with('/')) {
-                return;
-              }
-
-              const auto &landing{destination.value().get()};
-
-              // A fragment shaped like a pointer is not necessarily one. Draft
-              // 4 placed no restriction on the fragment an identifier carries,
-              // so an anchor may be named something like `/definitions/x`, and
-              // framing hands that name the URI the pointer would otherwise
-              // have had. Such a reference follows the anchor when it moves
-              // rather than keeping the location it looks like it names
-              if (landing.type == core::SchemaFrame::LocationType::Anchor) {
-                return;
-              }
-              potentially_broken_references.push_back(
-                  {.origin = core::to_pointer(origin),
-                   .original = core::JSON::String{reference.original},
-                   .destination = reference.destination,
-                   .fragment = core::JSON::String{reference.fragment.value()},
-                   .target_pointer = core::to_pointer(landing.pointer),
-                   .target_relative_pointer = landing.relative_pointer});
-            });
-
-            rule->prepare(*frame, location);
-            rule->transform(current);
-
-            applied = true;
-
-            if (reframe_after_transform) {
-              frame.emplace(
-                  core::SchemaFrame::Mode::References, schema, walker, resolver,
-                  default_dialect, default_id,
-                  sourcemeta::core::SchemaFrame::IdentifierMode::Fallback);
-            } else if (current.is_boolean()) {
-              std::tuple<core::Pointer, std::string_view, core::JSON> mark{
-                  entry_pointer, rule->name(), current};
-              assert(!processed_rules.contains(mark));
-              processed_rules.emplace(std::move(mark));
-              frame.reset();
-              return true;
-            }
-
-            const auto new_location{
-                frame->traverse(core::to_weak_pointer(entry_pointer))};
-            assert(new_location.has_value());
-
-            // Fix broken references before re-checking the condition,
-            // as the re-check may mutate rule state that rereference needs
-            bool references_fixed{false};
-            const auto resource_offset{
-                new_location.value().get().relative_pointer};
-            const auto current_slice{entry_pointer.slice(resource_offset)};
-            for (const auto &saved_reference : potentially_broken_references) {
-              // A reference only breaks when its destination stops resolving.
-              // The target sitting at a different pointer than before is not
-              // enough, as a resource that moved as a whole keeps resolving
-              // the fragments that its own identifier is the base of
-              if (frame->traverse(saved_reference.destination).has_value()) {
+              // A dialect the ladder does not name has no rules for moving a
+              // schema off it, so nothing may rewrite a subschema that is read
+              // as one. Leaving this to each rule's own vocabulary gate does
+              // not hold: core derives a pre-2019-09 dialect's vocabularies
+              // from its base dialect, so an off-ladder resource does carry
+              // the rung's vocabulary and does match those gates
+              if (!writes_outside && !site.dialect.empty() &&
+                  !names_ladder_dialect(site.dialect)) {
                 continue;
               }
 
-              // If the origin was also relocated, resolve its new location
-              auto effective_origin{saved_reference.origin};
-              if (!core::try_get(schema, saved_reference.origin.initial())) {
-                const auto new_origin{rule->rereference(
-                    saved_reference.destination, saved_reference.origin,
-                    saved_reference.origin.slice(resource_offset),
-                    current_slice)};
-                if (!new_origin.has_value()) {
-                  continue;
-                }
-                effective_origin =
-                    saved_reference.origin.slice(0, resource_offset)
-                        .concat(new_origin.value());
-                if (!core::try_get(schema, effective_origin.initial())) {
-                  continue;
-                }
+              // Whatever this rule needs the frame for, it takes down now
+              rule->plan(current, schema, vocabularies, frame, location, site,
+                         walker, resolver);
+
+              if (rule->condition(current, schema, vocabularies, site, walker,
+                                  resolver)) {
+                scheduled.push_back({.site = site,
+                                     .vocabularies = vocabularies,
+                                     .rule = index,
+                                     .depth = site.pointer.size(),
+                                     .writes_outside = writes_outside});
               }
+            }
+          });
 
-              const auto new_relative{rule->rereference(
-                  saved_reference.destination, saved_reference.origin,
-                  saved_reference.target_pointer.slice(
-                      saved_reference.target_relative_pointer),
-                  current_slice)};
-              if (!new_relative.has_value()) {
-                throw ConvertBrokenReferenceError{saved_reference.destination,
-                                                  saved_reference.origin};
-              }
-              const auto new_fragment{
-                  saved_reference.fragment ==
-                          core::to_string(saved_reference.target_pointer)
-                      ? saved_reference.target_pointer
-                            .slice(0, saved_reference.target_relative_pointer)
-                            .concat(new_relative.value())
-                      : new_relative.value()};
-
-              core::URI original{saved_reference.original};
-              // The stringified pointer is literal text, so a token that
-              // already reads as an escape must be encoded rather than taken
-              // as one
-              original.unescaped_fragment(core::to_string(new_fragment));
-              core::set(schema, effective_origin,
-                        core::JSON{original.recompose()});
-              references_fixed = true;
+      frame.for_each_reference(
+          [&](const core::SchemaReferenceType, const core::WeakPointer &origin,
+              const core::SchemaFrame::Reference &reference) -> void {
+            const auto destination{frame.traverse(reference.destination)};
+            if (!destination.has_value() || !reference.fragment.has_value() ||
+                !reference.fragment.value().starts_with('/')) {
+              return;
             }
 
-            const auto new_vocabularies{
-                frame->vocabularies(new_location.value().get(), resolver)};
+            const auto &landing{destination.value().get()};
 
-            assert(!rule->condition(current, schema, new_vocabularies, *frame,
-                                    new_location.value().get(), walker,
-                                    resolver));
-
-            std::tuple<core::Pointer, std::string_view, core::JSON> mark{
-                entry_pointer, rule->name(), current};
-            assert(!processed_rules.contains(mark));
-            processed_rules.emplace(std::move(mark));
-
-            if (references_fixed) {
-              frame.reset();
+            // A fragment shaped like a pointer is not necessarily one. Draft 4
+            // placed no restriction on the fragment an identifier carries, so
+            // an anchor may be named something like `/definitions/x`, and
+            // framing hands that name the URI the pointer would otherwise have
+            // had. Such a reference follows the anchor when it moves rather
+            // than keeping the location it looks like it names
+            if (landing.type == core::SchemaFrame::LocationType::Anchor) {
+              return;
             }
 
-            if (references_fixed || reframe_after_transform) {
-              return true;
-            }
-          }
+            snapshots.push_back(
+                {.origin = core::to_pointer(origin),
+                 .original = core::JSON::String{reference.original},
+                 .destination = reference.destination,
+                 .fragment = core::JSON::String{reference.fragment.value()},
+                 .target = core::to_pointer(landing.pointer),
+                 .target_offset = landing.relative_pointer});
+          });
+    }
 
-          return false;
-        })};
-
-    if (!applied) {
+    if (scheduled.empty()) {
       break;
     }
+
+    // A rule that writes across the document goes first, because what it
+    // planned names positions as they are now and any other edit would move
+    // them. After that, deepest first, and within one position in the order the
+    // rules were registered. Applying what is deepest first is what lets a rule
+    // stop asking whether the subschemas below it are still waiting: by the
+    // time a position is reached, everything under it has been handled already
+    std::ranges::stable_sort(
+        scheduled, [](const auto &left, const auto &right) -> bool {
+          if (left.writes_outside != right.writes_outside) {
+            return left.writes_outside;
+          }
+
+          if (left.depth != right.depth) {
+            return left.depth > right.depth;
+          }
+
+          return left.rule < right.rule;
+        });
+
+    journal.clear();
+    for (const auto &entry : scheduled) {
+      const auto &[rule, writes_outside] = rules.at(entry.rule);
+
+      // An edit applied earlier in this pass may have moved or removed the
+      // position a later one was scheduled on
+      if (core::try_get(schema, entry.site.pointer) == nullptr) {
+        continue;
+      }
+
+      auto &current{core::get(schema, entry.site.pointer)};
+
+      // Asked again right before the edit, so that an edit applied earlier in
+      // this pass can settle what this one was going to do. The question is
+      // answered from what was taken down above, never from the frame
+      if (!rule->condition(current, schema, entry.vocabularies, entry.site,
+                           walker, resolver)) {
+        continue;
+      }
+
+      rule->transform(current, entry.site);
+
+      for (const auto &[before, after] : rule->relocations()) {
+        journal.emplace_back(entry.site.pointer.concat(before),
+                             entry.site.pointer.concat(after));
+      }
+    }
+
+    repair_references(schema, snapshots, journal, walker, resolver,
+                      default_dialect, default_id);
   }
 }
 
 #include "rules/definitions_to_defs.h"
 #include "rules/dependencies_to_dependent.h"
+#include "rules/dialect_override_becomes_dollar_schema.h"
 #include "rules/draft_official_dialect_with_https.h"
 #include "rules/draft_official_dialect_without_empty_fragment.h"
 #include "rules/empty_object_as_true.h"
 #include "rules/enum_to_const.h"
 #include "rules/modern_official_dialect_with_empty_fragment.h"
 #include "rules/modern_official_dialect_with_http.h"
+#include "rules/openapi_official_dialect_with_date.h"
+#include "rules/openapi_official_dialect_with_empty_fragment.h"
 #include "rules/prefix_promoted_2020_12_keywords.h"
 #include "rules/prefix_promoted_draft_2019_09_keywords.h"
 #include "rules/prefix_promoted_draft_4_keywords.h"
 #include "rules/prefix_promoted_draft_6_keywords.h"
 #include "rules/prefix_promoted_draft_7_keywords.h"
+#include "rules/prefix_promoted_openapi_3_1_keywords.h"
 #include "rules/sanitize_draft_4_anchors.h"
 #include "rules/shadow_stray_dialect_declaration.h"
 #include "rules/upgrade_2019_09_to_2020_12.h"
-#include "rules/upgrade_dialect_override_cleanup.h"
+#include "rules/upgrade_2020_12_to_openapi_3_1.h"
 #include "rules/upgrade_draft_3_to_draft_4.h"
 #include "rules/upgrade_draft_4_to_draft_6.h"
 #include "rules/upgrade_draft_6_to_draft_7.h"
 #include "rules/upgrade_draft_7_to_draft_2019_09.h"
+#include "rules/upgrade_openapi_3_1_to_openapi_3_2.h"
 
 #undef ONLY_CONTINUE_IF
 
@@ -467,19 +527,31 @@ auto convert(sourcemeta::core::JSON &schema,
              const sourcemeta::core::SchemaResolver &resolver,
              const ConvertTarget target, const std::string_view default_dialect,
              const std::string_view default_id) -> void {
+  // How a dialect is spelled is settled before any rung is asked about one. A
+  // rung rule reads the dialect of the position it is looking at, and a
+  // spelling the ladder does not name is one it cannot answer for, so these
+  // run to completion first rather than alongside
+  std::vector<Rule> spellings;
+  spellings.reserve(8);
+  spellings.push_back(make_rule<DialectOverrideBecomesDollarSchema>());
+  spellings.push_back(make_rule<ShadowStrayDialectDeclaration>());
+  spellings.push_back(make_rule<DraftOfficialDialectWithHttps>());
+  spellings.push_back(make_rule<DraftOfficialDialectWithoutEmptyFragment>());
+  spellings.push_back(make_rule<ModernOfficialDialectWithEmptyFragment>());
+  spellings.push_back(make_rule<ModernOfficialDialectWithHttp>());
+  spellings.push_back(make_rule<OpenAPIOfficialDialectWithDate>());
+  spellings.push_back(make_rule<OpenAPIOfficialDialectWithEmptyFragment>());
+
   std::vector<Rule> rules;
-  rules.reserve(21);
-  rules.push_back(make_rule<ShadowStrayDialectDeclaration>());
-  rules.push_back(make_rule<DraftOfficialDialectWithHttps>());
-  rules.push_back(make_rule<DraftOfficialDialectWithoutEmptyFragment>());
-  rules.push_back(make_rule<ModernOfficialDialectWithEmptyFragment>());
-  rules.push_back(make_rule<ModernOfficialDialectWithHttp>());
+  rules.reserve(20);
   rules.push_back(make_rule<PrefixPromotedDraft4Keywords>());
   rules.push_back(make_rule<UpgradeDraft3ToDraft4>());
 
   if (target == ConvertTarget::Draft6 || target == ConvertTarget::Draft7 ||
       target == ConvertTarget::Draft201909 ||
-      target == ConvertTarget::Draft202012) {
+      target == ConvertTarget::Draft202012 ||
+      target == ConvertTarget::OpenAPI31 ||
+      target == ConvertTarget::OpenAPI32) {
     rules.push_back(make_rule<PrefixPromotedDraft6Keywords>());
     rules.push_back(make_rule<SanitizeDraft4Anchors>());
     rules.push_back(make_rule<UpgradeDraft4ToDraft6>());
@@ -488,28 +560,42 @@ auto convert(sourcemeta::core::JSON &schema,
   }
 
   if (target == ConvertTarget::Draft7 || target == ConvertTarget::Draft201909 ||
-      target == ConvertTarget::Draft202012) {
+      target == ConvertTarget::Draft202012 ||
+      target == ConvertTarget::OpenAPI31 ||
+      target == ConvertTarget::OpenAPI32) {
     rules.push_back(make_rule<PrefixPromotedDraft7Keywords>());
     rules.push_back(make_rule<UpgradeDraft6ToDraft7>());
   }
 
   if (target == ConvertTarget::Draft201909 ||
-      target == ConvertTarget::Draft202012) {
+      target == ConvertTarget::Draft202012 ||
+      target == ConvertTarget::OpenAPI31 ||
+      target == ConvertTarget::OpenAPI32) {
     rules.push_back(make_rule<PrefixPromoted201909Keywords>());
     rules.push_back(make_rule<UpgradeDraft7To201909>());
     rules.push_back(make_rule<DefinitionsToDefs>());
     rules.push_back(make_rule<DependenciesToDependent>());
   }
 
-  if (target == ConvertTarget::Draft202012) {
+  if (target == ConvertTarget::Draft202012 ||
+      target == ConvertTarget::OpenAPI31 ||
+      target == ConvertTarget::OpenAPI32) {
     rules.push_back(make_rule<PrefixPromoted202012Keywords>());
     rules.push_back(make_rule<Upgrade201909To202012>());
   }
 
-  rules.push_back(make_rule<UpgradeDialectOverrideCleanup>());
-  apply(rules, schema, walker, resolver, default_dialect, default_id);
-  erase_dialect_overrides(schema, walker, resolver, default_dialect,
-                          default_id);
+  if (target == ConvertTarget::OpenAPI31 ||
+      target == ConvertTarget::OpenAPI32) {
+    rules.push_back(make_rule<PrefixPromotedOpenAPI31Keywords>());
+    rules.push_back(make_rule<Upgrade202012ToOpenAPI31>());
+  }
+
+  if (target == ConvertTarget::OpenAPI32) {
+    rules.push_back(make_rule<UpgradeOpenAPI31ToOpenAPI32>());
+  }
+
+  apply(spellings, schema, walker, resolver, default_dialect, default_id, true);
+  apply(rules, schema, walker, resolver, default_dialect, default_id, false);
 }
 
 } // namespace sourcemeta::blaze

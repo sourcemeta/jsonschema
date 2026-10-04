@@ -1,46 +1,38 @@
 class UpgradeDraft4ToDraft6 final : public SchemaTransformRule {
 public:
-  using reframe_after_transform = std::true_type;
   UpgradeDraft4ToDraft6()
       : SchemaTransformRule{"upgrade_draft_4_to_draft_6"} {};
 
   [[nodiscard]] auto
   condition(const sourcemeta::core::JSON &schema,
-            const sourcemeta::core::JSON &root,
+            const sourcemeta::core::JSON &,
             const sourcemeta::core::SchemaVocabularies &vocabularies,
-            const sourcemeta::core::SchemaFrame &frame,
-            const sourcemeta::core::SchemaFrame::Location &location,
-            const sourcemeta::core::SchemaWalker &,
+            const Site &site, const sourcemeta::core::SchemaWalker &,
             const sourcemeta::core::SchemaResolver &) const -> bool override {
     ONLY_CONTINUE_IF(
         vocabularies.contains(SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_4) &&
         schema.is_object());
 
-    const bool root_via_default_dialect =
-        location.pointer.empty() && !schema.defines("$schema");
-
-    ONLY_CONTINUE_IF(has_pending_draft_4_pattern(schema, location.dialect) ||
-                     root_via_default_dialect);
+    ONLY_CONTINUE_IF(has_pending_draft_4_pattern(schema, site.dialect) ||
+                     at_dialect_declaration(schema, site));
 
     // Anchors are renamed document-wide by a rule of its own, and bumping the
     // dialect is what stops `id` from identifying anything, so this waits for
     // that to finish rather than deciding which resource ought to do it
-    ONLY_CONTINUE_IF(!has_unsanitized_draft_4_anchor(root, frame));
-
-    return !frame.any_subschema_under(
-        location.pointer,
-        [&root](const sourcemeta::core::SchemaFrame::Location &entry) -> bool {
-          const auto entry_pointer{sourcemeta::core::to_pointer(entry.pointer)};
-          const auto &entry_schema{sourcemeta::core::get(root, entry_pointer)};
-          if (entry_schema.is_object() && entry_schema.defines("$ref")) {
-            return false;
-          }
-
-          return has_pending_draft_4_pattern(entry_schema, entry.dialect);
-        });
+    return !this->anchors_pending_;
   }
 
-  auto transform(sourcemeta::core::JSON &schema) const -> void override {
+  auto plan(const sourcemeta::core::JSON &, const sourcemeta::core::JSON &root,
+            const sourcemeta::core::SchemaVocabularies &,
+            const sourcemeta::core::SchemaFrame &frame,
+            const sourcemeta::core::SchemaFrame::Location &, const Site &,
+            const sourcemeta::core::SchemaWalker &,
+            const sourcemeta::core::SchemaResolver &) const -> void override {
+    this->anchors_pending_ = has_unsanitized_draft_4_anchor(root, frame);
+  }
+
+  auto transform(sourcemeta::core::JSON &schema, const Site &site) const
+      -> void override {
     if (schema.defines("id") && schema.at("id").is_string()) {
       schema.rename("id", "$id");
     }
@@ -65,16 +57,12 @@ public:
       }
     }
 
-    if (schema.defines("$schema") && schema.at("$schema").is_string() &&
-        schema.at("$schema").to_string() == DRAFT_4_URL) {
-      schema.assign("$schema", sourcemeta::core::JSON{DRAFT_6_URL});
-      drop_dialect_overrides(schema, DRAFT_6_URL, this->subschemas());
-    } else {
-      mark_dialect_override(schema, DRAFT_6_URL);
-    }
+    bump_dialect(schema, site, DRAFT_6_URL);
   }
 
 private:
+  mutable bool anchors_pending_{false};
+
   // NOLINTNEXTLINE(cert-err58-cpp,bugprone-throwing-static-initialization)
   static inline const std::string DRAFT_4_URL{
       "http://json-schema.org/draft-04/schema#"};

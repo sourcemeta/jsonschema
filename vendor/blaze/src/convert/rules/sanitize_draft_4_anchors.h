@@ -7,8 +7,6 @@
 /// left pointing at a name that moved
 class SanitizeDraft4Anchors final : public SchemaTransformRule {
 public:
-  using reframe_after_transform = std::true_type;
-
   // References to an anchor may sit anywhere, so this fires at the document
   // root and writes across it. Only Draft 4 subschemas are ever touched, which
   // is what the driver's own guard is there to protect
@@ -16,15 +14,16 @@ public:
 
   SanitizeDraft4Anchors() : SchemaTransformRule{"sanitize_draft_4_anchors"} {};
 
-  [[nodiscard]] auto
-  condition(const sourcemeta::core::JSON &schema,
+  auto plan(const sourcemeta::core::JSON &schema,
             const sourcemeta::core::JSON &,
             const sourcemeta::core::SchemaVocabularies &,
             const sourcemeta::core::SchemaFrame &frame,
-            const sourcemeta::core::SchemaFrame::Location &location,
+            const sourcemeta::core::SchemaFrame::Location &, const Site &site,
             const sourcemeta::core::SchemaWalker &,
-            const sourcemeta::core::SchemaResolver &) const -> bool override {
-    ONLY_CONTINUE_IF(location.pointer.empty() && schema.is_object());
+            const sourcemeta::core::SchemaResolver &) const -> void override {
+    if (!site.pointer.empty() || !schema.is_object()) {
+      return;
+    }
 
     this->moves_.clear();
 
@@ -33,14 +32,25 @@ public:
     std::map<sourcemeta::core::Pointer, Rename> renamed;
     plan_anchor_renames(schema, frame, renamed, this->moves_);
     if (renamed.empty()) {
-      return false;
+      this->moves_.clear();
+      return;
     }
 
     plan_reference_rewrites(frame, renamed, this->moves_);
-    return true;
   }
 
-  auto transform(sourcemeta::core::JSON &schema) const -> void override {
+  [[nodiscard]] auto
+  condition(const sourcemeta::core::JSON &, const sourcemeta::core::JSON &,
+            const sourcemeta::core::SchemaVocabularies &, const Site &site,
+            const sourcemeta::core::SchemaWalker &,
+            const sourcemeta::core::SchemaResolver &) const -> bool override {
+    // What was planned names positions across the whole document, so it is
+    // written from the root and nowhere else
+    return site.pointer.empty() && !this->moves_.empty();
+  }
+
+  auto transform(sourcemeta::core::JSON &schema, const Site &) const
+      -> void override {
     for (const auto &[pointer, keyword, value] : this->moves_) {
       sourcemeta::core::get(schema, pointer).assign(keyword, value);
     }

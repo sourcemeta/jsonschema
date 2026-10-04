@@ -29,9 +29,63 @@ inline auto declared_dialect(const sourcemeta::core::JSON &schema)
   return {};
 }
 
-inline auto mark_dialect_override(sourcemeta::core::JSON &schema,
-                                  const std::string_view dialect) -> void {
-  schema.assign(DIALECT_OVERRIDE_KEYWORD, sourcemeta::core::JSON{dialect});
+// Where the dialect a rung moves off is written down, and so the only place a
+// rung has anything to write. Framing reads a `$schema` only at the root of a
+// schema resource, which is where the position and its resource-relative
+// offset meet, and a resource that does not spell one out takes the dialect of
+// the resource holding it, which the same pass has already bumped. The
+// document root is the exception: there is nothing above it to inherit from, so
+// a dialect it took from the caller is materialised here
+/// Where a rule fires, owned rather than viewed, so that it stays readable
+/// after the document has been edited
+struct Site {
+  sourcemeta::core::Pointer pointer;
+  sourcemeta::core::JSON::String dialect;
+  sourcemeta::core::SchemaBaseDialect base_dialect;
+  sourcemeta::core::SchemaFrame::LocationType type;
+  std::size_t relative_pointer;
+};
+
+inline auto at_dialect_declaration(const sourcemeta::core::JSON &schema,
+                                   const Site &site) -> bool {
+  // A rule scheduled against an object may find a boolean here, because an
+  // edit applied earlier in the same pass can have replaced it with one
+  if (!schema.is_object() || site.pointer.size() != site.relative_pointer) {
+    return false;
+  }
+
+  return site.pointer.empty() || schema.defines("$schema");
+}
+
+// A dialect the document never spelled out goes in front of what the author
+// did write, which is where a `$schema` belongs and where one that was already
+// there would have stayed. The first key is read before anything is written,
+// because inserting into the object invalidates what iterating it handed out
+inline auto assign_before_first_key(sourcemeta::core::JSON &schema,
+                                    const sourcemeta::core::JSON::String &key,
+                                    sourcemeta::core::JSON &&value) -> void {
+  if (schema.empty()) {
+    schema.assign(key, std::move(value));
+    return;
+  }
+
+  const sourcemeta::core::JSON::String first{
+      schema.as_object().cbegin()->first};
+  schema.try_assign_before(key, value, first);
+}
+
+inline auto bump_dialect(sourcemeta::core::JSON &schema, const Site &site,
+                         const std::string_view dialect) -> void {
+  if (!at_dialect_declaration(schema, site)) {
+    return;
+  }
+
+  if (schema.defines("$schema")) {
+    schema.assign("$schema", sourcemeta::core::JSON{dialect});
+    return;
+  }
+
+  assign_before_first_key(schema, "$schema", sourcemeta::core::JSON{dialect});
 }
 
 inline auto current_dialect_or_override(const sourcemeta::core::JSON &schema)
@@ -85,27 +139,33 @@ inline auto is_metaschema_target(const sourcemeta::core::JSON &schema,
       });
 }
 
-inline auto
-subschema_at_dialect(const sourcemeta::core::JSON &schema,
-                     const sourcemeta::core::SchemaFrame::Location &location,
-                     const std::string_view dialect) -> bool {
-  const auto current{current_dialect_or_override(schema)};
-  if (!current.empty()) {
-    return current == dialect;
-  }
-  return schema.is_object() && location.pointer.empty();
-}
+// The spelling every OpenAPI 3.1 dialect URI settles onto. OpenAPI 3.1
+// publishes the same dialect at `dialect/2024-10-25` and `dialect/2024-11-10`
+// as well, naming documents that differ only in formatting, and
+// `normalized_official_dialect` below folds those onto this one
+constexpr std::string_view OPENAPI_3_1_DIALECT{
+    "https://spec.openapis.org/oas/3.1/dialect/base"};
 
-// The official dialects the upgrade walks through, oldest first, so that a
-// marker recording a newer one can be told apart from a stale one
+// The OpenAPI 3.2 dialect, which declares the same four keywords as 3.1 with
+// strictly more permissive constraints, so the rung above only has a dialect
+// to move. OpenAPI 3.2 publishes one dated URI with no undated alias, so there
+// is no spelling here for `normalized_official_dialect` to fold
+constexpr std::string_view OPENAPI_3_2_DIALECT{
+    "https://spec.openapis.org/oas/3.2/dialect/2025-09-17"};
+
+// The dialects the upgrade walks through, oldest first, so that a marker
+// recording a newer one can be told apart from a stale one. The last two rungs
+// are not JSON Schema dialects but the OpenAPI ones, each of which requires
+// every 2020-12 vocabulary and adds one of its own
 // NOLINTNEXTLINE(cert-err58-cpp,bugprone-throwing-static-initialization)
-constexpr std::array<std::string_view, 6> LADDER_DIALECTS{
+constexpr std::array<std::string_view, 8> LADDER_DIALECTS{
     {"http://json-schema.org/draft-03/schema#",
      "http://json-schema.org/draft-04/schema#",
      "http://json-schema.org/draft-06/schema#",
      "http://json-schema.org/draft-07/schema#",
      "https://json-schema.org/draft/2019-09/schema",
-     "https://json-schema.org/draft/2020-12/schema"}};
+     "https://json-schema.org/draft/2020-12/schema", OPENAPI_3_1_DIALECT,
+     OPENAPI_3_2_DIALECT}};
 
 // The spellings the normalising rules settle on all name the same dialect, so
 // whether the ladder names one has to be asked of the spelling those rules
@@ -122,6 +182,13 @@ inline auto normalized_official_dialect(const std::string_view dialect)
     result.erase(4, 1);
   } else if (result.starts_with("http://json-schema.org/draft/")) {
     result.insert(4, "s");
+  } else if (result == "https://spec.openapis.org/oas/3.1/dialect/2024-10-25" ||
+             result == "https://spec.openapis.org/oas/3.1/dialect/2024-11-10") {
+    // A spelling rule rewrites the document, but it cannot be the only place
+    // this lives. The dialect asserts run in the first pass of the spellings
+    // phase, before any rule is planned, so a dated URI would be refused
+    // before that rule could reach it
+    result = OPENAPI_3_1_DIALECT;
   }
 
   return result;
@@ -130,7 +197,13 @@ inline auto normalized_official_dialect(const std::string_view dialect)
 // Where a base dialect sits on the ladder, so that a dialect the ladder does
 // not name can still be placed by the official one it derives from. Hyper
 // variants sit alongside their plain counterparts, and the drafts below the
-// ladder answer zero just as an unrecognised dialect does
+// ladder answer zero just as an unrecognised dialect does.
+//
+// This stops at 2020-12 where `dialect_position` goes one rung further. The
+// OpenAPI 3.1 dialect declares 2020-12 as its own `$schema`, so core frames a
+// document on it with a 2020-12 base dialect and there is no base dialect that
+// names the last rung. Anything needing that rung has to ask about the
+// declared dialect instead
 inline auto
 base_dialect_position(const sourcemeta::core::SchemaBaseDialect base_dialect)
     -> std::size_t {
@@ -179,9 +252,13 @@ inline auto dialect_position(const std::string_view dialect) -> std::size_t {
 // The official meta-schema documents, by the URI a schema references them at.
 // Each recurses with the keyword of the dialect it was written for, so a
 // meta-schema that extends one cannot be carried to another dialect by renaming
-// anything in the extending document alone
+// anything in the extending document alone. The OpenAPI documents are here for
+// that same reason, as they recurse through `$dynamicAnchor`. All three
+// spellings are listed, because `normalized_metaschema_uri` folds only
+// `json-schema.org` prefixes and a `$ref` is not something a spelling rule
+// rewrites
 // NOLINTNEXTLINE(cert-err58-cpp,bugprone-throwing-static-initialization)
-constexpr std::array<std::string_view, 22> OFFICIAL_METASCHEMAS{
+constexpr std::array<std::string_view, 30> OFFICIAL_METASCHEMAS{
     {"http://json-schema.org/draft-03/schema",
      "http://json-schema.org/draft-04/schema",
      "http://json-schema.org/draft-06/schema",
@@ -203,7 +280,15 @@ constexpr std::array<std::string_view, 22> OFFICIAL_METASCHEMAS{
      "https://json-schema.org/draft/2020-12/meta/format-annotation",
      "https://json-schema.org/draft/2020-12/meta/format-assertion",
      "https://json-schema.org/draft/2020-12/meta/content",
-     "https://json-schema.org/draft/2020-12/meta/hyper-schema"}};
+     "https://json-schema.org/draft/2020-12/meta/hyper-schema",
+     "https://spec.openapis.org/oas/3.1/dialect/base",
+     "https://spec.openapis.org/oas/3.1/dialect/2024-10-25",
+     "https://spec.openapis.org/oas/3.1/dialect/2024-11-10",
+     "https://spec.openapis.org/oas/3.1/meta/base",
+     "https://spec.openapis.org/oas/3.1/meta/2024-10-25",
+     "https://spec.openapis.org/oas/3.1/meta/2024-11-10",
+     "https://spec.openapis.org/oas/3.2/dialect/2025-09-17",
+     "https://spec.openapis.org/oas/3.2/meta/2025-09-17"}};
 
 // The two families settled on opposite schemes, `http` for the numbered drafts
 // and `https` for the dated ones, and both spellings are seen in the wild.
@@ -362,159 +447,6 @@ declares_dialect_out_of_reach(const sourcemeta::core::JSON &subschema,
   return declared == 0 || declared > dialect_position(dialect);
 }
 
-// The ladder only ever writes its marker onto a schema, so clearing it follows
-// the frame's own idea of where the schemas are rather than the spelling of
-// keyword names. A keyword carries schemas only in a dialect that defines it,
-// and walking a name the dialect never defined reaches the caller's own data,
-// where a member that merely reads like the marker is not ours to touch. The
-// frame is only in hand while a condition runs, so the rules carry this list
-// over to their transform
-inline auto subschema_pointers_under(
-    const sourcemeta::core::SchemaFrame &frame,
-    const sourcemeta::core::SchemaFrame::Location &location)
-    -> std::vector<sourcemeta::core::Pointer> {
-  std::vector<sourcemeta::core::Pointer> result;
-  frame.for_each_subschema_under(
-      location.pointer,
-      [&result, &location](
-          const sourcemeta::core::SchemaFrame::Location &entry) -> void {
-        result.push_back(sourcemeta::core::to_pointer(entry.pointer)
-                             .slice(location.pointer.size()));
-      });
-
-  return result;
-}
-
-// The marker is state of the ladder rather than of the schema. A resource that
-// declares a dialect the conversion does not own can never materialise it into
-// a `$schema`, so whatever survives the ladder has to come off before the
-// caller ever sees it.
-//
-// Which members of a document are schemas is a question for the walker, so this
-// follows the frame rather than guessing from keyword names. A keyword only
-// carries schemas in a dialect that defines it, and walking a name the dialect
-// never defined reaches the caller's own data, where a member that merely reads
-// like the marker is not ours to touch
-inline auto
-erase_dialect_overrides(sourcemeta::core::JSON &schema,
-                        const sourcemeta::core::SchemaWalker &walker,
-                        const sourcemeta::core::SchemaResolver &resolver,
-                        const std::string_view default_dialect,
-                        const std::string_view default_id) -> void {
-  if (!schema.is_object()) {
-    return;
-  }
-
-  const sourcemeta::core::SchemaFrame frame{
-      sourcemeta::core::SchemaFrame::Mode::References,
-      schema,
-      walker,
-      resolver,
-      default_dialect,
-      default_id,
-      sourcemeta::core::SchemaFrame::IdentifierMode::Fallback};
-
-  // A resource on a dialect the ladder does not name is one no rule was
-  // allowed to rewrite, so a marker inside it cannot be the ladder's own
-  // record of progress and is the author's data. Reading the resource's
-  // `$schema` rather than the dialect framing reports is what tells the two
-  // apart, as framing reads the marker itself as a dialect
-  // Naming the resources rather than their positions is what keeps a resource
-  // nested inside a foreign one from being exempted along with it. A position
-  // prefix cannot tell the two apart, and an exempt document root prefixes
-  // every pointer there is
-  std::set<std::string> exempt;
-  frame.for_each_location(
-      [&schema, &exempt](
-          const sourcemeta::core::SchemaReferenceType, const std::string_view,
-          const sourcemeta::core::SchemaFrame::Location &location) -> void {
-        if (location.type !=
-            sourcemeta::core::SchemaFrame::LocationType::Resource) {
-          return;
-        }
-
-        const auto &resource{sourcemeta::core::get(
-            schema, sourcemeta::core::to_pointer(location.pointer))};
-        if (!resource.is_object()) {
-          return;
-        }
-
-        const auto *dialect{resource.try_at("$schema")};
-        if (dialect != nullptr && dialect->is_string() &&
-            !names_ladder_dialect(dialect->to_string())) {
-          exempt.insert(std::string{location.base});
-        }
-      });
-
-  std::vector<std::pair<sourcemeta::core::Pointer, std::string>> subschemas;
-  frame.for_each_subschema(
-      [&subschemas](
-          const sourcemeta::core::SchemaFrame::Location &location) -> void {
-        subschemas.emplace_back(sourcemeta::core::to_pointer(location.pointer),
-                                location.base);
-      });
-
-  for (const auto &[pointer, base] : subschemas) {
-    if (exempt.contains(base)) {
-      continue;
-    }
-
-    auto &subschema{sourcemeta::core::get(schema, pointer)};
-    if (!subschema.is_object()) {
-      continue;
-    }
-
-    const auto *marker{subschema.try_at(DIALECT_OVERRIDE_KEYWORD)};
-    if (marker != nullptr && is_own_dialect_override(*marker)) {
-      subschema.erase(DIALECT_OVERRIDE_KEYWORD);
-    }
-  }
-}
-
-inline auto clear_dialect_override(sourcemeta::core::JSON &subschema,
-                                   const bool is_root,
-                                   const std::string_view dialect) -> void {
-  if (!subschema.is_object()) {
-    return;
-  }
-
-  if (!is_root && subschema.defines("$schema") &&
-      subschema.at("$schema").is_string()) {
-    return;
-  }
-
-  // A subschema that already moved past the dialect being established keeps
-  // its marker. Dropping it would leave the keywords that move brought in
-  // looking like keywords of the dialect it has left behind, and the rules
-  // that reserve those names would prefix them away
-  const auto *marker{subschema.try_at(DIALECT_OVERRIDE_KEYWORD)};
-  if (marker != nullptr && is_own_dialect_override(*marker) &&
-      (is_root || !moved_past(subschema, dialect))) {
-    subschema.erase(DIALECT_OVERRIDE_KEYWORD);
-  }
-}
-
-inline auto drop_dialect_overrides(
-    sourcemeta::core::JSON &schema, const std::string_view dialect,
-    const std::vector<sourcemeta::core::Pointer> &subschemas) -> void {
-  clear_dialect_override(schema, true, dialect);
-
-  for (const auto &pointer : subschemas) {
-    if (pointer.empty()) {
-      continue;
-    }
-
-    // A transform may have moved things before the markers come off, so a
-    // location the frame knew about need not still be where it was
-    if (sourcemeta::core::try_get(schema, pointer) == nullptr) {
-      continue;
-    }
-
-    clear_dialect_override(sourcemeta::core::get(schema, pointer), false,
-                           dialect);
-  }
-}
-
 struct AnchorCharPolicy {
   std::function<bool(char)> is_valid_first;
   std::function<bool(char)> is_valid_body;
@@ -634,10 +566,14 @@ inline auto sanitize_anchor_with_policy(const std::string_view original,
   for (const char character : original) {
     sanitized.push_back(policy.is_valid_body(character) ? character : '-');
   }
+  // Every policy takes a letter as an opening character and a hyphen in the
+  // body, so prepending this both settles an opening character the policy
+  // rejects and walks away from a name already in use
   while (sanitized.empty() || !policy.is_valid_first(sanitized.front()) ||
          in_use.contains(sanitized)) {
     sanitized.insert(0, "x-");
   }
+
   return sanitized;
 }
 

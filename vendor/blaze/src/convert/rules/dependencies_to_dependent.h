@@ -1,6 +1,5 @@
 class DependenciesToDependent final : public SchemaTransformRule {
 public:
-  using reframe_after_transform = std::true_type;
   DependenciesToDependent()
       : SchemaTransformRule{"dependencies_to_dependent"} {};
 
@@ -8,9 +7,7 @@ public:
   condition(const sourcemeta::core::JSON &schema,
             const sourcemeta::core::JSON &,
             const sourcemeta::core::SchemaVocabularies &vocabularies,
-            const sourcemeta::core::SchemaFrame &,
-            const sourcemeta::core::SchemaFrame::Location &,
-            const sourcemeta::core::SchemaWalker &,
+            const Site &, const sourcemeta::core::SchemaWalker &,
             const sourcemeta::core::SchemaResolver &) const -> bool override {
     ONLY_CONTINUE_IF(
         vocabularies.contains_any(
@@ -32,7 +29,8 @@ public:
     return true;
   }
 
-  auto transform(sourcemeta::core::JSON &schema) const -> void override {
+  auto transform(sourcemeta::core::JSON &schema, const Site &) const
+      -> void override {
     this->renames_.clear();
     auto dependent_required{sourcemeta::core::JSON::make_object()};
     auto dependent_schemas{sourcemeta::core::JSON::make_object()};
@@ -87,20 +85,8 @@ public:
     schema.at("dependentRequired").into(std::move(dependent_required));
   }
 
-  [[nodiscard]] auto rereference(const std::string_view,
-                                 const sourcemeta::core::Pointer &,
-                                 const sourcemeta::core::Pointer &target,
-                                 const sourcemeta::core::Pointer &current) const
-      -> std::optional<sourcemeta::core::Pointer> override {
-    for (const auto &[old_pointer, new_pointer] : this->renames_) {
-      const auto result{target.rebase(current.concat(old_pointer),
-                                      current.concat(new_pointer))};
-      if (result != target) {
-        return result;
-      }
-    }
-
-    return target;
+  [[nodiscard]] auto relocations() const -> std::vector<Relocation> override {
+    return {this->renames_.cbegin(), this->renames_.cend()};
   }
 
 private:

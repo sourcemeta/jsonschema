@@ -1,17 +1,15 @@
 class ShadowStrayDialectDeclaration final : public SchemaTransformRule {
 public:
-  using reframe_after_transform = std::true_type;
   ShadowStrayDialectDeclaration()
       : SchemaTransformRule{"shadow_stray_dialect_declaration"} {};
 
-  [[nodiscard]] auto
-  condition(const sourcemeta::core::JSON &schema,
-            const sourcemeta::core::JSON &,
-            const sourcemeta::core::SchemaVocabularies &,
-            const sourcemeta::core::SchemaFrame &,
-            const sourcemeta::core::SchemaFrame::Location &location,
-            const sourcemeta::core::SchemaWalker &,
-            const sourcemeta::core::SchemaResolver &) const -> bool override {
+  [[nodiscard]] auto condition(const sourcemeta::core::JSON &schema,
+                               const sourcemeta::core::JSON &,
+                               const sourcemeta::core::SchemaVocabularies &,
+                               const Site &location,
+                               const sourcemeta::core::SchemaWalker &,
+                               const sourcemeta::core::SchemaResolver &) const
+      -> bool override {
     ONLY_CONTINUE_IF(schema.is_object() && schema.defines("$schema") &&
                      schema.at("$schema").is_string());
 
@@ -38,7 +36,8 @@ public:
     return true;
   }
 
-  auto transform(sourcemeta::core::JSON &schema) const -> void override {
+  auto transform(sourcemeta::core::JSON &schema, const Site &) const
+      -> void override {
     std::string shadowed{"x-$schema"};
     while (schema.defines(shadowed)) {
       shadowed.insert(0, "x-");

@@ -1,14 +1,12 @@
 class ModernOfficialDialectWithHttp final : public SchemaTransformRule {
 public:
-  using reframe_after_transform = std::true_type;
   ModernOfficialDialectWithHttp()
       : SchemaTransformRule{"modern_official_dialect_with_http"} {};
 
   [[nodiscard]] auto condition(const sourcemeta::core::JSON &schema,
                                const sourcemeta::core::JSON &,
                                const sourcemeta::core::SchemaVocabularies &,
-                               const sourcemeta::core::SchemaFrame &,
-                               const sourcemeta::core::SchemaFrame::Location &,
+                               const Site &,
                                const sourcemeta::core::SchemaWalker &,
                                const sourcemeta::core::SchemaResolver &) const
       -> bool override {
@@ -28,7 +26,8 @@ public:
     return true;
   }
 
-  auto transform(sourcemeta::core::JSON &schema) const -> void override {
+  auto transform(sourcemeta::core::JSON &schema, const Site &) const
+      -> void override {
     const auto &old_dialect{schema.at("$schema").to_string()};
     std::string new_dialect{"https://"};
     new_dialect += old_dialect.substr(7);

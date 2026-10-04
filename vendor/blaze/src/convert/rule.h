@@ -21,45 +21,47 @@ public:
     return this->name_;
   }
 
-  /// A method to optionally fix any reference location that was affected by the
-  /// transformation
-  [[nodiscard]] virtual auto
-  rereference(const std::string_view, const sourcemeta::core::Pointer &,
-              const sourcemeta::core::Pointer &,
-              const sourcemeta::core::Pointer &) const
-      -> std::optional<sourcemeta::core::Pointer> {
-    return std::nullopt;
+  /// Where this rule moved a subschema, as pairs of positions relative to the
+  /// subschema it fired on. The driver collects these so that a reference
+  /// naming a moved position follows it, which is why a rule that relocates
+  /// anything has to say so here rather than rewrite references itself
+  using Relocation =
+      std::pair<sourcemeta::core::Pointer, sourcemeta::core::Pointer>;
+
+  [[nodiscard]] virtual auto relocations() const -> std::vector<Relocation> {
+    return {};
   }
+
+  /// Called once at the start of every pass, before anything is planned, so
+  /// that a rule holding what it planned does not read back an answer about a
+  /// document that has since changed
+  virtual auto begin_pass() const -> void {}
+
+  /// Whatever a rule needs the frame for, taken down while the frame still
+  /// describes the document in front of it. A `SchemaFrame::Location` hands out
+  /// views into the frame and the document, so reading one after an edit is a
+  /// dangling read rather than a stale one, which is why anything frame-derived
+  /// is captured here and nowhere else
+  virtual auto plan(const sourcemeta::core::JSON &,
+                    const sourcemeta::core::JSON &,
+                    const sourcemeta::core::SchemaVocabularies &,
+                    const sourcemeta::core::SchemaFrame &,
+                    const sourcemeta::core::SchemaFrame::Location &,
+                    const Site &, const sourcemeta::core::SchemaWalker &,
+                    const sourcemeta::core::SchemaResolver &) const -> void {}
 
   [[nodiscard]] virtual auto
   condition(const sourcemeta::core::JSON &schema,
             const sourcemeta::core::JSON &root,
             const sourcemeta::core::SchemaVocabularies &vocabularies,
-            const sourcemeta::core::SchemaFrame &frame,
-            const sourcemeta::core::SchemaFrame::Location &location,
-            const sourcemeta::core::SchemaWalker &walker,
+            const Site &site, const sourcemeta::core::SchemaWalker &walker,
             const sourcemeta::core::SchemaResolver &resolver) const -> bool = 0;
 
-  virtual auto transform(sourcemeta::core::JSON &schema) const -> void = 0;
-
-  /// The schemas the frame knows about under the one being transformed, as the
-  /// driver saw them just before the transform ran. A transform has no frame of
-  /// its own, and the ladder's marker only ever sits on a schema, so this is
-  /// how a rule clears markers without walking into the caller's own data
-  auto prepare(const sourcemeta::core::SchemaFrame &frame,
-               const sourcemeta::core::SchemaFrame::Location &location)
-      -> void {
-    this->subschemas_ = subschema_pointers_under(frame, location);
-  }
-
-  [[nodiscard]] auto subschemas() const noexcept
-      -> const std::vector<sourcemeta::core::Pointer> & {
-    return this->subschemas_;
-  }
+  virtual auto transform(sourcemeta::core::JSON &schema, const Site &site) const
+      -> void = 0;
 
 private:
   const std::string name_{};
-  std::vector<sourcemeta::core::Pointer> subschemas_;
 };
 
 #endif

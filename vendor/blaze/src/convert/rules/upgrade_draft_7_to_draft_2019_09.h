@@ -1,70 +1,35 @@
 class UpgradeDraft7To201909 final : public SchemaTransformRule {
 public:
-  using reframe_after_transform = std::true_type;
   UpgradeDraft7To201909()
       : SchemaTransformRule{"upgrade_draft_7_to_2019_09"} {};
 
   [[nodiscard]] auto
   condition(const sourcemeta::core::JSON &schema,
-            const sourcemeta::core::JSON &root,
+            const sourcemeta::core::JSON &,
             const sourcemeta::core::SchemaVocabularies &vocabularies,
-            const sourcemeta::core::SchemaFrame &frame,
-            const sourcemeta::core::SchemaFrame::Location &location,
-            const sourcemeta::core::SchemaWalker &,
+            const Site &site, const sourcemeta::core::SchemaWalker &,
             const sourcemeta::core::SchemaResolver &) const -> bool override {
     ONLY_CONTINUE_IF(
         vocabularies.contains(SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_7) &&
         schema.is_object());
 
-    ONLY_CONTINUE_IF(subschema_at_dialect(schema, location, DRAFT_7_URL) ||
-                     has_actionable_id_fragment(schema) ||
-                     has_actionable_dependencies(schema) ||
-                     has_actionable_ref_siblings(schema));
-
-    if (frame.any_subschema_under(
-            location.pointer,
-            [&root](
-                const sourcemeta::core::SchemaFrame::Location &entry) -> bool {
-              const auto entry_pointer{
-                  sourcemeta::core::to_pointer(entry.pointer)};
-              const auto &entry_schema{
-                  sourcemeta::core::get(root, entry_pointer)};
-
-              return has_descendant_pending_pattern(entry_schema,
-                                                    entry.dialect);
-            })) {
-      return false;
-    }
-
-    return true;
+    return at_dialect_declaration(schema, site) ||
+           has_actionable_id_fragment(schema) ||
+           has_actionable_dependencies(schema) ||
+           has_actionable_ref_siblings(schema);
   }
 
-  auto transform(sourcemeta::core::JSON &schema) const -> void override {
+  auto transform(sourcemeta::core::JSON &schema, const Site &site) const
+      -> void override {
     this->renames_.clear();
     this->prefix_ref_siblings(schema);
     this->split_id_fragment(schema);
     this->split_dependencies(schema);
-    if (bump_schema(schema)) {
-      drop_dialect_overrides(schema, DRAFT_2019_09_URL, this->subschemas());
-    } else {
-      mark_dialect_override(schema, DRAFT_2019_09_URL);
-    }
+    bump_dialect(schema, site, DRAFT_2019_09_URL);
   }
 
-  [[nodiscard]] auto rereference(const std::string_view,
-                                 const sourcemeta::core::Pointer &,
-                                 const sourcemeta::core::Pointer &target,
-                                 const sourcemeta::core::Pointer &current) const
-      -> std::optional<sourcemeta::core::Pointer> override {
-    for (const auto &[old_pointer, new_pointer] : this->renames_) {
-      const auto result{target.rebase(current.concat(old_pointer),
-                                      current.concat(new_pointer))};
-      if (result != target) {
-        return result;
-      }
-    }
-
-    return target;
+  [[nodiscard]] auto relocations() const -> std::vector<Relocation> override {
+    return {this->renames_.cbegin(), this->renames_.cend()};
   }
 
 private:
@@ -311,15 +276,6 @@ private:
                                 sourcemeta::core::Pointer{"dependentRequired"});
     schema.rename("dependencies", "dependentRequired");
     schema.at("dependentRequired").into(std::move(dependent_required));
-  }
-
-  static auto bump_schema(sourcemeta::core::JSON &schema) -> bool {
-    if (schema.defines("$schema") && schema.at("$schema").is_string() &&
-        schema.at("$schema").to_string() == DRAFT_7_URL) {
-      schema.assign("$schema", sourcemeta::core::JSON{DRAFT_2019_09_URL});
-      return true;
-    }
-    return false;
   }
 
   static auto has_pending_pattern(const sourcemeta::core::JSON &subschema)

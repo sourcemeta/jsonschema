@@ -1,15 +1,13 @@
 class DraftOfficialDialectWithoutEmptyFragment final
     : public SchemaTransformRule {
 public:
-  using reframe_after_transform = std::true_type;
   DraftOfficialDialectWithoutEmptyFragment()
       : SchemaTransformRule{"draft_official_dialect_without_empty_fragment"} {};
 
   [[nodiscard]] auto condition(const sourcemeta::core::JSON &schema,
                                const sourcemeta::core::JSON &,
                                const sourcemeta::core::SchemaVocabularies &,
-                               const sourcemeta::core::SchemaFrame &,
-                               const sourcemeta::core::SchemaFrame::Location &,
+                               const Site &,
                                const sourcemeta::core::SchemaWalker &,
                                const sourcemeta::core::SchemaResolver &) const
       -> bool override {
@@ -35,7 +33,8 @@ public:
     return true;
   }
 
-  auto transform(sourcemeta::core::JSON &schema) const -> void override {
+  auto transform(sourcemeta::core::JSON &schema, const Site &) const
+      -> void override {
     auto dialect{std::move(schema.at("$schema")).to_string()};
     dialect += "#";
     schema.at("$schema").into(sourcemeta::core::JSON{dialect});

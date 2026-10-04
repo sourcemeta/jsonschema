@@ -207,6 +207,10 @@ public:
   /// Strip trailing zeros from the coefficient
   [[nodiscard]] auto reduce() const -> Decimal;
 
+  /// Strip trailing zeros from the coefficient for as long as the exponent is
+  /// not zero
+  [[nodiscard]] auto trim() const -> Decimal;
+
   /// Return the adjusted exponent (floor of base-10 logarithm)
   [[nodiscard]] auto logb() const -> Decimal;
 
@@ -294,6 +298,11 @@ private:
   static constexpr std::uint8_t FLAG_SNAN = 0x04;
   static constexpr std::uint8_t FLAG_INFINITE = 0x08;
   static constexpr std::uint8_t FLAG_INTEGER_LITERAL = 0x40;
+
+  // Gives up at most the stated number of trailing zeros, lifting the exponent
+  // by one for each, which is what both of the public strips are made of
+  [[nodiscard]] auto remove_trailing_zeros(std::int32_t allowance) const
+      -> Decimal;
 
   std::int64_t coefficient_{0};
   std::uint64_t coefficient_high_{0};

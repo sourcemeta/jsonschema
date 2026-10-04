@@ -1,6 +1,5 @@
 class PrefixPromotedDraft4Keywords final : public SchemaTransformRule {
 public:
-  using reframe_after_transform = std::true_type;
   PrefixPromotedDraft4Keywords()
       : SchemaTransformRule{"prefix_promoted_draft_4_keywords"} {};
 
@@ -8,9 +7,7 @@ public:
   condition(const sourcemeta::core::JSON &schema,
             const sourcemeta::core::JSON &,
             const sourcemeta::core::SchemaVocabularies &vocabularies,
-            const sourcemeta::core::SchemaFrame &,
-            const sourcemeta::core::SchemaFrame::Location &,
-            const sourcemeta::core::SchemaWalker &,
+            const Site &, const sourcemeta::core::SchemaWalker &,
             const sourcemeta::core::SchemaResolver &) const -> bool override {
     ONLY_CONTINUE_IF(
         vocabularies.contains(SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_3) &&
@@ -28,7 +25,8 @@ public:
     return false;
   }
 
-  auto transform(sourcemeta::core::JSON &schema) const -> void override {
+  auto transform(sourcemeta::core::JSON &schema, const Site &) const
+      -> void override {
     this->renames_.clear();
     for (const auto &keyword : KEYWORDS) {
       const std::string keyword_name{keyword};
@@ -46,21 +44,15 @@ public:
     }
   }
 
-  [[nodiscard]] auto rereference(const std::string_view,
-                                 const sourcemeta::core::Pointer &,
-                                 const sourcemeta::core::Pointer &target,
-                                 const sourcemeta::core::Pointer &current) const
-      -> std::optional<sourcemeta::core::Pointer> override {
+  [[nodiscard]] auto relocations() const -> std::vector<Relocation> override {
+    std::vector<Relocation> result;
+    result.reserve(this->renames_.size());
     for (const auto &[old_name, new_name] : this->renames_) {
-      const auto result{
-          target.rebase(current.concat(sourcemeta::core::Pointer{old_name}),
-                        current.concat(sourcemeta::core::Pointer{new_name}))};
-      if (result != target) {
-        return result;
-      }
+      result.emplace_back(sourcemeta::core::Pointer{old_name},
+                          sourcemeta::core::Pointer{new_name});
     }
 
-    return target;
+    return result;
   }
 
 private:

@@ -1,17 +1,15 @@
 class DraftOfficialDialectWithHttps final : public SchemaTransformRule {
 public:
-  using reframe_after_transform = std::true_type;
   DraftOfficialDialectWithHttps()
       : SchemaTransformRule{"draft_official_dialect_with_https"} {};
 
-  [[nodiscard]] auto
-  condition(const sourcemeta::core::JSON &schema,
-            const sourcemeta::core::JSON &,
-            const sourcemeta::core::SchemaVocabularies &,
-            const sourcemeta::core::SchemaFrame &,
-            const sourcemeta::core::SchemaFrame::Location &location,
-            const sourcemeta::core::SchemaWalker &,
-            const sourcemeta::core::SchemaResolver &) const -> bool override {
+  [[nodiscard]] auto condition(const sourcemeta::core::JSON &schema,
+                               const sourcemeta::core::JSON &,
+                               const sourcemeta::core::SchemaVocabularies &,
+                               const Site &location,
+                               const sourcemeta::core::SchemaWalker &,
+                               const sourcemeta::core::SchemaResolver &) const
+      -> bool override {
     using sourcemeta::core::SchemaBaseDialect;
     ONLY_CONTINUE_IF(
         location.base_dialect == SchemaBaseDialect::JSON_SCHEMA_DRAFT_7 ||
@@ -62,7 +60,8 @@ public:
     return true;
   }
 
-  auto transform(sourcemeta::core::JSON &schema) const -> void override {
+  auto transform(sourcemeta::core::JSON &schema, const Site &) const
+      -> void override {
     const auto &old_dialect{schema.at("$schema").to_string()};
     std::string new_dialect{"http://"};
     new_dialect += old_dialect.substr(8);
