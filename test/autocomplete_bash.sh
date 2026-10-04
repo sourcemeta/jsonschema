@@ -151,4 +151,10 @@ test_completion "jsonschema help --color " "always" "After --color always is off
 test_completion "jsonschema help --color " "never" "After --color never is offered"
 test_completion "jsonschema validate --" "--color" "Validate includes global option --color"
 
+test_completion "jsonschema upgrade --to " "2020-12" "After --to 2020-12 is offered"
+test_completion "jsonschema upgrade --to " "openapi3.1" "After --to openapi3.1 is offered"
+test_completion "jsonschema upgrade --to " "openapi3.2" "After --to openapi3.2 is offered"
+test_completion "jsonschema upgrade -t " "openapi3.1" "After -t openapi3.1 is offered"
+test_completion "jsonschema upgrade -t " "openapi3.2" "After -t openapi3.2 is offered"
+
 echo "PASS" 1>&2

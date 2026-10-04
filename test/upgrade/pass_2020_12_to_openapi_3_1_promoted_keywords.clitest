@@ -1,0 +1,29 @@
+WRITE schema.json UNTIL EOF
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.com/test",
+  "type": "object",
+  "example": { "name": "Juan" },
+  "discriminator": "kind",
+  "xml": true,
+  "externalDocs": 42
+}
+EOF
+
+RUN upgrade --to openapi3.1 schema.json STDIN /dev/null IN . INTO result.txt EXPECTING 0
+
+WRITE expected.txt UNTIL EOF
+1> {
+1>   "$schema": "https://spec.openapis.org/oas/3.1/dialect/base",
+1>   "$id": "https://example.com/test",
+1>   "x-discriminator": "kind",
+1>   "x-example": {
+1>     "name": "Juan"
+1>   },
+1>   "x-externalDocs": 42,
+1>   "x-xml": true,
+1>   "type": "object"
+1> }
+EOF
+
+COMPARE result.txt AGAINST expected.txt

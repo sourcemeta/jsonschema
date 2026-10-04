@@ -46,10 +46,19 @@ auto parse_target_dialect(const std::string_view value)
     return sourcemeta::blaze::ConvertTarget::Draft202012;
   }
 
+  if (value == "openapi3.1") {
+    return sourcemeta::blaze::ConvertTarget::OpenAPI31;
+  }
+
+  if (value == "openapi3.2") {
+    return sourcemeta::blaze::ConvertTarget::OpenAPI32;
+  }
+
   throw sourcemeta::jsonschema::InvalidOptionEnumerationValueError{
       "The given target dialect is not supported",
       "to",
-      {"draft4", "draft6", "draft7", "2019-09", "2020-12"}};
+      {"draft4", "draft6", "draft7", "2019-09", "2020-12", "openapi3.1",
+       "openapi3.2"}};
 }
 
 template <typename Error>

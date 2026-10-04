@@ -88,13 +88,13 @@ _jsonschema() {
       return 0
       ;;
     --to)
-      COMPREPLY=( $(compgen -W "draft4 draft6 draft7 2019-09 2020-12" -- "${current}") )
+      COMPREPLY=( $(compgen -W "draft4 draft6 draft7 2019-09 2020-12 openapi3.1 openapi3.2" -- "${current}") )
       return 0
       ;;
     -t)
       if [ "${command}" = "upgrade" ]
       then
-        COMPREPLY=( $(compgen -W "draft4 draft6 draft7 2019-09 2020-12" -- "${current}") )
+        COMPREPLY=( $(compgen -W "draft4 draft6 draft7 2019-09 2020-12 openapi3.1 openapi3.2" -- "${current}") )
       elif [ "${command}" = "lint" ]
       then
         COMPREPLY=( $(compgen -f -X '!*.json' -X '!*.yaml' -X '!*.yml' -- "${current}") )

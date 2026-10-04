@@ -2,7 +2,8 @@ Upgrading
 =========
 
 ```sh
-jsonschema upgrade <schema.json|.yaml> [--to/-t draft4|draft6|draft7|2019-09|2020-12]
+jsonschema upgrade <schema.json|.yaml>
+  [--to/-t draft4|draft6|draft7|2019-09|2020-12|openapi3.1|openapi3.2]
   [--http/-h] [--verbose/-v] [--debug/-g] [--json/-j]
   [--header/-H "<name>: <value>"]
   [--resolve/-r <schemas-or-directories> ...]
@@ -19,7 +20,15 @@ JSON Schema dialects are not always backwards compatible. The `upgrade` command
 rewrites a schema to conform to a newer dialect, taking every subtletly across
 specifications into account, including re-writing references that point at
 locations whose path has changed. By default, schemas are upgraded to the
-latest supported dialect, and the result is printed to standard output.
+latest JSON Schema dialect, 2020-12, and the result is printed to standard
+output.
+
+The dialects it walks through are the official JSON Schema ones up to 2020-12,
+and then the OpenAPI Schema Object dialects, each of which is 2020-12 plus a
+vocabulary of its own. Those sit past the default, so a schema lands on one of
+them only when it is asked for. Note this upgrades a *schema* onto an OpenAPI
+dialect, and is a separate matter from reading an OpenAPI description, which
+this command does not do.
 
 The result is printed in the format the input was written in: a YAML schema
 upgrades into YAML and a JSON schema into JSON. A YAML result keeps the width
@@ -88,7 +97,8 @@ The result will be something like this:
 > The `--to/-t` option means "upgrade to at least this dialect". If your
 > schema is already at or beyond the target dialect, the command leaves
 > the schema unchanged. For example, asking the CLI to upgrade a 2020-12
-> schema to Draft 7 will do nothing.
+> schema to Draft 7 will do nothing, and neither will asking it to upgrade
+> an OpenAPI 3.2 schema to 2020-12.
 
 > [!NOTE]
 > A meta-schema is only recognised as one if the document describes itself, or
@@ -112,6 +122,12 @@ jsonschema upgrade path/to/schema.json
 
 ```sh
 jsonschema upgrade path/to/schema.json --to draft7
+```
+
+### Upgrade a JSON Schema to the OpenAPI 3.1 Schema Object dialect
+
+```sh
+jsonschema upgrade path/to/schema.json --to openapi3.1
 ```
 
 ### Upgrade a JSON Schema piped from standard input

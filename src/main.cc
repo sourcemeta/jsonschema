@@ -116,13 +116,14 @@ constexpr std::string_view USAGE_COMMANDS{R"EOF(   version / --version / -v
        against the document root.
 
    upgrade <schema.json|.yaml>
-           [--to/-t draft4|draft6|draft7|2019-09|2020-12]
+           [--to/-t draft4|draft6|draft7|2019-09|2020-12|openapi3.1|openapi3.2]
            [--indentation/-n <spaces>]
 
-       Upgrade the given schema to a newer JSON Schema dialect.
-       Defaults to the latest dialect (2020-12). Schemas that declare a
-       custom meta-schema and schemas that are meta-schemas themselves
-       cannot be upgraded by this command.
+       Upgrade the given schema to a newer JSON Schema dialect, or to one
+       of the OpenAPI Schema Object dialects. Defaults to the latest JSON
+       Schema dialect (2020-12). Schemas that declare a custom meta-schema
+       and schemas that are meta-schemas themselves cannot be upgraded by
+       this command.
 
    bundle <schema.json|.yaml> [--extension/-e <extension>]
           [--ignore/-i <schemas-or-directories>] [--without-id/-w]

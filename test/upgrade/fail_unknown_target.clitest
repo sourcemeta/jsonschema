@@ -17,6 +17,8 @@ WRITE expected.txt UNTIL EOF
 2>   - draft7
 2>   - 2019-09
 2>   - 2020-12
+2>   - openapi3.1
+2>   - openapi3.2
 2>
 2> Run the `help` command for usage information
 EOF
@@ -30,7 +32,15 @@ WRITE expected_json.txt UNTIL EOF
 1> {
 1>   "error": "The given target dialect is not supported",
 1>   "option": "to",
-1>   "values": [ "draft4", "draft6", "draft7", "2019-09", "2020-12" ]
+1>   "values": [
+1>     "draft4",
+1>     "draft6",
+1>     "draft7",
+1>     "2019-09",
+1>     "2020-12",
+1>     "openapi3.1",
+1>     "openapi3.2"
+1>   ]
 1> }
 EOF
 
