@@ -25,11 +25,10 @@ output.
 
 The dialects it walks through are the official JSON Schema ones up to 2020-12,
 and then the OpenAPI Schema Object dialects, each of which is 2020-12 plus a
-vocabulary of its own. The OpenAPI dialects sit past the default, so landing a
-schema on one of them means asking for it with `--to/-t openapi3.1` or
-`--to/-t openapi3.2`. Note this upgrades a *schema* onto an OpenAPI dialect,
-and is a separate matter from reading an OpenAPI description, which this
-command does not do.
+vocabulary of its own. Those sit past the default, so a schema lands on one of
+them only when it is asked for. Note this upgrades a *schema* onto an OpenAPI
+dialect, and is a separate matter from reading an OpenAPI description, which
+this command does not do.
 
 The result is printed in the format the input was written in: a YAML schema
 upgrades into YAML and a JSON schema into JSON. A YAML result keeps the width
