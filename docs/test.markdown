@@ -157,6 +157,9 @@ the Schema Object that the fragment names:
 > finds nothing unless a schema of that identifier was imported in its own
 > right.
 
+A description that names itself with `$self` answers to that name as well as to
+where it was read from, so a `target` may spell either.
+
 Use `--resolve/-r` for the other documents a description spans, and for the
 description itself when a `target` names it by URI, exactly as you would for
 schemas. One suite may mix the two kinds of target freely, as each `target` is

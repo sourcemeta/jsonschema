@@ -1,0 +1,52 @@
+// A relative self-declared name resolves against where the description was
+// read from, and a target reaches it by that name or by the file itself.
+
+MAKE DIRECTORY sub
+
+WRITE openapi.json UNTIL EOF
+{
+  "openapi": "3.2.0",
+  "$self": "sub/api",
+  "info": { "title": "Example", "version": "1.0.0" },
+  "paths": {},
+  "components": {
+    "schemas": {
+      "Person": {
+        "type": "object",
+        "required": [ "name" ]
+      }
+    }
+  }
+}
+EOF
+
+WRITE test.json UNTIL EOF
+{
+  "target": [
+    "./openapi.json#/components/schemas/Person",
+    "./sub/api#/components/schemas/Person"
+  ],
+  "tests": [
+    {
+      "description": "A person",
+      "valid": true,
+      "data": { "name": "Juan" }
+    },
+    {
+      "description": "Missing name",
+      "valid": false,
+      "data": {}
+    }
+  ]
+}
+EOF
+
+RUN test test.json --resolve openapi.json STDIN /dev/null IN . INTO result_0.txt EXPECTING 0
+
+REPLACE $CWD WITH '[CWD]' IN result_0.txt
+
+WRITE expected_0.txt UNTIL EOF
+1> [CWD]/test.json: PASS 4/4
+EOF
+
+COMPARE result_0.txt AGAINST expected_0.txt

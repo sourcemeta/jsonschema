@@ -193,6 +193,38 @@ struct TestTargets {
       return this->schema == nullptr ? this->description->schemas()
                                      : *this->schema;
     }
+
+    // A document answers to an identity it declares as well as to where it was
+    // read from, and a target may spell either. A schema is framed under the
+    // one the target used, so both reach it. A description is keyed under the
+    // single base framing settled on, which is whatever `$self` it declares,
+    // so the place the target names is carried over to that base. The same
+    // place is the same place however the document was reached, and the
+    // document answering to the target's base is what got us this far
+    // TODO: Drop this once `OpenAPIFrame` can register the retrieval identity
+    // alongside `$self`, the way `SchemaFrame` does with `default_id` and
+    // `IdentifierMode::Additional`
+    [[nodiscard]] auto
+    entrypoint(const sourcemeta::core::URI &target_uri,
+               const sourcemeta::core::JSON::String &target) const
+        -> sourcemeta::core::JSON::String {
+      if (this->description == nullptr) {
+        return target;
+      }
+
+      const auto settled{this->description->base()};
+      if (target_uri.recompose_without_fragment().value_or(target) == settled) {
+        return target;
+      }
+
+      sourcemeta::core::URI result{std::string{settled}};
+      if (target_uri.fragment().has_value()) {
+        result.fragment(std::string{target_uri.fragment().value()});
+      }
+
+      result.canonicalize();
+      return result.recompose();
+    }
   };
 
   std::map<sourcemeta::core::JSON::String, Entry> bases;
@@ -308,18 +340,19 @@ auto resolve_test_target(
   }
 
   const auto &entry{match->second};
+  const auto entrypoint{entry.entrypoint(target_uri, target)};
 
   // Asking here reports a target that nothing locates in terms of the document
   // that was read for it, rather than as an entry point that whatever compiles
   // it next does not know how to talk about
-  if (!entry.frame().traverse(target).has_value()) {
+  if (!entry.frame().traverse(entrypoint).has_value()) {
     throw target_not_schema(*entry.document, entry.schema == nullptr,
                             target_uri, target);
   }
 
   return {.document = *entry.document,
           .frame = entry.frame(),
-          .entrypoint = target};
+          .entrypoint = entrypoint};
 }
 
 auto parse_test_suite(const sourcemeta::jsonschema::InputJSON &entry,
