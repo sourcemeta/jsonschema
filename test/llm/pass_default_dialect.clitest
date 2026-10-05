@@ -32,6 +32,7 @@ WRITE expected.txt UNTIL EOF
 1>       "name": "schema",
 1>       "strict": true,
 1>       "schema": {
+1>         "$schema": "https://json-schema.org/draft/2020-12/schema",
 1>         "$id": "[CWD_URI]/schema.json",
 1>         "type": "object",
 1>         "required": [ "capital" ],

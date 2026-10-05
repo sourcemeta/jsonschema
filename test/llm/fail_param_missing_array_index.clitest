@@ -14,8 +14,6 @@ RUN llm schema.json --ask hello --url https://api.example.com/v1/chat/completion
 WRITE expected.txt UNTIL EOF
 2> error: The parameter writes a property into a value that is not an object
 2>   at value /messages/role=system
-2>
-2> For example: --param /max_tokens=2048
 EOF
 
 COMPARE result.txt AGAINST expected.txt

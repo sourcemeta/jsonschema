@@ -41,12 +41,23 @@ jsonschema llm path/to/schema.json \
 ```
 
 On success the generated document goes to standard output exactly as the model
-emitted it, and the command exits 0:
+emitted it, and the command exits 0. What the provider said about the run goes
+to standard error, so that redirecting standard output keeps the document alone:
 
-```json
+```
 {
   "capital": "Berlin"
 }
+finish reason: stop
+tokens: 17 prompt, 128 completion, 145 total
+```
+
+Both lines are printed whether or not the provider reported them, as one that
+keeps a count to itself is worth knowing about:
+
+```
+finish reason: unknown
+tokens: unknown
 ```
 
 When the document does not conform, it still goes to standard output, the
@@ -57,7 +68,7 @@ validation errors go to standard error, and the command exits 2:
   "capital": 42
 }
 fail: https://api.openai.com/v1/chat/completions
-error: Schema validation failure
+error: The generated document does not conform to the schema
   The value was expected to be of type string but it was of type integer
     at instance location "/capital" (line 2, column 3)
     at evaluate path "/properties/capital/type"
@@ -136,10 +147,11 @@ such as `/a~2b` is reported rather than quietly meaning something else.
 
 > [!IMPORTANT]
 > One location is off limits. A parameter may not write
-> `/response_format/json_schema/schema`, anything within it, or anything that
-> contains it. The response is checked against the schema that was read, so
-> rewriting the one that goes out would leave the two describing different things
-> and turn every result this command reports into a statement about nothing.
+> `/response_format/json_schema/schema` or anything within it, because the
+> response is checked against the schema that was read and rewriting the one that
+> goes out would leave the two describing different things. Nor may it write
+> anything that contains that location, such as `/response_format`, since
+> replacing what carries the schema takes the schema with it.
 >
 > Everything else in the body is yours, including
 > `/response_format/json_schema/name` and `/response_format/json_schema/strict`.
@@ -202,6 +214,10 @@ What This Command Takes
 -----------------------
 
 One schema, in a file or on standard input, which is what a provider takes too.
+
+A boolean schema is refused. `true` accepts every document and `false` rejects
+every one, so what a model returned would be judged the same way whatever it
+was, leaving nothing to find out about.
 
 An OpenAPI description is refused. A description holds many Schema Objects and
 no schema of its own, so there is nothing to send without being told which one
@@ -343,9 +359,12 @@ not, as the validation result is the point and a count never decides it.
 
 A response that succeeds but carries no generated document is a gap in what this
 command knows rather than a mistake you made, so the body comes out unchanged and
-the command exits 3. Error bodies get the same treatment: they are not portable,
-not even within one provider, and at least one provider returns a body that is
-not JSON at all, so none of them is parsed, reformatted or summarised.
+the command exits 3. Error bodies get the same treatment: they are not
+portable, not even within one provider, and at least one provider returns a body
+that is not JSON at all. Nothing is read out of one or summarised from it, so
+what came back is what you see, laid out when it happens to be JSON and left
+exactly as it arrived when it is not. Under `--json` the body is always carried
+as a string, which is the one form that works for both.
 
 Use `--raw/-R` to print the response envelope without reading it at all, which is
 how you capture one to keep.

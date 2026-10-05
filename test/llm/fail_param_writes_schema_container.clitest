@@ -1,6 +1,6 @@
-// What the response is checked against is the schema that was read, so a
-// parameter that rewrites the one going out would leave the two describing
-// different things and turn every result into a statement about nothing.
+// Replacing the part of the request that carries the schema takes the schema
+// with it, which is a different mistake from rewriting the schema and is said
+// apart from it.
 
 WRITE schema.json UNTIL EOF
 {
@@ -13,10 +13,8 @@ EOF
 RUN llm schema.json --ask hello --url https://api.example.com/v1/chat/completions --model my-model --dry-run --param /response_format=1 STDIN /dev/null IN . INTO result.txt EXPECTING 5
 
 WRITE expected.txt UNTIL EOF
-2> error: A parameter cannot write the schema, as that is what the response is checked against
+2> error: A parameter cannot replace the part of the request that carries the schema
 2>   at value /response_format=1
-2>
-2> For example: --param /max_tokens=2048
 EOF
 
 COMPARE result.txt AGAINST expected.txt

@@ -55,10 +55,31 @@ error: Unsuccessful HTTP response
   with status 400 Bad Request
   at url http://localhost:${PORT}/reject
 
-{"message":"Bad Request","type":"Bad Request","code":400}
+{
+  "message": "Bad Request",
+  "type": "Bad Request",
+  "code": 400
+}
 EOF
 
 diff "$TMP/output.txt" "$TMP/expected.txt"
+
+"$1" llm "$TMP/schema.json" --ask hello \
+  --url "http://localhost:${PORT}/reject" --model my-model --json \
+  > "$TMP/output_json.txt" 2>&1 && EXIT_CODE="$?" || EXIT_CODE="$?"
+# Not supported
+test "$EXIT_CODE" = "3"
+
+cat << EOF > "$TMP/expected_json.txt"
+{
+  "error": "Unsuccessful HTTP response",
+  "status": 400,
+  "url": "http://localhost:${PORT}/reject",
+  "body": "{\"message\":\"Bad Request\",\"type\":\"Bad Request\",\"code\":400}"
+}
+EOF
+
+diff "$TMP/output_json.txt" "$TMP/expected_json.txt"
 
 "$1" llm "$TMP/schema.json" --ask hello \
   --url "http://localhost:${PORT}/blocked" --model my-model \
@@ -75,3 +96,20 @@ Real-time access to 'my-model' is blocked by a routing rule.
 EOF
 
 diff "$TMP/output_blocked.txt" "$TMP/expected_blocked.txt"
+
+"$1" llm "$TMP/schema.json" --ask hello \
+  --url "http://localhost:${PORT}/blocked" --model my-model --json \
+  > "$TMP/output_blocked_json.txt" 2>&1 && EXIT_CODE="$?" || EXIT_CODE="$?"
+# Other input error
+test "$EXIT_CODE" = "6"
+
+cat << EOF > "$TMP/expected_blocked_json.txt"
+{
+  "error": "Unsuccessful HTTP response",
+  "status": 403,
+  "url": "http://localhost:${PORT}/blocked",
+  "body": "Real-time access to 'my-model' is blocked by a routing rule."
+}
+EOF
+
+diff "$TMP/output_blocked_json.txt" "$TMP/expected_blocked_json.txt"

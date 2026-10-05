@@ -944,8 +944,10 @@ inline auto print(const Entries &output,
                   const sourcemeta::core::PointerPositionTracker &tracker,
                   std::ostream &stream,
                   const std::string_view error_label = "error:",
-                  const sourcemeta::core::Pointer &base = {}) -> void {
-  stream << error_label << " Schema validation failure\n";
+                  const sourcemeta::core::Pointer &base = {},
+                  const std::string_view headline = "Schema validation failure")
+    -> void {
+  stream << error_label << " " << headline << "\n";
   for (const auto &entry : output) {
     stream << "  " << entry.message << "\n";
     stream << "    at instance location \"";

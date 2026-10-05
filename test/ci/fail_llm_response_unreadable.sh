@@ -54,7 +54,10 @@ error: The response does not carry a generated document
   with status 200 OK
   at url http://localhost:${PORT}/envelope
 
-{"id":"resp_1","object":"chat.completion"}
+{
+  "id": "resp_1",
+  "object": "chat.completion"
+}
 EOF
 
 diff "$TMP/output.txt" "$TMP/expected.txt"

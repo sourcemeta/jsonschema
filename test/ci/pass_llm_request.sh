@@ -59,6 +59,8 @@ EOF
 
 cat << 'EOF' > "$TMP/expected.txt"
 "Berlin"
+finish reason: stop
+tokens: unknown
 EOF
 
 diff "$TMP/output.txt" "$TMP/expected.txt"

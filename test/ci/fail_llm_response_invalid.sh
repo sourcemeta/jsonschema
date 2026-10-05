@@ -60,13 +60,15 @@ diff "$TMP/output.txt" "$TMP/expected.txt"
 
 cat << EOF > "$TMP/expected_error.txt"
 fail: http://localhost:${PORT}/v1/chat/completions
-error: Schema validation failure
+error: The generated document does not conform to the schema
   The value was expected to be of type string but it was of type integer
     at instance location "/capital" (line 2, column 3)
     at evaluate path "/properties/capital/type"
   The object value was expected to validate against the defined properties subschemas
     at instance location "" (line 1, column 1)
     at evaluate path "/properties"
+finish reason: stop
+tokens: unknown
 EOF
 
 diff "$TMP/error.txt" "$TMP/expected_error.txt"

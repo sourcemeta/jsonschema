@@ -69,6 +69,8 @@ EOF
 diff "$TMP/output.txt" "$TMP/expected.txt"
 
 cat << 'EOF' > "$TMP/expected_error.txt"
+finish reason: stop
+tokens: 17 prompt, 128 completion, 145 total
 EOF
 
 diff "$TMP/error.txt" "$TMP/expected_error.txt"

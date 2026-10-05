@@ -62,10 +62,18 @@ constexpr std::uint64_t DEFAULT_TIMEOUT_SECONDS{120};
 
 // The names a provider reports token counts under, and what they are reported
 // as
-constexpr std::array<std::pair<std::string_view, std::string_view>, 3>
-    USAGE_FIELDS{{{"prompt_tokens", "promptTokens"},
-                  {"completion_tokens", "completionTokens"},
-                  {"total_tokens", "totalTokens"}}};
+struct UsageField {
+  std::string_view wire;
+  std::string_view reported;
+  std::string_view label;
+};
+
+constexpr std::array<UsageField, 3> USAGE_FIELDS{
+    {{.wire = "prompt_tokens", .reported = "promptTokens", .label = "prompt"},
+     {.wire = "completion_tokens",
+      .reported = "completionTokens",
+      .label = "completion"},
+     {.wire = "total_tokens", .reported = "totalTokens", .label = "total"}}};
 
 // The OpenAPI Schema Object dialects are deliberately absent. They are 2020-12
 // plus a vocabulary that describes an API rather than an instance, so no
@@ -152,21 +160,23 @@ auto parse_parameter_value(const std::string_view value)
 constexpr std::array<std::string_view, 3> SCHEMA_LOCATION{
     "response_format", "json_schema", "schema"};
 
-// Whether a parameter would write the schema, either by naming it, by naming a
-// place within it, or by replacing something that holds it. The response is
-// checked against the schema that was read, so a parameter that rewrites what
-// goes out would leave the two describing different things and quietly turn
-// every result this command reports into a statement about nothing
-auto writes_the_schema(const sourcemeta::core::Pointer &pointer) -> bool {
+// How a parameter stands in relation to the schema being sent. The response is
+// checked against the schema that was read, so neither rewriting it nor
+// replacing what carries it can be allowed, but they are different mistakes and
+// worth saying apart
+enum class SchemaReach : std::uint8_t { Elsewhere, TheSchema, WhatCarriesIt };
+
+auto schema_reach(const sourcemeta::core::Pointer &pointer) -> SchemaReach {
   const auto depth{std::min(pointer.size(), SCHEMA_LOCATION.size())};
   for (std::size_t index = 0; index < depth; index++) {
     const auto &token{pointer.at(index)};
     if (!token.is_property() || token.to_property() != SCHEMA_LOCATION[index]) {
-      return false;
+      return SchemaReach::Elsewhere;
     }
   }
 
-  return true;
+  return pointer.size() < SCHEMA_LOCATION.size() ? SchemaReach::WhatCarriesIt
+                                                 : SchemaReach::TheSchema;
 }
 
 // Where a parameter writes, creating the objects along the way, as a request
@@ -216,27 +226,35 @@ auto overlay_parameter(sourcemeta::core::JSON &body,
   const std::string entry{parameter};
   const auto separator{entry.find('=')};
   if (separator == std::string::npos) {
-    throw sourcemeta::jsonschema::InvalidParameterError{
+    throw sourcemeta::jsonschema::MalformedParameterError{
         "Parameters must be in the form `<pointer>=<value>`", entry};
   }
 
   const auto location{entry.substr(0, separator)};
   if (location.empty()) {
-    throw sourcemeta::jsonschema::InvalidParameterError{
+    throw sourcemeta::jsonschema::MalformedParameterError{
         "The parameter must name a location within the request body", entry};
   }
 
   if (!sourcemeta::core::is_pointer(location)) {
-    throw sourcemeta::jsonschema::InvalidParameterError{
+    throw sourcemeta::jsonschema::MalformedParameterError{
         "The parameter location must be a JSON Pointer", entry};
   }
 
   const auto pointer{sourcemeta::core::to_pointer(location)};
-  if (writes_the_schema(pointer)) {
-    throw sourcemeta::jsonschema::InvalidParameterError{
-        "A parameter cannot write the schema, as that is what the response is "
-        "checked against",
-        entry};
+  switch (schema_reach(pointer)) {
+    case SchemaReach::TheSchema:
+      throw sourcemeta::jsonschema::InvalidParameterError{
+          "A parameter cannot write the schema, as that is what the response "
+          "is checked against",
+          entry};
+    case SchemaReach::WhatCarriesIt:
+      throw sourcemeta::jsonschema::InvalidParameterError{
+          "A parameter cannot replace the part of the request that carries "
+          "the schema",
+          entry};
+    case SchemaReach::Elsewhere:
+      break;
   }
 
   auto value{
@@ -392,8 +410,9 @@ auto exit_code_for_status(const sourcemeta::core::HTTPStatus &status) -> int {
 }
 
 // Error bodies are not portable, not even within one provider, and one of the
-// shapes seen in the wild is not JSON at all, so the body goes out as it came
-// in rather than being parsed, reformatted or summarised
+// shapes seen in the wild is not JSON at all. Nothing is read out of one or
+// summarised from it, so what came back is what is shown, laid out when it
+// happens to be JSON and left exactly as it arrived when it is not
 auto report_response_body(const sourcemeta::core::Options &options,
                           const std::string_view message,
                           const std::string_view url,
@@ -421,8 +440,16 @@ auto report_response_body(const sourcemeta::core::Options &options,
 
   std::cerr << "\n";
   std::cerr << "  at url " << url << "\n";
-  if (!response.body.empty()) {
+  if (response.body.empty()) {
+    return;
+  }
+
+  std::cerr << "\n";
+  try {
+    const auto parsed{sourcemeta::core::parse_json(response.body)};
+    sourcemeta::core::prettify(parsed, std::cerr);
     std::cerr << "\n";
+  } catch (const sourcemeta::core::JSONParseError &) {
     print_verbatim(response.body, std::cerr);
   }
 }
@@ -490,9 +517,9 @@ auto usage_json(const sourcemeta::core::JSON &envelope)
 
   auto result{sourcemeta::core::JSON::make_object()};
   for (const auto &field : USAGE_FIELDS) {
-    const auto *value{usage->try_at(field.first)};
+    const auto *value{usage->try_at(field.wire)};
     if (value != nullptr && value->is_integer()) {
-      result.assign(sourcemeta::core::JSON::String{field.second}, *value);
+      result.assign(sourcemeta::core::JSON::String{field.reported}, *value);
     }
   }
 
@@ -503,17 +530,37 @@ auto usage_json(const sourcemeta::core::JSON &envelope)
   return result;
 }
 
-auto report_usage(const sourcemeta::core::Options &options,
-                  const sourcemeta::core::JSON &envelope) -> void {
+// What the provider said about the run, beside what it generated. Both are
+// reported whether or not they came back, as a provider that keeps a count to
+// itself is worth knowing about and a blank where a number should be says that
+// better than printing nothing at all
+auto report_metadata(const sourcemeta::core::JSON &envelope) -> void {
+  const auto *reason{finish_reason(envelope)};
+  std::cerr << "finish reason: "
+            << (reason == nullptr ? "unknown" : reason->to_string()) << "\n";
+
   const auto usage{usage_json(envelope)};
   if (!usage.has_value()) {
+    std::cerr << "tokens: unknown\n";
     return;
   }
 
-  sourcemeta::jsonschema::LOG_VERBOSE(options) << "Token usage: ";
-  sourcemeta::core::stringify(usage.value(),
-                              sourcemeta::jsonschema::LOG_VERBOSE(options));
-  sourcemeta::jsonschema::LOG_VERBOSE(options) << "\n";
+  std::cerr << "tokens:";
+  bool first{true};
+  for (const auto &field : USAGE_FIELDS) {
+    std::cerr << (first ? " " : ", ");
+    first = false;
+    const auto *value{usage.value().try_at(field.reported)};
+    if (value == nullptr) {
+      std::cerr << "unknown";
+    } else {
+      sourcemeta::core::stringify(*value, std::cerr);
+    }
+
+    std::cerr << " " << field.label;
+  }
+
+  std::cerr << "\n";
 }
 
 // Spelling a schema for a provider is the same rewrite an upgrade performs, but
@@ -634,6 +681,13 @@ auto sourcemeta::jsonschema::llm(const sourcemeta::core::Options &options)
     throw NotSchemaError{display_path};
   }
 
+  // A boolean schema says the same thing to every document it is handed, so
+  // asking a model to satisfy one asks nothing, and there is nothing in the
+  // answer to find out about either
+  if (parsed_schema.document.is_boolean()) {
+    throw sourcemeta::core::FileError<BooleanSchemaLLMError>(display_path);
+  }
+
   const auto &custom_resolver{resolver(options, false, dialect, configuration)};
   const auto schema_default_id{
       sourcemeta::jsonschema::default_id(schema_path, schema_from_stdin)};
@@ -661,6 +715,15 @@ auto sourcemeta::jsonschema::llm(const sourcemeta::core::Options &options)
   // constraint lost on the way out invisible, which is the very thing this
   // command exists to find
   auto wire{bundled};
+
+  // A schema that declares no dialect was read under the one the caller named,
+  // and what goes out says so rather than leaving whoever receives it to guess.
+  // This happens before the conversion, so that what is written here is lifted
+  // along with everything else rather than standing apart from it
+  if (!wire.defines("$schema") && !dialect.empty()) {
+    wire.assign("$schema", sourcemeta::core::JSON{dialect});
+  }
+
   upgrade_for_wire(wire, custom_resolver, upgrade_target, dialect,
                    schema_default_id, display_path, parsed_schema.positions);
 
@@ -670,6 +733,12 @@ auto sourcemeta::jsonschema::llm(const sourcemeta::core::Options &options)
   }
 
   format_schema(wire, custom_resolver, dialect);
+
+  // Nothing reaches a provider without saying which dialect it is written
+  // against. A schema that declares none is read under a named dialect or not
+  // read at all, so by here there is always one to state
+  assert(wire.is_object());
+  assert(wire.defines("$schema"));
 
   auto body{make_request_body(wire, options.at("model").front(),
                               options.at("ask").front())};
@@ -806,6 +875,9 @@ auto sourcemeta::jsonschema::llm(const sourcemeta::core::Options &options)
     throw Fail{EXIT_EXPECTED_FAILURE};
   }
 
+  LOG_VERBOSE(options)
+      << "Validating the generated document against the schema\n";
+
   sourcemeta::blaze::Evaluator evaluator;
   bool result{true};
 
@@ -849,14 +921,15 @@ auto sourcemeta::jsonschema::llm(const sourcemeta::core::Options &options)
     if (!result) {
       std::cerr << format_validation_status(ValidationStatus::Fail) << " "
                 << url << "\n";
-      print(output, positions, std::cerr);
+      print(output, positions, std::cerr, "error:", {},
+            "The generated document does not conform to the schema");
     }
   }
 
-  // The machine-readable report already carries the counts, so this is only for
+  // The machine-readable report already carries these, so this is only for
   // whoever is reading along
   if (!json_output) {
-    report_usage(options, envelope.value());
+    report_metadata(envelope.value());
   }
 
   if (result) {

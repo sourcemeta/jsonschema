@@ -378,6 +378,16 @@ public:
                            "supported yet"} {}
 };
 
+// A boolean schema answers the same way whatever it is handed: `false` can
+// never be satisfied and `true` constrains nothing. Either way what a model
+// returns would be judged without reference to it, so there is no conformance
+// to find out about, which is the whole of what this command is for
+class BooleanSchemaLLMError : public std::runtime_error {
+public:
+  BooleanSchemaLLMError()
+      : std::runtime_error{"A boolean schema cannot be sent to a model"} {}
+};
+
 class UnsupportedOpenAPIVersionError : public std::runtime_error {
 public:
   UnsupportedOpenAPIVersionError(std::string value)
@@ -445,9 +455,24 @@ public:
                            "number of seconds"} {}
 };
 
-// A parameter writes a value into the request body at a location, so what can
-// go wrong is the location, the shape of what already sits along it, or the
-// pairing of the two
+// A parameter that is not shaped like one at all, so what it was meant to say
+// cannot be read out of it. This is the only case where showing what one looks
+// like helps, as the rest are well formed and refused on their merits
+class MalformedParameterError : public std::runtime_error {
+public:
+  MalformedParameterError(const std::string &message, std::string value)
+      : std::runtime_error{message}, value_{std::move(value)} {}
+
+  [[nodiscard]] auto value() const noexcept -> const std::string & {
+    return this->value_;
+  }
+
+private:
+  std::string value_;
+};
+
+// A parameter that reads as one but cannot be carried out, either because of
+// what sits along the way to where it writes or because of what it would write
 class InvalidParameterError : public std::runtime_error {
 public:
   InvalidParameterError(const std::string &message, std::string value)
@@ -1575,6 +1600,18 @@ inline auto try_catch(const sourcemeta::core::Options &options,
     const auto is_json{options.contains("json")};
     print_exception(is_json, error);
     return EXIT_NOT_SUPPORTED;
+  } catch (const sourcemeta::core::FileError<BooleanSchemaLLMError> &error) {
+    const auto is_json{options.contains("json")};
+    print_exception(is_json, error);
+    if (!is_json) {
+      std::cerr << "\nA boolean schema accepts every document or rejects "
+                   "every one, so what a\n";
+      std::cerr << "model returned would be judged the same way whatever it "
+                   "was. Send a schema\n";
+      std::cerr << "that constrains something instead\n";
+    }
+
+    return EXIT_SCHEMA_INPUT_ERROR;
   } catch (
       const sourcemeta::core::FileError<UnsupportedOpenAPILLMError> &error) {
     const auto is_json{options.contains("json")};
@@ -2173,13 +2210,17 @@ inline auto try_catch(const sourcemeta::core::Options &options,
     const auto is_json{options.contains("json")};
     print_exception(is_json, error);
     return EXIT_INVALID_CLI_ARGUMENTS;
-  } catch (const InvalidParameterError &error) {
+  } catch (const MalformedParameterError &error) {
     const auto is_json{options.contains("json")};
     print_exception(is_json, error);
     if (!is_json) {
       std::cerr << "\nFor example: --param /max_tokens=2048\n";
     }
 
+    return EXIT_INVALID_CLI_ARGUMENTS;
+  } catch (const InvalidParameterError &error) {
+    const auto is_json{options.contains("json")};
+    print_exception(is_json, error);
     return EXIT_INVALID_CLI_ARGUMENTS;
   } catch (const InvalidOptionEnumerationValueError &error) {
     const auto is_json{options.contains("json")};
