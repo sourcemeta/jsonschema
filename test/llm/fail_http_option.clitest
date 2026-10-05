@@ -1,0 +1,19 @@
+// The headers this command is given carry the credential for the completion
+// request, and remote resolution would send them to whatever host a reference
+// names, so the two are kept apart rather than quietly sharing.
+
+WRITE schema.json UNTIL EOF
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "string"
+}
+EOF
+
+// Invalid CLI arguments
+RUN llm schema.json --ask hello --url https://api.example.com/v1/chat/completions --model my-model --dry-run --http STDIN /dev/null IN . INTO result.txt EXPECTING 5
+
+WRITE expected.txt UNTIL EOF
+2> error: The `--http/-h` option is not supported by this command, as `--header/-H` carries the credential for the completion request. Run `bundle --http` first and pass its output to this command instead
+EOF
+
+COMPARE result.txt AGAINST expected.txt

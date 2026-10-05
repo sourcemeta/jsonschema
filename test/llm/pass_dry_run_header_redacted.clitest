@@ -1,0 +1,45 @@
+// Header names and their order are shown while the values are held back, so
+// that printing a request never puts a credential into output somebody pastes
+// elsewhere.
+
+WRITE schema.json UNTIL EOF
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "string"
+}
+EOF
+
+RUN llm schema.json --ask hello --url https://api.example.com/v1/chat/completions --model my-model --dry-run --header "Authorization: Bearer super-secret" --header "anthropic-version: 2023-06-01" STDIN /dev/null IN . INTO result.txt EXPECTING 0
+
+REPLACE $CWD_URI WITH '[CWD_URI]' IN result.txt
+
+WRITE expected.txt UNTIL EOF
+1> POST https://api.example.com/v1/chat/completions
+1> Content-Type: application/json
+1> Authorization: <redacted>
+1> anthropic-version: <redacted>
+1>
+1> {
+1>   "model": "my-model",
+1>   "messages": [
+1>     {
+1>       "role": "user",
+1>       "content": "hello"
+1>     }
+1>   ],
+1>   "response_format": {
+1>     "type": "json_schema",
+1>     "json_schema": {
+1>       "name": "schema",
+1>       "strict": true,
+1>       "schema": {
+1>         "$schema": "https://json-schema.org/draft/2020-12/schema",
+1>         "$id": "[CWD_URI]/schema.json",
+1>         "type": "string"
+1>       }
+1>     }
+1>   }
+1> }
+EOF
+
+COMPARE result.txt AGAINST expected.txt

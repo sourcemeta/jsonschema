@@ -1,0 +1,17 @@
+// A request that waits for no time at all would never be sent.
+
+WRITE schema.json UNTIL EOF
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "string"
+}
+EOF
+
+// Invalid CLI arguments
+RUN llm schema.json --ask hello --url https://api.example.com/v1/chat/completions --model my-model --dry-run --timeout 0 STDIN /dev/null IN . INTO result.txt EXPECTING 5
+
+WRITE expected.txt UNTIL EOF
+2> error: The --timeout option must be a positive integer number of seconds
+EOF
+
+COMPARE result.txt AGAINST expected.txt

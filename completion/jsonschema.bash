@@ -11,7 +11,7 @@ _jsonschema() {
     previous=""
   fi
 
-  commands="validate metaschema compile test fmt lint bundle inspect encode decode codegen install upgrade rdf version help"
+  commands="validate metaschema compile test fmt lint bundle inspect encode decode codegen install upgrade rdf llm version help"
 
   global_options="--verbose -v --resolve -r --default-dialect -d --json -j --http -h --debug -g --header -H --configuration -C --color"
 
@@ -89,6 +89,13 @@ _jsonschema() {
       ;;
     --to)
       COMPREPLY=( $(compgen -W "draft4 draft6 draft7 2019-09 2020-12 openapi3.1 openapi3.2" -- "${current}") )
+      return 0
+      ;;
+    --upgrade|-U)
+      COMPREPLY=( $(compgen -W "draft4 draft6 draft7 2019-09 2020-12" -- "${current}") )
+      return 0
+      ;;
+    --ask|-A|--url|-u|--model|-M|--param|-P|--timeout|-T)
       return 0
       ;;
     -t)
@@ -213,6 +220,15 @@ _jsonschema() {
       ;;
     upgrade)
       local options="--to -t"
+      if [[ ${current} == -* ]]
+      then
+        COMPREPLY=( $(compgen -W "${options} ${global_options}" -- "${current}") )
+      else
+        COMPREPLY=( $(compgen -f -X '!*.json' -X '!*.yaml' -X '!*.yml' -- "${current}") )
+      fi
+      ;;
+    llm)
+      local options="--ask -A --url -u --model -M --param -P --upgrade -U --timeout -T --raw -R --dry-run -D --trace -t --without-id -w"
       if [[ ${current} == -* ]]
       then
         COMPREPLY=( $(compgen -W "${options} ${global_options}" -- "${current}") )

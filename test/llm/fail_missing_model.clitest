@@ -1,0 +1,17 @@
+// Which model to ask is never guessed, as no vendor is built in.
+
+WRITE schema.json UNTIL EOF
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "string"
+}
+EOF
+
+// Invalid CLI arguments
+RUN llm schema.json --ask hello --url https://api.example.com/v1/chat/completions --dry-run STDIN /dev/null IN . INTO result.txt EXPECTING 5
+
+WRITE expected.txt UNTIL EOF
+2> error: You must pass the model using the `--model/-M` option
+EOF
+
+COMPARE result.txt AGAINST expected.txt

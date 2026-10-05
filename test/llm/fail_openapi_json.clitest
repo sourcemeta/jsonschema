@@ -1,0 +1,30 @@
+// A description holds many schemas and none of itself, and what a provider takes
+// is one schema that stands on its own, so it is turned down outright rather
+// than half done.
+
+WRITE openapi.json UNTIL EOF
+{
+  "openapi": "3.1.1",
+  "info": { "title": "Example", "version": "1.0.0" },
+  "paths": {},
+  "components": {
+    "schemas": {
+      "Person": { "type": "string" }
+    }
+  }
+}
+EOF
+
+// Not supported
+RUN llm openapi.json --ask hello --url https://api.example.com/v1/chat/completions --model my-model --dry-run --json STDIN /dev/null IN . INTO result.txt EXPECTING 3
+
+REPLACE $CWD WITH '[CWD]' IN result.txt
+
+WRITE expected.txt UNTIL EOF
+1> {
+1>   "error": "Sending OpenAPI descriptions to a model is not supported yet",
+1>   "filePath": "[CWD]/openapi.json"
+1> }
+EOF
+
+COMPARE result.txt AGAINST expected.txt

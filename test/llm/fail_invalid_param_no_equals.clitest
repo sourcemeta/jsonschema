@@ -1,0 +1,21 @@
+// A parameter names a location and a value, so one half of the pair is no
+// parameter at all.
+
+WRITE schema.json UNTIL EOF
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "string"
+}
+EOF
+
+// Invalid CLI arguments
+RUN llm schema.json --ask hello --url https://api.example.com/v1/chat/completions --model my-model --dry-run --param max_tokens STDIN /dev/null IN . INTO result.txt EXPECTING 5
+
+WRITE expected.txt UNTIL EOF
+2> error: Parameters must be in the form `<pointer>=<value>`
+2>   at value max_tokens
+2>
+2> For example: --param /max_tokens=2048
+EOF
+
+COMPARE result.txt AGAINST expected.txt

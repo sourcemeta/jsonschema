@@ -12,6 +12,7 @@
 #include <sourcemeta/core/yaml.h>
 
 #include <sourcemeta/blaze/compiler.h>
+#include <sourcemeta/blaze/convert.h>
 #include <sourcemeta/blaze/output.h>
 
 #include "error.h"
@@ -29,7 +30,8 @@
 #include <string>      // std::string, std::stoull
 #include <string_view> // std::string_view
 #include <thread>      // std::thread
-#include <utility>     // std::unreachable
+#include <tuple>       // std::get
+#include <utility>     // std::move, std::unreachable
 
 namespace sourcemeta::jsonschema {
 
@@ -789,6 +791,114 @@ inline auto compile_for_evaluation(
   } catch (const sourcemeta::core::SchemaError &error) {
     throw sourcemeta::core::FileError<sourcemeta::core::SchemaError>(
         resolution_base, error.what());
+  }
+}
+
+template <typename Error>
+[[noreturn]] auto
+throw_upgrade_error(const std::filesystem::path &schema_display_path,
+                    const sourcemeta::core::PointerPositionTracker &positions,
+                    sourcemeta::core::Pointer location, std::string uri)
+    -> void {
+  const auto position{positions.get(location)};
+  if (position.has_value()) {
+    throw PositionError<Error>{
+        std::get<0>(position.value()), std::get<1>(position.value()),
+        schema_display_path, std::move(location), std::move(uri)};
+  }
+
+  throw Error{schema_display_path, std::move(location), std::move(uri)};
+}
+
+// Moving a schema onto a newer dialect, with every way that can fail reported
+// against the file the schema came from. Shared by whoever asks for the move,
+// whether that is the user outright or a command that has to spell a schema the
+// way something else recognises it
+inline auto
+upgrade_schema(sourcemeta::core::JSON &schema,
+               const sourcemeta::core::SchemaResolver &resolver,
+               const sourcemeta::blaze::ConvertTarget target,
+               const std::string &dialect, const std::string &default_id,
+               const std::filesystem::path &schema_display_path,
+               const sourcemeta::core::PointerPositionTracker &positions)
+    -> void {
+  try {
+    sourcemeta::blaze::convert(schema, sourcemeta::core::schema_walker,
+                               resolver, target, dialect, default_id);
+  } catch (const sourcemeta::blaze::ConvertUnsupportedMetaschemaError &error) {
+    throw_upgrade_error<MetaschemaUpgradeError>(
+        schema_display_path, positions, error.location(),
+        std::string{error.identifier()});
+  } catch (const sourcemeta::blaze::ConvertUnsupportedDialectError &error) {
+    // A dialect with no conversion rules is either one we have not taught
+    // the CLI yet or one only the author of the schema knows about, which are
+    // different problems to act on. Whether JSON Schema names the dialect is
+    // what tells them apart
+    if (sourcemeta::core::schema_is_known(error.identifier())) {
+      throw_upgrade_error<UnsupportedDialectUpgradeError>(
+          schema_display_path, positions, error.location(),
+          std::string{error.identifier()});
+    }
+
+    throw_upgrade_error<CustomMetaschemaUpgradeError>(
+        schema_display_path, positions, error.location(),
+        std::string{error.identifier()});
+  } catch (const sourcemeta::blaze::ConvertInvalidReferenceError &error) {
+    throw_upgrade_error<InvalidReferenceUpgradeError>(
+        schema_display_path, positions, error.location(),
+        std::string{error.identifier()});
+  } catch (const sourcemeta::blaze::ConvertBrokenReferenceError &error) {
+    throw_upgrade_error<BrokenReferenceUpgradeError>(
+        schema_display_path, positions, error.location(),
+        std::string{error.identifier()});
+  } catch (const sourcemeta::core::SchemaKeywordError &error) {
+    throw sourcemeta::core::FileError<sourcemeta::core::SchemaKeywordError>(
+        schema_display_path, error);
+  } catch (const sourcemeta::core::SchemaFrameError &error) {
+    throw sourcemeta::core::FileError<sourcemeta::core::SchemaFrameError>(
+        schema_display_path, error);
+  } catch (const sourcemeta::core::SchemaAnchorCollisionError &error) {
+    const auto position{positions.get(error.location())};
+    if (position.has_value()) {
+      throw PositionError<sourcemeta::core::FileError<
+          sourcemeta::core::SchemaAnchorCollisionError>>(
+          std::get<0>(position.value()), std::get<1>(position.value()),
+          schema_display_path, error);
+    }
+
+    throw sourcemeta::core::FileError<
+        sourcemeta::core::SchemaAnchorCollisionError>(schema_display_path,
+                                                      error);
+  } catch (const sourcemeta::core::SchemaReferenceError &error) {
+    const auto position{positions.get(error.location())};
+    if (position.has_value()) {
+      throw PositionError<
+          sourcemeta::core::FileError<sourcemeta::core::SchemaReferenceError>>(
+          std::get<0>(position.value()), std::get<1>(position.value()),
+          schema_display_path, error.identifier(), error.location(),
+          error.what());
+    }
+
+    throw sourcemeta::core::FileError<sourcemeta::core::SchemaReferenceError>(
+        schema_display_path, error.identifier(), error.location(),
+        error.what());
+  } catch (
+      const sourcemeta::core::SchemaRelativeMetaschemaResolutionError &error) {
+    throw sourcemeta::core::FileError<
+        sourcemeta::core::SchemaRelativeMetaschemaResolutionError>(
+        schema_display_path, error);
+  } catch (const sourcemeta::core::SchemaResolutionError &error) {
+    throw sourcemeta::core::FileError<sourcemeta::core::SchemaResolutionError>(
+        schema_display_path, error);
+  } catch (const sourcemeta::core::SchemaUnknownBaseDialectError &) {
+    throw sourcemeta::core::FileError<
+        sourcemeta::core::SchemaUnknownBaseDialectError>(schema_display_path);
+  } catch (const sourcemeta::core::SchemaUnknownDialectError &) {
+    throw sourcemeta::core::FileError<
+        sourcemeta::core::SchemaUnknownDialectError>(schema_display_path);
+  } catch (const sourcemeta::core::SchemaError &error) {
+    throw sourcemeta::core::FileError<sourcemeta::core::SchemaError>(
+        schema_display_path, error.what());
   }
 }
 

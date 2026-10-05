@@ -1,0 +1,39 @@
+// A schema piped in reaches a provider the same way one read from a file does.
+
+WRITE schema.json UNTIL EOF
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "string"
+}
+EOF
+
+RUN llm - --ask hello --url https://api.example.com/v1/chat/completions --model my-model --dry-run STDIN schema.json IN . INTO result.txt EXPECTING 0
+
+WRITE expected.txt UNTIL EOF
+1> POST https://api.example.com/v1/chat/completions
+1> Content-Type: application/json
+1>
+1> {
+1>   "model": "my-model",
+1>   "messages": [
+1>     {
+1>       "role": "user",
+1>       "content": "hello"
+1>     }
+1>   ],
+1>   "response_format": {
+1>     "type": "json_schema",
+1>     "json_schema": {
+1>       "name": "schema",
+1>       "strict": true,
+1>       "schema": {
+1>         "$schema": "https://json-schema.org/draft/2020-12/schema",
+1>         "$id": "tag:sourcemeta.com,2026:jsonschema/stdin",
+1>         "type": "string"
+1>       }
+1>     }
+1>   }
+1> }
+EOF
+
+COMPARE result.txt AGAINST expected.txt

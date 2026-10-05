@@ -1,0 +1,48 @@
+// A parameter writes into the request body at the location it names, creating
+// the objects along the way, and its value is read as JSON so that a number
+// arrives as a number and a bare word as text.
+
+WRITE schema.json UNTIL EOF
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "string"
+}
+EOF
+
+RUN llm schema.json --ask hello --url https://api.example.com/v1/chat/completions --model my-model --dry-run --param /max_completion_tokens=2048 --param /response_format/json_schema/strict=false --param /provider/require_parameters=true --param /messages/0/role=system --param /stop=gpt-foo STDIN /dev/null IN . INTO result.txt EXPECTING 0
+
+REPLACE $CWD_URI WITH '[CWD_URI]' IN result.txt
+
+WRITE expected.txt UNTIL EOF
+1> POST https://api.example.com/v1/chat/completions
+1> Content-Type: application/json
+1>
+1> {
+1>   "model": "my-model",
+1>   "messages": [
+1>     {
+1>       "role": "system",
+1>       "content": "hello"
+1>     }
+1>   ],
+1>   "response_format": {
+1>     "type": "json_schema",
+1>     "json_schema": {
+1>       "name": "schema",
+1>       "strict": false,
+1>       "schema": {
+1>         "$schema": "https://json-schema.org/draft/2020-12/schema",
+1>         "$id": "[CWD_URI]/schema.json",
+1>         "type": "string"
+1>       }
+1>     }
+1>   },
+1>   "max_completion_tokens": 2048,
+1>   "provider": {
+1>     "require_parameters": true
+1>   },
+1>   "stop": "gpt-foo"
+1> }
+EOF
+
+COMPARE result.txt AGAINST expected.txt

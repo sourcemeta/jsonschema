@@ -1,0 +1,28 @@
+// The dialects a schema can be spelled as are the official JSON Schema ones.
+// The OpenAPI Schema Object dialects describe an API rather than an instance,
+// so no provider recognises one.
+
+WRITE schema.json UNTIL EOF
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "string"
+}
+EOF
+
+// Invalid CLI arguments
+RUN llm schema.json --ask hello --url https://api.example.com/v1/chat/completions --model my-model --dry-run --upgrade openapi3.1 STDIN /dev/null IN . INTO result.txt EXPECTING 5
+
+WRITE expected.txt UNTIL EOF
+2> error: The given target dialect is not supported
+2>   at option upgrade
+2>   with values
+2>   - draft4
+2>   - draft6
+2>   - draft7
+2>   - 2019-09
+2>   - 2020-12
+2>
+2> Run the `help` command for usage information
+EOF
+
+COMPARE result.txt AGAINST expected.txt

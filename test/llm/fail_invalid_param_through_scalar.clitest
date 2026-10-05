@@ -1,0 +1,21 @@
+// A parameter creates the objects along the way to where it writes, which it
+// cannot do through a value that already holds something else.
+
+WRITE schema.json UNTIL EOF
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "string"
+}
+EOF
+
+// Invalid CLI arguments
+RUN llm schema.json --ask hello --url https://api.example.com/v1/chat/completions --model my-model --dry-run --param /model/nested=1 STDIN /dev/null IN . INTO result.txt EXPECTING 5
+
+WRITE expected.txt UNTIL EOF
+2> error: The parameter writes a property into a value that is not an object
+2>   at value /model/nested=1
+2>
+2> For example: --param /max_tokens=2048
+EOF
+
+COMPARE result.txt AGAINST expected.txt

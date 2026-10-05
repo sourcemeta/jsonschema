@@ -1,0 +1,41 @@
+// A provider recognises one fixed set of keywords and reads no dialect
+// declaration, so a schema written against a meta-schema of its own describes
+// itself in terms nothing on the other end could know, and sending it would hand
+// over keywords that are silently ignored.
+
+WRITE metaschema.json UNTIL EOF
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.com/my-metaschema",
+  "$dynamicAnchor": "meta",
+  "type": [ "object", "boolean" ]
+}
+EOF
+
+WRITE schema.json UNTIL EOF
+{
+  "$schema": "https://example.com/my-metaschema",
+  "type": "string"
+}
+EOF
+
+// Schema input error
+RUN llm schema.json --ask hello --url https://api.example.com/v1/chat/completions --model my-model --dry-run --resolve metaschema.json STDIN /dev/null IN . INTO result.txt EXPECTING 4
+
+REPLACE $CWD WITH '[CWD]' IN result.txt
+
+WRITE expected.txt UNTIL EOF
+2> error: Schemas that declare a custom meta-schema cannot be sent to a model
+2>   at line 1
+2>   at column 1
+2>   at file path [CWD]/schema.json
+2>   at location ""
+2>   at uri https://example.com/my-metaschema
+2>
+2> Providers recognise one fixed set of keywords and read no dialect declaration,
+2> so the keywords a custom meta-schema describes are ones they cannot know about
+2> and would silently ignore. Rewrite the schema against an official dialect,
+2> using only official vocabularies, and send that instead
+EOF
+
+COMPARE result.txt AGAINST expected.txt

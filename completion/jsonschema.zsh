@@ -21,6 +21,7 @@ _jsonschema() {
     'install:Fetch and install external schema dependencies'
     'upgrade:Upgrade a schema to a newer JSON Schema dialect'
     'rdf:Turn an instance into Linked Data / JSON-LD'
+    'llm:Ask a model for a document and validate what comes back'
     'version:Print version information'
     'help:Print help information'
   )
@@ -159,6 +160,21 @@ _jsonschema() {
           _arguments \
             ${global_options[@]} \
             '(--to -t)'{--to,-t}'[Target dialect]:dialect:(draft4 draft6 draft7 2019-09 2020-12 openapi3.1 openapi3.2)' \
+            '1:schema file:_files -g "*.json *.yaml *.yml"'
+          ;;
+        llm)
+          _arguments \
+            ${global_options[@]} \
+            '(--ask -A)'{--ask,-A}'[The prompt to send]:prompt:' \
+            '(--url -u)'{--url,-u}'[The completion endpoint URL]:url:' \
+            '(--model -M)'{--model,-M}'[The model to ask]:model:' \
+            '*'{--param,-P}'[Set a request body value (<pointer>=<value>)]:parameter:' \
+            '(--upgrade -U)'{--upgrade,-U}'[Spell the schema as the given dialect]:dialect:(draft4 draft6 draft7 2019-09 2020-12)' \
+            '(--timeout -T)'{--timeout,-T}'[Seconds to wait for the response]:seconds:' \
+            '(--raw -R)'{--raw,-R}'[Print the response envelope without reading it]' \
+            '(--dry-run -D)'{--dry-run,-D}'[Print the request instead of sending it]' \
+            '(--trace -t)'{--trace,-t}'[Enable trace output]' \
+            '(--without-id -w)'{--without-id,-w}'[Remove schema identifiers before sending]' \
             '1:schema file:_files -g "*.json *.yaml *.yml"'
           ;;
         rdf)
