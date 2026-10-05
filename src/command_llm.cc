@@ -444,7 +444,9 @@ auto report_response_body(const sourcemeta::core::Options &options,
     return;
   }
 
-  std::cerr << "\n";
+  // Whose words these are is worth saying outright, as an error body reads like
+  // one of ours otherwise and is written to none of our conventions
+  std::cerr << "\nThe provider responded with:\n\n";
   try {
     const auto parsed{sourcemeta::core::parse_json(response.body)};
     sourcemeta::core::prettify(parsed, std::cerr);

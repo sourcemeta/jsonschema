@@ -55,6 +55,8 @@ error: Unsuccessful HTTP response
   with status 400 Bad Request
   at url http://localhost:${PORT}/reject
 
+The provider responded with:
+
 {
   "message": "Bad Request",
   "type": "Bad Request",
@@ -87,12 +89,12 @@ diff "$TMP/output_json.txt" "$TMP/expected_json.txt"
 # Other input error
 test "$EXIT_CODE" = "6"
 
-# The body below is the provider's own, whole and exactly as it arrived. It is
-# not JSON, so there is nothing to lay out and nothing of ours added to it
 cat << EOF > "$TMP/expected_blocked.txt"
 error: Unsuccessful HTTP response
   with status 403 Forbidden
   at url http://localhost:${PORT}/blocked
+
+The provider responded with:
 
 Real-time access to 'my-model' is blocked by a routing rule.
 EOF

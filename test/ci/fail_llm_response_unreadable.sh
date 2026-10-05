@@ -54,6 +54,8 @@ error: The response does not carry a generated document
   with status 200 OK
   at url http://localhost:${PORT}/envelope
 
+The provider responded with:
+
 {
   "id": "resp_1",
   "object": "chat.completion"

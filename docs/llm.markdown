@@ -361,8 +361,22 @@ the command exits 3. Error bodies get the same treatment: they are not
 portable, not even within one provider, and at least one provider returns a body
 that is not JSON at all. Nothing is read out of one or summarised from it, so
 what came back is what you see, laid out when it happens to be JSON and left
-exactly as it arrived when it is not. Under `--json` the body is always carried
-as a string, which is the one form that works for both.
+exactly as it arrived when it is not. It is introduced as the provider's, since
+it is written to none of this command's conventions and would otherwise read as
+though it were:
+
+```
+error: Unsuccessful HTTP response
+  with status 403 Forbidden
+  at url https://api.example.com/v1/chat/completions
+
+The provider responded with:
+
+Real-time access to 'my-model' is blocked by a routing rule.
+```
+
+Under `--json` the body is carried as a string under `body`, which is the one
+form that works whether or not it is JSON.
 
 Use `--raw/-R` to print the response envelope without reading it at all, which is
 how you capture one to keep.
