@@ -41,24 +41,18 @@ jsonschema llm path/to/schema.json \
 ```
 
 On success the generated document goes to standard output exactly as the model
-emitted it, and the command exits 0. What the provider said about the run goes
-to standard error, so that redirecting standard output keeps the document alone:
+emitted it, and the command exits 0. What the provider said it spent goes to
+standard error, so that redirecting standard output keeps the document alone:
 
 ```
 {
   "capital": "Berlin"
 }
-finish reason: stop
 tokens: 17 prompt, 128 completion, 145 total
 ```
 
-Both lines are printed whether or not the provider reported them, as one that
-keeps a count to itself is worth knowing about:
-
-```
-finish reason: unknown
-tokens: unknown
-```
+A provider that reports no counts gets no such line. How generation stopped is
+reported under `--json/-j` only, as `finishReason`.
 
 When the document does not conform, it still goes to standard output, the
 validation errors go to standard error, and the command exits 2:

@@ -530,33 +530,26 @@ auto usage_json(const sourcemeta::core::JSON &envelope)
   return result;
 }
 
-// What the provider said about the run, beside what it generated. Both are
-// reported whether or not they came back, as a provider that keeps a count to
-// itself is worth knowing about and a blank where a number should be says that
-// better than printing nothing at all
-auto report_metadata(const sourcemeta::core::JSON &envelope) -> void {
-  const auto *reason{finish_reason(envelope)};
-  std::cerr << "finish reason: "
-            << (reason == nullptr ? "unknown" : reason->to_string()) << "\n";
-
+// What the provider said it spent, where it said anything at all. One that
+// keeps its counts to itself leaves nothing to report rather than a line of
+// blanks
+auto report_usage(const sourcemeta::core::JSON &envelope) -> void {
   const auto usage{usage_json(envelope)};
   if (!usage.has_value()) {
-    std::cerr << "tokens: unknown\n";
     return;
   }
 
   std::cerr << "tokens:";
   bool first{true};
   for (const auto &field : USAGE_FIELDS) {
-    std::cerr << (first ? " " : ", ");
-    first = false;
     const auto *value{usage.value().try_at(field.reported)};
     if (value == nullptr) {
-      std::cerr << "unknown";
-    } else {
-      sourcemeta::core::stringify(*value, std::cerr);
+      continue;
     }
 
+    std::cerr << (first ? " " : ", ");
+    first = false;
+    sourcemeta::core::stringify(*value, std::cerr);
     std::cerr << " " << field.label;
   }
 
@@ -929,7 +922,7 @@ auto sourcemeta::jsonschema::llm(const sourcemeta::core::Options &options)
   // The machine-readable report already carries these, so this is only for
   // whoever is reading along
   if (!json_output) {
-    report_metadata(envelope.value());
+    report_usage(envelope.value());
   }
 
   if (result) {

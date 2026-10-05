@@ -87,6 +87,8 @@ diff "$TMP/output_json.txt" "$TMP/expected_json.txt"
 # Other input error
 test "$EXIT_CODE" = "6"
 
+# The body below is the provider's own, whole and exactly as it arrived. It is
+# not JSON, so there is nothing to lay out and nothing of ours added to it
 cat << EOF > "$TMP/expected_blocked.txt"
 error: Unsuccessful HTTP response
   with status 403 Forbidden
