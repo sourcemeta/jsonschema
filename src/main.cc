@@ -168,14 +168,12 @@ constexpr std::string_view USAGE_COMMANDS{R"EOF(   version / --version / -v
        [--upgrade/-U draft4|draft6|draft7|2019-09|2020-12]
        [--timeout/-T <seconds>] [--dry-run/-D] [--trace/-t] [--without-id/-w]
 
-       Ask a model for a document conforming to the given schema, then
-       validate what comes back against that schema, printing it and exiting
-       2 when it does not conform. Works against any endpoint taking an
-       OpenAI Chat Completions `response_format` with a nested `json_schema`.
-       Pass the credential with --header/-H, further request body fields with
-       --param/-P, and --upgrade/-U to spell the schema as another dialect on
-       the way out, which defaults to 2020-12. Use --dry-run/-D to print the
-       request instead of sending it.
+       Ask a model for a document conforming to the given schema.
+       Works against any endpoint taking an OpenAI Chat Completions
+       `response_format` with a nested `json_schema`.
+       The --param/-P option adds further entries to the request body.
+       The --upgrade/-U option defaults to 2020-12.
+       Use --dry-run/-D to print the request instead of sending it.
 
    install [<uri> <path>] [--force/-f] [--frozen/-z]
 

@@ -178,14 +178,12 @@ WRITE expected.txt UNTIL EOF
 1>        [--upgrade/-U draft4|draft6|draft7|2019-09|2020-12]
 1>        [--timeout/-T <seconds>] [--dry-run/-D] [--trace/-t] [--without-id/-w]
 1>
-1>        Ask a model for a document conforming to the given schema, then
-1>        validate what comes back against that schema, printing it and exiting
-1>        2 when it does not conform. Works against any endpoint taking an
-1>        OpenAI Chat Completions `response_format` with a nested `json_schema`.
-1>        Pass the credential with --header/-H, further request body fields with
-1>        --param/-P, and --upgrade/-U to spell the schema as another dialect on
-1>        the way out, which defaults to 2020-12. Use --dry-run/-D to print the
-1>        request instead of sending it.
+1>        Ask a model for a document conforming to the given schema.
+1>        Works against any endpoint taking an OpenAI Chat Completions
+1>        `response_format` with a nested `json_schema`.
+1>        The --param/-P option adds further entries to the request body.
+1>        The --upgrade/-U option defaults to 2020-12.
+1>        Use --dry-run/-D to print the request instead of sending it.
 1>
 1>    install [<uri> <path>] [--force/-f] [--frozen/-z]
 1>
