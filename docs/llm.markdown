@@ -192,12 +192,32 @@ jsonschema llm path/to/draft4-schema.json --ask "..." \
 > 2020-12 schema back onto Draft 7.
 
 > [!IMPORTANT]
-> A schema that declares a custom meta-schema is refused outright. A provider
-> recognises one fixed set of keywords and reads no dialect declaration, so the
-> keywords a custom meta-schema describes are ones it cannot know about and would
-> silently ignore, which is the opposite of what asking a model to honour a schema
-> is for. Rewrite the schema against an official dialect, using only official
-> vocabularies.
+> A schema that declares a custom meta-schema is refused outright. What any given
+> provider supports is a subset that differs between them and moves over time, so
+> there is little to say about it with confidence, but a meta-schema of your own
+> is very unlikely to be part of any of it. Rewrite the schema against an official
+> dialect.
+
+What This Command Takes
+-----------------------
+
+One schema, in a file or on standard input, which is what a provider takes too.
+
+An OpenAPI description is refused. A description holds many Schema Objects and
+no schema of its own, so there is nothing to send without being told which one
+is meant, and naming one is not supported here yet:
+
+```sh
+jsonschema llm path/to/openapi.json --ask "..." \
+  --url https://api.example.com/v1/chat/completions --model my-model
+```
+
+```
+error: Sending OpenAPI descriptions to a model is not supported yet
+  at file path /path/to/openapi.json
+```
+
+Extract the Schema Object you mean into a file of its own and pass that instead.
 
 Credentials and Network Access
 ------------------------------
@@ -288,9 +308,19 @@ without a colon with the exit code each would really produce.
 > identifier goes out with the schema, the same way the `bundle` command writes
 > it. Pass `--without-id/-w` to remove identifiers before sending.
 
-Header names and their order are shown while their values are held back, so that
-printing a request never puts a live credential into output you paste into a bug
-report.
+Headers are printed as they were given, values and all, so what comes out is a
+request another HTTP client can replay as it stands:
+
+```sh
+jsonschema llm path/to/schema.json --ask "..." \
+  --url https://api.example.com/v1/chat/completions --model my-model \
+  --header "Authorization: Bearer $TOKEN" --dry-run
+```
+
+> [!WARNING]
+> A credential you pass therefore lands in the output. Treat what `--dry-run`
+> prints the way you treat the credential itself, and redact it before pasting it
+> anywhere.
 
 Reading the Response
 --------------------

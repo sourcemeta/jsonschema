@@ -13,7 +13,7 @@ EOF
 RUN llm schema.json --ask hello --url https://api.example.com/v1/chat/completions --model my-model --dry-run --http STDIN /dev/null IN . INTO result.txt EXPECTING 5
 
 WRITE expected.txt UNTIL EOF
-2> error: The `--http/-h` option is not supported by this command, as `--header/-H` carries the credential for the completion request. Run `bundle --http` first and pass its output to this command instead
+2> error: The `--http/-h` option is not supported by this command. Run `bundle --http` first and pass its output to this command instead
 EOF
 
 COMPARE result.txt AGAINST expected.txt

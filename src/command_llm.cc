@@ -50,11 +50,6 @@ namespace {
 // schema itself is the one finding this command must never manufacture
 constexpr std::string_view SCHEMA_NAME{"schema"};
 
-// What a header value prints as. Every one of them is held back rather than
-// matching the names that tend to carry credentials, as a rule that tries to
-// tell a secret from the rest is a rule that is eventually wrong about one
-constexpr std::string_view REDACTED_HEADER_VALUE{"<redacted>"};
-
 // A completion response runs to kilobytes. A model asked for JSON without being
 // told to stop has been documented to emit whitespace until it reaches the
 // token limit, so there is a ceiling rather than none
@@ -312,6 +307,10 @@ auto make_request_body(const sourcemeta::core::JSON &schema,
   return body;
 }
 
+// The request as it would go out, headers and all. A value is printed as it was
+// given so that what comes out can be replayed by whatever else speaks HTTP,
+// which means a credential passed here lands in the output and should be
+// treated the way the credential itself is
 auto print_dry_run(const sourcemeta::core::Options &options,
                    const std::string_view url,
                    const sourcemeta::core::JSON &body) -> void {
@@ -327,8 +326,7 @@ auto print_dry_run(const sourcemeta::core::Options &options,
     for (const auto &header : headers) {
       auto entry{sourcemeta::core::JSON::make_object()};
       entry.assign("name", sourcemeta::core::JSON{std::string{header.first}});
-      entry.assign("value",
-                   sourcemeta::core::JSON{std::string{REDACTED_HEADER_VALUE}});
+      entry.assign("value", sourcemeta::core::JSON{std::string{header.second}});
       entries.push_back(std::move(entry));
     }
 
@@ -345,7 +343,7 @@ auto print_dry_run(const sourcemeta::core::Options &options,
   std::cout << "POST " << url << "\n";
   std::cout << "Content-Type: application/json\n";
   for (const auto &header : headers) {
-    std::cout << header.first << ": " << REDACTED_HEADER_VALUE << "\n";
+    std::cout << header.first << ": " << header.second << "\n";
   }
 
   std::cout << "\n";
@@ -563,26 +561,29 @@ auto sourcemeta::jsonschema::llm(const sourcemeta::core::Options &options)
   // So references resolve locally here and the rest composes through `bundle`
   if (options.contains("http")) {
     throw OptionConflictError{
-        "The `--http/-h` option is not supported by this command, as "
-        "`--header/-H` carries the credential for the completion request. Run "
-        "`bundle --http` first and pass its output to this command instead"};
+        "The `--http/-h` option is not supported by this command. Run `bundle "
+        "--http` first and pass its output to this command instead"};
   }
 
   validate_http_headers(options);
 
   if (!options.contains("ask") || options.at("ask").front().empty()) {
-    throw OptionConflictError{
-        "You must pass a prompt using the `--ask/-A` option"};
+    throw MissingOptionError{
+        "You must pass a prompt using the `--ask/-A` option",
+        "--ask \"What is the capital of Germany?\""};
   }
 
   if (!options.contains("url") || options.at("url").front().empty()) {
-    throw OptionConflictError{
-        "You must pass the completion endpoint using the `--url/-u` option"};
+    throw MissingOptionError{
+        "You must pass the full URL of the structured output endpoint using "
+        "the `--url/-u` option",
+        "--url https://api.example.com/v1/chat/completions"};
   }
 
   if (!options.contains("model") || options.at("model").front().empty()) {
-    throw OptionConflictError{
-        "You must pass the model using the `--model/-M` option"};
+    throw MissingOptionError{"You must pass the model using the `--model/-M` "
+                             "option",
+                             "--model my-model"};
   }
 
   const auto timeout{parse_timeout(options)};

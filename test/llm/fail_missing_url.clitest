@@ -11,7 +11,9 @@ EOF
 RUN llm schema.json --ask hello --model my-model --dry-run STDIN /dev/null IN . INTO result.txt EXPECTING 5
 
 WRITE expected.txt UNTIL EOF
-2> error: You must pass the completion endpoint using the `--url/-u` option
+2> error: You must pass the full URL of the structured output endpoint using the `--url/-u` option
+2>
+2> For example: --url https://api.example.com/v1/chat/completions
 EOF
 
 COMPARE result.txt AGAINST expected.txt

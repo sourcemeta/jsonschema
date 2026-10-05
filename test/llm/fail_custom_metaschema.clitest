@@ -1,7 +1,6 @@
-// A provider recognises one fixed set of keywords and reads no dialect
-// declaration, so a schema written against a meta-schema of its own describes
-// itself in terms nothing on the other end could know, and sending it would hand
-// over keywords that are silently ignored.
+// What a provider supports is a moving subset that is hard to say much about,
+// but a meta-schema of one's own is very unlikely to be part of any of it, so a
+// schema written against one is turned down rather than sent to be ignored.
 
 WRITE metaschema.json UNTIL EOF
 {
@@ -32,10 +31,9 @@ WRITE expected.txt UNTIL EOF
 2>   at location ""
 2>   at uri https://example.com/my-metaschema
 2>
-2> Providers recognise one fixed set of keywords and read no dialect declaration,
-2> so the keywords a custom meta-schema describes are ones they cannot know about
-2> and would silently ignore. Rewrite the schema against an official dialect,
-2> using only official vocabularies, and send that instead
+2> What a provider supports differs between them and changes over time, but a
+2> meta-schema of your own is very unlikely to be part of any of it. Rewrite the
+2> schema against an official dialect and send that instead
 EOF
 
 COMPARE result.txt AGAINST expected.txt

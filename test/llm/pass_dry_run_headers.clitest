@@ -1,6 +1,5 @@
-// Header names and their order are shown while the values are held back, so
-// that printing a request never puts a credential into output somebody pastes
-// elsewhere.
+// Headers go out as they were given, names, values and order alike, so that what
+// is printed is a request another HTTP client can replay as it stands.
 
 WRITE schema.json UNTIL EOF
 {
@@ -16,8 +15,8 @@ REPLACE $CWD_URI WITH '[CWD_URI]' IN result.txt
 WRITE expected.txt UNTIL EOF
 1> POST https://api.example.com/v1/chat/completions
 1> Content-Type: application/json
-1> Authorization: <redacted>
-1> anthropic-version: <redacted>
+1> Authorization: Bearer super-secret
+1> anthropic-version: 2023-06-01
 1>
 1> {
 1>   "model": "my-model",

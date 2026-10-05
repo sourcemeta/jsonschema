@@ -393,6 +393,21 @@ private:
   std::string value_;
 };
 
+// An option this command cannot proceed without. What to pass is not always
+// obvious from the name, so one that would have worked travels along
+class MissingOptionError : public std::runtime_error {
+public:
+  MissingOptionError(const std::string &message, std::string example)
+      : std::runtime_error{message}, example_{std::move(example)} {}
+
+  [[nodiscard]] auto example() const noexcept -> const std::string & {
+    return this->example_;
+  }
+
+private:
+  std::string example_;
+};
+
 class OptionConflictError : public std::runtime_error {
 public:
   OptionConflictError(const std::string &message)
@@ -623,11 +638,11 @@ private:
   std::string dialect_;
 };
 
-// Every provider has one fixed set of keywords it recognises and reads no
-// dialect declaration at all, so a schema that declares a meta-schema of its
-// own is written in terms nothing on the other end can know. Sending it would
-// mean handing over keywords the provider silently ignores, which is the
-// opposite of what asking a model to honour a schema is for
+// What a provider supports is a subset that differs between them and moves
+// over time, so there is little to say about it with confidence. A meta-schema
+// of one's own is the exception: nothing published suggests any of them reads a
+// dialect declaration, so a schema written against one is very unlikely to be
+// understood as written
 class CustomMetaschemaLLMError : public std::runtime_error {
 public:
   CustomMetaschemaLLMError(std::filesystem::path path,
@@ -1468,17 +1483,14 @@ print_reference_target_guidance(const sourcemeta::core::Pointer &location)
   }
 }
 
-// The same, for a schema whose dialect nothing on the other end of a completion
-// request could know about
+// The same, for a schema whose dialect a provider is unlikely to have heard of
 inline auto print_custom_metaschema_llm_guidance() -> void {
   std::cerr << "\n";
-  std::cerr << "Providers recognise one fixed set of keywords and read no "
-               "dialect declaration,\n";
-  std::cerr << "so the keywords a custom meta-schema describes are ones they "
-               "cannot know about\n";
-  std::cerr << "and would silently ignore. Rewrite the schema against an "
-               "official dialect,\n";
-  std::cerr << "using only official vocabularies, and send that instead\n";
+  std::cerr << "What a provider supports differs between them and changes over "
+               "time, but a\n";
+  std::cerr << "meta-schema of your own is very unlikely to be part of any of "
+               "it. Rewrite the\n";
+  std::cerr << "schema against an official dialect and send that instead\n";
 }
 
 // What an auto-fix failure tells the user to do next, which is the same
@@ -2136,6 +2148,14 @@ inline auto try_catch(const sourcemeta::core::Options &options,
   } catch (const StdinError &error) {
     const auto is_json{options.contains("json")};
     print_exception(is_json, error);
+    return EXIT_INVALID_CLI_ARGUMENTS;
+  } catch (const MissingOptionError &error) {
+    const auto is_json{options.contains("json")};
+    print_exception(is_json, error);
+    if (!is_json) {
+      std::cerr << "\nFor example: " << error.example() << "\n";
+    }
+
     return EXIT_INVALID_CLI_ARGUMENTS;
   } catch (const OptionConflictError &error) {
     const auto is_json{options.contains("json")};
