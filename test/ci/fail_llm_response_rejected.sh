@@ -11,17 +11,17 @@ PORT=5897
 # in, and what the status says about whose problem it is decides the exit code
 cat << 'EOF' > "$TMP/server.js"
 const http = require('http');
-const server = http.createServer((req, res) => {
-  if (req.url === '/reject') {
-    res.statusCode = 400;
-    res.setHeader('content-type', 'application/json');
-    res.end(JSON.stringify({ message: "Bad Request", type: "Bad Request", code: 400 }));
+const server = http.createServer((request, response) => {
+  if (request.url === '/reject') {
+    response.statusCode = 400;
+    response.setHeader('content-type', 'application/json');
+    response.end(JSON.stringify({ message: "Bad Request", type: "Bad Request", code: 400 }));
     return;
   }
 
-  res.statusCode = 403;
-  res.setHeader('content-type', 'text/plain');
-  res.end("Real-time access to 'my-model' is blocked by a routing rule.");
+  response.statusCode = 403;
+  response.setHeader('content-type', 'text/plain');
+  response.end("Real-time access to 'my-model' is blocked by a routing rule.");
 });
 server.listen(parseInt(process.argv[2], 10));
 EOF

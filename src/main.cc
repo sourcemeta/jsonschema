@@ -168,27 +168,14 @@ constexpr std::string_view USAGE_COMMANDS{R"EOF(   version / --version / -v
        [--upgrade/-U draft4|draft6|draft7|2019-09|2020-12]
        [--timeout/-T <seconds>] [--dry-run/-D] [--trace/-t] [--without-id/-w]
 
-       Ask a model to generate a document that conforms to the given schema,
-       then validate what comes back against that schema and report whether
-       the provider honoured it.
-
-       Works against any endpoint that accepts an OpenAI Chat Completions
-       `response_format` with a nested `json_schema` object. Pass the
-       credential with --header/-H, the endpoint with --url/-u, and anything
-       else the endpoint wants in the request body with --param/-P, whose
-       values are read as JSON and fall back to text.
-
-       Exits 0 when the response validates and 2 when it does not, printing
-       the model's output as it came along with the validation errors.
-
-       No provider reads the `$schema` a schema declares, so the keyword names
-       are all it has to go on. Use --upgrade/-U to spell the schema as another
-       dialect on the way out, as a provider that chokes on `$defs` may accept
-       `definitions` for the identical schema. Defaults to the latest JSON
-       Schema dialect (2020-12).
-
-       Use --dry-run/-D to print the request instead of sending it, and
-       --raw/-R to print the response envelope without reading it.
+       Ask a model for a document conforming to the given schema, then
+       validate what comes back against that schema, printing it and exiting
+       2 when it does not conform. Works against any endpoint taking an
+       OpenAI Chat Completions `response_format` with a nested `json_schema`.
+       Pass the credential with --header/-H, further request body fields with
+       --param/-P, and --upgrade/-U to spell the schema as another dialect on
+       the way out, which defaults to 2020-12. Use --dry-run/-D to print the
+       request instead of sending it.
 
    install [<uri> <path>] [--force/-f] [--frozen/-z]
 

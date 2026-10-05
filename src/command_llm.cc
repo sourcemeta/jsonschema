@@ -153,6 +153,27 @@ auto parse_parameter_value(const std::string_view value)
   return sourcemeta::core::JSON{input};
 }
 
+// Where the schema being tested sits in the request body
+constexpr std::array<std::string_view, 3> SCHEMA_LOCATION{
+    "response_format", "json_schema", "schema"};
+
+// Whether a parameter would write the schema, either by naming it, by naming a
+// place within it, or by replacing something that holds it. The response is
+// checked against the schema that was read, so a parameter that rewrites what
+// goes out would leave the two describing different things and quietly turn
+// every result this command reports into a statement about nothing
+auto writes_the_schema(const sourcemeta::core::Pointer &pointer) -> bool {
+  const auto depth{std::min(pointer.size(), SCHEMA_LOCATION.size())};
+  for (std::size_t index = 0; index < depth; index++) {
+    const auto &token{pointer.at(index)};
+    if (!token.is_property() || token.to_property() != SCHEMA_LOCATION[index]) {
+      return false;
+    }
+  }
+
+  return true;
+}
+
 // Where a parameter writes, creating the objects along the way, as a request
 // body has no reason to already hold the shape a provider-specific setting sits
 // under. An array position is never created, as JSON holds no holes
@@ -216,6 +237,13 @@ auto overlay_parameter(sourcemeta::core::JSON &body,
   }
 
   const auto pointer{sourcemeta::core::to_pointer(location)};
+  if (writes_the_schema(pointer)) {
+    throw sourcemeta::jsonschema::InvalidParameterError{
+        "A parameter cannot write the schema, as that is what the response is "
+        "checked against",
+        entry};
+  }
+
   auto value{
       parse_parameter_value(std::string_view{entry}.substr(separator + 1))};
   auto *target{parameter_target(body, pointer, entry)};

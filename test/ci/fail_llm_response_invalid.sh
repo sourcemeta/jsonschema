@@ -11,9 +11,9 @@ PORT=5896
 # document comes out alongside the errors and the coordinates point into it
 cat << 'EOF' > "$TMP/server.js"
 const http = require('http');
-const server = http.createServer((req, res) => {
-  res.setHeader('content-type', 'application/json');
-  res.end(JSON.stringify({
+const server = http.createServer((request, response) => {
+  response.setHeader('content-type', 'application/json');
+  response.end(JSON.stringify({
     choices: [ {
       finish_reason: "stop",
       message: { content: "{\n  \"capital\": 42\n}", role: "assistant" }

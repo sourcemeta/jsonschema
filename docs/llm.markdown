@@ -131,6 +131,21 @@ boolean, `=2048` a number, `=null` null and `=my-model` a string. Without that
 rule `strict=false` would arrive as the string `"false"`, which is truthy to most
 JSON consumers.
 
+The location is a JSON Pointer and is validated as one, so a malformed escape
+such as `/a~2b` is reported rather than quietly meaning something else.
+
+> [!IMPORTANT]
+> One location is off limits. A parameter may not write
+> `/response_format/json_schema/schema`, anything within it, or anything that
+> contains it. The response is checked against the schema that was read, so
+> rewriting the one that goes out would leave the two describing different things
+> and turn every result this command reports into a statement about nothing.
+>
+> Everything else in the body is yours, including
+> `/response_format/json_schema/name` and `/response_format/json_schema/strict`.
+> A parameter that writes somewhere `--model/-M` or `--ask/-A` already filled
+> simply wins, since parameters are applied last.
+
 Where a setting lives decides how you set it:
 
 | Where it lives | How to set it |

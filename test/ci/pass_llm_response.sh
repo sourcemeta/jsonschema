@@ -8,9 +8,9 @@ PORT=5894
 
 cat << 'EOF' > "$TMP/server.js"
 const http = require('http');
-const server = http.createServer((req, res) => {
-  res.setHeader('content-type', 'application/json');
-  res.end(JSON.stringify({
+const server = http.createServer((request, response) => {
+  response.setHeader('content-type', 'application/json');
+  response.end(JSON.stringify({
     choices: [ {
       finish_reason: "stop",
       index: 0,

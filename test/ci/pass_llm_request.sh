@@ -10,20 +10,20 @@ PORT=5895
 # method, the content type, the credential a header carries, and the body the
 # schema turned into
 cat << 'EOF' > "$TMP/server.js"
-const fs = require('fs');
+const filesystem = require('fs');
 const http = require('http');
-const server = http.createServer((req, res) => {
+const server = http.createServer((request, response) => {
   let body = '';
-  req.on('data', (chunk) => { body += chunk; });
-  req.on('end', () => {
-    fs.writeFileSync(process.argv[3], JSON.stringify({
-      method: req.method,
-      contentType: req.headers['content-type'],
-      authorization: req.headers['authorization'],
+  request.on('data', (chunk) => { body += chunk; });
+  request.on('end', () => {
+    filesystem.writeFileSync(process.argv[3], JSON.stringify({
+      method: request.method,
+      contentType: request.headers['content-type'],
+      authorization: request.headers['authorization'],
       body: JSON.parse(body)
     }, null, 2) + '\n');
-    res.setHeader('content-type', 'application/json');
-    res.end(JSON.stringify({
+    response.setHeader('content-type', 'application/json');
+    response.end(JSON.stringify({
       choices: [ { finish_reason: "stop", message: { content: "\"Berlin\"", role: "assistant" } } ]
     }));
   });

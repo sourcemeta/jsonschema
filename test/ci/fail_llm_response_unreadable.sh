@@ -11,14 +11,14 @@ PORT=5898
 # is a gap in what this command knows, the second is a finding about the provider
 cat << 'EOF' > "$TMP/server.js"
 const http = require('http');
-const server = http.createServer((req, res) => {
-  res.setHeader('content-type', 'application/json');
-  if (req.url === '/envelope') {
-    res.end(JSON.stringify({ id: "resp_1", object: "chat.completion" }));
+const server = http.createServer((request, response) => {
+  response.setHeader('content-type', 'application/json');
+  if (request.url === '/envelope') {
+    response.end(JSON.stringify({ id: "resp_1", object: "chat.completion" }));
     return;
   }
 
-  res.end(JSON.stringify({
+  response.end(JSON.stringify({
     choices: [ { finish_reason: "stop", message: { content: "Berlin, obviously.", role: "assistant" } } ]
   }));
 });
