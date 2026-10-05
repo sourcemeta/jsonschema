@@ -77,6 +77,7 @@ EOF
 diff "$TMP/output_prose.txt" "$TMP/expected_prose.txt"
 
 cat << EOF > "$TMP/expected_error_prose.txt"
+
 fail: http://localhost:${PORT}/prose
 error: The generated document is not valid JSON
   Failed to parse the JSON document

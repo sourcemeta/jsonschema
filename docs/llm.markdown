@@ -41,13 +41,15 @@ jsonschema llm path/to/schema.json \
 ```
 
 On success the generated document goes to standard output exactly as the model
-emitted it, and the command exits 0. What the provider said it spent goes to
-standard error, so that redirecting standard output keeps the document alone:
+emitted it, and the command exits 0. Everything else, the blank line that sets
+it apart included, goes to standard error, so that redirecting standard output
+leaves the document alone and ready to pipe:
 
 ```
 {
   "capital": "Berlin"
 }
+
 tokens: 17 prompt, 128 completion, 145 total
 ```
 
@@ -61,6 +63,7 @@ validation errors go to standard error, and the command exits 2:
 {
   "capital": 42
 }
+
 fail: https://api.openai.com/v1/chat/completions
 error: The generated document does not conform to the schema
   The value was expected to be of type string but it was of type integer

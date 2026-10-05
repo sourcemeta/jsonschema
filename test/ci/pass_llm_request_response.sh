@@ -128,6 +128,7 @@ EOF
 diff "$TMP/output.txt" "$TMP/expected.txt"
 
 cat << 'EOF' > "$TMP/expected_error.txt"
+
 tokens: 17 prompt, 128 completion, 145 total
 EOF
 

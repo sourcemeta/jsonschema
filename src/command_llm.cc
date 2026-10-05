@@ -541,7 +541,7 @@ auto report_usage(const sourcemeta::core::JSON &envelope) -> void {
     return;
   }
 
-  std::cerr << "tokens:";
+  std::cerr << "\ntokens:";
   bool first{true};
   for (const auto &field : USAGE_FIELDS) {
     const auto *value{usage.value().try_at(field.reported)};
@@ -837,7 +837,8 @@ auto sourcemeta::jsonschema::llm(const sourcemeta::core::Options &options)
       sourcemeta::core::prettify(result, std::cout);
       std::cout << "\n";
     } else {
-      std::cerr << format_validation_status(ValidationStatus::Fail) << " "
+      std::cerr << "\n"
+                << format_validation_status(ValidationStatus::Fail) << " "
                 << url << "\n";
       std::cerr << "error: The generated document is not valid JSON\n";
       std::cerr << "  " << error.what() << "\n";
@@ -861,7 +862,8 @@ auto sourcemeta::jsonschema::llm(const sourcemeta::core::Options &options)
       sourcemeta::core::prettify(result, std::cout);
       std::cout << "\n";
     } else {
-      std::cerr << format_validation_status(ValidationStatus::Fail) << " "
+      std::cerr << "\n"
+                << format_validation_status(ValidationStatus::Fail) << " "
                 << url << "\n";
       std::cerr << "error: The generated document is followed by more than one "
                    "document\n";
@@ -914,7 +916,8 @@ auto sourcemeta::jsonschema::llm(const sourcemeta::core::Options &options)
     sourcemeta::blaze::SimpleOutput output{document};
     result = evaluator.validate(schema_template, document, std::ref(output));
     if (!result) {
-      std::cerr << format_validation_status(ValidationStatus::Fail) << " "
+      std::cerr << "\n"
+                << format_validation_status(ValidationStatus::Fail) << " "
                 << url << "\n";
       print(output, positions, std::cerr, "error:", {},
             "The generated document does not conform to the schema");

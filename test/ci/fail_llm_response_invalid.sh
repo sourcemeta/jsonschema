@@ -59,6 +59,7 @@ EOF
 diff "$TMP/output.txt" "$TMP/expected.txt"
 
 cat << EOF > "$TMP/expected_error.txt"
+
 fail: http://localhost:${PORT}/v1/chat/completions
 error: The generated document does not conform to the schema
   The value was expected to be of type string but it was of type integer
