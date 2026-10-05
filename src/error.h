@@ -1603,14 +1603,6 @@ inline auto try_catch(const sourcemeta::core::Options &options,
   } catch (const sourcemeta::core::FileError<BooleanSchemaLLMError> &error) {
     const auto is_json{options.contains("json")};
     print_exception(is_json, error);
-    if (!is_json) {
-      std::cerr << "\nA boolean schema accepts every document or rejects "
-                   "every one, so what a\n";
-      std::cerr << "model returned would be judged the same way whatever it "
-                   "was. Send a schema\n";
-      std::cerr << "that constrains something instead\n";
-    }
-
     return EXIT_SCHEMA_INPUT_ERROR;
   } catch (
       const sourcemeta::core::FileError<UnsupportedOpenAPILLMError> &error) {
@@ -2221,6 +2213,12 @@ inline auto try_catch(const sourcemeta::core::Options &options,
   } catch (const InvalidParameterError &error) {
     const auto is_json{options.contains("json")};
     print_exception(is_json, error);
+    if (!is_json) {
+      std::cerr << "\nRun this command without this parameter and with "
+                   "--dry-run/-D to see what\n";
+      std::cerr << "the request body looks like\n";
+    }
+
     return EXIT_INVALID_CLI_ARGUMENTS;
   } catch (const InvalidOptionEnumerationValueError &error) {
     const auto is_json{options.contains("json")};

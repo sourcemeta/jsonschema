@@ -1,12 +1,13 @@
-// A dialect settled by the option counts the same as one the schema declares, so
-// a schema named as an older dialect is spelled as the latest on the way out,
-// gaining the declaration it never carried.
+// A dialect named by the option counts the same as one the schema declares. A
+// schema read under an older one is spelled as the latest on the way out,
+// keywords and all, and says the dialect it ended up on rather than the one it
+// was read under.
 
 WRITE schema.json UNTIL EOF
 {
   "type": "object",
-  "properties": { "capital": { "type": "string" } },
-  "required": [ "capital" ]
+  "definitions": { "name": { "type": "string" } },
+  "properties": { "author": { "$ref": "#/definitions/name" } }
 }
 EOF
 
@@ -35,9 +36,13 @@ WRITE expected.txt UNTIL EOF
 1>         "$schema": "https://json-schema.org/draft/2020-12/schema",
 1>         "$id": "[CWD_URI]/schema.json",
 1>         "type": "object",
-1>         "required": [ "capital" ],
 1>         "properties": {
-1>           "capital": {
+1>           "author": {
+1>             "$ref": "#/$defs/name"
+1>           }
+1>         },
+1>         "$defs": {
+1>           "name": {
 1>             "type": "string"
 1>           }
 1>         }

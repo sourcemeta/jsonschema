@@ -219,6 +219,10 @@ A boolean schema is refused. `true` accepts every document and `false` rejects
 every one, so what a model returned would be judged the same way whatever it
 was, leaving nothing to find out about.
 
+When a parameter reads as one but cannot be carried out, running the same
+command without it and with `--dry-run/-D` shows the request body it was meant
+to write into.
+
 An OpenAPI description is refused. A description holds many Schema Objects and
 no schema of its own, so there is nothing to send without being told which one
 is meant, and naming one is not supported here yet:

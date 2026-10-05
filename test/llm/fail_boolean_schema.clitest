@@ -14,10 +14,6 @@ REPLACE $CWD WITH '[CWD]' IN result.txt
 WRITE expected.txt UNTIL EOF
 2> error: A boolean schema cannot be sent to a model
 2>   at file path [CWD]/schema.json
-2>
-2> A boolean schema accepts every document or rejects every one, so what a
-2> model returned would be judged the same way whatever it was. Send a schema
-2> that constrains something instead
 EOF
 
 COMPARE result.txt AGAINST expected.txt

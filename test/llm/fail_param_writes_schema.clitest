@@ -15,6 +15,9 @@ RUN llm schema.json --ask hello --url https://api.example.com/v1/chat/completion
 WRITE expected.txt UNTIL EOF
 2> error: A parameter cannot write the schema, as that is what the response is checked against
 2>   at value /response_format/json_schema/schema=1
+2>
+2> Run this command without this parameter and with --dry-run/-D to see what
+2> the request body looks like
 EOF
 
 COMPARE result.txt AGAINST expected.txt

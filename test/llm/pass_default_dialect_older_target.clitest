@@ -1,0 +1,50 @@
+// Naming a dialect the schema is already on leaves the keywords alone, so what
+// states the dialect on the way out is the injection rather than any rewriting
+// that followed it.
+
+WRITE schema.json UNTIL EOF
+{
+  "type": "object",
+  "properties": { "capital": { "type": "string" } },
+  "required": [ "capital" ]
+}
+EOF
+
+RUN llm schema.json --ask hello --url https://api.example.com/v1/chat/completions --model my-model --dry-run --default-dialect http://json-schema.org/draft-07/schema# --upgrade draft7 STDIN /dev/null IN . INTO result.txt EXPECTING 0
+
+REPLACE $CWD_URI WITH '[CWD_URI]' IN result.txt
+
+WRITE expected.txt UNTIL EOF
+1> POST https://api.example.com/v1/chat/completions
+1> Content-Type: application/json
+1>
+1> {
+1>   "model": "my-model",
+1>   "messages": [
+1>     {
+1>       "role": "user",
+1>       "content": "hello"
+1>     }
+1>   ],
+1>   "response_format": {
+1>     "type": "json_schema",
+1>     "json_schema": {
+1>       "name": "schema",
+1>       "strict": true,
+1>       "schema": {
+1>         "$schema": "http://json-schema.org/draft-07/schema#",
+1>         "$id": "[CWD_URI]/schema.json",
+1>         "type": "object",
+1>         "required": [ "capital" ],
+1>         "properties": {
+1>           "capital": {
+1>             "type": "string"
+1>           }
+1>         }
+1>       }
+1>     }
+1>   }
+1> }
+EOF
+
+COMPARE result.txt AGAINST expected.txt
