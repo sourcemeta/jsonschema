@@ -24,17 +24,15 @@ silently bad write.
 > Schema plays in AI, see [The only schema language AI speaks is JSON
 > Schema](https://www.sourcemeta.com/blog/ai-only-speaks-json-schema/).
 
-Sending a single self-contained schema is easy enough by hand. It gets harder
-the moment the schema is a real one: it references other schemas, and no
-provider fetches anything for you; it is written in YAML, which no provider
-reads; it sits on an older dialect, and what these engines match on is keyword
-names rather than the dialect a document declares. That is the part this
-command takes off your hands. References are bundled in, YAML becomes JSON, and
-keywords are respelled as whichever dialect you ask for, so a Draft 4 schema in
-YAML spread over half a dozen files works as it stands. Preparing a schema can
-lose what it was asserting, though, so the gate stays: what comes back is
-validated against the schema you wrote rather than the copy that went out, and
-a constraint dropped along the way surfaces as a failure with exit code 2.
+Sending a single self-contained schema by hand is easy. Real ones are rarely so
+tidy. Yours may reference other schemas, and no provider fetches anything for
+you. It may be written in YAML, which no provider reads. It may sit on an older
+dialect than the provider recognises. This command handles all three.
+References are bundled in, YAML becomes JSON, and keywords are respelled as
+whichever dialect you ask for, so a Draft 4 schema in YAML spread over half a
+dozen files works as it stands. Whatever comes back is then validated against
+the schema you wrote, not the prepared copy that went out, so anything the
+provider failed to honour still shows up instead of slipping through.
 
 > [!NOTE]
 > See [Resolving External References](./guides/resolution.markdown) for every way of
