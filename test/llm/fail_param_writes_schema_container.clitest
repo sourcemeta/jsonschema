@@ -1,0 +1,23 @@
+// Replacing the part of the request that carries the schema takes the schema
+// with it, which is a different mistake from rewriting the schema and is said
+// apart from it.
+
+WRITE schema.json UNTIL EOF
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "string"
+}
+EOF
+
+// Invalid CLI arguments
+RUN llm schema.json --ask hello --url https://api.example.com/v1/chat/completions --model my-model --dry-run --param /response_format=1 STDIN /dev/null IN . INTO result.txt EXPECTING 5
+
+WRITE expected.txt UNTIL EOF
+2> error: A parameter cannot replace the part of the request that carries the schema
+2>   at value /response_format=1
+2>
+2> Run this command without this parameter and with --dry-run/-D to see what
+2> the request body looks like
+EOF
+
+COMPARE result.txt AGAINST expected.txt

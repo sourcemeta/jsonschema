@@ -366,6 +366,28 @@ public:
                            "supported yet"} {}
 };
 
+// What a provider takes is a single schema, and a description holds many and
+// none of itself, so which one to send is the caller's to say. Nothing names
+// one yet, as naming a Schema Object within a description and getting a schema
+// that stands on its own is not something we can do, so this is turned down
+// outright rather than half done
+class UnsupportedOpenAPILLMError : public std::runtime_error {
+public:
+  UnsupportedOpenAPILLMError()
+      : std::runtime_error{"Sending OpenAPI descriptions to a model is not "
+                           "supported yet"} {}
+};
+
+// A boolean schema answers the same way whatever it is handed: `false` can
+// never be satisfied and `true` constrains nothing. Either way what a model
+// returns would be judged without reference to it, so there is no conformance
+// to find out about, which is the whole of what this command is for
+class BooleanSchemaLLMError : public std::runtime_error {
+public:
+  BooleanSchemaLLMError()
+      : std::runtime_error{"A boolean schema cannot be sent to a model"} {}
+};
+
 class UnsupportedOpenAPIVersionError : public std::runtime_error {
 public:
   UnsupportedOpenAPIVersionError(std::string value)
@@ -379,6 +401,21 @@ public:
 
 private:
   std::string value_;
+};
+
+// An option this command cannot proceed without. What to pass is not always
+// obvious from the name, so one that would have worked travels along
+class MissingOptionError : public std::runtime_error {
+public:
+  MissingOptionError(const std::string &message, std::string example)
+      : std::runtime_error{message}, example_{std::move(example)} {}
+
+  [[nodiscard]] auto example() const noexcept -> const std::string & {
+    return this->example_;
+  }
+
+private:
+  std::string example_;
 };
 
 class OptionConflictError : public std::runtime_error {
@@ -409,6 +446,44 @@ public:
   InvalidIndentationError()
       : std::runtime_error{
             "The --indentation option must be a non-negative integer"} {}
+};
+
+class InvalidTimeoutError : public std::runtime_error {
+public:
+  InvalidTimeoutError()
+      : std::runtime_error{"The --timeout option must be a positive integer "
+                           "number of seconds"} {}
+};
+
+// A parameter that is not shaped like one at all, so what it was meant to say
+// cannot be read out of it. This is the only case where showing what one looks
+// like helps, as the rest are well formed and refused on their merits
+class MalformedParameterError : public std::runtime_error {
+public:
+  MalformedParameterError(const std::string &message, std::string value)
+      : std::runtime_error{message}, value_{std::move(value)} {}
+
+  [[nodiscard]] auto value() const noexcept -> const std::string & {
+    return this->value_;
+  }
+
+private:
+  std::string value_;
+};
+
+// A parameter that reads as one but cannot be carried out, either because of
+// what sits along the way to where it writes or because of what it would write
+class InvalidParameterError : public std::runtime_error {
+public:
+  InvalidParameterError(const std::string &message, std::string value)
+      : std::runtime_error{message}, value_{std::move(value)} {}
+
+  [[nodiscard]] auto value() const noexcept -> const std::string & {
+    return this->value_;
+  }
+
+private:
+  std::string value_;
 };
 
 class InvalidLintRuleError : public std::runtime_error {
@@ -566,6 +641,41 @@ public:
                                std::string dialect)
       : std::runtime_error{"Cannot upgrade a schema that uses a custom "
                            "meta-schema"},
+        path_{std::move(path)}, location_{std::move(location)},
+        dialect_{std::move(dialect)} {}
+
+  [[nodiscard]] auto path() const noexcept -> const std::filesystem::path & {
+    return this->path_;
+  }
+
+  [[nodiscard]] auto location() const noexcept
+      -> const sourcemeta::core::Pointer & {
+    return this->location_;
+  }
+
+  [[nodiscard]] auto uri() const noexcept -> const std::string & {
+    return this->dialect_;
+  }
+
+private:
+  std::filesystem::path path_;
+  sourcemeta::core::Pointer location_;
+  std::string dialect_;
+};
+
+// What a provider supports is a subset that differs between them and moves
+// over time, so there is little to say about it with confidence. A meta-schema
+// of one's own is the exception: nothing published suggests any of them reads a
+// dialect declaration, so a schema written against one is very unlikely to be
+// understood as written
+class CustomMetaschemaLLMError : public std::runtime_error {
+public:
+  CustomMetaschemaLLMError(std::filesystem::path path,
+                           sourcemeta::core::Pointer location,
+                           std::string dialect)
+      : std::
+            runtime_error{"Schemas that declare a custom meta-schema cannot be "
+                          "sent to a model"},
         path_{std::move(path)}, location_{std::move(location)},
         dialect_{std::move(dialect)} {}
 
@@ -1398,6 +1508,16 @@ print_reference_target_guidance(const sourcemeta::core::Pointer &location)
   }
 }
 
+// The same, for a schema whose dialect a provider is unlikely to have heard of
+inline auto print_custom_metaschema_llm_guidance() -> void {
+  std::cerr << "\n";
+  std::cerr << "What a provider supports differs between them and changes over "
+               "time, but a\n";
+  std::cerr << "meta-schema of your own is very unlikely to be part of any of "
+               "it. Rewrite the\n";
+  std::cerr << "schema against an official dialect and send that instead\n";
+}
+
 // What an auto-fix failure tells the user to do next, which is the same
 // whether or not we could point at where in the file it happened
 inline auto print_lint_autofix_guidance() -> void {
@@ -1479,6 +1599,23 @@ inline auto try_catch(const sourcemeta::core::Options &options,
                &error) {
     const auto is_json{options.contains("json")};
     print_exception(is_json, error);
+    return EXIT_NOT_SUPPORTED;
+  } catch (const sourcemeta::core::FileError<BooleanSchemaLLMError> &error) {
+    const auto is_json{options.contains("json")};
+    print_exception(is_json, error);
+    return EXIT_SCHEMA_INPUT_ERROR;
+  } catch (
+      const sourcemeta::core::FileError<UnsupportedOpenAPILLMError> &error) {
+    const auto is_json{options.contains("json")};
+    print_exception(is_json, error);
+    if (!is_json) {
+      std::cerr << "\nA description holds many schemas and none of itself, and "
+                   "what a model\n";
+      std::cerr << "takes is one schema that stands on its own. Extract the "
+                   "Schema Object you\n";
+      std::cerr << "mean into a file of its own and pass that instead\n";
+    }
+
     return EXIT_NOT_SUPPORTED;
   } catch (const sourcemeta::core::FileError<UnsupportedOpenAPIWithoutIdError>
                &error) {
@@ -1665,6 +1802,22 @@ inline auto try_catch(const sourcemeta::core::Options &options,
                    "upgraded in place\n";
       std::cerr << "by this command. Please upgrade the meta-schema and the "
                    "schema manually.\n";
+    }
+
+    return EXIT_SCHEMA_INPUT_ERROR;
+  } catch (const PositionError<CustomMetaschemaLLMError> &error) {
+    const auto is_json{options.contains("json")};
+    print_exception(is_json, error);
+    if (!is_json) {
+      print_custom_metaschema_llm_guidance();
+    }
+
+    return EXIT_SCHEMA_INPUT_ERROR;
+  } catch (const CustomMetaschemaLLMError &error) {
+    const auto is_json{options.contains("json")};
+    print_exception(is_json, error);
+    if (!is_json) {
+      print_custom_metaschema_llm_guidance();
     }
 
     return EXIT_SCHEMA_INPUT_ERROR;
@@ -2025,6 +2178,14 @@ inline auto try_catch(const sourcemeta::core::Options &options,
     const auto is_json{options.contains("json")};
     print_exception(is_json, error);
     return EXIT_INVALID_CLI_ARGUMENTS;
+  } catch (const MissingOptionError &error) {
+    const auto is_json{options.contains("json")};
+    print_exception(is_json, error);
+    if (!is_json) {
+      std::cerr << "\nFor example: " << error.example() << "\n";
+    }
+
+    return EXIT_INVALID_CLI_ARGUMENTS;
   } catch (const OptionConflictError &error) {
     const auto is_json{options.contains("json")};
     print_exception(is_json, error);
@@ -2036,6 +2197,28 @@ inline auto try_catch(const sourcemeta::core::Options &options,
   } catch (const InvalidIndentationError &error) {
     const auto is_json{options.contains("json")};
     print_exception(is_json, error);
+    return EXIT_INVALID_CLI_ARGUMENTS;
+  } catch (const InvalidTimeoutError &error) {
+    const auto is_json{options.contains("json")};
+    print_exception(is_json, error);
+    return EXIT_INVALID_CLI_ARGUMENTS;
+  } catch (const MalformedParameterError &error) {
+    const auto is_json{options.contains("json")};
+    print_exception(is_json, error);
+    if (!is_json) {
+      std::cerr << "\nFor example: --param /max_tokens=2048\n";
+    }
+
+    return EXIT_INVALID_CLI_ARGUMENTS;
+  } catch (const InvalidParameterError &error) {
+    const auto is_json{options.contains("json")};
+    print_exception(is_json, error);
+    if (!is_json) {
+      std::cerr << "\nRun this command without this parameter and with "
+                   "--dry-run/-D to see what\n";
+      std::cerr << "the request body looks like\n";
+    }
+
     return EXIT_INVALID_CLI_ARGUMENTS;
   } catch (const InvalidOptionEnumerationValueError &error) {
     const auto is_json{options.contains("json")};

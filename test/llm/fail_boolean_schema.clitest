@@ -1,0 +1,19 @@
+// A boolean schema answers the same way whatever it is handed, so asking a
+// model to satisfy one asks nothing and leaves nothing in the answer to find
+// out about.
+
+WRITE schema.json UNTIL EOF
+true
+EOF
+
+// Schema input error
+RUN llm schema.json --ask hello --url https://api.example.com/v1/chat/completions --model my-model --dry-run STDIN /dev/null IN . INTO result.txt EXPECTING 4
+
+REPLACE $CWD WITH '[CWD]' IN result.txt
+
+WRITE expected.txt UNTIL EOF
+2> error: A boolean schema cannot be sent to a model
+2>   at file path [CWD]/schema.json
+EOF
+
+COMPARE result.txt AGAINST expected.txt

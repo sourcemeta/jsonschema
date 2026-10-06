@@ -1,0 +1,28 @@
+// Which dialect a schema is written against decides what its keywords mean, and
+// a schema that declares none leaves that unanswered. Nothing is assumed on its
+// behalf, as guessing would send a provider keywords read under a dialect the
+// author never chose.
+
+WRITE schema.json UNTIL EOF
+{
+  "type": "object",
+  "properties": { "capital": { "type": "string" } },
+  "required": [ "capital" ]
+}
+EOF
+
+// Schema input error
+RUN llm schema.json --ask hello --url https://api.example.com/v1/chat/completions --model my-model --dry-run STDIN /dev/null IN . INTO result.txt EXPECTING 4
+
+REPLACE $CWD WITH '[CWD]' IN result.txt
+
+WRITE expected.txt UNTIL EOF
+2> error: Could not determine the base dialect of the schema
+2>   at file path [CWD]/schema.json
+2>
+2> Are you sure the input is a valid JSON Schema and its base dialect is known?
+2> If the input does not declare the `$schema` keyword, you might want to
+2> explicitly declare a default dialect using `--default-dialect/-d`
+EOF
+
+COMPARE result.txt AGAINST expected.txt

@@ -163,6 +163,18 @@ constexpr std::string_view USAGE_COMMANDS{R"EOF(   version / --version / -v
        default. Pass --fast/-f to optimise for speed at the expense of
        validation error quality.
 
+   llm <schema.json|.yaml> --ask/-a <prompt> --url/-u <completion-url>
+       --model/-m <model> [--param/-p <pointer>=<value>] [--raw/-R]
+       [--upgrade/-U draft4|draft6|draft7|2019-09|2020-12]
+       [--timeout/-T <seconds>] [--dry-run/-D] [--trace/-t] [--without-id/-w]
+
+       Ask a model for a document conforming to the given schema.
+       Works against any endpoint taking an OpenAI Chat Completions
+       `response_format` with a nested `json_schema`.
+       The --param/-p option sets entries in the request body.
+       The --upgrade/-U option defaults to 2020-12.
+       Use --dry-run/-D to print the request instead of sending it.
+
    install [<uri> <path>] [--force/-f] [--frozen/-z]
 
        Fetch and install external schema dependencies declared in
@@ -396,6 +408,22 @@ auto jsonschema_main(const std::string &program, const std::string &command,
     app.option("indentation", {"n"});
     parse_options(app, argc, argv, {.skip = 1});
     sourcemeta::jsonschema::upgrade(app);
+    return EXIT_SUCCESS;
+  }
+
+  if (command == "llm") {
+    app.flag("dry-run", {"D"});
+    app.flag("raw", {"R"});
+    app.flag("trace", {"t"});
+    app.flag("without-id", {"w"});
+    app.option("ask", {"a"});
+    app.option("url", {"u"});
+    app.option("model", {"m"});
+    app.option("param", {"p"});
+    app.option("upgrade", {"U"});
+    app.option("timeout", {"T"});
+    parse_options(app, argc, argv, {.skip = 1});
+    sourcemeta::jsonschema::llm(app);
     return EXIT_SUCCESS;
   }
 

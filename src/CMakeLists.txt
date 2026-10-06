@@ -17,7 +17,8 @@ sourcemeta_executable(
     command_codegen.cc
     command_install.cc
     command_upgrade.cc
-    command_rdf.cc)
+    command_rdf.cc
+    command_llm.cc)
 
 set_target_properties(jsonschema_cli PROPERTIES OUTPUT_NAME jsonschema)
 target_link_libraries(jsonschema_cli PRIVATE sourcemeta::core::error)

@@ -100,6 +100,7 @@ documentation:
 - [`jsonschema encode`](./docs/encode.markdown) (for binary compression)
 - [`jsonschema decode`](./docs/decode.markdown)
 - [`jsonschema install`](./docs/install.markdown) (for fetching external schema dependencies)
+- [`jsonschema llm`](./docs/llm.markdown) (interact with LLMs using schema-driven structured outputs)
 
 > See [Resolving External References](./docs/guides/resolution.markdown) for how the
 CLI locates the schemas that your schemas reference, covering the

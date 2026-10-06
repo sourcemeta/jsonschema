@@ -1,0 +1,22 @@
+// A parameter creates the objects along the way to where it writes, which it
+// cannot do through a place that already holds something other than an object.
+
+WRITE schema.json UNTIL EOF
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "string"
+}
+EOF
+
+// Invalid CLI arguments
+RUN llm schema.json --ask hello --url https://api.example.com/v1/chat/completions --model my-model --dry-run --param /max_tokens=64 --param /max_tokens/soft/limit=32 STDIN /dev/null IN . INTO result.txt EXPECTING 5
+
+WRITE expected.txt UNTIL EOF
+2> error: The parameter writes through a value that is not an object
+2>   at value /max_tokens/soft/limit=32
+2>
+2> Run this command without this parameter and with --dry-run/-D to see what
+2> the request body looks like
+EOF
+
+COMPARE result.txt AGAINST expected.txt

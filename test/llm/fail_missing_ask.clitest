@@ -1,0 +1,19 @@
+// There is nothing to ask a model without a prompt.
+
+WRITE schema.json UNTIL EOF
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "string"
+}
+EOF
+
+// Invalid CLI arguments
+RUN llm schema.json --url https://api.example.com/v1/chat/completions --model my-model --dry-run STDIN /dev/null IN . INTO result.txt EXPECTING 5
+
+WRITE expected.txt UNTIL EOF
+2> error: You must pass a prompt using the `--ask/-a` option
+2>
+2> For example: --ask "What is the capital of Germany?"
+EOF
+
+COMPARE result.txt AGAINST expected.txt

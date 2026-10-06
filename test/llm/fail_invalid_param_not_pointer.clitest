@@ -1,0 +1,21 @@
+// Where a parameter writes is spelled as a JSON Pointer, so anything else
+// names nowhere.
+
+WRITE schema.json UNTIL EOF
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "string"
+}
+EOF
+
+// Invalid CLI arguments
+RUN llm schema.json --ask hello --url https://api.example.com/v1/chat/completions --model my-model --dry-run --param max_tokens=2048 STDIN /dev/null IN . INTO result.txt EXPECTING 5
+
+WRITE expected.txt UNTIL EOF
+2> error: The parameter location must be a JSON Pointer
+2>   at value max_tokens=2048
+2>
+2> For example: --param /max_tokens=2048
+EOF
+
+COMPARE result.txt AGAINST expected.txt

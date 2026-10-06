@@ -1,0 +1,50 @@
+// Naming the dialect is enough to settle what a schema that declares none means.
+// No keyword is migrated, since the schema already sits on the dialect it is
+// spelled as, and what goes out states the dialect it was read under.
+
+WRITE schema.json UNTIL EOF
+{
+  "type": "object",
+  "properties": { "capital": { "type": "string" } },
+  "required": [ "capital" ]
+}
+EOF
+
+RUN llm schema.json --ask hello --url https://api.example.com/v1/chat/completions --model my-model --dry-run --default-dialect https://json-schema.org/draft/2020-12/schema STDIN /dev/null IN . INTO result.txt EXPECTING 0
+
+REPLACE $CWD_URI WITH '[CWD_URI]' IN result.txt
+
+WRITE expected.txt UNTIL EOF
+1> POST https://api.example.com/v1/chat/completions
+1> Content-Type: application/json
+1>
+1> {
+1>   "model": "my-model",
+1>   "messages": [
+1>     {
+1>       "role": "user",
+1>       "content": "hello"
+1>     }
+1>   ],
+1>   "response_format": {
+1>     "type": "json_schema",
+1>     "json_schema": {
+1>       "name": "schema",
+1>       "strict": true,
+1>       "schema": {
+1>         "$schema": "https://json-schema.org/draft/2020-12/schema",
+1>         "$id": "[CWD_URI]/schema.json",
+1>         "type": "object",
+1>         "required": [ "capital" ],
+1>         "properties": {
+1>           "capital": {
+1>             "type": "string"
+1>           }
+1>         }
+1>       }
+1>     }
+1>   }
+1> }
+EOF
+
+COMPARE result.txt AGAINST expected.txt
