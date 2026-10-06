@@ -167,3 +167,21 @@ cat << 'EOF' > "$TMP/expected_json.txt"
 EOF
 
 diff "$TMP/output_json.txt" "$TMP/expected_json.txt"
+
+"$1" llm - --ask "What is the capital of Germany?" \
+  --url "http://localhost:${PORT}/v1/chat/completions" --model my-model \
+  --color always --verbose \
+  < "$TMP/schema.json" > "$TMP/output_color.txt" 2> "$TMP/error_color.txt"
+
+diff "$TMP/output_color.txt" "$TMP/expected.txt"
+
+{
+  printf 'Sending a completion request: http://localhost:%s/v1/chat/completions\n' "$PORT"
+  printf 'Received HTTP 200\n'
+  printf 'Validating the generated document against the schema\n'
+  printf '\n'
+  printf 'tokens: 17 prompt, 128 completion, 145 total\n'
+  printf '\033[1;32m\342\234\223 ok:\033[0m http://localhost:%s/v1/chat/completions\n' "$PORT"
+} > "$TMP/expected_error_color.txt"
+
+diff "$TMP/error_color.txt" "$TMP/expected_error_color.txt"

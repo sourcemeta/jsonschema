@@ -71,3 +71,26 @@ error: The generated document does not conform to the schema
 EOF
 
 diff "$TMP/error.txt" "$TMP/expected_error.txt"
+
+"$1" llm "$TMP/schema.json" --ask "What is the capital of Germany?" \
+  --url "http://localhost:${PORT}/v1/chat/completions" --model my-model \
+  --color always \
+  > "$TMP/output_color.txt" 2> "$TMP/error_color.txt" && EXIT_CODE="$?" || EXIT_CODE="$?"
+# Validation failure
+test "$EXIT_CODE" = "2"
+
+diff "$TMP/output_color.txt" "$TMP/expected.txt"
+
+{
+  printf '\n'
+  printf '\033[1;31m\342\234\227 fail:\033[0m http://localhost:%s/v1/chat/completions\n' "$PORT"
+  printf 'error: The generated document does not conform to the schema\n'
+  printf '  The value was expected to be of type string but it was of type integer\n'
+  printf '    at instance location "/capital" (line 2, column 3)\n'
+  printf '    at evaluate path "/properties/capital/type"\n'
+  printf '  The object value was expected to validate against the defined properties subschemas\n'
+  printf '    at instance location "" (line 1, column 1)\n'
+  printf '    at evaluate path "/properties"\n'
+} > "$TMP/expected_error_color.txt"
+
+diff "$TMP/error_color.txt" "$TMP/expected_error_color.txt"
