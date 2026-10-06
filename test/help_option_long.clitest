@@ -172,7 +172,7 @@ WRITE expected.txt UNTIL EOF
 1>        Ask a model for a document conforming to the given schema.
 1>        Works against any endpoint taking an OpenAI Chat Completions
 1>        `response_format` with a nested `json_schema`.
-1>        The --param/-p option adds further entries to the request body.
+1>        The --param/-p option sets entries in the request body.
 1>        The --upgrade/-U option defaults to 2020-12.
 1>        Use --dry-run/-D to print the request instead of sending it.
 1>

@@ -1,6 +1,6 @@
-// Naming the dialect is enough to settle what a schema that declares none means,
-// and the schema goes out as it was written, since it already sits on the
-// dialect it is spelled as.
+// Naming the dialect is enough to settle what a schema that declares none means.
+// No keyword is migrated, since the schema already sits on the dialect it is
+// spelled as, and what goes out states the dialect it was read under.
 
 WRITE schema.json UNTIL EOF
 {

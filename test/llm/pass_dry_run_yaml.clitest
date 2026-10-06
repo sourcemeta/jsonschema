@@ -9,6 +9,7 @@ properties:
     type: string
 required:
   - capital
+additionalProperties: false
 EOF
 
 RUN llm schema.yaml --ask hello --url https://api.example.com/v1/chat/completions --model my-model --dry-run STDIN /dev/null IN . INTO result.txt EXPECTING 0
@@ -41,7 +42,8 @@ WRITE expected.txt UNTIL EOF
 1>           "capital": {
 1>             "type": "string"
 1>           }
-1>         }
+1>         },
+1>         "additionalProperties": false
 1>       }
 1>     }
 1>   }

@@ -171,7 +171,7 @@ constexpr std::string_view USAGE_COMMANDS{R"EOF(   version / --version / -v
        Ask a model for a document conforming to the given schema.
        Works against any endpoint taking an OpenAI Chat Completions
        `response_format` with a nested `json_schema`.
-       The --param/-p option adds further entries to the request body.
+       The --param/-p option sets entries in the request body.
        The --upgrade/-U option defaults to 2020-12.
        Use --dry-run/-D to print the request instead of sending it.
 

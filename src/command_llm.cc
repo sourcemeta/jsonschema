@@ -127,7 +127,11 @@ auto parse_timeout(const sourcemeta::core::Options &options)
     throw sourcemeta::jsonschema::InvalidTimeoutError{};
   }
 
-  if (seconds == 0) {
+  // A duration counts in a signed type, so a value past its ceiling wraps into
+  // a negative one, which is a request that has run out of time before it is
+  // sent
+  if (seconds == 0 || seconds > static_cast<std::uint64_t>(
+                                    std::chrono::seconds::max().count())) {
     throw sourcemeta::jsonschema::InvalidTimeoutError{};
   }
 
@@ -158,7 +162,7 @@ auto parse_parameter_value(const std::string_view value)
 
 // Where the schema being tested sits in the request body
 constexpr std::array<std::string_view, 3> SCHEMA_LOCATION{
-    "response_format", "json_schema", "schema"};
+    {"response_format", "json_schema", "schema"}};
 
 // How a parameter stands in relation to the schema being sent. The response is
 // checked against the schema that was read, so neither rewriting it nor
@@ -823,13 +827,13 @@ auto sourcemeta::jsonschema::llm(const sourcemeta::core::Options &options)
     auto callback{make_position_callback(positions, property_storage)};
     sourcemeta::core::parse_json(generated_stream, document, callback);
   } catch (const sourcemeta::core::JSONParseError &error) {
-    print_verbatim(generated, std::cout);
     if (json_output) {
       auto result{sourcemeta::core::JSON::make_object()};
       result.assign("valid", sourcemeta::core::JSON{false});
       result.assign("error",
                     sourcemeta::core::JSON{"The generated document is not "
                                            "valid JSON"});
+      result.assign("raw", sourcemeta::core::JSON{generated});
       result.assign("line", sourcemeta::core::JSON{
                                 static_cast<std::size_t>(error.line())});
       result.assign("column", sourcemeta::core::JSON{
@@ -837,6 +841,7 @@ auto sourcemeta::jsonschema::llm(const sourcemeta::core::Options &options)
       sourcemeta::core::prettify(result, std::cout);
       std::cout << "\n";
     } else {
+      print_verbatim(generated, std::cout);
       std::cerr << "\n"
                 << format_validation_status(ValidationStatus::Fail) << " "
                 << url << "\n";
@@ -852,16 +857,17 @@ auto sourcemeta::jsonschema::llm(const sourcemeta::core::Options &options)
   // Bytes past the first document mean the model wrote more than the one answer
   // the schema asked for, which no amount of validation would notice
   if (!at_end_of_stream(generated, generated_stream)) {
-    print_verbatim(generated, std::cout);
     if (json_output) {
       auto result{sourcemeta::core::JSON::make_object()};
       result.assign("valid", sourcemeta::core::JSON{false});
       result.assign("error", sourcemeta::core::JSON{
                                  "The generated document is followed by more "
                                  "than one document"});
+      result.assign("raw", sourcemeta::core::JSON{generated});
       sourcemeta::core::prettify(result, std::cout);
       std::cout << "\n";
     } else {
+      print_verbatim(generated, std::cout);
       std::cerr << "\n"
                 << format_validation_status(ValidationStatus::Fail) << " "
                 << url << "\n";
