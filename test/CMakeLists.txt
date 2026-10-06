@@ -1614,6 +1614,7 @@ add_jsonschema_test_unix_ci(pass_llm_request_response)
 add_jsonschema_test_unix_ci(fail_llm_response_invalid)
 add_jsonschema_test_unix_ci(fail_llm_response_rejected)
 add_jsonschema_test_unix_ci(fail_llm_response_unreadable)
+add_jsonschema_test_unix_ci(fail_llm_timeout)
 add_jsonschema_test_unix_ci(precommit_lint)
 
 if(CMAKE_SYSTEM_NAME STREQUAL "Linux" AND NOT JSONSCHEMA_USE_SYSTEM_CURL)

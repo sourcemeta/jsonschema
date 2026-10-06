@@ -777,7 +777,24 @@ auto sourcemeta::jsonschema::llm(const sourcemeta::core::Options &options)
 
   // Sent once and never retried. A completion is not idempotent and it costs
   // money, so a request that fails is reported rather than repeated
-  const auto response{request.send()};
+  const auto started{std::chrono::steady_clock::now()};
+  sourcemeta::core::HTTPResponse response;
+  try {
+    response = request.send();
+  } catch (const sourcemeta::core::HTTPError &) {
+    // What the backend says about a failure is its own business, so whether the
+    // time ran out is read off the clock rather than off the message
+    // TODO: Have Core raise an exception of its own for a request that ran out
+    // of time, so that this is detected from the failure rather than inferred
+    // from how long it took
+    if (std::chrono::steady_clock::now() - started >= timeout) {
+      throw LLMTimeoutError{"The completion request did not answer within " +
+                                std::to_string(timeout.count()) + " seconds",
+                            std::string{url}};
+    }
+
+    throw;
+  }
 
   LOG_VERBOSE(options) << "Received HTTP " << response.status.code << "\n";
 

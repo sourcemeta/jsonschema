@@ -73,9 +73,6 @@ jsonschema llm path/to/schema.json \
   --header "Authorization: Bearer $DOUBLEWORD_API_KEY"
 ```
 
-Doubleword can sometimes be slow to serve a request, independently of the
-model, which is what the generous default `--timeout/-T` leaves room for.
-
 ### OpenAI
 
 ```sh

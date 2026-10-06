@@ -418,6 +418,22 @@ private:
   std::string example_;
 };
 
+// A request that ran out of time before an answer arrived. Waiting longer is
+// the one thing the caller can do about it, so what it took is part of what is
+// said
+class LLMTimeoutError : public std::runtime_error {
+public:
+  LLMTimeoutError(const std::string &message, std::string url)
+      : std::runtime_error{message}, url_{std::move(url)} {}
+
+  [[nodiscard]] auto url() const noexcept -> const std::string & {
+    return this->url_;
+  }
+
+private:
+  std::string url_;
+};
+
 class OptionConflictError : public std::runtime_error {
 public:
   OptionConflictError(const std::string &message)
@@ -2283,6 +2299,15 @@ inline auto try_catch(const sourcemeta::core::Options &options,
     const auto is_json{options.contains("json")};
     print_exception(is_json, error);
     return EXIT_OTHER_INPUT_ERROR;
+  } catch (const LLMTimeoutError &error) {
+    const auto is_json{options.contains("json")};
+    print_exception(is_json, error);
+    if (!is_json) {
+      std::cerr << "\nPass --timeout/-T with a larger number of seconds to "
+                   "wait longer\n";
+    }
+
+    return EXIT_UNEXPECTED_ERROR;
   } catch (const sourcemeta::core::HTTPStatusError &error) {
     const auto is_json{options.contains("json")};
     print_exception(is_json, error);
