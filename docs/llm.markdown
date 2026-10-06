@@ -12,11 +12,6 @@ jsonschema llm <schema.json|.yaml> --ask/-A <prompt>
   [--verbose/-v] [--debug/-g] [--json/-j] [--color auto|always|never]
 ```
 
-> [!NOTE]
-> See [Resolving External References](./guides/resolution.markdown) for every way of
-> making referenced schemas available, including how to handle a reference whose
-> URI differs from the identifier the target schema declares.
-
 A schema is usually a gate you put in front of data that already exists.
 Structured outputs turn it around: the provider restricts what the model is
 allowed to emit, token by token, so the only thing it can produce is a document
@@ -31,72 +26,36 @@ major provider converged on it independently, so the same schema you already use
 to validate your data is the artifact that constrains a model, describes a tool
 to an agent, and travels over the Model Context Protocol.
 
-The catch is that the guarantee is only as good as each provider's
-implementation of it, and a schema that one engine enforces exactly may be a
-vague hint to the next. This command sends your schema to a completion endpoint,
-reads the document that comes back, and validates it against **the schema you
-wrote** rather than against whatever was sent after preparation. A provider that
-quietly drops a constraint therefore shows up as a validation failure, exit code
-2, with the document and the errors side by side.
+In practice, though, the schema you already have is rarely one a provider will
+take. It probably references other schemas, and no provider fetches anything on
+your behalf. It may well be written against an older dialect, and what these
+engines match on is keyword names rather than the dialect a document declares.
+This command handles both. External references are bundled in, so what goes out
+is one self-contained document, with `--resolve/-r` for the ones that live on
+your own disk. Keywords are spelled as whichever dialect you ask for, 2020-12
+by default. An existing Draft 4 schema spread across half a dozen files is
+therefore usable as it stands.
 
-```sh
-jsonschema llm path/to/schema.json \
-  --ask "What is the capital of Germany?" \
-  --url https://api.openai.com/v1/chat/completions \
-  --model "$OPENAI_MODEL" \
-  --header "Authorization: Bearer $OPENAI_API_KEY"
-```
+The other catch is that the guarantee is only as good as each provider's
+implementation of it, and a schema one engine enforces exactly may be a vague
+hint to the next. So the gate does not go away. This command keeps it: whatever
+comes back is validated against **the schema you wrote**, rather than against
+the prepared copy that went out. A constraint lost along the way then surfaces
+as a validation failure with exit code 2, printed alongside the document that
+broke it.
 
-The generated document goes to standard output exactly as the model emitted it,
-and everything else to standard error, so redirecting leaves the document alone
-and ready to pipe:
-
-```
-{
-  "capital": "Berlin"
-}
-
-tokens: 17 prompt, 128 completion, 145 total
-```
-
-When it does not conform, the document is still printed, because the coordinates
-are useless without it:
-
-```
-{
-  "capital": 42
-}
-
-fail: https://api.openai.com/v1/chat/completions
-error: The generated document does not conform to the schema
-  The value was expected to be of type string but it was of type integer
-    at instance location "/capital" (line 2, column 3)
-    at evaluate path "/properties/capital/type"
-```
-
-Building the request, extracting the answer out of whatever envelope it arrives
-in and keeping a chain of thought from being mistaken for it are all handled for
-you. Pass the credential with `--header/-H`, anything else a given endpoint wants
-in the request body with `--param/-P`, and `--dry-run/-D` to print the request
-instead of sending it. A boolean schema, an OpenAPI description and a schema that
-declares a custom meta-schema are each refused, with the reason.
-
-No provider reads the `$schema` a document declares. The keyword appears nowhere
-in any provider's structured-output documentation, so what varies between
-dialects is purely how the keywords are spelled, and spelling is what these
-engines match on. Schemas go out as 2020-12 by default. Use `--upgrade/-U` to
-spell one as another dialect instead, since an engine that chokes on `$defs` may
-accept `definitions` for the identical schema.
+> [!NOTE]
+> See [Resolving External References](./guides/resolution.markdown) for every way of
+> making referenced schemas available, including how to handle a reference whose
+> URI differs from the identifier the target schema declares.
 
 Providers
 ---------
 
-What each provider supports, and which dialect it expects, varies between them
-and shifts over time. Treat the sections below as a starting point and check your
-provider's own structured-output documentation for the subset it accepts. Some
-accept only `{ "type": "json_object" }`, which guarantees parseable JSON while
-ignoring the schema entirely, and a gateway that routes to several upstreams may
-enforce the schema for some and treat it as a hint for others.
+*JSON Schema compliance varies a lot between providers*. How much of the
+language an engine enforces, how strictly, and which dialects it recognises all
+differ, sometimes between models of one provider. Treat the sections below as
+a starting point and check the documentation of whichever provider you use.
 
 **This landscape changes constantly. If this command stops working against a
 provider, please open an issue at
@@ -104,9 +63,10 @@ https://github.com/sourcemeta/jsonschema/issues so we can keep up.**
 
 ### dottxt on Doubleword
 
-[.txt](https://dottxt.ai) built its generation engine around JSON Schema rather
-than bolting validation on afterwards, which it describes in [How JSON Schema
-makes LLM output
+This is the one we recommend, and the most JSON Schema compliant implementation
+we are aware of so far. [.txt](https://dottxt.ai) built its generation engine
+around JSON Schema rather than bolting validation on afterwards, which it
+describes in [How JSON Schema makes LLM output
 reliable](https://json-schema.org/blog/posts/dottxt-case-study). Its models are
 served through [Doubleword](https://doubleword.ai):
 
@@ -115,17 +75,15 @@ jsonschema llm path/to/schema.json \
   --ask "What is the capital of Germany?" \
   --url https://api.doubleword.ai/v1/chat/completions \
   --model Qwen/Qwen3.5-35B-A3B-FP8-dottxt \
-  --header "Authorization: Bearer $DOUBLEWORD_API_KEY" \
-  --without-id
+  --header "Authorization: Bearer $DOUBLEWORD_API_KEY"
 ```
 
-Compiling a schema into a grammar takes this engine well past the time an
-ordinary completion takes, which is what the generous default `--timeout/-T` is
-for. An involved schema may want more still.
+We often saw requests here take a good while longer than an ordinary completion,
+as the engine compiles the schema into a grammar before generating anything. The
+default `--timeout/-T` leaves room for that, though an involved schema may want
+more.
 
 ### OpenAI
-
-The request this command sends is OpenAI's own shape, so it goes unmodified:
 
 ```sh
 jsonschema llm path/to/schema.json --ask "..." \
@@ -134,46 +92,36 @@ jsonschema llm path/to/schema.json --ask "..." \
   --header "Authorization: Bearer $OPENAI_API_KEY"
 ```
 
-Their Structured Outputs requires `additionalProperties: false` on every object,
-every property listed in `required`, and an object at the root.
+At least at the time of this writing, they place extra restrictions on the input
+schema beyond what JSON Schema itself asks for. Their [Structured
+Outputs](https://developers.openai.com/api/docs/guides/structured-outputs)
+documentation is the place to check what those are.
 
 ### OpenAI-compatible servers
 
 Anything implementing the same endpoint works without special casing, which
-covers vLLM, llama.cpp, LM Studio, Ollama's compatibility endpoint and gateways
-such as OpenRouter. Only the URL changes:
+covers [vLLM](https://docs.vllm.ai/en/latest/serving/openai_compatible_server.html),
+[llama.cpp](https://github.com/ggml-org/llama.cpp/blob/master/tools/server/README.md),
+[LM Studio](https://lmstudio.ai/docs/app/api/endpoints/openai),
+[Ollama's compatibility endpoint](https://docs.ollama.com/openai) and gateways
+such as [OpenRouter](https://openrouter.ai/docs/features/structured-outputs).
+Only the URL changes:
 
 ```sh
 jsonschema llm path/to/schema.json --ask "..." \
   --url http://localhost:1234/v1/chat/completions --model my-model
 ```
 
-Watch the token-limit field, which these disagree on: OpenAI takes
-`max_completion_tokens` while Ollama normalises to `max_tokens`.
+Watch the token-limit field, which these often disagree on. Set it with
+`--param/-P`, which writes into the request body at the JSON Pointer you name:
+OpenAI takes `/max_completion_tokens` while Ollama normalises to `/max_tokens`.
+For example:
 
-### Anthropic
-
-Not reachable through this command today, for two separate reasons.
-
-Their [OpenAI SDK compatibility
-layer](https://platform.claude.com/docs/en/cli-sdks-libraries/libraries/openai-sdk)
-accepts the endpoint but documents `response_format` as ignored. The schema would
-travel and constrain nothing, so any non-conformance reported here would be an
-artifact of the compatibility layer rather than anything about the model.
-
-Their native [Structured
-Outputs](https://platform.claude.com/docs/en/build-with-claude/structured-outputs)
-does enforce the schema, but on `/v1/messages` with the schema carried at
-`output_config.format.schema`, a different request shape than the one this
-command speaks.
-
-### Google Gemini
-
-Also not reachable. Its [OpenAI compatibility
-endpoint](https://ai.google.dev/gemini-api/docs/openai) routes structured
-outputs through a client-side parse helper rather than through `response_format`
-with a nested `json_schema`, and its native API carries the schema under
-`generationConfig` instead.
+```sh
+jsonschema llm path/to/schema.json --ask "..." \
+  --url http://localhost:11434/v1/chat/completions --model my-model \
+  --param /max_tokens=2048
+```
 
 Examples
 --------
