@@ -611,7 +611,7 @@ auto sourcemeta::jsonschema::llm(const sourcemeta::core::Options &options)
 
   if (!options.contains("ask") || options.at("ask").front().empty()) {
     throw MissingOptionError{
-        "You must pass a prompt using the `--ask/-A` option",
+        "You must pass a prompt using the `--ask/-a` option",
         "--ask \"What is the capital of Germany?\""};
   }
 
@@ -623,7 +623,7 @@ auto sourcemeta::jsonschema::llm(const sourcemeta::core::Options &options)
   }
 
   if (!options.contains("model") || options.at("model").front().empty()) {
-    throw MissingOptionError{"You must pass the model using the `--model/-M` "
+    throw MissingOptionError{"You must pass the model using the `--model/-m` "
                              "option",
                              "--model my-model"};
   }

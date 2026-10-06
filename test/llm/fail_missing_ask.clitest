@@ -11,7 +11,7 @@ EOF
 RUN llm schema.json --url https://api.example.com/v1/chat/completions --model my-model --dry-run STDIN /dev/null IN . INTO result.txt EXPECTING 5
 
 WRITE expected.txt UNTIL EOF
-2> error: You must pass a prompt using the `--ask/-A` option
+2> error: You must pass a prompt using the `--ask/-a` option
 2>
 2> For example: --ask "What is the capital of Germany?"
 EOF

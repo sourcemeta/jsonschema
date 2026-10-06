@@ -2,9 +2,9 @@ LLM Structured Outputs
 ======================
 
 ```sh
-jsonschema llm <schema.json|.yaml> --ask/-A <prompt>
-  --url/-u <completion-url> --model/-M <model>
-  [--param/-P <pointer>=<value>] [--header/-H "<name>: <value>"]
+jsonschema llm <schema.json|.yaml> --ask/-a <prompt>
+  --url/-u <completion-url> --model/-m <model>
+  [--param/-p <pointer>=<value>] [--header/-H "<name>: <value>"]
   [--upgrade/-U draft4|draft6|draft7|2019-09|2020-12]
   [--timeout/-T <seconds>] [--raw/-R] [--dry-run/-D] [--trace/-t]
   [--without-id/-w] [--resolve/-r <schemas-or-directories> ...]
@@ -113,7 +113,7 @@ jsonschema llm path/to/schema.json --ask "..." \
 ```
 
 Watch the token-limit field, which these often disagree on. Set it with
-`--param/-P`, which writes into the request body at the JSON Pointer you name:
+`--param/-p`, which writes into the request body at the JSON Pointer you name:
 OpenAI takes `/max_completion_tokens` while Ollama normalises to `/max_tokens`.
 For example:
 

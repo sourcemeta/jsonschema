@@ -161,15 +161,15 @@ WRITE expected.txt UNTIL EOF
 1>        default. Pass --fast/-f to optimise for speed at the expense of
 1>        validation error quality.
 1>
-1>    llm <schema.json|.yaml> --ask/-A <prompt> --url/-u <completion-url>
-1>        --model/-M <model> [--param/-P <pointer>=<value>] [--raw/-R]
+1>    llm <schema.json|.yaml> --ask/-a <prompt> --url/-u <completion-url>
+1>        --model/-m <model> [--param/-p <pointer>=<value>] [--raw/-R]
 1>        [--upgrade/-U draft4|draft6|draft7|2019-09|2020-12]
 1>        [--timeout/-T <seconds>] [--dry-run/-D] [--trace/-t] [--without-id/-w]
 1>
 1>        Ask a model for a document conforming to the given schema.
 1>        Works against any endpoint taking an OpenAI Chat Completions
 1>        `response_format` with a nested `json_schema`.
-1>        The --param/-P option adds further entries to the request body.
+1>        The --param/-p option adds further entries to the request body.
 1>        The --upgrade/-U option defaults to 2020-12.
 1>        Use --dry-run/-D to print the request instead of sending it.
 1>

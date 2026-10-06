@@ -11,7 +11,7 @@ EOF
 RUN llm schema.json --ask hello --url https://api.example.com/v1/chat/completions --dry-run STDIN /dev/null IN . INTO result.txt EXPECTING 5
 
 WRITE expected.txt UNTIL EOF
-2> error: You must pass the model using the `--model/-M` option
+2> error: You must pass the model using the `--model/-m` option
 2>
 2> For example: --model my-model
 EOF

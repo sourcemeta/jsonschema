@@ -68,7 +68,7 @@ _jsonschema() {
     --exclude|-x|--only|-o)
       return 0
       ;;
-    --template|-m)
+    --template)
       COMPREPLY=( $(compgen -f -X '!*.json' -- "${current}") )
       return 0
       ;;
@@ -95,7 +95,24 @@ _jsonschema() {
       COMPREPLY=( $(compgen -W "draft4 draft6 draft7 2019-09 2020-12" -- "${current}") )
       return 0
       ;;
-    --ask|-A|--url|-u|--model|-M|--param|-P|--timeout|-T)
+    --ask|--url|-u|--model|--param|--timeout|-T)
+      return 0
+      ;;
+    -a)
+      if [ "${command}" = "lint" ]
+      then
+        COMPREPLY=( $(compgen -f -X '!*.json' -X '!*.yaml' -X '!*.yml' -- "${current}") )
+      fi
+      return 0
+      ;;
+    -m)
+      if [ "${command}" = "validate" ]
+      then
+        COMPREPLY=( $(compgen -f -X '!*.json' -- "${current}") )
+      fi
+      return 0
+      ;;
+    -p)
       return 0
       ;;
     -t)
@@ -228,7 +245,7 @@ _jsonschema() {
       fi
       ;;
     llm)
-      local options="--ask -A --url -u --model -M --param -P --upgrade -U --timeout -T --raw -R --dry-run -D --trace -t --without-id -w"
+      local options="--ask -a --url -u --model -m --param -p --upgrade -U --timeout -T --raw -R --dry-run -D --trace -t --without-id -w"
       if [[ ${current} == -* ]]
       then
         COMPREPLY=( $(compgen -W "${options} ${global_options}" -- "${current}") )

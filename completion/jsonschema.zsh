@@ -165,10 +165,10 @@ _jsonschema() {
         llm)
           _arguments \
             ${global_options[@]} \
-            '(--ask -A)'{--ask,-A}'[The prompt to send]:prompt:' \
+            '(--ask -a)'{--ask,-a}'[The prompt to send]:prompt:' \
             '(--url -u)'{--url,-u}'[The completion endpoint URL]:url:' \
-            '(--model -M)'{--model,-M}'[The model to ask]:model:' \
-            '*'{--param,-P}'[Set a request body value (<pointer>=<value>)]:parameter:' \
+            '(--model -m)'{--model,-m}'[The model to ask]:model:' \
+            '*'{--param,-p}'[Set a request body value (<pointer>=<value>)]:parameter:' \
             '(--upgrade -U)'{--upgrade,-U}'[Spell the schema as the given dialect]:dialect:(draft4 draft6 draft7 2019-09 2020-12)' \
             '(--timeout -T)'{--timeout,-T}'[Seconds to wait for the response]:seconds:' \
             '(--raw -R)'{--raw,-R}'[Print the response envelope without reading it]' \
