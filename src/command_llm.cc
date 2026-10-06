@@ -784,6 +784,9 @@ auto sourcemeta::jsonschema::llm(const sourcemeta::core::Options &options)
   } catch (const sourcemeta::core::HTTPError &) {
     // What the backend says about a failure is its own business, so whether the
     // time ran out is read off the clock rather than off the message
+    // TODO: Have Core raise an exception of its own for a request that ran out
+    // of time, so that this is detected from the failure rather than inferred
+    // from how long it took
     if (std::chrono::steady_clock::now() - started >= timeout) {
       throw LLMTimeoutError{"The completion request did not answer within " +
                                 std::to_string(timeout.count()) + " seconds",
