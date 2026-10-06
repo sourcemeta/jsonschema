@@ -47,6 +47,11 @@ language an engine enforces, how strictly, and which dialects it recognises all
 differ, sometimes between models of one provider. Treat the sections below as
 a starting point and check the documentation of whichever provider you use.
 
+This command speaks one request shape, the OpenAI Chat Completions
+`response_format` with a nested `json_schema`, so any endpoint that takes it
+works without special casing. Support for other shapes, Anthropic's among them,
+is on the way.
+
 **This landscape changes constantly. If this command stops working against a
 provider, please open an issue at
 https://github.com/sourcemeta/jsonschema/issues so we can keep up.**
@@ -89,8 +94,7 @@ documentation is the place to check what those are.
 
 ### OpenAI-compatible servers
 
-Anything implementing the same endpoint works without special casing, which
-covers [vLLM](https://docs.vllm.ai/en/latest/serving/openai_compatible_server.html),
+That covers [vLLM](https://docs.vllm.ai/en/latest/serving/openai_compatible_server.html),
 [llama.cpp](https://github.com/ggml-org/llama.cpp/blob/master/tools/server/README.md),
 [LM Studio](https://lmstudio.ai/docs/app/api/endpoints/openai),
 [Ollama's compatibility endpoint](https://docs.ollama.com/openai) and gateways
