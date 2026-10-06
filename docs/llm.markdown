@@ -12,37 +12,29 @@ jsonschema llm <schema.json|.yaml> --ask/-a <prompt>
   [--verbose/-v] [--debug/-g] [--json/-j] [--color auto|always|never]
 ```
 
-A schema is usually a gate you put in front of data that already exists.
-Structured outputs turn it around: the provider restricts what the model is
-allowed to emit, token by token, so the only thing it can produce is a document
-matching the schema you handed over. The schema stops being a check and becomes
-the question. You describe the shape of the answer you want, and you get that
-shape back instead of prose to pick apart afterwards.
+Use this command to make a model answer with a JSON document that conforms to a
+schema you supply, instead of prose you have to parse afterwards. In a pipeline
+that is the difference between a contract and a guess. A renamed field, an
+absent one, or a number arriving as a string is a crash downstream, or a
+silently bad write.
 
-This is why JSON Schema ended up as the contract language of the entire AI
-stack, a story we tell in [The only schema language AI speaks is JSON
-Schema](https://www.sourcemeta.com/blog/ai-only-speaks-json-schema/). Every
-major provider converged on it independently, so the same schema you already use
-to validate your data is the artifact that constrains a model, describes a tool
-to an agent, and travels over the Model Context Protocol.
+> [!NOTE]
+> The whole field converged on JSON Schema to write these contracts in,
+> independently and for the same reasons. To learn more about the role JSON
+> Schema plays in AI, see [The only schema language AI speaks is JSON
+> Schema](https://www.sourcemeta.com/blog/ai-only-speaks-json-schema/).
 
-In practice, though, the schema you already have is rarely one a provider will
-take. It probably references other schemas, and no provider fetches anything on
-your behalf. It may well be written against an older dialect, and what these
-engines match on is keyword names rather than the dialect a document declares.
-This command handles both. External references are bundled in, so what goes out
-is one self-contained document, with `--resolve/-r` for the ones that live on
-your own disk. Keywords are spelled as whichever dialect you ask for, 2020-12
-by default. An existing Draft 4 schema spread across half a dozen files is
-therefore usable as it stands.
-
-The other catch is that the guarantee is only as good as each provider's
-implementation of it, and a schema one engine enforces exactly may be a vague
-hint to the next. So the gate does not go away. This command keeps it: whatever
-comes back is validated against **the schema you wrote**, rather than against
-the prepared copy that went out. A constraint lost along the way then surfaces
-as a validation failure with exit code 2, printed alongside the document that
-broke it.
+Sending a single self-contained schema is easy enough by hand. It gets harder
+the moment the schema is a real one: it references other schemas, and no
+provider fetches anything for you; it is written in YAML, which no provider
+reads; it sits on an older dialect, and what these engines match on is keyword
+names rather than the dialect a document declares. That is the part this
+command takes off your hands. References are bundled in, YAML becomes JSON, and
+keywords are respelled as whichever dialect you ask for, so a Draft 4 schema in
+YAML spread over half a dozen files works as it stands. Preparing a schema can
+lose what it was asserting, though, so the gate stays: what comes back is
+validated against the schema you wrote rather than the copy that went out, and
+a constraint dropped along the way surfaces as a failure with exit code 2.
 
 > [!NOTE]
 > See [Resolving External References](./guides/resolution.markdown) for every way of
