@@ -1,0 +1,27 @@
+WRITE jsonschema.json UNTIL EOF
+{
+  "zebra": true,
+  "title": "My project",
+  "apple": false
+}
+EOF
+
+RUN fmt jsonschema.json STDIN /dev/null IN . INTO result.txt EXPECTING 0
+
+REPLACE $CWD WITH '[CWD]' IN result.txt
+
+WRITE expected.txt UNTIL EOF
+2> Interpreting as a configuration file: [CWD]/jsonschema.json
+EOF
+
+COMPARE result.txt AGAINST expected.txt
+
+WRITE expected_file_0.txt UNTIL EOF
+{
+  "title": "My project",
+  "apple": false,
+  "zebra": true
+}
+EOF
+
+COMPARE jsonschema.json AGAINST expected_file_0.txt
