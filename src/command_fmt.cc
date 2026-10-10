@@ -3,11 +3,13 @@
 #include <sourcemeta/core/json.h>
 #include <sourcemeta/core/jsonschema.h>
 
-#include <iostream>    // std::cerr, std::cout
-#include <sstream>     // std::ostringstream
-#include <string>      // std::string
-#include <string_view> // std::string_view
-#include <utility>     // std::move, std::unreachable
+#include <filesystem>   // std::filesystem
+#include <iostream>     // std::cerr, std::cout
+#include <sstream>      // std::ostringstream
+#include <string>       // std::string
+#include <string_view>  // std::string_view
+#include <system_error> // std::error_code
+#include <utility>      // std::move, std::unreachable
 
 #include "command.h"
 #include "error.h"
@@ -152,6 +154,21 @@ auto formatted_copy(const sourcemeta::core::JSON &document,
   return copy;
 }
 
+// A configuration file read through a path of its own, such as a symbolic link
+// or a spelling that the filesystem matches without regard to case, is still
+// the very file the lookup settled on. What tells the two apart is therefore
+// the identity of the file rather than the path that happens to name it
+auto same_file(const std::filesystem::path &left,
+               const std::filesystem::path &right) -> bool {
+  if (left == right) {
+    return true;
+  }
+
+  std::error_code error;
+  const auto result{std::filesystem::equivalent(left, right, error)};
+  return !error && result;
+}
+
 auto configuration_copy(const sourcemeta::core::JSON &document)
     -> sourcemeta::core::JSON {
   auto copy{document};
@@ -293,9 +310,9 @@ auto sourcemeta::jsonschema::fmt(const sourcemeta::core::Options &options)
     // The configuration file in effect for its own location is the one this
     // goes on to order by the configuration format rather than by any dialect,
     // so none of what tells a schema from the rest has a say over it
-    const auto is_configuration{configuration_path.has_value() &&
-                                configuration_path.value() ==
-                                    entry.resolution_base};
+    const auto is_configuration{
+        configuration_path.has_value() &&
+        same_file(configuration_path.value(), entry.resolution_base)};
 
     if (!is_configuration) {
       if (!entry.second.is_object() && !entry.second.is_boolean()) {

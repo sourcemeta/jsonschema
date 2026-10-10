@@ -5,6 +5,8 @@ WRITE jsonschema.json UNTIL EOF
 }
 EOF
 
+COPY jsonschema.json TO original.json
+
 // Validation failure
 RUN fmt jsonschema.json --check STDIN /dev/null IN . INTO result.txt EXPECTING 2
 
@@ -27,3 +29,5 @@ WRITE expected.txt UNTIL EOF
 EOF
 
 COMPARE result.txt AGAINST expected.txt
+
+COMPARE jsonschema.json AGAINST original.json
