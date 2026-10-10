@@ -1,0 +1,29 @@
+WRITE jsonschema.json UNTIL EOF
+{
+  "baseUri": "https://example.com",
+  "title": "My project"
+}
+EOF
+
+// Validation failure
+RUN fmt jsonschema.json --check STDIN /dev/null IN . INTO result.txt EXPECTING 2
+
+REPLACE $CWD WITH '[CWD]' IN result.txt
+
+WRITE expected.txt UNTIL EOF
+2> Interpreting as a configuration file: [CWD]/jsonschema.json
+2> fail: [CWD]/jsonschema.json
+2> --- current
+2> +++ expected
+2> @@ -1,4 +1,4 @@
+2>  {
+2> -  "baseUri": "https://example.com",
+2> -  "title": "My project"
+2> +  "title": "My project",
+2> +  "baseUri": "https://example.com"
+2>  }
+2>
+2> Run the `fmt` command without `--check/-c` to fix the formatting
+EOF
+
+COMPARE result.txt AGAINST expected.txt
