@@ -9,7 +9,7 @@
 [![pre-commit](https://img.shields.io/badge/pre--commit-enabled-brightgreen?logo=pre-commit&logoColor=white)](https://github.com/sourcemeta/jsonschema/blob/main/.pre-commit-hooks.yaml)
 [![DOI](https://zenodo.org/badge/802599802.svg)](https://doi.org/10.5281/zenodo.20086212)
 
-[![Get it from the Snap Store](https://snapcraft.io/en/light/install.svg)](https://snapcraft.io/jsonschema)
+<a href="https://snapcraft.io/jsonschema"><img alt="Get it from the Snap Store" src="https://snapcraft.io/en/light/install.svg" width="182" height="56"></a>
 
 The command-line tool for working with [JSON Schema](https://json-schema.org),
 the world most popular schema language. It is a comprehensive solution for
