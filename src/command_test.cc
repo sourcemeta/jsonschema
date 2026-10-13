@@ -389,12 +389,6 @@ auto parse_test_suite(const sourcemeta::jsonschema::InputJSON &entry,
         sourcemeta::jsonschema::TestTargetNotSchemaError>{entry.resolution_base,
                                                           error};
   } catch (const sourcemeta::core::OpenAPIResolutionError &error) {
-    // TODO: A reference of the description itself that names a plain schema
-    // reports "Could not resolve the reference to an external document", even
-    // though the document was reached and only turned out to be no
-    // description. Core says exactly that where a resolver hands one back, but
-    // sourcemeta::core::OpenAPIResolver is documented to hand back descriptions
-    // alone, so that message is out of reach from here
     throw sourcemeta::core::FileError<sourcemeta::core::OpenAPIResolutionError>{
         entry.resolution_base, error};
   } catch (const sourcemeta::core::OpenAPIReferenceError &error) {
