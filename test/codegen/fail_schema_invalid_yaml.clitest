@@ -1,7 +1,5 @@
 WRITE schema.yaml UNTIL EOF
-type: string
----
-type: integer
+type: [string
 EOF
 
 // Other input error
@@ -10,9 +8,9 @@ RUN codegen schema.yaml --target typescript STDIN /dev/null IN . INTO result.txt
 REPLACE $CWD WITH '[CWD]' IN result.txt
 
 WRITE expected_0.txt UNTIL EOF
-2> error: Unexpected content after document
-2>   at line 3
-2>   at column 1
+2> error: Missing comma in flow sequence
+2>   at line 2
+2>   at column 0
 2>   at file path [CWD]/schema.yaml
 EOF
 
@@ -25,9 +23,9 @@ REPLACE $CWD WITH '[CWD]' IN result_json.txt
 
 WRITE expected_1.txt UNTIL EOF
 1> {
-1>   "error": "Unexpected content after document",
-1>   "line": 3,
-1>   "column": 1,
+1>   "error": "Missing comma in flow sequence",
+1>   "line": 2,
+1>   "column": 0,
 1>   "filePath": "[CWD]/schema.yaml"
 1> }
 EOF

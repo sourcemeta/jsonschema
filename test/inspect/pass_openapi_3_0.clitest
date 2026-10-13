@@ -1,0 +1,42 @@
+WRITE openapi.json UNTIL EOF
+{
+  "openapi": "3.0.3",
+  "info": { "title": "Example", "version": "1.0.0" },
+  "paths": {}
+}
+EOF
+
+RUN inspect openapi.json STDIN /dev/null IN . INTO result_0.txt EXPECTING 0
+
+REPLACE $CWD_URI WITH '[CWD_URI]' IN result_0.txt
+
+WRITE expected_0.txt UNTIL EOF
+1> (OPENAPI) URI: [CWD_URI]/openapi.json
+1>     Pointer           :
+1>     File Position     : 1:1
+1>     Parent            : <NONE>
+1>     Default Dialect   : tag:spec.openapis.org,2024-10-18:oas/3.0/dialect
+1>     Version           : 3.0
+1>     Base              : [CWD_URI]/openapi.json
+1>     Standalone        : yes
+1>     Info              :
+1>       Title           : Example
+1>       Version         : 1.0.0
+1>       Summary         : <NONE>
+1>       Description     : <NONE>
+1>       Terms of Service: <NONE>
+1>       Contact         : <NONE>
+1>       License         : <NONE>
+1>
+1> (INFO) URI: [CWD_URI]/openapi.json#/info
+1>     Pointer           : /info
+1>     File Position     : 3:3
+1>     Parent            : [CWD_URI]/openapi.json
+1>
+1> (PATHS) URI: [CWD_URI]/openapi.json#/paths
+1>     Pointer           : /paths
+1>     File Position     : 4:3
+1>     Parent            : [CWD_URI]/openapi.json
+EOF
+
+COMPARE result_0.txt AGAINST expected_0.txt

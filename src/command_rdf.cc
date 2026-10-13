@@ -314,6 +314,12 @@ auto sourcemeta::jsonschema::rdf(const sourcemeta::core::Options &options)
       schema_from_stdin ? (is_openapi ? openapi_stdin_path() : stdin_path())
                         : schema_resolution_base};
 
+  if (parsed_schema.multidocument) {
+    throw MultiDocumentInputError{
+        "This command does not support input with multiple documents",
+        display_path};
+  }
+
   reject_unsupported_openapi(parsed_schema.document, display_path);
 
   if (!is_openapi && !parsed_schema.document.is_object() &&

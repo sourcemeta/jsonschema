@@ -1083,6 +1083,18 @@ inline auto print_exception(const bool is_json, const Exception &exception)
 
   if constexpr (requires(const Exception &current) {
                   {
+                    current.dialect()
+                  } -> std::convertible_to<std::string_view>;
+                }) {
+    if (is_json) {
+      error_json.assign("dialect", sourcemeta::core::JSON{exception.dialect()});
+    } else {
+      std::cerr << "  at dialect " << exception.dialect() << "\n";
+    }
+  }
+
+  if constexpr (requires(const Exception &current) {
+                  {
                     current.resolve_path()
                   } -> std::convertible_to<std::filesystem::path>;
                 }) {
@@ -2084,6 +2096,16 @@ inline auto try_catch(const sourcemeta::core::Options &options,
     return EXIT_SCHEMA_INPUT_ERROR;
   } catch (const sourcemeta::core::FileError<
            sourcemeta::core::SchemaAnchorCollisionError> &error) {
+    const auto is_json{options.contains("json")};
+    print_exception(is_json, error);
+    return EXIT_SCHEMA_INPUT_ERROR;
+  } catch (const PositionError<sourcemeta::core::FileError<
+               sourcemeta::core::SchemaDialectImpossibleError>> &error) {
+    const auto is_json{options.contains("json")};
+    print_exception(is_json, error);
+    return EXIT_SCHEMA_INPUT_ERROR;
+  } catch (const sourcemeta::core::FileError<
+           sourcemeta::core::SchemaDialectImpossibleError> &error) {
     const auto is_json{options.contains("json")};
     print_exception(is_json, error);
     return EXIT_SCHEMA_INPUT_ERROR;

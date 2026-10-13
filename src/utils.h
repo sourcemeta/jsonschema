@@ -365,6 +365,17 @@ auto with_openapi_diagnostics(
 
     throw sourcemeta::core::FileError<
         sourcemeta::core::SchemaAnchorCollisionError>(display_path, error);
+  } catch (const sourcemeta::core::SchemaDialectImpossibleError &error) {
+    const auto position{positions.get(error.location())};
+    if (position.has_value()) {
+      throw PositionError<sourcemeta::core::FileError<
+          sourcemeta::core::SchemaDialectImpossibleError>>(
+          std::get<0>(position.value()), std::get<1>(position.value()),
+          display_path, error);
+    }
+
+    throw sourcemeta::core::FileError<
+        sourcemeta::core::SchemaDialectImpossibleError>(display_path, error);
   } catch (const sourcemeta::core::SchemaReferenceError &error) {
     const auto position{positions.get(error.location())};
     if (position.has_value()) {
@@ -593,6 +604,17 @@ bundle_for_evaluation(const sourcemeta::core::JSON &schema,
 
     throw sourcemeta::core::FileError<
         sourcemeta::core::SchemaAnchorCollisionError>(resolution_base, error);
+  } catch (const sourcemeta::core::SchemaDialectImpossibleError &error) {
+    const auto position{positions.get(error.location())};
+    if (position.has_value()) {
+      throw PositionError<sourcemeta::core::FileError<
+          sourcemeta::core::SchemaDialectImpossibleError>>(
+          std::get<0>(position.value()), std::get<1>(position.value()),
+          resolution_base, error);
+    }
+
+    throw sourcemeta::core::FileError<
+        sourcemeta::core::SchemaDialectImpossibleError>(resolution_base, error);
   } catch (const sourcemeta::core::SchemaReferenceError &error) {
     const auto position{positions.get(error.location())};
     if (position.has_value()) {
@@ -660,6 +682,17 @@ frame_for_evaluation(const sourcemeta::core::JSON &bundled,
 
     throw sourcemeta::core::FileError<
         sourcemeta::core::SchemaAnchorCollisionError>(resolution_base, error);
+  } catch (const sourcemeta::core::SchemaDialectImpossibleError &error) {
+    const auto position{positions.get(error.location())};
+    if (position.has_value()) {
+      throw PositionError<sourcemeta::core::FileError<
+          sourcemeta::core::SchemaDialectImpossibleError>>(
+          std::get<0>(position.value()), std::get<1>(position.value()),
+          resolution_base, error);
+    }
+
+    throw sourcemeta::core::FileError<
+        sourcemeta::core::SchemaDialectImpossibleError>(resolution_base, error);
   } catch (const sourcemeta::core::SchemaReferenceError &error) {
     const auto position{positions.get(error.location())};
     if (position.has_value()) {
@@ -760,6 +793,17 @@ inline auto compile_for_evaluation(
 
     throw sourcemeta::core::FileError<
         sourcemeta::core::SchemaAnchorCollisionError>(resolution_base, error);
+  } catch (const sourcemeta::core::SchemaDialectImpossibleError &error) {
+    const auto position{positions.get(error.location())};
+    if (position.has_value()) {
+      throw PositionError<sourcemeta::core::FileError<
+          sourcemeta::core::SchemaDialectImpossibleError>>(
+          std::get<0>(position.value()), std::get<1>(position.value()),
+          resolution_base, error);
+    }
+
+    throw sourcemeta::core::FileError<
+        sourcemeta::core::SchemaDialectImpossibleError>(resolution_base, error);
   } catch (const sourcemeta::core::SchemaReferenceError &error) {
     const auto position{positions.get(error.location())};
     if (position.has_value()) {
@@ -869,6 +913,18 @@ upgrade_schema(sourcemeta::core::JSON &schema,
     throw sourcemeta::core::FileError<
         sourcemeta::core::SchemaAnchorCollisionError>(schema_display_path,
                                                       error);
+  } catch (const sourcemeta::core::SchemaDialectImpossibleError &error) {
+    const auto position{positions.get(error.location())};
+    if (position.has_value()) {
+      throw PositionError<sourcemeta::core::FileError<
+          sourcemeta::core::SchemaDialectImpossibleError>>(
+          std::get<0>(position.value()), std::get<1>(position.value()),
+          schema_display_path, error);
+    }
+
+    throw sourcemeta::core::FileError<
+        sourcemeta::core::SchemaDialectImpossibleError>(schema_display_path,
+                                                        error);
   } catch (const sourcemeta::core::SchemaReferenceError &error) {
     const auto position{positions.get(error.location())};
     if (position.has_value()) {

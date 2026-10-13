@@ -1,0 +1,19 @@
+WRITE openapi.json UNTIL EOF
+{
+  "openapi": "3.0.3",
+  "info": { "title": "Example", "version": "1.0.0" },
+  "paths": {},
+  "components": {
+    "schemas": {
+      "Pet": { "type": "string", "nullable": true }
+    }
+  }
+}
+EOF
+
+RUN lint openapi.json STDIN /dev/null IN . INTO result_0.txt EXPECTING 0
+
+WRITE expected_0.txt UNTIL EOF
+EOF
+
+COMPARE result_0.txt AGAINST expected_0.txt

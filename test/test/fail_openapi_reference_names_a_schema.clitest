@@ -39,7 +39,7 @@ REPLACE $CWD WITH '[CWD]' IN result_0.txt
 
 WRITE expected_0.txt UNTIL EOF
 1> [CWD]/test.json:
-2> error: This reference must name a place within the document it points at
+2> error: Could not resolve the reference to an external document
 2>   at identifier [CWD_URI]/plain.json
 2>   at file path [CWD]/test.json
 2>   at location "/paths/~1people/$ref"
