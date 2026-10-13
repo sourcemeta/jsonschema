@@ -17,7 +17,12 @@ function isMusl() {
     return false;
   }
 
+  // Some environments, like the VS Code extension host, return no report
   const report = process.report.getReport();
+  if (!report?.header) {
+    return false;
+  }
+
   return report.header.glibcVersionRuntime === undefined;
 }
 
