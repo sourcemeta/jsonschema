@@ -1,0 +1,45 @@
+// A v3.0 schema spells its optional null with `nullable` rather than a `null`
+// member of `type`, and the rules read it as such. Pinning a number between
+// equal bounds leaves one value in the first schema below, but two in the
+// second, so only the first is reported
+
+WRITE openapi.json UNTIL EOF
+{
+  "openapi": "3.0.3",
+  "info": { "title": "Example", "version": "1.0.0" },
+  "paths": {},
+  "components": {
+    "schemas": {
+      "Exact": {
+        "title": "Exact",
+        "description": "A quantity pinned to one number",
+        "type": "integer",
+        "minimum": 5,
+        "maximum": 5
+      },
+      "ExactOrNull": {
+        "title": "Exact or null",
+        "description": "The same quantity, or nothing at all",
+        "type": "integer",
+        "nullable": true,
+        "minimum": 5,
+        "maximum": 5
+      }
+    }
+  }
+}
+EOF
+
+// Validation failure
+RUN lint openapi.json STDIN /dev/null IN . INTO result_0.txt EXPECTING 2
+
+WRITE expected_0.txt UNTIL EOF
+1> openapi.json:11:9:
+1>   Setting `minimum` and `maximum` to the same number only leaves one possible value (equal_numeric_bounds_to_enum)
+1>     at location "/components/schemas/Exact/minimum"
+1> openapi.json:12:9:
+1>   Setting `minimum` and `maximum` to the same number only leaves one possible value (equal_numeric_bounds_to_enum)
+1>     at location "/components/schemas/Exact/maximum"
+EOF
+
+COMPARE result_0.txt AGAINST expected_0.txt

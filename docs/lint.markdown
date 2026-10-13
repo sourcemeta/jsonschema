@@ -162,19 +162,20 @@ object entry with `topLevel` set to `true` marks the rule as top-level only.
 OpenAPI Descriptions
 --------------------
 
-If the input is an OpenAPI spec v3.1 or v3.2, the `lint` command treats it as
-an [OpenAPI](https://spec.openapis.org/oas/latest.html) description rather than
-as a schema. Every Schema Object in the description (for example, the ones
+If the input is an OpenAPI spec v3.0, v3.1 or v3.2, the `lint` command treats
+it as an [OpenAPI](https://spec.openapis.org/oas/latest.html) description rather
+than as a schema. Every Schema Object in the description (for example, the ones
 under `components/schemas` or the `schema` of a parameter, request body, or
 response) is linted, and every warning reports its location from the root of
-the description.
+the description. Any other revision is rejected rather than read as a schema.
 
-A v3.0 description is read as a description too, but none of its Schema Objects
-are linted yet. The v3.0 Schema Object is not JSON Schema but a dialect of its
-own, and no rule covers it so far, so such a description reports no warnings
-whether or not it has anything worth reporting. Other commands do read those
-Schema Objects: see [`jsonschema metaschema`](./metaschema.markdown) to check
-them against their dialect.
+Each Schema Object is linted against the dialect it is written in, so a v3.0
+description draws only the rules that its own keyword set can express. A rule
+that rewrites an `enum` of a single value into a `const`, for instance, stays
+quiet on v3.0, where there is no `const` to rewrite it to. The rules that do
+apply know how v3.0 spells things: `nullable` widens a sibling `type`, and a
+rule that would otherwise narrow such a schema to the one value left leaves it
+alone, because `null` is still a value it admits.
 
 With `--format/-m`, the whole description is formatted, not only the Schema
 Objects the rules ran against.
