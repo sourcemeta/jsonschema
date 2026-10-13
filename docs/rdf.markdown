@@ -319,7 +319,13 @@ OpenAPI Descriptions
 
 If the input is an OpenAPI spec v3.1 or v3.2, the `rdf` command treats it as an
 [OpenAPI](https://spec.openapis.org/oas/latest.html) description rather than as a
-schema. Any other revision, such as v3.0, is rejected rather than read as a schema.
+schema. Any other revision is rejected rather than read as a schema.
+
+A v3.0 description is read as a description, but its Schema Objects cannot be
+used here. The `x-jsonld-*` keywords rely on annotation collection, which JSON
+Schema only introduced in 2019-09, and the v3.0 Schema Object dialect predates
+it. Use [`jsonschema upgrade`](./upgrade.markdown) to move such a schema onto a
+newer dialect first.
 
 A description declares many schemas and no root one, so you must say which to
 use with `--entrypoint/-p`, given as a JSON Pointer into the description or as

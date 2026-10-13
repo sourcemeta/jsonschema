@@ -1,0 +1,63 @@
+// A 3.0 description is read as one, but the rules do not reach the Schema
+// Objects it holds, so a schema that draws warnings under 3.1 draws none here.
+
+WRITE openapi.json UNTIL EOF
+{
+  "openapi": "3.0.3",
+  "info": { "title": "Example", "version": "1.0.0" },
+  "paths": {},
+  "components": {
+    "schemas": {
+      "Pet": { "type": "string", "enum": [ "dog" ] }
+    }
+  }
+}
+EOF
+
+RUN lint openapi.json STDIN /dev/null IN . INTO result_0.txt EXPECTING 0
+
+WRITE expected_0.txt UNTIL EOF
+EOF
+
+COMPARE result_0.txt AGAINST expected_0.txt
+
+WRITE openapi_3_1.json UNTIL EOF
+{
+  "openapi": "3.1.1",
+  "info": { "title": "Example", "version": "1.0.0" },
+  "paths": {},
+  "components": {
+    "schemas": {
+      "Pet": { "type": "string", "enum": [ "dog" ] }
+    }
+  }
+}
+EOF
+
+// Lint failure
+RUN lint openapi_3_1.json STDIN /dev/null IN . INTO result_1.txt EXPECTING 2
+
+REPLACE $CWD WITH '[CWD]' IN result_1.txt
+
+WRITE expected_1.txt UNTIL EOF
+1> openapi_3_1.json:7:34:
+1>   Setting `type` alongside `enum` is considered an anti-pattern, as the enumeration choices already imply their respective types (enum_with_type)
+1>     at location "/components/schemas/Pet/enum"
+1> openapi_3_1.json:7:16:
+1>   Setting `type` alongside `enum` is considered an anti-pattern, as the enumeration choices already imply their respective types (enum_with_type)
+1>     at location "/components/schemas/Pet/type"
+1> openapi_3_1.json:7:34:
+1>   An `enum` of a single value can be expressed as `const` (enum_to_const)
+1>     at location "/components/schemas/Pet/enum"
+1> openapi_3_1.json:7:7:
+1>   Set a concise non-empty title at the top level of the schema to explain what the definition is about (top_level_title)
+1>     at location "/components/schemas/Pet"
+1> openapi_3_1.json:7:7:
+1>   Set a non-empty description at the top level of the schema to explain what the definition is about in detail (top_level_description)
+1>     at location "/components/schemas/Pet"
+1> openapi_3_1.json:7:7:
+1>   Set a non-empty examples array at the top level of the schema to illustrate the expected data (top_level_examples)
+1>     at location "/components/schemas/Pet"
+EOF
+
+COMPARE result_1.txt AGAINST expected_1.txt
