@@ -10,7 +10,7 @@
 #include <optional>    // std::optional
 #include <string>      // std::string
 #include <string_view> // std::string_view
-#include <utility>     // std::move, std::pair, std::unreachable
+#include <utility>     // std::move, std::pair
 
 namespace sourcemeta::core {
 
@@ -111,30 +111,21 @@ constexpr auto NON_DIGIT_CLASS{(~DIGIT_CLASS).reset(0)};
 constexpr auto NON_WORD_CLASS{(~WORD_CLASS).reset(0)};
 constexpr auto NON_SPACE_CLASS{(~SPACE_CLASS).reset(0)};
 
+// Each shorthand names a class in its lower case and the complement of that
+// class in its upper case, so which class is meant and whether it is negated
+// are read apart rather than spelled out once per pairing. The caller matches
+// the shorthand against the set of them before asking, which is what leaves
+// the last pairing to answer for whatever is not one of the other two
 inline auto set_shorthand_class(std::bitset<128> &characters,
                                 const char shorthand) -> void {
-  switch (shorthand) {
-    case 'd':
-      characters |= DIGIT_CLASS;
-      return;
-    case 'D':
-      characters |= NON_DIGIT_CLASS;
-      return;
-    case 'w':
-      characters |= WORD_CLASS;
-      return;
-    case 'W':
-      characters |= NON_WORD_CLASS;
-      return;
-    case 's':
-      characters |= SPACE_CLASS;
-      return;
-    case 'S':
-      characters |= NON_SPACE_CLASS;
-      return;
-    default:
-      // The caller matches the shorthand against the set of them before asking
-      std::unreachable();
+  const auto lowered{static_cast<char>(shorthand | 0x20)};
+  const auto negated{shorthand != lowered};
+  if (lowered == 'd') {
+    characters |= negated ? NON_DIGIT_CLASS : DIGIT_CLASS;
+  } else if (lowered == 'w') {
+    characters |= negated ? NON_WORD_CLASS : WORD_CLASS;
+  } else {
+    characters |= negated ? NON_SPACE_CLASS : SPACE_CLASS;
   }
 }
 

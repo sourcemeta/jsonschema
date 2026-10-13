@@ -32,7 +32,8 @@ public:
              SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_1,
              SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_1_HYPER,
              SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_0,
-             SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_0_HYPER}) &&
+             SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_0_HYPER,
+             SchemaVocabularies::Known::OPENAPI_3_0_BASE}) &&
                 (type_value != nullptr) &&
                 is_known_type_form(*type_value, vocabularies)
             ? parse_schema_type(*type_value)
@@ -46,7 +47,8 @@ public:
              SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_4,
              SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_3,
              SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_2,
-             SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_1})) {
+             SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_1,
+             SchemaVocabularies::Known::OPENAPI_3_0_BASE})) {
       const auto *enum_value{schema.try_at("enum")};
       if ((enum_value != nullptr) && enum_value->is_array()) {
         for (const auto &entry : enum_value->as_array()) {

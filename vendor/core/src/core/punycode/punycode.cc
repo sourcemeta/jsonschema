@@ -2,8 +2,9 @@
 #include <sourcemeta/core/punycode_error.h>
 #include <sourcemeta/core/unicode.h>
 
-#include <algorithm> // std::ranges::sort
+#include <algorithm> // std::min, std::ranges::sort
 #include <cassert>   // assert
+#include <cstddef>   // std::size_t
 #include <cstdint>   // std::uint32_t, std::uint64_t
 #include <limits>    // std::numeric_limits
 #include <vector>    // std::vector
@@ -82,11 +83,14 @@ static constexpr auto is_basic(const char32_t code_point) -> bool {
 }
 
 static auto punycode_encode(const std::u32string_view codepoints,
-                            std::string &output) -> void {
+                            std::string &output,
+                            const std::size_t maximum_code_points) -> void {
   // RFC 3492 Section 6.4 offers bounding the input as one way of keeping the
   // counters from wrapping, alongside the detection the arithmetic below
-  // carries out, so this bound is a choice made here rather than a requirement
-  if (codepoints.size() > std::numeric_limits<std::uint32_t>::max()) {
+  // carries out. What a caller names only ever tightens the ceiling the
+  // counters stand at, as a wider input than that has nowhere to be addressed
+  if (codepoints.size() >
+      std::min(maximum_code_points, PUNYCODE_MAXIMUM_CODE_POINTS)) {
     throw PunycodeError("Input is too large");
   }
 
@@ -181,12 +185,14 @@ static auto punycode_encode(const std::u32string_view codepoints,
 }
 
 static auto punycode_decode(const std::string_view encoded,
-                            std::u32string &decoded) -> void {
+                            std::u32string &decoded,
+                            const std::size_t maximum_encoded_bytes) -> void {
   // RFC 3492 Section 6.4 offers bounding the input as one way of keeping the
   // position counter from wrapping, alongside the detection the arithmetic
-  // below carries out, so this bound is a choice made here rather than a
-  // requirement
-  if (encoded.size() > std::numeric_limits<std::uint32_t>::max()) {
+  // below carries out. What a caller names only ever tightens the ceiling the
+  // counter stands at, as a wider input than that has nowhere to be addressed
+  if (encoded.size() >
+      std::min(maximum_encoded_bytes, PUNYCODE_MAXIMUM_ENCODED_BYTES)) {
     throw PunycodeError("Input is too large");
   }
 
@@ -283,57 +289,71 @@ static auto punycode_decode(const std::string_view encoded,
   }
 }
 
-auto utf32_to_punycode(std::u32string_view input) -> std::string {
+auto utf32_to_punycode(std::u32string_view input,
+                       const std::size_t maximum_code_points) -> std::string {
   std::string result;
-  punycode_encode(input, result);
+  punycode_encode(input, result, maximum_code_points);
   return result;
 }
 
-auto punycode_to_utf32(const std::string_view input) -> std::u32string {
+auto punycode_to_utf32(const std::string_view input,
+                       const std::size_t maximum_encoded_bytes)
+    -> std::u32string {
   std::u32string result;
-  punycode_decode(input, result);
+  punycode_decode(input, result, maximum_encoded_bytes);
   return result;
 }
 
-auto utf8_to_punycode(std::istream &input, std::ostream &output) -> void {
+auto utf8_to_punycode(std::istream &input, std::ostream &output,
+                      const std::size_t maximum_code_points) -> void {
   const auto codepoints = utf8_to_utf32(input);
   if (!codepoints.has_value()) {
     throw PunycodeError("Invalid UTF-8 input");
   }
 
   std::string result;
-  punycode_encode(codepoints.value(), result);
+  punycode_encode(codepoints.value(), result, maximum_code_points);
   output << result;
 }
 
-auto punycode_to_utf8(std::istream &input, std::ostream &output) -> void {
+auto punycode_to_utf8(std::istream &input, std::ostream &output,
+                      const std::size_t maximum_encoded_bytes) -> void {
+  // The bound is held to while the stream is read rather than once it has all
+  // arrived, so that what a caller refuses is never taken in to begin with
+  const auto bound{
+      std::min(maximum_encoded_bytes, PUNYCODE_MAXIMUM_ENCODED_BYTES)};
   std::string encoded;
   char character{0};
   while (input.get(character)) {
     encoded.push_back(character);
+    if (encoded.size() > bound) {
+      throw PunycodeError("Input is too large");
+    }
   }
 
   std::u32string decoded;
-  punycode_decode(encoded, decoded);
+  punycode_decode(encoded, decoded, maximum_encoded_bytes);
   for (const auto code_point : decoded) {
     codepoint_to_utf8(code_point, output);
   }
 }
 
-auto utf8_to_punycode(const std::string_view input) -> std::string {
+auto utf8_to_punycode(const std::string_view input,
+                      const std::size_t maximum_code_points) -> std::string {
   const auto codepoints = utf8_to_utf32(input);
   if (!codepoints.has_value()) {
     throw PunycodeError("Invalid UTF-8 input");
   }
 
   std::string result;
-  punycode_encode(codepoints.value(), result);
+  punycode_encode(codepoints.value(), result, maximum_code_points);
   return result;
 }
 
-auto punycode_to_utf8(const std::string_view input) -> std::string {
+auto punycode_to_utf8(const std::string_view input,
+                      const std::size_t maximum_encoded_bytes) -> std::string {
   std::u32string decoded;
-  punycode_decode(input, decoded);
+  punycode_decode(input, decoded, maximum_encoded_bytes);
   std::string output;
   output.reserve(decoded.size());
   for (const auto code_point : decoded) {

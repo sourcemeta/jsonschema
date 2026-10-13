@@ -53,7 +53,11 @@ constexpr auto mcp_cache_scope_string(const MCPCacheScope scope) noexcept
     case MCPCacheScope::Private:
       return "private";
   }
+    // Clang settles that no other value arrives, so only GCC and MSVC
+    // need to be told that the end of this function is never reached
+#if !defined(__clang__)
   std::unreachable();
+#endif
 }
 
 /// @ingroup mcp

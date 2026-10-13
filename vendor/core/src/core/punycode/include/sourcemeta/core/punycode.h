@@ -9,7 +9,10 @@
 #include <sourcemeta/core/punycode_error.h>
 // NOLINTEND(misc-include-cleaner)
 
+#include <cstddef>     // std::size_t
+#include <cstdint>     // std::uint32_t
 #include <istream>     // std::istream
+#include <limits>      // std::numeric_limits
 #include <ostream>     // std::ostream
 #include <string>      // std::string, std::u32string
 #include <string_view> // std::string_view, std::u32string_view
@@ -26,6 +29,21 @@
 namespace sourcemeta::core {
 
 // See https://www.rfc-editor.org/rfc/rfc3492
+
+/// @ingroup punycode
+/// The most code points an encode accepts when a caller names no bound of its
+/// own. RFC 3492 Section 6.4 offers bounding the input as one way of keeping
+/// the position counters from wrapping, which is the ceiling this stands at, so
+/// a caller may name a smaller bound but never a larger one.
+inline constexpr std::size_t PUNYCODE_MAXIMUM_CODE_POINTS{
+    std::numeric_limits<std::uint32_t>::max()};
+
+/// @ingroup punycode
+/// The most bytes a decode accepts when a caller names no bound of its own,
+/// which stands at the same ceiling the encode bound does and may likewise only
+/// be tightened.
+inline constexpr std::size_t PUNYCODE_MAXIMUM_ENCODED_BYTES{
+    std::numeric_limits<std::uint32_t>::max()};
 
 /// @ingroup punycode
 /// Encode Unicode code points (UTF-32) to Punycode. For example:
@@ -45,8 +63,12 @@ namespace sourcemeta::core {
 /// because the C++ standard library does not define the required locale facets
 /// (`std::ctype<char32_t>`) for `std::basic_istream<char32_t>` and
 /// `std::basic_ostream<char32_t>` to function properly.
+///
+/// A bound smaller than the default refuses a larger input.
 SOURCEMETA_CORE_PUNYCODE_EXPORT
-auto utf32_to_punycode(std::u32string_view input) -> std::string;
+auto utf32_to_punycode(std::u32string_view input,
+                       std::size_t maximum_code_points =
+                           PUNYCODE_MAXIMUM_CODE_POINTS) -> std::string;
 
 /// @ingroup punycode
 /// Encode UTF-8 to Punycode using streams. For example:
@@ -61,8 +83,12 @@ auto utf32_to_punycode(std::u32string_view input) -> std::string;
 /// sourcemeta::core::utf8_to_punycode(input, output);
 /// assert(output.str() == "Mnchen-3ya");
 /// ```
+///
+/// A bound smaller than the default refuses a larger input.
 SOURCEMETA_CORE_PUNYCODE_EXPORT
-auto utf8_to_punycode(std::istream &input, std::ostream &output) -> void;
+auto utf8_to_punycode(
+    std::istream &input, std::ostream &output,
+    std::size_t maximum_code_points = PUNYCODE_MAXIMUM_CODE_POINTS) -> void;
 
 /// @ingroup punycode
 /// Encode UTF-8 to Punycode. For example:
@@ -74,8 +100,12 @@ auto utf8_to_punycode(std::istream &input, std::ostream &output) -> void;
 /// assert(sourcemeta::core::utf8_to_punycode("M\xC3\xBCnchen") ==
 /// "Mnchen-3ya");
 /// ```
+///
+/// A bound smaller than the default refuses a larger input.
 SOURCEMETA_CORE_PUNYCODE_EXPORT
-auto utf8_to_punycode(const std::string_view input) -> std::string;
+auto utf8_to_punycode(const std::string_view input,
+                      std::size_t maximum_code_points =
+                          PUNYCODE_MAXIMUM_CODE_POINTS) -> std::string;
 
 /// @ingroup punycode
 /// Decode Punycode to Unicode code points (UTF-32). For example:
@@ -96,8 +126,12 @@ auto utf8_to_punycode(const std::string_view input) -> std::string;
 /// because the C++ standard library does not define the required locale facets
 /// (`std::ctype<char32_t>`) for `std::basic_istream<char32_t>` and
 /// `std::basic_ostream<char32_t>` to function properly.
+///
+/// A bound smaller than the default refuses a larger input.
 SOURCEMETA_CORE_PUNYCODE_EXPORT
-auto punycode_to_utf32(const std::string_view input) -> std::u32string;
+auto punycode_to_utf32(const std::string_view input,
+                       std::size_t maximum_encoded_bytes =
+                           PUNYCODE_MAXIMUM_ENCODED_BYTES) -> std::u32string;
 
 /// @ingroup punycode
 /// Decode Punycode to UTF-8 using streams. For example:
@@ -112,8 +146,12 @@ auto punycode_to_utf32(const std::string_view input) -> std::u32string;
 /// sourcemeta::core::punycode_to_utf8(input, output);
 /// assert(output.str() == "M\xC3\xBCnchen");
 /// ```
+///
+/// A bound smaller than the default refuses a larger input.
 SOURCEMETA_CORE_PUNYCODE_EXPORT
-auto punycode_to_utf8(std::istream &input, std::ostream &output) -> void;
+auto punycode_to_utf8(
+    std::istream &input, std::ostream &output,
+    std::size_t maximum_encoded_bytes = PUNYCODE_MAXIMUM_ENCODED_BYTES) -> void;
 
 /// @ingroup punycode
 /// Decode Punycode to UTF-8. For example:
@@ -125,8 +163,12 @@ auto punycode_to_utf8(std::istream &input, std::ostream &output) -> void;
 /// assert(sourcemeta::core::punycode_to_utf8("Mnchen-3ya") ==
 /// "M\xC3\xBCnchen");
 /// ```
+///
+/// A bound smaller than the default refuses a larger input.
 SOURCEMETA_CORE_PUNYCODE_EXPORT
-auto punycode_to_utf8(const std::string_view input) -> std::string;
+auto punycode_to_utf8(const std::string_view input,
+                      std::size_t maximum_encoded_bytes =
+                          PUNYCODE_MAXIMUM_ENCODED_BYTES) -> std::string;
 
 } // namespace sourcemeta::core
 

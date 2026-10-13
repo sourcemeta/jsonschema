@@ -19,7 +19,8 @@ public:
     ONLY_CONTINUE_IF(vocabularies.contains_any(
         {SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_7,
          SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_6,
-         SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_4}));
+         SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_4,
+         SchemaVocabularies::Known::OPENAPI_3_0_BASE}));
     ONLY_CONTINUE_IF(schema.is_object() && schema.size() == 1);
     const auto *all_of{schema.try_at("allOf")};
     ONLY_CONTINUE_IF(all_of && all_of->is_array());

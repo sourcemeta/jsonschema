@@ -81,17 +81,43 @@ auto accept_iri_extension(const std::string_view input,
   }
 }
 
+// Every reader below turns down what it was handed in the same two ways,
+// depending on whether it was asked to check the input or to take it apart, so
+// what a refusal answers with is spelled out once here
+template <bool CheckOnly, typename Value>
+auto parse_refused()
+    -> std::conditional_t<CheckOnly, bool, std::optional<Value>> {
+  if constexpr (CheckOnly) {
+    return false;
+  } else {
+    return std::nullopt;
+  }
+}
+
+// A reader that has found what it was after answers with the text it took or
+// with the bare fact that it was there, and steps past the delimiter either
+// way, so what being taken looks like is spelled out once here
+template <bool CheckOnly>
+auto parse_taken(const std::string_view input,
+                 const std::string_view::size_type start,
+                 std::string_view::size_type &position)
+    -> std::conditional_t<CheckOnly, bool, std::optional<std::string>> {
+  const auto taken{input.substr(start, position - start)};
+  position += 1;
+  if constexpr (CheckOnly) {
+    return true;
+  } else {
+    return std::string{taken};
+  }
+}
+
 template <bool CheckOnly>
 auto parse_scheme(const std::string_view input,
                   std::string_view::size_type &position)
     -> std::conditional_t<CheckOnly, bool, std::optional<std::string>> {
   if (position >= input.size() ||
       !std::isalpha(static_cast<unsigned char>(input[position]))) {
-    if constexpr (CheckOnly) {
-      return false;
-    } else {
-      return std::nullopt;
-    }
+    return parse_refused<CheckOnly, std::string>();
   }
 
   const auto start = position;
@@ -102,22 +128,11 @@ auto parse_scheme(const std::string_view input,
   }
 
   if (position < input.size() && input[position] == URI_COLON) {
-    if constexpr (CheckOnly) {
-      position += 1;
-      return true;
-    } else {
-      std::string scheme{input.substr(start, position - start)};
-      position += 1;
-      return scheme;
-    }
+    return parse_taken<CheckOnly>(input, start, position);
   }
 
   position = start;
-  if constexpr (CheckOnly) {
-    return false;
-  } else {
-    return std::nullopt;
-  }
+  return parse_refused<CheckOnly, std::string>();
 }
 
 template <bool CheckOnly>
@@ -126,11 +141,7 @@ auto parse_port(const std::string_view input,
     -> std::conditional_t<CheckOnly, bool, std::optional<unsigned long>> {
   if (position >= input.size() ||
       !std::isdigit(static_cast<unsigned char>(input[position]))) {
-    if constexpr (CheckOnly) {
-      return false;
-    } else {
-      return std::nullopt;
-    }
+    return parse_refused<CheckOnly, unsigned long>();
   }
 
   const auto start = position;
@@ -289,12 +300,7 @@ auto parse_host(const std::string_view input,
 
   if (input[position] == URI_OPEN_BRACKET) {
     ip_literal = true;
-    if constexpr (CheckOnly) {
-      parse_ipv6<true>(input, position);
-      return;
-    } else {
-      return parse_ipv6<false>(input, position);
-    }
+    return parse_ipv6<CheckOnly>(input, position);
   }
 
   const auto start = position;
@@ -364,11 +370,7 @@ auto parse_userinfo(const std::string_view input,
   }
 
   position = start;
-  if constexpr (CheckOnly) {
-    return false;
-  } else {
-    return std::nullopt;
-  }
+  return parse_refused<CheckOnly, std::string>();
 }
 
 template <bool CheckOnly, bool IRI>
@@ -376,20 +378,12 @@ auto parse_path(const std::string_view input,
                 std::string_view::size_type &position)
     -> std::conditional_t<CheckOnly, bool, std::optional<std::string>> {
   if (position >= input.size()) {
-    if constexpr (CheckOnly) {
-      return false;
-    } else {
-      return std::nullopt;
-    }
+    return parse_refused<CheckOnly, std::string>();
   }
 
   const auto first_char = input[position];
   if (first_char == URI_QUESTION || first_char == URI_HASH) {
-    if constexpr (CheckOnly) {
-      return false;
-    } else {
-      return std::nullopt;
-    }
+    return parse_refused<CheckOnly, std::string>();
   }
 
   const auto start = position;
@@ -422,11 +416,7 @@ auto parse_query(const std::string_view input,
                  std::string_view::size_type &position)
     -> std::conditional_t<CheckOnly, bool, std::optional<std::string>> {
   if (position >= input.size() || input[position] != URI_QUESTION) {
-    if constexpr (CheckOnly) {
-      return false;
-    } else {
-      return std::nullopt;
-    }
+    return parse_refused<CheckOnly, std::string>();
   }
 
   position += 1;
@@ -462,11 +452,7 @@ auto parse_fragment(const std::string_view input,
                     std::string_view::size_type &position)
     -> std::conditional_t<CheckOnly, bool, std::optional<std::string>> {
   if (position >= input.size() || input[position] != URI_HASH) {
-    if constexpr (CheckOnly) {
-      return false;
-    } else {
-      return std::nullopt;
-    }
+    return parse_refused<CheckOnly, std::string>();
   }
 
   position += 1;

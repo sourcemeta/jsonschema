@@ -38,6 +38,32 @@ auto compile_pcre2(const std::string &pattern, const std::uint32_t options)
   return RegexTypePCRE2{std::shared_ptr<void>(pcre2_regex)};
 }
 
+auto matches_range(const RegexTypeRange &range, const std::string_view value)
+    -> bool {
+  // ECMA-262 "." matches a single code point, not a single byte, so the
+  // bounds are compared against the number of code points
+  return utf8_codepoint_within(value, range.first, range.second);
+}
+
+auto matches_pcre2(const RegexTypePCRE2 &regex, const std::string_view value)
+    -> bool {
+  auto *pcre2_code_ptr{static_cast<pcre2_code *>(regex.code.get())};
+  // Allocated once per thread and reused across calls to avoid
+  // allocating every time. It is intentionally never freed, as
+  // releasing it on thread exit would make matching unsafe during the
+  // destruction of other objects with thread storage duration
+  thread_local pcre2_match_data *match_data{
+      pcre2_match_data_create(1, nullptr)};
+  // A null context selects the built-in default limits, which guarantee
+  // that pathological patterns applied to adversarial inputs terminate.
+  // Note that exhausting any matching resource, like the machine stack
+  // of the just-in-time fast path on long values, counts as a failure
+  const int match_result{
+      pcre2_match(pcre2_code_ptr, reinterpret_cast<PCRE2_SPTR>(value.data()),
+                  value.size(), 0, PCRE2_NO_UTF_CHECK, match_data, nullptr)};
+  return match_result >= 0;
+}
+
 } // namespace
 
 auto to_regex(const std::string_view pattern, const RegexDialect dialect,
@@ -131,30 +157,10 @@ auto matches(const Regex &regex, const std::string_view value) -> bool {
       return value.starts_with(*std::get_if<RegexTypePrefix>(&regex));
     case RegexIndex::NonEmpty:
       return !value.empty();
-    case RegexIndex::Range: {
-      // ECMA-262 "." matches a single code point, not a single byte, so the
-      // bounds are compared against the number of code points
-      const RegexTypeRange *range{std::get_if<RegexTypeRange>(&regex)};
-      return utf8_codepoint_within(value, range->first, range->second);
-    }
-    case RegexIndex::PCRE2: {
-      const RegexTypePCRE2 *pcre2_regex{std::get_if<RegexTypePCRE2>(&regex)};
-      auto *pcre2_code_ptr{static_cast<pcre2_code *>(pcre2_regex->code.get())};
-      // Allocated once per thread and reused across calls to avoid
-      // allocating every time. It is intentionally never freed, as
-      // releasing it on thread exit would make matching unsafe during the
-      // destruction of other objects with thread storage duration
-      thread_local pcre2_match_data *match_data{
-          pcre2_match_data_create(1, nullptr)};
-      // A null context selects the built-in default limits, which guarantee
-      // that pathological patterns applied to adversarial inputs terminate.
-      // Note that exhausting any matching resource, like the machine stack
-      // of the just-in-time fast path on long values, counts as a failure
-      const int match_result{pcre2_match(
-          pcre2_code_ptr, reinterpret_cast<PCRE2_SPTR>(value.data()),
-          value.size(), 0, PCRE2_NO_UTF_CHECK, match_data, nullptr)};
-      return match_result >= 0;
-    }
+    case RegexIndex::Range:
+      return matches_range(*std::get_if<RegexTypeRange>(&regex), value);
+    case RegexIndex::PCRE2:
+      return matches_pcre2(*std::get_if<RegexTypePCRE2>(&regex), value);
     case RegexIndex::Noop:
       return true;
   }

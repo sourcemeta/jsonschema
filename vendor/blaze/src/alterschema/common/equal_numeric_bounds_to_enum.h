@@ -23,8 +23,13 @@ public:
                           SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_3_HYPER,
                           SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_2,
                           SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_1,
-                          SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_0}) &&
+                          SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_0,
+                          SchemaVocabularies::Known::OPENAPI_3_0_BASE}) &&
                      schema.is_object());
+
+    // The rewrite drops `type`, which is what makes a sibling `nullable` take
+    // effect, so null would stop being a permitted value
+    ONLY_CONTINUE_IF(!is_nullable(schema, vocabularies));
 
     const auto *type{schema.try_at("type")};
     ONLY_CONTINUE_IF(

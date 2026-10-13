@@ -41,8 +41,8 @@ auto to_rfc850_date(const std::chrono::system_clock::time_point time)
   return stream.str();
 }
 
-auto from_rfc850_date(const std::string_view value) noexcept
-    -> std::optional<std::chrono::system_clock::time_point> try {
+auto from_rfc850_date(const std::string_view value)
+    -> std::optional<std::chrono::system_clock::time_point> {
   const auto comma_position{value.find(',')};
   if (comma_position == std::string_view::npos) {
     return std::nullopt;
@@ -99,8 +99,6 @@ auto from_rfc850_date(const std::string_view value) noexcept
     return std::nullopt;
   }
   return broken_down_time_to_time_point(parts);
-} catch (...) {
-  return std::nullopt;
 }
 
 } // namespace sourcemeta::core

@@ -3767,7 +3767,7 @@ constexpr std::array<Variant, 728> VARIANTS{{
      .secondary = std::nullopt,
      .result = {SchemaKeywordType::Assertion,
                 Known::OPENAPI_3_0_BASE,
-                {},
+                KEYWORDS_TYPE,
                 {},
                 INSTANCES_ANY}},
     {.vocabulary = Known::JSON_SCHEMA_2020_12_APPLICATOR,

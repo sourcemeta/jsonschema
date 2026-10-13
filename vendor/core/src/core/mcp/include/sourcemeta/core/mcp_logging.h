@@ -75,7 +75,11 @@ constexpr auto mcp_log_level_string(const MCPLogLevel level) noexcept
     case MCPLogLevel::Emergency:
       return "emergency";
   }
+    // Clang settles that no other value arrives, so only GCC and MSVC
+    // need to be told that the end of this function is never reached
+#if !defined(__clang__)
   std::unreachable();
+#endif
 }
 
 /// @ingroup mcp

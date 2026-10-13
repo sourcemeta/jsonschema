@@ -57,7 +57,7 @@ auto to_imf_fixdate(const std::chrono::system_clock::time_point time)
 /// assert(point.has_value());
 /// ```
 SOURCEMETA_CORE_TIME_EXPORT
-auto from_imf_fixdate(const std::string_view value) noexcept
+auto from_imf_fixdate(const std::string_view value)
     -> std::optional<std::chrono::system_clock::time_point>;
 
 /// @ingroup time
@@ -93,7 +93,7 @@ auto to_rfc850_date(const std::chrono::system_clock::time_point time)
 /// assert(point.has_value());
 /// ```
 SOURCEMETA_CORE_TIME_EXPORT
-auto from_rfc850_date(const std::string_view value) noexcept
+auto from_rfc850_date(const std::string_view value)
     -> std::optional<std::chrono::system_clock::time_point>;
 
 /// @ingroup time
@@ -130,7 +130,7 @@ auto to_asctime(const std::chrono::system_clock::time_point time)
 /// assert(point.has_value());
 /// ```
 SOURCEMETA_CORE_TIME_EXPORT
-auto from_asctime(const std::string_view value) noexcept
+auto from_asctime(const std::string_view value)
     -> std::optional<std::chrono::system_clock::time_point>;
 
 /// @ingroup time

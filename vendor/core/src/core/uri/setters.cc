@@ -81,6 +81,18 @@ auto validate_raw_path(const std::string_view path) -> void {
 
 namespace sourcemeta::core {
 
+namespace {
+
+// A path hangs off a root when what it is set on names one, which a scheme
+// that addresses hierarchically does, and which an authority does on its own
+auto needs_root_slash(const URI &uri) -> bool {
+  const auto is_hierarchical{!uri.is_urn() && !uri.is_tag() &&
+                             !uri.is_mailto() && uri.scheme().has_value()};
+  return is_hierarchical || uri.host().has_value();
+}
+
+} // namespace
+
 auto URI::path(const std::string &path) -> URI & {
   if (path.empty()) {
     this->path_ = std::nullopt;
@@ -93,12 +105,7 @@ auto URI::path(const std::string &path) -> URI & {
 
   validate_raw_path(path);
 
-  // Determine if this URI needs a leading slash
-  // (URIs with scheme/authority need leading slash, except URNs/tags/mailto)
-  const auto needs_leading_slash =
-      (!this->is_urn() && !this->is_tag() && !this->is_mailto() &&
-       this->scheme_.has_value()) ||
-      this->host_.has_value();
+  const auto needs_leading_slash{needs_root_slash(*this)};
 
   this->path_ = apply_leading_slash_transform(std::optional<std::string>{path},
                                               needs_leading_slash);
@@ -117,12 +124,7 @@ auto URI::path(std::string &&path) -> URI & {
 
   validate_raw_path(path);
 
-  // Determine if this URI needs a leading slash
-  // (URIs with scheme/authority need leading slash, except URNs/tags/mailto)
-  const auto needs_leading_slash =
-      (!this->is_urn() && !this->is_tag() && !this->is_mailto() &&
-       this->scheme_.has_value()) ||
-      this->host_.has_value();
+  const auto needs_leading_slash{needs_root_slash(*this)};
 
   this->path_ = apply_leading_slash_transform(
       std::optional<std::string>{std::move(path)}, needs_leading_slash);
@@ -224,10 +226,7 @@ auto URI::append_path(std::string_view path) -> URI & {
         "Cannot append a URI as a path that contains an invalid character"};
   }
 
-  const auto needs_leading_slash =
-      (!this->is_urn() && !this->is_tag() && !this->is_mailto() &&
-       this->scheme_.has_value()) ||
-      this->host_.has_value();
+  const auto needs_leading_slash{needs_root_slash(*this)};
   merge_reference_path(this->path_, needs_leading_slash, path);
   return *this;
 }
@@ -256,10 +255,7 @@ auto URI::append_path(const URI &reference) -> URI & {
     return *this;
   }
 
-  const auto needs_leading_slash =
-      (!this->is_urn() && !this->is_tag() && !this->is_mailto() &&
-       this->scheme_.has_value()) ||
-      this->host_.has_value();
+  const auto needs_leading_slash{needs_root_slash(*this)};
   merge_reference_path(this->path_, needs_leading_slash,
                        reference.path_.value());
   return *this;
@@ -272,10 +268,7 @@ auto URI::append_path(URI &&reference) -> URI & {
     return *this;
   }
 
-  const auto needs_leading_slash =
-      (!this->is_urn() && !this->is_tag() && !this->is_mailto() &&
-       this->scheme_.has_value()) ||
-      this->host_.has_value();
+  const auto needs_leading_slash{needs_root_slash(*this)};
   std::string reference_path{std::move(reference.path_.value())};
   reference.path_ = std::nullopt;
   merge_reference_path(this->path_, needs_leading_slash, reference_path);

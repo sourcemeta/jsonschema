@@ -7,7 +7,7 @@
 #include <exception> // std::exception_ptr, std::current_exception, std::rethrow_exception
 #include <functional> // std::function
 #include <iterator>   // std::input_iterator, std::iter_reference_t
-#include <mutex>      // std::mutex, std::scoped_lock
+#include <mutex>      // std::mutex, std::scoped_lock, std::unique_lock
 #include <queue>      // std::queue
 #include <stdexcept>  // std::runtime_error
 #include <thread>     // std::thread
@@ -132,17 +132,18 @@ auto parallel_for_each(
                           &exception_mutex, effective_parallelism, total] {
     try {
       while (true) {
-        Iterator iterator;
-        std::size_t cursor{0};
-        {
-          std::scoped_lock lock{queue_mutex};
-          if (tasks.empty()) {
-            return;
-          }
-          iterator = tasks.front();
-          cursor = total - tasks.size() + 1;
-          tasks.pop();
+        // The lock is given up before the work runs, as holding it across the
+        // callback would leave the other workers waiting on the queue for as
+        // long as this one takes
+        std::unique_lock lock{queue_mutex};
+        if (tasks.empty()) {
+          return;
         }
+
+        const auto iterator{tasks.front()};
+        const auto cursor{total - tasks.size() + 1};
+        tasks.pop();
+        lock.unlock();
         effective_callback(*iterator, effective_parallelism, cursor);
       }
     } catch (...) {

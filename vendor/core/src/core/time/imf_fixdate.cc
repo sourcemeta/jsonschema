@@ -33,8 +33,8 @@ auto to_imf_fixdate(const std::chrono::system_clock::time_point time)
   return stream.str();
 }
 
-auto from_imf_fixdate(const std::string_view value) noexcept
-    -> std::optional<std::chrono::system_clock::time_point> try {
+auto from_imf_fixdate(const std::string_view value)
+    -> std::optional<std::chrono::system_clock::time_point> {
   if (value.size() != 29) {
     return std::nullopt;
   }
@@ -73,8 +73,6 @@ auto from_imf_fixdate(const std::string_view value) noexcept
     return std::nullopt;
   }
   return broken_down_time_to_time_point(parts);
-} catch (...) {
-  return std::nullopt;
 }
 
 } // namespace sourcemeta::core

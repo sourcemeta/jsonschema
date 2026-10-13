@@ -285,7 +285,11 @@ auto mcp_make_error_request_meta(
           version, identifier, JSONRPC_CODE_INVALID_PARAMS,
           "Invalid params: clientInfo description must be a string");
   }
+    // Clang settles that no other value arrives, so only GCC and MSVC
+    // need to be told that the end of this function is never reached
+#if !defined(__clang__)
   std::unreachable();
+#endif
 }
 
 auto mcp_request_name_from_body(const sourcemeta::core::JSON &envelope)

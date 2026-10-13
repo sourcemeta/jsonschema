@@ -70,9 +70,13 @@ auto terminal_color_enabled(TerminalStream stream) noexcept -> bool {
       return true;
     case TerminalColorPolicy::Disabled:
       return false;
-    default:
-      std::unreachable();
   }
+
+    // Clang settles that no other value arrives, so only GCC and MSVC
+    // need to be told that the end of this function is never reached
+#if !defined(__clang__)
+  std::unreachable();
+#endif
 }
 
 auto terminal_sgr_reset() noexcept -> std::string_view {

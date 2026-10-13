@@ -61,12 +61,11 @@ auto validate_idn_labels(const std::u32string_view codepoints) -> bool {
     // the corresponding A-label.
     std::size_t a_label_octets{label.size()};
     if (*kind == IDNALabelKind::ULabel) {
-      try {
-        const auto body{utf32_to_punycode(decoded)};
-        a_label_octets = 4 + body.size();
-      } catch (const PunycodeError &) {
-        return false;
-      }
+      // Classifying the label held it to the octet count a label may carry,
+      // which leaves it far shorter than what the position counters of the
+      // encoding could ever run past, so the encoding always answers
+      const auto body{utf32_to_punycode(decoded)};
+      a_label_octets = 4 + body.size();
     } else if (*kind == IDNALabelKind::Ascii) {
       // RFC 5891 §4.2.3.1: a label must not contain "--" in the third and
       // fourth positions unless it is a valid A-label (an "xn--" ACE label,

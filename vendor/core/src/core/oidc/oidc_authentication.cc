@@ -5,6 +5,7 @@
 #include <sourcemeta/core/text.h>
 
 #include <array>       // std::array
+#include <cassert>     // assert
 #include <cstddef>     // std::size_t
 #include <functional>  // std::less
 #include <optional>    // std::optional, std::nullopt
@@ -81,10 +82,10 @@ auto drop_offline_access(std::string_view &scope, std::string &storage)
   if (in_arena) {
     offset = static_cast<std::size_t>(scope.data() - arena);
   } else {
-    if (storage.capacity() - storage.size() < scope.size()) {
-      return;
-    }
-
+    // The parser reserved the whole query up front and a borrowed value took
+    // none of that room, while everything decoded into the arena is at most as
+    // long as the query it came from, so what is appended here always fits
+    assert(storage.capacity() - storage.size() >= scope.size());
     offset = storage.size();
     storage.resize(storage.size() + scope.size());
   }

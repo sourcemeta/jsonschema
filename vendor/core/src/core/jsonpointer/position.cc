@@ -8,6 +8,32 @@
 #include <cstdint>     // std::uint64_t
 #include <optional>    // std::optional
 #include <string_view> // std::string_view
+#include <vector>      // std::vector
+
+namespace {
+
+// A property step and an index step differ in nothing but which of the two
+// child maps of a node the step is remembered in, so what a step does with
+// what it finds there is spelled out once here. The map is reached through the
+// node each time, as taking in a new node may move the ones already held
+template <typename Node, typename Children, typename Key>
+auto descend_into(std::vector<Node> &trie, Children Node::*children,
+                  const Key &key, std::size_t &current_node) -> void {
+  const auto match{(trie[current_node].*children).find(key)};
+  if (match != (trie[current_node].*children).end()) {
+    current_node = match->second;
+    return;
+  }
+
+  const auto node_index{trie.size()};
+  trie.push_back({.position = std::nullopt,
+                  .index_children = {},
+                  .property_children = {}});
+  (trie[current_node].*children).emplace(key, node_index);
+  current_node = node_index;
+}
+
+} // namespace
 
 namespace sourcemeta::core {
 
@@ -32,40 +58,15 @@ auto PointerPositionTracker::ensure_index() const -> void {
                                 std::make_pair(event.line, event.column));
 
         switch (event.context) {
-          case JSON::ParseContext::Property: {
+          case JSON::ParseContext::Property:
             assert(event.property != nullptr);
-            const std::string_view key{*event.property};
-            auto iterator{
-                this->trie_[current_node].property_children.find(key)};
-            if (iterator == this->trie_[current_node].property_children.end()) {
-              const auto node_index{this->trie_.size()};
-              this->trie_.push_back({.position = std::nullopt,
-                                     .index_children = {},
-                                     .property_children = {}});
-              this->trie_[current_node].property_children.emplace(key,
-                                                                  node_index);
-              current_node = node_index;
-            } else {
-              current_node = iterator->second;
-            }
+            descend_into(this->trie_, &TrieNode::property_children,
+                         std::string_view{*event.property}, current_node);
             break;
-          }
-          case JSON::ParseContext::Index: {
-            auto iterator{
-                this->trie_[current_node].index_children.find(event.index)};
-            if (iterator == this->trie_[current_node].index_children.end()) {
-              const auto node_index{this->trie_.size()};
-              this->trie_.push_back({.position = std::nullopt,
-                                     .index_children = {},
-                                     .property_children = {}});
-              this->trie_[current_node].index_children.emplace(event.index,
-                                                               node_index);
-              current_node = node_index;
-            } else {
-              current_node = iterator->second;
-            }
+          case JSON::ParseContext::Index:
+            descend_into(this->trie_, &TrieNode::index_children, event.index,
+                         current_node);
             break;
-          }
           case JSON::ParseContext::Root:
             break;
         }

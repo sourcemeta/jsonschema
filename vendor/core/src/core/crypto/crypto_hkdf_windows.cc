@@ -26,7 +26,11 @@ auto hash_name(const sourcemeta::core::KDFHash hash) noexcept -> LPCWSTR {
       return BCRYPT_SHA512_ALGORITHM;
   }
 
+    // Clang settles that no other value arrives, so only GCC and MSVC
+    // need to be told that the end of this function is never reached
+#if !defined(__clang__)
   std::unreachable();
+#endif
 }
 
 auto hash_name_bytes(const sourcemeta::core::KDFHash hash) noexcept -> ULONG {
@@ -39,7 +43,11 @@ auto hash_name_bytes(const sourcemeta::core::KDFHash hash) noexcept -> ULONG {
       return sizeof(BCRYPT_SHA512_ALGORITHM);
   }
 
+    // Clang settles that no other value arrives, so only GCC and MSVC
+    // need to be told that the end of this function is never reached
+#if !defined(__clang__)
   std::unreachable();
+#endif
 }
 
 auto as_native(const std::string_view value) noexcept -> PUCHAR {

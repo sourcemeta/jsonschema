@@ -348,9 +348,10 @@ auto parse_expression(const std::string_view input)
     -> std::conditional_t<CheckOnly, std::optional<std::size_t>,
                           URITemplateParseResult> {
   if constexpr (std::is_same_v<T, URITemplateTokenLiteral>) {
-    if (input.empty() || input[0] == '{') {
-      return std::nullopt;
-    }
+    // A literal is read last of all, after everything that opens an expression
+    // has either taken what stands here or refused the template outright, and
+    // the walk that asks only ever hands over what it has left to read
+    assert(!input.empty() && input[0] != '{');
 
     std::size_t position = 0;
     while (position < input.size()) {
@@ -405,10 +406,11 @@ auto parse_expression(const std::string_view input)
       if (input.size() < 2) {
         throw URITemplateParseError(1);
       }
-      // Not a simple variable if it has an operator
-      if (is_operator(input[1])) {
-        return std::nullopt;
-      }
+
+      // RFC 6570 Section 2.2 has an operator name which expansion stands here,
+      // and every one of those is read before this is, so what reaches here
+      // never carries one
+      assert(!is_operator(input[1]));
       var_start = 1;
     }
 

@@ -367,15 +367,15 @@ auto parse_semver(const std::string_view input, std::uint64_t &major,
     }
   }
 
-  if (position != input.size()) {
-    if constexpr (ShouldThrow) {
-      throw sourcemeta::core::SemVerParseError(position + 1);
-    } else {
-      return false;
-    }
+  if (position == input.size()) {
+    return true;
   }
 
-  return true;
+  if constexpr (ShouldThrow) {
+    throw sourcemeta::core::SemVerParseError(position + 1);
+  } else {
+    return false;
+  }
 }
 
 } // namespace

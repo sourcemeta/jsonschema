@@ -7,7 +7,7 @@
 
 namespace sourcemeta::core {
 
-auto http_from_date(const std::string_view value) noexcept
+auto http_from_date(const std::string_view value)
     -> std::optional<std::chrono::system_clock::time_point> {
   if (const auto result{from_imf_fixdate(value)}; result.has_value()) {
     return result;

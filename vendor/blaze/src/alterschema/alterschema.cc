@@ -84,6 +84,21 @@ inline auto is_known_type_form(const JSON &type,
   });
 }
 
+// OpenAPI 3.0 bans `type: "null"` and offers `nullable` in its place, which
+// widens a sibling `type` and nothing else. It takes effect only where `type`
+// is present, so on its own it constrains nothing
+inline auto is_nullable(const JSON &schema,
+                        const SchemaVocabularies &vocabularies) -> bool {
+  if (!vocabularies.contains(SchemaVocabularies::Known::OPENAPI_3_0_BASE) ||
+      !schema.is_object()) {
+    return false;
+  }
+
+  const auto *nullable{schema.try_at("nullable")};
+  return nullable != nullptr && nullable->is_boolean() &&
+         nullable->to_boolean();
+}
+
 // Walk up from a schema location, continuing as long as the traversal
 // predicate returns true for each keyword type encountered. Returns a
 // reference to the pointer of the ancestor where the match callback returned

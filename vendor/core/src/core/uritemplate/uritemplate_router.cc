@@ -729,7 +729,11 @@ auto URITemplateRouter::match(const std::string_view path,
     ++position;
   }
 
-  if ((current != nullptr) && current->identifier == 0 && current->variable &&
+  // Every way out of the walk above either answers on its own or settles on a
+  // node, which is what stepping past that node's own literals relies on too
+  assert(current != nullptr);
+
+  if (current->identifier == 0 && current->variable &&
       current->variable->type == NodeType::OptionalExpansion) {
     assert(variable_index <=
            std::numeric_limits<URITemplateRouter::Index>::max());
@@ -739,11 +743,8 @@ auto URITemplateRouter::match(const std::string_view path,
                           current->variable->context);
   }
 
-  return (current != nullptr)
-             ? finalize_match(this->otherwise_, current->identifier,
-                              current->context)
-             : finalize_match(this->otherwise_, this->root_.identifier,
-                              this->root_.context);
+  return finalize_match(this->otherwise_, current->identifier,
+                        current->context);
 }
 
 } // namespace sourcemeta::core

@@ -234,7 +234,7 @@ auto http_negotiate_encoding(
 ///     "Sun Nov  6 08:49:37 1994").has_value());
 /// ```
 SOURCEMETA_CORE_HTTP_EXPORT
-auto http_from_date(const std::string_view value) noexcept
+auto http_from_date(const std::string_view value)
     -> std::optional<std::chrono::system_clock::time_point>;
 
 /// @ingroup http

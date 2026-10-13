@@ -40,7 +40,11 @@ auto to_cng_algorithm(
       return BCRYPT_SHA512_ALGORITHM;
   }
 
+    // Clang settles that no other value arrives, so only GCC and MSVC
+    // need to be told that the end of this function is never reached
+#if !defined(__clang__)
   std::unreachable();
+#endif
 }
 
 auto to_ecdsa_algorithm(const sourcemeta::core::EllipticCurve curve) noexcept
@@ -54,7 +58,11 @@ auto to_ecdsa_algorithm(const sourcemeta::core::EllipticCurve curve) noexcept
       return BCRYPT_ECDSA_P521_ALGORITHM;
   }
 
+    // Clang settles that no other value arrives, so only GCC and MSVC
+    // need to be told that the end of this function is never reached
+#if !defined(__clang__)
   std::unreachable();
+#endif
 }
 
 auto to_ecc_private_magic(const sourcemeta::core::EllipticCurve curve) noexcept
@@ -68,7 +76,11 @@ auto to_ecc_private_magic(const sourcemeta::core::EllipticCurve curve) noexcept
       return BCRYPT_ECDSA_PRIVATE_P521_MAGIC;
   }
 
+    // Clang settles that no other value arrives, so only GCC and MSVC
+    // need to be told that the end of this function is never reached
+#if !defined(__clang__)
   std::unreachable();
+#endif
 }
 
 struct KeyPair {
@@ -414,7 +426,11 @@ auto make_private_key(const std::string_view pem) -> std::optional<PrivateKey> {
     }
   }
 
+    // Clang settles that no other value arrives, so only GCC and MSVC
+    // need to be told that the end of this function is never reached
+#if !defined(__clang__)
   std::unreachable();
+#endif
 }
 
 auto make_ec_private_key(const EllipticCurve curve,
@@ -548,7 +564,11 @@ auto eddsa_sign(const PrivateKey &key, const std::string_view message)
       return edwards448_sign(internal->edwards_seed, message);
   }
 
+    // Clang settles that no other value arrives, so only GCC and MSVC
+    // need to be told that the end of this function is never reached
+#if !defined(__clang__)
   std::unreachable();
+#endif
 }
 
 auto derive_public_key(const PrivateKey &key) -> std::optional<PublicKey> {
@@ -607,7 +627,11 @@ auto derive_public_key(const PrivateKey &key) -> std::optional<PublicKey> {
     }
   }
 
+    // Clang settles that no other value arrives, so only GCC and MSVC
+    // need to be told that the end of this function is never reached
+#if !defined(__clang__)
   std::unreachable();
+#endif
 }
 
 } // namespace sourcemeta::core

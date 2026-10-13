@@ -397,7 +397,11 @@ mcp_protocol_version_string(const MCPProtocolVersion version) noexcept
     case MCPProtocolVersion::V_2026_07_28:
       return MCP_PROTOCOL_VERSION_2026_07_28;
   }
+    // Clang settles that no other value arrives, so only GCC and MSVC
+    // need to be told that the end of this function is never reached
+#if !defined(__clang__)
   std::unreachable();
+#endif
 }
 
 /// @ingroup mcp
@@ -903,7 +907,11 @@ constexpr auto mcp_is_request_method(const MCPProtocolVersion version,
              method == MCP_METHOD_SUBSCRIPTIONS_LISTEN ||
              method == MCP_METHOD_TOOLS_CALL || method == MCP_METHOD_TOOLS_LIST;
   }
+    // Clang settles that no other value arrives, so only GCC and MSVC
+    // need to be told that the end of this function is never reached
+#if !defined(__clang__)
   std::unreachable();
+#endif
 }
 
 /// @ingroup mcp
@@ -945,7 +953,11 @@ mcp_is_server_request_method(const MCPProtocolVersion version,
     case MCPProtocolVersion::V_2026_07_28:
       return false;
   }
+    // Clang settles that no other value arrives, so only GCC and MSVC
+    // need to be told that the end of this function is never reached
+#if !defined(__clang__)
   std::unreachable();
+#endif
 }
 
 /// @ingroup mcp
@@ -1003,7 +1015,11 @@ mcp_is_notification_method(const MCPProtocolVersion version,
              method == MCP_METHOD_NOTIFICATIONS_SUBSCRIPTIONS_ACKNOWLEDGED ||
              method == MCP_METHOD_NOTIFICATIONS_TOOLS_LIST_CHANGED;
   }
+    // Clang settles that no other value arrives, so only GCC and MSVC
+    // need to be told that the end of this function is never reached
+#if !defined(__clang__)
   std::unreachable();
+#endif
 }
 
 /// @ingroup mcp
@@ -1037,7 +1053,11 @@ mcp_is_input_request_method(const MCPProtocolVersion version,
              method == MCP_METHOD_ROOTS_LIST ||
              method == MCP_METHOD_SAMPLING_CREATE_MESSAGE;
   }
+    // Clang settles that no other value arrives, so only GCC and MSVC
+    // need to be told that the end of this function is never reached
+#if !defined(__clang__)
   std::unreachable();
+#endif
 }
 
 /// @ingroup mcp
@@ -1161,7 +1181,11 @@ constexpr auto mcp_supports_method(const MCPProtocolVersion version,
              method == MCP_METHOD_SUBSCRIPTIONS_LISTEN ||
              method == MCP_METHOD_TOOLS_CALL || method == MCP_METHOD_TOOLS_LIST;
   }
+    // Clang settles that no other value arrives, so only GCC and MSVC
+    // need to be told that the end of this function is never reached
+#if !defined(__clang__)
   std::unreachable();
+#endif
 }
 
 /// @ingroup mcp
@@ -1245,7 +1269,11 @@ mcp_is_client_notification_method(MCPProtocolVersion version,
     case MCPProtocolVersion::V_2026_07_28:
       return method == "notifications/cancelled";
   }
+    // Clang settles that no other value arrives, so only GCC and MSVC
+    // need to be told that the end of this function is never reached
+#if !defined(__clang__)
   std::unreachable();
+#endif
 }
 
 /// @ingroup mcp
@@ -1299,7 +1327,11 @@ mcp_is_server_notification_method(MCPProtocolVersion version,
              method == "notifications/tools/list_changed" ||
              method == "notifications/message";
   }
+    // Clang settles that no other value arrives, so only GCC and MSVC
+    // need to be told that the end of this function is never reached
+#if !defined(__clang__)
   std::unreachable();
+#endif
 }
 
 } // namespace sourcemeta::core

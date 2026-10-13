@@ -22,7 +22,8 @@ public:
              SchemaVocabularies::Known::JSON_SCHEMA_2019_09_VALIDATION,
              SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_7,
              SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_6,
-             SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_4}) &&
+             SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_4,
+             SchemaVocabularies::Known::OPENAPI_3_0_BASE}) &&
         schema.is_object() && !schema.defines("not"));
 
     const auto *enum_value{schema.try_at("enum")};

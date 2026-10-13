@@ -146,14 +146,18 @@ auto weakly_canonical(const std::filesystem::path &path)
   const auto absolute_path{
       path.is_absolute() ? path : std::filesystem::absolute(path)};
 
-  // On Linux, FIFO files (like /dev/fd/XX due to process substitution)
-  // cannot be made canonical
-  // See https://github.com/sourcemeta/jsonschema/issues/252
-  if (std::filesystem::is_fifo(absolute_path)) {
-    return normalize(absolute_path);
-  }
-
   try {
+    // On Linux, FIFO files (like /dev/fd/XX due to process substitution)
+    // cannot be made canonical
+    // See https://github.com/sourcemeta/jsonschema/issues/252
+    //
+    // Asking what the path is can fail for the same reasons canonicalising it
+    // can, so it is asked from inside here rather than ahead of it, where a
+    // failure would travel on without the naming below ever seeing it
+    if (std::filesystem::is_fifo(absolute_path)) {
+      return normalize(absolute_path);
+    }
+
     return normalize(std::filesystem::weakly_canonical(absolute_path));
   } catch (const std::filesystem::filesystem_error &error) {
     if (error.code() == std::errc::no_such_file_or_directory) {

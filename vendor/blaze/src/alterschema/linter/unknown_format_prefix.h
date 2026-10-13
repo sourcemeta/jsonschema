@@ -72,6 +72,9 @@ private:
         vocabularies.contains(Known::JSON_SCHEMA_2020_12_FORMAT_ASSERTION)) {
       return &DRAFT_2020_12_FORMATS;
     }
+    if (vocabularies.contains(Known::OPENAPI_3_0_BASE)) {
+      return &OPENAPI_3_0_FORMATS;
+    }
     return nullptr;
   }
 
@@ -104,6 +107,13 @@ private:
           "iri",          "iri-reference", "uuid",
           "uri-template", "json-pointer",  "relative-json-pointer",
           "regex"};
+  // The OpenAPI 3.0 Schema Object relies on the formats of the JSON Schema
+  // revision it is drawn from, Draft Wright-00, and adds a few of its own
+  // NOLINTNEXTLINE(cert-err58-cpp,bugprone-throwing-static-initialization)
+  static inline const std::unordered_set<std::string_view> OPENAPI_3_0_FORMATS{
+      "date-time", "email",  "hostname", "ipv4",  "ipv6",
+      "uri",       "uriref", "int32",    "int64", "float",
+      "double",    "byte",   "binary",   "date",  "password"};
   static inline const std::unordered_set<std::string_view>
       // NOLINTNEXTLINE(cert-err58-cpp,bugprone-throwing-static-initialization)
       DRAFT_2020_12_FORMATS{

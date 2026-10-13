@@ -878,13 +878,11 @@ auto URITemplateRouterView::arguments(
       }
 
       switch (type_tag) {
-        case ARGUMENT_TYPE_STRING: {
-          const std::string_view string_value{
-              reinterpret_cast<const char *>(this->data_ + cursor),
-              value_length};
-          callback(name, string_value);
+        case ARGUMENT_TYPE_STRING:
+          callback(name, std::string_view{reinterpret_cast<const char *>(
+                                              this->data_ + cursor),
+                                          value_length});
           break;
-        }
 
         case ARGUMENT_TYPE_INTEGER: {
           if (value_length != 8) {

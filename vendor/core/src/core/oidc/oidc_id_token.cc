@@ -170,10 +170,11 @@ auto oidc_id_token_checks(const JWT &token, const std::string_view issuer,
   std::optional<std::chrono::system_clock::time_point> authentication_time;
   const auto *auth_time{payload.try_at("auth_time"sv, HASH_AUTH_TIME)};
   if (auth_time != nullptr && auth_time->is_number()) {
-    // A NumericDate may be non-integer (RFC 7519 Section 2), and a value beyond
-    // the range of a double cannot stand for a usable timestamp, so it is
-    // treated as absent rather than aborting, matching how the JWT layer reads
-    // the registered time claims
+    // A NumericDate may be non-integer (RFC 7519 Section 2). A value past what
+    // a double stands for refuses to be read as one at all, and one the clock
+    // cannot stand for comes back as no time, so either way the claim reads as
+    // absent rather than aborting, matching how the JWT layer reads the
+    // registered time claims
     try {
       authentication_time = from_unix_timestamp(
           std::chrono::duration<double>{auth_time->as_real()});
