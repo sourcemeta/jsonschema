@@ -278,6 +278,28 @@ struct ParsedYAML {
   bool multidocument{false};
 };
 
+// A document read off a stream, keeping what it takes to write the input back
+// out unless the caller says it does not need it
+inline auto
+parse_yaml_stream(const std::filesystem::path &path, std::istream &stream,
+                  sourcemeta::core::JSON &output,
+                  const sourcemeta::core::JSON::ParseCallback &callback,
+                  const InputFormatting formatting)
+    -> std::optional<sourcemeta::core::YAMLRoundTrip> {
+  try {
+    if (formatting == InputFormatting::Discard) {
+      sourcemeta::core::parse_yaml(stream, output, callback);
+      return std::nullopt;
+    }
+
+    sourcemeta::core::YAMLRoundTrip roundtrip;
+    sourcemeta::core::parse_yaml(stream, roundtrip, output, callback);
+    return roundtrip;
+  } catch (const sourcemeta::core::YAMLParseError &error) {
+    throw sourcemeta::core::YAMLFileParseError{path, error};
+  }
+}
+
 inline auto
 read_yaml_file(const std::filesystem::path &path,
                sourcemeta::core::JSON &output,
@@ -288,26 +310,21 @@ read_yaml_file(const std::filesystem::path &path,
   // at a time is what leaves the rest of the stream to say so with, as the
   // readers that take the whole input stop at the first document without a
   // word about what follows it
+  //
+  // Only a regular file can be read back from where the first document ended.
+  // Anything else, a named pipe above all, gives up its position the moment it
+  // is read, so the input is kept around to ask what follows with
+  if (!std::filesystem::is_regular_file(path)) {
+    const auto input{sourcemeta::core::read_file_to_string(path)};
+    std::istringstream stream{input};
+    auto roundtrip{
+        parse_yaml_stream(path, stream, output, callback, formatting)};
+    return {.roundtrip = std::move(roundtrip),
+            .multidocument = !at_end_of_stream(input, stream)};
+  }
+
   auto stream{sourcemeta::core::read_file(path)};
-
-  if (formatting == InputFormatting::Discard) {
-    try {
-      sourcemeta::core::parse_yaml(stream, output, callback);
-    } catch (const sourcemeta::core::YAMLParseError &error) {
-      throw sourcemeta::core::YAMLFileParseError{path, error};
-    }
-
-    return {.multidocument = !at_end_of_stream(stream)};
-  }
-
-  sourcemeta::core::YAMLRoundTrip roundtrip;
-
-  try {
-    sourcemeta::core::parse_yaml(stream, roundtrip, output, callback);
-  } catch (const sourcemeta::core::YAMLParseError &error) {
-    throw sourcemeta::core::YAMLFileParseError{path, error};
-  }
-
+  auto roundtrip{parse_yaml_stream(path, stream, output, callback, formatting)};
   return {.roundtrip = std::move(roundtrip),
           .multidocument = !at_end_of_stream(stream)};
 }
