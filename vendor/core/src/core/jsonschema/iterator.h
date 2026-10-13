@@ -35,21 +35,106 @@ struct DialectInfo {
   bool override_active;
 };
 
+// An identifier only counts where the dialect in force gives the keyword that
+// carries it a meaning. Telling costs a vocabulary lookup, so only a schema
+// that wrote one ever pays for it
+inline auto
+identifier_counts(const sourcemeta::core::JSON &subschema,
+                  const std::string_view identifier,
+                  const std::string_view dialect,
+                  const sourcemeta::core::SchemaBaseDialect base_dialect,
+                  const sourcemeta::core::SchemaResolver &resolver,
+                  const sourcemeta::core::SchemaWalker &walker) -> bool {
+  if (identifier.empty()) {
+    return true;
+  }
+
+  const auto vocabularies{sourcemeta::core::vocabularies_with_embedded(
+      subschema, resolver, base_dialect, dialect)};
+  return sourcemeta::core::dialect_defines_identifier(walker, vocabularies,
+                                                      base_dialect);
+}
+
+// A schema names the dialect it is written against through a keyword, which
+// has to be readable before the dialect is known, since the dialect is what
+// says which keywords mean anything. That bootstrap is only sound while the
+// dialect being named is one that goes on to define the keyword that named it.
+// A dialect that does not leaves a declaration asserting the conditions under
+// which it could not have been written, and no reading of it holds up:
+//
+// Take the declaration at its word and the keyword carrying it means nothing,
+// so the schema never said which dialect it was. Ignore it and the dialect is
+// whatever was inherited or supplied from outside, which silently reads the
+// schema under rules its author rejected. Where the same subschema also names
+// an identifier, ignoring goes further still and keeps a resource boundary
+// that the named dialect has no keyword to express.
+//
+// So there is nothing to choose between, and such a declaration is refused.
+// Naming the dialect from outside, which no keyword of the schema has to
+// support, remains open to the caller.
+//
+// What makes this general rather than a rule about one dialect is that the
+// question is put to the declaration itself: resolve what the schema named,
+// work out the vocabularies that accepting it would bring into force, and ask
+// those whether the naming keyword means anything. Asking about the dialect
+// named rather than the one that ended up in force also matters, because a
+// later fallback can discard the declaration, and a declaration that was
+// discarded is exactly the silent case worth refusing
+inline auto declaration_counts(const sourcemeta::core::JSON &subschema,
+                               const std::string_view declared,
+                               const sourcemeta::core::SchemaResolver &resolver,
+                               const sourcemeta::core::SchemaWalker &walker)
+    -> bool {
+  const auto resolve{
+      sourcemeta::core::resolver_with_embedded(subschema, resolver)};
+
+  const auto base{
+      sourcemeta::core::base_dialect(subschema, resolve, declared, false)};
+  if (!base.has_value()) {
+    return true;
+  }
+
+  return sourcemeta::core::dialect_defines(
+      walker, sourcemeta::core::vocabularies(resolve, base.value(), declared),
+      "$schema"sv);
+}
+
 inline auto
 resolve_dialect_at(const sourcemeta::core::JSON &subschema,
                    const std::string_view inherited_dialect,
                    const sourcemeta::core::SchemaBaseDialect inherited_base,
                    const sourcemeta::core::SchemaResolver &resolver,
+                   const sourcemeta::core::SchemaWalker &walker,
                    const std::size_t level, const bool allow_dialect_override)
     -> DialectInfo {
   auto local{sourcemeta::core::dialect(subschema, inherited_dialect,
                                        allow_dialect_override)};
   const auto override_active{
       local != sourcemeta::core::dialect(subschema, inherited_dialect, false)};
-  auto identifier{sourcemeta::core::identify(subschema, resolver, local, "",
+  auto identifier{sourcemeta::core::identify(subschema, resolver, local,
                                              allow_dialect_override)};
+  // Telling whether an identifier counts takes a base dialect, which costs a
+  // meta-schema to resolve, so a schema that declares none never asks. Note
+  // this is not the base dialect the function goes on to report, which is
+  // settled only once the fallback below has had its say
+  if (!identifier.empty()) {
+    const auto local_base{
+        local != inherited_dialect
+            ? sourcemeta::core::base_dialect(subschema, resolver, local,
+                                             allow_dialect_override)
+                  .value_or(inherited_base)
+            : inherited_base};
+    if (!identifier_counts(subschema, identifier, local, local_base, resolver,
+                           walker)) {
+      identifier = {};
+    }
+  }
   if (identifier.empty() && local != inherited_dialect && !override_active) {
     identifier = sourcemeta::core::identify(subschema, inherited_base);
+    if (!identifier_counts(subschema, identifier, inherited_dialect,
+                           inherited_base, resolver, walker)) {
+      identifier = {};
+    }
     if (!identifier.empty()) {
       local = inherited_dialect;
     }
@@ -162,7 +247,7 @@ walk(const std::optional<sourcemeta::core::WeakPointer> &root_parent,
         sourcemeta::core::ref_overrides_adjacent_keywords(base_dialect)};
 
     const auto entry{resolve_dialect_at(subschema, dialect, base_dialect,
-                                        resolver, level,
+                                        resolver, walker, level,
                                         !enclosing_ref_overrides)};
     const auto current_dialect{entry.dialect};
     const auto current_base_dialect{entry.base_dialect};
@@ -171,18 +256,24 @@ walk(const std::optional<sourcemeta::core::WeakPointer> &root_parent,
     // meta-schema inside its own `$defs`/`definitions`. Probe for it here, the
     // same way we do at the document root, so that nested self-contained
     // meta-schemas resolve to their embedded definition before the resolver
-    const auto vocabularies{sourcemeta::core::vocabularies(
-        [&subschema,
-         &resolver](const std::string_view identifier) -> SchemaResolverResult {
-          const auto *embedded{sourcemeta::core::metaschema_try_embedded(
-              subschema, identifier, resolver)};
-          if (embedded) {
-            return *embedded;
-          }
+    const auto vocabularies{sourcemeta::core::vocabularies_with_embedded(
+        subschema, resolver, current_base_dialect, current_dialect)};
 
-          return resolver(identifier);
-        },
-        current_base_dialect, current_dialect)};
+    // A schema that names its dialect through a keyword that very dialect
+    // leaves undefined cannot be taken at its word, because honouring it would
+    // make the keyword mean something the dialect says it does not. The caller
+    // has to name such a dialect from the outside instead
+    if (subschema.is_object()) {
+      const auto *declared{
+          subschema.try_at("$schema"sv, JSONSCHEMA_HASH_SCHEMA)};
+      if (declared != nullptr && declared->is_string() &&
+          !declaration_counts(subschema, declared->to_string(), resolver,
+                              walker)) {
+        throw sourcemeta::core::SchemaDialectImpossibleError(
+            "$schema", declared->to_string(),
+            sourcemeta::core::to_pointer(pointer));
+      }
+    }
 
     SubschemaEntry iterator_entry{.parent = parent,
                                   .pointer = pointer,
@@ -201,7 +292,7 @@ walk(const std::optional<sourcemeta::core::WeakPointer> &root_parent,
 
     const auto child{entry.override_active
                          ? resolve_dialect_at(subschema, dialect, base_dialect,
-                                              resolver, level, false)
+                                              resolver, walker, level, false)
                          : entry};
     const auto child_dialect{child.dialect};
     const auto child_base_dialect{child.base_dialect};
@@ -492,27 +583,16 @@ inline SchemaIterator::SchemaIterator(
   const std::string_view resolved_dialect{
       sourcemeta::core::dialect(schema, default_dialect)};
 
+  // Whoever walks a schema has already settled what it is written against,
+  // either from the schema itself or from the default they handed over, as
+  // nothing of the walk can be read without it
+  assert(!resolved_dialect.empty());
+  const auto resolved_base_dialect{
+      sourcemeta::core::base_dialect(schema, resolver, resolved_dialect)};
+  assert(resolved_base_dialect.has_value());
   sourcemeta::core::WeakPointer pointer;
-  // If the given schema declares no dialect and the user didn't
-  // not pass a default, then there is nothing we can do. We know
-  // the current schema is a subschema, but cannot walk any further.
-  if (resolved_dialect.empty()) {
-    SubschemaEntry entry{.parent = std::nullopt,
-                         .pointer = pointer,
-                         .dialect = "",
-                         .vocabularies = {},
-                         .base_dialect = std::nullopt,
-                         .subschema = schema,
-                         .orphan = false,
-                         .property_name = false};
-    this->subschemas_.push_back(std::move(entry));
-  } else {
-    const auto resolved_base_dialect{
-        sourcemeta::core::base_dialect(schema, resolver, resolved_dialect)};
-    assert(resolved_base_dialect.has_value());
-    walk(std::nullopt, pointer, this->subschemas_, schema, walker, resolver,
-         resolved_dialect, resolved_base_dialect.value(), 0, false, false);
-  }
+  walk(std::nullopt, pointer, this->subschemas_, schema, walker, resolver,
+       resolved_dialect, resolved_base_dialect.value(), 0, false, false);
 }
 
 inline auto SchemaIterator::begin() const -> const_iterator {

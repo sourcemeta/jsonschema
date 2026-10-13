@@ -56,6 +56,23 @@ auto initialise_expansion(const JSONLDResolver &resolver,
   }
 }
 
+// Process the expansion context the caller supplies. It is not part of the
+// input document, and the error contract is that a pointer locates a position
+// in that document, so what goes wrong in it reports at the document root. An
+// empty pointer alone is not enough, as the terms it defines build positions
+// of their own from names only this context carries, and so do the scoped
+// contexts among them once they are processed after the fact
+auto process_expansion_context(ExpansionState &state,
+                               ActiveContext &active_context,
+                               const JSON &context) -> void {
+  const ForeignContextScope origin{state, to_pointer(EMPTY_WEAK_POINTER)};
+  try {
+    process_context(state, active_context, context, EMPTY_WEAK_POINTER);
+  } catch (const JSONLDError &error) {
+    throw JSONLDError(error.what(), EMPTY_WEAK_POINTER);
+  }
+}
+
 } // namespace sourcemeta::core
 
 namespace sourcemeta::core {
@@ -81,9 +98,7 @@ auto jsonld_expand(const JSON &input, const JSON &expand_context,
               expand_context.defines(KEYWORD_CONTEXT, KEYWORD_CONTEXT_HASH)
           ? expand_context.at(KEYWORD_CONTEXT, KEYWORD_CONTEXT_HASH)
           : expand_context};
-  // The external expansion context is not part of the input document, so its
-  // errors carry an empty pointer.
-  process_context(state, active_context, context, EMPTY_WEAK_POINTER);
+  process_expansion_context(state, active_context, context);
   return run_expansion(state, active_context, input);
 }
 

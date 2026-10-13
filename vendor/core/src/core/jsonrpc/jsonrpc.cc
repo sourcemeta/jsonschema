@@ -2,6 +2,7 @@
 
 #include <sourcemeta/core/json.h>
 
+#include <cassert>     // assert
 #include <cstdint>     // std::int64_t
 #include <optional>    // std::optional, std::nullopt
 #include <string_view> // std::string_view_literals
@@ -121,6 +122,18 @@ auto jsonrpc_is_notification(const sourcemeta::core::JSON &request) -> bool {
   }
   const auto *method_field{request.try_at("method", JSONRPC_HASH_METHOD)};
   return method_field != nullptr && method_field->is_string();
+}
+
+auto jsonrpc_make_notification(const JSON::StringView method, JSON parameters)
+    -> JSON {
+  assert(parameters.is_object() || parameters.is_array());
+
+  auto result{JSON::make_object()};
+  result.assign_assume_new("jsonrpc", JSON{"2.0"}, JSONRPC_HASH_JSONRPC);
+  result.assign_assume_new("method", JSON{method}, JSONRPC_HASH_METHOD);
+  result.assign_assume_new("params", std::move(parameters),
+                           JSONRPC_HASH_PARAMS);
+  return result;
 }
 
 auto jsonrpc_make_success(const sourcemeta::core::JSON &identifier,

@@ -20,10 +20,12 @@ auto compiler_draft4_validation_required(const Context &context,
                                          const DynamicContext &dynamic_context,
                                          const Instructions &current)
     -> Instructions {
-  // Draft 4 alone asks that `required` name at least one property
+  // Draft 4 asks that `required` name at least one property, and the OpenAPI
+  // 3.0 Schema Object, whose meta-schema is a Draft 4 document, asks the same
   using Known = sourcemeta::core::SchemaVocabularies::Known;
   const auto allows_empty{!schema_context.vocabularies.contains_any(
-      {Known::JSON_SCHEMA_DRAFT_4, Known::JSON_SCHEMA_DRAFT_4_HYPER})};
+      {Known::JSON_SCHEMA_DRAFT_4, Known::JSON_SCHEMA_DRAFT_4_HYPER,
+       Known::OPENAPI_3_0_BASE})};
   if (!is_string_array(schema_context.schema.at(dynamic_context.keyword)) ||
       (!allows_empty &&
        schema_context.schema.at(dynamic_context.keyword).empty())) {
@@ -42,8 +44,10 @@ auto compiler_draft4_applicator_allof(const Context &context,
                                       const SchemaContext &schema_context,
                                       const DynamicContext &dynamic_context,
                                       const Instructions &) -> Instructions {
-  if (!is_schema_array(schema_context.schema.at(dynamic_context.keyword),
-                       booleans_are_schemas(schema_context.vocabularies))) {
+  if (!is_schema_array(
+          schema_context.schema.at(dynamic_context.keyword),
+          booleans_are_schemas(schema_context.vocabularies),
+          in_place_applicators_may_be_empty(schema_context.vocabularies))) {
     throw sourcemeta::blaze::CompilerError(
         schema_context.base, absolute_schema_location(context, schema_context),
         EXPECTED_SCHEMA_ARRAY);
@@ -90,11 +94,21 @@ auto compiler_draft4_applicator_anyof(const Context &context,
                                       const SchemaContext &schema_context,
                                       const DynamicContext &dynamic_context,
                                       const Instructions &) -> Instructions {
-  if (!is_schema_array(schema_context.schema.at(dynamic_context.keyword),
-                       booleans_are_schemas(schema_context.vocabularies))) {
+  if (!is_schema_array(
+          schema_context.schema.at(dynamic_context.keyword),
+          booleans_are_schemas(schema_context.vocabularies),
+          in_place_applicators_may_be_empty(schema_context.vocabularies))) {
     throw sourcemeta::blaze::CompilerError(
         schema_context.base, absolute_schema_location(context, schema_context),
         EXPECTED_SCHEMA_ARRAY);
+  }
+
+  // A disjunction over no branches can never be satisfied. Only a dialect that
+  // permits the empty array gets here, as the shape check above refuses it
+  // everywhere else
+  if (schema_context.schema.at(dynamic_context.keyword).empty()) {
+    return {make(sourcemeta::blaze::InstructionIndex::AssertionFail, context,
+                 schema_context, dynamic_context, ValueNone{})};
   }
 
   Instructions disjunctors;
@@ -166,11 +180,21 @@ auto compiler_draft4_applicator_oneof(const Context &context,
                                       const SchemaContext &schema_context,
                                       const DynamicContext &dynamic_context,
                                       const Instructions &) -> Instructions {
-  if (!is_schema_array(schema_context.schema.at(dynamic_context.keyword),
-                       booleans_are_schemas(schema_context.vocabularies))) {
+  if (!is_schema_array(
+          schema_context.schema.at(dynamic_context.keyword),
+          booleans_are_schemas(schema_context.vocabularies),
+          in_place_applicators_may_be_empty(schema_context.vocabularies))) {
     throw sourcemeta::blaze::CompilerError(
         schema_context.base, absolute_schema_location(context, schema_context),
         EXPECTED_SCHEMA_ARRAY);
+  }
+
+  // A disjunction over no branches can never be satisfied. Only a dialect that
+  // permits the empty array gets here, as the shape check above refuses it
+  // everywhere else
+  if (schema_context.schema.at(dynamic_context.keyword).empty()) {
+    return {make(sourcemeta::blaze::InstructionIndex::AssertionFail, context,
+                 schema_context, dynamic_context, ValueNone{})};
   }
 
   Instructions disjunctors;
@@ -231,9 +255,8 @@ auto compiler_draft4_validation_maxproperties(
     const Context &context, const SchemaContext &schema_context,
     const DynamicContext &dynamic_context, const Instructions &)
     -> Instructions {
-  if (!schema_context.schema.at(dynamic_context.keyword).is_integral() ||
-      (!integral_reals_are_integers(schema_context.vocabularies) &&
-       !schema_context.schema.at(dynamic_context.keyword).is_integer())) {
+  if (!is_dialect_integer(schema_context.schema.at(dynamic_context.keyword),
+                          schema_context.vocabularies)) {
     throw sourcemeta::blaze::CompilerError(
         schema_context.base, absolute_schema_location(context, schema_context),
         EXPECTED_INTEGER);
@@ -253,9 +276,15 @@ auto compiler_draft4_validation_maxproperties(
 
   // We'll handle it at the type level as an optimization
   if (context.mode == Mode::FastValidation &&
-      schema_context.schema.defines("type") &&
-      schema_context.schema.at("type").is_string() &&
-      schema_context.schema.at("type").to_string() == "object") {
+      assume_type(schema_context.vocabularies, schema_context.schema,
+                  "object")) {
+    return {};
+  }
+
+  // A bound too large to hold sits beyond the size of anything that can
+  // exist, so every object meets it and there is nothing left to assert
+  if (!bound_is_representable(
+          schema_context.schema.at(dynamic_context.keyword))) {
     return {};
   }
 
@@ -272,9 +301,8 @@ auto compiler_draft4_validation_minproperties(
     const Context &context, const SchemaContext &schema_context,
     const DynamicContext &dynamic_context, const Instructions &)
     -> Instructions {
-  if (!schema_context.schema.at(dynamic_context.keyword).is_integral() ||
-      (!integral_reals_are_integers(schema_context.vocabularies) &&
-       !schema_context.schema.at(dynamic_context.keyword).is_integer())) {
+  if (!is_dialect_integer(schema_context.schema.at(dynamic_context.keyword),
+                          schema_context.vocabularies)) {
     throw sourcemeta::blaze::CompilerError(
         schema_context.base, absolute_schema_location(context, schema_context),
         EXPECTED_INTEGER);
@@ -292,11 +320,25 @@ auto compiler_draft4_validation_minproperties(
     return {};
   }
 
+  // A bound too large to hold is beyond the size of anything that can
+  // exist, so no object can meet it, and nothing else is affected. A property
+  // name is always a string, which no object bound applies to
+  if (!bound_is_representable(
+          schema_context.schema.at(dynamic_context.keyword))) {
+    if (schema_context.is_property_name) {
+      return {};
+    }
+
+    ValueTypes types;
+    types.set(std::to_underlying(sourcemeta::core::JSON::Type::Object));
+    return {make(sourcemeta::blaze::InstructionIndex::AssertionNotTypeStrictAny,
+                 context, schema_context, dynamic_context, types)};
+  }
+
   // We'll handle it at the type level as an optimization
   if (context.mode == Mode::FastValidation &&
-      schema_context.schema.defines("type") &&
-      schema_context.schema.at("type").is_string() &&
-      schema_context.schema.at("type").to_string() == "object") {
+      assume_type(schema_context.vocabularies, schema_context.schema,
+                  "object")) {
     return {};
   }
 

@@ -6,6 +6,7 @@
 #include <sourcemeta/core/yaml_error.h>
 
 #include <algorithm>    // std::max
+#include <cassert>      // assert
 #include <charconv>     // std::from_chars
 #include <cstdint>      // std::uint8_t, std::uint64_t
 #include <deque>        // std::deque
@@ -74,14 +75,6 @@ public:
     this->validate_characters();
   }
 
-  // A carriage return is a line break rather than comment content, so it never
-  // belongs to the text of a comment that a carriage return ends.
-  // See https://yaml.org/spec/1.2.2/#66-comments
-  static auto comment_text(const std::string_view raw) -> std::string {
-    return std::string{raw.ends_with('\r') ? raw.substr(0, raw.size() - 1)
-                                           : raw};
-  }
-
   // The number of leading bytes consumed by a stripped byte order mark, so a
   // caller reading from a stream can map a consumed count back to the original
   // input offset
@@ -89,7 +82,9 @@ public:
     return this->bom_length_;
   }
 
-  auto next() -> std::optional<Token> {
+  // The end of the stream is a token of its own, and it is handed out for
+  // every read from there on, so a caller has one thing to look for
+  auto next() -> Token {
     if (this->roundtrip_) {
       this->inline_comment_buffer_.reset();
     }
@@ -109,16 +104,27 @@ public:
                      .line = this->line_,
                      .column = this->column_};
       }
-      if (!this->stream_ended_) {
-        this->stream_ended_ = true;
-        const auto end_line{this->column_ > 0 ? this->line_ + 1 : this->line_};
-        const std::uint64_t end_column{0};
-        return Token{.type = TokenType::StreamEnd,
-                     .value = {},
-                     .line = end_line,
-                     .column = end_column};
+      return Token{.type = TokenType::StreamEnd,
+                   .value = {},
+                   .line = this->line(),
+                   .column = this->column()};
+    }
+
+    // Read before the stream start token is handed out, as the leading
+    // whitespace of the first line has already been stepped over by this point
+    // and the next call would find the flag cleared
+    if (this->tab_at_line_start_) {
+      this->tab_at_line_start_ = false;
+      const char next_char{this->peek()};
+      // YAML 1.2.2 production 63 writes indentation as `s-indent(n+1) ::=
+      // s-space s-indent(n)`, so a tab can be none of it. Production 197 has a
+      // flow node at block level preceded by `s-separate` instead, which does
+      // admit one, so a tab opening a flow collection is separation rather
+      // than indentation
+      if (next_char != '{' && next_char != '[') [[unlikely]] {
+        throw YAMLParseError{this->line_, this->column_,
+                             "Tab characters cannot be used for indentation"};
       }
-      return std::nullopt;
     }
 
     if (!this->stream_started_) {
@@ -132,15 +138,6 @@ public:
     const auto current_line{this->line_};
     const auto current_column{this->column_};
     const auto current_position{this->position_};
-
-    if (this->tab_at_line_start_) {
-      this->tab_at_line_start_ = false;
-      const char next_char{this->peek()};
-      if (next_char != '{' && next_char != '[') [[unlikely]] {
-        throw YAMLParseError{current_line, current_column,
-                             "Tab characters cannot be used for indentation"};
-      }
-    }
 
     // YAML 1.2.2 Section 8.2: a flow collection nested in a block context
     // continues on the following lines only when they are indented past that
@@ -271,6 +268,14 @@ public:
       }
       this->advance(1);
       this->last_was_quoted_scalar_ = false;
+      // Section 8.2.1 indents the compact content that shares a line with its
+      // indicator by spaces, and a value indicator opens such a line just as a
+      // sequence entry or an explicit key does, so a tab separating it from a
+      // nested block indicator is invalid the same way
+      if (this->flow_level_ == 0) {
+        this->after_block_indicator_ = true;
+      }
+
       return Token{.type = TokenType::BlockMappingValue,
                    .value = ":",
                    .line = current_line,
@@ -322,6 +327,9 @@ public:
     return this->scan_plain_scalar();
   }
 
+  // Where the input ran out before what was being read could be finished,
+  // the position reported is the start of the line that never came, which
+  // pairs with a column of zero to say there is no character to point at
   [[nodiscard]] auto line() const noexcept -> std::uint64_t {
     if (this->position_ >= this->input_.size() && this->column_ > 1) {
       return this->line_ + 1;
@@ -489,10 +497,9 @@ private:
 
   auto skip_whitespace_and_comments(bool block_indicator_separation = false)
       -> void {
+    assert(this->column_ == 1 || this->position_ > 0);
     bool preceded_by_whitespace{
-        this->column_ == 1 ||
-        (this->position_ > 0 &&
-         is_whitespace(this->input_[this->position_ - 1]))};
+        this->column_ == 1 || is_whitespace(this->input_[this->position_ - 1])};
     bool at_line_start{this->column_ == 1};
     bool blank_line{at_line_start};
     // YAML 1.2.2 Section 6.1: indentation is made of spaces only. A tab in the
@@ -574,11 +581,11 @@ private:
           this->advance(1);
         }
         if (this->roundtrip_) {
-          std::string text{comment_text(this->input_.substr(
-              comment_start, this->position_ - comment_start))};
-          if (comment_line == this->comment_reference_line_ &&
-              this->comment_reference_line_ > 0 &&
-              !this->inline_comment_buffer_.has_value()) {
+          std::string text{this->input_.substr(
+              comment_start, this->position_ - comment_start)};
+          assert(comment_line != this->comment_reference_line_ ||
+                 !this->inline_comment_buffer_.has_value());
+          if (comment_line == this->comment_reference_line_) {
             this->inline_comment_buffer_ = std::move(text);
           } else {
             this->preceding_comments_buffer_.push_back(std::move(text));
@@ -602,8 +609,11 @@ private:
       return false;
     }
     if (this->position_ + 3 < this->input_.size()) {
-      const char after{this->input_[this->position_ + 3]};
-      return is_whitespace(after) || after == '\0';
+      // Read straight out of the input rather than through the accessor that
+      // reports the end as a null character, and the whole stream was turned
+      // down for carrying one of those, so what stands here is a character of
+      // the document
+      return is_whitespace(this->input_[this->position_ + 3]);
     }
     return true;
   }
@@ -678,12 +688,18 @@ private:
 
     if (this->peek() == '<') {
       this->advance(1);
-      while (this->position_ < this->input_.size() && this->peek() != '>') {
+      while (this->position_ < this->input_.size() && this->peek() != '>' &&
+             this->peek() != '\n' && this->peek() != '\r') {
         this->advance(1);
       }
-      if (this->peek() == '>') {
-        this->advance(1);
+      // YAML 1.2.2 Section 6.9.1 closes a verbatim tag with an angle bracket,
+      // and the opening bracket is no tag character, so one left unclosed can
+      // fall back on nothing
+      if (this->peek() != '>') [[unlikely]] {
+        throw YAMLParseError{start_line, start_column,
+                             "Unterminated verbatim tag"};
       }
+      this->advance(1);
     } else {
       while (this->position_ < this->input_.size()) {
         const char current{this->peek()};
@@ -767,15 +783,13 @@ private:
           line_content += '\'';
           this->advance(2);
         } else {
-          this->flush_flow_line(buffer, line_content, pending_newlines,
-                                first_line, true);
+          this->flush_flow_line(buffer, line_content, pending_newlines, true);
           this->advance(1);
           found_closing_quote = true;
           break;
         }
       } else if (current == '\n' || current == '\r') {
-        this->flush_flow_line(buffer, line_content, pending_newlines,
-                              first_line);
+        this->flush_flow_line(buffer, line_content, pending_newlines);
         first_line = false;
         this->skip_flow_scalar_line_break(current, pending_newlines);
       } else {
@@ -806,7 +820,7 @@ private:
   }
 
   auto flush_flow_line(std::string &buffer, std::string &line_content,
-                       std::size_t &pending_newlines, const bool first_line,
+                       std::size_t &pending_newlines,
                        const bool is_final = false,
                        const std::size_t protected_length = 0) -> void {
     if (!is_final) {
@@ -818,7 +832,7 @@ private:
       }
     }
 
-    if (pending_newlines > 0 && !first_line) {
+    if (pending_newlines > 0) {
       if (pending_newlines == 1) {
         buffer += ' ';
       } else {
@@ -842,7 +856,6 @@ private:
       this->advance(1);
     }
     pending_newlines++;
-    bool line_start{true};
     bool space_in_indent{false};
     bool leading_space_run{true};
     // Only spaces count toward indentation, so the leading-space count of the
@@ -851,11 +864,9 @@ private:
     while (this->position_ < this->input_.size()) {
       const char character{this->peek()};
       if (character == ' ') {
-        if (line_start) {
-          space_in_indent = true;
-          if (leading_space_run) {
-            space_indent++;
-          }
+        space_in_indent = true;
+        if (leading_space_run) {
+          space_indent++;
         }
         this->advance(1);
       } else if (character == '\t') {
@@ -863,24 +874,20 @@ private:
         // indentation, that indentation is made of spaces, so a tab before any
         // space establishes no indentation
         if (this->flow_level_ == 0 && this->block_indent_ != SIZE_MAX &&
-            line_start && !space_in_indent) [[unlikely]] {
+            !space_in_indent) [[unlikely]] {
           throw YAMLParseError{this->line_, this->column_,
                                "Tab characters cannot be used for indentation"};
         }
-        if (line_start) {
-          leading_space_run = false;
-        }
+        leading_space_run = false;
         this->advance(1);
       } else if (character == '\n') {
         pending_newlines++;
-        line_start = true;
         space_in_indent = false;
         leading_space_run = true;
         space_indent = 0;
         this->advance(1);
       } else if (character == '\r') {
         pending_newlines++;
-        line_start = true;
         space_in_indent = false;
         leading_space_run = true;
         space_indent = 0;
@@ -962,8 +969,7 @@ private:
       const char current{this->peek()};
 
       if (current == '"') {
-        this->flush_flow_line(buffer, line_content, pending_newlines,
-                              first_line, true);
+        this->flush_flow_line(buffer, line_content, pending_newlines, true);
         this->advance(1);
         found_closing_quote = true;
         break;
@@ -1061,8 +1067,8 @@ private:
           protected_length = line_content.size();
         }
       } else if (current == '\n' || current == '\r') {
-        this->flush_flow_line(buffer, line_content, pending_newlines,
-                              first_line, false, protected_length);
+        this->flush_flow_line(buffer, line_content, pending_newlines, false,
+                              protected_length);
         protected_length = 0;
         first_line = false;
         this->skip_flow_scalar_line_break(current, pending_newlines);
@@ -1170,22 +1176,33 @@ private:
       this->line_ = saved_line;
       this->column_ = saved_column;
 
-      if (found_content) {
-        if (max_leading_empty_indent > content_indent && content_indent > 0)
-            [[unlikely]] {
+      // YAML 1.2.2 production 170 reads the content of a literal at
+      // `s-indent(n+m)` where the increment auto-detection yields is positive,
+      // so content stands further in than the node holding the scalar. A first
+      // non-empty line that stands no further in is a sibling of that node
+      // rather than a line of the contents, and at the root there is no node
+      // for it to be a sibling of
+      const bool first_line_is_content{found_content &&
+                                       (this->block_indent_ == SIZE_MAX ||
+                                        content_indent > this->block_indent_)};
+      if (first_line_is_content) {
+        // Section 8.1.1.1: "It is an error for any of the leading empty lines
+        // to contain more spaces than the first non-empty line"
+        if (max_leading_empty_indent > content_indent) [[unlikely]] {
           throw YAMLParseError{
               start_line, start_column,
               "Leading empty line has more spaces than content indentation"};
         }
       } else {
-        // YAML 1.2.2 Section 8.1.1.1: with no non-empty content line the
-        // indentation level is the number of spaces on the longest line
+        // Section 8.1.1.1: with no non-empty line of its own the level is
+        // "the number of spaces on the longest line", and it still stands
+        // further in than the node holding the scalar so that what follows at
+        // that node's own level is read as a sibling rather than as content
         content_indent = std::max(content_indent, max_leading_empty_indent);
+        if (this->block_indent_ != SIZE_MAX) {
+          content_indent = std::max(content_indent, this->block_indent_ + 1);
+        }
       }
-    }
-
-    if (content_indent == 0 && start_column > 5) {
-      content_indent = 1;
     }
 
     return content_indent;
@@ -1228,8 +1245,8 @@ private:
           this->advance(1);
         }
         if (this->roundtrip_) {
-          this->block_scalar_comment_ = comment_text(this->input_.substr(
-              comment_start, this->position_ - comment_start));
+          this->block_scalar_comment_ = this->input_.substr(
+              comment_start, this->position_ - comment_start);
         }
       } else if (current == '\n' || current == '\r') {
         break;
@@ -1342,13 +1359,13 @@ private:
         break;
       }
 
-      if (line_indent == 0 && this->position_ + 2 < this->input_.size()) {
-        if ((this->peek() == '-' && this->peek(1) == '-' &&
-             this->peek(2) == '-') ||
-            (this->peek() == '.' && this->peek(1) == '.' &&
-             this->peek(2) == '.')) {
-          break;
-        }
+      // YAML 1.2.2 production 206 forbids a document marker from standing at
+      // the start of a line of the bare document, and the marker is only one
+      // where white space or the end of input follows it, so a line that
+      // merely begins with those three characters is content
+      if (line_indent == 0 && (this->check_document_marker('-') ||
+                               this->check_document_marker('.'))) {
+        break;
       }
 
       if (style == ScalarStyle::Literal) {
@@ -1448,10 +1465,18 @@ private:
         if (!trailing_newlines.empty()) {
           buffer += '\n';
         }
-      } else if (had_line_break || blank_line_count > 0) {
-        buffer += '\n';
-        if ((original != nullptr) && !original_trailing.empty()) {
-          *original += '\n';
+      } else {
+        // Every empty line counted here follows a line of content, and that
+        // content line was only left behind by the line break that ends it,
+        // which is the very break the parallel buffer is holding
+        assert(had_line_break || blank_line_count == 0);
+        assert(!had_line_break || original == nullptr ||
+               !original_trailing.empty());
+        if (had_line_break) {
+          buffer += '\n';
+          if (original != nullptr) {
+            *original += '\n';
+          }
         }
       }
     }
@@ -1482,9 +1507,16 @@ private:
     const auto start_position{this->position_};
     const bool in_flow{this->flow_level_ > 0};
 
+    // YAML 1.2.2 production 126 writes `ns-plain-first(c)` as `( ns-char -
+    // c-indicator ) | ( ( "?" | ":" | "-" ) /* Followed by an ns-plain-safe(c)
+    // */ )` and production 129 takes the flow indicators out of
+    // `ns-plain-safe-in`, so inside a flow collection one of those three opens
+    // a scalar only when a character that is neither white space nor a flow
+    // indicator follows. A colon that one of those follows is read as a value
+    // indicator instead, so it never arrives here
     if (in_flow) {
       const char first{this->peek()};
-      if (first == '-' || first == '?' || first == ':') {
+      if (first == '-' || first == '?') {
         const char after{this->peek(1)};
         if (after == '\0' || is_whitespace(after) || is_flow_indicator(after))
             [[unlikely]] {
@@ -1502,7 +1534,8 @@ private:
     std::string pending_whitespace;
     std::string *buffer{nullptr};
 
-    while (this->position_ < this->input_.size()) {
+    while (true) {
+      assert(this->position_ < this->input_.size());
       const auto line_start{this->position_};
 
       while (this->position_ < this->input_.size()) {
@@ -1519,11 +1552,10 @@ private:
         }
 
         if (current == '#') {
-          if (this->position_ > line_start) {
-            const char before{this->input_[this->position_ - 1]};
-            if (before == ' ' || before == '\t') {
-              break;
-            }
+          assert(this->position_ > line_start);
+          const char before{this->input_[this->position_ - 1]};
+          if (before == ' ' || before == '\t') {
+            break;
           }
         }
 
@@ -1551,8 +1583,6 @@ private:
       if (!segment.empty()) {
         if (used_multiline) {
           *buffer += pending_whitespace;
-        }
-        if (buffer != nullptr) {
           *buffer += segment;
         }
         pending_whitespace.clear();
@@ -1618,27 +1648,6 @@ private:
         break;
       }
 
-      if (next_char == '-' || next_char == '?' || next_char == ':') {
-        const char after{this->peek(1)};
-        if (after == '\0' || is_whitespace(after)) {
-          if (next_line_indent == 0 || start_column < 3 ||
-              next_line_indent <= start_column - 3) {
-            this->position_ = saved_position;
-            this->line_ = saved_line;
-            this->column_ = saved_column;
-            break;
-          }
-        }
-        if (in_flow && next_char == ':') {
-          if (is_flow_indicator(after)) {
-            this->position_ = saved_position;
-            this->line_ = saved_line;
-            this->column_ = saved_column;
-            break;
-          }
-        }
-      }
-
       if (!in_flow && this->line_contains_mapping_key()) {
         this->position_ = saved_position;
         this->line_ = saved_line;
@@ -1646,16 +1655,15 @@ private:
         break;
       }
 
-      if (next_line_indent == 0) {
-        if ((next_char == '-' && this->peek(1) == '-' &&
-             this->peek(2) == '-') ||
-            (next_char == '.' && this->peek(1) == '.' &&
-             this->peek(2) == '.')) {
-          this->position_ = saved_position;
-          this->line_ = saved_line;
-          this->column_ = saved_column;
-          break;
-        }
+      // Production 206 only forbids a document marker that white space or the
+      // end of input follows, so a line that merely begins with those three
+      // characters carries on the scalar
+      if (next_line_indent == 0 && (this->check_document_marker('-') ||
+                                    this->check_document_marker('.'))) {
+        this->position_ = saved_position;
+        this->line_ = saved_line;
+        this->column_ = saved_column;
+        break;
       }
 
       if (next_char == '#') {
@@ -1678,10 +1686,13 @@ private:
       }
     }
 
-    if (used_multiline && buffer != nullptr) {
+    if (used_multiline) {
+      // A plain scalar opens on a character that is no white space, so every
+      // scan back over trailing white space stops on it at the latest
+      assert(!is_whitespace(this->input_[start_position]));
       auto raw_end{this->position_};
-      while (raw_end > start_position && (this->input_[raw_end - 1] == ' ' ||
-                                          this->input_[raw_end - 1] == '\t')) {
+      while (this->input_[raw_end - 1] == ' ' ||
+             this->input_[raw_end - 1] == '\t') {
         raw_end--;
       }
       return Token{.type = TokenType::Scalar,
@@ -1697,9 +1708,10 @@ private:
                            : std::string_view{}};
     }
 
+    assert(!is_whitespace(this->input_[start_position]));
     auto length{this->position_ - start_position};
-    while (length > 0 && (this->input_[start_position + length - 1] == ' ' ||
-                          this->input_[start_position + length - 1] == '\t')) {
+    while (this->input_[start_position + length - 1] == ' ' ||
+           this->input_[start_position + length - 1] == '\t') {
       length--;
     }
 
@@ -1722,7 +1734,6 @@ private:
   std::uint64_t column_{1};
   std::size_t flow_level_{0};
   bool stream_started_{false};
-  bool stream_ended_{false};
   bool last_was_quoted_scalar_{false};
   bool tab_at_line_start_{false};
   bool after_block_indicator_{false};

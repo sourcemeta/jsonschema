@@ -9,6 +9,7 @@
 #include <cassert>    // assert
 #include <functional> // std::cref
 #include <iterator>   // std::distance
+#include <limits>     // std::numeric_limits
 #include <optional>   // std::optional
 #include <regex>      // std::regex, std::regex_match, std::smatch
 #include <stdexcept>  // std::out_of_range
@@ -254,6 +255,28 @@ inline auto is_numeric_integer_type_check(const Instruction &instruction)
              sourcemeta::core::JSON::Type::Integer;
 }
 
+// A multiple of one admits exactly the integers, so it bounds a number the way
+// an integer type check does, without saying anything about the type
+inline auto is_numeric_integral_multiple_check(const Instruction &instruction)
+    -> bool {
+  if (instruction.type != InstructionIndex::AssertionDivisible) {
+    return false;
+  }
+
+  const auto &divisor{std::get<ValueJSON>(instruction.value)};
+  if (!divisor.is_integral()) {
+    return false;
+  }
+
+  // A real or decimal may spell an integer too large to represent, and such a
+  // divisor is never one, so a failed conversion just means no fusion
+  try {
+    return divisor.as_integer() == 1;
+  } catch (const std::out_of_range &) {
+    return false;
+  }
+}
+
 inline auto is_numeric_bound_check(const Instruction &instruction) -> bool {
   return instruction.type == InstructionIndex::AssertionGreaterEqual ||
          instruction.type == InstructionIndex::AssertionGreater ||
@@ -277,12 +300,22 @@ inline auto merge_integer_bound(const Instruction &instruction,
   if (instruction.type == InstructionIndex::AssertionGreaterEqual) {
     minimum = minimum.has_value() ? std::max(minimum.value(), value) : value;
   } else if (instruction.type == InstructionIndex::AssertionGreater) {
+    // Tightening the bound past the representable range would wrap around, so
+    // leave such a bound to the standalone instruction that can still hold it
+    if (value == std::numeric_limits<std::int64_t>::max()) {
+      return false;
+    }
+
     const auto adjusted{value + 1};
     minimum =
         minimum.has_value() ? std::max(minimum.value(), adjusted) : adjusted;
   } else if (instruction.type == InstructionIndex::AssertionLessEqual) {
     maximum = maximum.has_value() ? std::min(maximum.value(), value) : value;
   } else if (instruction.type == InstructionIndex::AssertionLess) {
+    if (value == std::numeric_limits<std::int64_t>::min()) {
+      return false;
+    }
+
     const auto adjusted{value - 1};
     maximum =
         maximum.has_value() ? std::min(maximum.value(), adjusted) : adjusted;
@@ -291,6 +324,47 @@ inline auto merge_integer_bound(const Instruction &instruction,
   }
 
   return true;
+}
+
+// Whether the bound fits the integer the instructions carry. One that does not
+// sits beyond the size of anything that can be held in memory, so the keyword
+// compilers say such a bound outright rather than convert a value that does
+// not fit. The comparison reads the number by its value, so it holds whichever
+// way the literal came to be stored
+inline auto bound_is_representable(const sourcemeta::core::JSON &value)
+    -> bool {
+  static const sourcemeta::core::JSON LIMIT{
+      std::numeric_limits<sourcemeta::core::JSON::Integer>::max()};
+  return value <= LIMIT;
+}
+
+// Draft 3 to 7 let `$ref` replace every sibling keyword, so nothing those
+// siblings say ever takes effect, and the OpenAPI 3.0 Schema Object answers
+// with Draft 4 here. Core's schema walker frames nothing under one of those
+// drafts either, which is what keeps such a sibling from compiling at all
+inline auto ref_overrides_sibling_keywords(const SchemaContext &schema_context)
+    -> bool {
+  using Known = sourcemeta::core::SchemaVocabularies::Known;
+  return schema_context.schema.is_object() &&
+         schema_context.schema.defines("$ref") &&
+         schema_context.vocabularies.contains_any(
+             {Known::JSON_SCHEMA_DRAFT_7, Known::JSON_SCHEMA_DRAFT_7_HYPER,
+              Known::JSON_SCHEMA_DRAFT_6, Known::JSON_SCHEMA_DRAFT_6_HYPER,
+              Known::JSON_SCHEMA_DRAFT_4, Known::JSON_SCHEMA_DRAFT_4_HYPER,
+              Known::JSON_SCHEMA_DRAFT_3, Known::JSON_SCHEMA_DRAFT_3_HYPER,
+              Known::OPENAPI_3_0_BASE});
+}
+
+// The OpenAPI 3.0 Schema Object spells a reference as a Reference Object, whose
+// every other member the specification says to ignore. The shape of such a
+// member is therefore not this dialect's to judge at all, and its own
+// meta-schema agrees: it accepts whatever stands beside a `$ref`. Every other
+// dialect here lets `$ref` override its siblings without excusing them from
+// being well-formed, which their meta-schemas do go on to check
+inline auto ref_object_ignores_siblings(
+    const sourcemeta::core::SchemaVocabularies &vocabularies) -> bool {
+  return vocabularies.contains(
+      sourcemeta::core::SchemaVocabularies::Known::OPENAPI_3_0_BASE);
 }
 
 // Note that the size keywords that let the type level fuse their bound accept
@@ -577,7 +651,8 @@ inline auto required_properties(const SchemaContext &schema_context)
       schema_context.vocabularies.contains(
           Known::JSON_SCHEMA_2019_09_VALIDATION) ||
       schema_context.vocabularies.contains(
-          Known::JSON_SCHEMA_2020_12_VALIDATION)};
+          Known::JSON_SCHEMA_2020_12_VALIDATION) ||
+      schema_context.vocabularies.contains(Known::OPENAPI_3_0_BASE)};
 
   ValueStringSet result;
 

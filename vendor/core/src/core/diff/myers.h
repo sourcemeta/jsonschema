@@ -3,6 +3,7 @@
 
 #include <cassert> // assert
 #include <cstddef> // std::size_t, std::ptrdiff_t
+#include <utility> // std::unreachable
 #include <vector>  // std::vector
 
 namespace sourcemeta::core::internal {
@@ -121,11 +122,12 @@ inline auto myers_middle_snake(const std::vector<std::size_t> &original,
     }
   }
 
+  // A middle snake always lands within the bounds the search was given, so the
+  // loop above returns rather than running out. Unlike a function that ends
+  // after an exhaustive switch, the search is a loop whose returns are all
+  // conditional, so every compiler has to be told the end is never reached
   assert(false);
-  return {.original_start = original_start,
-          .modified_start = modified_start,
-          .original_end = original_end,
-          .modified_end = modified_end};
+  std::unreachable();
 }
 
 inline auto myers_compare(const std::vector<std::size_t> &original,

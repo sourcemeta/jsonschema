@@ -9,6 +9,7 @@
 
 #include <algorithm>   // std::binary_search
 #include <array>       // std::array
+#include <cassert>     // assert
 #include <cstddef>     // std::size_t
 #include <cstdint>     // std::uint8_t
 #include <string_view> // std::string_view
@@ -45,7 +46,7 @@ inline auto scan_spacechars(const std::string_view input,
   return position - offset;
 }
 
-// An absolute URI of GFM section 6.9, right after the opening angle bracket
+// An absolute URI of GFM section 6.8, right after the opening angle bracket
 inline auto scan_autolink_uri(const std::string_view input,
                               const std::size_t offset) noexcept
     -> std::size_t {
@@ -88,7 +89,7 @@ inline auto scan_autolink_uri(const std::string_view input,
   return position + 1 - offset;
 }
 
-// An email address of GFM section 6.9, right after the opening angle bracket,
+// An email address of GFM section 6.8, right after the opening angle bracket,
 // which is a valid email address of the HTML Standard up to the closing angle
 // bracket
 inline auto scan_autolink_email(const std::string_view input,
@@ -180,7 +181,7 @@ scan_attribute_value_specification(const std::string_view input,
   return position - offset;
 }
 
-// An open tag or a closing tag of GFM section 6.6, right after the opening
+// An open tag or a closing tag of GFM section 6.10, right after the opening
 // angle bracket
 inline auto scan_html_tag(const std::string_view input,
                           const std::size_t offset) noexcept -> std::size_t {
@@ -241,10 +242,9 @@ inline auto scan_html_tag(const std::string_view input,
 inline auto scan_html_comment(const std::string_view input,
                               const std::size_t offset) noexcept
     -> std::size_t {
-  if (character_at(input, offset) != '-' ||
-      character_at(input, offset + 1) != '-') {
-    return 0;
-  }
+  // The caller reads both of these before asking
+  assert(character_at(input, offset) == '-');
+  assert(character_at(input, offset + 1) == '-');
 
   const auto text{offset + 2};
   if (character_at(input, text) == '>' ||
@@ -314,8 +314,10 @@ inline auto scan_html_declaration(const std::string_view input,
 // brackets and angle bracket
 inline auto scan_html_cdata(const std::string_view input,
                             const std::size_t offset) noexcept -> std::size_t {
-  if (offset > input.size() ||
-      input.substr(offset, 6) != std::string_view{"CDATA["}) {
+  // The caller reads the two characters before this one, so the offset is at
+  // most the end of the input and the view below is well formed
+  assert(offset <= input.size());
+  if (input.substr(offset, 6) != std::string_view{"CDATA["}) {
     return 0;
   }
 
@@ -380,10 +382,8 @@ inline auto lowercase_tag_name(const std::string_view input,
 inline auto scan_html_block_start(const std::string_view input,
                                   const std::size_t offset) noexcept
     -> std::size_t {
-  if (character_at(input, offset) != '<') {
-    return 0;
-  }
-
+  assert(input.ends_with('\n'));
+  assert(character_at(input, offset) == '<');
   const auto next{character_at(input, offset + 1)};
   if (next == '!') {
     const auto after{character_at(input, offset + 2)};
@@ -435,8 +435,21 @@ inline auto scan_html_block_start(const std::string_view input,
 // The start condition 7 of an HTML block of GFM section 4.6
 inline auto scan_html_block_start_7(const std::string_view input,
                                     const std::size_t offset) noexcept -> bool {
-  if (character_at(input, offset) != '<') {
-    return false;
+  assert(input.ends_with('\n'));
+  assert(character_at(input, offset) == '<');
+  // CommonMark 0.31.2 section 4.6 writes this condition as "a complete open
+  // tag (with any tag name other than pre, script, style, or textarea) or a
+  // complete closing tag", so an open tag of an element whose content is raw
+  // text opens a block of the first condition or none at all. The exclusion is
+  // written of the open tag alone, so the closing tag of one of those elements
+  // opens a block here
+  if (character_at(input, offset + 1) != '/') {
+    std::array<char, 16> buffer{};
+    const auto name{lowercase_tag_name(input, offset + 1, buffer)};
+    if (name == "script" || name == "pre" || name == "textarea" ||
+        name == "style") {
+      return false;
+    }
   }
 
   const auto length{scan_html_tag(input, offset + 1)};
@@ -445,23 +458,21 @@ inline auto scan_html_block_start_7(const std::string_view input,
   }
 
   auto position{offset + 1 + length};
-  while (position < input.size() &&
-         (input[position] == '\t' || input[position] == '\f' ||
-          input[position] == ' ')) {
+  while (input[position] == '\t' || input[position] == '\f' ||
+         input[position] == ' ') {
     ++position;
   }
 
-  const auto character{character_at(input, position)};
-  return character == '\n' || character == '\r';
+  return input[position] == '\n';
 }
 
 // The end conditions of the HTML blocks of GFM section 4.6
 inline auto scan_html_block_end(const std::string_view input,
                                 const std::size_t offset,
                                 const std::size_t condition) noexcept -> bool {
-  if (offset > input.size()) {
-    return false;
-  }
+  // The offset is the first character of the line that is not a space, and a
+  // line ends with a line feed, so there is always one to find
+  assert(offset < input.size());
 
   const auto line{input.substr(offset)};
   switch (condition) {
@@ -495,7 +506,7 @@ inline auto scan_html_block_end(const std::string_view input,
   }
 }
 
-// A link title of GFM section 6.3, which "consists of either a sequence of zero
+// A link title of GFM section 6.6, which "consists of either a sequence of zero
 // or more characters between straight double-quote characters ("), including a
 // " character only if it is backslash-escaped, or a sequence of zero or more
 // characters between straight single-quote characters ('), including a '
@@ -512,7 +523,7 @@ inline auto scan_link_title(const std::string_view input,
   const auto closing{opening == '(' ? ')' : opening};
   for (auto position{offset + 1}; position < input.size(); ++position) {
     const auto character{input[position]};
-    // GFM section 2.4: "Any ASCII punctuation character may be
+    // GFM section 6.1: "Any ASCII punctuation character may be
     // backslash-escaped"
     if (character == '\\' && position + 1 < input.size() &&
         sourcemeta::core::is_punctuation(input[position + 1])) {
@@ -533,31 +544,34 @@ inline auto scan_link_title(const std::string_view input,
 }
 
 // The start of an ATX heading of GFM section 4.2, including the whitespace
-// after its opening sequence
+// after its opening sequence. The line this reads always ends with a line feed,
+// which is neither a number sign nor whitespace, so neither run below can walk
+// off the end, and the caller only asks once it has seen the first sign
 inline auto scan_atx_heading_start(const std::string_view input,
                                    const std::size_t offset) noexcept
     -> std::size_t {
+  assert(input.ends_with('\n'));
+  assert(character_at(input, offset) == '#');
   auto position{offset};
-  while (position < input.size() && input[position] == '#') {
+  while (input[position] == '#') {
     ++position;
   }
 
   const auto hashes{position - offset};
-  if (hashes == 0 || hashes > 6) {
+  if (hashes > 6) {
     return 0;
   }
 
-  const auto character{character_at(input, position)};
+  const auto character{input[position]};
   if (character == ' ' || character == '\t') {
-    while (position < input.size() &&
-           (input[position] == ' ' || input[position] == '\t')) {
+    while (input[position] == ' ' || input[position] == '\t') {
       ++position;
     }
 
     return position - offset;
   }
 
-  return character == '\n' || character == '\r' ? position + 1 - offset : 0;
+  return character == '\n' ? position + 1 - offset : 0;
 }
 
 // The underline of a setext heading of GFM section 4.3, returning the level
@@ -565,23 +579,20 @@ inline auto scan_atx_heading_start(const std::string_view input,
 inline auto scan_setext_heading_line(const std::string_view input,
                                      const std::size_t offset) noexcept
     -> std::uint8_t {
-  const auto marker{character_at(input, offset)};
-  if (marker != '=' && marker != '-') {
-    return 0;
-  }
+  assert(input.ends_with('\n'));
+  const auto marker{input[offset]};
+  assert(marker == '=' || marker == '-');
 
   auto position{offset};
-  while (position < input.size() && input[position] == marker) {
+  while (input[position] == marker) {
     ++position;
   }
 
-  while (position < input.size() &&
-         (input[position] == ' ' || input[position] == '\t')) {
+  while (input[position] == ' ' || input[position] == '\t') {
     ++position;
   }
 
-  const auto character{character_at(input, position)};
-  if (character != '\n' && character != '\r') {
+  if (input[position] != '\n') {
     return 0;
   }
 
@@ -593,13 +604,12 @@ inline auto scan_setext_heading_line(const std::string_view input,
 inline auto scan_open_code_fence(const std::string_view input,
                                  const std::size_t offset) noexcept
     -> std::size_t {
-  const auto marker{character_at(input, offset)};
-  if (marker != '`' && marker != '~') {
-    return 0;
-  }
+  assert(input.ends_with('\n'));
+  const auto marker{input[offset]};
+  assert(marker == '`' || marker == '~');
 
   auto position{offset};
-  while (position < input.size() && input[position] == marker) {
+  while (input[position] == marker) {
     ++position;
   }
 
@@ -608,9 +618,9 @@ inline auto scan_open_code_fence(const std::string_view input,
     return 0;
   }
 
-  while (position < input.size()) {
+  while (true) {
     const auto character{input[position]};
-    if (character == '\n' || character == '\r') {
+    if (character == '\n') {
       return length;
     }
 
@@ -620,8 +630,6 @@ inline auto scan_open_code_fence(const std::string_view input,
 
     ++position;
   }
-
-  return 0;
 }
 
 // The closing fence of a fenced code block of GFM section 4.5, returning the
@@ -629,13 +637,12 @@ inline auto scan_open_code_fence(const std::string_view input,
 inline auto scan_close_code_fence(const std::string_view input,
                                   const std::size_t offset) noexcept
     -> std::size_t {
-  const auto marker{character_at(input, offset)};
-  if (marker != '`' && marker != '~') {
-    return 0;
-  }
+  assert(input.ends_with('\n'));
+  const auto marker{input[offset]};
+  assert(marker == '`' || marker == '~');
 
   auto position{offset};
-  while (position < input.size() && input[position] == marker) {
+  while (input[position] == marker) {
     ++position;
   }
 
@@ -644,13 +651,11 @@ inline auto scan_close_code_fence(const std::string_view input,
     return 0;
   }
 
-  while (position < input.size() &&
-         (input[position] == ' ' || input[position] == '\t')) {
+  while (input[position] == ' ' || input[position] == '\t') {
     ++position;
   }
 
-  const auto character{character_at(input, position)};
-  return character == '\n' || character == '\r' ? length : 0;
+  return input[position] == '\n' ? length : 0;
 }
 
 // The image media types whose data URLs safe mode keeps
@@ -682,30 +687,30 @@ inline auto is_dangerous_url(const std::string_view url) noexcept -> bool {
 inline auto scan_footnote_definition(const std::string_view input,
                                      const std::size_t offset) noexcept
     -> std::size_t {
-  if (character_at(input, offset) != '[' ||
-      character_at(input, offset + 1) != '^') {
+  assert(input.ends_with('\n'));
+  assert(character_at(input, offset) == '[');
+  if (character_at(input, offset + 1) != '^') {
     return 0;
   }
 
   auto position{offset + 2};
-  while (position < input.size()) {
+  while (true) {
     const auto character{input[position]};
-    if (character == ']' || character == ' ' || character == '\r' ||
-        character == '\n' || character == '\t') {
+    if (character == ']' || character == ' ' || character == '\n' ||
+        character == '\t') {
       break;
     }
 
     ++position;
   }
 
-  if (position == offset + 2 || character_at(input, position) != ']' ||
+  if (position == offset + 2 || input[position] != ']' ||
       character_at(input, position + 1) != ':') {
     return 0;
   }
 
   position += 2;
-  while (position < input.size() &&
-         (input[position] == ' ' || input[position] == '\t')) {
+  while (input[position] == ' ' || input[position] == '\t') {
     ++position;
   }
 
@@ -714,17 +719,18 @@ inline auto scan_footnote_definition(const std::string_view input,
 
 inline auto scan_table_marker(const std::string_view input,
                               std::size_t position) noexcept -> std::size_t {
+  assert(input.ends_with('\n'));
   const auto start{position};
-  while (position < input.size() && is_line_space(input[position])) {
+  while (is_line_space(input[position])) {
     ++position;
   }
 
-  if (character_at(input, position) == ':') {
+  if (input[position] == ':') {
     ++position;
   }
 
   const auto dashes_start{position};
-  while (position < input.size() && input[position] == '-') {
+  while (input[position] == '-') {
     ++position;
   }
 
@@ -732,11 +738,11 @@ inline auto scan_table_marker(const std::string_view input,
     return 0;
   }
 
-  if (character_at(input, position) == ':') {
+  if (input[position] == ':') {
     ++position;
   }
 
-  while (position < input.size() && is_line_space(input[position])) {
+  while (is_line_space(input[position])) {
     ++position;
   }
 
@@ -747,28 +753,21 @@ inline auto scan_table_marker(const std::string_view input,
 inline auto scan_table_row_end(const std::string_view input,
                                const std::size_t offset) noexcept
     -> std::size_t {
-  if (offset >= input.size()) {
-    return 0;
-  }
-
+  assert(input.ends_with('\n'));
+  assert(offset < input.size());
   auto position{offset};
-  while (position < input.size() && is_line_space(input[position])) {
+  while (is_line_space(input[position])) {
     ++position;
   }
 
-  if (character_at(input, position) == '\r') {
-    ++position;
-  }
-
-  return character_at(input, position) == '\n' ? position + 1 - offset : 0;
+  return input[position] == '\n' ? position + 1 - offset : 0;
 }
 
 // The delimiter row of a table of GFM section 4.10
 inline auto scan_table_start(const std::string_view input,
                              const std::size_t offset) noexcept -> std::size_t {
-  if (offset >= input.size()) {
-    return 0;
-  }
+  assert(input.ends_with('\n'));
+  assert(offset < input.size());
 
   auto position{offset};
   if (input[position] == '|') {
@@ -799,10 +798,11 @@ inline auto scan_table_start(const std::string_view input,
 // is not preceded by a backslash
 inline auto scan_table_cell(const std::string_view input,
                             const std::size_t offset) noexcept -> std::size_t {
+  assert(input.ends_with('\n'));
   auto position{offset};
-  while (position < input.size()) {
+  while (true) {
     const auto character{input[position]};
-    if (character == '\r' || character == '\n') {
+    if (character == '\n') {
       break;
     }
 
@@ -821,12 +821,13 @@ inline auto scan_table_cell(const std::string_view input,
 inline auto scan_table_cell_end(const std::string_view input,
                                 const std::size_t offset) noexcept
     -> std::size_t {
+  assert(input.ends_with('\n'));
   if (character_at(input, offset) != '|') {
     return 0;
   }
 
   auto position{offset + 1};
-  while (position < input.size() && is_line_space(input[position])) {
+  while (is_line_space(input[position])) {
     ++position;
   }
 

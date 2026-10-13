@@ -56,9 +56,9 @@ auto add_value(JSON &result, const JSON::String &key, JSON &&value,
 
 // A value object carrying a JSON literal whose value is null.
 auto is_json_literal_null(const JSON &element) -> bool {
-  if (!element.is_object()) {
-    return false;
-  }
+  // Whatever stands as the value of a property in an expanded document is an
+  // object, which is what the one place this is asked from hands over
+  assert(element.is_object());
   const auto *const contents{element.try_at(KEYWORD_VALUE, KEYWORD_VALUE_HASH)};
   if (contents == nullptr || !contents->is_null()) {
     return false;

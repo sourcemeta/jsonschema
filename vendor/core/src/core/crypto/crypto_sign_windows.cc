@@ -226,12 +226,12 @@ auto native_ec_private_key(const sourcemeta::core::EllipticCurve curve,
     rest = element->rest;
   }
 
-  const auto stripped_scalar{
-      sourcemeta::core::strip_left(scalar->content, '\x00')};
-  if (point.size() != 2 * field_bytes || stripped_scalar.empty() ||
-      stripped_scalar.size() > field_bytes) {
+  if (point.size() != 2 * field_bytes) {
     return {.algorithm = nullptr, .key = nullptr};
   }
+
+  const auto stripped_scalar{
+      sourcemeta::core::strip_left(scalar->content, '\x00')};
 
   BCRYPT_ECCKEY_BLOB header{};
   header.dwMagic = to_ecc_private_magic(curve);

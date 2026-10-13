@@ -533,6 +533,11 @@ auto parse_authority(const std::string_view input,
         }
 
         port = static_cast<std::uint32_t>(port_value.value());
+        // RFC 3986 Section 3.2 reads a port only inside an authority, and the
+        // host of an authority is always recorded even when it is empty, so a
+        // port never stands without one. Callers rely on this to ask about the
+        // authority through the host alone
+        assert(host.has_value());
       }
     }
   }
@@ -650,10 +655,10 @@ auto do_parse(const std::string_view input,
     }
   }
 
-  if (position < input.size()) [[unlikely]] {
-    throw sourcemeta::core::URIParseError{
-        static_cast<std::uint64_t>(position + 1)};
-  }
+  // Each of the three above either takes what it reads or refuses it outright,
+  // and the last reads to the end rather than stopping at a delimiter, so none
+  // of them hands back an input with anything of it left over
+  assert(position == input.size());
 
   return has_scheme;
 }

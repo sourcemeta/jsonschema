@@ -12,6 +12,7 @@
 
 #include <algorithm>   // std::ranges::any_of
 #include <array>       // std::array
+#include <cassert>     // assert
 #include <cstddef>     // std::size_t
 #include <optional>    // std::optional, std::nullopt
 #include <set>         // std::set
@@ -60,7 +61,13 @@ inline auto openapi_check_server_variable(const JSON &value,
           "The Server Variable Object enumeration must be an array"};
     }
 
-    if (enumeration->empty()) {
+    // 3.0 asks for the same thing without requiring it. Its first three
+    // releases say nothing of emptiness at all, and the last two say "The
+    // array SHOULD NOT be empty", the later of which was published the same
+    // day as the 3.1.1 wording above. The two lines were maintained together
+    // and chose different strengths, so an empty array is conforming under 3.0
+    // and turning one down there would refuse a document the revision admits
+    if (walk.version >= OpenAPIVersion::OPENAPI_3_1 && enumeration->empty()) {
       throw OpenAPIError{
           openapi_child(base, "enum"sv),
           "The Server Variable Object enumeration must not be empty"};
@@ -96,8 +103,13 @@ inline auto openapi_check_server_variable(const JSON &value,
   // OpenAPI Specification 3.1.1, Section 4.8.6: "If the `enum` is defined, the
   // value MUST exist in the enum's values". The published meta-schema does not
   // check this, and the fixture the OpenAPI Initiative ships for an empty
-  // enumeration says so in a comment, so the prose is what this follows
-  if (enumeration != nullptr &&
+  // enumeration says so in a comment, so the prose is what this follows.
+  //
+  // 3.0 holds the two fields to no such relation. Its first three releases
+  // state none, and the last two say "If the `enum` is defined, the value
+  // SHOULD exist in the enum's values", so a default outside the enumeration
+  // is conforming there
+  if (walk.version >= OpenAPIVersion::OPENAPI_3_1 && enumeration != nullptr &&
       !std::ranges::any_of(enumeration->as_array(),
                            [default_value](const JSON &option) -> bool {
                              return option.to_string() == default_value;
@@ -162,41 +174,93 @@ inline auto openapi_substitute_server_variables(const JSON::StringView address,
   JSON::String result;
   JSON::StringView::size_type cursor{0};
   while (cursor < address.size()) {
-    const auto opening{address.find('{', cursor)};
-    if (opening == JSON::StringView::npos) {
+    const auto expression{openapi_next_brace_expression(address, cursor)};
+    if (expression.opening == JSON::StringView::npos) {
       result.append(address.substr(cursor));
       break;
     }
 
-    const auto closing{address.find('}', opening)};
-    if (closing == JSON::StringView::npos) {
+    // A run that never closes leaves no name to look up, and what a template
+    // means by one is not something to guess at
+    if (expression.closing == JSON::StringView::npos) {
       return std::nullopt;
     }
 
-    result.append(address.substr(cursor, opening - cursor));
-    const auto *variable{
-        variables.try_at(address.substr(opening + 1, closing - opening - 1))};
-    if (variable == nullptr || !variable->is_object()) {
+    result.append(address.substr(cursor, expression.opening - cursor));
+    const auto name{address.substr(
+        expression.opening + 1, expression.closing - expression.opening - 1)};
+    // Nothing holds a URL template to naming only variables that are declared,
+    // so one that names an undeclared variable stands for nothing this can
+    // work out. Whatever is declared has already been read as a Server
+    // Variable Object by the time any of this runs
+    const auto *variable{variables.try_at(name)};
+    if (variable == nullptr) {
       return std::nullopt;
     }
 
-    const auto name{address.substr(opening + 1, closing - opening - 1)};
+    assert(variable->is_object());
+
     if (!varied.empty() && name == varied) {
       result.append(value);
-      cursor = closing + 1;
+      cursor = expression.closing + 1;
       continue;
     }
 
     const auto *fallback{variable->try_at("default")};
-    if (fallback == nullptr || !fallback->is_string()) {
-      return std::nullopt;
-    }
-
+    assert(fallback != nullptr && fallback->is_string());
     result.append(fallback->to_string());
-    cursor = closing + 1;
+    cursor = expression.closing + 1;
   }
 
   return result;
+}
+
+// The first slash, question mark or number sign standing in literal text,
+// which is the boundary the reasoning below draws on. Substitution takes
+// whatever a pair of braces holds as the name to look up, so one of those
+// inside a variable expression is part of a name rather than a boundary, and
+// the scan steps over every expression rather than reading the template flat
+inline auto openapi_server_authority_end(const JSON::StringView address)
+    -> JSON::StringView::size_type {
+  JSON::StringView::size_type cursor{0};
+  while (true) {
+    const auto boundary{address.find_first_of("/?#", cursor)};
+    const auto expression{openapi_next_brace_expression(address, cursor)};
+    // Where nothing was found, where no expression stands in the way, where
+    // one begins only after what was found, or where a run never closes and so
+    // is no expression at all, what was found stands in literal text
+    if (boundary == JSON::StringView::npos ||
+        expression.opening == JSON::StringView::npos ||
+        expression.closing == JSON::StringView::npos ||
+        boundary < expression.opening) {
+      return boundary;
+    }
+
+    cursor = expression.closing + 1;
+  }
+}
+
+// Whether what a variable stands for can bear on the kind of reference the
+// template names. RFC 3986 Section 3.2 ends the authority at the first slash,
+// question mark or number sign, and what follows any of those is the path, the
+// query or the fragment, none of which can turn an absolute reference into a
+// relative one. So only a variable reaching the part before the earliest of
+// them has to have what it stands for bounded, and one the template never
+// names reaches nothing at all
+inline auto openapi_server_variable_bears_on_absoluteness(
+    const JSON::StringView address, const JSON::String &name) -> bool {
+  JSON::String placeholder;
+  placeholder.reserve(name.size() + 2);
+  placeholder.push_back('{');
+  placeholder.append(name);
+  placeholder.push_back('}');
+  const auto occurrence{address.find(placeholder)};
+  if (occurrence == JSON::StringView::npos) {
+    return false;
+  }
+
+  const auto authority_end{openapi_server_authority_end(address)};
+  return authority_end == JSON::StringView::npos || occurrence < authority_end;
 }
 
 // Whether a server URL template names an absolute URI whatever its variables
@@ -217,16 +281,25 @@ openapi_is_absolute_server_url_template(const JSON::StringView address,
   }
 
   for (const auto &variable : variables.as_object()) {
-    const auto *choices{variable.second.try_at("enum")};
-    if (choices == nullptr || !choices->is_array()) {
+    if (!openapi_server_variable_bears_on_absoluteness(address,
+                                                       variable.first)) {
       continue;
     }
 
-    for (const auto &choice : choices->as_array()) {
-      if (!choice.is_string()) {
-        return false;
-      }
+    const auto *choices{variable.second.try_at("enum")};
+    // Section 4.8.6 admits an enumeration only where the substitution options
+    // are from a limited set, and sends the default only where an alternate
+    // value is not supplied, so a variable that enumerates nothing may stand
+    // for anything at all. Reading its default as the whole of what it may
+    // stand for would settle a question the description leaves open, which is
+    // the one thing this is here to refuse
+    if (choices == nullptr) {
+      return false;
+    }
 
+    assert(choices->is_array());
+    for (const auto &choice : choices->as_array()) {
+      assert(choice.is_string());
       const auto candidate{openapi_substitute_server_variables(
           address, variables, variable.first, choice.to_string())};
       if (!candidate.has_value() || !URI::is_uri(candidate.value())) {
@@ -270,9 +343,11 @@ inline auto openapi_resolve_server_url(const JSON::StringView address,
   // and a template that names an absolute URI that way names the same place
   // wherever the Object holding it comes to sit
   if (separator == JSON::StringView::npos) {
-    if (variables == nullptr || !variables->is_object()) {
+    if (variables == nullptr) {
       return std::nullopt;
     }
+
+    assert(variables->is_object());
 
     if (!openapi_is_absolute_server_url_template(address, *variables)) {
       return std::nullopt;
@@ -361,13 +436,18 @@ inline auto openapi_check_server(const JSON &value, const Pointer &base,
   // document, not the feature set" and goes on: "The patch version SHOULD NOT
   // be considered by tooling, making no distinction between `3.1.0` and
   // `3.1.1`". So reading this one as a clarification of what 3.1 always meant
-  // is what that rule asks for.
+  // is what that rule asks for. No release of 3.0 carries that sentence, and
+  // the last of them was published the same day as 3.1.1, so the line that
+  // had the clarification to make did not make it there. What 3.0 says of
+  // this field is "**REQUIRED**. A URL to the target host", and nothing in
+  // any of its releases forbids either character.
   //
   // A query begins at the first `?` and a fragment at the first `#`, so either
   // character in the template starts one, whether or not it sits inside a
   // variable expression. A percent-encoded one is neither and is left alone
-  if (address.find('?') != JSON::StringView::npos ||
-      address.find('#') != JSON::StringView::npos) {
+  if (walk.version >= OpenAPIVersion::OPENAPI_3_1 &&
+      (address.find('?') != JSON::StringView::npos ||
+       address.find('#') != JSON::StringView::npos)) {
     throw OpenAPIError{
         openapi_child(base, "url"sv),
         "The Server Object URL must carry no query and no fragment"};
@@ -392,7 +472,7 @@ inline auto openapi_check_server(const JSON &value, const Pointer &base,
   // amount of parsing can rescue unreported. That is under-reporting rather
   // than a wrong refusal, and closing it would turn down documents accepted
   // until now, so it waits for a release that can carry it
-  if (walk.version == OpenAPIVersion::OPENAPI_3_2) {
+  if (walk.version >= OpenAPIVersion::OPENAPI_3_2) {
     if (!openapi_is_server_url_template(address)) {
       throw OpenAPIError{openapi_child(base, "url"sv),
                          "The Server Object URL must take the form of a "

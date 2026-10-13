@@ -781,9 +781,6 @@ private:
       std::size_t distance{0};
       std::size_t length{this->find(input, size, position, distance)};
       this->insert(input, position);
-      if (length > 0 && length < 4) {
-        length = 0;
-      }
 
       if (previous_available && previous_length >= 4 &&
           length <= previous_length) {

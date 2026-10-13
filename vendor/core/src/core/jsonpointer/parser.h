@@ -7,6 +7,7 @@
 #include <sourcemeta/core/jsonpointer.h>
 #include <sourcemeta/core/jsonpointer_error.h>
 
+#include <cassert>      // assert
 #include <charconv>     // std::from_chars
 #include <cstddef>      // std::size_t
 #include <cstdint>      // std::uint64_t
@@ -31,8 +32,7 @@ template <typename CharT, typename Traits,
           template <typename T> typename Allocator>
 inline auto emplace_index_or_property(
     Pointer &result,
-    std::basic_stringstream<CharT, Traits, Allocator<CharT>> &stream,
-    const std::uint64_t column) -> void {
+    std::basic_stringstream<CharT, Traits, Allocator<CharT>> &stream) -> void {
   auto input = stream.str();
   std::size_t index_value{};
   const auto conversion =
@@ -49,10 +49,9 @@ inline auto emplace_index_or_property(
     return;
   }
 
-  if (conversion.ec != std::errc{}) [[unlikely]] {
-    throw PointerParseError(column);
-  }
-
+  // The scan only arrives here with a token of digits alone, which either
+  // names an index or stands for a value too large to be one
+  assert(conversion.ec == std::errc{});
   result.emplace_back(index_value);
 }
 
@@ -153,7 +152,7 @@ parse_token_index_end:
     column += 1;
     stream.ignore();
     if constexpr (!CheckOnly) {
-      internal::emplace_index_or_property(result, string, column);
+      internal::emplace_index_or_property(result, string);
       internal::reset(string);
     }
     goto done;
@@ -164,7 +163,7 @@ parse_token_index_end:
       column += 1;
       stream.ignore();
       if constexpr (!CheckOnly) {
-        internal::emplace_index_or_property(result, string, column);
+        internal::emplace_index_or_property(result, string);
         internal::reset(string);
       }
       goto parse_token_content;
@@ -178,7 +177,7 @@ parse_token_index_rest_any:
     column += 1;
     stream.ignore();
     if constexpr (!CheckOnly) {
-      internal::emplace_index_or_property(result, string, column);
+      internal::emplace_index_or_property(result, string);
       internal::reset(string);
     }
     goto done;
@@ -189,7 +188,7 @@ parse_token_index_rest_any:
       column += 1;
       stream.ignore();
       if constexpr (!CheckOnly) {
-        internal::emplace_index_or_property(result, string, column);
+        internal::emplace_index_or_property(result, string);
         internal::reset(string);
       }
       goto parse_token_content;

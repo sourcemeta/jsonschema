@@ -65,6 +65,8 @@ auto Decoder::ANY_PACKED_TYPE_TAG_BYTE_PREFIX(
         return sourcemeta::core::JSON{true};
       case SUBTYPE_NUMBER:
         return this->DOUBLE_VARINT_TUPLE({});
+      case SUBTYPE_DECIMAL:
+        return this->NUMBER_VARINT_TUPLE({});
       case SUBTYPE_POSITIVE_REAL_INTEGER_BYTE:
         return sourcemeta::core::JSON{static_cast<double>(this->get_byte())};
       case SUBTYPE_POSITIVE_INTEGER:

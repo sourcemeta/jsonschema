@@ -27,54 +27,7 @@ public:
     const auto *enum_value{schema.try_at("enum")};
     ONLY_CONTINUE_IF(enum_value && enum_value->is_array());
 
-    if (vocabularies.contains_any(
-            {SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_3,
-             SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_3_HYPER})) {
-      if (type->is_string() && type->to_string() == "any") {
-        return true;
-      }
-
-      if (type->is_array()) {
-        bool has_tautology{false};
-        bool has_unknown_subschema{false};
-        for (const auto &entry : type->as_array()) {
-          if (entry.is_string() && entry.to_string() == "any") {
-            has_tautology = true;
-            break;
-          }
-          if (entry.is_object()) {
-            if (entry.empty()) {
-              has_tautology = true;
-              break;
-            }
-            has_unknown_subschema = true;
-          }
-        }
-
-        if (has_tautology) {
-          return true;
-        }
-
-        if (has_unknown_subschema) {
-          return false;
-        }
-      }
-    }
-
-    const auto current_types{parse_schema_type(*type)};
-    ONLY_CONTINUE_IF(current_types.any());
-    const bool integer_matches_integral{
-        vocabularies.contains_any(
-            {SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_6,
-             SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_7}) &&
-        current_types.test(
-            std::to_underlying(sourcemeta::core::JSON::Type::Integer))};
-    ONLY_CONTINUE_IF(std::ranges::all_of(
-        enum_value->as_array(),
-        [&current_types, integer_matches_integral](const auto &item) -> auto {
-          return current_types.test(std::to_underlying(item.type())) ||
-                 (integer_matches_integral && item.is_integral());
-        }));
+    ONLY_CONTINUE_IF(type_is_implied_by_enum(*type, *enum_value, vocabularies));
 
     return true;
   }

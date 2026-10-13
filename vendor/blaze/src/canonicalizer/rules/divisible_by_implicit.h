@@ -11,10 +11,12 @@ public:
             const sourcemeta::core::SchemaFrame::Location &,
             const sourcemeta::core::SchemaWalker &,
             const sourcemeta::core::SchemaResolver &) const -> bool override {
-    ONLY_CONTINUE_IF(vocabularies.contains_any(
-                         {SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_2,
-                          SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_3}) &&
-                     schema.is_object() && !schema.defines("divisibleBy"));
+    ONLY_CONTINUE_IF(
+        vocabularies.contains_any(
+            {SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_2,
+             SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_3,
+             SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_3_HYPER}) &&
+        schema.is_object() && !schema.defines("divisibleBy"));
 
     const auto *type{schema.try_at("type")};
     ONLY_CONTINUE_IF(type && type->is_string() &&

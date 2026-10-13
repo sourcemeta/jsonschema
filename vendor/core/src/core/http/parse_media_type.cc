@@ -2,6 +2,7 @@
 
 #include "helpers.h"
 
+#include <cassert>     // assert
 #include <cstddef>     // std::size_t
 #include <optional>    // std::optional, std::nullopt
 #include <string>      // std::string
@@ -24,11 +25,14 @@ auto http_is_parameters(const std::string_view parameters) -> bool {
   std::string_view value;
   std::size_t position{0};
   while (position < span.size()) {
-    while (position < span.size() && http_is_ows(span[position])) {
+    // The tail was trimmed with this very predicate, so a run of optional
+    // whitespace always stops before the end of the span and a byte follows it
+    while (http_is_ows(span[position])) {
       position += 1;
+      assert(position < span.size());
     }
 
-    if (position >= span.size() || span[position] != ';') {
+    if (span[position] != ';') {
       return false;
     }
 

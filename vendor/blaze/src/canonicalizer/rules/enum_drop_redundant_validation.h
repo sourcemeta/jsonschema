@@ -23,10 +23,17 @@ public:
              SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_7,
              SchemaVocabularies::Known::JSON_SCHEMA_2019_09_VALIDATION,
              SchemaVocabularies::Known::JSON_SCHEMA_2020_12_VALIDATION}) &&
-        schema.is_object() && !schema.defines("type"));
+        schema.is_object());
 
     const auto *enum_value{schema.try_at("enum")};
     ONLY_CONTINUE_IF(enum_value && enum_value->is_array());
+
+    // `enum_with_type` takes away a `type` the options already imply, so one
+    // that is still here says something they do not, and belongs in a branch
+    // of its own rather than beside them
+    const auto *type{schema.try_at("type")};
+    ONLY_CONTINUE_IF(type == nullptr || !type_is_implied_by_enum(
+                                            *type, *enum_value, vocabularies));
 
     this->keywords_.clear();
     this->wrap_keywords_.clear();

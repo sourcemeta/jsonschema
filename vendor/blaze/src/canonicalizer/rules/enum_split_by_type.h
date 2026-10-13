@@ -28,7 +28,8 @@ public:
         {SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_0,
          SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_1,
          SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_2,
-         SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_3})};
+         SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_3,
+         SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_3_HYPER})};
     ONLY_CONTINUE_IF((any_of_dialect || type_union_dialect) &&
                      schema.is_object());
 

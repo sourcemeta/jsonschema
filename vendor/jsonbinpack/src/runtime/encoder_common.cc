@@ -38,6 +38,7 @@ auto Encoder::write(const sourcemeta::core::JSON &document,
     HANDLE_ENCODING(19, ROOF_TYPED_ARRAY)
     HANDLE_ENCODING(20, FIXED_TYPED_ARBITRARY_OBJECT)
     HANDLE_ENCODING(21, VARINT_TYPED_ARBITRARY_OBJECT)
+    HANDLE_ENCODING(22, NUMBER_VARINT_TUPLE)
 #undef HANDLE_ENCODING
     default:
       // We should never get here. If so, it is definitely a bug

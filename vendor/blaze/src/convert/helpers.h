@@ -74,20 +74,6 @@ inline auto assign_before_first_key(sourcemeta::core::JSON &schema,
   schema.try_assign_before(key, value, first);
 }
 
-inline auto bump_dialect(sourcemeta::core::JSON &schema, const Site &site,
-                         const std::string_view dialect) -> void {
-  if (!at_dialect_declaration(schema, site)) {
-    return;
-  }
-
-  if (schema.defines("$schema")) {
-    schema.assign("$schema", sourcemeta::core::JSON{dialect});
-    return;
-  }
-
-  assign_before_first_key(schema, "$schema", sourcemeta::core::JSON{dialect});
-}
-
 inline auto current_dialect_or_override(const sourcemeta::core::JSON &schema)
     -> std::string_view {
   return declared_dialect(schema);
@@ -145,6 +131,119 @@ inline auto is_metaschema_target(const sourcemeta::core::JSON &schema,
 // `normalized_official_dialect` below folds those onto this one
 constexpr std::string_view OPENAPI_3_1_DIALECT{
     "https://spec.openapis.org/oas/3.1/dialect/base"};
+
+// The OpenAPI 3.0 Schema Object dialect, which the conversion reads as a
+// source and never writes. It is not a rung: its Schema Object extends the
+// Draft 4 base dialect while OpenAPI 3.1's extends 2020-12, so it sits below
+// Draft 4 by base dialect and below 3.1 by product version, and those two
+// orderings disagree. A document on it forks instead, reaching an OpenAPI
+// target through 3.1 and a JSON Schema target through Draft 4.
+//
+// Both dated spellings are listed and neither is canonical. Unlike OpenAPI
+// 3.1's three URIs, these name two documents that genuinely differ, so there
+// is nothing here for `normalized_official_dialect` to fold. They differ only
+// in the parts of an OpenAPI document that a Schema Object never reaches,
+// which is why one set of rules serves both
+// NOLINTNEXTLINE(cert-err58-cpp,bugprone-throwing-static-initialization)
+constexpr std::array<std::string_view, 2> OPENAPI_3_0_DIALECTS{
+    {"tag:spec.openapis.org,2024-10-18:oas/3.0/dialect",
+     "tag:spec.openapis.org,2021-09-28:oas/3.0/dialect"}};
+
+// Whether the dialect is one of those, asked of the spelling as written. A tag
+// URI carries no fragment and no scheme the spelling rules fold, so what the
+// document says is already the only spelling there is
+inline auto names_openapi_3_0_dialect(const std::string_view dialect) -> bool {
+  return std::ranges::find(OPENAPI_3_0_DIALECTS, dialect) !=
+         OPENAPI_3_0_DIALECTS.cend();
+}
+
+// Fold an OpenAPI 3.0 `nullable` into the `type` beside it, which is the one
+// member of that dialect carrying an assertion rather than an annotation. Both
+// targets of the fork accept a type array, so the same rewrite serves each.
+//
+// The keyword takes effect only where `type` is explicitly defined within the
+// same Schema Object, which the specification states outright. One standing
+// alone constrained nothing, and is left exactly where it is so that the
+// shadowing carries it across as the author data it was. Erasing it would drop
+// something the author wrote, which is not what becomes of any other member
+// this dialect has, and turning it into `{"type": ["null"]}` would invent a
+// constraint it never applied.
+//
+// A `nullable` that a `$ref` suppressed is left untouched too, whatever it
+// says. Such a keyword never applied, and the caller shadows it along with
+// every other sibling instead
+inline auto fold_nullable_into_type(sourcemeta::core::JSON &schema) -> void {
+  const auto *nullable{schema.try_at("nullable")};
+  if (nullable == nullptr || !nullable->is_boolean() ||
+      !nullable->to_boolean() || schema.defines("$ref") ||
+      !schema.defines("type")) {
+    return;
+  }
+
+  static const sourcemeta::core::JSON NULL_TYPE{"null"};
+  auto &type{schema.at("type")};
+  if (type.is_string()) {
+    auto names{sourcemeta::core::JSON::make_array()};
+    names.push_back(type);
+    names.push_back_if_unique(NULL_TYPE);
+    type = std::move(names);
+  } else if (type.is_array()) {
+    // An array here is not a shape OpenAPI 3.0 permits, as its `type` takes a
+    // single name. Carrying one anyway costs a line and keeps the rewrite from
+    // depending on a check that runs elsewhere
+    type.push_back_if_unique(NULL_TYPE);
+  } else {
+    return;
+  }
+
+  schema.erase("nullable");
+}
+
+// Draft 4 reads `enum` as a set and requires its members to be unique, while
+// the OpenAPI 3.0 Schema Object states `uniqueItems: false` for it outright. A
+// repeated option says nothing a single one does not, so a document carrying
+// one would otherwise reach a dialect that cannot read it back
+inline auto deduplicate_enum(sourcemeta::core::JSON &schema) -> void {
+  auto *options{schema.try_at("enum")};
+  if (options == nullptr || !options->is_array() || options->unique()) {
+    return;
+  }
+
+  auto distinct{sourcemeta::core::JSON::make_array()};
+  for (const auto &option : options->as_array()) {
+    distinct.push_back_if_unique(option);
+  }
+
+  *options = std::move(distinct);
+}
+
+// An empty `anyOf` or `oneOf` is satisfied by no instance whatever, which
+// Draft 4 has no boolean schema to say and spells as a `not` of the schema
+// every instance satisfies. That goes into `allOf`, whose meaning is already
+// the conjunction this needs, so a `not` the author wrote is left exactly as it
+// stands. Draft 4 requires at least one branch in each of the three, while the
+// OpenAPI 3.0 Schema Object places no bound on them at all
+inline auto fold_empty_applicators(sourcemeta::core::JSON &schema) -> void {
+  static const std::array<std::string_view, 2> UNSATISFIABLE_WHEN_EMPTY{
+      {"anyOf", "oneOf"}};
+
+  for (const auto &keyword : UNSATISFIABLE_WHEN_EMPTY) {
+    const sourcemeta::core::JSON::String name{keyword};
+    const auto *branches{schema.try_at(name)};
+    if (branches == nullptr || !branches->is_array() || !branches->empty()) {
+      continue;
+    }
+
+    schema.erase(name);
+    if (!schema.defines("allOf") || !schema.at("allOf").is_array()) {
+      schema.assign("allOf", sourcemeta::core::JSON::make_array());
+    }
+
+    auto nothing{sourcemeta::core::JSON::make_object()};
+    nothing.assign("not", sourcemeta::core::JSON::make_object());
+    schema.at("allOf").push_back(std::move(nothing));
+  }
+}
 
 // The OpenAPI 3.2 dialect, which declares the same four keywords as 3.1 with
 // strictly more permissive constraints, so the rung above only has a dialect
@@ -313,11 +412,13 @@ inline auto names_official_metaschema(const std::string_view uri) -> bool {
       });
 }
 
-// A dialect the ladder does not name is one the conversion has no rules for,
-// whether it belongs to a draft older than the ladder starts at or to a
-// meta-schema of the caller's own
+// Whether the conversion has rules for moving a schema off this dialect. A
+// dialect it does not name is one it has no rules for, whether that is a draft
+// older than the ladder starts at or a meta-schema of the caller's own. Every
+// rung qualifies, and so does OpenAPI 3.0, which forks off the ladder rather
+// than standing on it
 inline auto names_ladder_dialect(const std::string_view dialect) -> bool {
-  return dialect_position(dialect) > 0;
+  return dialect_position(dialect) > 0 || names_openapi_3_0_dialect(dialect);
 }
 
 // Core reads this keyword as a dialect too, so it may well be a keyword the
@@ -326,6 +427,40 @@ inline auto names_ladder_dialect(const std::string_view dialect) -> bool {
 inline auto is_own_dialect_override(const sourcemeta::core::JSON &value)
     -> bool {
   return value.is_string() && dialect_position(value.to_string()) > 0;
+}
+
+inline auto bump_dialect(sourcemeta::core::JSON &schema, const Site &site,
+                         const std::string_view dialect) -> void {
+  // Core reads the override marker as the dialect of the position carrying it,
+  // ahead of any `$schema` beside it and wherever that position is
+  if (schema.is_object()) {
+    auto *override_value{schema.try_at(DIALECT_OVERRIDE_KEYWORD)};
+    if (override_value != nullptr && override_value->is_string() &&
+        names_ladder_dialect(override_value->to_string())) {
+      // Where nothing else is read, the dialect moves by writing the marker. A
+      // `$schema` written here instead would not be the thing read, and the
+      // position would keep the dialect it had while its keywords moved on
+      if (!at_dialect_declaration(schema, site)) {
+        *override_value = sourcemeta::core::JSON{dialect};
+        return;
+      }
+
+      // Here a `$schema` is read, and the marker would go on overriding it, so
+      // the marker gives way to the declaration that now says the same thing
+      schema.erase(DIALECT_OVERRIDE_KEYWORD);
+    }
+  }
+
+  if (!at_dialect_declaration(schema, site)) {
+    return;
+  }
+
+  if (schema.defines("$schema")) {
+    schema.assign("$schema", sourcemeta::core::JSON{dialect});
+    return;
+  }
+
+  assign_before_first_key(schema, "$schema", sourcemeta::core::JSON{dialect});
 }
 
 // Whether an identifier and a dialect name the same thing once both are

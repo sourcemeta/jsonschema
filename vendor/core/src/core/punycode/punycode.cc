@@ -83,8 +83,9 @@ static constexpr auto is_basic(const char32_t code_point) -> bool {
 
 static auto punycode_encode(const std::u32string_view codepoints,
                             std::string &output) -> void {
-  // RFC 3492 Section 6.4 requires failing rather than letting the code point
-  // counters wrap on an input that does not fit a 32-bit count
+  // RFC 3492 Section 6.4 offers bounding the input as one way of keeping the
+  // counters from wrapping, alongside the detection the arithmetic below
+  // carries out, so this bound is a choice made here rather than a requirement
   if (codepoints.size() > std::numeric_limits<std::uint32_t>::max()) {
     throw PunycodeError("Input is too large");
   }
@@ -181,8 +182,10 @@ static auto punycode_encode(const std::u32string_view codepoints,
 
 static auto punycode_decode(const std::string_view encoded,
                             std::u32string &decoded) -> void {
-  // RFC 3492 Section 6.4 requires failing rather than letting the output
-  // position counter wrap on an input that does not fit a 32-bit count
+  // RFC 3492 Section 6.4 offers bounding the input as one way of keeping the
+  // position counter from wrapping, alongside the detection the arithmetic
+  // below carries out, so this bound is a choice made here rather than a
+  // requirement
   if (encoded.size() > std::numeric_limits<std::uint32_t>::max()) {
     throw PunycodeError("Input is too large");
   }

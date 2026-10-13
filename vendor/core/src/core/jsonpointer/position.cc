@@ -79,9 +79,6 @@ auto PointerPositionTracker::ensure_index() const -> void {
         current_node = node_stack.back().first;
         node_stack.pop_back();
         break;
-      default:
-        assert(false);
-        break;
     }
   }
 }
@@ -182,9 +179,6 @@ auto PointerPositionTracker::to_json() const -> JSON {
           current.pop_back();
         }
 
-        break;
-      default:
-        assert(false);
         break;
     }
   }

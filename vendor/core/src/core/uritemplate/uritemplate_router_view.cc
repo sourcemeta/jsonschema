@@ -517,6 +517,11 @@ auto URITemplateRouterView::save(const URITemplateRouter &router,
                sizeof(entry.string_length));
   }
 
+  // Closing is what settles whether the data reached the file, as what the
+  // writes above hand over sits in a buffer until then, and a destination that
+  // cannot take it says so only once it is handed on. Reading the state of the
+  // file before that reports a save that wrote nothing as one that went through
+  file.close();
   if (!file) {
     throw URITemplateRouterSaveError{path,
                                      "Failed to write router data to file"};

@@ -65,10 +65,11 @@ inline auto scientific_lexical_form(const double value) -> JSON::String {
   // The exponent characters are copied out first, as the assembled form is
   // written over the region they occupy
   auto exponent{digits.substr(exponent_marker + 1)};
+  // The scientific form always writes the exponent with a sign, so one of the
+  // two is there to be dropped
+  assert(exponent.front() == '-' || exponent.front() == '+');
   const bool negative_exponent{exponent.front() == '-'};
-  if (negative_exponent || exponent.front() == '+') {
-    exponent.remove_prefix(1);
-  }
+  exponent.remove_prefix(1);
   const auto first_significant_exponent{exponent.find_first_not_of('0')};
   std::array<char, 8> exponent_digits{};
   std::size_t exponent_size{0};
@@ -237,7 +238,11 @@ inline auto typed_literal_lexical_form(const JSON &value,
       return std::nullopt;
   }
 
+    // Clang settles that no other value arrives, so only GCC and MSVC
+    // need to be told that the end of this function is never reached
+#if !defined(__clang__)
   std::unreachable();
+#endif
 }
 
 } // namespace sourcemeta::core

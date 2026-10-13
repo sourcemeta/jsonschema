@@ -343,9 +343,10 @@ auto URITemplateRouter::add(const std::string_view uri_template,
           [&previous_identifier](const auto &candidate) -> bool {
             return std::get<0>(candidate) == previous_identifier;
           });
-      if (existing != this->entries_.end()) {
-        *existing = std::make_tuple(identifier, context, uri_template);
-      }
+      // An identifier is only ever handed out together with the entry that
+      // holds it, and nothing drops an entry once it is there
+      assert(existing != this->entries_.end());
+      *existing = std::make_tuple(identifier, context, uri_template);
       std::erase_if(this->operations_,
                     [&previous_identifier](const auto &entry) -> bool {
                       return entry.second.first == previous_identifier;
@@ -587,9 +588,10 @@ auto URITemplateRouter::add(const std::string_view uri_template,
           [&previous_identifier](const auto &candidate) -> bool {
             return std::get<0>(candidate) == previous_identifier;
           });
-      if (existing != this->entries_.end()) {
-        *existing = std::make_tuple(identifier, context, uri_template);
-      }
+      // An identifier is only ever handed out together with the entry that
+      // holds it, and nothing drops an entry once it is there
+      assert(existing != this->entries_.end());
+      *existing = std::make_tuple(identifier, context, uri_template);
       std::erase_if(this->operations_,
                     [&previous_identifier](const auto &entry) -> bool {
                       return entry.second.first == previous_identifier;

@@ -40,6 +40,16 @@ inline unsigned __stdcall parallel_for_each_windows_thread_start(
 #endif
 #endif
 
+// The first exception a worker runs into is the one the caller is handed, so
+// one that arrives after it is dropped rather than replacing it
+inline auto hold_first_exception(std::mutex &mutex, std::exception_ptr &holder,
+                                 const std::exception_ptr &pointer) -> void {
+  std::scoped_lock lock{mutex};
+  if (!holder) {
+    holder = pointer;
+  }
+}
+
 /// @ingroup parallel
 ///
 /// Process a collection in parallel. If the parallelism is set to zero, the
@@ -109,13 +119,6 @@ auto parallel_for_each(
   auto effective_callback = std::forward<Callback>(callback);
 
   std::exception_ptr exception = nullptr;
-  auto handle_exception = [&exception_mutex,
-                           &exception](const std::exception_ptr &pointer) {
-    std::scoped_lock lock{exception_mutex};
-    if (!exception) {
-      exception = pointer;
-    }
-  };
 
   std::vector<std::thread> workers;
   workers.reserve(effective_parallelism);
@@ -125,8 +128,8 @@ auto parallel_for_each(
   // Worker function that runs the actual per-item work and captures the
   // environment by reference. It will be heap-copied into the native thread
   // API.
-  auto worker_callable = [&tasks, &queue_mutex, &effective_callback,
-                          &handle_exception, effective_parallelism, total] {
+  auto worker_callable = [&tasks, &queue_mutex, &effective_callback, &exception,
+                          &exception_mutex, effective_parallelism, total] {
     try {
       while (true) {
         Iterator iterator;
@@ -143,7 +146,8 @@ auto parallel_for_each(
         effective_callback(*iterator, effective_parallelism, cursor);
       }
     } catch (...) {
-      handle_exception(std::current_exception());
+      hold_first_exception(exception_mutex, exception,
+                           std::current_exception());
     }
   };
 

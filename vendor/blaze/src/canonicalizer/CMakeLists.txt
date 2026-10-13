@@ -83,6 +83,7 @@ sourcemeta_library(NAMESPACE sourcemeta PROJECT blaze NAME canonicalizer
     rules/maximum_can_equal_integer_fold.h
     rules/maximum_can_equal_true_drop.h
     rules/maximum_real_for_integer.h
+    rules/metadata_keywords_drop.h
     rules/min_contains_without_contains.h
     rules/min_items_given_min_contains.h
     rules/min_length_implicit.h
@@ -122,6 +123,7 @@ sourcemeta_library(NAMESPACE sourcemeta PROJECT blaze NAME canonicalizer
     rules/type_with_applicator_to_extends.h
     rules/unevaluated_items_to_items.h
     rules/unevaluated_properties_to_additional_properties.h
+    rules/unknown_keywords_drop.h
     rules/unknown_keywords_prefix.h
     rules/unknown_local_ref.h
     rules/unnecessary_allof_ref_wrapper_draft.h

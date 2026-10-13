@@ -51,6 +51,21 @@ enum class PKCS8KeyKind : std::uint8_t { RSA, EllipticCurve, Edwards };
 
 // The parsed shape of an RFC 5958 PrivateKeyInfo, where `key` views the
 // algorithm specific privateKey octets that each backend parses further
+// The components of a PKCS#1 RSAPrivateKey, as views into the key they were
+// read from. Handing these back is what keeps whatever consumes the key from
+// walking the same structure a second time, where a second walk can only
+// repeat what the gate below already turned away
+struct RSAPrivateKeyParts {
+  std::string_view version{};
+  std::string_view modulus{};
+  std::string_view public_exponent{};
+  std::string_view private_exponent{};
+  // Where the components of the two-prime form begin, which the gate below
+  // does not look at because what is required of them is left to whatever
+  // consumes the key
+  std::string_view rest{};
+};
+
 struct PKCS8Key {
   PKCS8KeyKind kind;
   EllipticCurve curve;
@@ -59,6 +74,9 @@ struct PKCS8Key {
   // Set when the algorithm is id-RSASSA-PSS rather than rsaEncryption, so that
   // such a key is refused for RSASSA-PKCS1-v1_5 signing (RFC 8017 Appendix A.2)
   bool rsa_pss_restricted{false};
+  // Set when the algorithm is one of the RSA ones, where what the key holds
+  // has already been read apart to admit it
+  RSAPrivateKeyParts rsa{};
 };
 
 // Whether a PKCS#1 RSAPrivateKey carries usable components (RFC 8017 Appendix
@@ -71,34 +89,35 @@ struct PKCS8Key {
 // in each backend, since only the reference one reads these components itself
 // and the rest hand the blob straight to a platform that does not apply the
 // rule
-inline auto rsa_private_key_acceptable(const std::string_view key) -> bool {
+inline auto read_rsa_private_key(const std::string_view key)
+    -> std::optional<RSAPrivateKeyParts> {
   // A canonical RSAPrivateKey is exactly one SEQUENCE, so bytes trailing it
   // mark a malformed encoding (X.690 Section 10.1), the same rule the enclosing
   // PrivateKeyInfo is held to
   const auto sequence{der_read(key)};
   if (!sequence.has_value() || sequence->tag != 0x30 ||
       !sequence->rest.empty()) {
-    return false;
+    return std::nullopt;
   }
 
   const auto version{der_read(sequence->content)};
   if (!version.has_value() || version->tag != 0x02) {
-    return false;
+    return std::nullopt;
   }
 
   const auto modulus{der_read(version->rest)};
   if (!modulus.has_value() || modulus->tag != 0x02) {
-    return false;
+    return std::nullopt;
   }
 
   const auto public_exponent{der_read(modulus->rest)};
   if (!public_exponent.has_value() || public_exponent->tag != 0x02) {
-    return false;
+    return std::nullopt;
   }
 
   const auto private_exponent{der_read(public_exponent->rest)};
   if (!private_exponent.has_value() || private_exponent->tag != 0x02) {
-    return false;
+    return std::nullopt;
   }
 
   const auto modulus_value{der_unsigned_integer(modulus->content)};
@@ -106,13 +125,55 @@ inline auto rsa_private_key_acceptable(const std::string_view key) -> bool {
       der_unsigned_integer(public_exponent->content)};
   const auto private_exponent_value{
       der_unsigned_integer(private_exponent->content)};
-  return modulus_value.has_value() && public_exponent_value.has_value() &&
-         private_exponent_value.has_value() && !modulus_value->empty() &&
-         !private_exponent_value->empty() &&
-         modulus_value->size() <= MAXIMUM_KEY_BYTES &&
-         private_exponent_value->size() <= MAXIMUM_KEY_BYTES &&
-         rsa_public_exponent_acceptable(public_exponent_value.value(),
-                                        modulus_value.value());
+  if (!modulus_value.has_value() || !public_exponent_value.has_value() ||
+      !private_exponent_value.has_value() || modulus_value->empty() ||
+      private_exponent_value->empty() ||
+      modulus_value->size() > MAXIMUM_KEY_BYTES ||
+      private_exponent_value->size() > MAXIMUM_KEY_BYTES ||
+      !rsa_public_exponent_acceptable(public_exponent_value.value(),
+                                      modulus_value.value())) {
+    return std::nullopt;
+  }
+
+  return RSAPrivateKeyParts{.version = version->content,
+                            .modulus = modulus_value.value(),
+                            .public_exponent = public_exponent_value.value(),
+                            .private_exponent = private_exponent_value.value(),
+                            .rest = private_exponent->rest};
+}
+
+// Whether a SEC 1 ECPrivateKey carries a usable private scalar, which RFC 5915
+// Section 3 writes as the OCTET STRING following the version. SEC 1 Section 3.2
+// draws the private key from the interval [1, n-1], so a zero scalar, or one at
+// or above the group order, names no key. Checked here rather than in each
+// backend, as the platform ones hand the blob straight to a system that does
+// not apply the rule
+inline auto ec_private_key_acceptable(const std::string_view key,
+                                      const EllipticCurve curve) -> bool {
+  // A canonical ECPrivateKey is exactly one SEQUENCE, so bytes trailing it mark
+  // a malformed encoding (X.690 Section 10.1), the same rule the enclosing
+  // PrivateKeyInfo is held to
+  const auto sequence{der_read(key)};
+  if (!sequence.has_value() || sequence->tag != 0x30 ||
+      !sequence->rest.empty()) {
+    return false;
+  }
+
+  // RFC 5915 Section 3 constrains the version to ecPrivkeyVer1, saying it
+  // "SHALL be set to ecPrivkeyVer1, which is of type INTEGER and whose value is
+  // one (1)", so no other value names a key this reads
+  const auto version{der_read(sequence->content)};
+  if (!version.has_value() || version->tag != 0x02 ||
+      version->content.size() != 1 || version->content.front() != '\x01') {
+    return false;
+  }
+
+  const auto scalar{der_read(version->rest)};
+  if (!scalar.has_value() || scalar->tag != 0x04) {
+    return false;
+  }
+
+  return ec_private_scalar_in_range(scalar->content, curve);
 }
 
 // Parse an RFC 5958 PrivateKeyInfo, identifying the algorithm from its object
@@ -160,7 +221,8 @@ inline auto parse_pkcs8(const std::string_view der) -> std::optional<PKCS8Key> {
   // NOLINTEND(modernize-raw-string-literal)
 
   if (oid->content == RSA || oid->content == RSA_PSS) {
-    if (!rsa_private_key_acceptable(private_key->content)) {
+    const auto parts{read_rsa_private_key(private_key->content)};
+    if (!parts.has_value()) {
       return std::nullopt;
     }
 
@@ -168,7 +230,8 @@ inline auto parse_pkcs8(const std::string_view der) -> std::optional<PKCS8Key> {
                     .curve = {},
                     .edwards_curve = {},
                     .key = private_key->content,
-                    .rsa_pss_restricted = oid->content == RSA_PSS};
+                    .rsa_pss_restricted = oid->content == RSA_PSS,
+                    .rsa = parts.value()};
   }
 
   if (oid->content == ED25519 || oid->content == ED448) {
@@ -199,6 +262,10 @@ inline auto parse_pkcs8(const std::string_view der) -> std::optional<PKCS8Key> {
     } else if (curve_oid->content == P521) {
       curve = EllipticCurve::P521;
     } else {
+      return std::nullopt;
+    }
+
+    if (!ec_private_key_acceptable(private_key->content, curve)) {
       return std::nullopt;
     }
 

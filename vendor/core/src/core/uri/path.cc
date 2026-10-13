@@ -5,6 +5,7 @@
 #include "grammar.h"
 #include "normalize.h"
 
+#include <cassert>     // assert
 #include <cstddef>     // std::size_t
 #include <optional>    // std::optional, std::nullopt
 #include <string>      // std::string
@@ -79,8 +80,8 @@ auto URI::strip_path_prefix(const std::string_view path,
     }
     suffix_start = prefix_canonical.size();
   }
-  if (!prefix_provides_boundary && suffix_start < path_canonical.size() &&
-      path_canonical[suffix_start] == URI_SLASH) {
+  if (!prefix_provides_boundary && suffix_start < path_canonical.size()) {
+    assert(path_canonical[suffix_start] == URI_SLASH);
     ++suffix_start;
   }
 

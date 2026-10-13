@@ -22,9 +22,6 @@ auto http_match_accept(const std::string_view accept_header,
   std::string_view best{};
   float best_quality{0.0F};
   std::uint8_t best_specificity{0};
-  std::size_t best_order{candidates.size()};
-
-  std::size_t order{0};
   for (const auto candidate : candidates) {
     assert(!candidate.empty());
     // RFC 9110 §12.5.1: a candidate may itself carry media-type parameters
@@ -55,18 +52,16 @@ auto http_match_accept(const std::string_view accept_header,
             candidate_specificity = specificity;
           }
         });
+    // A candidate only displaces one already held by being better, so the
+    // first of several equally good ones is the one kept
     if (candidate_quality > 0.0F &&
         (candidate_quality > best_quality ||
          (candidate_quality == best_quality &&
-          candidate_specificity > best_specificity) ||
-         (candidate_quality == best_quality &&
-          candidate_specificity == best_specificity && order < best_order))) {
+          candidate_specificity > best_specificity))) {
       best = candidate;
       best_quality = candidate_quality;
       best_specificity = candidate_specificity;
-      best_order = order;
     }
-    ++order;
   }
   return best;
 }

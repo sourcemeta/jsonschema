@@ -6,7 +6,7 @@
 #include <sstream>       // std::ostringstream
 #include <string_view>   // std::string_view
 #include <unordered_set> // std::unordered_set
-#include <utility>       // std::move, std::to_underlying
+#include <utility>       // std::move, std::to_underlying, std::unreachable
 
 // TODO: Make this function detect schemas only using identifier/comment
 // keywords, etc
@@ -45,8 +45,11 @@ auto sourcemeta::core::base_dialect_uri(const SchemaBaseDialect base_dialect)
       return "http://json-schema.org/draft-00/hyper-schema#";
   }
 
-  assert(false);
-  return {};
+    // Clang settles that no other value arrives, so only GCC and MSVC
+    // need to be told that the end of this function is never reached
+#if !defined(__clang__)
+  std::unreachable();
+#endif
 }
 
 auto sourcemeta::core::operator<<(std::ostream &stream,
@@ -124,22 +127,15 @@ auto sourcemeta::core::to_base_dialect(const std::string_view base_dialect)
 auto sourcemeta::core::identify(const sourcemeta::core::JSON &schema,
                                 const SchemaResolver &resolver,
                                 std::string_view default_dialect,
-                                std::string_view default_id,
                                 const bool allow_dialect_override)
     -> std::string_view {
-  try {
-    const auto maybe_base_dialect{sourcemeta::core::base_dialect(
-        schema, resolver, default_dialect, allow_dialect_override)};
-    if (maybe_base_dialect.has_value()) {
-      return identify(schema, maybe_base_dialect.value(), default_id);
-    }
-    return default_id;
-  } catch (const SchemaResolutionError &) {
-    if (!default_id.empty()) {
-      return default_id;
-    }
-    throw;
+  const auto maybe_base_dialect{sourcemeta::core::base_dialect(
+      schema, resolver, default_dialect, allow_dialect_override)};
+  if (maybe_base_dialect.has_value()) {
+    return identify(schema, maybe_base_dialect.value());
   }
+
+  return {};
 }
 
 auto sourcemeta::core::identify(const sourcemeta::core::JSON &schema,
@@ -198,6 +194,7 @@ auto sourcemeta::core::identify(const sourcemeta::core::JSON &schema,
 
 auto sourcemeta::core::schema_reidentify(sourcemeta::core::JSON &schema,
                                          std::string_view new_identifier,
+                                         const SchemaWalker &walker,
                                          const SchemaResolver &resolver,
                                          std::string_view default_dialect)
     -> void {
@@ -205,6 +202,22 @@ auto sourcemeta::core::schema_reidentify(sourcemeta::core::JSON &schema,
       sourcemeta::core::base_dialect(schema, resolver, default_dialect)};
   if (!resolved_base_dialect.has_value()) {
     throw sourcemeta::core::SchemaUnknownBaseDialectError();
+  }
+
+  // Writing the keyword anyway would leave an identifier that every reader of
+  // this dialect goes on to ignore, which is worse than refusing outright
+  const auto effective_dialect{
+      sourcemeta::core::dialect(schema, default_dialect)};
+  if (!sourcemeta::core::dialect_defines_identifier(
+          walker,
+          sourcemeta::core::vocabularies_with_embedded(
+              schema, resolver, resolved_base_dialect.value(),
+              effective_dialect),
+          resolved_base_dialect.value())) {
+    throw sourcemeta::core::SchemaKeywordError(
+        sourcemeta::core::id_keyword(resolved_base_dialect.value()).name,
+        new_identifier,
+        "The dialect of the schema does not support identification");
   }
 
   schema_reidentify(schema, new_identifier, resolved_base_dialect.value());
@@ -241,7 +254,7 @@ auto sourcemeta::core::dialect(const sourcemeta::core::JSON &schema,
 
   if (allow_dialect_override && schema.is_object()) {
     const auto *override_value{
-        schema.try_at("x-sourcemeta-dialect-override-subschema"sv,
+        schema.try_at(sourcemeta::core::DIALECT_OVERRIDE_KEYWORD,
                       sourcemeta::core::JSONSCHEMA_HASH_DIALECT_OVERRIDE)};
     if ((override_value != nullptr) && override_value->is_string() &&
         !override_value->to_string().empty()) {
@@ -470,9 +483,9 @@ auto core_vocabulary_known(
     case SchemaBaseDialect::JSON_SCHEMA_2019_09:
     case SchemaBaseDialect::JSON_SCHEMA_2019_09_HYPER:
       return SchemaVocabularies::Known::JSON_SCHEMA_2019_09_CORE;
+    // Only the dialects that carry vocabularies reach here
     default:
-      assert(false);
-      return SchemaVocabularies::Known::JSON_SCHEMA_2020_12_CORE;
+      std::unreachable();
   }
 }
 
@@ -503,6 +516,16 @@ auto pre_vocabulary_dialect_to_known(const std::string_view dialect)
   if (dialect == "http://json-schema.org/draft-00/schema#") {
     return SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_0;
   }
+
+  // The OpenAPI v3.0 Schema Object describes itself through a Draft 4
+  // meta-schema, so it lands on a base dialect that predates vocabularies and
+  // has no way of declaring one. Its keyword set is neither a subset nor a
+  // superset of Draft 4, so it stands on its own rather than extending it
+  if (dialect == "tag:spec.openapis.org,2024-10-18:oas/3.0/dialect" ||
+      dialect == "tag:spec.openapis.org,2021-09-28:oas/3.0/dialect") {
+    return SchemaVocabularies::Known::OPENAPI_3_0_BASE;
+  }
+
   return std::nullopt;
 }
 
@@ -533,9 +556,9 @@ auto base_dialect_to_known(const sourcemeta::core::SchemaBaseDialect dialect)
       return SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_1_HYPER;
     case SchemaBaseDialect::JSON_SCHEMA_DRAFT_0_HYPER:
       return SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_0_HYPER;
+    // Only the dialects that predate vocabularies reach here
     default:
-      assert(false);
-      return SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_7;
+      std::unreachable();
   }
 }
 
@@ -561,7 +584,8 @@ auto is_pre_vocabulary_base_dialect(
 }
 
 auto parse_vocabularies(const sourcemeta::core::JSON &schema,
-                        const sourcemeta::core::SchemaBaseDialect base_dialect)
+                        const sourcemeta::core::SchemaBaseDialect base_dialect,
+                        const std::string_view dialect)
     -> std::optional<sourcemeta::core::SchemaVocabularies> {
   if (base_dialect !=
           sourcemeta::core::SchemaBaseDialect::JSON_SCHEMA_2020_12 &&
@@ -584,14 +608,21 @@ auto parse_vocabularies(const sourcemeta::core::JSON &schema,
     return std::nullopt;
   }
 
+  // Section 8.1.2 requires the value to be an object whose property values
+  // are booleans. A metaschema that breaks either is malformed, and reading it
+  // as declaring nothing would quietly hand the caller a core-only answer for
+  // a document that never said so
   if (!vocabulary_entry->is_object()) {
-    return std::nullopt;
+    throw sourcemeta::core::SchemaVocabularyError(
+        dialect, "The vocabularies of a metaschema must be an object");
   }
 
   sourcemeta::core::SchemaVocabularies result;
   for (const auto &entry : vocabulary_entry->as_object()) {
     if (!entry.second.is_boolean()) {
-      return std::nullopt;
+      throw sourcemeta::core::SchemaVocabularyError(
+          dialect,
+          "Every vocabulary of a metaschema must be declared with a boolean");
     }
 
     result.insert(entry.first, entry.second.to_boolean());
@@ -660,13 +691,6 @@ auto sourcemeta::core::vocabularies(const SchemaResolver &resolver,
         dialect, "Could not resolve the metaschema of the schema");
   }
   const sourcemeta::core::JSON &schema_dialect{maybe_schema_dialect.value()};
-  // At this point we are sure that the dialect is vocabulary aware and the
-  // identifier keyword is indeed `$id`, so we can avoid the added
-  // complexity of the generic `id` function.
-  assert(
-      schema_dialect.defines("$id"sv, sourcemeta::core::JSONSCHEMA_HASH_ID) &&
-      schema_dialect.at("$id"sv, sourcemeta::core::JSONSCHEMA_HASH_ID)
-          .is_string());
 
   /*
    * (4) Retrieve the vocabularies explicitly or implicitly declared by the
@@ -674,7 +698,7 @@ auto sourcemeta::core::vocabularies(const SchemaResolver &resolver,
    */
 
   const auto core{core_vocabulary_known(base_dialect)};
-  auto result{parse_vocabularies(schema_dialect, base_dialect)
+  auto result{parse_vocabularies(schema_dialect, base_dialect, dialect)
                   .value_or(SchemaVocabularies{})};
   if (result.empty()) {
     result.insert(core, true);

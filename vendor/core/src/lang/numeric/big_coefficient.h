@@ -4,6 +4,7 @@
 #include <algorithm>   // std::max, std::copy, std::fill
 #include <array>       // std::array
 #include <bit>         // std::endian
+#include <cassert>     // assert
 #include <cstdint>     // std::int32_t, std::int64_t, std::uint32_t,
                        // std::uint64_t, std::uintptr_t, std::uint8_t
 #include <cstring>     // std::memcpy
@@ -280,6 +281,24 @@ public:
     }
 
     return total_stripped;
+  }
+
+  // A divisor that the word base is a multiple of divides each word in place,
+  // carrying what one word leaves over into the word below, the same way that
+  // stripping a trailing zero does. The caller establishes that the whole
+  // number divides evenly, which the word base being a multiple of the divisor
+  // reduces to the lowest word doing so
+  auto divide_by_base_factor(const std::uint64_t divisor) -> void {
+    std::uint64_t borrow = 0;
+    for (auto index = this->length; index > 0; index--) {
+      const auto word = this->words[index - 1];
+      this->words[index - 1] = (word / divisor) + (borrow * (BASE / divisor));
+      borrow = word % divisor;
+    }
+
+    if (this->length > 1 && this->words[this->length - 1] == 0) {
+      this->length--;
+    }
   }
 
   [[nodiscard]] auto compare(const BigCoefficient &other) const -> int {
@@ -948,6 +967,15 @@ auto round_to_precision(std::int64_t &coefficient,
     }
     if (round_up) {
       new_coefficient++;
+      // The round operation of the decimal arithmetic specification shortens
+      // the result by one digit and raises the exponent to match when the
+      // increment carries past the precision being rounded to. Leaving that
+      // out hands back one digit more than was asked for
+      if (digit_count(static_cast<std::uint64_t>(new_coefficient)) >
+          static_cast<std::uint32_t>(WORKING_PRECISION)) {
+        new_coefficient /= 10;
+        excess++;
+      }
     }
 
     coefficient = new_coefficient;
@@ -975,6 +1003,11 @@ auto round_to_precision(std::int64_t &coefficient,
   if (remainder > half ||
       (remainder == half && (residue || quotient % 2 != 0))) {
     quotient++;
+    if (digit_count(static_cast<std::uint64_t>(quotient)) >
+        static_cast<std::uint32_t>(WORKING_PRECISION)) {
+      quotient /= 10;
+      excess++;
+    }
   }
 
   coefficient = quotient;
@@ -982,7 +1015,8 @@ auto round_to_precision(std::int64_t &coefficient,
   exponent += excess;
 }
 
-void free_big_coefficient(std::int64_t coefficient, std::uint8_t flags) {
+auto free_big_coefficient(std::int64_t coefficient, std::uint8_t flags)
+    -> void {
   if ((flags & FLAG_HEAP) != 0) {
     delete load_big_pointer(coefficient);
   }
@@ -1006,11 +1040,14 @@ auto coefficient_as_big(std::int64_t coefficient,
   return BigCoefficient::from_uint64(static_cast<std::uint64_t>(coefficient));
 }
 
-void store_big_result(std::int64_t &coefficient,
+auto store_big_result(std::int64_t &coefficient,
                       std::uint64_t &coefficient_high, std::uint8_t &flags,
-                      BigCoefficient result_big, bool result_negative) {
-  if (result_big.length <= 1 &&
-      result_big.words[0] <= static_cast<std::uint64_t>(COMPACT_MAX)) {
+                      BigCoefficient result_big, bool result_negative) -> void {
+  // Every limb is held below the base it counts in, which is the largest the
+  // narrow form takes plus one, so a lone limb always fits it and asking
+  // whether it does can only ever answer yes
+  assert(result_big.length == 0 || result_big.words[0] < BASE);
+  if (result_big.length <= 1) {
     coefficient = static_cast<std::int64_t>(result_big.words[0]);
     coefficient_high = 0;
     flags = result_negative ? FLAG_SIGN : 0;

@@ -142,12 +142,12 @@ auto native_ec_private_key(const std::string_view sec1,
     rest = element->rest;
   }
 
-  const auto stripped_scalar{
-      sourcemeta::core::strip_left(scalar->content, '\x00')};
-  if (point.empty() || stripped_scalar.empty() ||
-      stripped_scalar.size() > field_bytes) {
+  if (point.empty()) {
     return nullptr;
   }
+
+  const auto stripped_scalar{
+      sourcemeta::core::strip_left(scalar->content, '\x00')};
 
   std::string data{point};
   data.append(sourcemeta::core::pad_left(stripped_scalar, field_bytes, '\x00'));

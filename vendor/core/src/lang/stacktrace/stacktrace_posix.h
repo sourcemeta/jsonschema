@@ -238,8 +238,7 @@ sourcemeta_core_stacktrace_crash_handler(int signal_number,
   write_text(file_descriptor, "pid:     ");
   write_decimal(file_descriptor, static_cast<unsigned long>(::getpid()));
   write_text(file_descriptor, "\n\n");
-  write_backtrace(file_descriptor, /*frames_to_skip=*/1,
-                  extract_crash_pc(context));
+  write_backtrace(file_descriptor, 1, extract_crash_pc(context));
   write_text(file_descriptor, SEPARATOR);
 
   struct sigaction default_action{};
@@ -285,7 +284,7 @@ __attribute__((noinline, visibility("default"))) auto stacktrace() -> void {
   write_text(file_descriptor, "pid:     ");
   write_decimal(file_descriptor, static_cast<unsigned long>(::getpid()));
   write_text(file_descriptor, "\n\n");
-  write_backtrace(file_descriptor, /*frames_to_skip=*/1);
+  write_backtrace(file_descriptor, 1);
   write_text(file_descriptor, SEPARATOR);
 }
 

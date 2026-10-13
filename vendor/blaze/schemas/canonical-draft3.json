@@ -19,20 +19,6 @@
   ],
   "$ref": "#/$defs/document",
   "$defs": {
-    "metadata": {
-      "properties": {
-        "title": {
-          "type": "string"
-        },
-        "description": {
-          "type": "string"
-        },
-        "default": true
-      },
-      "patternProperties": {
-        "^x-": true
-      }
-    },
     "document": {
       "x-lint-exclude": "simple_properties_identifiers",
       "type": "object",
@@ -46,11 +32,12 @@
           "maxItems": 1,
           "minItems": 1,
           "items": {
-            "$ref": "#/$defs/entry"
+            "$ref": "#/$defs/edge"
           }
         },
         "definitions": {
           "type": "object",
+          "minProperties": 1,
           "propertyNames": {
             "pattern": "^(0|[1-9][0-9]*)$"
           },
@@ -59,20 +46,9 @@
           }
         }
       },
-      "unevaluatedProperties": false
+      "additionalProperties": false
     },
     "edge": {
-      "x-lint-exclude": "simple_properties_identifiers",
-      "type": "object",
-      "required": [ "$ref" ],
-      "properties": {
-        "$ref": {
-          "type": "string"
-        }
-      },
-      "unevaluatedProperties": false
-    },
-    "entry": {
       "x-lint-exclude": "simple_properties_identifiers",
       "type": "object",
       "required": [ "$ref" ],
@@ -82,7 +58,7 @@
           "pattern": "^#/definitions/(0|[1-9][0-9]*)$"
         }
       },
-      "unevaluatedProperties": false
+      "additionalProperties": false
     },
     "subproperty": {
       "anyOf": [
@@ -105,7 +81,7 @@
               }
             }
           },
-          "unevaluatedProperties": false
+          "additionalProperties": false
         }
       ]
     },
@@ -119,7 +95,6 @@
         },
         {
           "x-lint-exclude": "simple_properties_identifiers",
-          "$ref": "#/$defs/metadata",
           "type": "object",
           "required": [ "$ref" ],
           "properties": {
@@ -127,10 +102,9 @@
               "type": "string"
             }
           },
-          "unevaluatedProperties": false
+          "additionalProperties": false
         },
         {
-          "$ref": "#/$defs/metadata",
           "type": "object",
           "required": [ "enum" ],
           "properties": {
@@ -172,10 +146,9 @@
               "uniqueItems": true
             }
           },
-          "unevaluatedProperties": false
+          "additionalProperties": false
         },
         {
-          "$ref": "#/$defs/metadata",
           "type": "object",
           "required": [ "type", "minLength" ],
           "properties": {
@@ -197,10 +170,9 @@
               "type": "string"
             }
           },
-          "unevaluatedProperties": false
+          "additionalProperties": false
         },
         {
-          "$ref": "#/$defs/metadata",
           "type": "object",
           "required": [ "type", "divisibleBy" ],
           "properties": {
@@ -218,10 +190,9 @@
               "type": "number"
             }
           },
-          "unevaluatedProperties": false
+          "additionalProperties": false
         },
         {
-          "$ref": "#/$defs/metadata",
           "type": "object",
           "required": [ "type" ],
           "properties": {
@@ -245,10 +216,9 @@
               "type": "boolean"
             }
           },
-          "unevaluatedProperties": false
+          "additionalProperties": false
         },
         {
-          "$ref": "#/$defs/metadata",
           "type": "object",
           "required": [
             "type",
@@ -276,10 +246,9 @@
               "$ref": "#/$defs/edge"
             }
           },
-          "unevaluatedProperties": false
+          "additionalProperties": false
         },
         {
-          "$ref": "#/$defs/metadata",
           "type": "object",
           "required": [ "type", "items", "minItems", "uniqueItems" ],
           "properties": {
@@ -301,10 +270,9 @@
               "type": "boolean"
             }
           },
-          "unevaluatedProperties": false
+          "additionalProperties": false
         },
         {
-          "$ref": "#/$defs/metadata",
           "type": "object",
           "required": [
             "type",
@@ -339,10 +307,9 @@
               "type": "boolean"
             }
           },
-          "unevaluatedProperties": false
+          "additionalProperties": false
         },
         {
-          "$ref": "#/$defs/metadata",
           "type": "object",
           "required": [ "type" ],
           "properties": {
@@ -354,10 +321,9 @@
               }
             }
           },
-          "unevaluatedProperties": false
+          "additionalProperties": false
         },
         {
-          "$ref": "#/$defs/metadata",
           "type": "object",
           "required": [ "extends" ],
           "properties": {
@@ -369,10 +335,9 @@
               }
             }
           },
-          "unevaluatedProperties": false
+          "additionalProperties": false
         },
         {
-          "$ref": "#/$defs/metadata",
           "type": "object",
           "required": [ "disallow" ],
           "properties": {
@@ -385,7 +350,7 @@
               }
             }
           },
-          "unevaluatedProperties": false
+          "additionalProperties": false
         }
       ]
     }

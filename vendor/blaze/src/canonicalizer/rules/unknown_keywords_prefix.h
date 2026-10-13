@@ -10,7 +10,14 @@ public:
                                const SchemaFrame::Location &,
                                const SchemaWalker &walker,
                                const SchemaResolver &) const -> bool override {
-    ONLY_CONTINUE_IF(schema.is_object());
+    // Draft 3 deletes an unknown keyword outright instead, which
+    // `unknown_keywords_drop` does, as its canonical form has nowhere to put
+    // one
+    ONLY_CONTINUE_IF(
+        !vocabularies.contains_any(
+            {SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_3,
+             SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_3_HYPER}) &&
+        schema.is_object());
     std::vector<sourcemeta::core::Pointer> locations;
     for (const auto &entry : schema.as_object()) {
       if (entry.first.starts_with("x-")) {

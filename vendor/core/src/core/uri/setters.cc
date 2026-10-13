@@ -98,7 +98,7 @@ auto URI::path(const std::string &path) -> URI & {
   const auto needs_leading_slash =
       (!this->is_urn() && !this->is_tag() && !this->is_mailto() &&
        this->scheme_.has_value()) ||
-      this->port_.has_value() || this->host_.has_value();
+      this->host_.has_value();
 
   this->path_ = apply_leading_slash_transform(std::optional<std::string>{path},
                                               needs_leading_slash);
@@ -122,7 +122,7 @@ auto URI::path(std::string &&path) -> URI & {
   const auto needs_leading_slash =
       (!this->is_urn() && !this->is_tag() && !this->is_mailto() &&
        this->scheme_.has_value()) ||
-      this->port_.has_value() || this->host_.has_value();
+      this->host_.has_value();
 
   this->path_ = apply_leading_slash_transform(
       std::optional<std::string>{std::move(path)}, needs_leading_slash);
@@ -227,7 +227,7 @@ auto URI::append_path(std::string_view path) -> URI & {
   const auto needs_leading_slash =
       (!this->is_urn() && !this->is_tag() && !this->is_mailto() &&
        this->scheme_.has_value()) ||
-      this->port_.has_value() || this->host_.has_value();
+      this->host_.has_value();
   merge_reference_path(this->path_, needs_leading_slash, path);
   return *this;
 }
@@ -259,7 +259,7 @@ auto URI::append_path(const URI &reference) -> URI & {
   const auto needs_leading_slash =
       (!this->is_urn() && !this->is_tag() && !this->is_mailto() &&
        this->scheme_.has_value()) ||
-      this->port_.has_value() || this->host_.has_value();
+      this->host_.has_value();
   merge_reference_path(this->path_, needs_leading_slash,
                        reference.path_.value());
   return *this;
@@ -275,7 +275,7 @@ auto URI::append_path(URI &&reference) -> URI & {
   const auto needs_leading_slash =
       (!this->is_urn() && !this->is_tag() && !this->is_mailto() &&
        this->scheme_.has_value()) ||
-      this->port_.has_value() || this->host_.has_value();
+      this->host_.has_value();
   std::string reference_path{std::move(reference.path_.value())};
   reference.path_ = std::nullopt;
   merge_reference_path(this->path_, needs_leading_slash, reference_path);
@@ -339,7 +339,7 @@ auto URI::unescaped_fragment(const std::string_view fragment) -> URI & {
   // mistaken for input the caller wrote
   for (const auto character : fragment) {
     if (character == URI_PERCENT) {
-      uri_percent_encode_byte(value, URI_PERCENT);
+      value.append("%25");
     } else {
       value.push_back(character);
     }
@@ -365,6 +365,16 @@ auto URI::userinfo(const std::string_view userinfo) -> URI & {
   if (userinfo.empty()) {
     this->userinfo_ = std::nullopt;
     return *this;
+  }
+
+  // RFC 3986 section 3.2 writes `authority = [ userinfo "@" ] host [ ":" port
+  // ]`, so userinfo only ever reads back as part of an authority, and section
+  // 3.3 requires the path of a reference that has an authority to be empty or
+  // to begin with a slash. Writing one over a relative path would hand that
+  // path's first segment to the host on the way back in
+  if (!this->host_.has_value() && this->path_.has_value() &&
+      !this->path_.value().starts_with('/')) {
+    throw URIError{"You cannot set a userinfo on a URI with a relative path"};
   }
 
   std::string value{userinfo};

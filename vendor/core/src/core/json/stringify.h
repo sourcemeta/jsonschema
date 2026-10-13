@@ -16,7 +16,7 @@
 #include <iterator> // std::next, std::cbegin, std::cend, std::back_inserter
 #include <ostream>  // std::basic_ostream
 #include <sstream>  // std::ostringstream
-#include <string>   // std::basic_string
+#include <string>   // std::basic_string, std::string
 #include <vector>   // std::vector
 
 namespace sourcemeta::core::internal {
@@ -296,6 +296,27 @@ auto prettify(const typename JSON::Object &document,
   stream.put(internal::TOKEN_OBJECT_END<JSON::Char>);
 }
 
+// A number the double precision format holds exactly would be read back as a
+// double, so it keeps an exponent to be read back as a decimal instead. The
+// rest are read back as decimals however they are written, so they take the
+// plain form, which states them as they came in. Where that form needs an
+// exponent of its own it groups the digits in threes, which states them
+// further from how they came in than scientific notation does
+inline auto
+stringify_decimal(const Decimal &decimal,
+                  std::basic_ostream<JSON::Char, JSON::CharTraits> &stream)
+    -> void {
+  if (!decimal.is_double()) {
+    const auto plain{decimal.to_string()};
+    if (plain.find('e') == std::string::npos) {
+      stream << plain;
+      return;
+    }
+  }
+
+  stream << decimal.to_scientific_string();
+}
+
 template <template <typename T> typename Allocator>
 auto stringify(const JSON &document,
                std::basic_ostream<JSON::Char, JSON::CharTraits> &stream)
@@ -323,10 +344,7 @@ auto stringify(const JSON &document,
       stringify<Allocator>(document.as_object(), stream);
       break;
     case JSON::Type::Decimal:
-      // We ALWAYS parse numbers with exponents as decimal, so if we don't
-      // preserve the exponent, we might end up incorrectly treating the number
-      // when parsing it again
-      stream << document.to_decimal().to_scientific_string();
+      stringify_decimal(document.to_decimal(), stream);
       break;
   }
 }
@@ -363,10 +381,7 @@ auto prettify(const JSON &document,
       prettify<Allocator>(document.as_object(), stream, indentation, indent_by);
       break;
     case JSON::Type::Decimal:
-      // We ALWAYS parse numbers with exponents as decimal, so if we don't
-      // preserve the exponent, we might end up incorrectly treating the number
-      // when parsing it again
-      stream << document.to_decimal().to_scientific_string();
+      stringify_decimal(document.to_decimal(), stream);
       break;
   }
 }

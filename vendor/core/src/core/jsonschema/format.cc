@@ -23,8 +23,8 @@ constexpr auto KEYWORDS{std::to_array<std::string_view>(
      "$recursiveAnchor",
 
      // Then important metadata about the schema
-     "title", "description", "$comment", "examples", "deprecated", "readOnly",
-     "writeOnly", "default",
+     "title", "description", "$comment", "examples", "example", "externalDocs",
+     "deprecated", "readOnly", "writeOnly", "default",
 
      // This is a placeholder for "x-"-prefixed unknown keywords, as they are
      // almost always metadata
@@ -34,8 +34,9 @@ constexpr auto KEYWORDS{std::to_array<std::string_view>(
      "$ref", "$dynamicRef", "$recursiveRef",
 
      // Then keywords that apply to any type
-     "type", "disallow", "extends", "const", "enum", "optional", "requires",
-     "allOf", "anyOf", "oneOf", "not", "if", "then", "else",
+     "type", "nullable", "disallow", "extends", "const", "enum", "optional",
+     "requires", "allOf", "anyOf", "oneOf", "discriminator", "not", "if",
+     "then", "else",
 
      // Then keywords about numbers
      "exclusiveMaximum", "maximum", "maximumCanEqual", "exclusiveMinimum",
@@ -55,8 +56,11 @@ constexpr auto KEYWORDS{std::to_array<std::string_view>(
      "unevaluatedProperties", "dependentRequired", "dependencies",
      "dependentSchemas",
 
+     // Then how a value is carried rather than what it may be
+     "xml",
+
      // Reusable utilities go last
-     "$defs", "definitions"})};
+     "$defs", "definitions", "x-definitions"})};
 
 constexpr std::string_view EXTENSION_PREFIX{"x-"};
 
@@ -75,14 +79,18 @@ const auto INDEX{make_index()};
 
 auto keyword_rank(const JSON::String &keyword) -> std::uint16_t {
   constexpr auto UNRECOGNISED{std::numeric_limits<std::uint16_t>::max()};
-  const auto match{INDEX.find(keyword.starts_with(EXTENSION_PREFIX)
-                                  ? EXTENSION_PREFIX
-                                  : std::string_view{keyword})};
-  if (match == INDEX.cend()) {
-    return UNRECOGNISED;
+  const auto match{INDEX.find(std::string_view{keyword})};
+  if (match != INDEX.cend()) {
+    return match->second;
   }
 
-  return match->second;
+  // An extension this does not know by name is almost always metadata, which
+  // the placeholder stands for. One it does know keeps the place it was given
+  if (keyword.starts_with(EXTENSION_PREFIX)) {
+    return INDEX.find(EXTENSION_PREFIX)->second;
+  }
+
+  return UNRECOGNISED;
 }
 
 auto keyword_compare(const JSON::String &left, const JSON::String &right)

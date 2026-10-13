@@ -153,16 +153,18 @@ inline auto aes_expand_key(const std::string_view key) -> AesKeySchedule {
   return schedule;
 }
 
+// AddRoundKey of FIPS 197 Section 5.1.4, which adds the round key of the given
+// round into the state a byte at a time over the field of two elements
+inline auto aes_add_round_key(const AesKeySchedule &schedule, AesBlock &state,
+                              const std::size_t round) -> void {
+  for (std::size_t index = 0; index < 16; ++index) {
+    state[index] ^= schedule.round_keys[(round * 16) + index];
+  }
+}
+
 inline auto aes_encrypt_block(const AesKeySchedule &schedule, AesBlock state)
     -> AesBlock {
-  const auto &round_keys{schedule.round_keys};
-  const auto add_round_key{[&round_keys, &state](const std::size_t round) {
-    for (std::size_t index = 0; index < 16; ++index) {
-      state[index] ^= round_keys[(round * 16) + index];
-    }
-  }};
-
-  add_round_key(0);
+  aes_add_round_key(schedule, state, 0);
   for (std::size_t round = 1; round <= schedule.rounds; ++round) {
     for (auto &byte : state) {
       byte = AES_SUBSTITUTION[byte];
@@ -194,7 +196,7 @@ inline auto aes_encrypt_block(const AesKeySchedule &schedule, AesBlock state)
       }
     }
 
-    add_round_key(round);
+    aes_add_round_key(schedule, state, round);
   }
 
   return state;
@@ -202,14 +204,7 @@ inline auto aes_encrypt_block(const AesKeySchedule &schedule, AesBlock state)
 
 inline auto aes_decrypt_block(const AesKeySchedule &schedule, AesBlock state)
     -> AesBlock {
-  const auto &round_keys{schedule.round_keys};
-  const auto add_round_key{[&round_keys, &state](const std::size_t round) {
-    for (std::size_t index = 0; index < 16; ++index) {
-      state[index] ^= round_keys[(round * 16) + index];
-    }
-  }};
-
-  add_round_key(schedule.rounds);
+  aes_add_round_key(schedule, state, schedule.rounds);
   for (std::size_t round = schedule.rounds; round-- > 0;) {
     // InvShiftRows over the column-major state (FIPS 197 Section 5.3.1)
     const AesBlock shifted{{state[0], state[13], state[10], state[7], state[4],
@@ -222,7 +217,7 @@ inline auto aes_decrypt_block(const AesKeySchedule &schedule, AesBlock state)
       byte = AES_INVERSE_SUBSTITUTION[byte];
     }
 
-    add_round_key(round);
+    aes_add_round_key(schedule, state, round);
 
     if (round != 0) {
       // InvMixColumns (FIPS 197 Section 5.3.3)

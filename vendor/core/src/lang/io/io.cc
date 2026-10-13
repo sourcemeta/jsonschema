@@ -34,7 +34,13 @@ public:
     } catch (...) {
       // Capture before any other syscall can clobber errno
       const auto open_errno{errno};
-      if (open_errno == EACCES) {
+      // The Windows runtime refuses to open a directory for writing with the
+      // same code it reports a denied permission with, and a directory is not
+      // a permission the caller can be granted, so the kind of the refusal is
+      // settled by looking at what the path names
+      std::error_code directory_error;
+      if (open_errno == EACCES &&
+          !std::filesystem::is_directory(path, directory_error)) {
         throw sourcemeta::core::IOFilePermissionError{path};
       }
 

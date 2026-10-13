@@ -7,6 +7,7 @@
 
 // NOLINTBEGIN(misc-include-cleaner)
 #include <sourcemeta/core/http_aws_sigv4.h>
+#include <sourcemeta/core/http_baggage.h>
 #include <sourcemeta/core/http_error.h>
 #include <sourcemeta/core/http_message.h>
 #include <sourcemeta/core/http_method.h>
@@ -14,6 +15,7 @@
 #include <sourcemeta/core/http_status.h>
 #include <sourcemeta/core/http_syntax.h>
 #include <sourcemeta/core/http_system.h>
+#include <sourcemeta/core/http_tracecontext.h>
 // NOLINTEND(misc-include-cleaner)
 
 #include <chrono>           // std::chrono::system_clock

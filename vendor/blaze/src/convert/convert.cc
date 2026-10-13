@@ -37,9 +37,9 @@ namespace {
 using Rule = std::tuple<std::unique_ptr<SchemaTransformRule>, bool>;
 
 /// Construct a rule entry for the given rule type
-template <std::derived_from<SchemaTransformRule> T>
-[[nodiscard]] auto make_rule() -> Rule {
-  return {std::make_unique<T>(),
+template <std::derived_from<SchemaTransformRule> T, typename... Args>
+[[nodiscard]] auto make_rule(Args &&...arguments) -> Rule {
+  return {std::make_unique<T>(std::forward<Args>(arguments)...),
           std::is_same_v<typename T::writes_outside_itself, std::true_type>};
 }
 
@@ -516,6 +516,7 @@ auto apply(const std::vector<Rule> &rules, sourcemeta::core::JSON &schema,
 #include "rules/upgrade_draft_4_to_draft_6.h"
 #include "rules/upgrade_draft_6_to_draft_7.h"
 #include "rules/upgrade_draft_7_to_draft_2019_09.h"
+#include "rules/upgrade_openapi_3_0_to_draft_4.h"
 #include "rules/upgrade_openapi_3_1_to_openapi_3_2.h"
 
 #undef ONLY_CONTINUE_IF
@@ -544,6 +545,40 @@ auto convert(sourcemeta::core::JSON &schema,
 
   std::vector<Rule> rules;
   rules.reserve(20);
+
+  // Again here, and not only among the spellings above: a marker that said
+  // something when the pass began can stop saying anything once a rung has
+  // moved the resource holding it to the dialect the marker names, and a
+  // conversion that left it behind would not be done with the document
+  rules.push_back(make_rule<DialectOverrideBecomesDollarSchema>());
+
+  // A document on the OpenAPI 3.0 dialect forks here rather than standing on a
+  // rung. Every target below reaches it through Draft 4, which is the base
+  // dialect its Schema Object extends, so this runs ahead of the ladder and
+  // the rungs carry on from there
+  rules.push_back(make_rule<UpgradeOpenAPI30ToDraft4>(target));
+
+  // Whether this conversion starts from OpenAPI 3.0. Usually only the caller
+  // can say, because the Schema Object admits no `$schema` member of its own,
+  // so a document written in that dialect is named from the outside. The
+  // exception is the override marker, which names a dialect for a document that
+  // cannot declare one, and which `declared_dialect` reads ahead of `$schema`
+  // exactly as core frames it.
+  //
+  // So the question is what the document says it is, and only where it says
+  // nothing does the default the caller passed decide. Asking merely whether a
+  // `$schema` member is present answers both halves wrongly: a document naming
+  // this dialect through the marker is read as not being on it, and one naming
+  // another dialect that way is read as being on it.
+  //
+  // What this buys is the keywords the fork carries across as themselves. Each
+  // is author data to the rung that promotes it, and shadowing it there would
+  // undo the fork, so the rules that would are told to leave it be
+  const auto declared{declared_dialect(schema)};
+  const auto from_openapi_3_0{
+      names_openapi_3_0_dialect(declared) ||
+      (declared.empty() && names_openapi_3_0_dialect(default_dialect))};
+
   rules.push_back(make_rule<PrefixPromotedDraft4Keywords>());
   rules.push_back(make_rule<UpgradeDraft3ToDraft4>());
 
@@ -563,7 +598,10 @@ auto convert(sourcemeta::core::JSON &schema,
       target == ConvertTarget::Draft202012 ||
       target == ConvertTarget::OpenAPI31 ||
       target == ConvertTarget::OpenAPI32) {
-    rules.push_back(make_rule<PrefixPromotedDraft7Keywords>());
+    rules.push_back(make_rule<PrefixPromotedDraft7Keywords>(
+        from_openapi_3_0
+            ? std::vector<std::string_view>{"readOnly", "writeOnly"}
+            : std::vector<std::string_view>{}));
     rules.push_back(make_rule<UpgradeDraft6ToDraft7>());
   }
 
@@ -571,7 +609,9 @@ auto convert(sourcemeta::core::JSON &schema,
       target == ConvertTarget::Draft202012 ||
       target == ConvertTarget::OpenAPI31 ||
       target == ConvertTarget::OpenAPI32) {
-    rules.push_back(make_rule<PrefixPromoted201909Keywords>());
+    rules.push_back(make_rule<PrefixPromoted201909Keywords>(
+        from_openapi_3_0 ? std::vector<std::string_view>{"deprecated"}
+                         : std::vector<std::string_view>{}));
     rules.push_back(make_rule<UpgradeDraft7To201909>());
     rules.push_back(make_rule<DefinitionsToDefs>());
     rules.push_back(make_rule<DependenciesToDependent>());
@@ -586,7 +626,11 @@ auto convert(sourcemeta::core::JSON &schema,
 
   if (target == ConvertTarget::OpenAPI31 ||
       target == ConvertTarget::OpenAPI32) {
-    rules.push_back(make_rule<PrefixPromotedOpenAPI31Keywords>());
+    rules.push_back(make_rule<PrefixPromotedOpenAPI31Keywords>(
+        from_openapi_3_0
+            ? std::vector<std::string_view>{"example", "discriminator",
+                                            "externalDocs", "xml"}
+            : std::vector<std::string_view>{}));
     rules.push_back(make_rule<Upgrade202012ToOpenAPI31>());
   }
 

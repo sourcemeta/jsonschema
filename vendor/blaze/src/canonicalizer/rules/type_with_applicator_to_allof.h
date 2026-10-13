@@ -154,6 +154,22 @@ public:
         return true;
       }
 
+      // Merging only collapses the sibling applicators into the `allOf` that
+      // is already there, and the condition has to come out false as soon as
+      // the transform returns. So merging is the right move only when those
+      // siblings are the whole reason we are here: typed keywords with no
+      // `type` to sit under, and references that need a branch of their own,
+      // all survive a merge and have to go through the extraction path instead
+      const bool mergeable_siblings{std::ranges::any_of(
+          APPLICATORS_WITHOUT_ALLOF, [&schema](const auto *applicator) -> bool {
+            return schema.defines(applicator);
+          })};
+      if (!mergeable_siblings || has_orphaned_typed_keywords ||
+          modern_ref_needs_wrapping || this->has_modern_ref_ ||
+          this->has_dynamic_ref_ || this->has_recursive_ref_) {
+        return true;
+      }
+
       const auto all_refs_fixed{!frame.any_reference_from(
           location.pointer,
           [&](const sourcemeta::core::SchemaReferenceType,

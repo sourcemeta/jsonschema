@@ -5,6 +5,7 @@
 #include "jsonld_keywords.h"
 
 #include <algorithm> // std::find
+#include <cassert>   // assert
 #include <optional>  // std::optional
 
 namespace sourcemeta::core {
@@ -61,7 +62,10 @@ auto compact_value(const ActiveContext &active_context,
                                 identifier.to_string(), nullptr, true, false)};
       }
     }
-  } else if (value.defines(KEYWORD_VALUE, KEYWORD_VALUE_HASH)) {
+  } else {
+    // A caller hands this either a value object or a node reference, so an
+    // object carrying no identifier carries a value
+    assert(value.defines(KEYWORD_VALUE, KEYWORD_VALUE_HASH));
     const auto &contents{value.at(KEYWORD_VALUE, KEYWORD_VALUE_HASH)};
     const bool has_type{value.defines(KEYWORD_TYPE, KEYWORD_TYPE_HASH)};
     const bool type_matches{

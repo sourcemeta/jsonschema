@@ -1,6 +1,7 @@
 #ifndef SOURCEMETA_CORE_URI_NORMALIZE_H_
 #define SOURCEMETA_CORE_URI_NORMALIZE_H_
 
+#include <cassert>     // assert
 #include <cstddef>     // std::size_t
 #include <string>      // std::string
 #include <string_view> // std::string_view
@@ -33,7 +34,8 @@ namespace sourcemeta::core {
       const auto last_slash{output.rfind('/')};
       if (last_slash == std::string::npos) {
         output.clear();
-        if (!is_absolute && !input.empty() && input.front() == '/') {
+        assert(!input.empty() && input.front() == '/');
+        if (!is_absolute) {
           input.remove_prefix(1);
         }
       } else {
@@ -54,9 +56,8 @@ namespace sourcemeta::core {
     } else if (input == ".") {
       break;
     } else if (input == "..") {
-      if (!is_absolute) {
-        output.append("../");
-      }
+      assert(!is_absolute);
+      output.append("../");
       break;
     } else {
       const std::size_t next_slash{input.starts_with('/') ? input.find('/', 1)

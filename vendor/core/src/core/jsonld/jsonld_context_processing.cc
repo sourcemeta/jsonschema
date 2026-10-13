@@ -1,6 +1,7 @@
 #include "jsonld_algorithms.h"
 #include "jsonld_keywords.h"
 
+#include <sourcemeta/core/numeric.h>
 #include <sourcemeta/core/uri.h>
 
 #include <memory>   // std::make_shared
@@ -37,6 +38,61 @@ auto absolute_reference(const std::optional<JSON::String> &base,
   }
 }
 
+// What the resolver answers with, where an error of this library's own kind
+// coming out of it would otherwise reach the caller carrying a position that
+// belongs to another document
+auto resolve(const JSONLDResolver &resolver, const JSON::String &reference)
+    -> std::optional<JSON> {
+  try {
+    return resolver(reference);
+  } catch (const JSONLDError &) {
+    return std::nullopt;
+  }
+}
+
+// The base IRI a value sets, resolved against the current one when there is
+// one. A string the parser rejects, and a relative reference with no base to
+// resolve it against, both name no base (JSON-LD 1.1 API Section 5.1 steps
+// 5.7.3 to 5.7.5)
+auto resolved_base(const std::optional<JSON::String> &base,
+                   const JSON::String &value) -> std::optional<JSON::String> {
+  try {
+    if (base.has_value()) {
+      return URI::from_iri(value)
+          .resolve_from(URI::from_iri(base.value()))
+          .recompose();
+    }
+
+    if (URI::from_iri(value).is_absolute()) {
+      return value;
+    }
+  } catch (const URIParseError &) {
+    return std::nullopt;
+  }
+
+  return std::nullopt;
+}
+
+// The version number, which the JSON library holds as a real or as an exact
+// decimal depending on how the input spells it, and which both representations
+// may name (JSON-LD 1.1 API Section 5.1 step 5.5.1). Trailing zeros come off
+// first, so that every spelling of the value lands on the same exponent, and
+// an exponent that does not match then settles the comparison without the
+// digits of either side having to be aligned
+auto is_version_1_1(const JSON &version) -> bool {
+  static const Decimal VERSION_1_1{"1.1"};
+  if (version.is_real()) {
+    return version.to_real() == 1.1;
+  }
+
+  if (!version.is_decimal()) {
+    return false;
+  }
+
+  const auto reduced{version.to_decimal().reduce()};
+  return reduced.same_quantum(VERSION_1_1) && reduced == VERSION_1_1;
+}
+
 // A context merged with an imported one (JSON-LD 1.1 API Section 5.1 step
 // 5.6.8) holds entries from two documents, and only the ones the input spells
 // out have a position in it. An error on an entry that came from the imported
@@ -49,6 +105,18 @@ auto is_input_authored(const JSONLDError &error, const JSON &context,
   }
   const auto &token{pointer.at(location.size())};
   return token.is_property() && context.defines(token.to_property());
+}
+
+// The origin a context reached from the given location reports against. A
+// reference that sits inside content the input does not spell out keeps the
+// outermost input location, which is the only one the document has
+auto foreign_origin(const ExpansionState &state, const WeakPointer &location)
+    -> std::optional<Pointer> {
+  if (state.foreign_context_location.has_value()) {
+    return state.foreign_context_location;
+  }
+
+  return to_pointer(location);
 }
 
 } // namespace
@@ -99,10 +167,16 @@ auto process_context(ExpansionState &state, ActiveContext &active_context,
       // the document base. The relativise option and the processing mode are
       // processing state rather than context state, so they survive the reset.
       const bool relativise{active_context.compact_to_relative};
+      // What a scope reverts to outlives the nullification inside it, or the
+      // nodes below would never regain the context the scope was entered from
+      // (JSON-LD 1.1 API Section 5.1 step 5.1.2)
+      auto saved_previous{effective_propagate ? nullptr
+                                              : active_context.previous};
       active_context = ActiveContext{};
       active_context.base = state.document_base;
       active_context.compact_to_relative = relativise;
       active_context.processing_1_0 = state.processing_1_0;
+      active_context.previous = std::move(saved_previous);
       continue;
     }
 
@@ -115,48 +189,79 @@ auto process_context(ExpansionState &state, ActiveContext &active_context,
 
       const auto &reference{resolved.value()};
 
+      bool already_loaded{false};
       for (const auto &loaded : state.remote_context_chain) {
         if (loaded == reference) {
-          // A scoped context can be loaded again on purpose, so JSON-LD 1.1
-          // withdrew the recursion error and treats meeting a context already
-          // in the chain as reaching the limit on how many may be loaded
-          // (JSON-LD 1.1 API Section 5.1 step 5.2.3)
-          if (state.processing_1_0) {
-            throw JSONLDError("Recursive context inclusion", location);
-          }
-
-          throw JSONLDError("Context overflow", location);
+          already_loaded = true;
+          break;
         }
       }
-      if (state.resolver == nullptr || !*state.resolver) {
-        throw JSONLDError("Loading remote context failed", location);
+
+      // A scoped context being validated stops at a reference that is already
+      // loading rather than treating it as recursion (JSON-LD 1.1 API Section
+      // 5.1 step 5.2.2)
+      if (already_loaded && !state.validate_scoped_context) {
+        continue;
       }
-      const auto document{(*state.resolver)(reference)};
-      if (!document.has_value()) {
-        throw JSONLDError("Loading remote context failed", location);
+
+      if (already_loaded) {
+        // A scoped context can be loaded again on purpose, so JSON-LD 1.1
+        // withdrew the recursion error and treats meeting a context already
+        // in the chain as reaching the limit on how many may be loaded
+        // (JSON-LD 1.1 API Section 5.1 step 5.2.3)
+        if (state.processing_1_0) {
+          throw JSONLDError("Recursive context inclusion", location);
+        }
+
+        throw JSONLDError("Context overflow", location);
       }
-      const auto *context_entry{
-          document->is_object()
-              ? document->try_at(KEYWORD_CONTEXT, KEYWORD_CONTEXT_HASH)
-              : nullptr};
-      if (context_entry == nullptr) {
-        throw JSONLDError("Invalid remote context", location);
+      if (state.remote_context_chain.size() >=
+          ExpansionState::MAXIMUM_REMOTE_CONTEXTS) {
+        throw JSONLDError("Context overflow", location);
       }
-      state.remote_context_chain.push_back(reference);
+      // Step 5.2.4: "If context was previously dereferenced, then the
+      // processor MUST NOT do a further dereference, and context is set to the
+      // previously established internal representation", with the note that
+      // "Only the @context entry need be retained", which is why the cache
+      // holds that entry rather than the document (JSON-LD 1.1 API Section 5.1
+      // step 5.2.4)
+      const auto dereferenced{state.remote_documents.find(reference)};
+      const JSON *context_entry{nullptr};
+      if (dereferenced != state.remote_documents.cend()) {
+        context_entry = &dereferenced->second;
+      } else {
+        if (state.resolver == nullptr || !*state.resolver) {
+          throw JSONLDError("Loading remote context failed", location);
+        }
+        const auto document{resolve(*state.resolver, reference)};
+        if (!document.has_value()) {
+          throw JSONLDError("Loading remote context failed", location);
+        }
+        const auto *loaded{
+            document->is_object()
+                ? document->try_at(KEYWORD_CONTEXT, KEYWORD_CONTEXT_HASH)
+                : nullptr};
+        if (loaded == nullptr) {
+          throw JSONLDError("Invalid remote context", location);
+        }
+        context_entry =
+            &state.remote_documents.emplace(reference, *loaded).first->second;
+      }
+      const RemoteContextScope chain{state.remote_context_chain, reference};
+      // A scoped context the loaded document defines is processed again when
+      // its term comes into use, long after this location is out of reach, so
+      // the reference is recorded for it to report against
+      const ForeignContextScope origin{state, foreign_origin(state, location)};
       try {
         // A loaded remote context is processed with the default propagation.
         process_context(state, active_context, *context_entry, location);
       } catch (const JSONLDError &error) {
-        state.remote_context_chain.pop_back();
         // The offending entries live in the remote document, whose keys have
         // no position in the input, so the error is located at the reference
         // that loaded it
         throw JSONLDError(error.what(), location);
-      } catch (...) {
-        state.remote_context_chain.pop_back();
-        throw;
       }
-      state.remote_context_chain.pop_back();
+
       continue;
     }
 
@@ -166,8 +271,7 @@ auto process_context(ExpansionState &state, ActiveContext &active_context,
 
     if (const auto *version{
             context.try_at(KEYWORD_VERSION, KEYWORD_VERSION_HASH)};
-        version != nullptr &&
-        (!version->is_real() || version->to_real() != 1.1)) {
+        version != nullptr && !is_version_1_1(*version)) {
       throw JSONLDError("Invalid @version value", location, {KEYWORD_VERSION});
     }
     if (state.processing_1_0 &&
@@ -175,18 +279,18 @@ auto process_context(ExpansionState &state, ActiveContext &active_context,
       throw JSONLDError("Processing mode conflict", location,
                         {KEYWORD_VERSION});
     }
-    if (state.processing_1_0 &&
-        (context.defines(KEYWORD_PROPAGATE, KEYWORD_PROPAGATE_HASH) ||
-         context.defines(KEYWORD_IMPORT, KEYWORD_IMPORT_HASH) ||
-         context.defines(KEYWORD_PROTECTED, KEYWORD_PROTECTED_HASH))) {
-      throw JSONLDError("Invalid context entry", location);
-    }
+    // The entries 1.1 introduced are refused where the algorithm reaches them,
+    // so each names itself and none stands in for an entry judged earlier
+    // (JSON-LD 1.1 API Section 5.1 step 5.6.1)
+    if (state.processing_1_0) {
+      if (context.defines(KEYWORD_IMPORT, KEYWORD_IMPORT_HASH)) {
+        throw JSONLDError("Invalid context entry", location, {KEYWORD_IMPORT});
+      }
 
-    if (const auto *propagate_entry{
-            context.try_at(KEYWORD_PROPAGATE, KEYWORD_PROPAGATE_HASH)};
-        propagate_entry != nullptr && !propagate_entry->is_boolean()) {
-      throw JSONLDError("Invalid @propagate value", location,
-                        {KEYWORD_PROPAGATE});
+      if (context.defines(KEYWORD_PROTECTED, KEYWORD_PROTECTED_HASH)) {
+        throw JSONLDError("Invalid context entry", location,
+                          {KEYWORD_PROTECTED});
+      }
     }
 
     // @protected applies to imported terms too, so it is set before @import.
@@ -220,7 +324,7 @@ auto process_context(ExpansionState &state, ActiveContext &active_context,
         throw JSONLDError("Loading remote context failed", location,
                           {KEYWORD_IMPORT});
       }
-      const auto document{(*state.resolver)(reference)};
+      const auto document{resolve(*state.resolver, reference)};
       if (!document.has_value()) {
         throw JSONLDError("Loading remote context failed", location,
                           {KEYWORD_IMPORT});
@@ -243,6 +347,16 @@ auto process_context(ExpansionState &state, ActiveContext &active_context,
           merged.assign(entry.first, entry.second);
         }
       }
+      // The merged context holds entries from two documents, so a scoped
+      // context defined among the ones only the imported document carries is
+      // reported against the entry that merged them in, while the input's own
+      // entries keep their position
+      auto import_location{foreign_origin(state, location)};
+      if (!state.foreign_context_location.has_value()) {
+        import_location.value().push_back(JSON::String{KEYWORD_IMPORT});
+      }
+      const ForeignContextScope origin{state, std::move(import_location),
+                                       &context};
       try {
         process_context(state, active_context, merged, location, propagate);
       } catch (const JSONLDError &error) {
@@ -265,17 +379,12 @@ auto process_context(ExpansionState &state, ActiveContext &active_context,
       } else if (!base.is_string()) {
         throw JSONLDError("Invalid base IRI", location, {KEYWORD_BASE});
       } else {
-        const auto &base_string{base.to_string()};
-        if (active_context.base.has_value()) {
-          active_context.base =
-              URI::from_iri(base_string)
-                  .resolve_from(URI::from_iri(active_context.base.value()))
-                  .recompose();
-        } else if (URI::from_iri(base_string).is_absolute()) {
-          active_context.base = base_string;
-        } else {
+        auto resolved{resolved_base(active_context.base, base.to_string())};
+        if (!resolved.has_value()) {
           throw JSONLDError("Invalid base IRI", location, {KEYWORD_BASE});
         }
+
+        active_context.base = std::move(resolved);
       }
     }
 
@@ -292,9 +401,17 @@ auto process_context(ExpansionState &state, ActiveContext &active_context,
         if (state.processing_1_0 && !vocabulary_string.contains(':')) {
           throw JSONLDError("Invalid vocab mapping", location, {KEYWORD_VOCAB});
         }
-        active_context.vocabulary =
-            expand_iri(state, active_context, vocabulary_string, true, true,
-                       nullptr, nullptr, EMPTY_WEAK_POINTER);
+        auto mapping{expand_iri(state, active_context, vocabulary_string, true,
+                                true, nullptr, nullptr, EMPTY_WEAK_POINTER)};
+        // Step 5.8.3: "If it is not an IRI, or a blank node identifier, an
+        // invalid vocab mapping error has been detected". The expansion is
+        // what has to pass, since a relative reference is admitted here and
+        // resolved against the base (JSON-LD 1.1 API Section 5.1 step 5.8.3)
+        if (!mapping.has_value() || (!URI::is_iri(mapping.value()) &&
+                                     !is_blank_node(mapping.value()))) {
+          throw JSONLDError("Invalid vocab mapping", location, {KEYWORD_VOCAB});
+        }
+        active_context.vocabulary = std::move(mapping);
       }
     }
 
@@ -311,8 +428,14 @@ auto process_context(ExpansionState &state, ActiveContext &active_context,
       }
     }
 
+    // (JSON-LD 1.1 API Section 5.1 step 5.10)
     if (const auto *direction_entry{
             context.try_at(KEYWORD_DIRECTION, KEYWORD_DIRECTION_HASH)}) {
+      if (state.processing_1_0) {
+        throw JSONLDError("Invalid context entry", location,
+                          {KEYWORD_DIRECTION});
+      }
+
       const auto &direction{*direction_entry};
       if (direction.is_null()) {
         active_context.default_direction = std::nullopt;
@@ -326,6 +449,22 @@ auto process_context(ExpansionState &state, ActiveContext &active_context,
                             {KEYWORD_DIRECTION});
         }
         active_context.default_direction = direction_string;
+      }
+    }
+
+    // The flag itself is read before the entries are, so that a context that
+    // does not propagate is remembered first, and only what it says is judged
+    // here (JSON-LD 1.1 API Section 5.1 step 5.11)
+    if (const auto *propagate_entry{
+            context.try_at(KEYWORD_PROPAGATE, KEYWORD_PROPAGATE_HASH)}) {
+      if (state.processing_1_0) {
+        throw JSONLDError("Invalid context entry", location,
+                          {KEYWORD_PROPAGATE});
+      }
+
+      if (!propagate_entry->is_boolean()) {
+        throw JSONLDError("Invalid @propagate value", location,
+                          {KEYWORD_PROPAGATE});
       }
     }
 

@@ -73,6 +73,9 @@ enum class KnownSchema : std::uint8_t {
   OAS_3_1_DIALECT_2024_10_25,
   OAS_3_1_META_2024_10_25,
 
+  OAS_3_0_DIALECT_2024_10_18,
+  OAS_3_0_DIALECT_2021_09_28,
+
   UNKNOWN
 };
 
@@ -448,6 +451,20 @@ static auto parse_identifier(const std::string_view identifier) -> KnownSchema {
     return KnownSchema::OAS_3_1_META_2024_10_25;
   }
 
+  // OpenAPI v3.0
+  //
+  // The OpenAPI Initiative never assigned a dialect identifier to the Schema
+  // Object of this revision, the way it did from v3.1 onwards, so we mint one
+  // per published release of the document schema that carries it, following
+  // RFC 4151
+  if (identifier == "tag:spec.openapis.org,2024-10-18:oas/3.0/dialect") {
+    return KnownSchema::OAS_3_0_DIALECT_2024_10_18;
+  }
+
+  if (identifier == "tag:spec.openapis.org,2021-09-28:oas/3.0/dialect") {
+    return KnownSchema::OAS_3_0_DIALECT_2021_09_28;
+  }
+
   return KnownSchema::UNKNOWN;
 }
 
@@ -749,6 +766,42 @@ auto sourcemeta::core::schema_resolver(const std::string_view identifier)
           R"EOF(@OPENAPI_OAS_3_1_META_2024_10_25@)EOF")};
       return SCHEMA;
     }
+    // The published document schema describes the Schema Object as one of its
+    // definitions rather than on its own, and nothing else of it is of use
+    // here, so it is carried within the dialect instead of being exposed. The
+    // identifier it declares has to stay for the references it makes to
+    // itself to keep resolving against its own scope. Note a schema of this
+    // dialect is either a Schema Object or a Reference Object
+    case KnownSchema::OAS_3_0_DIALECT_2024_10_18: {
+      static const auto SCHEMA{sourcemeta::core::parse_json(R"EOF({
+  "id": "tag:spec.openapis.org,2024-10-18:oas/3.0/dialect",
+  "$schema": "http://json-schema.org/draft-04/schema#",
+  "description": "The OpenAPI v3.0.x Schema Object dialect",
+  "anyOf": [
+    { "$ref": "#/definitions/openapi/definitions/Schema" },
+    { "$ref": "#/definitions/openapi/definitions/Reference" }
+  ],
+  "definitions": {
+    "openapi": @OPENAPI_OAS_3_0_SCHEMA_2024_10_18@
+  }
+})EOF")};
+      return SCHEMA;
+    }
+    case KnownSchema::OAS_3_0_DIALECT_2021_09_28: {
+      static const auto SCHEMA{sourcemeta::core::parse_json(R"EOF({
+  "id": "tag:spec.openapis.org,2021-09-28:oas/3.0/dialect",
+  "$schema": "http://json-schema.org/draft-04/schema#",
+  "description": "The OpenAPI v3.0.x Schema Object dialect",
+  "anyOf": [
+    { "$ref": "#/definitions/openapi/definitions/Schema" },
+    { "$ref": "#/definitions/openapi/definitions/Reference" }
+  ],
+  "definitions": {
+    "openapi": @OPENAPI_OAS_3_0_SCHEMA_2021_09_28@
+  }
+})EOF")};
+      return SCHEMA;
+    }
     case KnownSchema::UNKNOWN:
       return std::nullopt;
   }
@@ -824,6 +877,8 @@ auto sourcemeta::core::schema_is_official(
     case KnownSchema::OAS_3_1_META_2024_11_10:
     case KnownSchema::OAS_3_1_DIALECT_2024_10_25:
     case KnownSchema::OAS_3_1_META_2024_10_25:
+    case KnownSchema::OAS_3_0_DIALECT_2024_10_18:
+    case KnownSchema::OAS_3_0_DIALECT_2021_09_28:
     case KnownSchema::UNKNOWN:
       return false;
   }

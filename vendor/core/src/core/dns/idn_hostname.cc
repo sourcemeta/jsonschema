@@ -4,6 +4,7 @@
 #include <sourcemeta/core/punycode.h>
 #include <sourcemeta/core/unicode.h>
 
+#include <cassert>     // assert
 #include <cstddef>     // std::size_t
 #include <optional>    // std::optional
 #include <string>      // std::string, std::u32string
@@ -85,11 +86,9 @@ auto validate_idn_labels(const std::u32string_view codepoints) -> bool {
       }
     }
 
-    // RFC 5891 §4.2.4 / RFC 1035 §2.3.4: each label, in A-label form,
-    // must be 1-63 octets
-    if (a_label_octets > 63) {
-      return false;
-    }
+    // RFC 5891 §4.2.4 / RFC 1035 §2.3.4: each label, in A-label form, must be
+    // 1-63 octets, which classifying it above already held it to
+    assert(a_label_octets <= 63);
 
     if (!decoded_labels.empty()) {
       total_octets += 1;

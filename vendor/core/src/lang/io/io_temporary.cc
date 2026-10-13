@@ -36,7 +36,16 @@ TemporaryDirectory::TemporaryDirectory(const std::filesystem::path &parent,
         std::error_code{error, std::generic_category()}};
   }
 
-  if (!std::filesystem::create_directory(name)) {
+  // The name the platform settled on may still be one the file system cannot
+  // hold, which is a failure of its own rather than a name already taken, and
+  // is reported the way the other platform reports it
+  std::error_code code;
+  if (!std::filesystem::create_directory(name, code)) {
+    if (code) {
+      throw std::filesystem::filesystem_error{
+          "failed to create temporary directory", parent, code};
+    }
+
     throw IOFileAlreadyExistsError{std::filesystem::path{name}};
   }
 #else

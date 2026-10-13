@@ -218,11 +218,17 @@ private:
 
   auto register_definition(const std::uint32_t index) -> void {
     normalize_label(this->label_buffer_, this->document_.nodes[index].literal);
+
+    // A definition whose label normalises away can never be referenced, but it
+    // still has to be accounted for, because the sweep that drops unreferenced
+    // definitions only looks at the ones recorded here. Leaving it out keeps it
+    // in the tree, where it opens a footnotes section that nothing closes until
+    // the end of the document and swallows everything after it
+    this->definition_nodes_.push_back(index);
     if (this->label_buffer_.empty()) {
       return;
     }
 
-    this->definition_nodes_.push_back(index);
     if (!this->definitions_.contains(std::string_view{this->label_buffer_})) {
       this->definitions_.emplace(
           this->document_.strings.store(this->label_buffer_), index);

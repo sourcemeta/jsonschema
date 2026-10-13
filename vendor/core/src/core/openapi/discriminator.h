@@ -114,7 +114,7 @@ openapi_discriminators(const JSON &document, const SchemaFrame &schemas,
 
     const auto *discriminator{
         schema->try_at("discriminator", OPENAPI_HASH_DISCRIMINATOR)};
-    if (discriminator == nullptr || !discriminator->is_object()) {
+    if (discriminator == nullptr) {
       return;
     }
 
@@ -138,6 +138,16 @@ openapi_discriminators(const JSON &document, const SchemaFrame &schemas,
     const JSON::String scope{location.base};
     origin.push_back(JSON::String{"discriminator"});
 
+    // Section 4.8.24.2 has the dialect this specification publishes hold the
+    // keyword, and the schema that dialect is written as admits nothing but a
+    // map there, so what the keyword names is an Object or it is an error. The
+    // shape is read only once the dialect is known to define the keyword at
+    // all, as a dialect that leaves it out leaves the member free
+    if (!discriminator->is_object()) {
+      throw OpenAPIError{base, std::move(origin),
+                         "The Discriminator Object must be an object"};
+    }
+
     // Section 4.8.25 marks this one "**REQUIRED**. The name of the property in
     // the payload that will hold the discriminating value", and 3.2.1 Section
     // 4.25 says as much, so a Discriminator Object the dialect does define
@@ -159,8 +169,13 @@ openapi_discriminators(const JSON &document, const SchemaFrame &schemas,
     }
 
     const auto *mapping{discriminator->try_at("mapping", OPENAPI_HASH_MAPPING)};
-    if (mapping != nullptr && mapping->is_object()) {
+    if (mapping != nullptr) {
       const auto mapped{origin.concat(JSON::String{"mapping"})};
+      if (!mapping->is_object()) {
+        throw OpenAPIError{
+            base, mapped, "The Discriminator Object mapping must be an object"};
+      }
+
       for (const auto &entry : mapping->as_object()) {
         openapi_record_discriminator(result, base, mapped.concat(entry.first),
                                      entry.second, scope);

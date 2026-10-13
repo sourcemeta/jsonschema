@@ -4,6 +4,7 @@
 #include <sourcemeta/core/ip.h>
 #include <sourcemeta/core/text.h>
 
+#include <cassert>     // assert
 #include <cstdint>     // std::uint8_t, std::uint16_t
 #include <string>      // std::string
 #include <string_view> // std::string_view
@@ -106,10 +107,9 @@ inline auto is_address_literal(const std::string_view domain) -> bool {
   if (domain.back() != ']') {
     return false;
   }
-  // RFC 5321 §4.5.3.1.2: 255-octet cap on a domain "name or number"
-  if (domain.size() > 255) {
-    return false;
-  }
+  // RFC 5321 §4.5.3.1.2 caps a domain "name or number" at 255 octets, which
+  // the 254-octet mailbox total of §4.5.3.1.3 already leaves out of reach
+  assert(domain.size() <= 255);
   const auto inner{domain.substr(1, domain.size() - 2)};
   // RFC 5321 §4.1.3: IPv6-address-literal = "IPv6:" IPv6-addr. The tag names
   // the syntax that the rest of the literal follows, so a payload that is not

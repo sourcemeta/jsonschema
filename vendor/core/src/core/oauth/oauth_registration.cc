@@ -54,10 +54,13 @@ constexpr auto HASH_ERROR{JSON::Object::hash("error"sv)};
 constexpr auto HASH_ERROR_DESCRIPTION{
     JSON::Object::hash("error_description"sv)};
 
+// Client metadata is refused at construction unless these members are arrays
+// of strings, so whether one was registered is the whole question here
 auto array_member_is_present(const JSON &data, const JSON::StringView name,
                              const JSON::Object::hash_type hash) -> bool {
   const auto *member{data.try_at(name, hash)};
-  return member != nullptr && member->is_array();
+  assert(member == nullptr || member->is_array());
+  return member != nullptr;
 }
 
 // A membership predicate that falls back to the specification default when the
@@ -70,7 +73,8 @@ auto array_member_contains_or_default(const JSON &data,
                                       const std::string_view fallback) -> bool {
   assert(data.is_object());
   const auto *member{data.try_at(name, hash)};
-  if (member == nullptr || !member->is_array()) {
+  assert(member == nullptr || member->is_array());
+  if (member == nullptr) {
     return value == fallback;
   }
 

@@ -1084,6 +1084,17 @@ auto describe(const bool valid, const Instruction &step,
   }
 
   if (step.type ==
+      sourcemeta::blaze::InstructionIndex::AssertionNumberIntegerBounded) {
+    std::ostringstream message;
+    const auto &value{instruction_value<ValueIntegerBounds>(step)};
+    message << "The " << value_type_name(target) << " value ";
+    describe_stringify(target, message);
+    message << " was expected to be an integer between " << value.first
+            << " and " << value.second;
+    return message.str();
+  }
+
+  if (step.type ==
       sourcemeta::blaze::InstructionIndex::AssertionObjectPropertiesSimple) {
     return "The object value was expected to validate against the defined "
            "property subschemas";
@@ -1717,6 +1728,32 @@ auto describe(const bool valid, const Instruction &step,
              "string is short enough to satisfy a negative maximum length";
     }
 
+    // The lower bounds below compile the same way when the bound is too large
+    // to hold, as nothing can be big enough to satisfy one
+    if (keyword == "minLength") {
+      return "The value was expected to be of a type other than string, as no "
+             "string is long enough to satisfy a minimum length that large";
+    }
+
+    if (keyword == "minItems") {
+      return "The value was expected to be of a type other than array, as no "
+             "array has enough items to satisfy a minimum size that large";
+    }
+
+    if (keyword == "minProperties") {
+      return "The value was expected to be of a type other than object, as no "
+             "object has enough properties to satisfy a minimum size that "
+             "large";
+    }
+
+    // `contains` compiles the same way when its `minContains` is too large to
+    // hold, as no array has that many items for the subschema to match
+    if (keyword == "contains") {
+      return "The value was expected to be of a type other than array, as no "
+             "array has enough matching items to satisfy a minimum count that "
+             "large";
+    }
+
     std::ostringstream message;
     describe_not_types_check(valid, target.type(),
                              instruction_value<ValueTypes>(step), message);
@@ -2291,6 +2328,23 @@ auto describe(const bool valid, const Instruction &step,
     return message.str();
   }
 
+  if (step.type == sourcemeta::blaze::InstructionIndex::AssertionNumberType) {
+    std::ostringstream message;
+    message << "The " << value_type_name(target) << " value ";
+    describe_stringify(target, message);
+    message << " was expected to be exactly representable as an IEEE 754 ";
+    switch (instruction_value<ValueNumberType>(step)) {
+      case ValueNumberType::Float:
+        message << "single precision floating point number";
+        break;
+      case ValueNumberType::Double:
+        message << "double precision floating point number";
+        break;
+    }
+
+    return message.str();
+  }
+
   if (step.type == sourcemeta::blaze::InstructionIndex::AssertionStringType) {
     assert(target.is_string());
     std::ostringstream message;
@@ -2359,6 +2413,9 @@ auto describe(const bool valid, const Instruction &step,
         break;
       case ValueStringType::Color:
         message << " CSS 2 color";
+        break;
+      case ValueStringType::Base64:
+        message << " RFC 4648 Base64 string";
         break;
       default:
         return unknown();

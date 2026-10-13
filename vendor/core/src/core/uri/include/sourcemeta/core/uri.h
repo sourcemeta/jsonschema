@@ -768,7 +768,8 @@ public:
   [[nodiscard]] auto userinfo() const -> std::optional<std::string_view>;
 
   /// Set the user information part of the URI. Passing an empty string clears
-  /// the user information. For example:
+  /// the user information, and a URI whose path is relative cannot take any.
+  /// For example:
   ///
   /// ```cpp
   /// #include <sourcemeta/core/uri.h>

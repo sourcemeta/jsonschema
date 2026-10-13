@@ -626,9 +626,21 @@ inline auto write_inline_value(OutputStream &stream, const JSON &value,
         }
       }
     } break;
-    case JSON::Type::Decimal:
-      stream << value.to_decimal().to_scientific_string();
-      break;
+    case JSON::Type::Decimal: {
+      // Written so that reading the output again recovers the same number as a
+      // decimal rather than as a double, preferring the plain form where it
+      // states the number as it came in
+      const auto &decimal{value.to_decimal()};
+      if (!decimal.is_double()) {
+        const auto plain{decimal.to_string()};
+        if (plain.find('e') == std::string::npos) {
+          stream << plain;
+          break;
+        }
+      }
+
+      stream << decimal.to_scientific_string();
+    } break;
     case JSON::Type::String:
       write_string_with_style(stream, value, roundtrip, pointer);
       break;
@@ -668,9 +680,9 @@ inline auto write_flow_properties(OutputStream &stream, const JSON &value,
                                   const YAMLRoundTrip *roundtrip,
                                   AnchorValues &anchors, const Pointer &pointer)
     -> void {
-  if (roundtrip == nullptr) {
-    return;
-  }
+  // Only what was read as a flow collection is written back as one, so there
+  // is always a record to read the properties of its members out of
+  assert(roundtrip != nullptr);
   const auto match{roundtrip->styles.find(pointer)};
   if (match != roundtrip->styles.end() &&
       write_node_properties(stream, value, &match->second, anchors)) {
@@ -684,10 +696,7 @@ inline auto write_flow_node_properties(OutputStream &stream, const JSON &value,
                                        const YAMLRoundTrip *roundtrip,
                                        AnchorValues &anchors,
                                        const Pointer &pointer) -> void {
-  if (roundtrip == nullptr) {
-    return;
-  }
-
+  assert(roundtrip != nullptr);
   const auto match{roundtrip->styles.find(pointer)};
   if (match != roundtrip->styles.end()) {
     write_node_properties(stream, value, &match->second, anchors);
@@ -698,14 +707,15 @@ inline auto write_flow_mapping(OutputStream &stream, const JSON &value,
                                const YAMLRoundTrip *roundtrip,
                                AnchorValues &anchors, Pointer &pointer)
     -> void {
+  // Only what was read as a flow collection is written back as one, so there
+  // is always a record to read how it was spelled out of
+  assert(roundtrip != nullptr);
   bool compact{false};
   bool padded{false};
-  if (roundtrip != nullptr) {
-    const auto match{roundtrip->styles.find(pointer)};
-    if (match != roundtrip->styles.end()) {
-      compact = match->second.compact_flow;
-      padded = match->second.padded_flow;
-    }
+  const auto match{roundtrip->styles.find(pointer)};
+  if (match != roundtrip->styles.end()) {
+    compact = match->second.compact_flow;
+    padded = match->second.padded_flow;
   }
   stream.put('{');
   if (padded) {
@@ -743,16 +753,15 @@ inline auto write_flow_sequence(OutputStream &stream, const JSON &value,
                                 const YAMLRoundTrip *roundtrip,
                                 AnchorValues &anchors, Pointer &pointer)
     -> void {
+  assert(roundtrip != nullptr);
   bool compact{false};
   bool padded{false};
   bool annotations{true};
-  if (roundtrip != nullptr) {
-    const auto match{roundtrip->styles.find(pointer)};
-    if (match != roundtrip->styles.end()) {
-      compact = match->second.compact_flow;
-      padded = match->second.padded_flow;
-      annotations = keeps_item_annotations(&match->second, value);
-    }
+  const auto match{roundtrip->styles.find(pointer)};
+  if (match != roundtrip->styles.end()) {
+    compact = match->second.compact_flow;
+    padded = match->second.padded_flow;
+    annotations = keeps_item_annotations(&match->second, value);
   }
   stream.put('[');
   if (padded) {
@@ -844,15 +853,19 @@ inline auto write_node(OutputStream &stream, const JSON &value,
       (node_style != nullptr) && node_style->collection.has_value() &&
       node_style->collection.value() == YAMLRoundTrip::CollectionStyle::Flow};
 
-  // An indicator is a single digit, so content that needs one but sits too far
-  // in has to give up on block style and be quoted instead
+  // Production 163 makes an indicator a single digit from one to nine, so
+  // content that is written with one but sits too far in has to give up on
+  // block style and be quoted instead. An indicator goes out whenever the
+  // content defeats detection and also whenever the document asked for one of
+  // its own, so both have to be weighed here, not just the first
   const bool block_style{
       (node_style != nullptr) && value.is_string() &&
       node_style->scalar.has_value() &&
       (node_style->scalar.value() == YAMLRoundTrip::ScalarStyle::Literal ||
        node_style->scalar.value() == YAMLRoundTrip::ScalarStyle::Folded) &&
       ((block_indicator >= 1 && block_indicator <= 9) ||
-       !block_detection_fails(block_scalar_content(*node_style, value)))};
+       (node_style->explicit_indent == 0 &&
+        !block_detection_fails(block_scalar_content(*node_style, value))))};
 
   if (value.is_object() && !value.empty()) {
     if (flow) {
