@@ -105,7 +105,8 @@ OpenAPI Descriptions
 If the input is an OpenAPI spec v3.0, v3.1 or v3.2, the `validate` command treats
 it as an [OpenAPI](https://spec.openapis.org/oas/latest.html) description rather
 than as a schema, and validates the instance against one of the Schema Objects
-it holds. Any other revision is rejected rather than read as a schema.
+it holds. An unsupported `openapi` revision is rejected rather than read as a
+schema.
 
 A description declares many schemas and no root one, so you must say which to
 use with `--entrypoint/-p`, given as a JSON Pointer into the description or as

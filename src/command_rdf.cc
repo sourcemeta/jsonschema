@@ -378,6 +378,11 @@ auto sourcemeta::jsonschema::rdf(const sourcemeta::core::Options &options)
   if (compact) {
     const std::filesystem::path context_path{options.at("compact").front()};
     auto parsed_context{read_file(context_path)};
+    if (parsed_context.multidocument) {
+      throw MultiDocumentInputError{
+          "A context cannot be read from input with multiple documents",
+          context_path};
+    }
 
     // Compacting an empty document exercises context processing on its own,
     // so context errors are attributed to the context file while errors on

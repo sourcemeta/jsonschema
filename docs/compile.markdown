@@ -90,10 +90,10 @@ jsonschema compile path/to/my/schema.json --entrypoint '/$defs/MyType' > templat
 
 If the input is an OpenAPI spec v3.0, v3.1 or v3.2, the `compile` command treats
 it as an [OpenAPI](https://spec.openapis.org/oas/latest.html) description rather
-than as a schema. Any other revision is rejected rather than read as a schema. A
-description declares many schemas and no root one, so you must say which to
-compile with `--entrypoint/-p`, given as a JSON Pointer into the description or
-as the identifier a Schema Object declares.
+than as a schema. An unsupported `openapi` revision is rejected rather than read
+as a schema. A description declares many schemas and no root one, so you must
+say which to compile with `--entrypoint/-p`, given as a JSON Pointer into the
+description or as the identifier a Schema Object declares.
 
 ```sh
 jsonschema compile path/to/my/openapi.json \

@@ -38,3 +38,31 @@ WRITE expected_1.txt UNTIL EOF
 EOF
 
 COMPARE result_1.txt AGAINST expected_1.txt
+
+// Schema input error
+RUN lint schema.json --resolve meta.json --json STDIN /dev/null IN . INTO result_2.txt EXPECTING 4
+
+REPLACE $CWD WITH '[CWD]' IN result_2.txt
+
+WRITE expected_2.txt UNTIL EOF
+1> {
+1>   "error": "The core vocabulary must always be present",
+1>   "filePath": "[CWD]/schema.json"
+1> }
+EOF
+
+COMPARE result_2.txt AGAINST expected_2.txt
+
+// Schema input error
+RUN lint schema.json --resolve meta.json --fix --json STDIN /dev/null IN . INTO result_3.txt EXPECTING 4
+
+REPLACE $CWD WITH '[CWD]' IN result_3.txt
+
+WRITE expected_3.txt UNTIL EOF
+1> {
+1>   "error": "The core vocabulary must always be present",
+1>   "filePath": "[CWD]/schema.json"
+1> }
+EOF
+
+COMPARE result_3.txt AGAINST expected_3.txt

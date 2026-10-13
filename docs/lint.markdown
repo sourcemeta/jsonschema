@@ -167,7 +167,8 @@ it as an [OpenAPI](https://spec.openapis.org/oas/latest.html) description rather
 than as a schema. Every Schema Object in the description (for example, the ones
 under `components/schemas` or the `schema` of a parameter, request body, or
 response) is linted, and every warning reports its location from the root of
-the description. Any other revision is rejected rather than read as a schema.
+the description. An unsupported `openapi` revision is rejected rather than read
+as a schema.
 
 With `--format/-m`, the whole description is formatted, not only the Schema
 Objects the rules ran against.

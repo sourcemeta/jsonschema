@@ -1234,7 +1234,9 @@ resolver(const sourcemeta::core::Options &options, const bool remote,
 }
 
 // The OpenAPI half, which answers from the same instance as the schema half
-// above and holds to the same separation: a schema is never reported from here
+// above. What a URI names is handed back whether or not it holds a description,
+// as reading one that does not is how bundling tells a reference that it landed
+// on the wrong kind of thing
 inline auto openapi_resolver(
     const sourcemeta::core::Options &options, const bool remote,
     const std::string_view default_dialect,

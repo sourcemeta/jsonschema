@@ -1,3 +1,7 @@
+// What a v3.0 description spans is embedded as the plain v3.0 it already was,
+// keeping the keywords only that revision spells, and the reference that
+// reached it names where it landed
+
 WRITE openapi.json UNTIL EOF
 {
   "openapi": "3.0.3",
@@ -10,7 +14,7 @@ WRITE openapi.json UNTIL EOF
             "description": "OK",
             "content": {
               "application/json": {
-                "schema": { "$ref": "https://example.com/schemas/pet" }
+                "schema": { "$ref": "./pet.json#/components/schemas/Pet" }
               }
             }
           }
@@ -23,10 +27,14 @@ EOF
 
 WRITE pet.json UNTIL EOF
 {
-  "$id": "https://example.com/schemas/pet",
-  "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "type": "object",
-  "properties": { "name": { "type": "string" } }
+  "openapi": "3.0.3",
+  "info": { "title": "Pets", "version": "1.0.0" },
+  "paths": {},
+  "components": {
+    "schemas": {
+      "Pet": { "type": "string", "nullable": true }
+    }
+  }
 }
 EOF
 
@@ -48,7 +56,7 @@ WRITE expected.txt UNTIL EOF
 1>             "content": {
 1>               "application/json": {
 1>                 "schema": {
-1>                   "$ref": "https://example.com/schemas/pet"
+1>                   "$ref": "#/components/schemas/Pet"
 1>                 }
 1>               }
 1>             }
@@ -59,15 +67,9 @@ WRITE expected.txt UNTIL EOF
 1>   },
 1>   "components": {
 1>     "schemas": {
-1>       "pet": {
-1>         "$schema": "https://json-schema.org/draft/2020-12/schema",
-1>         "$id": "https://example.com/schemas/pet",
-1>         "type": "object",
-1>         "properties": {
-1>           "name": {
-1>             "type": "string"
-1>           }
-1>         }
+1>       "Pet": {
+1>         "type": "string",
+1>         "nullable": true
 1>       }
 1>     }
 1>   }

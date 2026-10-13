@@ -50,8 +50,8 @@ OpenAPI Descriptions
 If the input is an OpenAPI spec v3.0, v3.1 or v3.2, the `metaschema` command
 treats it as an [OpenAPI](https://spec.openapis.org/oas/latest.html) description
 rather than as a schema, and checks every Schema Object it holds against the
-meta-schema of the dialect that schema is written in. Any other revision is
-rejected rather than read as a schema.
+meta-schema of the dialect that schema is written in. An unsupported `openapi`
+revision is rejected rather than read as a schema.
 
 A Schema Object that declares its own `$schema` is held to that dialect rather
 than to the one the description has in force, so a description mixing dialects

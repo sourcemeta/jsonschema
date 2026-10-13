@@ -32,6 +32,15 @@ ladder leading onto it. Note this upgrades a *schema* onto an OpenAPI dialect,
 and is a separate matter from reading an OpenAPI description, which this
 command does not do.
 
+A v3.0 Schema Object is a dialect this command upgrades *from*, however. Since
+v3.0 has no `$schema` keyword to declare itself with, name the dialect with
+`--default-dialect/-d`:
+
+```sh
+jsonschema upgrade path/to/my/schema.json \
+  --default-dialect tag:spec.openapis.org,2024-10-18:oas/3.0/dialect
+```
+
 The result is printed in the format the input was written in: a YAML schema
 upgrades into YAML and a JSON schema into JSON. A YAML result keeps the width
 each level of nesting was written with, while a JSON result is laid out with
