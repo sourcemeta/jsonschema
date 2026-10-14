@@ -54,20 +54,6 @@ auto add_value(JSON &result, const JSON::String &key, JSON &&value,
   existing.push_back(std::move(value));
 }
 
-// A value object carrying a JSON literal whose value is null.
-auto is_json_literal_null(const JSON &element) -> bool {
-  // Whatever stands as the value of a property in an expanded document is an
-  // object, which is what the one place this is asked from hands over
-  assert(element.is_object());
-  const auto *const contents{element.try_at(KEYWORD_VALUE, KEYWORD_VALUE_HASH)};
-  if (contents == nullptr || !contents->is_null()) {
-    return false;
-  }
-  const auto *const type{element.try_at(KEYWORD_TYPE, KEYWORD_TYPE_HASH)};
-  return type != nullptr && type->is_string() &&
-         type->to_string() == KEYWORD_JSON;
-}
-
 // The object a property is written into: the result itself, or a nesting
 // container when the term carries an @nest mapping.
 auto nest_target(JSON &result, const TermDefinition *const definition,
@@ -109,25 +95,22 @@ auto compact(ExpansionState &state, const ActiveContext &active_context,
     throw JSONLDError("Maximum nesting depth exceeded", EMPTY_WEAK_POINTER);
   }
 
-  if (!element.is_object() && !element.is_array()) {
-    return element;
-  }
+  // Compaction walks an expanded document, where a scalar only ever stands as
+  // what a value object holds, which never reaches here on its own
+  assert(element.is_object() || element.is_array());
 
   const auto *definition{definition_for(active_context, active_property)};
 
   if (element.is_array()) {
     auto result{JSON::make_array()};
     for (const auto &item : element.as_array()) {
-      auto compacted{compact(state, active_context, inverse_context,
-                             active_property, item, compact_arrays)};
-      // A JSON literal holding null compacts to a bare null under a term
-      // coerced to @json, and that null is data rather than absence, so it
-      // survives even though the algorithm otherwise drops null items
-      // (JSON-LD 1.1 API Section 6.1.2: "If compacted item is not null, then
-      // append it to result"). Dropping it would silently lose the literal.
-      if (!compacted.is_null() || is_json_literal_null(item)) {
-        result.push_back(std::move(compacted));
-      }
+      // The step that drops a null item (JSON-LD 1.1 API Section 6.1.2: "If
+      // compacted item is not null, then append it to result") has nothing to
+      // act on here. The only null an expanded item compacts to is the one a
+      // JSON literal holds, which is data rather than absence, and dropping it
+      // would silently lose the literal
+      result.push_back(compact(state, active_context, inverse_context,
+                               active_property, item, compact_arrays));
     }
     const bool force_array{!compact_arrays ||
                            (active_property.has_value() &&

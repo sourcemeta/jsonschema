@@ -25,10 +25,13 @@ auto run_expansion(ExpansionState &state, ActiveContext &active_context,
   }
 
   if (expanded.is_object()) {
-    if (expanded.empty() || (expanded.object_size() == 1 &&
-                             expanded.defines(KEYWORD_ID, KEYWORD_ID_HASH))) {
-      return JSON::make_array();
-    }
+    // A map that names nothing but which node it is, or nothing at all, is
+    // already dropped where free-floating values are, and the only member
+    // that stands in for the whole document carries an array, so whatever
+    // arrives here as a map has something left to say
+    assert(!expanded.empty() &&
+           !(expanded.object_size() == 1 &&
+             expanded.defines(KEYWORD_ID, KEYWORD_ID_HASH)));
     auto result{JSON::make_array()};
     result.push_back(std::move(expanded));
     return result;

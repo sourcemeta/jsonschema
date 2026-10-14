@@ -96,9 +96,23 @@ file(READ "${OPENAPI_3_1_DIR}/meta/2024-10-25" OPENAPI_OAS_3_1_META_2024_10_25)
 file(READ "${OPENAPI_3_1_DIR}/dialect/2024-10-25" OPENAPI_OAS_3_1_DIALECT_2024_10_25)
 
 # OpenAPI v3.0
+# The Schema Object is only published as a definition of the document schema,
+# so a dialect for it has to carry that definition along with the ones it
+# reaches. Taking those alone leaves behind a document schema that is longer
+# than what the strictest compiler allows a single string literal to be
 set(OPENAPI_3_0_DIR "${PROJECT_SOURCE_DIR}/vendor/openapi/oas/3.0")
-file(READ "${OPENAPI_3_0_DIR}/schema/2024-10-18" OPENAPI_OAS_3_0_SCHEMA_2024_10_18)
-file(READ "${OPENAPI_3_0_DIR}/schema/2021-09-28" OPENAPI_OAS_3_0_SCHEMA_2021_09_28)
+file(READ "${OPENAPI_3_0_DIR}/schema/2024-10-18" OPENAPI_OAS_3_0_DOCUMENT)
+string(JSON OPENAPI_OAS_3_0_SCHEMA_2024_10_18 GET "${OPENAPI_OAS_3_0_DOCUMENT}" definitions Schema)
+string(JSON OPENAPI_OAS_3_0_REFERENCE_2024_10_18 GET "${OPENAPI_OAS_3_0_DOCUMENT}" definitions Reference)
+string(JSON OPENAPI_OAS_3_0_DISCRIMINATOR_2024_10_18 GET "${OPENAPI_OAS_3_0_DOCUMENT}" definitions Discriminator)
+string(JSON OPENAPI_OAS_3_0_EXTERNAL_DOCUMENTATION_2024_10_18 GET "${OPENAPI_OAS_3_0_DOCUMENT}" definitions ExternalDocumentation)
+string(JSON OPENAPI_OAS_3_0_XML_2024_10_18 GET "${OPENAPI_OAS_3_0_DOCUMENT}" definitions XML)
+file(READ "${OPENAPI_3_0_DIR}/schema/2021-09-28" OPENAPI_OAS_3_0_DOCUMENT)
+string(JSON OPENAPI_OAS_3_0_SCHEMA_2021_09_28 GET "${OPENAPI_OAS_3_0_DOCUMENT}" definitions Schema)
+string(JSON OPENAPI_OAS_3_0_REFERENCE_2021_09_28 GET "${OPENAPI_OAS_3_0_DOCUMENT}" definitions Reference)
+string(JSON OPENAPI_OAS_3_0_DISCRIMINATOR_2021_09_28 GET "${OPENAPI_OAS_3_0_DOCUMENT}" definitions Discriminator)
+string(JSON OPENAPI_OAS_3_0_EXTERNAL_DOCUMENTATION_2021_09_28 GET "${OPENAPI_OAS_3_0_DOCUMENT}" definitions ExternalDocumentation)
+string(JSON OPENAPI_OAS_3_0_XML_2021_09_28 GET "${OPENAPI_OAS_3_0_DOCUMENT}" definitions XML)
 
 if(NOT KNOWN_RESOLVER_INPUT)
   message(FATAL_ERROR "Missing KNOWN_RESOLVER_INPUT")

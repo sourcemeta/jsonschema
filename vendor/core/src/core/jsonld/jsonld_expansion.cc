@@ -175,6 +175,23 @@ auto container_includes(const TermDefinition *const definition,
   return false;
 }
 
+// Whether the items being expanded become the items of a list, which is
+// either the list they are written in or the one the property they stand
+// under collects them into
+auto collects_into_a_list(const ActiveContext &active_context,
+                          const std::optional<JSON::String> &active_property,
+                          const JSON::StringView name) -> bool {
+  if (name == KEYWORD_LIST) {
+    return true;
+  }
+
+  const auto term{active_property.has_value()
+                      ? active_context.terms.find(active_property.value())
+                      : active_context.terms.cend()};
+  return term != active_context.terms.cend() &&
+         container_includes(&term->second, KEYWORD_LIST);
+}
+
 // Expand a single @type value against the context that preceded type-scoped
 // processing.
 auto expand_type(ExpansionState &state, const ActiveContext &type_context,
@@ -693,7 +710,11 @@ auto expand_entries(ExpansionState &state, ActiveContext &active_context,
         }
         value_index += 1;
       }
-      if (name == KEYWORD_LIST && state.processing_1_0) {
+      // JSON-LD 1.0 refuses a list among the items of a list, whichever
+      // keyword hands those items over (JSON-LD 1.0 API Expansion Algorithm
+      // step 3.2)
+      if (state.processing_1_0 &&
+          collects_into_a_list(active_context, active_property, name)) {
         for (const auto &item : elements.as_array()) {
           if (is_list_object(item)) {
             throw JSONLDError("List of lists",
@@ -1200,22 +1221,12 @@ auto expand_entries(ExpansionState &state, ActiveContext &active_context,
     }
 
     // A @list container wraps the expanded value, including a @json-coerced
-    // one.
+    // one. A list among the items of the list this makes is refused by
+    // JSON-LD 1.0 where the array form and the keyword form gather those
+    // items, and welcomed by 1.1, so neither leaves anything to settle here
     if (container_includes(definition, KEYWORD_LIST) &&
-        !expanded_value.is_null() &&
-        !(expanded_value.is_object() &&
-          expanded_value.defines(KEYWORD_LIST, KEYWORD_LIST_HASH))) {
+        !expanded_value.is_null() && !is_list_object(expanded_value)) {
       expanded_value = into_array(std::move(expanded_value));
-      if (state.processing_1_0) {
-        for (const auto &item : expanded_value.as_array()) {
-          if (is_list_object(item)) {
-            throw JSONLDError("List of lists",
-                              forbidden_member_pointer(
-                                  state, active_context, property, entry.second,
-                                  entry_pointer, is_list_object));
-          }
-        }
-      }
       auto wrapper{JSON::make_object()};
       wrapper.assign_assume_new(JSON::String{KEYWORD_LIST},
                                 std::move(expanded_value), KEYWORD_LIST_HASH);

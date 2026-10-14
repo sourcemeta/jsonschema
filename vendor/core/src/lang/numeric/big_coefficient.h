@@ -110,7 +110,10 @@ constexpr std::int64_t COMPACT_MAX =
 
 class BigCoefficient {
   static constexpr std::uint32_t INLINE_CAPACITY = 4;
-  std::array<std::uint64_t, INLINE_CAPACITY> inline_words_;
+  // Every limb of the store stays written, and the ones at or past the length
+  // stay zero, which is what lets a value of fewer limbs than the store holds
+  // be read a limb at a time without reaching for one that was never written
+  std::array<std::uint64_t, INLINE_CAPACITY> inline_words_{};
 
   [[nodiscard]] auto is_inline() const -> bool {
     return this->capacity <= INLINE_CAPACITY;
@@ -129,7 +132,6 @@ public:
     if (requested_capacity <= INLINE_CAPACITY) {
       this->words = this->inline_words_.data();
       this->capacity = INLINE_CAPACITY;
-      this->inline_words_.fill(0);
     } else {
       this->words = new std::uint64_t[requested_capacity]();
       this->capacity = requested_capacity;
@@ -145,15 +147,14 @@ public:
   BigCoefficient(BigCoefficient &&other) noexcept
       : length{other.length}, capacity{other.capacity} {
     if (other.is_inline()) {
-      std::copy(other.inline_words_.data(),
-                other.inline_words_.data() + other.length,
-                this->inline_words_.data());
+      this->inline_words_ = other.inline_words_;
       this->words = this->inline_words_.data();
     } else {
       this->words = other.words;
       other.words = other.inline_words_.data();
     }
 
+    other.inline_words_.fill(0);
     other.length = 0;
     other.capacity = INLINE_CAPACITY;
   }
@@ -167,15 +168,14 @@ public:
       this->length = other.length;
       this->capacity = other.capacity;
       if (other.is_inline()) {
-        std::copy(other.inline_words_.data(),
-                  other.inline_words_.data() + other.length,
-                  this->inline_words_.data());
+        this->inline_words_ = other.inline_words_;
         this->words = this->inline_words_.data();
       } else {
         this->words = other.words;
         other.words = other.inline_words_.data();
       }
 
+      other.inline_words_.fill(0);
       other.length = 0;
       other.capacity = INLINE_CAPACITY;
     }
@@ -260,6 +260,9 @@ public:
       std::copy(this->words + zero_words, this->words + this->length,
                 this->words);
       this->length -= zero_words;
+      // What the shift leaves behind is no longer part of the value
+      std::fill(this->words + this->length,
+                this->words + this->length + zero_words, 0ULL);
       total_stripped += static_cast<std::int32_t>(zero_words) * BASE_DIGITS;
     }
 

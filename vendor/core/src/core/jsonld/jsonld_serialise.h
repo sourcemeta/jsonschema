@@ -231,10 +231,10 @@ inline auto typed_literal_lexical_form(const JSON &value,
       }
       return fixed_lexical_form(decimal);
     }
-    case JSON::Type::Null:
     case JSON::Type::String:
     case JSON::Type::Array:
     case JSON::Type::Object:
+    case JSON::Type::Null:
       return std::nullopt;
   }
 

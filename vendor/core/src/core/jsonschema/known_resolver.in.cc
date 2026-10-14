@@ -767,11 +767,11 @@ auto sourcemeta::core::schema_resolver(const std::string_view identifier)
       return SCHEMA;
     }
     // The published document schema describes the Schema Object as one of its
-    // definitions rather than on its own, and nothing else of it is of use
-    // here, so it is carried within the dialect instead of being exposed. The
-    // identifier it declares has to stay for the references it makes to
-    // itself to keep resolving against its own scope. Note a schema of this
-    // dialect is either a Schema Object or a Reference Object
+    // definitions rather than on its own, so the dialect carries that
+    // definition and the ones it reaches instead of the document being
+    // exposed. They stay under the identifier the document declares, as that
+    // is the scope the references between them resolve against. Note a schema
+    // of this dialect is either a Schema Object or a Reference Object
     case KnownSchema::OAS_3_0_DIALECT_2024_10_18: {
       static const auto SCHEMA{sourcemeta::core::parse_json(R"EOF({
   "id": "tag:spec.openapis.org,2024-10-18:oas/3.0/dialect",
@@ -782,7 +782,17 @@ auto sourcemeta::core::schema_resolver(const std::string_view identifier)
     { "$ref": "#/definitions/openapi/definitions/Reference" }
   ],
   "definitions": {
-    "openapi": @OPENAPI_OAS_3_0_SCHEMA_2024_10_18@
+    "openapi": {
+      "id": "https://spec.openapis.org/oas/3.0/schema/2024-10-18",
+      "$schema": "http://json-schema.org/draft-04/schema#",
+      "definitions": {
+        "Schema": @OPENAPI_OAS_3_0_SCHEMA_2024_10_18@,
+        "Reference": @OPENAPI_OAS_3_0_REFERENCE_2024_10_18@,
+        "Discriminator": @OPENAPI_OAS_3_0_DISCRIMINATOR_2024_10_18@,
+        "ExternalDocumentation": @OPENAPI_OAS_3_0_EXTERNAL_DOCUMENTATION_2024_10_18@,
+        "XML": @OPENAPI_OAS_3_0_XML_2024_10_18@
+      }
+    }
   }
 })EOF")};
       return SCHEMA;
@@ -797,7 +807,17 @@ auto sourcemeta::core::schema_resolver(const std::string_view identifier)
     { "$ref": "#/definitions/openapi/definitions/Reference" }
   ],
   "definitions": {
-    "openapi": @OPENAPI_OAS_3_0_SCHEMA_2021_09_28@
+    "openapi": {
+      "id": "https://spec.openapis.org/oas/3.0/schema/2021-09-28",
+      "$schema": "http://json-schema.org/draft-04/schema#",
+      "definitions": {
+        "Schema": @OPENAPI_OAS_3_0_SCHEMA_2021_09_28@,
+        "Reference": @OPENAPI_OAS_3_0_REFERENCE_2021_09_28@,
+        "Discriminator": @OPENAPI_OAS_3_0_DISCRIMINATOR_2021_09_28@,
+        "ExternalDocumentation": @OPENAPI_OAS_3_0_EXTERNAL_DOCUMENTATION_2021_09_28@,
+        "XML": @OPENAPI_OAS_3_0_XML_2021_09_28@
+      }
+    }
   }
 })EOF")};
       return SCHEMA;

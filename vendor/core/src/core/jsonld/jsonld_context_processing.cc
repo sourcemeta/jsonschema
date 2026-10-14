@@ -4,6 +4,7 @@
 #include <sourcemeta/core/numeric.h>
 #include <sourcemeta/core/uri.h>
 
+#include <cassert>  // assert
 #include <memory>   // std::make_shared
 #include <optional> // std::optional
 #include <utility>  // std::move, std::pair
@@ -100,9 +101,9 @@ auto is_version_1_1(const JSON &version) -> bool {
 auto is_input_authored(const JSONLDError &error, const JSON &context,
                        const WeakPointer &location) -> bool {
   const auto &pointer{error.pointer()};
-  if (pointer.size() <= location.size()) {
-    return true;
-  }
+  // Everything the merged context is held to account for is one of its
+  // entries, so what reports against it reaches past the context itself
+  assert(pointer.size() > location.size());
   const auto &token{pointer.at(location.size())};
   return token.is_property() && context.defines(token.to_property());
 }

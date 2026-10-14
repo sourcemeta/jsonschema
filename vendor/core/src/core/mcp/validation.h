@@ -11,7 +11,6 @@
 #include <sourcemeta/core/uri.h>
 
 #include <algorithm>        // std::all_of
-#include <cmath>            // std::isfinite
 #include <initializer_list> // std::initializer_list
 #include <set>              // std::set
 #include <utility>          // std::move, std::pair
@@ -189,9 +188,7 @@ inline auto annotations(const JSON &value, const bool received = false)
   if (const auto *priority{
           field(*item, "priority", sourcemeta::core::MCP_HASH_PRIORITY)};
       priority != nullptr &&
-      (!priority->is_number() ||
-       (priority->is_real() && !std::isfinite(priority->to_real())) ||
-       *priority < JSON{0} || *priority > JSON{1})) {
+      (!priority->is_number() || *priority < JSON{0} || *priority > JSON{1})) {
     return false;
   }
   if (const auto *audience{
@@ -1149,9 +1146,6 @@ inline auto valid_input_response(const JSON::StringView method,
         return false;
       }
       for (const auto &entry : content->as_object()) {
-        if (entry.second.is_real() && !std::isfinite(entry.second.to_real())) {
-          return false;
-        }
         if (!entry.second.is_string() && !entry.second.is_number() &&
             !entry.second.is_boolean() && !validation::strings(entry.second)) {
           return false;
