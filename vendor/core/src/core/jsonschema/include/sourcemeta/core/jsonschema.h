@@ -84,6 +84,7 @@ auto schema_walker(const std::string_view keyword,
 ///
 /// sourcemeta::core::schema_reidentify(document,
 ///   "https://example.com/my-new-id",
+///   sourcemeta::core::schema_walker,
 ///   sourcemeta::core::schema_resolver);
 ///
 /// assert(document.at("$id").to_string() ==
@@ -92,6 +93,7 @@ auto schema_walker(const std::string_view keyword,
 SOURCEMETA_CORE_JSONSCHEMA_EXPORT
 auto schema_reidentify(sourcemeta::core::JSON &schema,
                        std::string_view new_identifier,
+                       const SchemaWalker &walker,
                        const SchemaResolver &resolver,
                        std::string_view default_dialect = "") -> void;
 
@@ -257,12 +259,15 @@ struct SchemaBundleOptions {
 ///
 /// assert(document == expected);
 /// ```
+///
+/// Returns how many frame locations the analysis registered, which a caller
+/// that spends from the same allowance elsewhere takes off its own count.
 SOURCEMETA_CORE_JSONSCHEMA_EXPORT
 auto schema_bundle(sourcemeta::core::JSON &schema, const SchemaWalker &walker,
                    const SchemaResolver &resolver,
                    std::string_view default_dialect = "",
                    std::string_view default_id = "",
-                   const SchemaBundleOptions &options = {}) -> void;
+                   const SchemaBundleOptions &options = {}) -> std::uint64_t;
 
 /// @ingroup jsonschema
 ///

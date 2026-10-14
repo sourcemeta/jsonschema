@@ -441,11 +441,20 @@ auto transfer(Descriptor &input_descriptor, Descriptor &output_descriptor,
     }
 
     if (input_index < count) {
+      // POSIX.1-2024 reports a descriptor whose reader is gone as both in
+      // error and ready for writing, since a descriptor "shall be considered
+      // ready for writing when a call to an output function with O_NONBLOCK
+      // clear would not block, whether or not the function would transfer
+      // data successfully". Weighing the error first on such a platform gives
+      // up the stream without ever attempting to write, which is also what
+      // leaves the broken pipe below never raised. Writing first attempts it
+      // and gives up on the failure, and where the error stands alone, which
+      // is what at least one platform reports, the arm below still gives up
       const auto events{descriptors[input_index].revents};
-      if ((events & (POLLERR | POLLHUP | POLLNVAL)) != 0) {
-        input_descriptor.close();
-      } else if ((events & POLLOUT) != 0) {
+      if ((events & POLLOUT) != 0) {
         write_stream(input_descriptor, input, offset);
+      } else if ((events & (POLLERR | POLLHUP | POLLNVAL)) != 0) {
+        input_descriptor.close();
       }
     }
 

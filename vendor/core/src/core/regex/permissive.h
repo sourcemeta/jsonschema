@@ -5,6 +5,7 @@
 
 #include <array>       // std::array
 #include <bitset>      // std::bitset
+#include <cassert>     // assert
 #include <cstddef>     // std::size_t
 #include <optional>    // std::optional
 #include <string>      // std::string
@@ -110,29 +111,21 @@ constexpr auto NON_DIGIT_CLASS{(~DIGIT_CLASS).reset(0)};
 constexpr auto NON_WORD_CLASS{(~WORD_CLASS).reset(0)};
 constexpr auto NON_SPACE_CLASS{(~SPACE_CLASS).reset(0)};
 
+// Each shorthand names a class in its lower case and the complement of that
+// class in its upper case, so which class is meant and whether it is negated
+// are read apart rather than spelled out once per pairing. The caller matches
+// the shorthand against the set of them before asking, which is what leaves
+// the last pairing to answer for whatever is not one of the other two
 inline auto set_shorthand_class(std::bitset<128> &characters,
                                 const char shorthand) -> void {
-  switch (shorthand) {
-    case 'd':
-      characters |= DIGIT_CLASS;
-      return;
-    case 'D':
-      characters |= NON_DIGIT_CLASS;
-      return;
-    case 'w':
-      characters |= WORD_CLASS;
-      return;
-    case 'W':
-      characters |= NON_WORD_CLASS;
-      return;
-    case 's':
-      characters |= SPACE_CLASS;
-      return;
-    case 'S':
-      characters |= NON_SPACE_CLASS;
-      return;
-    default:
-      return;
+  const auto lowered{static_cast<char>(shorthand | 0x20)};
+  const auto negated{shorthand != lowered};
+  if (lowered == 'd') {
+    characters |= negated ? NON_DIGIT_CLASS : DIGIT_CLASS;
+  } else if (lowered == 'w') {
+    characters |= negated ? NON_WORD_CLASS : WORD_CLASS;
+  } else {
+    characters |= negated ? NON_SPACE_CLASS : SPACE_CLASS;
   }
 }
 
@@ -152,14 +145,15 @@ inline auto find_bracket_end(const std::string &content, std::size_t start,
   return content.size();
 }
 
+// A code point past the last ASCII one cannot be held in the set that a class
+// is expanded into. It is reported apart from an escape that stands for a
+// whole class of its own, so that naming one declines the rewrite rather than
+// being read as the letters it is written with
+constexpr int ESCAPE_BEYOND_RANGE{-2};
+
 inline auto parse_escape(const std::string &content, std::size_t position,
                          std::size_t &end, int &code_point) -> void {
-  if (position >= content.size()) {
-    end = position;
-    code_point = -1;
-    return;
-  }
-
+  assert(position < content.size());
   if (content[position] != '\\' || position + 1 >= content.size()) {
     end = position + 1;
     code_point = static_cast<unsigned char>(content[position]);
@@ -185,20 +179,21 @@ inline auto parse_escape(const std::string &content, std::size_t position,
       if (brace_end < content.size() && content[brace_end] == '}') {
         const int value =
             parse_hex_digits(content, position + 3, brace_end - position - 3);
-        if (value < 128) {
+        // A value past the last code point there is names no character at
+        // all, so it is left to be read the way anything malformed is rather
+        // than reported as something that could not be carried
+        if (value <= 0x10FFFF) {
           end = brace_end + 1;
-          code_point = value;
+          code_point = value < 128 ? value : ESCAPE_BEYOND_RANGE;
           return;
         }
       }
     } else if (position + 5 < content.size() &&
                all_hex(content, position + 2, 4)) {
       const int value = parse_hex_digits(content, position + 2, 4);
-      if (value < 128) {
-        end = position + 6;
-        code_point = value;
-        return;
-      }
+      end = position + 6;
+      code_point = value < 128 ? value : ESCAPE_BEYOND_RANGE;
+      return;
     }
   }
 
@@ -275,8 +270,14 @@ inline auto has_nested_brackets(const std::string &content) -> bool {
 inline auto expand_set_ops(const std::string &content, std::bitset<128> &result)
     -> bool;
 
+// A class is expanded into a set of code points that only reaches as far as
+// the last ASCII one, so a member named beyond it cannot be carried. Reporting
+// that back lets the caller decline the rewrite, where dropping the member
+// silently would hand back a class that turns such input away and, where it
+// was the only member, one that turns everything away
 inline auto parse_class_to_bitset(const std::string &content, std::size_t start,
-                                  std::bitset<128> &characters) -> std::size_t {
+                                  std::bitset<128> &characters,
+                                  bool &representable) -> std::size_t {
   std::size_t position = start;
   bool negated = position < content.size() && content[position] == '^';
   if (negated) {
@@ -297,9 +298,11 @@ inline auto parse_class_to_bitset(const std::string &content, std::size_t start,
           content.substr(position + 1, nested_end - position - 2);
       std::bitset<128> nested_chars;
       if (first_operator(nested, 0).first != std::string::npos) {
-        expand_set_ops(nested, nested_chars);
+        if (!expand_set_ops(nested, nested_chars)) {
+          representable = false;
+        }
       } else {
-        parse_class_to_bitset(nested, 0, nested_chars);
+        parse_class_to_bitset(nested, 0, nested_chars, representable);
       }
 
       characters |= nested_chars;
@@ -310,9 +313,19 @@ inline auto parse_class_to_bitset(const std::string &content, std::size_t start,
     std::size_t end{0};
     int first{0};
     parse_escape(content, position, end, first);
-    if (first < 0) {
+    if (first == ESCAPE_BEYOND_RANGE) {
+      representable = false;
       position = end;
       continue;
+    }
+
+    assert(first >= 0);
+
+    // A member past what the set reaches cannot be carried whether it stands
+    // alone or opens a range, and the range below is consumed without coming
+    // back here, so it is weighed first
+    if (first >= 128) {
+      representable = false;
     }
 
     if (end < content.size() && content[end] == '-' &&
@@ -320,7 +333,15 @@ inline auto parse_class_to_bitset(const std::string &content, std::size_t start,
       std::size_t range_end{0};
       int second{0};
       parse_escape(content, end + 1, range_end, second);
+      if (second == ESCAPE_BEYOND_RANGE) {
+        representable = false;
+      }
+
       if (second >= 0) {
+        if (second >= 128) {
+          representable = false;
+        }
+
         for (int code = first; code <= second && code < 128; ++code) {
           characters.set(static_cast<std::size_t>(code));
         }
@@ -391,10 +412,7 @@ inline auto bitset_to_class(const std::bitset<128> &characters) -> std::string {
 
 inline auto is_valid_escape(const std::string &content, std::size_t position)
     -> bool {
-  if (position + 1 >= content.size()) {
-    return false;
-  }
-
+  assert(position + 1 < content.size());
   const char next = content[position + 1];
   if (std::string_view{"dDwWsSnrtfvb0\\"}.contains(next)) {
     return true;
@@ -485,30 +503,37 @@ inline auto parse_operand(const std::string &operand,
     }
   }
 
-  parse_class_to_bitset(operand, 0, characters);
-  return true;
+  bool representable{true};
+  parse_class_to_bitset(operand, 0, characters, representable);
+  return representable;
 }
 
 inline auto expand_set_ops(const std::string &content, std::bitset<128> &result)
     -> bool {
   auto [op_pos, op_char] = first_operator(content, 0);
   if (op_pos == std::string::npos) {
-    parse_class_to_bitset(content, 0, result);
-    return true;
-  }
-
-  if (auto [next_pos, next_op] = first_operator(content, op_pos + 2);
-      next_pos != std::string::npos && next_op != op_char) {
-    return false;
+    bool representable{true};
+    parse_class_to_bitset(content, 0, result, representable);
+    return representable;
   }
 
   if (!parse_operand(content.substr(0, op_pos), result)) {
     return false;
   }
 
-  for (std::size_t position = op_pos; position + 1 < content.size() &&
-                                      content[position] == op_char &&
-                                      content[position + 1] == op_char;) {
+  std::size_t position{op_pos};
+  while (true) {
+    // The scan that reaches every operator here reports it whole
+    assert(position + 1 < content.size());
+    assert(content[position + 1] == content[position]);
+    // ECMA-262 writes a class set expression as a union, an intersection or a
+    // subtraction, and chains an intersection only with further intersections
+    // and a subtraction only with further subtractions, so a class naming two
+    // kinds of operator names no set this can work out
+    if (content[position] != op_char) {
+      return false;
+    }
+
     auto [next, unused] = first_operator(content, position += 2);
     std::bitset<128> operand_chars;
     if (!parse_operand(next != std::string::npos

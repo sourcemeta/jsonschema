@@ -54,6 +54,7 @@ auto curl_slist_free_all(curl_slist *list) -> void;
 // Option ids are a type-class base plus an index in libcurl's headers; the
 // resolved values are reproduced here (see the trailing comments)
 constexpr CURLcode CURLE_OK{0};
+constexpr CURLcode CURLE_OPERATION_TIMEDOUT{28};
 constexpr long CURL_GLOBAL_ALL{3};                   // SSL(1<<0) | WIN32(1<<1)
 constexpr CURLoption CURLOPT_URL{10002};             // STRINGPOINT + 2
 constexpr CURLoption CURLOPT_FOLLOWLOCATION{52};     // LONG + 52
@@ -432,6 +433,13 @@ auto HTTPSystemRequest::send() const -> HTTPResponse {
     if (body_context.maximum_size_exceeded) {
       throw HTTPError{this->method_, this->url_,
                       std::string{HTTP_RESPONSE_TOO_LARGE_MESSAGE}};
+    }
+
+    // libcurl reports an expired CURLOPT_TIMEOUT_MS and an expired
+    // CURLOPT_CONNECTTIMEOUT_MS with the same code, so which of the two
+    // bounds elapsed cannot be recovered here
+    if (code == CURLE_OPERATION_TIMEDOUT) {
+      throw HTTPTimeoutError{this->method_, this->url_, this->timeout_};
     }
 
     throw HTTPError{this->method_, this->url_, api.easy_strerror(code)};

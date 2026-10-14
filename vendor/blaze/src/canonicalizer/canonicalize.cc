@@ -405,9 +405,13 @@ auto edge_reference(const sourcemeta::core::JSON &body)
   return nullptr;
 }
 
-/// Whether the given body is an edge rather than a node
+/// Whether the given body is an edge rather than a node. Only a reference
+/// that stays inside the document can reach an entry, so one that leaves it
+/// becomes an entry of its own and every edge really is an edge of the graph
 auto is_edge(const sourcemeta::core::JSON &body) -> bool {
-  return edge_reference(body) != nullptr;
+  const auto *reference{edge_reference(body)};
+  return reference != nullptr && reference->is_string() &&
+         reference->to_string().starts_with('#');
 }
 
 /// What a subschema says, with the keywords that carry the graph itself taken
@@ -423,13 +427,6 @@ auto without_containers(sourcemeta::core::JSON body) -> sourcemeta::core::JSON {
   return body;
 }
 
-/// Where following a chain of edges ends up: an entry of the graph, or a
-/// reference that leaves the document. A chain that only ever reaches other
-/// edges reaches neither, and cannot be expressed as a graph at all
-struct Destination {
-  std::optional<std::size_t> entry;
-  std::optional<sourcemeta::core::JSON::String> outside;
-};
 /// Every place inside a node body where a reference can sit, as a pointer to
 /// the `$ref` itself.
 ///
@@ -526,8 +523,6 @@ auto lift_subschemas(sourcemeta::core::JSON &schema,
   // Every reference the document declares, before edges are followed through
   std::vector<std::pair<core::Pointer, core::Pointer>> links;
   std::vector<std::pair<core::Pointer, std::size_t>> reference_targets;
-  // References whose chain ends outside this document keep their own URI
-  std::vector<std::pair<core::Pointer, core::JSON::String>> outside_targets;
 
   {
     const core::SchemaFrame frame{core::SchemaFrame::Mode::References,
@@ -538,15 +533,13 @@ auto lift_subschemas(sourcemeta::core::JSON &schema,
                                   default_id,
                                   core::SchemaFrame::IdentifierMode::Fallback};
 
-    // Hyper-schema is left out, unlike identifier elimination above. Its
-    // `links` hold link descriptions rather than subschemas, so lifting them
-    // into `definitions` and referring to them would say something the
-    // document never said. The canonical form this pass produces is the one
-    // `canonical-draft3.json` describes, and that is Draft 3 proper
+    // Hyper-schema comes this far too. Nothing its vocabulary declares takes
+    // part in whether an instance is valid, so the rules have dropped all of
+    // it by now, and what is left is Draft 3 proper however the document
+    // spells its dialect
     if (frame.any_subschema(
             [](const core::SchemaFrame::Location &location) -> bool {
-              return location.base_dialect !=
-                     core::SchemaBaseDialect::JSON_SCHEMA_DRAFT_3;
+              return !is_draft3(location.base_dialect);
             })) {
       return;
     }
@@ -598,14 +591,13 @@ auto lift_subschemas(sourcemeta::core::JSON &schema,
   static const core::JSON::String REF_KEYWORD{"$ref"};
   static const core::JSON::String EXTENDS_KEYWORD{"extends"};
 
-  const auto resolve{[&nodes, &links,
-                      &schema](const core::Pointer &start) -> Destination {
+  const auto resolve{[&nodes, &links](const core::Pointer &start)
+                         -> std::optional<std::size_t> {
     auto target{start};
     for (std::size_t hop = 0; hop <= links.size(); hop++) {
       const auto match{std::ranges::find(nodes, target)};
       if (match != nodes.end()) {
-        return {.entry = static_cast<std::size_t>(match - nodes.begin()),
-                .outside = std::nullopt};
+        return static_cast<std::size_t>(match - nodes.begin());
       }
 
       const auto direct{
@@ -629,41 +621,34 @@ auto lift_subschemas(sourcemeta::core::JSON &schema,
         continue;
       }
 
-      // Nothing in this document takes the chain any further, so it ends at an
-      // edge that points out of it. Whatever referred here has to point there
-      // too, since the edge itself is about to go away
-      // Held in a named value: the reference points into it, so it has to
-      // outlive the check below
-      const auto subschema{without_containers(core::get(schema, target))};
-      const auto *outside{edge_reference(subschema)};
-      // Only a reference that leaves the document can be carried over. One
-      // that stays inside it names a subschema this pass is about to take
-      // away, and a `#/definitions/...` pointer would then be read back as
-      // one of the entries this pass itself named
-      if (outside != nullptr && outside->is_string() &&
-          !outside->to_string().starts_with('#')) {
-        return {.entry = std::nullopt, .outside = outside->to_string()};
-      }
-
       break;
     }
 
-    return {.entry = std::nullopt, .outside = std::nullopt};
+    return std::nullopt;
   }};
 
+  // A reference whose chain goes round in circles without ever reaching a
+  // subschema that says anything never gets to assert anything either, so it
+  // is the empty schema written the long way round. Each one is replaced by an
+  // empty schema and the pass starts over, since the document it framed has
+  // changed underneath it. Every round takes a reference away, so this ends
+  std::vector<core::Pointer> vacuous;
   for (const auto &entry : links) {
     const auto destination{resolve(entry.second)};
-    if (destination.entry.has_value()) {
-      reference_targets.emplace_back(entry.first, destination.entry.value());
-    } else if (destination.outside.has_value()) {
-      outside_targets.emplace_back(entry.first, destination.outside.value());
+    if (destination.has_value()) {
+      reference_targets.emplace_back(entry.first, destination.value());
     } else {
-      // The chain goes round in circles without ever reaching a subschema that
-      // says anything. There is no entry for such a reference to point at, and
-      // dropping it would change what the document means, so the graph form
-      // does not apply here
-      return;
+      vacuous.push_back(entry.first.initial());
     }
+  }
+
+  if (!vacuous.empty()) {
+    for (const auto &pointer : vacuous) {
+      core::set(schema, pointer, sourcemeta::core::JSON::make_object());
+    }
+
+    lift_subschemas(schema, walker, resolver, default_dialect, default_id);
+    return;
   }
 
   // The innermost node that contains the given pointer, if any
@@ -711,7 +696,7 @@ auto lift_subschemas(sourcemeta::core::JSON &schema,
     return wrapper;
   }};
 
-  const auto entry_node{resolve(core::Pointer{}).entry};
+  const auto entry_node{resolve(core::Pointer{})};
   if (!entry_node.has_value()) {
     return;
   }
@@ -746,18 +731,6 @@ auto lift_subschemas(sourcemeta::core::JSON &schema,
       core::set(body, entry.first.resolve_from(pointer),
                 sourcemeta::core::JSON{"#/definitions/" +
                                        std::to_string(entry.second)});
-    }
-
-    // A reference that ends up outside the document is written out in full,
-    // since the edges it used to travel through are not entries of the graph
-    for (const auto &entry : outside_targets) {
-      if (!entry.first.starts_with(pointer) ||
-          enclosing(entry.first.initial()) != index) {
-        continue;
-      }
-
-      core::set(body, entry.first.resolve_from(pointer),
-                sourcemeta::core::JSON{entry.second});
     }
 
     if (body.is_object()) {
@@ -1011,11 +984,16 @@ auto lift_subschemas(sourcemeta::core::JSON &schema,
       }
     }};
 
+    // The entries are written in the order they are numbered, so that the same
+    // graph always comes out spelled the same way. Following the order the
+    // groups were named in would instead follow where the nodes came from, and
+    // a document already in graph form names its nodes after the entries it
+    // holds, leaving `10` ahead of `2`
     auto merged{sourcemeta::core::JSON::make_object()};
-    for (const auto &group : position) {
-      auto body{relabel(bodies.at(representative.at(group.first)))};
+    for (std::size_t index = 0; index < walked.size(); index++) {
+      auto body{relabel(bodies.at(representative.at(walked.at(index))))};
       unique(body);
-      merged.assign(std::to_string(group.second), std::move(body));
+      merged.assign(std::to_string(index), std::move(body));
     }
 
     const auto next{position.at(classes.at(collapsed_entry))};
@@ -1110,6 +1088,7 @@ auto lift_subschemas(sourcemeta::core::JSON &schema,
 #include "rules/flatten_nested_allof.h"
 #include "rules/flatten_nested_anyof.h"
 #include "rules/flatten_nested_extends.h"
+#include "rules/hyper_schema_keywords_drop.h"
 #include "rules/if_then_else_implicit.h"
 #include "rules/if_without_then_else.h"
 #include "rules/ignored_metaschema.h"
@@ -1123,6 +1102,7 @@ auto lift_subschemas(sourcemeta::core::JSON &schema,
 #include "rules/maximum_can_equal_integer_fold.h"
 #include "rules/maximum_can_equal_true_drop.h"
 #include "rules/maximum_real_for_integer.h"
+#include "rules/metadata_keywords_drop.h"
 #include "rules/min_contains_without_contains.h"
 #include "rules/min_items_given_min_contains.h"
 #include "rules/min_length_implicit.h"
@@ -1162,6 +1142,7 @@ auto lift_subschemas(sourcemeta::core::JSON &schema,
 #include "rules/type_with_applicator_to_extends.h"
 #include "rules/unevaluated_items_to_items.h"
 #include "rules/unevaluated_properties_to_additional_properties.h"
+#include "rules/unknown_keywords_drop.h"
 #include "rules/unknown_keywords_prefix.h"
 #include "rules/unknown_local_ref.h"
 #include "rules/unknown_type_names.h"
@@ -1192,6 +1173,8 @@ auto canonicalize(sourcemeta::core::JSON &schema,
   rules.push_back(make_rule<MinimumCanEqualTrueDrop>());
   rules.push_back(make_rule<MaximumCanEqualTrueDrop>());
   rules.push_back(make_rule<CommentDrop>());
+  rules.push_back(make_rule<HyperSchemaKeywordsDrop>());
+  rules.push_back(make_rule<MetadataKeywordsDrop>());
   rules.push_back(make_rule<DeprecatedFalseDrop>());
   rules.push_back(make_rule<RecursiveAnchorFalseDrop>());
   rules.push_back(make_rule<UnevaluatedItemsToItems>());
@@ -1258,6 +1241,7 @@ auto canonicalize(sourcemeta::core::JSON &schema,
   rules.push_back(make_rule<DraftRefSiblings>());
   rules.push_back(make_rule<DynamicRefToStaticRef>());
   rules.push_back(make_rule<UnknownKeywordsPrefix>());
+  rules.push_back(make_rule<UnknownKeywordsDrop>());
   rules.push_back(make_rule<UnknownLocalRef>());
   rules.push_back(make_rule<RequiredPropertiesInProperties>());
   rules.push_back(make_rule<OrphanDefinitions>());

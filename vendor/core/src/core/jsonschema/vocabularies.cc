@@ -7,7 +7,7 @@
 #include <cassert>  // assert
 #include <optional> // std::optional
 #include <string>   // std::string
-#include <utility>  // std::pair, std::to_underlying
+#include <utility>  // std::pair, std::to_underlying, std::unreachable
 #include <vector>   // std::vector
 
 // X-macro defining all known vocabulary mappings (enum, URI)
@@ -68,10 +68,30 @@
   X(JSON_SCHEMA_DRAFT_0_HYPER,                                                 \
     "http://json-schema.org/draft-00/hyper-schema#")                           \
   /* OpenAPI vocabularies */                                                   \
+  /* Every published release of the v3.0 document schema carries the same      \
+     Schema Object definition, so one vocabulary serves them all, and its      \
+     date is that of the specification rather than of any one release */       \
+  X(OPENAPI_3_0_BASE, "tag:spec.openapis.org,2017:oas/3.0/vocab/base")         \
   X(OPENAPI_3_1_BASE, "https://spec.openapis.org/oas/3.1/vocab/base")          \
   X(OPENAPI_3_2_BASE, "https://spec.openapis.org/oas/3.2/vocab/base")          \
   /* Sourcemeta vocabularies */                                                \
   X(SOURCEMETA_EXTENSION_V1, "tag:sourcemeta.com,2026:extension/v1")
+
+// The switch over this list carries no default case, so the compiler holds the
+// list to every enumerator. Checking each one here therefore covers them all,
+// without naming any, so appending a vocabulary and forgetting to make room
+// for it fails to build rather than reading past the end of the sets
+// NOLINTNEXTLINE(bugprone-macro-parentheses)
+#define X_ASSERT_WITHIN_BOUND(enumerator, uri_string)                          \
+  static_assert(                                                               \
+      static_cast<std::size_t>(                                                \
+          sourcemeta::core::SchemaVocabularies::Known::enumerator) <           \
+          sourcemeta::core::SchemaVocabularies::KNOWN_VOCABULARY_COUNT,        \
+      "Every known vocabulary must fit in the membership bitsets");
+
+SOURCEMETA_VOCABULARIES_X(X_ASSERT_WITHIN_BOUND)
+
+#undef X_ASSERT_WITHIN_BOUND
 
 namespace {
 auto uri_to_known_vocabulary(const std::string_view uri)
@@ -117,10 +137,10 @@ auto sourcemeta::core::SchemaVocabularies::contains(
   }
 
   const auto maybe_known{uri_to_known_vocabulary(uri)};
-  // As a debug build check: Going through this branch is slow. If it is a
-  // known vocabulary, the consumer should be making use of the enum overload
-  // of this method
-  assert(!maybe_known.has_value());
+  // Naming one of the vocabularies this module knows by its URI is slower
+  // than naming it by its enumerator, which is what the other overload is
+  // for, but it is a documented way of asking and must answer rather than
+  // refuse
   if (maybe_known.has_value()) {
     return this->contains(maybe_known.value());
   }
@@ -189,10 +209,10 @@ auto sourcemeta::core::SchemaVocabularies::get(
   }
 
   const auto maybe_known{uri_to_known_vocabulary(uri)};
-  // As a debug build check: Going through this branch is slow. If it is a
-  // known vocabulary, the consumer should be making use of the enum overload
-  // of this method
-  assert(!maybe_known.has_value());
+  // Naming one of the vocabularies this module knows by its URI is slower
+  // than naming it by its enumerator, which is what the other overload is
+  // for, but it is a documented way of asking and must answer rather than
+  // refuse
   if (maybe_known.has_value()) {
     return this->get(maybe_known.value());
   }
@@ -249,8 +269,11 @@ auto sourcemeta::core::vocabulary_uri(SchemaVocabularies::Known vocabulary)
 #undef X_ENUM_TO_URI
   }
 
-  assert(false);
-  return {};
+  // Clang settles that no other value arrives, so only GCC and MSVC
+  // need to be told that the end of this function is never reached
+#if !defined(__clang__)
+  std::unreachable();
+#endif
 }
 
 auto sourcemeta::core::vocabulary_uri(const SchemaVocabularies::URI &vocabulary)

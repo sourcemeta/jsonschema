@@ -1,5 +1,6 @@
 #include <sourcemeta/core/jsonschema.h>
 
+#include "hasher.h"
 #include "helpers.h"
 #include "iterator.h"
 
@@ -16,7 +17,7 @@
 #include <tuple>         // std::tuple
 #include <unordered_map> // std::unordered_map
 #include <unordered_set> // std::unordered_set
-#include <utility>       // std::pair, std::move
+#include <utility>       // std::pair, std::move, std::unreachable
 #include <vector>        // std::vector
 
 enum class AnchorType : std::uint8_t { Static, Dynamic, All };
@@ -162,10 +163,17 @@ auto find_anchors(const sourcemeta::core::JSON &schema,
                                                    "Invalid anchor value");
       }
 
+      // A plain anchor names a fragment and nothing more. Section 8.2.3 gives
+      // it no dynamic behaviour, which Section 8.2.4.2.2 reserves for the
+      // recursive one, and Section 8.2.3.2 of the later revision makes a
+      // reference to a fragment that no dynamic anchor created behave as a
+      // plain one. A dialect declaring this core alongside a later one has
+      // already recorded the same name from the later vocabulary, so finding
+      // it again only means it is already known, never that it also acts as an
+      // extension point
       bool found = false;
-      for (auto &entry : result) {
+      for (const auto &entry : result) {
         if (entry.first == anchor_view) {
-          entry.second = AnchorType::All;
           found = true;
           break;
         }
@@ -177,12 +185,17 @@ auto find_anchors(const sourcemeta::core::JSON &schema,
   }
 
   // Draft 7 and 6
-  // Old `$id` anchor form
+  // Old `$id` anchor form, which the hyper-schema dialect of each draft spells
+  // the same way, as it is that draft plus the links vocabulary
   if (schema.is_object() &&
       (vocabularies.contains(
            sourcemeta::core::SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_7) ||
+       vocabularies.contains(sourcemeta::core::SchemaVocabularies::Known::
+                                 JSON_SCHEMA_DRAFT_7_HYPER) ||
        vocabularies.contains(
-           sourcemeta::core::SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_6))) {
+           sourcemeta::core::SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_6) ||
+       vocabularies.contains(sourcemeta::core::SchemaVocabularies::Known::
+                                 JSON_SCHEMA_DRAFT_6_HYPER))) {
     const auto *id_value{
         schema.try_at("$id"sv, sourcemeta::core::JSONSCHEMA_HASH_ID)};
     if (id_value != nullptr) {
@@ -588,10 +601,13 @@ auto to_json(const SchemaFrame::LocationType value) -> sourcemeta::core::JSON {
       return sourcemeta::core::JSON{"pointer"};
     case SchemaFrame::LocationType::Subschema:
       return sourcemeta::core::JSON{"subschema"};
-    default:
-      assert(false);
-      return sourcemeta::core::JSON{nullptr};
   }
+
+    // Clang settles that no other value arrives, so only GCC and MSVC
+    // need to be told that the end of this function is never reached
+#if !defined(__clang__)
+  std::unreachable();
+#endif
 }
 
 auto SchemaFrame::to_json(
@@ -697,8 +713,6 @@ auto SchemaFrame::to_json(
         dynamic_locations.assign_assume_new(location.first.second,
                                             std::move(entry));
         break;
-      default:
-        assert(false);
     }
   }
 
@@ -825,6 +839,7 @@ struct SchemaFrame::Cache {
   std::unordered_map<const Location *, const sourcemeta::core::JSON::String *>
       location_to_uri;
   bool standalone{false};
+  bool standalone_ignoring_metaschemas{false};
   bool has_dynamic_references{false};
 
   auto populate_pointer_to_location(const SchemaFrame &frame) -> void;
@@ -863,37 +878,16 @@ SchemaFrame::SchemaFrame(const Mode mode, const sourcemeta::core::JSON &root,
               paths.cbegin(), paths.cend())
               .size() == paths.size()));
 
-  // A meta-schema that is embedded in the document itself takes precedence
-  // over what the resolver knows about, as the document pins the exact
-  // meta-schema it is described by
-  const SchemaResolver effective_resolver{
-      [&root, &resolver,
-       this](const std::string_view identifier) -> SchemaResolverResult {
-        const sourcemeta::core::JSON::String key{identifier};
-        const auto hit{this->cache_->probed_metaschemas.find(key)};
-        if (hit != this->cache_->probed_metaschemas.cend()) {
-          return *(hit->second);
-        }
-
-        const auto *match{
-            sourcemeta::core::metaschema_try_embedded(root, key, resolver)};
-        if (match) {
-          this->cache_->probed_metaschemas.emplace(key, match);
-          return *match;
-        }
-
-        return resolver(identifier);
-      }};
   std::vector<InternalEntry> subschema_entries;
   std::unordered_map<sourcemeta::core::WeakPointer, CacheSubschema,
-                     sourcemeta::core::WeakPointer::Hasher>
+                     PositionHasher>
       subschemas;
   std::unordered_map<sourcemeta::core::WeakPointer,
                      std::vector<sourcemeta::core::JSON::String>,
-                     sourcemeta::core::WeakPointer::Hasher>
+                     PositionHasher>
       base_uris;
   std::unordered_map<sourcemeta::core::WeakPointer, DialectAtPointer,
-                     sourcemeta::core::WeakPointer::Hasher>
+                     PositionHasher>
       base_dialects;
 
   if (!default_base.empty()) {
@@ -922,6 +916,39 @@ SchemaFrame::SchemaFrame(const Mode mode, const sourcemeta::core::JSON &root,
 
     const auto &schema{sourcemeta::core::get(root, path)};
 
+    // A meta-schema that is embedded in the schema itself takes precedence
+    // over what the resolver knows about, as the schema pins the exact
+    // meta-schema it is described by. What counts as itself is the schema
+    // being analysed rather than whatever document it was pulled out of,
+    // since naming a path is what puts everything outside it out of scope
+    //
+    // What this path has already looked up is remembered separately from what
+    // the frame as a whole knows, because another path is as much out of
+    // scope as anything else outside this one, and a meta-schema it happens
+    // to carry must not stand in for one that is missing here
+    std::unordered_map<sourcemeta::core::JSON::String,
+                       const sourcemeta::core::JSON *>
+        probed_within_path;
+    const SchemaResolver effective_resolver{
+        [&schema, &resolver, &probed_within_path,
+         this](const std::string_view identifier) -> SchemaResolverResult {
+          const sourcemeta::core::JSON::String key{identifier};
+          const auto hit{probed_within_path.find(key)};
+          if (hit != probed_within_path.cend()) {
+            return *(hit->second);
+          }
+
+          const auto *match{
+              sourcemeta::core::metaschema_try_embedded(schema, key, resolver)};
+          if (match) {
+            probed_within_path.emplace(key, match);
+            this->cache_->probed_metaschemas.emplace(key, match);
+            return *match;
+          }
+
+          return resolver(identifier);
+        }};
+
     const auto root_base_dialect{sourcemeta::core::base_dialect(
         schema, effective_resolver, default_dialect)};
     if (!root_base_dialect.has_value()) {
@@ -935,8 +962,14 @@ SchemaFrame::SchemaFrame(const Mode mode, const sourcemeta::core::JSON &root,
     std::optional<sourcemeta::core::JSON::String> root_id{std::nullopt};
     bool root_declares_anchor{false};
     if (path.empty() || this->mode_ == SchemaFrame::Mode::Root) {
-      const auto declared_id{sourcemeta::core::identify(
+      auto declared_id{sourcemeta::core::identify(
           schema, root_base_dialect.value(), std::string_view{})};
+      if (!identifier_counts(schema, declared_id,
+                             sourcemeta::core::dialect(schema, default_dialect),
+                             root_base_dialect.value(), effective_resolver,
+                             walker)) {
+        declared_id = {};
+      }
 
       // Before 2019-09 an identifier that consists of nothing but a fragment
       // names the schema it sits on rather than declaring a resource of its
@@ -1121,13 +1154,20 @@ SchemaFrame::SchemaFrame(const Mode mode, const sourcemeta::core::JSON &root,
       // An identifier that only names the top of the document in place was
       // taken apart above, which leaves the name the caller gave it, if any,
       // as the one that identifies the document
-      const auto maybe_id{
-          entry.pointer.empty() && root_declares_anchor &&
-                  !default_id_for_entry.empty()
-              ? std::string_view{default_id_for_entry}
-              : sourcemeta::core::identify(entry.subschema.get(),
-                                           entry.base_dialect.value(),
-                                           default_id_for_entry)};
+      auto maybe_id{entry.pointer.empty() && root_declares_anchor &&
+                            !default_id_for_entry.empty()
+                        ? std::string_view{default_id_for_entry}
+                        : sourcemeta::core::identify(entry.subschema.get(),
+                                                     entry.base_dialect.value(),
+                                                     default_id_for_entry)};
+      // Anything other than what the caller supplied came out of the schema
+      // itself, and only counts where the dialect gives its keyword a meaning.
+      // Comparing first keeps the lookup off the path that declares nothing
+      if (maybe_id != default_id_for_entry &&
+          !sourcemeta::core::dialect_defines_identifier(
+              walker, entry.vocabularies, entry.base_dialect.value())) {
+        maybe_id = default_id_for_entry;
+      }
       std::optional<sourcemeta::core::JSON::String> identifier{
           !maybe_id.empty()
               ? std::make_optional<sourcemeta::core::JSON::String>(maybe_id)
@@ -1223,7 +1263,6 @@ SchemaFrame::SchemaFrame(const Mode mode, const sourcemeta::core::JSON &root,
                       : "Identifiers must not contain non-empty fragments");
             }
 
-            const bool maybe_relative_is_absolute{maybe_relative.is_absolute()};
             maybe_relative.resolve_from(base).canonicalize();
             const sourcemeta::core::JSON::String new_id{
                 maybe_relative.recompose()};
@@ -1235,8 +1274,14 @@ SchemaFrame::SchemaFrame(const Mode mode, const sourcemeta::core::JSON &root,
               throw_already_exists(new_id);
             }
 
-            if (!maybe_relative_is_absolute ||
-                maybe_match == this->locations_.cend()) {
+            // Two bases that differ only in their last segment resolve the
+            // same relative identifier to the same place, because merging a
+            // relative reference drops everything after the base's last
+            // slash. The check above has already refused a match that sits
+            // somewhere else, so a match here is this very place under the
+            // name it already goes by, and storing it again would only
+            // collide with itself
+            if (maybe_match == this->locations_.cend()) {
               assert(entry.common.base_dialect.has_value());
 
               store(this->locations_, max_locations,
@@ -1418,14 +1463,13 @@ SchemaFrame::SchemaFrame(const Mode mode, const sourcemeta::core::JSON &root,
 
       const auto combined{
           find_dialect_and_all_bases(base_dialects, base_uris, pointer_weak)};
+      // Every schema records the dialect it is read under, the root among
+      // them, so the walk up from any pointer reaches one
+      assert(combined.dialect_match.has_value());
       const auto &dialect_for_pointer{
-          combined.dialect_match.has_value()
-              ? combined.dialect_match->first.get().dialects.front()
-              : root_dialect};
+          combined.dialect_match->first.get().dialects.front()};
       const auto base_dialect_for_pointer{
-          combined.dialect_match.has_value()
-              ? combined.dialect_match->first.get().base_dialect
-              : root_base_dialect.value()};
+          combined.dialect_match->first.get().base_dialect};
       const auto &every_base_result{combined.every_base};
 
       std::optional<std::pair<std::string_view, sourcemeta::core::WeakPointer>>
@@ -1486,10 +1530,7 @@ SchemaFrame::SchemaFrame(const Mode mode, const sourcemeta::core::JSON &root,
                   subschema_it->second.property_name,
                   subschema_it->second.orphan, true);
           } else {
-            const auto &parent_pointer{
-                combined.dialect_match.has_value()
-                    ? combined.dialect_match->second
-                    : sourcemeta::core::EMPTY_WEAK_POINTER};
+            const auto &parent_pointer{combined.dialect_match->second};
             const auto parent_subschema_it{subschemas.find(parent_pointer)};
             const bool parent_property_name{
                 parent_subschema_it != subschemas.cend() &&
@@ -1770,21 +1811,47 @@ SchemaFrame::SchemaFrame(const Mode mode, const sourcemeta::core::JSON &root,
     }
   }
 
-  // A schema is standalone if all references can be resolved within itself
-  this->cache_->standalone = std::ranges::all_of(
-      this->references_, [&](const auto &reference) -> bool {
-        assert(!reference.first.second.empty());
-        assert(reference.first.second.back().is_property());
-        // TODO: This check might need to be more elaborate given
-        // https://github.com/sourcemeta/core/issues/1390
-        return reference.first.second.back().to_property() == "$schema" ||
-               this->locations_.contains({SchemaReferenceType::Static,
-                                          reference.second.destination}) ||
-               this->locations_.contains({SchemaReferenceType::Dynamic,
-                                          reference.second.destination});
-      });
+  // A schema is standalone if all references can be resolved within itself,
+  // and there are two readings of that worth telling apart, both of which
+  // come out of this one pass.
+  //
+  // The first never asks the document to carry a dialect this library already
+  // comes with, as naming one of those asks nothing of whoever reads it. Any
+  // other dialect counts like every other destination, because a reader that
+  // does not have it cannot tell what the schema means without fetching it.
+  //
+  // The second sets dialects aside altogether, which is what a caller that
+  // only resolves references between schemas needs to know, as the dialect is
+  // not something it was going to resolve either way
+  this->cache_->standalone = true;
+  this->cache_->standalone_ignoring_metaschemas = true;
+  for (const auto &reference : this->references_) {
+    assert(!reference.first.second.empty());
+    assert(reference.first.second.back().is_property());
+    if (this->locations_.contains(
+            {SchemaReferenceType::Static, reference.second.destination}) ||
+        this->locations_.contains(
+            {SchemaReferenceType::Dynamic, reference.second.destination})) {
+      continue;
+    }
 
-  if (this->cache_->standalone) {
+    if (reference.first.second.back().to_property() == "$schema") {
+      this->cache_->standalone =
+          this->cache_->standalone &&
+          sourcemeta::core::schema_is_known(reference.second.destination);
+      continue;
+    }
+
+    this->cache_->standalone = false;
+    this->cache_->standalone_ignoring_metaschemas = false;
+    break;
+  }
+
+  // Whether a lone destination can stand for a dynamic reference turns on
+  // seeing every anchor the schema could reach, which is a question about the
+  // references between schemas. A dialect the document does not carry
+  // contributes no anchor of its own, so it has no say here
+  if (this->cache_->standalone_ignoring_metaschemas) {
     // Find all dynamic anchors
     // Values are pointers to full URIs in locations_
     std::unordered_map<sourcemeta::core::JSON::String,
@@ -1943,6 +2010,10 @@ auto SchemaFrame::standalone() const noexcept -> bool {
   return this->cache_->standalone;
 }
 
+auto SchemaFrame::standalone_ignoring_metaschemas() const noexcept -> bool {
+  return this->cache_->standalone_ignoring_metaschemas;
+}
+
 auto SchemaFrame::root() const noexcept
     -> const sourcemeta::core::JSON::String & {
   return this->root_;
@@ -1987,28 +2058,23 @@ auto SchemaFrame::uri(
     const Location &location,
     const sourcemeta::core::WeakPointer &relative_schema_location) const
     -> sourcemeta::core::JSON::String {
+  // An empty base leaves an empty fragment in place, which recomposes to a
+  // lone number sign, while the names this frame files its places under drop
+  // it. Without settling the two the name built here never matches the one
+  // the place was filed as
   return sourcemeta::core::to_uri(
              this->relative_instance_location(location).concat(
                  relative_schema_location),
              location.base)
+      .canonicalize()
       .recompose();
 }
 
 auto SchemaFrame::traverse(
     const Location &location,
     const sourcemeta::core::WeakPointer &relative_schema_location) const
-    -> const Location & {
-  const auto new_uri{this->uri(location, relative_schema_location)};
-  const auto static_match{
-      this->locations_.find({SchemaReferenceType::Static, new_uri})};
-  if (static_match != this->locations_.cend()) {
-    return static_match->second;
-  }
-
-  const auto dynamic_match{
-      this->locations_.find({SchemaReferenceType::Dynamic, new_uri})};
-  assert(dynamic_match != this->locations_.cend());
-  return dynamic_match->second;
+    -> std::optional<std::reference_wrapper<const Location>> {
+  return this->traverse(this->uri(location, relative_schema_location));
 }
 
 auto SchemaFrame::traverse(const std::string_view uri) const
@@ -2233,9 +2299,9 @@ auto SchemaFrame::Cache::populate_pointer_to_location(const SchemaFrame &frame)
 auto SchemaFrame::Cache::populate_location_members(
     const SchemaFrame &frame, const SchemaWalker &walker,
     const SchemaResolver &resolver) -> void {
-  if (!this->location_members_children.empty()) {
-    return;
-  }
+  // The graph that reaches this is built once and answers for every question
+  // after, so this is only ever reached with nothing built yet
+  assert(this->location_members_children.empty());
 
   this->populate_pointer_to_location(frame);
 
@@ -2265,9 +2331,7 @@ auto SchemaFrame::Cache::populate_location_members(
 
 auto SchemaFrame::Cache::populate_reference_graph(const SchemaFrame &frame)
     -> void {
-  if (!this->references_by_destination.empty()) {
-    return;
-  }
+  assert(this->references_by_destination.empty());
 
   std::unordered_map<std::string_view,
                      std::vector<const sourcemeta::core::WeakPointer *>>

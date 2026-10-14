@@ -120,7 +120,7 @@ auto Options::parse(const int argc,
       }
 
       // Parse short options
-    } else if (token.size() >= 2 && token[0] == '-' && token[1] != '-') {
+    } else if (token.size() >= 2 && token[0] == '-') {
       for (std::size_t flag = 1; flag < token.size(); flag++) {
         const auto name{token.substr(flag, 1)};
         const auto &canonical{find_canonical_name(this->aliases_, name)};

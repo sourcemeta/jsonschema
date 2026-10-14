@@ -140,7 +140,9 @@ public:
     return (this->flags_ & (FLAG_NAN | FLAG_SNAN | FLAG_INFINITE)) == 0;
   }
 
-  /// Check if the decimal number is a real number (finite and not NaN)
+  /// Check if the decimal number holds a value that is finite and that no
+  /// integer equals, which is what is left of the real numbers once the
+  /// integral ones are taken out of them
   [[nodiscard]] SOURCEMETA_FORCEINLINE auto is_real() const -> bool {
     return this->is_finite() && !this->is_integral();
   }

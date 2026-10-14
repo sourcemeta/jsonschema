@@ -1,0 +1,79 @@
+// What a v3.0 description spans is embedded as the plain v3.0 it already was,
+// keeping the keywords only that revision spells, and the reference that
+// reached it names where it landed
+
+WRITE openapi.json UNTIL EOF
+{
+  "openapi": "3.0.3",
+  "info": { "title": "Example", "version": "1.0.0" },
+  "paths": {
+    "/pets": {
+      "get": {
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "./pet.json#/components/schemas/Pet" }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
+EOF
+
+WRITE pet.json UNTIL EOF
+{
+  "openapi": "3.0.3",
+  "info": { "title": "Pets", "version": "1.0.0" },
+  "paths": {},
+  "components": {
+    "schemas": {
+      "Pet": { "type": "string", "nullable": true }
+    }
+  }
+}
+EOF
+
+RUN bundle openapi.json --resolve pet.json STDIN /dev/null IN . INTO result.txt EXPECTING 0
+
+WRITE expected.txt UNTIL EOF
+1> {
+1>   "openapi": "3.0.3",
+1>   "info": {
+1>     "title": "Example",
+1>     "version": "1.0.0"
+1>   },
+1>   "paths": {
+1>     "/pets": {
+1>       "get": {
+1>         "responses": {
+1>           "200": {
+1>             "description": "OK",
+1>             "content": {
+1>               "application/json": {
+1>                 "schema": {
+1>                   "$ref": "#/components/schemas/Pet"
+1>                 }
+1>               }
+1>             }
+1>           }
+1>         }
+1>       }
+1>     }
+1>   },
+1>   "components": {
+1>     "schemas": {
+1>       "Pet": {
+1>         "type": "string",
+1>         "nullable": true
+1>       }
+1>     }
+1>   }
+1> }
+EOF
+
+COMPARE result.txt AGAINST expected.txt

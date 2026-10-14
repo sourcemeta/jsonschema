@@ -114,6 +114,10 @@ auto Encoder::ANY_PACKED_TYPE_TAG_BYTE_PREFIX(
                      static_cast<std::uint8_t>(subtype << TYPE_SIZE));
       this->put_varint(absolute);
     }
+  } else if (document.is_decimal()) {
+    this->put_byte(TYPE_OTHER |
+                   static_cast<std::uint8_t>(SUBTYPE_DECIMAL << TYPE_SIZE));
+    this->NUMBER_VARINT_TUPLE(document, {});
   } else if (document.is_string()) {
     const sourcemeta::core::JSON::String &value{document.to_string()};
     const auto size{document.byte_size()};

@@ -70,30 +70,59 @@ auto openapi_version_name(const OpenAPIVersion version) noexcept
     // OpenAPI Specification 3.1.1, Section 4.1: "The `major`.`minor` portion
     // of the version string (for example `3.1`) SHALL designate the OAS
     // feature set"
+    case OpenAPIVersion::OPENAPI_3_0:
+      return "3.0"sv;
     case OpenAPIVersion::OPENAPI_3_1:
       return "3.1"sv;
     case OpenAPIVersion::OPENAPI_3_2:
       return "3.2"sv;
   }
 
+    // Clang settles that no other value arrives, so only GCC and MSVC
+    // need to be told that the end of this function is never reached
+#if !defined(__clang__)
   std::unreachable();
+#endif
 }
 
-auto openapi_version(const JSON &document) -> std::optional<OpenAPIVersion> {
+auto openapi_version_string(const JSON &document)
+    -> std::optional<JSON::StringView> {
   if (!document.is_object()) {
     return std::nullopt;
   }
 
+  // OpenAPI Specification 3.1.1, Section 4.8.1: "openapi | string | REQUIRED",
+  // so a member of any other type declares no version at all
   const auto *version{document.try_at("openapi", HASH_OPENAPI)};
   if (version == nullptr || !version->is_string()) {
     return std::nullopt;
   }
 
-  if (is_openapi_minor(version->to_string(), "3.1."sv)) {
+  return version->to_string();
+}
+
+auto openapi_is_document(const JSON &document) -> bool {
+  return openapi_version_string(document).has_value();
+}
+
+auto openapi_version(const JSON &document) -> std::optional<OpenAPIVersion> {
+  // Which feature set a version designates is read from the same bytes that
+  // say there is one to read, so the two cannot disagree about what a document
+  // declares
+  const auto declared{openapi_version_string(document)};
+  if (!declared.has_value()) {
+    return std::nullopt;
+  }
+
+  if (is_openapi_minor(declared.value(), "3.0."sv)) {
+    return OpenAPIVersion::OPENAPI_3_0;
+  }
+
+  if (is_openapi_minor(declared.value(), "3.1."sv)) {
     return OpenAPIVersion::OPENAPI_3_1;
   }
 
-  if (is_openapi_minor(version->to_string(), "3.2."sv)) {
+  if (is_openapi_minor(declared.value(), "3.2."sv)) {
     return OpenAPIVersion::OPENAPI_3_2;
   }
 

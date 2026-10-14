@@ -517,6 +517,66 @@ public:
     return this->is_integer() || this->is_real() || this->is_decimal();
   }
 
+  /// Check whether the number this document holds is exactly a value of the
+  /// IEEE 754-2019 binary64 interchange format, the double precision format of
+  /// that standard. A number that no binary significand reaches is not one of
+  /// its values however closely it sits. A number taken in as a native
+  /// floating point value is one of them already, while a number read from a
+  /// document is judged on what its digits denote, so every way of writing one
+  /// number agrees. The result of this method is undefined unless the JSON
+  /// instance holds a number. For example:
+  ///
+  /// ```cpp
+  /// #include <sourcemeta/core/json.h>
+  /// #include <cassert>
+  ///
+  /// const sourcemeta::core::JSON half{sourcemeta::core::Decimal{"0.5"}};
+  /// const sourcemeta::core::JSON tenth{sourcemeta::core::Decimal{"0.1"}};
+  /// assert(half.is_double());
+  /// assert(!tenth.is_double());
+  /// assert(!sourcemeta::core::parse_json("3.14").is_double());
+  /// assert(!sourcemeta::core::parse_json("314e-2").is_double());
+  /// ```
+  [[nodiscard]] SOURCEMETA_FORCEINLINE auto is_double() const noexcept -> bool {
+    assert(this->is_number());
+    if (this->is_real()) {
+      return true;
+    }
+    if (this->is_integer()) {
+      return is_representable_as<Real>(this->to_integer());
+    }
+    return this->to_decimal().is_double();
+  }
+
+  /// Check whether the number this document holds is exactly a value of the
+  /// IEEE 754-2019 binary32 interchange format, the single precision format of
+  /// that standard. As with the double precision format, a number read from a
+  /// document is judged on what its digits denote, so every way of writing one
+  /// number agrees. The result of this method is undefined unless the JSON
+  /// instance holds a number. For example:
+  ///
+  /// ```cpp
+  /// #include <sourcemeta/core/json.h>
+  /// #include <cassert>
+  ///
+  /// const sourcemeta::core::JSON half{sourcemeta::core::Decimal{"0.5"}};
+  /// const sourcemeta::core::JSON pi{3.14};
+  /// assert(half.is_float());
+  /// assert(!pi.is_float());
+  /// assert(!sourcemeta::core::parse_json("3.14").is_float());
+  /// assert(!sourcemeta::core::parse_json("314e-2").is_float());
+  /// ```
+  [[nodiscard]] SOURCEMETA_FORCEINLINE auto is_float() const noexcept -> bool {
+    assert(this->is_number());
+    if (this->is_real()) {
+      return is_representable_as<float>(this->to_real());
+    }
+    if (this->is_integer()) {
+      return is_representable_as<float>(this->to_integer());
+    }
+    return this->to_decimal().is_float();
+  }
+
   /// Check if the input JSON document is either a positive integer or a
   /// positive real number. Zero is considered to be positive. For example:
   ///

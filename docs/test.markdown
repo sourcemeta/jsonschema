@@ -134,7 +134,7 @@ OpenAPI Descriptions
 
 A `target` names the schema under test wherever it lives, so the document at
 its base does not have to be a schema itself. If it is an
-[OpenAPI](https://spec.openapis.org/oas/latest.html) spec v3.1 or v3.2
+[OpenAPI](https://spec.openapis.org/oas/latest.html) spec v3.0, v3.1 or v3.2
 description, the `test` command reads it as one and runs the test cases against
 the Schema Object that the fragment names:
 

@@ -1,15 +1,17 @@
 #include <sourcemeta/core/numeric_parse.h>
 
+#include <sourcemeta/core/numeric_util.h>
+
 #include <array>        // std::array
 #include <cfenv>        // std::fegetround, FE_TONEAREST
 #include <charconv>     // std::from_chars
+#include <cmath>        // std::ldexp, HUGE_VAL
 #include <cstdint>      // std::uint64_t, std::int32_t
 #include <limits>       // std::numeric_limits
 #include <system_error> // std::errc
 
 #if defined(__APPLE__)
 #include <cerrno>  // errno, ERANGE
-#include <cmath>   // HUGE_VAL
 #include <cstring> // std::memcpy
 #include <string>  // std::string
 #include <xlocale.h>
@@ -104,7 +106,7 @@ auto to_int64_t_narrow(const std::string_view input) noexcept
 // would reach the slow way. Reporting no value means the input is either
 // outside that range or not a number at all, and either way the general routine
 // decides what it is, so this never has to agree with it on a rejection
-auto to_double_exact(const std::string_view input) noexcept
+auto to_double_fast(const std::string_view input) noexcept
     -> std::optional<double> {
   if (input.size() > MAXIMUM_EXACT_LENGTH) {
     return std::nullopt;
@@ -226,7 +228,7 @@ auto to_double(const std::string_view input) noexcept -> std::optional<double> {
   // Most numbers a document carries are short enough to be recovered exactly
   // without consulting the general routine, and taking them here also spares
   // them the pass over the alphabet below
-  const auto exact{to_double_exact(input)};
+  const auto exact{to_double_fast(input)};
   if (exact.has_value()) {
     return exact;
   }
@@ -239,9 +241,9 @@ auto to_double(const std::string_view input) noexcept -> std::optional<double> {
   // leading whitespace, hexadecimal literals, and infinity or not-a-number
   // spellings in the same way
   for (const auto character : input) {
-    const auto is_digit{character >= '0' && character <= '9'};
-    if (!is_digit && character != '.' && character != '-' && character != '+' &&
-        character != 'e' && character != 'E') {
+    if (!sourcemeta::core::is_digit(character) && character != '.' &&
+        character != '-' && character != '+' && character != 'e' &&
+        character != 'E') {
       return std::nullopt;
     }
   }
@@ -298,6 +300,85 @@ auto to_double(const std::string_view input) noexcept -> std::optional<double> {
 
   return value;
 #endif
+}
+
+auto to_double_exact(const std::string_view input) noexcept
+    -> std::optional<double> {
+  if (input.size() > MAXIMUM_EXACT_LENGTH) {
+    return std::nullopt;
+  }
+
+  const char *cursor{input.data()};
+  const char *const end{cursor + input.size()};
+
+  const auto negative{cursor < end && *cursor == '-'};
+  if (negative) {
+    cursor += 1;
+  }
+
+  std::uint64_t coefficient{0};
+  std::int32_t digits{0};
+  while (cursor < end && *cursor >= '0' && *cursor <= '9') {
+    coefficient =
+        (coefficient * 10) + static_cast<std::uint64_t>(*cursor - '0');
+    digits += 1;
+    cursor += 1;
+  }
+
+  if (digits == 0) {
+    return std::nullopt;
+  }
+
+  std::int32_t fraction_digits{0};
+  if (cursor < end && *cursor == '.') {
+    cursor += 1;
+    while (cursor < end && *cursor >= '0' && *cursor <= '9') {
+      coefficient =
+          (coefficient * 10) + static_cast<std::uint64_t>(*cursor - '0');
+      fraction_digits += 1;
+      cursor += 1;
+    }
+
+    if (fraction_digits == 0) {
+      return std::nullopt;
+    }
+  }
+
+  // Whatever is left is an exponent or not a number at all, and the fixed
+  // point form this recognises is neither
+  if (cursor != end) {
+    return std::nullopt;
+  }
+
+  if (digits + fraction_digits > MAXIMUM_ACCUMULATED_DIGITS) {
+    return std::nullopt;
+  }
+
+  if (coefficient == 0) {
+    return negative ? -0.0 : 0.0;
+  }
+
+  // The power of ten the fraction carries reduces to a power of two only when
+  // every factor of five it introduces divides out of the digits
+  for (auto remaining = fraction_digits; remaining > 0; remaining--) {
+    if (coefficient % 5 != 0) {
+      return std::nullopt;
+    }
+
+    coefficient /= 5;
+  }
+
+  // What is left scales by a power of two alone, which is exact, so the width
+  // of its odd part is all that can leave the number outside the format. That
+  // width also keeps the scaling clear of the exponent range, as the digits
+  // gathered here cannot reach far enough to approach either end of it
+  if (!sourcemeta::core::is_representable_as<double>(coefficient)) {
+    return std::nullopt;
+  }
+
+  const auto value{
+      std::ldexp(static_cast<double>(coefficient), -fraction_digits)};
+  return negative ? -value : value;
 }
 
 auto to_int64_t(const std::string_view input) noexcept

@@ -16,7 +16,7 @@
 #include <stdexcept>        // std::invalid_argument
 #include <string>           // std::to_string
 #include <string_view>      // std::basic_string_view
-#include <utility>          // std::exchange, std::move
+#include <utility>          // std::exchange, std::move, std::unreachable
 #include <vector>           // std::vector
 
 // Searching a run of hashes for one value tests many lanes at once on any
@@ -893,10 +893,13 @@ auto JSON::operator-=(const JSON &substractive) -> JSON & {
 
       return 5;
     }
-    default:
-      assert(false);
-      return 0;
   }
+
+    // Clang settles that no other value arrives, so only GCC and MSVC
+    // need to be told that the end of this function is never reached
+#if !defined(__clang__)
+  std::unreachable();
+#endif
 }
 
 [[nodiscard]] auto JSON::divisible_by(const JSON &divisor) const -> bool {

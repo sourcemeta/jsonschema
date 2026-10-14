@@ -5,6 +5,7 @@
 
 #include "jsonld_keywords.h"
 
+#include <cassert>     // assert
 #include <cstdint>     // std::uint8_t
 #include <string_view> // std::string_view
 #include <utility>     // std::pair
@@ -56,9 +57,8 @@ auto is_value_object(const JSON &value) -> bool {
   }
 
   const auto *const contents{value.try_at(KEYWORD_VALUE, KEYWORD_VALUE_HASH)};
-  if (contents == nullptr) {
-    return false;
-  }
+  // Only an object that defines the keyword is read as a value object
+  assert(contents != nullptr);
 
   const auto *const type{value.try_at(KEYWORD_TYPE, KEYWORD_TYPE_HASH)};
   const auto *const language{

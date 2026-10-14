@@ -308,8 +308,10 @@ auto oidc_make_provider_metadata(const OIDCProviderMetadataConfig &config)
     return std::nullopt;
   }
 
-  // OpenID Connect Discovery 1.0 Section 3: the OpenID Connect endpoints use
-  // the https scheme
+  // Each of these is defined by a document of its own rather than all by one.
+  // OpenID Connect Discovery 1.0 Section 3 gives the first and requires the
+  // https scheme for it, RP-Initiated Logout 1.0 Section 2.1 gives the second
+  // and Session Management 1.0 Section 3.3 the third, both likewise over https
   if ((!config.userinfo_endpoint.empty() &&
        !is_https_url(config.userinfo_endpoint)) ||
       (!config.end_session_endpoint.empty() &&

@@ -13,6 +13,7 @@
 #include <sourcemeta/core/uri.h>
 
 #include <algorithm>    // std::sort
+#include <cassert>      // assert
 #include <compare>      // std::strong_ordering
 #include <cstddef>      // std::size_t
 #include <cstdint>      // std::uint8_t
@@ -154,7 +155,9 @@ inline auto clitest_is_name_character(const char character) noexcept -> bool {
 inline auto clitest_variable_at(const std::string_view token,
                                 const std::size_t index)
     -> std::optional<CLITestVariable> {
-  if (index >= token.size() || token[index] != '$') {
+  // Whoever asks about a position names one the token holds
+  assert(index < token.size());
+  if (token[index] != '$') {
     return std::nullopt;
   }
 
@@ -469,11 +472,10 @@ inline auto clitest_parse(const std::vector<std::string_view> &lines)
       continue;
     }
 
+    // Trimming a line takes every character a word is split on, so one with
+    // anything left in it holds at least one word
     auto words{clitest_split_words(stripped, number)};
-    if (words.empty()) {
-      continue;
-    }
-
+    assert(!words.empty());
     CLITestStatement statement;
     statement.line = number;
     statement.keyword = std::move(words.front());

@@ -447,6 +447,56 @@ inline auto scan_number(const std::uint64_t line, std::uint64_t &column,
   return facts;
 }
 
+// What a container needs remembered while the scan walks its children
+struct ContainerFrame {
+  std::size_t tape_index;
+  std::uint32_t child_count;
+};
+
+// A key and a string value differ in nothing but the entry each leaves behind,
+// and the three places a string value can stand differ in nothing but where
+// the scan goes next, so what all four do with what they read is spelled out
+// once here
+template <bool TrackPositions, TapeType Type>
+inline auto push_string(const char *&cursor, const char *end,
+                        const char *buffer_start, std::uint64_t &line,
+                        std::uint64_t &column, std::vector<TapeEntry> &tape)
+    -> void {
+  const auto start{static_cast<std::uint32_t>(cursor - buffer_start)};
+  const auto value_line{line};
+  const auto value_column{column};
+  const auto has_escape{scan_string<TrackPositions>(line, column, cursor, end)};
+  tape.push_back(
+      {.type = Type,
+       .flags = has_escape ? TAPE_FLAG_STRING_ESCAPE : std::uint8_t{0},
+       .offset = start,
+       .length = static_cast<std::uint32_t>(cursor - buffer_start - start - 1),
+       .count = 0,
+       .line = value_line,
+       .column = value_column});
+}
+
+// Closing an array and closing an object differ in nothing but the entry each
+// leaves behind, as both settle the count of what the container held before
+// giving up the frame that was counting
+template <TapeType Type>
+inline auto push_container_end(const std::uint64_t line,
+                               const std::uint64_t column,
+                               std::vector<ContainerFrame> &container_stack,
+                               std::vector<TapeEntry> &tape) -> void {
+  assert(!container_stack.empty());
+  auto &frame{container_stack.back()};
+  tape[frame.tape_index].count = frame.child_count;
+  tape.push_back({.type = Type,
+                  .flags = 0,
+                  .offset = 0,
+                  .length = 0,
+                  .count = 0,
+                  .line = line,
+                  .column = column});
+  container_stack.pop_back();
+}
+
 } // namespace internal
 
 // NOLINTBEGIN(cppcoreguidelines-avoid-goto)
@@ -456,14 +506,9 @@ inline auto scan_json(const char *&cursor, const char *end,
                       const char *buffer_start, std::uint64_t &line,
                       std::uint64_t &column, std::vector<TapeEntry> &tape)
     -> void {
-  struct ContainerFrame {
-    std::size_t tape_index;
-    std::uint32_t child_count;
-  };
-
   using CharT = JSON::Char;
   char character = 0;
-  std::vector<ContainerFrame> container_stack;
+  std::vector<internal::ContainerFrame> container_stack;
   container_stack.reserve(32);
 
   internal::skip_whitespace<TrackPositions>(cursor, end, line, column);
@@ -484,47 +529,44 @@ inline auto scan_json(const char *&cursor, const char *end,
     switch (character) {
       case internal::TOKEN_TRUE<CharT>:
         internal::scan_true<TrackPositions>(line, column, cursor, end);
-        tape.push_back({.type = TapeType::True,
-                        .flags = 0,
-                        .offset = 0,
-                        .length = 0,
-                        .count = 0,
-                        .line = value_line,
-                        .column = value_column});
+        tape.push_back(
+            {.type = TapeType::True,
+             .flags = 0,
+             .offset = 0,
+             .length = static_cast<std::uint32_t>(
+                 internal::CONSTANT_TRUE<CharT, JSON::CharTraits>.size()),
+             .count = 0,
+             .line = value_line,
+             .column = value_column});
         return;
       case internal::TOKEN_FALSE<CharT>:
         internal::scan_false<TrackPositions>(line, column, cursor, end);
-        tape.push_back({.type = TapeType::False,
-                        .flags = 0,
-                        .offset = 0,
-                        .length = 0,
-                        .count = 0,
-                        .line = value_line,
-                        .column = value_column});
+        tape.push_back(
+            {.type = TapeType::False,
+             .flags = 0,
+             .offset = 0,
+             .length = static_cast<std::uint32_t>(
+                 internal::CONSTANT_FALSE<CharT, JSON::CharTraits>.size()),
+             .count = 0,
+             .line = value_line,
+             .column = value_column});
         return;
       case internal::TOKEN_NULL<CharT>:
         internal::scan_null<TrackPositions>(line, column, cursor, end);
-        tape.push_back({.type = TapeType::Null,
-                        .flags = 0,
-                        .offset = 0,
-                        .length = 0,
-                        .count = 0,
-                        .line = value_line,
-                        .column = value_column});
-        return;
-      case internal::TOKEN_STRING_QUOTE<CharT>: {
-        const auto string_start{
-            static_cast<std::uint32_t>(cursor - buffer_start)};
-        const auto string_has_escape{
-            internal::scan_string<TrackPositions>(line, column, cursor, end)};
-        const auto string_length{static_cast<std::uint32_t>(
-            cursor - buffer_start - string_start - 1)};
         tape.push_back(
-            {TapeType::String,
-             string_has_escape ? TAPE_FLAG_STRING_ESCAPE : std::uint8_t{0},
-             string_start, string_length, 0, value_line, value_column});
+            {.type = TapeType::Null,
+             .flags = 0,
+             .offset = 0,
+             .length = static_cast<std::uint32_t>(
+                 internal::CONSTANT_NULL<CharT, JSON::CharTraits>.size()),
+             .count = 0,
+             .line = value_line,
+             .column = value_column});
         return;
-      }
+      case internal::TOKEN_STRING_QUOTE<CharT>:
+        internal::push_string<TrackPositions, TapeType::String>(
+            cursor, end, buffer_start, line, column, tape);
+        return;
       case internal::TOKEN_ARRAY_BEGIN<CharT>:
         goto do_scan_array;
       case internal::TOKEN_OBJECT_BEGIN<CharT>:
@@ -569,7 +611,7 @@ do_scan_array: {
                   .count = 0,
                   .line = line,
                   .column = column});
-  container_stack.push_back({start_index, 0});
+  container_stack.push_back({.tape_index = start_index, .child_count = 0});
 
   internal::skip_whitespace<TrackPositions>(cursor, end, line, column);
   if (cursor >= end) [[unlikely]] {
@@ -625,47 +667,44 @@ do_scan_array_item:
         goto do_scan_object;
       case internal::TOKEN_TRUE<CharT>:
         internal::scan_true<TrackPositions>(line, column, cursor, end);
-        tape.push_back({.type = TapeType::True,
-                        .flags = 0,
-                        .offset = 0,
-                        .length = 0,
-                        .count = 0,
-                        .line = value_line,
-                        .column = value_column});
+        tape.push_back(
+            {.type = TapeType::True,
+             .flags = 0,
+             .offset = 0,
+             .length = static_cast<std::uint32_t>(
+                 internal::CONSTANT_TRUE<CharT, JSON::CharTraits>.size()),
+             .count = 0,
+             .line = value_line,
+             .column = value_column});
         goto do_scan_array_item_separator;
       case internal::TOKEN_FALSE<CharT>:
         internal::scan_false<TrackPositions>(line, column, cursor, end);
-        tape.push_back({.type = TapeType::False,
-                        .flags = 0,
-                        .offset = 0,
-                        .length = 0,
-                        .count = 0,
-                        .line = value_line,
-                        .column = value_column});
+        tape.push_back(
+            {.type = TapeType::False,
+             .flags = 0,
+             .offset = 0,
+             .length = static_cast<std::uint32_t>(
+                 internal::CONSTANT_FALSE<CharT, JSON::CharTraits>.size()),
+             .count = 0,
+             .line = value_line,
+             .column = value_column});
         goto do_scan_array_item_separator;
       case internal::TOKEN_NULL<CharT>:
         internal::scan_null<TrackPositions>(line, column, cursor, end);
-        tape.push_back({.type = TapeType::Null,
-                        .flags = 0,
-                        .offset = 0,
-                        .length = 0,
-                        .count = 0,
-                        .line = value_line,
-                        .column = value_column});
-        goto do_scan_array_item_separator;
-      case internal::TOKEN_STRING_QUOTE<CharT>: {
-        const auto string_start{
-            static_cast<std::uint32_t>(cursor - buffer_start)};
-        const auto string_has_escape{
-            internal::scan_string<TrackPositions>(line, column, cursor, end)};
-        const auto string_length{static_cast<std::uint32_t>(
-            cursor - buffer_start - string_start - 1)};
         tape.push_back(
-            {TapeType::String,
-             string_has_escape ? TAPE_FLAG_STRING_ESCAPE : std::uint8_t{0},
-             string_start, string_length, 0, value_line, value_column});
+            {.type = TapeType::Null,
+             .flags = 0,
+             .offset = 0,
+             .length = static_cast<std::uint32_t>(
+                 internal::CONSTANT_NULL<CharT, JSON::CharTraits>.size()),
+             .count = 0,
+             .line = value_line,
+             .column = value_column});
         goto do_scan_array_item_separator;
-      }
+      case internal::TOKEN_STRING_QUOTE<CharT>:
+        internal::push_string<TrackPositions, TapeType::String>(
+            cursor, end, buffer_start, line, column, tape);
+        goto do_scan_array_item_separator;
       case internal::TOKEN_NUMBER_MINUS<CharT>:
       case internal::TOKEN_NUMBER_ZERO<CharT>:
       case internal::TOKEN_NUMBER_ONE<CharT>:
@@ -708,20 +747,10 @@ do_scan_array_item_separator:
   switch (character) {
     case internal::TOKEN_ARRAY_DELIMITER<CharT>:
       goto do_scan_array_item;
-    case internal::TOKEN_ARRAY_END<CharT>: {
-      assert(!container_stack.empty());
-      auto &frame{container_stack.back()};
-      tape[frame.tape_index].count = frame.child_count;
-      tape.push_back({.type = TapeType::ArrayEnd,
-                      .flags = 0,
-                      .offset = 0,
-                      .length = 0,
-                      .count = 0,
-                      .line = line,
-                      .column = column});
-      container_stack.pop_back();
+    case internal::TOKEN_ARRAY_END<CharT>:
+      internal::push_container_end<TapeType::ArrayEnd>(line, column,
+                                                       container_stack, tape);
       goto do_scan_container_end;
-    }
     default:
       [[unlikely]] throw JSONParseError(line, column);
   }
@@ -739,7 +768,7 @@ do_scan_object: {
                   .count = 0,
                   .line = line,
                   .column = column});
-  container_stack.push_back({start_index, 0});
+  container_stack.push_back({.tape_index = start_index, .child_count = 0});
 
   internal::skip_whitespace<TrackPositions>(cursor, end, line, column);
   if (cursor >= end) [[unlikely]] {
@@ -785,20 +814,10 @@ do_scan_object_key:
   }
   character = *cursor++;
   switch (character) {
-    case internal::TOKEN_STRING_QUOTE<CharT>: {
-      const auto key_start{static_cast<std::uint32_t>(cursor - buffer_start)};
-      const auto key_line{line};
-      const auto key_column{column};
-      const auto key_has_escape{
-          internal::scan_string<TrackPositions>(line, column, cursor, end)};
-      const auto key_length{
-          static_cast<std::uint32_t>(cursor - buffer_start - key_start - 1)};
-      tape.push_back(
-          {TapeType::Key,
-           key_has_escape ? TAPE_FLAG_STRING_ESCAPE : std::uint8_t{0},
-           key_start, key_length, 0, key_line, key_column});
+    case internal::TOKEN_STRING_QUOTE<CharT>:
+      internal::push_string<TrackPositions, TapeType::Key>(
+          cursor, end, buffer_start, line, column, tape);
       goto do_scan_object_separator;
-    }
     default:
       [[unlikely]] throw JSONParseError(line, column);
   }
@@ -845,47 +864,44 @@ do_scan_object_value:
         goto do_scan_object;
       case internal::TOKEN_TRUE<CharT>:
         internal::scan_true<TrackPositions>(line, column, cursor, end);
-        tape.push_back({.type = TapeType::True,
-                        .flags = 0,
-                        .offset = 0,
-                        .length = 0,
-                        .count = 0,
-                        .line = value_line,
-                        .column = value_column});
+        tape.push_back(
+            {.type = TapeType::True,
+             .flags = 0,
+             .offset = 0,
+             .length = static_cast<std::uint32_t>(
+                 internal::CONSTANT_TRUE<CharT, JSON::CharTraits>.size()),
+             .count = 0,
+             .line = value_line,
+             .column = value_column});
         goto do_scan_object_property_end;
       case internal::TOKEN_FALSE<CharT>:
         internal::scan_false<TrackPositions>(line, column, cursor, end);
-        tape.push_back({.type = TapeType::False,
-                        .flags = 0,
-                        .offset = 0,
-                        .length = 0,
-                        .count = 0,
-                        .line = value_line,
-                        .column = value_column});
+        tape.push_back(
+            {.type = TapeType::False,
+             .flags = 0,
+             .offset = 0,
+             .length = static_cast<std::uint32_t>(
+                 internal::CONSTANT_FALSE<CharT, JSON::CharTraits>.size()),
+             .count = 0,
+             .line = value_line,
+             .column = value_column});
         goto do_scan_object_property_end;
       case internal::TOKEN_NULL<CharT>:
         internal::scan_null<TrackPositions>(line, column, cursor, end);
-        tape.push_back({.type = TapeType::Null,
-                        .flags = 0,
-                        .offset = 0,
-                        .length = 0,
-                        .count = 0,
-                        .line = value_line,
-                        .column = value_column});
-        goto do_scan_object_property_end;
-      case internal::TOKEN_STRING_QUOTE<CharT>: {
-        const auto string_start{
-            static_cast<std::uint32_t>(cursor - buffer_start)};
-        const auto string_has_escape{
-            internal::scan_string<TrackPositions>(line, column, cursor, end)};
-        const auto string_length{static_cast<std::uint32_t>(
-            cursor - buffer_start - string_start - 1)};
         tape.push_back(
-            {TapeType::String,
-             string_has_escape ? TAPE_FLAG_STRING_ESCAPE : std::uint8_t{0},
-             string_start, string_length, 0, value_line, value_column});
+            {.type = TapeType::Null,
+             .flags = 0,
+             .offset = 0,
+             .length = static_cast<std::uint32_t>(
+                 internal::CONSTANT_NULL<CharT, JSON::CharTraits>.size()),
+             .count = 0,
+             .line = value_line,
+             .column = value_column});
         goto do_scan_object_property_end;
-      }
+      case internal::TOKEN_STRING_QUOTE<CharT>:
+        internal::push_string<TrackPositions, TapeType::String>(
+            cursor, end, buffer_start, line, column, tape);
+        goto do_scan_object_property_end;
       case internal::TOKEN_NUMBER_MINUS<CharT>:
       case internal::TOKEN_NUMBER_ZERO<CharT>:
       case internal::TOKEN_NUMBER_ONE<CharT>:
@@ -928,20 +944,10 @@ do_scan_object_property_end:
   switch (character) {
     case internal::TOKEN_OBJECT_DELIMITER<CharT>:
       goto do_scan_object_key;
-    case internal::TOKEN_OBJECT_END<CharT>: {
-      assert(!container_stack.empty());
-      auto &frame{container_stack.back()};
-      tape[frame.tape_index].count = frame.child_count;
-      tape.push_back({.type = TapeType::ObjectEnd,
-                      .flags = 0,
-                      .offset = 0,
-                      .length = 0,
-                      .count = 0,
-                      .line = line,
-                      .column = column});
-      container_stack.pop_back();
+    case internal::TOKEN_OBJECT_END<CharT>:
+      internal::push_container_end<TapeType::ObjectEnd>(line, column,
+                                                        container_stack, tape);
       goto do_scan_container_end;
-    }
     default:
       [[unlikely]] throw JSONParseError(line, column);
   }

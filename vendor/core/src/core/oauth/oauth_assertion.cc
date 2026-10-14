@@ -9,7 +9,7 @@
 #include <sourcemeta/core/oauth_random.h>
 #include <sourcemeta/core/uri.h>
 
-#include <algorithm>   // std::ranges::find_if, std::clamp
+#include <algorithm>   // std::ranges::find_if
 #include <cassert>     // assert
 #include <chrono>      // std::chrono::seconds, std::chrono::duration_cast
 #include <cstdint>     // std::int64_t
@@ -136,14 +136,12 @@ auto verify_assertion(
     const auto identifier{token.token_id()};
     const auto expiration{token.expires_at()};
     if (identifier.has_value() && expiration.has_value()) {
-      // The skew is clamped to the same non-negative bounded range the claim
-      // check applies, so a negative value cannot shorten the window below the
+      // The skew is reduced by the same bound the claim check applies, so a
+      // negative or extreme value cannot shorten the window below the
       // acceptance window. The window as a whole is still attacker-influenced,
       // since the remaining lifetime comes from the token's own expiration, so
       // the store saturates rather than trusting it to fit
-      const auto skew{std::clamp(options.clock_skew,
-                                 std::chrono::seconds::zero(),
-                                 std::chrono::seconds{31556952})};
+      const auto skew{jwt_bounded_clock_skew(options.clock_skew)};
       // The remaining lifetime is rounded up to the next whole second so the
       // stored entry never expires before the sub-second interval during which
       // the assertion itself is still accepted, which a truncating cast would

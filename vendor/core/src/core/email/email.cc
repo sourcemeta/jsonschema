@@ -6,6 +6,8 @@
 
 #include "helpers.h"
 
+#include <cassert> // assert
+
 namespace sourcemeta::core {
 
 // RFC 5321 §4.1.2 Mailbox grammar, returning the position of the separator
@@ -74,7 +76,8 @@ static auto mailbox_separator(const std::string_view value)
     while (position < value.size() && value[position] != '@') {
       const auto character{value[position]};
       if (character == '.') {
-        if (!atom_started || previous_was_dot) {
+        assert(!atom_started || !previous_was_dot);
+        if (!atom_started) {
           return std::nullopt;
         }
         previous_was_dot = true;

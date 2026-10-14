@@ -5,6 +5,7 @@
 #include "jsonld_keywords.h"
 
 #include <algorithm> // std::ranges::sort
+#include <cassert>   // assert
 #include <optional>  // std::optional, std::nullopt
 #include <string>    // std::to_string
 #include <utility>   // std::move
@@ -14,12 +15,11 @@ namespace sourcemeta::core {
 
 namespace {
 
-// Append a value to the property array of node, creating the array as needed.
+// Append a value to the property array of node, which the caller makes before
+// it descends into the values that land there
 auto append_value(JSON &node, const JSON::StringView property, JSON value)
     -> void {
-  if (!node.defines(property)) {
-    node.assign_assume_new(JSON::String{property}, JSON::make_array());
-  }
+  assert(node.defines(property));
   node.at(property).push_back(std::move(value));
 }
 
@@ -80,7 +80,9 @@ auto generate_node_map(BlankNodeState &state, JSON &node_map,
   // The algorithm consumes entries of element, so work on a mutable copy.
   JSON working{element};
 
-  // Relabel blank node identifiers used as @type values.
+  // Relabel blank node identifiers used as @type values. A node object states
+  // its types as an array, and the datatype a value object states is an IRI,
+  // so a name to relabel only ever stands among the items of an array
   if (working.defines(KEYWORD_TYPE, KEYWORD_TYPE_HASH)) {
     auto &type_value{working.at(KEYWORD_TYPE, KEYWORD_TYPE_HASH)};
     if (type_value.is_array()) {
@@ -89,10 +91,6 @@ auto generate_node_map(BlankNodeState &state, JSON &node_map,
           item = JSON{generate_blank_node_identifier(state, item.to_string())};
         }
       }
-    } else if (type_value.is_string() &&
-               is_blank_node(type_value.to_string())) {
-      type_value =
-          JSON{generate_blank_node_identifier(state, type_value.to_string())};
     }
   }
 

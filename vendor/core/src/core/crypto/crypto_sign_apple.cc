@@ -34,7 +34,11 @@ auto to_sec_key_pkcs1_v15_algorithm(
       return kSecKeyAlgorithmRSASignatureMessagePKCS1v15SHA512;
   }
 
+    // Clang settles that no other value arrives, so only GCC and MSVC
+    // need to be told that the end of this function is never reached
+#if !defined(__clang__)
   std::unreachable();
+#endif
 }
 
 // These algorithm variants fix the salt length to the hash function output,
@@ -51,7 +55,11 @@ auto to_sec_key_pss_algorithm(
       return kSecKeyAlgorithmRSASignatureMessagePSSSHA512;
   }
 
+    // Clang settles that no other value arrives, so only GCC and MSVC
+    // need to be told that the end of this function is never reached
+#if !defined(__clang__)
   std::unreachable();
+#endif
 }
 
 auto to_sec_key_ecdsa_algorithm(
@@ -66,7 +74,11 @@ auto to_sec_key_ecdsa_algorithm(
       return kSecKeyAlgorithmECDSASignatureMessageX962SHA512;
   }
 
+    // Clang settles that no other value arrives, so only GCC and MSVC
+    // need to be told that the end of this function is never reached
+#if !defined(__clang__)
   std::unreachable();
+#endif
 }
 
 auto make_data(const std::string_view value) -> CFDataRef {
@@ -142,12 +154,12 @@ auto native_ec_private_key(const std::string_view sec1,
     rest = element->rest;
   }
 
-  const auto stripped_scalar{
-      sourcemeta::core::strip_left(scalar->content, '\x00')};
-  if (point.empty() || stripped_scalar.empty() ||
-      stripped_scalar.size() > field_bytes) {
+  if (point.empty()) {
     return nullptr;
   }
+
+  const auto stripped_scalar{
+      sourcemeta::core::strip_left(scalar->content, '\x00')};
 
   std::string data{point};
   data.append(sourcemeta::core::pad_left(stripped_scalar, field_bytes, '\x00'));
@@ -332,7 +344,11 @@ auto make_private_key(const std::string_view pem) -> std::optional<PrivateKey> {
     }
   }
 
+    // Clang settles that no other value arrives, so only GCC and MSVC
+    // need to be told that the end of this function is never reached
+#if !defined(__clang__)
   std::unreachable();
+#endif
 }
 
 auto make_ec_private_key(const EllipticCurve curve,
@@ -482,7 +498,11 @@ auto eddsa_sign(const PrivateKey &key, const std::string_view message)
       return edwards448_sign(internal->edwards_seed, message);
   }
 
+    // Clang settles that no other value arrives, so only GCC and MSVC
+    // need to be told that the end of this function is never reached
+#if !defined(__clang__)
   std::unreachable();
+#endif
 }
 
 auto derive_public_key(const PrivateKey &key) -> std::optional<PublicKey> {
@@ -542,7 +562,11 @@ auto derive_public_key(const PrivateKey &key) -> std::optional<PublicKey> {
     }
   }
 
+    // Clang settles that no other value arrives, so only GCC and MSVC
+    // need to be told that the end of this function is never reached
+#if !defined(__clang__)
   std::unreachable();
+#endif
 }
 
 } // namespace sourcemeta::core

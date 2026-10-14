@@ -22,9 +22,23 @@ public:
              SchemaVocabularies::Known::JSON_SCHEMA_2019_09_APPLICATOR,
              SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_7,
              SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_6,
+             SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_4,
              SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_3,
-             SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_3_HYPER}) &&
+             SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_3_HYPER,
+             SchemaVocabularies::Known::OPENAPI_3_0_BASE}) &&
         schema.is_object());
+
+    // In Draft 7 and older dialects, a `$ref` suppresses its siblings, so the
+    // negation this reads is itself ignored and there is nothing to drop
+    if (vocabularies.contains_any(
+            {SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_7,
+             SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_6,
+             SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_4,
+             SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_3,
+             SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_3_HYPER,
+             SchemaVocabularies::Known::OPENAPI_3_0_BASE})) {
+      ONLY_CONTINUE_IF(!schema.defines("$ref"));
+    }
 
     const bool is_draft_3{vocabularies.contains_any(
         {SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_3,

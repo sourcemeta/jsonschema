@@ -5,19 +5,6 @@
 #include <string>      // std::string
 #include <string_view> // std::string_view
 
-namespace {
-
-// RFC 9110 Section 5.6.4: qdtext and the escaped octet of a quoted-pair both
-// admit HTAB, SP, the visible characters, and obs-text, so every other control
-// character is rejected. The double quote and the backslash are handled by the
-// caller before this check
-auto http_is_quoted_content(const char character) noexcept -> bool {
-  const auto byte{static_cast<unsigned char>(character)};
-  return byte == 0x09 || (byte >= 0x20 && byte != 0x7f);
-}
-
-} // namespace
-
 namespace sourcemeta::core {
 
 auto http_scan_quoted_string(const std::string_view input,
@@ -28,14 +15,16 @@ auto http_scan_quoted_string(const std::string_view input,
     return std::nullopt;
   }
 
+  // RFC 9110 Section 5.6.4: quoted text and the escaped octet of a quoted-pair
+  // both admit what a field value admits, less the double quote and the
+  // backslash, and those two are what this scan is tracking anyway
   const std::size_t content_start{position + 1};
   std::size_t scan{content_start};
   bool escaped{false};
   while (scan < input.size()) {
     const char character{input[scan]};
     if (character == '\\') {
-      if (scan + 1 >= input.size() ||
-          !http_is_quoted_content(input[scan + 1])) {
+      if (scan + 1 >= input.size() || !http_is_field_octet(input[scan + 1])) {
         return std::nullopt;
       }
 
@@ -67,7 +56,7 @@ auto http_scan_quoted_string(const std::string_view input,
       return scan + 1;
     }
 
-    if (!http_is_quoted_content(character)) {
+    if (!http_is_field_octet(character)) {
       return std::nullopt;
     }
 

@@ -38,17 +38,17 @@ URITemplate::URITemplate(const std::string_view source) {
 
   while (!remaining.empty()) {
     try {
-      if (!try_parse_any<false, URITemplateTokenReservedExpansion,
-                         URITemplateTokenFragmentExpansion,
-                         URITemplateTokenLabelExpansion,
-                         URITemplateTokenPathExpansion,
-                         URITemplateTokenPathParameterExpansion,
-                         URITemplateTokenQueryExpansion,
-                         URITemplateTokenQueryContinuationExpansion,
-                         URITemplateTokenVariable, URITemplateTokenLiteral>(
-              remaining, offset, &this->tokens_)) {
-        throw URITemplateParseError(offset + 1);
-      }
+      // Each of these either takes what it reads or refuses it outright, and
+      // the last takes anything that does not open an expression, so one of
+      // them always answers for whatever is left
+      [[maybe_unused]] const auto parsed{try_parse_any<
+          false, URITemplateTokenReservedExpansion,
+          URITemplateTokenFragmentExpansion, URITemplateTokenLabelExpansion,
+          URITemplateTokenPathExpansion, URITemplateTokenPathParameterExpansion,
+          URITemplateTokenQueryExpansion,
+          URITemplateTokenQueryContinuationExpansion, URITemplateTokenVariable,
+          URITemplateTokenLiteral>(remaining, offset, &this->tokens_)};
+      assert(parsed);
     } catch (URITemplateParseError &error) {
       throw URITemplateParseError(offset + error.column());
     }
@@ -65,17 +65,14 @@ auto URITemplate::is_uritemplate(const std::string_view input) noexcept
     std::string_view remaining{input};
     std::size_t offset = 0;
     while (!remaining.empty()) {
-      if (!try_parse_any<true, URITemplateTokenReservedExpansion,
-                         URITemplateTokenFragmentExpansion,
-                         URITemplateTokenLabelExpansion,
-                         URITemplateTokenPathExpansion,
-                         URITemplateTokenPathParameterExpansion,
-                         URITemplateTokenQueryExpansion,
-                         URITemplateTokenQueryContinuationExpansion,
-                         URITemplateTokenVariable, URITemplateTokenLiteral>(
-              remaining, offset, nullptr)) {
-        return false;
-      }
+      [[maybe_unused]] const auto parsed{try_parse_any<
+          true, URITemplateTokenReservedExpansion,
+          URITemplateTokenFragmentExpansion, URITemplateTokenLabelExpansion,
+          URITemplateTokenPathExpansion, URITemplateTokenPathParameterExpansion,
+          URITemplateTokenQueryExpansion,
+          URITemplateTokenQueryContinuationExpansion, URITemplateTokenVariable,
+          URITemplateTokenLiteral>(remaining, offset, nullptr)};
+      assert(parsed);
     }
     return true;
   } catch (...) {

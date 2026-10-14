@@ -16,6 +16,7 @@
 #include <limits>      // std::numeric_limits
 #include <optional>    // std::optional
 #include <ostream>     // std::ostream
+#include <span>        // std::span
 #include <string>      // std::string
 #include <string_view> // std::string_view
 #include <type_traits> // std::is_nothrow_copy_constructible_v, std::is_nothrow_invocable_r_v, std::remove_cv_t
@@ -937,6 +938,31 @@ auto hex_to_bytes(const std::string_view input,
 /// ```
 SOURCEMETA_CORE_TEXT_EXPORT
 auto bytes_to_hex(const std::string_view input) -> std::string;
+
+/// @ingroup text
+///
+/// Write a byte sequence as lowercase hexadecimal into storage the caller
+/// owns, two characters to the byte, which is what lets a fixed-size
+/// identifier be spelled without allocating. The output must be exactly twice
+/// the length of the input, and the two must not share storage, since this
+/// writes forward and would otherwise overwrite input it has yet to read.
+/// For example:
+///
+/// ```cpp
+/// #include <sourcemeta/core/text.h>
+/// #include <array>
+/// #include <cassert>
+/// #include <cstdint>
+/// #include <string_view>
+///
+/// const std::array<std::uint8_t, 3> input{{0x66, 0x6f, 0x6f}};
+/// std::array<char, 6> output{};
+/// sourcemeta::core::bytes_to_hex(input, output);
+/// assert((std::string_view{output.data(), output.size()}) == "666f6f");
+/// ```
+SOURCEMETA_CORE_TEXT_EXPORT
+auto bytes_to_hex(const std::span<const std::uint8_t> input,
+                  const std::span<char> output) noexcept -> void;
 
 /// @ingroup text
 ///

@@ -1,0 +1,41 @@
+// A v3.0 description declares no identity of its own, so its Schema Objects
+// answer to where the description was read from plus the pointer that reaches
+// them, which names them as well as a pointer on its own does.
+
+WRITE openapi.json UNTIL EOF
+{
+  "openapi": "3.0.3",
+  "info": { "title": "Example", "version": "1.0.0" },
+  "paths": {},
+  "components": { "schemas": { "Person": { "type": "string" } } }
+}
+EOF
+
+RUN compile openapi.json --entrypoint $CWD_URI/openapi.json#/components/schemas/Person STDIN /dev/null IN . INTO result_0.txt EXPECTING 0
+
+REPLACE $CWD_URI WITH '[CWD_URI]' IN result_0.txt
+
+WRITE expected_0.txt UNTIL EOF
+1> [
+1>   9,
+1>   false,
+1>   true,
+1>   [
+1>     [
+1>       [
+1>         11,
+1>         [ "type" ],
+1>         [],
+1>         "[CWD_URI]/openapi.json#/components/schemas/Person/type",
+1>         1,
+1>         1,
+1>         [ 8, 4 ]
+1>       ]
+1>     ]
+1>   ],
+1>   [],
+1>   [ "tag:spec.openapis.org,2017:oas/3.0/vocab/base" ]
+1> ]
+EOF
+
+COMPARE result_0.txt AGAINST expected_0.txt

@@ -6,6 +6,7 @@
 #include <sourcemeta/core/unicode.h>
 
 #include <algorithm>   // std::min
+#include <cassert>     // assert
 #include <cstddef>     // std::size_t
 #include <string>      // std::string
 #include <string_view> // std::string_view
@@ -174,10 +175,10 @@ inline auto decode_character_references(std::string &output,
   return true;
 }
 
-// Resolve the backslash escapes of GFM section 2.4 and the character
-// references of GFM section 6.5 in one pass from left to right, so that an
+// Resolve the backslash escapes of GFM section 6.1 and the character
+// references of GFM section 6.2 in one pass from left to right, so that an
 // escaped ampersand stays literal rather than opening a character reference,
-// as GFM section 2.4 example 310 requires
+// as GFM section 6.1 example 310 requires
 inline auto decode_escapes_and_references(std::string &output,
                                           const std::string_view input)
     -> void {
@@ -244,12 +245,11 @@ inline auto normalize_label(std::string &output, const std::string_view label)
       pending_space = false;
     }
 
+    // What a byte sequence that is not well formed stands for is settled on the
+    // whole input before any of it is read apart, so nothing read here is left
+    // for this to settle again
     const auto decoded{sourcemeta::core::utf8_decode(label, index)};
-    if (!decoded.has_value()) {
-      sourcemeta::core::codepoint_to_utf8(0xFFFD, output);
-      ++index;
-      continue;
-    }
+    assert(decoded.has_value());
 
     const auto [codepoint, length]{decoded.value()};
     const auto folded{sourcemeta::core::case_fold(codepoint)};

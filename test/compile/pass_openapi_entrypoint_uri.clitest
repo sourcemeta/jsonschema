@@ -15,7 +15,7 @@ RUN compile openapi.json --entrypoint https://example.com/api#/components/schema
 
 WRITE expected.txt UNTIL EOF
 1> [
-1>   7,
+1>   9,
 1>   false,
 1>   true,
 1>   [

@@ -22,7 +22,8 @@ public:
          SchemaVocabularies::Known::JSON_SCHEMA_2019_09_APPLICATOR,
          SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_7,
          SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_6,
-         SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_4}));
+         SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_4,
+         SchemaVocabularies::Known::OPENAPI_3_0_BASE}));
     ONLY_CONTINUE_IF(schema.is_object());
 
     const auto *all_of_value{schema.try_at(KEYWORD)};
@@ -68,7 +69,8 @@ public:
                      SchemaVocabularies::Known::JSON_SCHEMA_2019_09_VALIDATION,
                      SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_7,
                      SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_6,
-                     SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_4})
+                     SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_4,
+                     SchemaVocabularies::Known::OPENAPI_3_0_BASE})
             ? parse_schema_type(*parent_type_value)
             : JSON::TypeSet{}};
 
@@ -109,6 +111,15 @@ public:
       const auto try_elevate_keyword = [&](const auto &keyword_entry) -> bool {
         const auto &keyword{keyword_entry.first};
         const auto &metadata{walker(keyword, vocabularies)};
+
+        // In OpenAPI 3.0, `nullable` widens the `type` that sits next to it, so
+        // moving either one out from under the other changes what the branch
+        // and the parent each admit
+        if ((keyword == "nullable" && is_nullable(entry, vocabularies)) ||
+            (keyword == "type" && (is_nullable(schema, vocabularies) ||
+                                   is_nullable(entry, vocabularies)))) {
+          return false;
+        }
 
         if (elevated.contains(keyword) ||
             (schema.defines(keyword) &&
@@ -249,6 +260,11 @@ private:
 
     if (vocabularies.contains(SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_4)) {
       return !entry.defines("id");
+    }
+
+    // The OpenAPI 3.0 Schema Object has no identifier keyword at all
+    if (vocabularies.contains(SchemaVocabularies::Known::OPENAPI_3_0_BASE)) {
+      return true;
     }
 
     return false;

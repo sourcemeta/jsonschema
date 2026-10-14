@@ -21,10 +21,17 @@ public:
                           SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_0}) &&
                      schema.is_object());
 
+    // An integer only where the dialect reads one as any number whose
+    // fractional part is zero. Draft 3 and Draft 4 read it as a number written
+    // without a fractional part, so there `type: "integer"` rejects `3.0`
+    // where `enum: [ 3 ]` accepts it, the two being equal as numbers. Keeping
+    // the type beside the enum is not an option either, as the canonical form
+    // has no entry that carries both
     const auto *type{schema.try_at("type")};
-    ONLY_CONTINUE_IF(
-        type && type->is_string() &&
-        (type->to_string() == "integer" || type->to_string() == "number"));
+    ONLY_CONTINUE_IF(type && type->is_string() &&
+                     (type->to_string() == "number" ||
+                      (type->to_string() == "integer" &&
+                       integral_reals_are_integers(vocabularies))));
     const auto *minimum{schema.try_at("minimum")};
     ONLY_CONTINUE_IF(minimum && minimum->is_number());
     const auto *maximum{schema.try_at("maximum")};

@@ -207,7 +207,9 @@ inline auto fuse_numeric_bounds(Instructions &instructions,
   for (std::size_t type_index = 0; type_index < instructions.size();
        ++type_index) {
     const auto &type_instruction{instructions[type_index]};
-    if (!is_numeric_integer_type_check(type_instruction)) {
+    const auto anchors_on_type{is_numeric_integer_type_check(type_instruction)};
+    if (!anchors_on_type &&
+        !is_numeric_integral_multiple_check(type_instruction)) {
       continue;
     }
 
@@ -220,6 +222,7 @@ inline auto fuse_numeric_bounds(Instructions &instructions,
     std::vector<std::size_t> bound_indices;
     std::optional<std::int64_t> minimum;
     std::optional<std::int64_t> maximum;
+    std::optional<std::size_t> minimum_index;
 
     for (std::size_t index = 0; index < instructions.size(); ++index) {
       const auto &candidate{instructions[index]};
@@ -232,8 +235,13 @@ inline auto fuse_numeric_bounds(Instructions &instructions,
         continue;
       }
 
+      const auto previous_minimum{minimum};
       if (!merge_integer_bound(candidate, minimum, maximum)) {
         continue;
+      }
+
+      if (minimum != previous_minimum) {
+        minimum_index = index;
       }
 
       bound_indices.push_back(index);
@@ -249,7 +257,16 @@ inline auto fuse_numeric_bounds(Instructions &instructions,
     InstructionIndex fused_type;
     Value fused_value;
 
-    if (minimum.has_value() && maximum.has_value()) {
+    if (!anchors_on_type) {
+      // Without a type check to absorb there is no lower-bound-only form to
+      // fall back on, as the instruction has to carry both ends of the range
+      if (!minimum.has_value() || !maximum.has_value()) {
+        continue;
+      }
+
+      fused_type = InstructionIndex::AssertionNumberIntegerBounded;
+      fused_value = ValueIntegerBounds{minimum.value(), maximum.value()};
+    } else if (minimum.has_value() && maximum.has_value()) {
       fused_type = is_strict
                        ? InstructionIndex::AssertionTypeIntegerBoundedStrict
                        : InstructionIndex::AssertionTypeIntegerBounded;
@@ -265,11 +282,14 @@ inline auto fuse_numeric_bounds(Instructions &instructions,
 
     const auto first_index{
         std::min(type_index, *std::ranges::min_element(bound_indices))};
+    const auto &minimum_metadata{
+        extra[instructions[minimum_index.value()].extra_index]};
     const auto extra_index{extra.size()};
-    extra.push_back({.relative_schema_location = parent->first,
-                     .keyword_location = parent->second,
-                     .schema_resource = type_metadata.schema_resource,
-                     .vocabulary = type_metadata.vocabulary});
+    extra.push_back(
+        {.relative_schema_location = minimum_metadata.relative_schema_location,
+         .keyword_location = minimum_metadata.keyword_location,
+         .schema_resource = type_metadata.schema_resource,
+         .vocabulary = type_metadata.vocabulary});
 
     Instructions result;
     result.reserve(instructions.size() - bound_indices.size());

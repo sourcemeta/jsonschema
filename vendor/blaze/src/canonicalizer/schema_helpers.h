@@ -30,6 +30,7 @@ inline auto parse_schema_type_string(const sourcemeta::core::JSON::String &type,
   } else if (type == "number") {
     result.set(std::to_underlying(sourcemeta::core::JSON::Type::Integer));
     result.set(std::to_underlying(sourcemeta::core::JSON::Type::Real));
+    result.set(std::to_underlying(sourcemeta::core::JSON::Type::Decimal));
   } else if (type == "integer") {
     result.set(std::to_underlying(sourcemeta::core::JSON::Type::Integer));
   } else if (type == "string") {

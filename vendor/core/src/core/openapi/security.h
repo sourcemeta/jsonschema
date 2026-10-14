@@ -268,12 +268,26 @@ inline auto openapi_check_security_scheme(const JSON &value,
       openapi_require(value, "type"sv, OPENAPI_HASH_TYPE, base,
                       "The Security Scheme Object must declare its type")};
 
-  const auto scheme_type{openapi_expect_enumeration(
-      type, base, "type"sv,
-      {"apiKey"sv, "http"sv, "mutualTLS"sv, "oauth2"sv, "openIdConnect"sv},
-      "The Security Scheme Object type must be a string",
-      "The Security Scheme Object type is not one this specification "
-      "defines")};
+  // OpenAPI Specification 3.0.4, Security Scheme Object: "type | `string` |
+  // Any | **REQUIRED**. The type of the security scheme. Valid values are
+  // `"apiKey"`, `"http"`, `"oauth2"`, `"openIdConnect"`". 3.1.1 Section 4.8.27
+  // adds `mutualTLS` to that list, which no release of 3.0 names anywhere, so
+  // the values a document is held to are the ones its own revision gives
+  const auto scheme_type{
+      walk.version >= OpenAPIVersion::OPENAPI_3_1
+          ? openapi_expect_enumeration(
+                type, base, "type"sv,
+                {"apiKey"sv, "http"sv, "mutualTLS"sv, "oauth2"sv,
+                 "openIdConnect"sv},
+                "The Security Scheme Object type must be a string",
+                "The Security Scheme Object type is not one this "
+                "specification defines")
+          : openapi_expect_enumeration(
+                type, base, "type"sv,
+                {"apiKey"sv, "http"sv, "oauth2"sv, "openIdConnect"sv},
+                "The Security Scheme Object type must be a string",
+                "The Security Scheme Object type is not one this "
+                "specification defines")};
 
   openapi_check_optional_string(
       value, base, "description"sv, OPENAPI_HASH_DESCRIPTION,
@@ -285,7 +299,7 @@ inline auto openapi_check_security_scheme(const JSON &value,
   // 3.2 defines the field, so under 3.1 the table below is what has something
   // to say about it rather than its type
   const auto *deprecated{value.try_at("deprecated", OPENAPI_HASH_DEPRECATED)};
-  if (deprecated != nullptr && walk.version == OpenAPIVersion::OPENAPI_3_2) {
+  if (deprecated != nullptr && walk.version >= OpenAPIVersion::OPENAPI_3_2) {
     openapi_expect_boolean(
         *deprecated, base, "deprecated"sv,
         "The Security Scheme Object deprecated must be a boolean");
@@ -419,7 +433,7 @@ inline auto openapi_check_security_scheme_or_reference(const JSON &value,
 inline auto openapi_check_security_scheme_name(const JSON::StringView name,
                                                const Pointer &origin,
                                                OpenAPIWalk &walk) -> void {
-  if (walk.version != OpenAPIVersion::OPENAPI_3_2) {
+  if (walk.version < OpenAPIVersion::OPENAPI_3_2) {
     throw OpenAPIError{
         origin, "The Security Requirement Object must name a declared security "
                 "scheme"};
@@ -471,6 +485,21 @@ inline auto openapi_check_security_requirement(const JSON &value,
         entry.second, openapi_child(base, entry.first),
         "The Security Requirement Object entries must be arrays",
         "The Security Requirement Object entries must hold strings");
+
+    // OpenAPI Specification 3.0.4, Security Requirement Object: "If the
+    // security scheme is of type `"oauth2"` or `"openIdConnect"`, then the
+    // value is a list of scope names required for the execution [...] For
+    // other security scheme types, the array MUST be empty". 3.1.1 relaxes
+    // that very sentence to "the array MAY contain a list of role names which
+    // are required for the execution", so what a name may carry is the
+    // revision's to say
+    if (walk.version < OpenAPIVersion::OPENAPI_3_1 && !entry.second.empty() &&
+        walk.security_schemes_without_scopes.contains(entry.first,
+                                                      entry.hash)) {
+      throw OpenAPIError{openapi_child(base, entry.first),
+                         "The Security Requirement Object entry must be empty "
+                         "for a security scheme of this type"};
+    }
   }
 }
 

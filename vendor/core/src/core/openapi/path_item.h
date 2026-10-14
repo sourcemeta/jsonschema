@@ -177,6 +177,14 @@ inline auto openapi_check_operation(const JSON &value, const Pointer &base,
   }
 
   const auto *responses{value.try_at("responses", OPENAPI_HASH_RESPONSES)};
+  // OpenAPI Specification 3.0.4, Operation Object: "responses | Responses
+  // Object | **REQUIRED**. The list of possible responses as they are returned
+  // from executing this operation". Every release of 3.0 marks it so, where
+  // 3.1.1 Section 4.8.10 leaves it optional
+  if (responses == nullptr && walk.version < OpenAPIVersion::OPENAPI_3_1) {
+    throw OpenAPIError{base, "The Operation Object must declare its responses"};
+  }
+
   if (responses != nullptr) {
     openapi_check_responses(*responses, openapi_child(base, "responses"sv),
                             walk);

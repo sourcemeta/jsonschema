@@ -358,6 +358,18 @@ auto sourcemeta::jsonschema::metaschema(
       throw sourcemeta::core::FileError<
           sourcemeta::core::SchemaAnchorCollisionError>(entry.resolution_base,
                                                         error);
+    } catch (const sourcemeta::core::SchemaDialectImpossibleError &error) {
+      const auto position{entry.positions.get(error.location())};
+      if (position.has_value()) {
+        throw PositionError<sourcemeta::core::FileError<
+            sourcemeta::core::SchemaDialectImpossibleError>>(
+            std::get<0>(position.value()), std::get<1>(position.value()),
+            entry.resolution_base, error);
+      }
+
+      throw sourcemeta::core::FileError<
+          sourcemeta::core::SchemaDialectImpossibleError>(entry.resolution_base,
+                                                          error);
     }
 
     if (summary.failed > failures_before && !continue_on_error) {

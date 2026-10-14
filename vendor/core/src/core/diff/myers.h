@@ -45,8 +45,13 @@ inline auto myers_middle_snake(const std::vector<std::size_t> &original,
   workspace.forward[static_cast<std::size_t>(offset + 1)] = 0;
   workspace.backward[static_cast<std::size_t>(offset + 1)] = 0;
 
-  const auto limit{(original_size + modified_size + 1) / 2};
-  for (std::ptrdiff_t depth{0}; depth <= limit; ++depth) {
+  [[maybe_unused]] const auto limit{(original_size + modified_size + 1) / 2};
+  // A middle snake always lands within the bounds the search was given, so one
+  // of the returns below is always taken. Spelling the search as a loop with no
+  // exit of its own is what says as much to every compiler, which otherwise has
+  // to be told separately that the end of the function is never reached
+  for (std::ptrdiff_t depth{0};; ++depth) {
+    assert(depth <= limit);
     for (std::ptrdiff_t diagonal{-depth}; diagonal <= depth; diagonal += 2) {
       const auto lower{
           workspace.forward[static_cast<std::size_t>(offset + diagonal - 1)]};
@@ -120,12 +125,6 @@ inline auto myers_middle_snake(const std::vector<std::size_t> &original,
       }
     }
   }
-
-  assert(false);
-  return {.original_start = original_start,
-          .modified_start = modified_start,
-          .original_end = original_end,
-          .modified_end = modified_end};
 }
 
 inline auto myers_compare(const std::vector<std::size_t> &original,
@@ -135,6 +134,11 @@ inline auto myers_compare(const std::vector<std::size_t> &original,
                           std::vector<bool> &original_changed,
                           std::vector<bool> &modified_changed,
                           MyersWorkspace &workspace) -> void {
+  // The caller takes off the lines the two sides share at the head and at the
+  // tail before the search begins, but a middle snake can still leave a
+  // sub-problem whose own ends match: a forward search never looks behind
+  // where its snake starts, and a backward search never looks past where its
+  // snake ends, so each recursion trims again for itself
   while (original_start < original_end && modified_start < modified_end &&
          original[original_start] == modified[modified_start]) {
     original_start += 1;

@@ -56,11 +56,11 @@ two spaces. Use `--indentation/-n` to set the width in either case.
 OpenAPI Descriptions
 --------------------
 
-If the input is an OpenAPI spec v3.1 or v3.2, the `bundle` command treats it as
-an [OpenAPI](https://spec.openapis.org/oas/latest.html) description rather than
-as a schema, and bundles it as one: every other document the description spans
-is embedded into the Components Object, and every reference that reached one is
-rewritten to name where it landed. Any other revision, such as v3.0, is
+If the input is an OpenAPI spec v3.0, v3.1 or v3.2, the `bundle` command treats
+it as an [OpenAPI](https://spec.openapis.org/oas/latest.html) description rather
+than as a schema, and bundles it as one: every other document the description
+spans is embedded into the Components Object, and every reference that reached
+one is rewritten to name where it landed. An unsupported `openapi` revision is
 rejected rather than read as a schema.
 The result is ordered exactly as
 [`jsonschema fmt`](./format.markdown) would order it.

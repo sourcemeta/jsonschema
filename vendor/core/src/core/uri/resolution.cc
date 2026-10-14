@@ -103,7 +103,9 @@ auto URI::resolve_from(const URI &base) -> URI & {
   // brackets for that form
   this->ip_literal_ = base.ip_literal_;
 
-  // Reference has empty path
+  // Reference has empty path. Resolution itself can store one, as a lone dot
+  // against a base whose path holds no slash merges to a dot and then removes
+  // it, so this is not the same question as the component being absent
   if (!this->path_.has_value() || this->path_.value().empty()) {
     // Empty path with query or fragment means use base path
     this->path_ = base.path_;

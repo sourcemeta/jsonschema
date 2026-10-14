@@ -11,12 +11,14 @@ public:
       const sourcemeta::core::SchemaWalker &walker,
       const sourcemeta::core::SchemaResolver &resolver) const -> bool override {
     ONLY_CONTINUE_IF(schema.is_object() && !schema.empty());
-    ONLY_CONTINUE_IF(!vocabularies.contains_any(
-                         {SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_0,
-                          SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_1,
-                          SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_2,
-                          SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_3}) ||
-                     !schema.defines("disallow"));
+    ONLY_CONTINUE_IF(
+        !vocabularies.contains_any(
+            {SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_0,
+             SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_1,
+             SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_2,
+             SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_3,
+             SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_3_HYPER}) ||
+        !schema.defines("disallow"));
     ONLY_CONTINUE_IF(vocabularies.contains_any(
         {SchemaVocabularies::Known::JSON_SCHEMA_2020_12_VALIDATION,
          SchemaVocabularies::Known::JSON_SCHEMA_2019_09_VALIDATION,
@@ -24,6 +26,7 @@ public:
          SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_6,
          SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_4,
          SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_3,
+         SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_3_HYPER,
          SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_2,
          SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_1,
          SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_0}));

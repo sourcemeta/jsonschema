@@ -43,7 +43,7 @@ inline auto openapi_check_response(const JSON &value, const Pointer &base,
   // stops requiring
   const auto *description{
       value.try_at("description", OPENAPI_HASH_DESCRIPTION)};
-  if (description == nullptr && walk.version != OpenAPIVersion::OPENAPI_3_2) {
+  if (description == nullptr && walk.version < OpenAPIVersion::OPENAPI_3_2) {
     throw OpenAPIError{base, "The Response Object must declare a description"};
   }
 

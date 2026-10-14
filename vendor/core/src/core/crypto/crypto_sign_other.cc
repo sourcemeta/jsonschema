@@ -192,8 +192,8 @@ auto hmac(const SignatureHashFunction hash, const std::string_view key,
   return secure_digest_message(hash, outer_input);
 }
 
-// RFC 6979 Section 2.3.2 bits2int, which is also the FIPS 186-4 Section 6.4
-// truncation of a bit string to the leftmost order-length bits
+// RFC 6979 Section 2.3.2 bits2int, which is also the FIPS 186-5 Section 6.4.1
+// step 2 truncation of a bit string to the leftmost order-length bits
 auto bits2int(const std::string_view bits, const std::size_t order_bits)
     -> CurveBignum {
   auto value{bignum_from_bytes<CURVE_BIGNUM_CAPACITY>(bits)};
@@ -223,7 +223,7 @@ auto sign_rsa(const PrivateKey::Internal &key,
   return bignum_to_bytes(representative, key.modulus.size());
 }
 
-// The signature for one nonce candidate (FIPS 186-4 Section 6.4.1), returning
+// The signature for one nonce candidate (FIPS 186-5 Section 6.4.1), returning
 // no value when the candidate must be rejected and a fresh one drawn
 auto ecdsa_signature_for_nonce(const CurveBignum &nonce,
                                const CurveBignum &digest_integer,
@@ -242,7 +242,11 @@ auto ecdsa_signature_for_nonce(const CurveBignum &nonce,
   // The ladder leaves its projective output fixed-width rather than normalized,
   // so it does not leak the secret nonce through a value-dependent loop. The
   // nonce lies in [1, n), so the result is never the point at infinity, and the
-  // r == 0 rejection below is the FIPS 186-4 restart condition regardless
+  // r == 0 rejection below draws another candidate regardless, which is what
+  // RFC 6979 Section 3.2 step h asks for. FIPS 186-5 Section 6.4.1 step 11
+  // instead ends in failure where the nonce came from its own deterministic
+  // procedure, that procedure yielding the same nonce again, where advancing
+  // the generator state the way RFC 6979 does yields a different one
   auto r{point_affine_x_constant_time(point, parameters)};
   bignum_reduce(r, parameters.order);
   if (bignum_is_zero(r)) {
@@ -275,7 +279,7 @@ auto ecdsa_signature_for_nonce(const CurveBignum &nonce,
   return signature;
 }
 
-// ECDSA signature generation (FIPS 186-4 Section 6.4.1) with the per-signature
+// ECDSA signature generation (FIPS 186-5 Section 6.4.1) with the per-signature
 // nonce derived deterministically from the private key and the message digest,
 // so that the signature never depends on the quality of the random generator
 // (RFC 6979 Section 3.2)
@@ -337,10 +341,13 @@ auto sign_ecdsa(const EllipticCurve curve, const SignatureHashFunction hash,
       return signature;
     }
 
-    // RFC 6979 Section 3.2 step h: reseed before the next candidate
-    SecureString reseed{hmac_value};
-    reseed.push_back('\x00');
-    hmac_key = hmac(hash, hmac_key, reseed);
+    // RFC 6979 Section 3.2 step h, sub-step 3 advances the generator state
+    // before drawing the next candidate. Section 3.3 notes that the reseeding
+    // the underlying construction offers is never invoked here, so this is
+    // that state advance and not a reseed
+    SecureString key_input{hmac_value};
+    key_input.push_back('\x00');
+    hmac_key = hmac(hash, hmac_key, key_input);
     hmac_value = hmac(hash, hmac_key, hmac_value);
   }
 
@@ -485,61 +492,22 @@ auto make_private_key(const std::string_view pem) -> std::optional<PrivateKey> {
 
   switch (parsed->kind) {
     case PKCS8KeyKind::RSA: {
-      // RFC 8017 Appendix A.1.2: RSAPrivateKey is a SEQUENCE of version,
-      // modulus, publicExponent, privateExponent, and the further primes
-      const auto sequence{der_read(parsed->key)};
-      if (!sequence.has_value() || sequence->tag != 0x30) {
-        return std::nullopt;
-      }
-
-      const auto version{der_read(sequence->content)};
-      if (!version.has_value() || version->tag != 0x02) {
-        return std::nullopt;
-      }
-
-      const auto modulus{der_read(version->rest)};
-      if (!modulus.has_value() || modulus->tag != 0x02) {
-        return std::nullopt;
-      }
-
-      const auto public_exponent{der_read(modulus->rest)};
-      if (!public_exponent.has_value() || public_exponent->tag != 0x02) {
-        return std::nullopt;
-      }
-
-      const auto private_exponent{der_read(public_exponent->rest)};
-      if (!private_exponent.has_value() || private_exponent->tag != 0x02) {
-        return std::nullopt;
-      }
-
-      // Decode each field as a canonical non-negative DER INTEGER, so a
-      // negative or non-canonically encoded value cannot be silently
-      // reinterpreted as a different positive number and used for signing
-      const auto modulus_value{der_unsigned_integer(modulus->content)};
-      const auto public_exponent_value{
-          der_unsigned_integer(public_exponent->content)};
-      const auto private_exponent_value{
-          der_unsigned_integer(private_exponent->content)};
-      if (!modulus_value.has_value() || !public_exponent_value.has_value() ||
-          !private_exponent_value.has_value() || modulus_value->empty() ||
-          private_exponent_value->empty() ||
-          modulus_value->size() > MAXIMUM_KEY_BYTES ||
-          private_exponent_value->size() > MAXIMUM_KEY_BYTES ||
-          !rsa_public_exponent_acceptable(public_exponent_value.value(),
-                                          modulus_value.value())) {
-        return std::nullopt;
-      }
-
+      // RFC 8017 Appendix A.1.2 has RSAPrivateKey be a SEQUENCE of version,
+      // modulus, publicExponent, privateExponent and the further primes, and
+      // reading it apart is what admitted this key in the first place. Reading
+      // it again here would only repeat checks already made, which left this
+      // arm unable to turn anything away and the tests that name it covering
+      // the gate rather than the arm
       // RFC 8017 Appendix A.1.2: the two-prime form carries the CRT components
       // after the private exponent, which the private operation uses to take
       // the cheaper path of RFC 8017 Section 5.1.2 step 2.b
       const auto crt{
-          read_rsa_crt_components(version->content, private_exponent->rest)};
+          read_rsa_crt_components(parsed->rsa.version, parsed->rsa.rest)};
       return PrivateKey{new PrivateKey::Internal{
           .kind = PrivateKey::Type::RSA,
-          .modulus = std::string{modulus_value.value()},
-          .public_exponent = std::string{public_exponent_value.value()},
-          .private_exponent = std::string{private_exponent_value.value()},
+          .modulus = std::string{parsed->rsa.modulus},
+          .public_exponent = std::string{parsed->rsa.public_exponent},
+          .private_exponent = std::string{parsed->rsa.private_exponent},
           .prime1 = crt.has_value() ? std::string{crt->prime1} : std::string{},
           .prime2 = crt.has_value() ? std::string{crt->prime2} : std::string{},
           .exponent1 =
@@ -575,19 +543,9 @@ auto make_private_key(const std::string_view pem) -> std::optional<PrivateKey> {
       }
 
       const auto stripped_scalar{strip_left(scalar->content, '\x00')};
-      const auto scalar_width{curve_field_bytes(parsed->curve)};
-      // A zero or oversized scalar is not a valid private key
-      if (stripped_scalar.empty() || stripped_scalar.size() > scalar_width) {
-        return std::nullopt;
-      }
-
-      auto padded_scalar{pad_left(stripped_scalar, scalar_width, '\x00')};
+      auto padded_scalar{
+          pad_left(stripped_scalar, curve_field_bytes(parsed->curve), '\x00')};
       const SecureStringScope padded_scalar_scope{padded_scalar};
-      // A scalar at or above the curve order is not a valid private key, so it
-      // is rejected before it drives the public point recovery
-      if (!ec_private_scalar_in_range(padded_scalar, parsed->curve)) {
-        return std::nullopt;
-      }
       auto point{ec_public_from_scalar(parsed->curve, padded_scalar)};
       return PrivateKey{
           new PrivateKey::Internal{.kind = PrivateKey::Type::EllipticCurve,
@@ -833,12 +791,9 @@ auto derive_public_key(const PrivateKey &key) -> std::optional<PublicKey> {
       return make_rsa_public_key(internal->modulus, internal->public_exponent);
     case PrivateKey::Type::EllipticCurve:
       // The public coordinates are populated for every elliptic curve private
-      // key, whether supplied directly or recomputed from a PEM scalar at parse
-      // time, so the guard is a defensive check rather than a common path
-      if (internal->coordinate_x.empty()) {
-        return std::nullopt;
-      }
-
+      // key, whether supplied directly or recomputed from a PEM scalar at
+      // parse time
+      assert(!internal->coordinate_x.empty());
       return make_ec_public_key(internal->elliptic_curve,
                                 internal->coordinate_x, internal->coordinate_y);
     case PrivateKey::Type::Edwards:

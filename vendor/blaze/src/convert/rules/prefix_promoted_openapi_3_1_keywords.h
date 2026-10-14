@@ -1,7 +1,9 @@
 class PrefixPromotedOpenAPI31Keywords final : public SchemaTransformRule {
 public:
-  PrefixPromotedOpenAPI31Keywords()
-      : SchemaTransformRule{"prefix_promoted_openapi_3_1_keywords"} {};
+  PrefixPromotedOpenAPI31Keywords(
+      std::vector<std::string_view> &&keywords_left_alone = {})
+      : SchemaTransformRule{"prefix_promoted_openapi_3_1_keywords"},
+        keywords_left_alone_{std::move(keywords_left_alone)} {};
 
   [[nodiscard]] auto
   condition(const sourcemeta::core::JSON &schema,
@@ -24,8 +26,14 @@ public:
     ONLY_CONTINUE_IF(
         promoted_keyword_is_author_data(schema, OPENAPI_3_1_DIALECT));
 
-    return schema.defines_any(
-        {"example", "discriminator", "externalDocs", "xml"});
+    for (const auto &keyword : KEYWORDS) {
+      if (schema.defines(sourcemeta::core::JSON::String{keyword}) &&
+          !this->is_left_alone(schema, keyword)) {
+        return true;
+      }
+    }
+
+    return false;
   }
 
   auto transform(sourcemeta::core::JSON &schema, const Site &) const
@@ -33,7 +41,8 @@ public:
     this->renames_.clear();
     for (const auto &keyword : KEYWORDS) {
       const std::string keyword_name{keyword};
-      if (!schema.defines(keyword_name)) {
+      if (!schema.defines(keyword_name) ||
+          this->is_left_alone(schema, keyword)) {
         continue;
       }
 
@@ -63,5 +72,30 @@ private:
   static inline const std::array<std::string_view, 4> KEYWORDS{
       {"example", "discriminator", "externalDocs", "xml"}};
 
+  // A keyword the caller asked to carry across as the keyword it already was,
+  // rather than as the author data it would otherwise be read as.
+  //
+  // The caller names the dialect of a document, not of each position in it, and
+  // a document may embed a resource written in another dialect whose members
+  // are exactly the author data this rule exists to protect. What tells the two
+  // apart is the value: the source dialect constrained the keyword it named, so
+  // one carrying a shape that dialect never allowed was never that keyword
+  [[nodiscard]] auto is_left_alone(const sourcemeta::core::JSON &schema,
+                                   const std::string_view keyword) const
+      -> bool {
+    if (std::ranges::find(this->keywords_left_alone_, keyword) ==
+        this->keywords_left_alone_.cend()) {
+      return false;
+    }
+
+    // Three of these name an object and `example` names anything at all. A
+    // value of another shape was never the keyword it is named after, and
+    // carrying it across as one would leave an output the target's own
+    // meta-schema rejects
+    return keyword == "example" ||
+           schema.at(sourcemeta::core::JSON::String{keyword}).is_object();
+  }
+
+  const std::vector<std::string_view> keywords_left_alone_;
   mutable std::unordered_map<std::string, std::string> renames_;
 };

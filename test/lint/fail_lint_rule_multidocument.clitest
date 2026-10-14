@@ -1,0 +1,38 @@
+WRITE rule.yaml UNTIL EOF
+title: require_type
+---
+title: another
+EOF
+
+WRITE schema.json UNTIL EOF
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "string"
+}
+EOF
+
+// Not supported
+RUN lint --rule rule.yaml schema.json STDIN /dev/null IN . INTO result_0.txt EXPECTING 3
+
+REPLACE $CWD WITH '[CWD]' IN result_0.txt
+
+WRITE expected_0.txt UNTIL EOF
+2> error: A lint rule cannot be read from input with multiple documents
+2>   at file path [CWD]/rule.yaml
+EOF
+
+COMPARE result_0.txt AGAINST expected_0.txt
+
+// Not supported
+RUN lint --rule rule.yaml --json schema.json STDIN /dev/null IN . INTO result_1.txt EXPECTING 3
+
+REPLACE $CWD WITH '[CWD]' IN result_1.txt
+
+WRITE expected_1.txt UNTIL EOF
+1> {
+1>   "error": "A lint rule cannot be read from input with multiple documents",
+1>   "filePath": "[CWD]/rule.yaml"
+1> }
+EOF
+
+COMPARE result_1.txt AGAINST expected_1.txt

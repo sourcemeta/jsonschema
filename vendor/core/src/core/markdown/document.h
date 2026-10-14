@@ -2,6 +2,7 @@
 #define SOURCEMETA_CORE_MARKDOWN_DOCUMENT_H_
 
 #include <algorithm> // std::max
+#include <cassert>   // assert
 #include <cstddef>   // std::size_t
 #include <cstdint>   // std::int32_t, std::uint8_t, std::uint16_t, std::uint32_t
 #include <cstring>   // std::memcpy
@@ -236,7 +237,8 @@ struct Document {
     sibling_node.previous = node.previous;
     if (node.previous != NO_NODE) {
       this->nodes[node.previous].next = sibling;
-    } else if (node.parent != NO_NODE) {
+    } else {
+      assert(node.parent != NO_NODE);
       this->nodes[node.parent].first_child = sibling;
     }
 
@@ -253,7 +255,8 @@ struct Document {
     sibling_node.next = node.next;
     if (node.next != NO_NODE) {
       this->nodes[node.next].previous = sibling;
-    } else if (node.parent != NO_NODE) {
+    } else {
+      assert(node.parent != NO_NODE);
       this->nodes[node.parent].last_child = sibling;
     }
 

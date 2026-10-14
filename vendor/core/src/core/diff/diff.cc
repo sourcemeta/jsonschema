@@ -69,6 +69,31 @@ auto to_identities(
   }
 }
 
+// The search is given its workspace here rather than alongside the result, so
+// that the two buffers it sizes to the span of the change are given up before
+// anything is made of what the search found
+auto compare_with_myers(const std::vector<std::size_t> &original_identities,
+                        const std::vector<std::size_t> &modified_identities,
+                        const std::size_t prefix,
+                        const std::size_t original_end,
+                        const std::size_t modified_end,
+                        std::vector<bool> &original_changed,
+                        std::vector<bool> &modified_changed) -> void {
+  sourcemeta::core::internal::MyersWorkspace workspace;
+  // A search only needs its workspace once both sides have something left, as
+  // any other case resolves to a plain insertion or deletion
+  if (original_end > prefix && modified_end > prefix) {
+    const auto span{(original_end - prefix) + (modified_end - prefix)};
+    workspace.forward.assign((2 * span) + 3, 0);
+    workspace.backward.assign((2 * span) + 3, 0);
+    workspace.offset = static_cast<std::ptrdiff_t>(span + 1);
+  }
+
+  sourcemeta::core::internal::myers_compare(
+      original_identities, prefix, original_end, modified_identities, prefix,
+      modified_end, original_changed, modified_changed, workspace);
+}
+
 // Slide every run of changed lines as far towards the end of the input as the
 // surrounding lines allow, which is what makes paired changes line up
 auto compact_changes(const std::vector<std::string_view> &lines,
@@ -225,22 +250,11 @@ auto diff(const std::string_view original, const std::string_view modified,
   std::vector<bool> modified_changed(modified_size, false);
 
   switch (algorithm) {
-    case Diff::Algorithm::Myers: {
-      internal::MyersWorkspace workspace;
-      // A search only needs its workspace once both sides have something left,
-      // as any other case resolves to a plain insertion or deletion
-      if (original_end > prefix && modified_end > prefix) {
-        const auto span{(original_end - prefix) + (modified_end - prefix)};
-        workspace.forward.assign((2 * span) + 3, 0);
-        workspace.backward.assign((2 * span) + 3, 0);
-        workspace.offset = static_cast<std::ptrdiff_t>(span + 1);
-      }
-
-      internal::myers_compare(original_identities, prefix, original_end,
-                              modified_identities, prefix, modified_end,
-                              original_changed, modified_changed, workspace);
+    case Diff::Algorithm::Myers:
+      compare_with_myers(original_identities, modified_identities, prefix,
+                         original_end, modified_end, original_changed,
+                         modified_changed);
       break;
-    }
   }
 
   compact_changes(result.original, result.original_ends_with_newline,

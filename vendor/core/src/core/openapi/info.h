@@ -32,6 +32,21 @@ constexpr std::array<JSON::StringView, 3> OPENAPI_CONTACT_FIELDS{
 constexpr std::array<JSON::StringView, 3> OPENAPI_LICENSE_FIELDS{
     {"name"sv, "identifier"sv, "url"sv}};
 
+// OpenAPI Specification 3.1.1, Section 4.8.4 adds `identifier`. 3.0.4, License
+// Object, tables `name` and `url` alone, and the document meta-schema closes
+// that Object, so the field is one 3.0 turns down rather than ignores
+constexpr std::array<JSON::StringView, 1> OPENAPI_LICENSE_FIELDS_FROM_3_1{
+    {"identifier"sv}};
+static_assert(openapi_every_field_is_tabled(OPENAPI_LICENSE_FIELDS_FROM_3_1,
+                                            OPENAPI_LICENSE_FIELDS));
+
+// OpenAPI Specification 3.1.1, Section 4.8.2 adds `summary`. 3.0.4, Info
+// Object, tables six fields without it, and closes that Object likewise
+constexpr std::array<JSON::StringView, 1> OPENAPI_INFO_FIELDS_FROM_3_1{
+    {"summary"sv}};
+static_assert(openapi_every_field_is_tabled(OPENAPI_INFO_FIELDS_FROM_3_1,
+                                            OPENAPI_INFO_FIELDS));
+
 // OpenAPI Specification 3.1.1, Section 4.8.3: "Contact information for the
 // exposed API"
 inline auto openapi_parse_contact(const JSON &value, const Pointer &base,
@@ -90,6 +105,10 @@ inline auto openapi_parse_license(const JSON &value, const Pointer &base,
       value, OPENAPI_LICENSE_FIELDS, base,
       "The License Object does not define this field");
 
+  openapi_reject_fields_of_a_later_revision(
+      value, OPENAPI_LICENSE_FIELDS_FROM_3_1, OpenAPIVersion::OPENAPI_3_1, base,
+      "The License Object does not define this field", walk);
+
   OpenAPILicense result;
 
   // OpenAPI Specification 3.1.1, Section 4.8.4: "name | string | REQUIRED. The
@@ -145,6 +164,10 @@ inline auto openapi_parse_info(const JSON &document, OpenAPIWalk &walk)
 
   openapi_reject_unknown_fields(value, OPENAPI_INFO_FIELDS, base,
                                 "The Info Object does not define this field");
+
+  openapi_reject_fields_of_a_later_revision(
+      value, OPENAPI_INFO_FIELDS_FROM_3_1, OpenAPIVersion::OPENAPI_3_1, base,
+      "The Info Object does not define this field", walk);
 
   OpenAPIInfo result;
 

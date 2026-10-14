@@ -24,7 +24,11 @@ auto to_cng_algorithm(const RSAOAEPHash hash) -> LPCWSTR {
       return BCRYPT_SHA256_ALGORITHM;
   }
 
+    // Clang settles that no other value arrives, so only GCC and MSVC
+    // need to be told that the end of this function is never reached
+#if !defined(__clang__)
   std::unreachable();
+#endif
 }
 
 auto as_buffer(const std::string_view value) -> PUCHAR {

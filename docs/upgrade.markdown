@@ -26,9 +26,20 @@ output.
 The dialects it walks through are the official JSON Schema ones up to 2020-12,
 and then the OpenAPI Schema Object dialects, each of which is 2020-12 plus a
 vocabulary of its own. Those sit past the default, so a schema lands on one of
-them only when it is asked for. Note this upgrades a *schema* onto an OpenAPI
-dialect, and is a separate matter from reading an OpenAPI description, which
-this command does not do.
+them only when it is asked for. The v3.0 Schema Object is not among them: it is
+a dialect of its own rather than 2020-12 with something added, so there is no
+ladder leading onto it. Note this upgrades a *schema* onto an OpenAPI dialect,
+and is a separate matter from reading an OpenAPI description, which this
+command does not do.
+
+A v3.0 Schema Object is a dialect this command upgrades *from*, however. Since
+v3.0 has no `$schema` keyword to declare itself with, name the dialect with
+`--default-dialect/-d`:
+
+```sh
+jsonschema upgrade path/to/my/schema.json \
+  --default-dialect tag:spec.openapis.org,2024-10-18:oas/3.0/dialect
+```
 
 The result is printed in the format the input was written in: a YAML schema
 upgrades into YAML and a JSON schema into JSON. A YAML result keeps the width

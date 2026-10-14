@@ -26,7 +26,8 @@ public:
          SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_3,
          SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_3_HYPER,
          SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_2,
-         SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_1}));
+         SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_1,
+         SchemaVocabularies::Known::OPENAPI_3_0_BASE}));
     ONLY_CONTINUE_IF(schema.is_object());
     ONLY_CONTINUE_IF(schema.defines("title"));
     ONLY_CONTINUE_IF(schema.at("title").is_string());

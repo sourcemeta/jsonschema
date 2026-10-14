@@ -38,7 +38,11 @@ auto to_cng_algorithm(
       return BCRYPT_SHA512_ALGORITHM;
   }
 
+    // Clang settles that no other value arrives, so only GCC and MSVC
+    // need to be told that the end of this function is never reached
+#if !defined(__clang__)
   std::unreachable();
+#endif
 }
 
 auto to_ecdsa_algorithm(const sourcemeta::core::EllipticCurve curve) noexcept
@@ -52,7 +56,11 @@ auto to_ecdsa_algorithm(const sourcemeta::core::EllipticCurve curve) noexcept
       return BCRYPT_ECDSA_P521_ALGORITHM;
   }
 
+    // Clang settles that no other value arrives, so only GCC and MSVC
+    // need to be told that the end of this function is never reached
+#if !defined(__clang__)
   std::unreachable();
+#endif
 }
 
 auto to_ecc_public_magic(const sourcemeta::core::EllipticCurve curve) noexcept
@@ -66,7 +74,11 @@ auto to_ecc_public_magic(const sourcemeta::core::EllipticCurve curve) noexcept
       return BCRYPT_ECDSA_PUBLIC_P521_MAGIC;
   }
 
+    // Clang settles that no other value arrives, so only GCC and MSVC
+    // need to be told that the end of this function is never reached
+#if !defined(__clang__)
   std::unreachable();
+#endif
 }
 
 struct KeyPair {
@@ -355,7 +367,11 @@ auto eddsa_verify(const PublicKey &key, const std::string_view message,
       return edwards448_verify(internal->edwards_point, message, signature);
   }
 
+    // Clang settles that no other value arrives, so only GCC and MSVC
+    // need to be told that the end of this function is never reached
+#if !defined(__clang__)
   std::unreachable();
+#endif
 }
 
 auto rsa_public_components(const PublicKey &key)

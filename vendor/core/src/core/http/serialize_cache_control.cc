@@ -68,7 +68,11 @@ auto visibility_directive(
       return "private";
   }
 
+    // Clang settles that no other value arrives, so only GCC and MSVC
+    // need to be told that the end of this function is never reached
+#if !defined(__clang__)
   std::unreachable();
+#endif
 }
 
 // RFC 9110 §5.1: field-name = token, so a name outside that set could not be

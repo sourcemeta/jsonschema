@@ -1,8 +1,11 @@
 #include <sourcemeta/core/text.h>
 
+#include <cassert>     // assert
 #include <cstddef>     // std::size_t
+#include <cstdint>     // std::uint8_t
 #include <filesystem>  // std::filesystem::path
 #include <optional>    // std::optional, std::nullopt
+#include <span>        // std::span
 #include <string>      // std::string
 #include <string_view> // std::string_view
 #include <utility>     // std::pair, std::move
@@ -258,16 +261,31 @@ auto hex_to_bytes(const std::string_view input, const bool allow_odd_length)
   return result;
 }
 
-auto bytes_to_hex(const std::string_view input) -> std::string {
+auto bytes_to_hex(const std::span<const std::uint8_t> input,
+                  const std::span<char> output) noexcept -> void {
+  assert(output.size() == input.size() * 2);
   static constexpr std::string_view DIGITS{"0123456789abcdef"};
-  std::string result;
-  result.reserve(input.size() * 2);
-  for (const auto character : input) {
-    const auto byte{static_cast<unsigned char>(character)};
-    result.push_back(DIGITS[byte >> 4U]);
-    result.push_back(DIGITS[byte & 0x0fU]);
+  for (std::size_t index = 0; index < input.size(); ++index) {
+    output[index * 2] = DIGITS[input[index] >> 4U];
+    output[(index * 2) + 1] = DIGITS[input[index] & 0x0fU];
   }
+}
 
+auto bytes_to_hex(const std::string_view input) -> std::string {
+  std::string result;
+  // Writing into uninitialised storage rather than resizing first, as every
+  // digest in this project spells its output through here
+  result.resize_and_overwrite(
+      input.size() * 2,
+      [input](char *const buffer, const std::size_t count) -> std::size_t {
+        // The caller handed text rather than bytes, so this is where the two
+        // views of the same storage meet
+        bytes_to_hex(std::span{reinterpret_cast<const std::uint8_t *>( // NOLINT
+                                   input.data()),
+                               input.size()},
+                     std::span{buffer, count});
+        return count;
+      });
   return result;
 }
 

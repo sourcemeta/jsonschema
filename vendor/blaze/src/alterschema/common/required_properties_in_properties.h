@@ -29,7 +29,8 @@ public:
          vocabularies.contains_any(
              {SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_7,
               SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_6,
-              SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_4})) &&
+              SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_4,
+              SchemaVocabularies::Known::OPENAPI_3_0_BASE})) &&
         schema.is_object());
 
     const auto *required{schema.try_at("required")};
@@ -68,7 +69,8 @@ public:
     for (const auto &location : result.locations) {
       const auto &property{
           schema.at("required").at(location.at(1).to_index()).to_string()};
-      schema.at("properties").assign(property, sourcemeta::core::JSON{true});
+      schema.at("properties")
+          .assign(property, sourcemeta::core::JSON::make_object());
     }
   }
 

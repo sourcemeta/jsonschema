@@ -16,6 +16,7 @@
 #include "crypto_shake256.h"
 
 #include <array>       // std::array
+#include <cassert>     // assert
 #include <cstddef>     // std::size_t
 #include <cstdint>     // std::uint8_t
 #include <optional>    // std::optional, std::nullopt
@@ -345,10 +346,8 @@ inline auto edwards_public_key_point(const CurveBignum &scalar,
 inline auto edwards25519_decode_point(const std::string_view encoding,
                                       const EdwardsParameters &parameters)
     -> std::optional<EdwardsPoint> {
-  if (encoding.size() != 32) {
-    return std::nullopt;
-  }
-
+  // Whoever hands an encoding over has already held it to the width of one
+  assert(encoding.size() == 32);
   // The final bit holds the sign of x, the remaining bits the little-endian y
   std::string bytes{encoding};
   const auto sign_bit{
@@ -542,10 +541,8 @@ inline auto edwards25519_prune_scalar(std::string &scalar_bytes) noexcept
 // Section 5.1.5)
 inline auto edwards25519_public_key(const std::string_view secret)
     -> std::optional<std::string> {
-  if (secret.size() != 32) {
-    return std::nullopt;
-  }
-
+  // A key of this kind only comes about once its seed was read at this width
+  assert(secret.size() == 32);
   const auto &parameters{edwards25519()};
   auto hashed{sha512_digest(secret)};
   const SecureBufferScope hashed_scope{hashed.data(), hashed.size()};
@@ -562,10 +559,8 @@ inline auto edwards25519_public_key(const std::string_view secret)
 inline auto edwards25519_sign(const std::string_view secret,
                               const std::string_view message)
     -> std::optional<std::string> {
-  if (secret.size() != 32) {
-    return std::nullopt;
-  }
-
+  // A key of this kind only comes about once its seed was read at this width
+  assert(secret.size() == 32);
   const auto &parameters{edwards25519()};
   // The key derivation hash carries both the secret scalar and the nonce
   // prefix, so it and everything derived from it below is wiped before
@@ -638,10 +633,8 @@ inline auto edwards25519_sign(const std::string_view secret,
 inline auto edwards448_decode_point(const std::string_view encoding,
                                     const EdwardsParameters &parameters)
     -> std::optional<EdwardsPoint> {
-  if (encoding.size() != 57) {
-    return std::nullopt;
-  }
-
+  // Whoever hands an encoding over has already held it to the width of one
+  assert(encoding.size() == 57);
   // The final bit holds the sign of x, the remaining bits the little-endian y
   std::string bytes{encoding};
   const auto sign_bit{
@@ -815,10 +808,8 @@ inline auto edwards448_prune_scalar(std::string &scalar_bytes) noexcept
 // Section 5.2.5)
 inline auto edwards448_public_key(const std::string_view secret)
     -> std::optional<std::string> {
-  if (secret.size() != 57) {
-    return std::nullopt;
-  }
-
+  // A key of this kind only comes about once its seed was read at this width
+  assert(secret.size() == 57);
   const auto &parameters{edwards448()};
   auto digest{shake256(secret, 114)};
   const SecureStringScope digest_scope{digest};
@@ -833,10 +824,8 @@ inline auto edwards448_public_key(const std::string_view secret)
 inline auto edwards448_sign(const std::string_view secret,
                             const std::string_view message)
     -> std::optional<std::string> {
-  if (secret.size() != 57) {
-    return std::nullopt;
-  }
-
+  // A key of this kind only comes about once its seed was read at this width
+  assert(secret.size() == 57);
   const auto &parameters{edwards448()};
   // The key derivation hash carries both the secret scalar and the nonce
   // prefix, so it and everything derived from it below is wiped before

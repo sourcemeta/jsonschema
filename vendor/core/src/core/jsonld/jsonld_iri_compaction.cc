@@ -5,6 +5,7 @@
 #include "jsonld_algorithms.h"
 #include "jsonld_keywords.h"
 
+#include <cassert>  // assert
 #include <optional> // std::optional, std::nullopt
 #include <vector>   // std::vector
 
@@ -210,9 +211,9 @@ auto compact_iri(const ActiveContext &active_context,
           common_type = JSON::String{KEYWORD_NONE};
         }
       }
-      if (!common_language.has_value()) {
-        common_language = JSON::String{KEYWORD_NONE};
-      }
+      // An empty list takes the default language, and any other settles one
+      // from its first item, so the language is spoken for either way
+      assert(common_language.has_value());
       if (!common_type.has_value()) {
         common_type = JSON::String{KEYWORD_NONE};
       }

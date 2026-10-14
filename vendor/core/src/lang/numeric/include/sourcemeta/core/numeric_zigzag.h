@@ -18,8 +18,8 @@ template <typename T> auto zigzag_encode(const T &value) {
     if (value >= Decimal{0}) {
       return value * Decimal{2};
     }
-    const Decimal absolute{value.is_signed() ? -value : value};
-    return (absolute * Decimal{2}) - Decimal{1};
+    assert(value.is_signed());
+    return ((-value) * Decimal{2}) - Decimal{1};
   } else {
     const auto signed_value{static_cast<std::int64_t>(value)};
     if (signed_value >= 0) {

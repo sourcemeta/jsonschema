@@ -15,6 +15,7 @@
 #include <algorithm>   // std::max, std::min
 #include <array>       // std::array
 #include <bit>         // std::bit_width
+#include <cassert>     // assert
 #include <cstddef>     // std::size_t
 #include <cstdint>     // std::uint8_t, std::uint64_t
 #include <optional>    // std::optional
@@ -115,12 +116,11 @@ inline auto bignum_from_u64(const std::uint64_t value) noexcept
 template <std::size_t Capacity = BIGNUM_CAPACITY>
 inline auto bignum_from_hex(const std::string_view hex)
     -> BasicBignum<Capacity> {
-  // An odd length is decoded as if a zero nibble had been prepended
+  // An odd length is decoded as if a zero nibble had been prepended. Every
+  // number read this way is one written out in this source, so a spelling that
+  // is no number at all is a mistake here rather than anything a caller did
   const auto bytes{hex_to_bytes(hex, true)};
-  if (!bytes.has_value()) {
-    return BasicBignum<Capacity>{};
-  }
-
+  assert(bytes.has_value());
   return bignum_from_bytes<Capacity>(bytes.value());
 }
 
@@ -249,8 +249,10 @@ inline auto bignum_reduce(BasicBignum<Capacity> &value,
   const auto divisor_words{modulus.size};
 
   // A zero modulus defines no residue to reduce into, and the division below
-  // reads the top two divisor words. An RSA modulus is only bounded from above
-  // on import, so a key carrying a one- or two-octet modulus reaches here
+  // would read past the divisor looking for its top two words. Nothing here
+  // reduces into one, as every modulus is the prime or the order of a curve or
+  // the modulus of a key, but turning it away is what holds those reads inside
+  // the divisor whether or not assertions are compiled in
   if (divisor_words == 0) {
     return;
   }

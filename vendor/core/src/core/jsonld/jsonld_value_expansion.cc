@@ -1,6 +1,7 @@
 #include "jsonld_algorithms.h"
 #include "jsonld_keywords.h"
 
+#include <cassert>  // assert
 #include <optional> // std::optional
 
 namespace sourcemeta::core {
@@ -9,12 +10,11 @@ namespace sourcemeta::core {
 auto expand_value(ExpansionState &state, ActiveContext &active_context,
                   const std::optional<JSON::String> &active_property,
                   const JSON &value) -> JSON {
+  assert(active_property.has_value());
   const TermDefinition *definition{nullptr};
-  if (active_property.has_value()) {
-    const auto iterator{active_context.terms.find(active_property.value())};
-    if (iterator != active_context.terms.cend()) {
-      definition = &iterator->second;
-    }
+  const auto iterator{active_context.terms.find(active_property.value())};
+  if (iterator != active_context.terms.cend()) {
+    definition = &iterator->second;
   }
 
   if (definition != nullptr && definition->type_mapping.has_value() &&

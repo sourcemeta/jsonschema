@@ -4,6 +4,7 @@
 #include "ip_helpers.h"
 
 #include <array>       // std::array
+#include <cassert>     // assert
 #include <cstddef>     // std::size_t
 #include <cstdint>     // std::uint8_t, std::uint16_t
 #include <optional>    // std::optional, std::nullopt
@@ -86,9 +87,11 @@ auto is_ipv6(const std::string_view address) -> bool {
         continue;
       }
       position += 1;
-      if (position >= size) {
-        return false;
-      }
+      // An address whose last character is a colon is turned away above unless
+      // the compression takes the last two, and the branch over the
+      // compression is taken before this one, so a colon reached here always
+      // has a group after it
+      assert(position < size);
     }
   }
 

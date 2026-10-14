@@ -36,13 +36,21 @@ inline auto openapi_check_reference(const JSON &value, const Pointer &base,
       "string",
       "The Reference Object identifier must be a URI reference")};
 
-  openapi_check_optional_string(
-      value, base, "summary"sv, OPENAPI_HASH_SUMMARY,
-      "The Reference Object summary must be a string");
+  // OpenAPI Specification 3.1.1, Section 4.8.23 adds `summary` and
+  // `description`. No release of 3.0 tables either, and 3.0 says of this
+  // Object exactly what 3.1 does: "This object cannot be extended with
+  // additional properties, and any properties added SHALL be ignored". So
+  // under 3.0 these are properties added rather than fields, and reading them
+  // at all would turn down a document the specification asks us to accept
+  if (walk.version >= OpenAPIVersion::OPENAPI_3_1) {
+    openapi_check_optional_string(
+        value, base, "summary"sv, OPENAPI_HASH_SUMMARY,
+        "The Reference Object summary must be a string");
 
-  openapi_check_optional_string(
-      value, base, "description"sv, OPENAPI_HASH_DESCRIPTION,
-      "The Reference Object description must be a string");
+    openapi_check_optional_string(
+        value, base, "description"sv, OPENAPI_HASH_DESCRIPTION,
+        "The Reference Object description must be a string");
+  }
 
   // OpenAPI Specification 3.1.1, Section 4.8.23: "This object cannot be
   // extended with additional properties, and any properties added SHALL be

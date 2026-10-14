@@ -25,10 +25,13 @@ auto run_expansion(ExpansionState &state, ActiveContext &active_context,
   }
 
   if (expanded.is_object()) {
-    if (expanded.empty() || (expanded.object_size() == 1 &&
-                             expanded.defines(KEYWORD_ID, KEYWORD_ID_HASH))) {
-      return JSON::make_array();
-    }
+    // A map that names nothing but which node it is, or nothing at all, is
+    // already dropped where free-floating values are, and the only member
+    // that stands in for the whole document carries an array, so whatever
+    // arrives here as a map has something left to say
+    assert(!expanded.empty() &&
+           !(expanded.object_size() == 1 &&
+             expanded.defines(KEYWORD_ID, KEYWORD_ID_HASH)));
     auto result{JSON::make_array()};
     result.push_back(std::move(expanded));
     return result;
@@ -53,6 +56,23 @@ auto initialise_expansion(const JSONLDResolver &resolver,
   if (!base_iri.empty()) {
     active_context.base = JSON::String{base_iri};
     state.document_base = JSON::String{base_iri};
+  }
+}
+
+// Process the expansion context the caller supplies. It is not part of the
+// input document, and the error contract is that a pointer locates a position
+// in that document, so what goes wrong in it reports at the document root. An
+// empty pointer alone is not enough, as the terms it defines build positions
+// of their own from names only this context carries, and so do the scoped
+// contexts among them once they are processed after the fact
+auto process_expansion_context(ExpansionState &state,
+                               ActiveContext &active_context,
+                               const JSON &context) -> void {
+  const ForeignContextScope origin{state, to_pointer(EMPTY_WEAK_POINTER)};
+  try {
+    process_context(state, active_context, context, EMPTY_WEAK_POINTER);
+  } catch (const JSONLDError &error) {
+    throw JSONLDError(error.what(), EMPTY_WEAK_POINTER);
   }
 }
 
@@ -81,9 +101,7 @@ auto jsonld_expand(const JSON &input, const JSON &expand_context,
               expand_context.defines(KEYWORD_CONTEXT, KEYWORD_CONTEXT_HASH)
           ? expand_context.at(KEYWORD_CONTEXT, KEYWORD_CONTEXT_HASH)
           : expand_context};
-  // The external expansion context is not part of the input document, so its
-  // errors carry an empty pointer.
-  process_context(state, active_context, context, EMPTY_WEAK_POINTER);
+  process_expansion_context(state, active_context, context);
   return run_expansion(state, active_context, input);
 }
 

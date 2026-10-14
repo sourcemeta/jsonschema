@@ -188,6 +188,18 @@ auto sourcemeta::jsonschema::bundle(const sourcemeta::core::Options &options)
     throw sourcemeta::core::FileError<
         sourcemeta::core::SchemaAnchorCollisionError>(schema_display_path,
                                                       error);
+  } catch (const sourcemeta::core::SchemaDialectImpossibleError &error) {
+    const auto position{parsed_schema.positions.get(error.location())};
+    if (position.has_value()) {
+      throw PositionError<sourcemeta::core::FileError<
+          sourcemeta::core::SchemaDialectImpossibleError>>(
+          std::get<0>(position.value()), std::get<1>(position.value()),
+          schema_display_path, error);
+    }
+
+    throw sourcemeta::core::FileError<
+        sourcemeta::core::SchemaDialectImpossibleError>(schema_display_path,
+                                                        error);
   } catch (const sourcemeta::core::SchemaReferenceError &error) {
     const auto position{parsed_schema.positions.get(error.location())};
     if (position.has_value()) {

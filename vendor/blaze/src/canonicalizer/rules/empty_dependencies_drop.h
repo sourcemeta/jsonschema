@@ -13,6 +13,7 @@ public:
             const sourcemeta::core::SchemaResolver &) const -> bool override {
     ONLY_CONTINUE_IF(vocabularies.contains_any(
                          {SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_3,
+                          SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_3_HYPER,
                           SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_4,
                           SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_6,
                           SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_7}) &&

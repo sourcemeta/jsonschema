@@ -81,7 +81,11 @@ auto same_site_token(const sourcemeta::core::HTTPCookieSameSite value) noexcept
       return COOKIE_SAME_SITE_NONE;
   }
 
+    // Clang settles that no other value arrives, so only GCC and MSVC
+    // need to be told that the end of this function is never reached
+#if !defined(__clang__)
   std::unreachable();
+#endif
 }
 
 auto required_size(const sourcemeta::core::HTTPCookie &cookie,

@@ -25,17 +25,15 @@ public:
     } else {
       ONLY_CONTINUE_IF(!schema.defines("minContains") &&
                        !schema.defines("maxContains"));
-      ONLY_CONTINUE_IF(
-          !walk_up_in_place_applicators(
-               root, frame, location, walker, resolver,
-               [](const sourcemeta::core::JSON &ancestor,
-                  const SchemaVocabularies &ancestor_vocabularies) -> bool {
-                 return ancestor.defines("unevaluatedItems") &&
-                        ancestor_vocabularies.contains(
-                            SchemaVocabularies::Known::
-                                JSON_SCHEMA_2020_12_UNEVALUATED);
-               })
-               .has_value());
+      ONLY_CONTINUE_IF(!walk_up_in_place_applicators_across_references(
+          root, frame, location, walker, resolver,
+          [](const sourcemeta::core::JSON &ancestor,
+             const SchemaVocabularies &ancestor_vocabularies) -> bool {
+            return ancestor.defines("unevaluatedItems") &&
+                   ancestor_vocabularies.contains(
+                       SchemaVocabularies::Known::
+                           JSON_SCHEMA_2020_12_UNEVALUATED);
+          }));
     }
 
     return true;

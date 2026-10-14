@@ -94,6 +94,21 @@ auto SOURCEMETA_CORE_CRYPTO_EXPORT base64_decode(const std::string_view input,
                                                  SecureString &output) -> bool;
 
 /// @ingroup crypto
+/// Check whether a string is a canonical padded Base64 encoding (RFC 4648
+/// Section 4) without decoding it, accepting exactly the inputs that decoding
+/// accepts. The empty string encodes no bytes. For example:
+///
+/// ```cpp
+/// #include <sourcemeta/core/crypto.h>
+/// #include <cassert>
+///
+/// assert(sourcemeta::core::is_base64("Zm9vYmFy"));
+/// assert(!sourcemeta::core::is_base64("Zm9vYmF"));
+/// ```
+auto SOURCEMETA_CORE_CRYPTO_EXPORT is_base64(const std::string_view input)
+    -> bool;
+
+/// @ingroup crypto
 /// Encode a byte sequence using unpadded Base64url (RFC 4648 Section 5) into a
 /// stream. For example:
 ///
@@ -166,6 +181,21 @@ base64url_encode(const std::string_view input, SecureString &output) -> void;
 /// ```
 auto SOURCEMETA_CORE_CRYPTO_EXPORT
 base64url_decode(const std::string_view input) -> std::optional<std::string>;
+
+/// @ingroup crypto
+/// Check whether a string is a canonical unpadded Base64url encoding (RFC 4648
+/// Section 5) without decoding it, accepting exactly the inputs that decoding
+/// accepts. The empty string encodes no bytes. For example:
+///
+/// ```cpp
+/// #include <sourcemeta/core/crypto.h>
+/// #include <cassert>
+///
+/// assert(sourcemeta::core::is_base64url("Zm8"));
+/// assert(!sourcemeta::core::is_base64url("Zm8="));
+/// ```
+auto SOURCEMETA_CORE_CRYPTO_EXPORT is_base64url(const std::string_view input)
+    -> bool;
 
 } // namespace sourcemeta::core
 

@@ -9,6 +9,7 @@
 #include <sourcemeta/core/preprocessor.h>
 
 #include <array>       // std::array
+#include <cassert>     // assert
 #include <concepts>    // std::same_as
 #include <cstddef>     // std::size_t
 #include <cstdint>     // std::uint8_t, std::uint64_t
@@ -138,9 +139,10 @@ inline auto html_escape_append(Output &output, const std::string_view input)
           break;
         default:
           // The no-break space is replaced by its named entity (HTML Living
-          // Standard "escaping a string" step 2)
-          if (static_cast<unsigned char>(input[position]) == 0xC2 &&
-              position + 1 < size &&
+          // Standard "escaping a string" step 2). The table above admits only
+          // its lead byte here, the five characters above having their own arm
+          assert(static_cast<unsigned char>(input[position]) == 0xC2);
+          if (position + 1 < size &&
               static_cast<unsigned char>(input[position + 1]) == 0xA0) {
             replacement = "&nbsp;";
             consumed = 2;

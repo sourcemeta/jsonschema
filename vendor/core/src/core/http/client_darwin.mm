@@ -29,6 +29,7 @@ auto to_nsstring(const std::string_view input) -> NSString * {
 @interface SourcemetaCoreHTTPDelegate : NSObject <NSURLSessionDataDelegate>
 @property(nonatomic, assign) sourcemeta::core::HTTPResponse *response;
 @property(nonatomic, assign) std::string *failure;
+@property(nonatomic, assign) bool *timedOut;
 @property(nonatomic, strong) dispatch_semaphore_t semaphore;
 @property(nonatomic, assign) BOOL hasMaximumResponseSize;
 @property(nonatomic, assign) std::size_t maximumResponseSize;
@@ -90,6 +91,11 @@ auto to_nsstring(const std::string_view input) -> NSString * {
   if (self.failure->empty()) {
     if (error != nil) {
       self.failure->assign([error.localizedDescription UTF8String]);
+      // NSURLSession reports an expired timeoutIntervalForRequest and an
+      // expired timeoutIntervalForResource with the same code, so which of
+      // the two bounds elapsed cannot be recovered here
+      *self.timedOut = [error.domain isEqualToString:NSURLErrorDomain] &&
+                       error.code == NSURLErrorTimedOut;
     } else if (![task.response isKindOfClass:[NSHTTPURLResponse class]]) {
       self.failure->assign("The response is not an HTTP response");
     } else {
@@ -124,6 +130,7 @@ auto HTTPSystemRequest::send() const -> HTTPResponse {
   // terminate the process, so failures are recorded here and thrown
   // from the calling thread once the request settles
   std::string failure;
+  bool timed_out{false};
 
   @autoreleasepool {
     NSURL *target{[NSURL URLWithString:to_nsstring(this->url_)]};
@@ -164,6 +171,7 @@ auto HTTPSystemRequest::send() const -> HTTPResponse {
           [[SourcemetaCoreHTTPDelegate alloc] init]};
       delegate.response = &response;
       delegate.failure = &failure;
+      delegate.timedOut = &timed_out;
       delegate.semaphore = dispatch_semaphore_create(0);
       delegate.hasMaximumResponseSize =
           this->maximum_response_size_.has_value() ? YES : NO;
@@ -185,6 +193,10 @@ auto HTTPSystemRequest::send() const -> HTTPResponse {
   }
 
   if (!failure.empty()) {
+    if (timed_out) {
+      throw HTTPTimeoutError{this->method_, this->url_, this->timeout_};
+    }
+
     throw HTTPError{this->method_, this->url_, failure};
   }
 

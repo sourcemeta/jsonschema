@@ -22,7 +22,7 @@ REPLACE $CWD WITH '[CWD]' IN result_0.txt
 
 WRITE expected_0.txt UNTIL EOF
 2> error: Missing comma in flow sequence
-2>   at line 4
+2>   at line 3
 2>   at column 0
 2>   at file path [CWD]/instances.yaml
 EOF
@@ -37,7 +37,7 @@ REPLACE $CWD WITH '[CWD]' IN result_1.txt
 WRITE expected_1.txt UNTIL EOF
 1> {
 1>   "error": "Missing comma in flow sequence",
-1>   "line": 4,
+1>   "line": 3,
 1>   "column": 0,
 1>   "filePath": "[CWD]/instances.yaml"
 1> }

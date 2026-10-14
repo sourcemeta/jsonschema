@@ -9,6 +9,7 @@
 #include <sourcemeta/core/text.h>
 #include <sourcemeta/core/uri.h>
 
+#include <cassert>     // assert
 #include <cstddef>     // std::size_t
 #include <set>         // std::set
 #include <string_view> // std::string_view
@@ -24,23 +25,23 @@ constexpr auto OPENAPI_HASH_WEBHOOKS{JSON::Object::hash("webhooks"sv)};
 inline auto openapi_path_shape(const JSON::StringView path) -> JSON::String {
   JSON::String result;
   result.reserve(path.size());
-  std::size_t cursor{0};
+  JSON::StringView::size_type cursor{0};
   while (cursor < path.size()) {
-    const auto open{path.find('{', cursor)};
-    if (open == JSON::StringView::npos) {
+    const auto expression{openapi_next_brace_expression(path, cursor)};
+    if (expression.opening == JSON::StringView::npos) {
       break;
     }
 
     // A brace that never closes opens no expression, so what follows it is
     // ordinary text. Dropping it instead would make two paths that differ only
     // after an unclosed brace compare as one, and 3.1 constrains neither
-    const auto close{path.find('}', open)};
-    if (close == JSON::StringView::npos) {
+    if (expression.closing == JSON::StringView::npos) {
       break;
     }
 
-    result.append(path.substr(cursor, open - cursor)).append("{}");
-    cursor = close + 1;
+    result.append(path.substr(cursor, expression.opening - cursor))
+        .append("{}");
+    cursor = expression.closing + 1;
   }
 
   result.append(path.substr(cursor));
@@ -62,9 +63,9 @@ inline auto openapi_path_shape(const JSON::StringView path) -> JSON::String {
 // the bytes of one holds only of a brace, so it is read byte by byte like the
 // rest
 inline auto openapi_is_path_template(const JSON::StringView path) -> bool {
-  if (!path.starts_with('/')) {
-    return false;
-  }
+  // The leading slash is settled before this is asked, and the scan below
+  // starts past it
+  assert(path.starts_with('/'));
 
   std::size_t cursor{1};
   bool segment_is_empty{true};
@@ -147,7 +148,7 @@ inline auto openapi_check_paths(const JSON &document, OpenAPIWalk &walk)
     // percent-decode using [RFC3986] rules", a path being appended to a server
     // URL to make one. The grammar is the whole of what the specification says
     // a path template is, and it is read for nothing but the shape
-    if (walk.version == OpenAPIVersion::OPENAPI_3_2) {
+    if (walk.version >= OpenAPIVersion::OPENAPI_3_2) {
       if (!openapi_is_path_template(entry.first)) {
         throw OpenAPIError{location,
                            "The Paths Object keys must take the form of a "

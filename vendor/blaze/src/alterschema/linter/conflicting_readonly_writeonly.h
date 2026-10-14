@@ -19,7 +19,8 @@ public:
     ONLY_CONTINUE_IF(vocabularies.contains_any(
         {SchemaVocabularies::Known::JSON_SCHEMA_2020_12_META_DATA,
          SchemaVocabularies::Known::JSON_SCHEMA_2019_09_META_DATA,
-         SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_7}));
+         SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_7,
+         SchemaVocabularies::Known::OPENAPI_3_0_BASE}));
     ONLY_CONTINUE_IF(schema.is_object());
     const auto *read_only{schema.try_at("readOnly")};
     const auto *write_only{schema.try_at("writeOnly")};

@@ -1,0 +1,43 @@
+// The v3.0 Schema Object spells an exclusive bound as a boolean alongside
+// `minimum`, rather than as the numeric keyword later revisions use.
+
+WRITE openapi.json UNTIL EOF
+{
+  "openapi": "3.0.3",
+  "info": { "title": "Example", "version": "1.0.0" },
+  "paths": {},
+  "components": {
+    "schemas": {
+      "Count": { "type": "integer", "minimum": 5, "exclusiveMinimum": true }
+    }
+  }
+}
+EOF
+
+WRITE test.json UNTIL EOF
+{
+  "target": "./openapi.json#/components/schemas/Count",
+  "tests": [
+    {
+      "description": "Above the bound",
+      "valid": true,
+      "data": 6
+    },
+    {
+      "description": "On the bound",
+      "valid": false,
+      "data": 5
+    }
+  ]
+}
+EOF
+
+RUN test test.json STDIN /dev/null IN . INTO result_0.txt EXPECTING 0
+
+REPLACE $CWD WITH '[CWD]' IN result_0.txt
+
+WRITE expected_0.txt UNTIL EOF
+1> [CWD]/test.json: PASS 2/2
+EOF
+
+COMPARE result_0.txt AGAINST expected_0.txt

@@ -1,0 +1,38 @@
+// A v3.0 Schema Object has no `$schema` keyword to declare itself with, so the
+// dialect is named from the outside. The keywords v3.0 spells its own way are
+// translated along the way
+
+WRITE schema.json UNTIL EOF
+{
+  "type": "object",
+  "properties": {
+    "age": { "type": "integer", "minimum": 0, "exclusiveMinimum": true },
+    "nick": { "type": "string", "nullable": true },
+    "kind": { "type": "string", "enum": [ "dog" ] }
+  }
+}
+EOF
+
+RUN upgrade schema.json --default-dialect tag:spec.openapis.org,2024-10-18:oas/3.0/dialect STDIN /dev/null IN . INTO result.txt EXPECTING 0
+
+WRITE expected.txt UNTIL EOF
+1> {
+1>   "$schema": "https://json-schema.org/draft/2020-12/schema",
+1>   "type": "object",
+1>   "properties": {
+1>     "age": {
+1>       "type": "integer",
+1>       "exclusiveMinimum": 0
+1>     },
+1>     "nick": {
+1>       "type": [ "string", "null" ]
+1>     },
+1>     "kind": {
+1>       "type": "string",
+1>       "const": "dog"
+1>     }
+1>   }
+1> }
+EOF
+
+COMPARE result.txt AGAINST expected.txt

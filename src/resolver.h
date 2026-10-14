@@ -738,9 +738,11 @@ public:
     return this->fetched_.emplace(target, std::move(document)).first->second;
   }
 
-  // The other half of the split. An OpenAPI Description is what this hands
-  // back and the only thing it ever does, so a schema that a fetch turns up
-  // goes to the resolver above rather than being reported from here
+  // The other half of the split. What the URI names is handed back whether or
+  // not it holds a description, as reading one that does not is how bundling
+  // tells a reference that it landed on the wrong kind of thing, and it cannot
+  // say so of a document it never sees. Nothing at all is handed back only
+  // where the URI names nothing
   auto openapi(std::string_view identifier)
       -> sourcemeta::core::OpenAPIResolverResult {
     // What a configuration remaps an identifier to holds for a description just
@@ -768,8 +770,16 @@ public:
       return match->second;
     }
 
-    if (this->fetched_.contains(target)) {
-      return std::nullopt;
+    // A document that holds no description is still a document this URI names,
+    // so wherever the schema half already keeps one, that is what answers here
+    const auto imported{this->schemas_.find(target)};
+    if (imported != this->schemas_.cend()) {
+      return imported->second;
+    }
+
+    const auto cached{this->fetched_.find(target)};
+    if (cached != this->fetched_.cend()) {
+      return cached->second;
     }
 
     auto fetched{fetch_schema(this->options_, target, this->remote_)};
@@ -779,8 +789,7 @@ public:
 
     auto document{std::move(fetched).to_owned()};
     if (!is_openapi_document(document)) {
-      this->fetched_.emplace(target, std::move(document));
-      return std::nullopt;
+      return this->fetched_.emplace(target, std::move(document)).first->second;
     }
 
     const auto &stored{
@@ -1105,6 +1114,18 @@ private:
       throw sourcemeta::core::FileError<
           sourcemeta::core::SchemaAnchorCollisionError>(entry.resolution_base,
                                                         error);
+    } catch (const sourcemeta::core::SchemaDialectImpossibleError &error) {
+      const auto position{entry.positions.get(error.location())};
+      if (position.has_value()) {
+        throw PositionError<sourcemeta::core::FileError<
+            sourcemeta::core::SchemaDialectImpossibleError>>(
+            std::get<0>(position.value()), std::get<1>(position.value()),
+            entry.resolution_base, error);
+      }
+
+      throw sourcemeta::core::FileError<
+          sourcemeta::core::SchemaDialectImpossibleError>(entry.resolution_base,
+                                                          error);
     } catch (const sourcemeta::core::SchemaReferenceError &error) {
       const auto position{entry.positions.get(error.location())};
       if (position.has_value()) {
@@ -1213,7 +1234,9 @@ resolver(const sourcemeta::core::Options &options, const bool remote,
 }
 
 // The OpenAPI half, which answers from the same instance as the schema half
-// above and holds to the same separation: a schema is never reported from here
+// above. What a URI names is handed back whether or not it holds a description,
+// as reading one that does not is how bundling tells a reference that it landed
+// on the wrong kind of thing
 inline auto openapi_resolver(
     const sourcemeta::core::Options &options, const bool remote,
     const std::string_view default_dialect,

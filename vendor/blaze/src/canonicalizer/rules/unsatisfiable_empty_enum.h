@@ -17,6 +17,7 @@ public:
              SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_1,
              SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_2,
              SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_3,
+             SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_3_HYPER,
              SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_4,
              SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_6,
              SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_7,

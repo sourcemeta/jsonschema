@@ -1,6 +1,8 @@
 #include <sourcemeta/core/numeric.h>
 #include <sourcemeta/core/time.h>
 
+#include <cassert> // assert
+
 namespace sourcemeta::core {
 
 auto is_rfc3339_fulltime(const std::string_view value) -> bool {
@@ -61,7 +63,8 @@ auto is_rfc3339_fulltime(const std::string_view value) -> bool {
   position += 2;
 
   // --- [time-secfrac] = "." 1*DIGIT ---
-  if (position < size && value[position] == '.') {
+  assert(position < size);
+  if (value[position] == '.') {
     position += 1;
     if (position >= size || !is_digit(value[position])) {
       // "." must be followed by at least 1 digit

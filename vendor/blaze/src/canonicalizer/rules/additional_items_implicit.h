@@ -14,6 +14,7 @@ public:
             const sourcemeta::core::SchemaResolver &) const -> bool override {
     ONLY_CONTINUE_IF(vocabularies.contains_any(
                          {SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_3,
+                          SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_3_HYPER,
                           SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_4,
                           SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_6,
                           SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_7}) &&
@@ -24,8 +25,9 @@ public:
     const auto *items{schema.try_at("items")};
     ONLY_CONTINUE_IF(items && items->is_array() &&
                      !schema.defines("additionalItems"));
-    this->is_draft3_ =
-        vocabularies.contains(SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_3);
+    this->is_draft3_ = vocabularies.contains_any(
+        {SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_3,
+         SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_3_HYPER});
     return true;
   }
 

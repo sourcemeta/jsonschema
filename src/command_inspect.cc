@@ -2,7 +2,6 @@
 #include <sourcemeta/core/json.h>
 #include <sourcemeta/core/jsonschema.h>
 #include <sourcemeta/core/openapi.h>
-#include <sourcemeta/core/yaml.h>
 
 #include <cctype>   // std::toupper
 #include <iostream> // std::cout
@@ -481,17 +480,13 @@ auto sourcemeta::jsonschema::inspect(const sourcemeta::core::Options &options)
 
   sourcemeta::core::PointerPositionTracker positions;
   auto property_storage = std::make_shared<std::deque<std::string>>();
+  bool multidocument{false};
   const sourcemeta::core::JSON schema{[&]() {
-    if (schema_from_stdin) {
-      auto parsed{read_from_stdin()};
-      positions = std::move(parsed.positions);
-      property_storage = std::move(parsed.property_storage);
-      return std::move(parsed.document);
-    }
-    sourcemeta::core::JSON document{sourcemeta::core::JSON{nullptr}};
-    auto callback = make_position_callback(positions, property_storage);
-    sourcemeta::core::read_yaml_or_json(schema_path, document, callback);
-    return document;
+    auto parsed{schema_from_stdin ? read_from_stdin() : read_file(schema_path)};
+    positions = std::move(parsed.positions);
+    property_storage = std::move(parsed.property_storage);
+    multidocument = parsed.multidocument;
+    return std::move(parsed.document);
   }()};
 
   // An OpenAPI description is not a schema, so what it goes by wherever we
@@ -501,6 +496,12 @@ auto sourcemeta::jsonschema::inspect(const sourcemeta::core::Options &options)
   const auto schema_resolution_base{
       schema_from_stdin ? (is_openapi ? openapi_stdin_path() : stdin_path())
                         : schema_path};
+
+  if (multidocument) {
+    throw MultiDocumentInputError{
+        "This command does not support input with multiple documents",
+        schema_resolution_base};
+  }
 
   reject_unsupported_openapi(schema, schema_resolution_base, &positions);
 
@@ -552,6 +553,18 @@ auto sourcemeta::jsonschema::inspect(const sourcemeta::core::Options &options)
     throw sourcemeta::core::FileError<
         sourcemeta::core::SchemaAnchorCollisionError>(schema_resolution_base,
                                                       error);
+  } catch (const sourcemeta::core::SchemaDialectImpossibleError &error) {
+    const auto position{positions.get(error.location())};
+    if (position.has_value()) {
+      throw PositionError<sourcemeta::core::FileError<
+          sourcemeta::core::SchemaDialectImpossibleError>>(
+          std::get<0>(position.value()), std::get<1>(position.value()),
+          schema_resolution_base, error);
+    }
+
+    throw sourcemeta::core::FileError<
+        sourcemeta::core::SchemaDialectImpossibleError>(schema_resolution_base,
+                                                        error);
   } catch (const sourcemeta::core::SchemaReferenceError &error) {
     const auto position{positions.get(error.location())};
     if (position.has_value()) {

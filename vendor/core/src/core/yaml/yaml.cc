@@ -54,7 +54,15 @@ auto parse_yaml(std::basic_istream<JSON::Char, JSON::CharTraits> &stream)
 auto parse_yaml(const JSON::String &input) -> JSON {
   yaml::Lexer lexer{input};
   yaml::Parser parser{&lexer, nullptr};
-  return parser.parse();
+  auto result{parser.parse()};
+
+  // A caller holding the whole input has no way to ask for a second document,
+  // so whatever stands after the first is content nothing could reach. The
+  // stream overloads are the ones that read a document at a time, and those
+  // leave the rest where the next call will find it
+  parser.validate_end_of_stream();
+
+  return result;
 }
 
 auto read_yaml(const std::filesystem::path &path) -> JSON {
@@ -96,6 +104,8 @@ auto parse_yaml(const JSON::String &input, JSON &output,
   yaml::Lexer lexer{input};
   yaml::Parser parser{&lexer, &callback};
   output = parser.parse();
+
+  parser.validate_end_of_stream();
 }
 
 auto read_yaml(const std::filesystem::path &path, JSON &output,
@@ -154,6 +164,7 @@ auto parse_yaml(const JSON::String &input, YAMLRoundTrip &roundtrip) -> JSON {
   yaml::Lexer lexer{input, true};
   yaml::Parser parser{&lexer, nullptr, &roundtrip};
   auto result{parser.parse()};
+  parser.validate_single_document();
   record_encoding(input, lexer, parser, roundtrip);
   return result;
 }
@@ -186,6 +197,7 @@ auto parse_yaml(const JSON::String &input, YAMLRoundTrip &roundtrip,
   yaml::Lexer lexer{input, true};
   yaml::Parser parser{&lexer, &callback, &roundtrip};
   output = parser.parse();
+  parser.validate_single_document();
   record_encoding(input, lexer, parser, roundtrip);
 }
 

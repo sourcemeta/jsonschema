@@ -1,0 +1,48 @@
+// A Schema Object of a v3.0 description is reachable by pointer like any
+// other, and `nullable` admits the null that the declared type does not.
+
+WRITE openapi.json UNTIL EOF
+{
+  "openapi": "3.0.3",
+  "info": { "title": "Example", "version": "1.0.0" },
+  "paths": {},
+  "components": {
+    "schemas": {
+      "Name": { "type": "string", "nullable": true, "maxLength": 5 }
+    }
+  }
+}
+EOF
+
+WRITE test.json UNTIL EOF
+{
+  "target": "./openapi.json#/components/schemas/Name",
+  "tests": [
+    {
+      "description": "A short name",
+      "valid": true,
+      "data": "Juan"
+    },
+    {
+      "description": "A null name",
+      "valid": true,
+      "data": null
+    },
+    {
+      "description": "A name that is too long",
+      "valid": false,
+      "data": "Juan Cruz"
+    }
+  ]
+}
+EOF
+
+RUN test test.json STDIN /dev/null IN . INTO result_0.txt EXPECTING 0
+
+REPLACE $CWD WITH '[CWD]' IN result_0.txt
+
+WRITE expected_0.txt UNTIL EOF
+1> [CWD]/test.json: PASS 3/3
+EOF
+
+COMPARE result_0.txt AGAINST expected_0.txt
