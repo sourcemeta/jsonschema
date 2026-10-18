@@ -3,11 +3,13 @@
 #include <sourcemeta/core/json.h>
 #include <sourcemeta/core/jsonschema.h>
 
-#include <iostream>    // std::cerr, std::cout
-#include <sstream>     // std::ostringstream
-#include <string>      // std::string
-#include <string_view> // std::string_view
-#include <utility>     // std::move, std::unreachable
+#include <filesystem>   // std::filesystem
+#include <iostream>     // std::cerr, std::cout
+#include <sstream>      // std::ostringstream
+#include <string>       // std::string
+#include <string_view>  // std::string_view
+#include <system_error> // std::error_code
+#include <utility>      // std::move, std::unreachable
 
 #include "command.h"
 #include "error.h"
@@ -152,6 +154,28 @@ auto formatted_copy(const sourcemeta::core::JSON &document,
   return copy;
 }
 
+// A configuration file read through a path of its own, such as a symbolic link
+// or a spelling that the filesystem matches without regard to case, is still
+// the very file the lookup settled on. What tells the two apart is therefore
+// the identity of the file rather than the path that happens to name it
+auto same_file(const std::filesystem::path &left,
+               const std::filesystem::path &right) -> bool {
+  if (left == right) {
+    return true;
+  }
+
+  std::error_code error;
+  const auto result{std::filesystem::equivalent(left, right, error)};
+  return !error && result;
+}
+
+auto configuration_copy(const sourcemeta::core::JSON &document)
+    -> sourcemeta::core::JSON {
+  auto copy{document};
+  sourcemeta::jsonschema::format_configuration(copy);
+  return copy;
+}
+
 } // namespace
 
 auto sourcemeta::jsonschema::fmt(const sourcemeta::core::Options &options)
@@ -281,13 +305,22 @@ auto sourcemeta::jsonschema::fmt(const sourcemeta::core::Options &options)
           entry.resolution_base};
     }
 
-    if (!entry.second.is_object() && !entry.second.is_boolean()) {
-      throw NotSchemaError{entry.resolution_base};
-    }
+    const auto configuration_path{
+        find_configuration(options, entry.resolution_base)};
+    // The configuration file in effect for its own location is the one this
+    // goes on to order by the configuration format rather than by any dialect,
+    // so none of what tells a schema from the rest has a say over it
+    const auto is_configuration{
+        configuration_path.has_value() &&
+        same_file(configuration_path.value(), entry.resolution_base)};
 
-    reject_unsupported_openapi(entry.second, entry.resolution_base);
-    const auto is_openapi{
-        sourcemeta::core::openapi_version(entry.second).has_value()};
+    if (!is_configuration) {
+      if (!entry.second.is_object() && !entry.second.is_boolean()) {
+        throw NotSchemaError{entry.resolution_base};
+      }
+
+      reject_unsupported_openapi(entry.second, entry.resolution_base);
+    }
 
     if (options.contains("check")) {
       LOG_VERBOSE(options) << "Checking: " << entry.first << "\n";
@@ -296,30 +329,43 @@ auto sourcemeta::jsonschema::fmt(const sourcemeta::core::Options &options)
     }
 
     try {
-      const auto configuration_path{
-          find_configuration(options, entry.resolution_base)};
-      const auto &configuration{read_configuration(options, configuration_path,
-                                                   entry.resolution_base)};
-      const auto dialect{default_dialect(options, configuration)};
-      const auto is_test_document =
-          dialect.empty() && looks_like_test_document(entry.second);
-      const auto effective_dialect =
-          is_test_document ? TEST_DOCUMENT_DEFAULT_DIALECT : dialect;
-      if (is_test_document) {
-        std::cerr << "Interpreting as a test file: " << entry.first << "\n";
-      }
-      const auto &custom_resolver{resolver(options, options.contains("http"),
-                                           effective_dialect, configuration)};
-
       std::ostringstream expected;
-      if (options.contains("keep-ordering")) {
-        sourcemeta::jsonschema::write_schema(entry.second, expected,
-                                             indentation, entry.roundtrip);
+      if (is_configuration) {
+        std::cerr << "Interpreting as a configuration file: " << entry.first
+                  << "\n";
+        if (options.contains("keep-ordering")) {
+          sourcemeta::jsonschema::write_schema(entry.second, expected,
+                                               indentation, entry.roundtrip);
+        } else {
+          sourcemeta::jsonschema::write_schema(configuration_copy(entry.second),
+                                               expected, indentation,
+                                               entry.roundtrip);
+        }
       } else {
-        sourcemeta::jsonschema::write_schema(
-            formatted_copy(entry.second, custom_resolver, effective_dialect,
-                           openapi_default_id(entry), is_openapi),
-            expected, indentation, entry.roundtrip);
+        const auto &configuration{read_configuration(
+            options, configuration_path, entry.resolution_base)};
+        const auto dialect{default_dialect(options, configuration)};
+        const auto is_test_document =
+            dialect.empty() && looks_like_test_document(entry.second);
+        const auto effective_dialect =
+            is_test_document ? TEST_DOCUMENT_DEFAULT_DIALECT : dialect;
+        if (is_test_document) {
+          std::cerr << "Interpreting as a test file: " << entry.first << "\n";
+        }
+        const auto &custom_resolver{resolver(options, options.contains("http"),
+                                             effective_dialect, configuration)};
+        const auto is_openapi{
+            sourcemeta::core::openapi_version(entry.second).has_value()};
+
+        if (options.contains("keep-ordering")) {
+          sourcemeta::jsonschema::write_schema(entry.second, expected,
+                                               indentation, entry.roundtrip);
+        } else {
+          sourcemeta::jsonschema::write_schema(
+              formatted_copy(entry.second, custom_resolver, effective_dialect,
+                             openapi_default_id(entry), is_openapi),
+              expected, indentation, entry.roundtrip);
+        }
       }
 
       const auto current{

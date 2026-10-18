@@ -18,14 +18,19 @@
 #include "error.h"
 #include "input.h"
 
-#include <algorithm>   // std::max, std::ranges::all_of
-#include <cctype>      // std::isdigit
+#include <algorithm> // std::max, std::ranges::all_of, std::ranges::find, std::sort
+#include <array>     // std::array, std::to_array
+#include <cctype>    // std::isdigit
 #include <cstddef>     // std::size_t
+#include <cstdint>     // std::uint16_t
 #include <filesystem>  // std::filesystem::path
+#include <iterator>    // std::ranges::distance
+#include <limits>      // std::numeric_limits
 #include <memory>      // std::make_shared
 #include <optional>    // std::optional
 #include <ostream>     // std::ostream
 #include <set>         // std::set
+#include <span>        // std::span
 #include <stdexcept>   // std::out_of_range
 #include <string>      // std::string, std::stoull
 #include <string_view> // std::string_view
@@ -141,6 +146,115 @@ inline auto looks_like_test_document(const sourcemeta::core::JSON &document)
   return document.is_object() && !document.defines("$schema") &&
          document.defines("target") && document.at("target").is_string() &&
          document.defines("tests") && document.at("tests").is_array();
+}
+
+// The order in which properties are meant to appear within a configuration
+// file, where the position of an entry is the rank of the property it names.
+// This is the order upstream spells when it serializes a configuration of its
+// own, so a configuration this writes is one upstream would have written
+constexpr auto CONFIGURATION_PROPERTIES{std::to_array<std::string_view>(
+    {"title", "description", "email", "github", "website", "path", "baseUri",
+     "defaultDialect", "extension", "resolve", "dependencies", "ignore",
+     "lint"})};
+
+constexpr auto CONFIGURATION_LINT_PROPERTIES{
+    std::to_array<std::string_view>({"rules", "exclude"})};
+
+inline auto
+configuration_property_rank(const std::span<const std::string_view> properties,
+                            const sourcemeta::core::JSON::String &property)
+    -> std::uint16_t {
+  constexpr auto UNRECOGNISED{std::numeric_limits<std::uint16_t>::max()};
+  const auto match{std::ranges::find(properties, property)};
+  if (match == properties.end()) {
+    return UNRECOGNISED;
+  }
+
+  return static_cast<std::uint16_t>(
+      std::ranges::distance(properties.begin(), match));
+}
+
+// A property the configuration format does not name goes last, and goes in
+// alphabetical order among the rest of its kind, so that what this writes does
+// not depend on the order the properties were read in
+inline auto configuration_property_compare(
+    const std::span<const std::string_view> properties,
+    const sourcemeta::core::JSON::String &left,
+    const sourcemeta::core::JSON::String &right) -> bool {
+  const auto left_rank{configuration_property_rank(properties, left)};
+  const auto right_rank{configuration_property_rank(properties, right)};
+  if (left_rank == right_rank) {
+    return left < right;
+  }
+
+  return left_rank < right_rank;
+}
+
+// A configuration property whose value stands for a set rather than a sequence,
+// where the order the entries were written in carries no meaning of its own
+inline auto sort_configuration_set(sourcemeta::core::JSON &value) -> void {
+  if (!value.is_array()) {
+    return;
+  }
+
+  std::sort(value.as_array().begin(), value.as_array().end());
+}
+
+inline auto sort_configuration_map(sourcemeta::core::JSON &value) -> void {
+  if (!value.is_object()) {
+    return;
+  }
+
+  value.reorder(
+      [](const auto &left, const auto &right) { return left < right; });
+}
+
+// A configuration file is not a schema, so what orders it is the configuration
+// format rather than any dialect. Every property the file spells is kept as it
+// was written, as the only thing at stake here is the order they come in
+inline auto format_configuration(sourcemeta::core::JSON &configuration)
+    -> void {
+  if (!configuration.is_object()) {
+    return;
+  }
+
+  auto *extension{configuration.try_at("extension")};
+  if (extension != nullptr) {
+    sort_configuration_set(*extension);
+  }
+
+  auto *ignore{configuration.try_at("ignore")};
+  if (ignore != nullptr) {
+    sort_configuration_set(*ignore);
+  }
+
+  auto *resolve{configuration.try_at("resolve")};
+  if (resolve != nullptr) {
+    sort_configuration_map(*resolve);
+  }
+
+  auto *dependencies{configuration.try_at("dependencies")};
+  if (dependencies != nullptr) {
+    sort_configuration_map(*dependencies);
+  }
+
+  auto *lint{configuration.try_at("lint")};
+  if (lint != nullptr && lint->is_object()) {
+    auto *exclude{lint->try_at("exclude")};
+    if (exclude != nullptr) {
+      sort_configuration_set(*exclude);
+    }
+
+    lint->reorder([](const auto &left, const auto &right) {
+      return configuration_property_compare(CONFIGURATION_LINT_PROPERTIES, left,
+                                            right);
+    });
+  }
+
+  configuration.reorder([](const auto &left, const auto &right) {
+    return configuration_property_compare(CONFIGURATION_PROPERTIES, left,
+                                          right);
+  });
 }
 
 // Whether a document holds an OpenAPI Description at all, whichever revision it
