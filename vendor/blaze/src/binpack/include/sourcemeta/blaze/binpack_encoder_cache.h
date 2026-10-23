@@ -1,0 +1,51 @@
+#ifndef SOURCEMETA_BLAZE_BINPACK_ENCODER_CACHE_H_
+#define SOURCEMETA_BLAZE_BINPACK_ENCODER_CACHE_H_
+#ifndef DOXYGEN
+
+#ifndef SOURCEMETA_BLAZE_BINPACK_EXPORT
+#include <sourcemeta/blaze/binpack_export.h>
+#endif
+
+#include <sourcemeta/core/json.h>
+
+#include <functional> // std::reference_wrapper
+#include <map>        // std::map
+#include <optional>   // std::optional
+#include <utility>    // std::pair
+
+namespace sourcemeta::blaze {
+
+class SOURCEMETA_BLAZE_BINPACK_EXPORT BinPackCache {
+public:
+  enum class Type : std::uint8_t { Standalone, PrefixLengthVarintPlusOne };
+  auto record(const sourcemeta::core::JSON::String &value,
+              const std::uint64_t offset, const Type type) -> void;
+  [[nodiscard]] auto find(const sourcemeta::core::JSON::String &value,
+                          const Type type) const
+      -> std::optional<std::uint64_t>;
+
+#ifndef DOXYGEN
+  // This method is considered private. We only expose it for testing purposes
+  auto remove_oldest() -> void;
+#endif
+
+private:
+// Exporting symbols that depends on the standard C++ library is considered
+// safe.
+// https://learn.microsoft.com/en-us/cpp/error-messages/compiler-warnings/compiler-warning-level-2-c4275?view=msvc-170&redirectedfrom=MSDN
+#if defined(_MSC_VER)
+#pragma warning(disable : 4251 4275)
+#endif
+  std::uint64_t byte_size_{0};
+  using Entry = std::pair<sourcemeta::core::JSON::String, Type>;
+  std::map<Entry, std::uint64_t> data_;
+  std::map<std::uint64_t, std::reference_wrapper<const Entry>> order_;
+#if defined(_MSC_VER)
+#pragma warning(default : 4251 4275)
+#endif
+};
+
+} // namespace sourcemeta::blaze
+
+#endif
+#endif

@@ -246,6 +246,24 @@ auto apply(const std::vector<Rule> &rules, sourcemeta::core::JSON &schema,
   }
 }
 
+/// The OpenAPI 3.0 Schema Object dialect, in both of its dated spellings.
+/// Neither is canonical, and a tag URI carries no fragment and no scheme the
+/// spelling rules fold, so what a document says is already the only spelling
+/// there is
+constexpr std::array<std::string_view, 2> OPENAPI_3_0_DIALECTS{
+    {"tag:spec.openapis.org,2024-10-18:oas/3.0/dialect",
+     "tag:spec.openapis.org,2021-09-28:oas/3.0/dialect"}};
+
+/// Whether a location is an OpenAPI 3.0 Schema Object. One describes itself
+/// through a Draft 4 meta-schema, so it frames as Draft 4 while being a closed
+/// dialect that names neither `definitions` nor an identifier. Neither the
+/// graph form nor the identifier elimination that leads to it has a spelling
+/// there, so such a document is left exactly as it stands
+auto is_openapi_3_0(const std::string_view dialect) -> bool {
+  return std::ranges::find(OPENAPI_3_0_DIALECTS, dialect) !=
+         OPENAPI_3_0_DIALECTS.cend();
+}
+
 /// The drafts that spell the identifier `id` and let it nest anywhere, so
 /// that a subschema can change the base URI the references around it resolve
 /// against. Draft 6 renamed the keyword to `$id` and the rules there differ.
@@ -255,11 +273,14 @@ auto apply(const std::vector<Rule> &rules, sourcemeta::core::JSON &schema,
 /// the dialects `profile_for` covers: a dialect that lost its identifiers
 /// without being lifted would keep every nested document it had while no
 /// longer being able to address them. That is why Draft 4 hyper-schema is
-/// absent, as it is there
-auto has_nested_id(const core::SchemaBaseDialect base_dialect) -> bool {
+/// absent, as it is there, and why the OpenAPI 3.0 Schema Object is turned
+/// down although it frames as Draft 4
+auto has_nested_id(const core::SchemaBaseDialect base_dialect,
+                   const std::string_view dialect) -> bool {
   return base_dialect == core::SchemaBaseDialect::JSON_SCHEMA_DRAFT_3 ||
          base_dialect == core::SchemaBaseDialect::JSON_SCHEMA_DRAFT_3_HYPER ||
-         base_dialect == core::SchemaBaseDialect::JSON_SCHEMA_DRAFT_4;
+         (base_dialect == core::SchemaBaseDialect::JSON_SCHEMA_DRAFT_4 &&
+          !is_openapi_3_0(dialect));
 }
 
 /// Remove every `id`, including anchors and the identifier of the root. Every
@@ -296,7 +317,7 @@ auto eliminate_identifiers(sourcemeta::core::JSON &schema,
 
     if (frame.any_subschema(
             [](const core::SchemaFrame::Location &location) -> bool {
-              return !has_nested_id(location.base_dialect);
+              return !has_nested_id(location.base_dialect, location.dialect);
             })) {
       return;
     }
@@ -444,14 +465,14 @@ auto draft4_profile() -> const Profile & {
 /// have dropped the keywords its vocabulary adds, none of which takes part
 /// in whether an instance is valid. Draft 4 hyper-schema has no such rule
 /// yet, so its `links` would be lifted as though they were subschemas
-auto profile_for(const core::SchemaBaseDialect base_dialect)
-    -> const Profile * {
+auto profile_for(const core::SchemaBaseDialect base_dialect,
+                 const std::string_view dialect) -> const Profile * {
   switch (base_dialect) {
     case core::SchemaBaseDialect::JSON_SCHEMA_DRAFT_3:
     case core::SchemaBaseDialect::JSON_SCHEMA_DRAFT_3_HYPER:
       return &draft3_profile();
     case core::SchemaBaseDialect::JSON_SCHEMA_DRAFT_4:
-      return &draft4_profile();
+      return is_openapi_3_0(dialect) ? nullptr : &draft4_profile();
     default:
       return nullptr;
   }
@@ -618,17 +639,16 @@ auto lift_subschemas(sourcemeta::core::JSON &schema,
     // vocabulary adds, none of which takes part in whether an instance is
     // valid
     bool unsupported{false};
-    frame.for_each_subschema(
-        [&profile,
-         &unsupported](const core::SchemaFrame::Location &location) -> void {
-          const auto *current{profile_for(location.base_dialect)};
-          if (current == nullptr ||
-              (profile != nullptr && profile != current)) {
-            unsupported = true;
-          } else {
-            profile = current;
-          }
-        });
+    frame.for_each_subschema([&profile, &unsupported](
+                                 const core::SchemaFrame::Location &location)
+                                 -> void {
+      const auto *current{profile_for(location.base_dialect, location.dialect)};
+      if (current == nullptr || (profile != nullptr && profile != current)) {
+        unsupported = true;
+      } else {
+        profile = current;
+      }
+    });
 
     if (unsupported || profile == nullptr) {
       return;

@@ -72,6 +72,26 @@ auto parse_yaml(const JSON::String &input) -> JSON;
 
 /// @ingroup yaml
 ///
+/// Create a JSON document from a YAML string, reporting whether the string
+/// held more documents after the one that was read. For example:
+///
+/// ```cpp
+/// #include <sourcemeta/core/json.h>
+/// #include <sourcemeta/core/yaml.h>
+///
+/// #include <cassert>
+///
+/// bool more_documents{false};
+/// const sourcemeta::core::JSON document =
+///   sourcemeta::core::parse_yaml("hello: world\n---\nsecond: document",
+///                                more_documents);
+/// assert(more_documents);
+/// ```
+SOURCEMETA_CORE_YAML_EXPORT
+auto parse_yaml(const JSON::String &input, bool &more_documents) -> JSON;
+
+/// @ingroup yaml
+///
 /// Read a JSON document from a file location that represents a YAML file. The
 /// file must be UTF-8, optionally preceded by a UTF-8 byte order mark, as
 /// UTF-16 and UTF-32 input are not supported. For example:
@@ -91,6 +111,28 @@ auto parse_yaml(const JSON::String &input) -> JSON;
 /// ```
 SOURCEMETA_CORE_YAML_EXPORT
 auto read_yaml(const std::filesystem::path &path) -> JSON;
+
+/// @ingroup yaml
+///
+/// Read a JSON document from a file location that represents a YAML file,
+/// reporting whether the file held more documents after the one that was
+/// read. For example:
+///
+/// ```cpp
+/// #include <sourcemeta/core/json.h>
+/// #include <sourcemeta/core/yaml.h>
+///
+/// #include <cassert>
+/// #include <filesystem>
+///
+/// bool more_documents{false};
+/// const std::filesystem::path path{"test.yaml"};
+/// const sourcemeta::core::JSON document =
+///   sourcemeta::core::read_yaml(path, more_documents);
+/// assert(!more_documents);
+/// ```
+SOURCEMETA_CORE_YAML_EXPORT
+auto read_yaml(const std::filesystem::path &path, bool &more_documents) -> JSON;
 
 /// @ingroup yaml
 ///
@@ -115,6 +157,18 @@ auto parse_yaml(const JSON::String &input, JSON &output,
 
 /// @ingroup yaml
 ///
+/// Parse a YAML string into an existing JSON value, invoking the given
+/// callback during parsing and reporting whether the string held more
+/// documents after the one that was read. The result is constructed directly
+/// into the given reference rather than returned by value to ensure that
+/// references passed through the parse callback remain valid after parsing
+/// completes.
+SOURCEMETA_CORE_YAML_EXPORT
+auto parse_yaml(const JSON::String &input, bool &more_documents, JSON &output,
+                const JSON::ParseCallback &callback) -> void;
+
+/// @ingroup yaml
+///
 /// Read a YAML file into an existing JSON value, invoking the given callback
 /// during parsing. The result is constructed directly into the given reference
 /// rather than returned by value to ensure that references passed through the
@@ -122,6 +176,17 @@ auto parse_yaml(const JSON::String &input, JSON &output,
 SOURCEMETA_CORE_YAML_EXPORT
 auto read_yaml(const std::filesystem::path &path, JSON &output,
                const JSON::ParseCallback &callback) -> void;
+
+/// @ingroup yaml
+///
+/// Read a YAML file into an existing JSON value, invoking the given callback
+/// during parsing and reporting whether the file held more documents after
+/// the one that was read. The result is constructed directly into the given
+/// reference rather than returned by value to ensure that references passed
+/// through the parse callback remain valid after parsing completes.
+SOURCEMETA_CORE_YAML_EXPORT
+auto read_yaml(const std::filesystem::path &path, bool &more_documents,
+               JSON &output, const JSON::ParseCallback &callback) -> void;
 
 /// @ingroup yaml
 ///
