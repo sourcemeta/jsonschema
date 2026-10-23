@@ -168,9 +168,9 @@ struct MCPServerCapabilities {
 ///
 /// @see
 /// https://modelcontextprotocol.io/specification/2026-07-28/schema#clientcapabilities
-SOURCEMETA_CORE_MCP_EXPORT
-auto mcp_parse_client_capabilities(const MCPProtocolVersion version,
-                                   const sourcemeta::core::JSON &capabilities)
+[[nodiscard]] SOURCEMETA_CORE_MCP_EXPORT auto
+mcp_parse_client_capabilities(const MCPProtocolVersion version,
+                              const sourcemeta::core::JSON &capabilities)
     -> MCPClientCapabilities;
 
 /// @ingroup mcp
@@ -199,9 +199,9 @@ auto mcp_parse_client_capabilities(const MCPProtocolVersion version,
 ///
 /// @see
 /// https://modelcontextprotocol.io/specification/2026-07-28/schema#clientcapabilities
-SOURCEMETA_CORE_MCP_EXPORT
-auto mcp_serialize_client_capabilities(
-    const MCPProtocolVersion version, const MCPClientCapabilities &capabilities)
+[[nodiscard]] SOURCEMETA_CORE_MCP_EXPORT auto
+mcp_serialize_client_capabilities(const MCPProtocolVersion version,
+                                  const MCPClientCapabilities &capabilities)
     -> sourcemeta::core::JSON;
 
 /// @ingroup mcp
@@ -226,9 +226,9 @@ auto mcp_serialize_client_capabilities(
 ///
 /// @see
 /// https://modelcontextprotocol.io/specification/2026-07-28/schema#servercapabilities
-SOURCEMETA_CORE_MCP_EXPORT
-auto mcp_parse_server_capabilities(MCPProtocolVersion version,
-                                   const JSON &capabilities)
+[[nodiscard]] SOURCEMETA_CORE_MCP_EXPORT auto
+mcp_parse_server_capabilities(MCPProtocolVersion version,
+                              const JSON &capabilities)
     -> MCPServerCapabilities;
 
 /// @ingroup mcp
@@ -252,9 +252,9 @@ auto mcp_parse_server_capabilities(MCPProtocolVersion version,
 ///
 /// @see
 /// https://modelcontextprotocol.io/specification/2026-07-28/schema#servercapabilities
-SOURCEMETA_CORE_MCP_EXPORT
-auto mcp_serialize_server_capabilities(
-    MCPProtocolVersion version, const MCPServerCapabilities &capabilities)
+[[nodiscard]] SOURCEMETA_CORE_MCP_EXPORT auto
+mcp_serialize_server_capabilities(MCPProtocolVersion version,
+                                  const MCPServerCapabilities &capabilities)
     -> JSON;
 
 } // namespace sourcemeta::core

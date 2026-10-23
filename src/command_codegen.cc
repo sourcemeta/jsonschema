@@ -138,6 +138,17 @@ auto sourcemeta::jsonschema::codegen(const sourcemeta::core::Options &options)
 
     throw sourcemeta::core::FileError<
         sourcemeta::core::SchemaDialectImpossibleError>(schema_path, error);
+  } catch (const sourcemeta::core::SchemaReferenceError &error) {
+    const auto position{parsed_schema.positions.get(error.location())};
+    if (position.has_value()) {
+      throw PositionError<
+          sourcemeta::core::FileError<sourcemeta::core::SchemaReferenceError>>(
+          std::get<0>(position.value()), std::get<1>(position.value()),
+          schema_path, error.identifier(), error.location(), error.what());
+    }
+
+    throw sourcemeta::core::FileError<sourcemeta::core::SchemaReferenceError>(
+        schema_path, error.identifier(), error.location(), error.what());
   } catch (const sourcemeta::core::SchemaResolutionError &error) {
     throw sourcemeta::core::FileError<sourcemeta::core::SchemaResolutionError>(
         schema_path, error);

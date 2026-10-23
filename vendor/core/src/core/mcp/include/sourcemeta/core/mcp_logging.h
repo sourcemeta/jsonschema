@@ -55,8 +55,8 @@ enum class MCPLogLevel : std::uint8_t {
 ///
 /// @see
 /// https://modelcontextprotocol.io/specification/2026-07-28/server/utilities/logging
-constexpr auto mcp_log_level_string(const MCPLogLevel level) noexcept
-    -> JSON::StringView {
+[[nodiscard]] constexpr auto
+mcp_log_level_string(const MCPLogLevel level) noexcept -> JSON::StringView {
   switch (level) {
     case MCPLogLevel::Debug:
       return "debug";
@@ -99,7 +99,8 @@ constexpr auto mcp_log_level_string(const MCPLogLevel level) noexcept
 ///
 /// @see
 /// https://modelcontextprotocol.io/specification/2026-07-28/server/utilities/logging
-constexpr auto mcp_resolve_log_level(const JSON::StringView value) noexcept
+[[nodiscard]] constexpr auto
+mcp_resolve_log_level(const JSON::StringView value) noexcept
     -> std::optional<MCPLogLevel> {
   constexpr std::array<MCPLogLevel, 8> LEVELS{
       {MCPLogLevel::Debug, MCPLogLevel::Info, MCPLogLevel::Notice,
@@ -135,9 +136,9 @@ constexpr auto mcp_resolve_log_level(const JSON::StringView value) noexcept
 ///
 /// @see
 /// https://modelcontextprotocol.io/specification/2026-07-28/server/utilities/logging
-constexpr auto mcp_log_level_enabled(const MCPLogLevel level,
-                                     const MCPLogLevel threshold) noexcept
-    -> bool {
+[[nodiscard]] constexpr auto
+mcp_log_level_enabled(const MCPLogLevel level,
+                      const MCPLogLevel threshold) noexcept -> bool {
   return level >= threshold;
 }
 

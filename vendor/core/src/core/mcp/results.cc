@@ -207,14 +207,8 @@ namespace {
 // is reachable from the interim and subscription results too, whose own result
 // type rules out the complete-result decorator
 // https://modelcontextprotocol.io/specification/2026-07-28/basic/index#responses
-auto attach_server_info(const MCPProtocolVersion version,
-                        sourcemeta::core::JSON &result,
-                        const std::optional<MCPImplementation> &server_info)
-    -> void {
-  if (!server_info.has_value() || !mcp_requires_result_type(version)) {
-    return;
-  }
-  auto info{internal::make_implementation(version, *server_info)};
+auto attach_server_info(sourcemeta::core::JSON &result,
+                        sourcemeta::core::JSON &&info) -> void {
   if (auto *meta{result.try_at("_meta", MCP_HASH_META)};
       meta != nullptr && meta->is_object()) {
     // Caller-supplied metadata may already identify the server
@@ -225,6 +219,17 @@ auto attach_server_info(const MCPProtocolVersion version,
                                   std::move(info), MCP_HASH_META_SERVER_INFO);
     result.assign_assume_new("_meta", std::move(meta_object), MCP_HASH_META);
   }
+}
+
+auto attach_server_info(const MCPProtocolVersion version,
+                        sourcemeta::core::JSON &result,
+                        const std::optional<MCPImplementation> &server_info)
+    -> void {
+  if (!server_info.has_value() || !mcp_requires_result_type(version)) {
+    return;
+  }
+  attach_server_info(result,
+                     internal::make_implementation(version, *server_info));
 }
 
 auto decorate_result(
@@ -256,12 +261,20 @@ auto decorate_result(
                       "or extension results");
   }
 
+  auto info{
+      server_info.has_value()
+          ? std::optional<sourcemeta::core::JSON>{internal::make_implementation(
+                version, *server_info)}
+          : std::nullopt};
+
   if (result.try_at("resultType", MCP_HASH_RESULT_TYPE) == nullptr) {
     result.assign_assume_new("resultType", sourcemeta::core::JSON{"complete"},
                              MCP_HASH_RESULT_TYPE);
   }
 
-  attach_server_info(version, result, server_info);
+  if (info) {
+    attach_server_info(result, std::move(*info));
+  }
 }
 
 } // namespace
@@ -1066,11 +1079,11 @@ auto mcp_make_completion_result(const MCPProtocolVersion version, JSON values,
   return result;
 }
 
-auto mcp_write_result(std::ostream &stream, const MCPProtocolVersion version,
-                      const JSON::StringView method, const JSON &identifier,
-                      const JSON &result,
-                      const std::optional<MCPCachePolicy> cache_policy,
-                      const std::optional<MCPImplementation> server_info)
+namespace {
+auto validate_write_result(const MCPProtocolVersion version,
+                           const JSON::StringView method,
+                           const JSON &identifier, const JSON &result,
+                           const std::optional<MCPCachePolicy> &cache_policy)
     -> void {
   internal::require(internal::valid_id(identifier), "Invalid MCP identifier");
   internal::require(mcp_is_request_method(version, method) &&
@@ -1101,6 +1114,10 @@ auto mcp_write_result(std::ostream &stream, const MCPProtocolVersion version,
   if (version == MCPProtocolVersion::V_2026_07_28) {
     internal::require(cache_policy.has_value(),
                       "Cacheable results require a policy");
+  }
+  if (cache_policy) {
+    internal::require(cache_policy->ttl_ms >= 0,
+                      "A cache time to live cannot be negative");
   }
   const JSON *entries = nullptr;
   if (method == MCP_METHOD_TOOLS_LIST) {
@@ -1164,11 +1181,46 @@ auto mcp_write_result(std::ostream &stream, const MCPProtocolVersion version,
       cursor) {
     internal::require(cursor->is_string(), "Invalid result cursor");
   }
-  auto payload{result};
-  decorate_result(version, payload, server_info);
+}
+
+auto write_result_impl(std::ostream &stream, const MCPProtocolVersion version,
+                       const JSON::StringView method, const JSON &identifier,
+                       JSON &&result,
+                       const std::optional<MCPCachePolicy> &cache_policy,
+                       const std::optional<MCPImplementation> &server_info)
+    -> void {
+  // NOLINTNEXTLINE(performance-unnecessary-copy-initialization)
+  const auto envelope_identifier{identifier};
+  const JSON::String operation{method};
+  decorate_result(version, result, server_info);
   if (cache_policy) {
-    decorate_cacheable_result(version, payload, *cache_policy, method);
+    decorate_cacheable_result(version, result, *cache_policy, operation);
   }
-  stringify(jsonrpc_make_success(identifier, std::move(payload)), stream);
+  stringify(jsonrpc_make_success(envelope_identifier, std::move(result)),
+            stream);
+}
+} // namespace
+
+auto mcp_write_result(std::ostream &stream, const MCPProtocolVersion version,
+                      const JSON::StringView method, const JSON &identifier,
+                      JSON &&result,
+                      const std::optional<MCPCachePolicy> cache_policy,
+                      const std::optional<MCPImplementation> server_info)
+    -> void {
+  validate_write_result(version, method, identifier, result, cache_policy);
+  write_result_impl(stream, version, method, identifier, std::move(result),
+                    cache_policy, server_info);
+}
+
+auto mcp_write_result(std::ostream &stream, const MCPProtocolVersion version,
+                      const JSON::StringView method, const JSON &identifier,
+                      const JSON &result,
+                      const std::optional<MCPCachePolicy> cache_policy,
+                      const std::optional<MCPImplementation> server_info)
+    -> void {
+  validate_write_result(version, method, identifier, result, cache_policy);
+  auto payload{result};
+  write_result_impl(stream, version, method, identifier, std::move(payload),
+                    cache_policy, server_info);
 }
 } // namespace sourcemeta::core

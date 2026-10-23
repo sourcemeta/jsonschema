@@ -13,12 +13,14 @@
 
 // We do not check vocabularies here because the canonicaliser ensures
 // we never get an official keyword when its vocabulary is not present
+// Every shape already allows `$defs`. `definitions` is the same container
+// under the spelling Drafts 4 to 7 use, so allow it everywhere too
 // NOLINTNEXTLINE(cppcoreguidelines-macro-usage)
 #define ONLY_WHITELIST_KEYWORDS(schema, subschema, pointer, ...)               \
   {                                                                            \
     static const std::unordered_set<std::string_view> allowed{__VA_ARGS__};    \
     for (const auto &entry : (subschema).as_object()) {                        \
-      if (!allowed.contains(entry.first)) {                                    \
+      if (entry.first != "definitions" && !allowed.contains(entry.first)) {    \
         throw sourcemeta::blaze::CodegenUnsupportedKeywordError(               \
             (schema), (pointer), entry.first,                                  \
             "Unsupported keyword in subschema");                               \

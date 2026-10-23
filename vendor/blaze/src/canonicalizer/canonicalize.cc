@@ -246,20 +246,31 @@ auto apply(const std::vector<Rule> &rules, sourcemeta::core::JSON &schema,
   }
 }
 
-auto is_draft3(const core::SchemaBaseDialect base_dialect) -> bool {
+/// The drafts that spell the identifier `id` and let it nest anywhere, so
+/// that a subschema can change the base URI the references around it resolve
+/// against. Draft 6 renamed the keyword to `$id` and the rules there differ.
+///
+/// Erasing an identifier is only worth doing where the graph form follows,
+/// since the form is what cannot carry one. These must therefore name exactly
+/// the dialects `profile_for` covers: a dialect that lost its identifiers
+/// without being lifted would keep every nested document it had while no
+/// longer being able to address them. That is why Draft 4 hyper-schema is
+/// absent, as it is there
+auto has_nested_id(const core::SchemaBaseDialect base_dialect) -> bool {
   return base_dialect == core::SchemaBaseDialect::JSON_SCHEMA_DRAFT_3 ||
-         base_dialect == core::SchemaBaseDialect::JSON_SCHEMA_DRAFT_3_HYPER;
+         base_dialect == core::SchemaBaseDialect::JSON_SCHEMA_DRAFT_3_HYPER ||
+         base_dialect == core::SchemaBaseDialect::JSON_SCHEMA_DRAFT_4;
 }
 
-/// Remove every Draft 3 identifier, including anchors and the identifier of
-/// the root. Every reference is first resolved while the frame still knows
-/// the identifiers, and rewritten into a form that does not depend on any of
-/// them: a JSON Pointer into this document when the destination is local, or
-/// the absolute URI when it is not. Only then are the identifiers erased, so
-/// no reference can lose the base it was resolved against.
+/// Remove every `id`, including anchors and the identifier of the root. Every
+/// reference is first resolved while the frame still knows the identifiers,
+/// and rewritten into a form that does not depend on any of them: a JSON
+/// Pointer into this document when the destination is local, or the absolute
+/// URI when it is not. Only then are the identifiers erased, so no reference
+/// can lose the base it was resolved against.
 ///
-/// This only applies to documents that are Draft 3 throughout. A document of
-/// another dialect may embed a Draft 3 resource and reference it by its
+/// This only applies to documents that use `id` throughout. A document of
+/// another dialect may embed such a resource and reference it by its
 /// identifier from outside, with a reference this pass must not rewrite, so
 /// such documents are left untouched
 auto eliminate_identifiers(sourcemeta::core::JSON &schema,
@@ -285,7 +296,7 @@ auto eliminate_identifiers(sourcemeta::core::JSON &schema,
 
     if (frame.any_subschema(
             [](const core::SchemaFrame::Location &location) -> bool {
-              return !is_draft3(location.base_dialect);
+              return !has_nested_id(location.base_dialect);
             })) {
       return;
     }
@@ -374,11 +385,83 @@ auto entry_number(const sourcemeta::core::JSON &reference)
   return static_cast<std::size_t>(std::stoull(suffix));
 }
 
+/// How the graph form is spelled in a given dialect: the form is the same
+/// everywhere, only the keywords and what the dialect allows differ
+struct Profile {
+  /// The keyword a conjunction is written with
+  sourcemeta::core::JSON::String wrapper;
+  /// Keywords whose value is an object whose members are subschemas
+  std::set<sourcemeta::core::JSON::String> mappings;
+  /// Keywords whose value is a single subschema
+  std::set<sourcemeta::core::JSON::String> singles;
+  /// Keywords whose value is a subschema or an array of them
+  std::set<sourcemeta::core::JSON::String> branches;
+  /// Keywords whose arrays say nothing new by naming the same entry twice
+  std::set<sourcemeta::core::JSON::String> unique_branches;
+  /// Whether requiredness is a marker beside the subschema it applies to, as
+  /// in Draft 3, rather than a list of names on the object, as from Draft 4 on
+  bool property_marker;
+  /// Whether a boolean standing in for a subschema can be an entry. From
+  /// Draft 4 on the values of `definitions` have to be schemas, and a boolean
+  /// is not one, so there it stays where it is
+  bool boolean_nodes;
+};
+
+/// Draft 3 states a conjunction with `extends`, a disjunction as an array of
+/// subschemas under `type`, and a negation with `disallow`
+auto draft3_profile() -> const Profile & {
+  static const Profile PROFILE{
+      .wrapper = "extends",
+      .mappings = {"properties", "patternProperties", "dependencies"},
+      .singles = {"additionalProperties", "additionalItems"},
+      .branches = {"items", "type", "extends", "disallow"},
+      .unique_branches = {"type", "extends", "disallow"},
+      .property_marker = true,
+      .boolean_nodes = true};
+  return PROFILE;
+}
+
+/// Draft 4 replaces those three with `allOf`, `anyOf`, `oneOf` and `not`. Its
+/// `type` only ever names types, so unlike Draft 3 it holds no subschema, and
+/// its requiredness is a list of names on the object rather than a marker
+auto draft4_profile() -> const Profile & {
+  static const Profile PROFILE{
+      .wrapper = "allOf",
+      .mappings = {"properties", "patternProperties", "dependencies"},
+      .singles = {"additionalProperties", "additionalItems", "not"},
+      .branches = {"items", "allOf", "anyOf", "oneOf"},
+      // `oneOf` counts how many branches match, so naming the same entry
+      // twice is not the same as naming it once: two identical branches
+      // never match, one always can
+      .unique_branches = {"allOf", "anyOf"},
+      .property_marker = false,
+      .boolean_nodes = false};
+  return PROFILE;
+}
+
+/// The profile for a dialect, when the graph form covers it at all. Draft 3
+/// hyper-schema shares the Draft 3 profile: by the time this runs the rules
+/// have dropped the keywords its vocabulary adds, none of which takes part
+/// in whether an instance is valid. Draft 4 hyper-schema has no such rule
+/// yet, so its `links` would be lifted as though they were subschemas
+auto profile_for(const core::SchemaBaseDialect base_dialect)
+    -> const Profile * {
+  switch (base_dialect) {
+    case core::SchemaBaseDialect::JSON_SCHEMA_DRAFT_3:
+    case core::SchemaBaseDialect::JSON_SCHEMA_DRAFT_3_HYPER:
+      return &draft3_profile();
+    case core::SchemaBaseDialect::JSON_SCHEMA_DRAFT_4:
+      return &draft4_profile();
+    default:
+      return nullptr;
+  }
+}
+
 /// The reference an entry amounts to, when the entry is nothing but a
-/// reference: either on its own, or behind the one-element `extends` that
-/// this pass leaves in place of a lifted subschema. Such a subschema is an
-/// edge of the graph rather than a node of it
-auto edge_reference(const sourcemeta::core::JSON &body)
+/// reference: either on its own, or behind the one-element wrapper that this
+/// pass leaves in place of a lifted subschema. Such a subschema is an edge of
+/// the graph rather than a node of it
+auto edge_reference(const sourcemeta::core::JSON &body, const Profile &profile)
     -> const sourcemeta::core::JSON * {
   if (!body.is_object() || body.size() != 1) {
     return nullptr;
@@ -388,11 +471,11 @@ auto edge_reference(const sourcemeta::core::JSON &body)
     return &body.at("$ref");
   }
 
-  if (!body.defines("extends")) {
+  if (!body.defines(profile.wrapper)) {
     return nullptr;
   }
 
-  const auto &branches{body.at("extends")};
+  const auto &branches{body.at(profile.wrapper)};
   if (!branches.is_array() || branches.size() != 1) {
     return nullptr;
   }
@@ -408,20 +491,25 @@ auto edge_reference(const sourcemeta::core::JSON &body)
 /// Whether the given body is an edge rather than a node. Only a reference
 /// that stays inside the document can reach an entry, so one that leaves it
 /// becomes an entry of its own and every edge really is an edge of the graph
-auto is_edge(const sourcemeta::core::JSON &body) -> bool {
-  const auto *reference{edge_reference(body)};
+auto is_edge(const sourcemeta::core::JSON &body, const Profile &profile)
+    -> bool {
+  const auto *reference{edge_reference(body, profile)};
   return reference != nullptr && reference->is_string() &&
          reference->to_string().starts_with('#');
 }
 
 /// What a subschema says, with the keywords that carry the graph itself taken
-/// out. `definitions` holds other nodes rather than part of this one, and a
-/// `required` marker belongs to the parent `properties`
-auto without_containers(sourcemeta::core::JSON body) -> sourcemeta::core::JSON {
+/// out. `definitions` holds other nodes rather than part of this one, and
+/// where requiredness is a marker it belongs to the parent `properties`
+/// rather than to the subschema it sits on
+auto without_containers(sourcemeta::core::JSON body, const Profile &profile)
+    -> sourcemeta::core::JSON {
   if (body.is_object()) {
     body.erase("$schema");
     body.erase("definitions");
-    body.erase("required");
+    if (profile.property_marker) {
+      body.erase("required");
+    }
   }
 
   return body;
@@ -439,22 +527,12 @@ auto without_containers(sourcemeta::core::JSON body) -> sourcemeta::core::JSON {
 ///
 /// Members are read in key order so that the result never depends on the order
 /// an object happens to store them in
-auto reference_slots(const sourcemeta::core::JSON &body)
+auto reference_slots(const sourcemeta::core::JSON &body, const Profile &profile)
     -> std::vector<sourcemeta::core::Pointer> {
-  static const std::set<sourcemeta::core::JSON::String> MAPPINGS{
-      "properties", "patternProperties", "dependencies"};
-  static const std::set<sourcemeta::core::JSON::String> SINGLES{
-      "additionalProperties", "additionalItems"};
-  // `items` holds either one subschema or a tuple of them, and the three
-  // Draft 3 keywords that take branches hold an array once the rules have run,
-  // though hyper-schema can leave a lone subschema behind
-  static const std::set<sourcemeta::core::JSON::String> BRANCHES{
-      "items", "type", "extends", "disallow"};
-
   std::vector<sourcemeta::core::Pointer> result;
-  const auto collect{[&result](const sourcemeta::core::JSON &current,
-                               const core::Pointer &position,
-                               const auto &self) -> void {
+  const auto collect{[&result, &profile](const sourcemeta::core::JSON &current,
+                                         const core::Pointer &position,
+                                         const auto &self) -> void {
     if (!current.is_object()) {
       return;
     }
@@ -472,7 +550,7 @@ auto reference_slots(const sourcemeta::core::JSON &body)
         if (value.is_string()) {
           result.push_back(position.concat(key));
         }
-      } else if (MAPPINGS.contains(key) && value.is_object()) {
+      } else if (profile.mappings.contains(key) && value.is_object()) {
         std::vector<sourcemeta::core::JSON::String> names;
         names.reserve(value.size());
         for (const auto &member : value.as_object()) {
@@ -483,9 +561,9 @@ auto reference_slots(const sourcemeta::core::JSON &body)
         for (const auto &name : names) {
           self(value.at(name), position.concat(key).concat(name), self);
         }
-      } else if (SINGLES.contains(key)) {
+      } else if (profile.singles.contains(key)) {
         self(value, position.concat(key), self);
-      } else if (BRANCHES.contains(key)) {
+      } else if (profile.branches.contains(key)) {
         if (value.is_array()) {
           for (std::size_t index = 0; index < value.size(); index++) {
             self(value.at(index),
@@ -519,6 +597,7 @@ auto lift_subschemas(sourcemeta::core::JSON &schema,
     return;
   }
 
+  const Profile *profile{nullptr};
   std::vector<core::Pointer> nodes;
   // Every reference the document declares, before edges are followed through
   std::vector<std::pair<core::Pointer, core::Pointer>> links;
@@ -533,24 +612,40 @@ auto lift_subschemas(sourcemeta::core::JSON &schema,
                                   default_id,
                                   core::SchemaFrame::IdentifierMode::Fallback};
 
-    // Hyper-schema comes this far too. Nothing its vocabulary declares takes
-    // part in whether an instance is valid, so the rules have dropped all of
-    // it by now, and what is left is Draft 3 proper however the document
-    // spells its dialect
-    if (frame.any_subschema(
-            [](const core::SchemaFrame::Location &location) -> bool {
-              return !is_draft3(location.base_dialect);
-            })) {
+    // Every subschema has to land on the same spelling of the form, and on
+    // one the form covers at all. Draft 3 and its hyper-schema share a
+    // profile: by now the rules have dropped everything the hyper-schema
+    // vocabulary adds, none of which takes part in whether an instance is
+    // valid
+    bool unsupported{false};
+    frame.for_each_subschema(
+        [&profile,
+         &unsupported](const core::SchemaFrame::Location &location) -> void {
+          const auto *current{profile_for(location.base_dialect)};
+          if (current == nullptr ||
+              (profile != nullptr && profile != current)) {
+            unsupported = true;
+          } else {
+            profile = current;
+          }
+        });
+
+    if (unsupported || profile == nullptr) {
       return;
     }
 
     frame.for_each_subschema(
-        [&nodes, &schema](const core::SchemaFrame::Location &location) -> void {
+        [&nodes, &schema,
+         profile](const core::SchemaFrame::Location &location) -> void {
+          const auto &body{core::get(schema, location.pointer)};
+          if (!profile->boolean_nodes && body.is_boolean()) {
+            return;
+          }
+
           // The test runs on what the body would be once the container
           // keywords are stripped, so that a root already in graph form is
           // recognised as the wrapper it is
-          if (is_edge(
-                  without_containers(core::get(schema, location.pointer)))) {
+          if (is_edge(without_containers(body, *profile), *profile)) {
             return;
           }
 
@@ -589,9 +684,8 @@ auto lift_subschemas(sourcemeta::core::JSON &schema,
   // A reference can target a subschema that is itself an edge, so follow such
   // a chain through to the node it ultimately reaches
   static const core::JSON::String REF_KEYWORD{"$ref"};
-  static const core::JSON::String EXTENDS_KEYWORD{"extends"};
 
-  const auto resolve{[&nodes, &links](const core::Pointer &start)
+  const auto resolve{[&nodes, &links, profile](const core::Pointer &start)
                          -> std::optional<std::size_t> {
     auto target{start};
     for (std::size_t hop = 0; hop <= links.size(); hop++) {
@@ -609,10 +703,10 @@ auto lift_subschemas(sourcemeta::core::JSON &schema,
         continue;
       }
 
-      const auto wrapped{
-          std::ranges::find_if(links, [&target](const auto &entry) -> bool {
+      const auto wrapped{std::ranges::find_if(
+          links, [&target, profile](const auto &entry) -> bool {
             return entry.first ==
-                   target.concat({EXTENDS_KEYWORD,
+                   target.concat({profile->wrapper,
                                   static_cast<core::Pointer::Token::Index>(0),
                                   REF_KEYWORD});
           })};
@@ -666,35 +760,40 @@ auto lift_subschemas(sourcemeta::core::JSON &schema,
         return result;
       }};
 
-  const auto link{[](const std::size_t index,
-                     const sourcemeta::core::JSON &target,
-                     const core::Pointer &position) -> sourcemeta::core::JSON {
-    auto reference{sourcemeta::core::JSON::make_object()};
-    reference.assign("$ref", sourcemeta::core::JSON{"#/definitions/" +
-                                                    std::to_string(index)});
+  const auto link{
+      [profile](const std::size_t index, const sourcemeta::core::JSON &target,
+                const core::Pointer &position) -> sourcemeta::core::JSON {
+        auto reference{sourcemeta::core::JSON::make_object()};
+        reference.assign("$ref", sourcemeta::core::JSON{"#/definitions/" +
+                                                        std::to_string(index)});
 
-    // `required` is read by the parent `properties`, and Draft 3 ignores
-    // the siblings of a `$ref`, so the marker can neither travel into the
-    // entry nor sit next to the reference. It stays behind, wrapping it
-    const auto *marker{target.is_object() ? target.try_at("required")
-                                          : nullptr};
-    // Anywhere but a property entry the marker means nothing at all, so
-    // a subschema under `items` or `additionalProperties` loses it
-    const auto under_properties{
-        position.size() >= 2 &&
-        position.at(position.size() - 2).is_property() &&
-        position.at(position.size() - 2).to_property() == "properties"};
-    if (marker == nullptr || !under_properties) {
-      return reference;
-    }
+        // A list of names on the object leaves nothing behind
+        if (!profile->property_marker) {
+          return reference;
+        }
 
-    auto wrapper{sourcemeta::core::JSON::make_object()};
-    wrapper.assign("required", *marker);
-    auto branches{sourcemeta::core::JSON::make_array()};
-    branches.push_back(std::move(reference));
-    wrapper.assign("extends", std::move(branches));
-    return wrapper;
-  }};
+        // A marker is read by the parent `properties`, and these drafts ignore
+        // the siblings of a `$ref`, so it can neither travel into the entry nor
+        // sit next to the reference. It stays behind, wrapping it
+        const auto *marker{target.is_object() ? target.try_at("required")
+                                              : nullptr};
+        // Anywhere but a property entry the marker means nothing at all, so
+        // a subschema under `items` or `additionalProperties` loses it
+        const auto under_properties{
+            position.size() >= 2 &&
+            position.at(position.size() - 2).is_property() &&
+            position.at(position.size() - 2).to_property() == "properties"};
+        if (marker == nullptr || !under_properties) {
+          return reference;
+        }
+
+        auto wrapper{sourcemeta::core::JSON::make_object()};
+        wrapper.assign("required", *marker);
+        auto branches{sourcemeta::core::JSON::make_array()};
+        branches.push_back(std::move(reference));
+        wrapper.assign(profile->wrapper, std::move(branches));
+        return wrapper;
+      }};
 
   const auto entry_node{resolve(core::Pointer{})};
   if (!entry_node.has_value()) {
@@ -735,7 +834,9 @@ auto lift_subschemas(sourcemeta::core::JSON &schema,
 
     if (body.is_object()) {
       body.erase("$schema");
-      body.erase("required");
+      if (profile->property_marker) {
+        body.erase("required");
+      }
       // Every entry of a `definitions` is a node of its own, so the container
       // is not part of any body. Leaving it in would make a later pass lift
       // the same entries again
@@ -759,7 +860,7 @@ auto lift_subschemas(sourcemeta::core::JSON &schema,
     // and the entry itself goes away
     std::map<std::size_t, std::size_t> collapsed;
     for (const auto &entry : definitions.as_object()) {
-      const auto *reference{edge_reference(entry.second)};
+      const auto *reference{edge_reference(entry.second, *profile)};
       if (reference == nullptr) {
         continue;
       }
@@ -792,9 +893,9 @@ auto lift_subschemas(sourcemeta::core::JSON &schema,
       }
     }
 
-    const auto rewrite{[&destination,
-                        &renamed](sourcemeta::core::JSON &body) -> void {
-      for (const auto &slot : reference_slots(body)) {
+    const auto rewrite{[&destination, &renamed,
+                        profile](sourcemeta::core::JSON &body) -> void {
+      for (const auto &slot : reference_slots(body, *profile)) {
         const auto entry{entry_number(core::get(body, slot))};
         if (!entry.has_value()) {
           continue;
@@ -836,9 +937,9 @@ auto lift_subschemas(sourcemeta::core::JSON &schema,
     // not depend on the order an object happens to store its members in.
     // Reading them by sorted key gives the same answer however the object was
     // built
-    const auto targets{[](const sourcemeta::core::JSON &body,
-                          std::vector<std::size_t> &result) -> void {
-      for (const auto &slot : reference_slots(body)) {
+    const auto targets{[profile](const sourcemeta::core::JSON &body,
+                                 std::vector<std::size_t> &result) -> void {
+      for (const auto &slot : reference_slots(body, *profile)) {
         const auto entry{entry_number(core::get(body, slot))};
         if (entry.has_value()) {
           result.push_back(entry.value());
@@ -849,17 +950,17 @@ auto lift_subschemas(sourcemeta::core::JSON &schema,
     // Only the references this pass produced are set aside. A reference that
     // leaves the document names no entry, so it stays part of what the body
     // says: two entries that point at different documents are not the same
-    const auto skeleton{
-        [](const sourcemeta::core::JSON &body) -> sourcemeta::core::JSON {
-          auto result{body};
-          for (const auto &slot : reference_slots(result)) {
-            if (entry_number(core::get(result, slot)).has_value()) {
-              core::set(result, slot, sourcemeta::core::JSON{""});
-            }
-          }
+    const auto skeleton{[profile](const sourcemeta::core::JSON &body)
+                            -> sourcemeta::core::JSON {
+      auto result{body};
+      for (const auto &slot : reference_slots(result, *profile)) {
+        if (entry_number(core::get(result, slot)).has_value()) {
+          core::set(result, slot, sourcemeta::core::JSON{""});
+        }
+      }
 
-          return result;
-        }};
+      return result;
+    }};
 
     std::vector<std::vector<std::size_t>> outgoing{bodies.size()};
     std::vector<std::size_t> classes(bodies.size(), 0);
@@ -933,33 +1034,34 @@ auto lift_subschemas(sourcemeta::core::JSON &schema,
       position.emplace(walked.at(index), index);
     }
 
-    const auto relabel{[&classes, &position](const sourcemeta::core::JSON &body)
-                           -> sourcemeta::core::JSON {
-      auto result{body};
-      for (const auto &slot : reference_slots(result)) {
-        const auto entry{entry_number(core::get(result, slot))};
-        if (!entry.has_value()) {
-          continue;
-        }
+    const auto relabel{
+        [&classes, &position, profile](
+            const sourcemeta::core::JSON &body) -> sourcemeta::core::JSON {
+          auto result{body};
+          for (const auto &slot : reference_slots(result, *profile)) {
+            const auto entry{entry_number(core::get(result, slot))};
+            if (!entry.has_value()) {
+              continue;
+            }
 
-        core::set(result, slot,
-                  sourcemeta::core::JSON{
-                      "#/definitions/" +
-                      std::to_string(position.at(classes.at(entry.value())))});
-      }
+            core::set(result, slot,
+                      sourcemeta::core::JSON{"#/definitions/" +
+                                             std::to_string(position.at(
+                                                 classes.at(entry.value())))});
+          }
 
-      return result;
-    }};
+          return result;
+        }};
 
     // Merging entries can leave a disjunction or a conjunction listing the same
-    // entry twice, which says nothing new. The rules already drop duplicates in
-    // these three keywords, but they run before any of this
-    const auto unique{[](sourcemeta::core::JSON &body) -> void {
+    // entry twice, which says nothing new. The rules already drop duplicates
+    // in these keywords, but they run before any of this
+    const auto unique{[profile](sourcemeta::core::JSON &body) -> void {
       if (!body.is_object()) {
         return;
       }
 
-      for (const auto *keyword : {"type", "extends", "disallow"}) {
+      for (const auto &keyword : profile->unique_branches) {
         auto *entries{body.try_at(keyword)};
         if (entries == nullptr || !entries->is_array()) {
           continue;
@@ -1015,7 +1117,7 @@ auto lift_subschemas(sourcemeta::core::JSON &schema,
   reference.assign("$ref", sourcemeta::core::JSON{"#/definitions/" +
                                                   std::to_string(entry_point)});
   wrapper.push_back(std::move(reference));
-  result.assign("extends", std::move(wrapper));
+  result.assign(profile->wrapper, std::move(wrapper));
   result.assign("definitions", std::move(definitions));
   schema.into(std::move(result));
 }

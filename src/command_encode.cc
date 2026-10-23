@@ -75,8 +75,14 @@ auto sourcemeta::jsonschema::encode(const sourcemeta::core::Options &options)
     std::println(stderr, "compression ratio: {}%",
                  total_size * 100 / original_size);
   } else {
-    const auto entry{
-        sourcemeta::core::read_yaml_or_json(options.positional().front())};
+    auto parsed{read_file(options.positional().front())};
+    if (parsed.multidocument) {
+      throw MultiDocumentInputError{
+          "This command does not support input with multiple documents",
+          options.positional().front()};
+    }
+
+    const auto entry{std::move(parsed.document)};
     std::ofstream output_stream(
         sourcemeta::core::weakly_canonical(options.positional().at(1)),
         std::ios::binary);

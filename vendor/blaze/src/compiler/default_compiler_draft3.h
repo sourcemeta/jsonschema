@@ -117,72 +117,24 @@ static constexpr auto UNSUPPORTED_VALUE_FOR_DIALECT{
     "The value this keyword is set to is not supported by this dialect"};
 static constexpr auto PROHIBITED_KEYWORD_FOR_DIALECT{
     "This keyword is prohibited by this dialect"};
-// A subschema that `narrows_type_away` drops is never compiled, so the refusal
-// at the end of the dispatch table never reaches its members. Walk them here,
-// as a member this dialect does not define is an error rather than one more
-// keyword to pass by. The dialect is closed, so the applicators below are the
-// complete set of places a further subschema can sit
-static inline auto assert_members_are_permitted(
-    const sourcemeta::core::JSON &schema,
-    const sourcemeta::blaze::Context &context,
-    const sourcemeta::blaze::SchemaContext &schema_context,
-    const std::uint64_t depth = 0) -> void {
-  if (depth >= context.tweaks.max_depth) [[unlikely]] {
-    throw sourcemeta::blaze::CompilerDepthLimitError{context.tweaks.max_depth};
-  }
-
-  // The OpenAPI 3.0 Schema Object is the only dialect here that treats a
-  // member it does not define as an error, so it is the only one whose pruned
-  // subschemas have anything to answer for
+// A subschema that `narrows_type_away` drops is never compiled, so neither
+// the refusal at the end of the dispatch table nor the keyword shape checks
+// ever reach its members. The OpenAPI 3.0 Schema Object is the only dialect
+// here whose documents those checks judge as a whole, reachable or not, so
+// compile the subschema the way a reachable one compiles and discard what it
+// yields: the checks are the point rather than the instructions
+static inline auto
+compile_pruned_subschema(const sourcemeta::blaze::Context &context,
+                         const sourcemeta::blaze::SchemaContext &schema_context,
+                         const sourcemeta::core::WeakPointer &suffix) -> void {
   if (!schema_context.vocabularies.contains(
           sourcemeta::core::SchemaVocabularies::Known::OPENAPI_3_0_BASE)) {
     return;
   }
 
-  if (!schema.is_object()) {
-    return;
-  }
-
-  // A Reference Object ignores whatever sits beside `$ref`, so those members
-  // answer to no keyword set
-  if (schema.defines("$ref")) {
-    return;
-  }
-
-  for (const auto &entry : schema.as_object()) {
-    if (entry.first.starts_with("x-")) {
-      continue;
-    }
-
-    if (context.walker(entry.first, schema_context.vocabularies).type ==
-        sourcemeta::core::SchemaKeywordType::Unknown) {
-      throw sourcemeta::blaze::CompilerError(
-          schema_context.base,
-          absolute_schema_location(context, schema_context),
-          PROHIBITED_KEYWORD_FOR_DIALECT);
-    }
-
-    if (entry.first == "not" || entry.first == "items" ||
-        entry.first == "additionalProperties") {
-      assert_members_are_permitted(entry.second, context, schema_context,
-                                   depth + 1);
-    } else if (entry.first == "allOf" || entry.first == "anyOf" ||
-               entry.first == "oneOf") {
-      if (entry.second.is_array()) {
-        for (const auto &element : entry.second.as_array()) {
-          assert_members_are_permitted(element, context, schema_context,
-                                       depth + 1);
-        }
-      }
-    } else if (entry.first == "properties") {
-      if (entry.second.is_object()) {
-        for (const auto &property : entry.second.as_object()) {
-          assert_members_are_permitted(property.second, context, schema_context,
-                                       depth + 1);
-        }
-      }
-    }
-  }
+  sourcemeta::blaze::compile(context, schema_context,
+                             sourcemeta::blaze::relative_dynamic_context(),
+                             suffix, suffix);
 }
 
 static constexpr auto EXPECTED_UNIQUE_VALUES{
@@ -845,7 +797,9 @@ auto compiler_draft3_applicator_properties_with_options(
   if (narrows_type_away(schema_context.schema, {"object"})) {
     for (const auto &entry :
          schema_context.schema.at(dynamic_context.keyword).as_object()) {
-      assert_members_are_permitted(entry.second, context, schema_context);
+      compile_pruned_subschema(
+          context, schema_context,
+          sourcemeta::blaze::make_weak_pointer(entry.first));
     }
 
     return {};
@@ -1504,9 +1458,8 @@ auto compiler_draft3_applicator_additionalproperties_with_options(
     const DynamicContext &dynamic_context, const bool annotate,
     const bool track_evaluation) -> Instructions {
   if (narrows_type_away(schema_context.schema, {"object"})) {
-    assert_members_are_permitted(
-        schema_context.schema.at(dynamic_context.keyword), context,
-        schema_context);
+    compile_pruned_subschema(context, schema_context,
+                             sourcemeta::core::EMPTY_WEAK_POINTER);
     return {};
   }
 
@@ -1859,9 +1812,8 @@ auto compiler_draft3_applicator_items_with_options(
   }
 
   if (narrows_type_away(schema_context.schema, {"array"})) {
-    assert_members_are_permitted(
-        schema_context.schema.at(dynamic_context.keyword), context,
-        schema_context);
+    compile_pruned_subschema(context, schema_context,
+                             sourcemeta::core::EMPTY_WEAK_POINTER);
     return {};
   }
 
@@ -2471,33 +2423,6 @@ auto compiler_draft3_validation_minimum(const Context &context,
                    schema_context.schema.at(dynamic_context.keyword)})};
 }
 
-// Whether the name was one this function knows, so that callers can tell an
-// unrecognised name apart from one that set no bit
-auto assign_type_bit(sourcemeta::blaze::ValueTypes &types,
-                     const std::string_view name) -> bool {
-  if (name == "null") {
-    types.set(std::to_underlying(sourcemeta::core::JSON::Type::Null));
-  } else if (name == "boolean") {
-    types.set(std::to_underlying(sourcemeta::core::JSON::Type::Boolean));
-  } else if (name == "object") {
-    types.set(std::to_underlying(sourcemeta::core::JSON::Type::Object));
-  } else if (name == "array") {
-    types.set(std::to_underlying(sourcemeta::core::JSON::Type::Array));
-  } else if (name == "number") {
-    types.set(std::to_underlying(sourcemeta::core::JSON::Type::Integer));
-    types.set(std::to_underlying(sourcemeta::core::JSON::Type::Real));
-    types.set(std::to_underlying(sourcemeta::core::JSON::Type::Decimal));
-  } else if (name == "integer") {
-    types.set(std::to_underlying(sourcemeta::core::JSON::Type::Integer));
-  } else if (name == "string") {
-    types.set(std::to_underlying(sourcemeta::core::JSON::Type::String));
-  } else {
-    return false;
-  }
-
-  return true;
-}
-
 auto compiler_draft3_validation_type(const Context &context,
                                      const SchemaContext &schema_context,
                                      const DynamicContext &dynamic_context,
@@ -2511,12 +2436,12 @@ auto compiler_draft3_validation_type(const Context &context,
 
   // This dialect types `type` as a string drawn from six names. It has no
   // array form and no null type, offering `nullable` in place of the latter.
-  // `assign_type_bit` answers for the seven JSON Schema names, so the null one
-  // has to be ruled out separately
+  // `draft3_set_type_bits` answers for the seven JSON Schema names, so the
+  // null one has to be ruled out separately
   if (schema_context.vocabularies.contains(Known::OPENAPI_3_0_BASE)) {
     ValueTypes recognised{};
     if (!value.is_string() || value.to_string() == "null" ||
-        !assign_type_bit(recognised, value.to_string())) {
+        !draft3_set_type_bits(value.to_string(), recognised)) {
       throw sourcemeta::blaze::CompilerError(
           schema_context.base,
           absolute_schema_location(context, schema_context),
@@ -2910,7 +2835,7 @@ auto compiler_draft3_validation_type(const Context &context,
         continue;
       }
 
-      if (!assign_type_bit(types, element.to_string()) && !is_draft3) {
+      if (!draft3_set_type_bits(element.to_string(), types) && !is_draft3) {
         throw sourcemeta::blaze::CompilerError(
             schema_context.base,
             absolute_schema_location(context, schema_context),
@@ -3240,6 +3165,35 @@ auto is_openapi_numeric_format(const SchemaContext &schema_context,
          name == "double";
 }
 
+// Every OpenAPI version types `int32`, `int64`, `float`, and `double` over
+// numbers, so the assertion each name compiles to is the same wherever it
+// appears. The caller answers for `name` being one of the four
+auto make_openapi_numeric_format_assertion(
+    const Context &context, const SchemaContext &schema_context,
+    const DynamicContext &dynamic_context,
+    const sourcemeta::core::JSON::String &name) -> Instruction {
+  if (name == "int32") {
+    return make(
+        sourcemeta::blaze::InstructionIndex::AssertionNumberIntegerBounded,
+        context, schema_context, dynamic_context,
+        ValueIntegerBounds{std::numeric_limits<std::int32_t>::min(),
+                           std::numeric_limits<std::int32_t>::max()});
+  }
+
+  if (name == "int64") {
+    return make(
+        sourcemeta::blaze::InstructionIndex::AssertionNumberIntegerBounded,
+        context, schema_context, dynamic_context,
+        ValueIntegerBounds{std::numeric_limits<std::int64_t>::min(),
+                           std::numeric_limits<std::int64_t>::max()});
+  }
+
+  return make(sourcemeta::blaze::InstructionIndex::AssertionNumberType, context,
+              schema_context, dynamic_context,
+              name == "float" ? ValueNumberType::Float
+                              : ValueNumberType::Double);
+}
+
 auto compiler_draft3_validation_format(const Context &context,
                                        const SchemaContext &schema_context,
                                        const DynamicContext &dynamic_context,
@@ -3277,26 +3231,8 @@ auto compiler_draft3_validation_format(const Context &context,
     // TODO: Consider asserting the numeric and string formats that the
     // OpenAPI Format Registry defines
     if (is_openapi_numeric_format(schema_context, format)) {
-      Instructions instructions;
-      if (name == "int32") {
-        instructions.push_back(make(
-            sourcemeta::blaze::InstructionIndex::AssertionNumberIntegerBounded,
-            context, schema_context, dynamic_context,
-            ValueIntegerBounds{std::numeric_limits<std::int32_t>::min(),
-                               std::numeric_limits<std::int32_t>::max()}));
-      } else if (name == "int64") {
-        instructions.push_back(make(
-            sourcemeta::blaze::InstructionIndex::AssertionNumberIntegerBounded,
-            context, schema_context, dynamic_context,
-            ValueIntegerBounds{std::numeric_limits<std::int64_t>::min(),
-                               std::numeric_limits<std::int64_t>::max()}));
-      } else {
-        instructions.push_back(
-            make(sourcemeta::blaze::InstructionIndex::AssertionNumberType,
-                 context, schema_context, dynamic_context,
-                 name == "float" ? ValueNumberType::Float
-                                 : ValueNumberType::Double));
-      }
+      Instructions instructions{make_openapi_numeric_format_assertion(
+          context, schema_context, dynamic_context, name)};
 
       // Unlike the string formats, the annotation cannot be grouped by the
       // instance type, as `ControlGroupWhenType` does not take a number
@@ -3424,24 +3360,12 @@ auto compiler_draft3_validation_format(const Context &context,
       schema_context.vocabularies.contains(Known::JSON_SCHEMA_DRAFT_7_HYPER)};
 
   if (schema_context.vocabularies.contains(Known::OPENAPI_3_0_BASE)) {
-    // OpenAPI 3.0 defines these two for numbers, so they cannot resolve to a
+    // OpenAPI 3.0 defines these four for numbers, so they cannot resolve to a
     // string logical type like the rest of this chain does
-    if (name == "int32" || name == "int64") {
-      return {make(
-          sourcemeta::blaze::InstructionIndex::AssertionNumberIntegerBounded,
-          context, schema_context, dynamic_context,
-          name == "int32"
-              ? ValueIntegerBounds{std::numeric_limits<std::int32_t>::min(),
-                                   std::numeric_limits<std::int32_t>::max()}
-              : ValueIntegerBounds{std::numeric_limits<std::int64_t>::min(),
-                                   std::numeric_limits<std::int64_t>::max()})};
-    }
-
-    if (name == "float" || name == "double") {
-      return {make(sourcemeta::blaze::InstructionIndex::AssertionNumberType,
-                   context, schema_context, dynamic_context,
-                   name == "float" ? ValueNumberType::Float
-                                   : ValueNumberType::Double)};
+    if (name == "int32" || name == "int64" || name == "float" ||
+        name == "double") {
+      return {make_openapi_numeric_format_assertion(context, schema_context,
+                                                    dynamic_context, name)};
     }
 
     if (name == "date-time") {

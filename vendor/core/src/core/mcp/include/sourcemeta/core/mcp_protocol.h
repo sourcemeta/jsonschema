@@ -384,7 +384,7 @@ constexpr JSON::StringView MCP_METHOD_TASKS_RESULT{"tasks/result"};
 ///
 /// @see
 /// https://modelcontextprotocol.io/specification/2026-07-28/basic/versioning
-constexpr auto
+[[nodiscard]] constexpr auto
 mcp_protocol_version_string(const MCPProtocolVersion version) noexcept
     -> JSON::StringView {
   switch (version) {
@@ -421,7 +421,7 @@ mcp_protocol_version_string(const MCPProtocolVersion version) noexcept
 ///
 /// @see
 /// https://modelcontextprotocol.io/specification/2026-07-28/basic/versioning
-constexpr auto
+[[nodiscard]] constexpr auto
 mcp_resolve_protocol_version(const JSON::StringView value) noexcept
     -> std::optional<MCPProtocolVersion> {
   if (value == MCP_PROTOCOL_VERSION_2026_07_28) {
@@ -458,7 +458,7 @@ mcp_resolve_protocol_version(const JSON::StringView value) noexcept
 ///
 /// @see
 /// https://modelcontextprotocol.io/specification/2026-07-28/basic/versioning
-constexpr auto
+[[nodiscard]] constexpr auto
 mcp_protocol_version_at_least(const MCPProtocolVersion current,
                               const MCPProtocolVersion minimum) noexcept
     -> bool {
@@ -480,7 +480,7 @@ mcp_protocol_version_at_least(const MCPProtocolVersion current,
 ///
 /// @see
 /// https://modelcontextprotocol.io/specification/2026-07-28/basic/versioning
-constexpr auto
+[[nodiscard]] constexpr auto
 mcp_protocol_version_is_valid(const JSON::StringView value) noexcept -> bool {
   return mcp_resolve_protocol_version(value).has_value();
 }
@@ -502,7 +502,7 @@ mcp_protocol_version_is_valid(const JSON::StringView value) noexcept -> bool {
 ///
 /// @see
 /// https://modelcontextprotocol.io/specification/2026-07-28/basic/lifecycle
-constexpr auto
+[[nodiscard]] constexpr auto
 mcp_uses_initialization_handshake(const MCPProtocolVersion version) noexcept
     -> bool {
   return version != MCPProtocolVersion::V_2026_07_28;
@@ -524,8 +524,8 @@ mcp_uses_initialization_handshake(const MCPProtocolVersion version) noexcept
 ///
 /// @see
 /// https://modelcontextprotocol.io/specification/2026-07-28/basic/lifecycle
-constexpr auto mcp_supports_ping(const MCPProtocolVersion version) noexcept
-    -> bool {
+[[nodiscard]] constexpr auto
+mcp_supports_ping(const MCPProtocolVersion version) noexcept -> bool {
   return version != MCPProtocolVersion::V_2026_07_28;
 }
 
@@ -546,7 +546,7 @@ constexpr auto mcp_supports_ping(const MCPProtocolVersion version) noexcept
 ///
 /// @see
 /// https://modelcontextprotocol.io/specification/2026-07-28/basic/index#_meta
-constexpr auto
+[[nodiscard]] constexpr auto
 mcp_requires_request_meta(const MCPProtocolVersion version) noexcept -> bool {
   return version == MCPProtocolVersion::V_2026_07_28;
 }
@@ -568,7 +568,7 @@ mcp_requires_request_meta(const MCPProtocolVersion version) noexcept -> bool {
 ///
 /// @see
 /// https://modelcontextprotocol.io/specification/2026-07-28/schema
-constexpr auto
+[[nodiscard]] constexpr auto
 mcp_requires_result_type(const MCPProtocolVersion version) noexcept -> bool {
   return version == MCPProtocolVersion::V_2026_07_28;
 }
@@ -590,7 +590,7 @@ mcp_requires_result_type(const MCPProtocolVersion version) noexcept -> bool {
 ///
 /// @see
 /// https://modelcontextprotocol.io/specification/2026-07-28/server/utilities/caching#cacheable-results
-constexpr auto
+[[nodiscard]] constexpr auto
 mcp_requires_cacheable_metadata(const MCPProtocolVersion version) noexcept
     -> bool {
   return version == MCPProtocolVersion::V_2026_07_28;
@@ -613,7 +613,7 @@ mcp_requires_cacheable_metadata(const MCPProtocolVersion version) noexcept
 ///
 /// @see
 /// https://modelcontextprotocol.io/specification/2026-07-28/server/discover
-constexpr auto
+[[nodiscard]] constexpr auto
 mcp_supports_server_discover(const MCPProtocolVersion version) noexcept
     -> bool {
   return version == MCPProtocolVersion::V_2026_07_28;
@@ -636,7 +636,7 @@ mcp_supports_server_discover(const MCPProtocolVersion version) noexcept
 ///
 /// @see
 /// https://modelcontextprotocol.io/specification/2026-07-28/basic/patterns/subscriptions
-constexpr auto
+[[nodiscard]] constexpr auto
 mcp_supports_subscriptions_listen(const MCPProtocolVersion version) noexcept
     -> bool {
   return version == MCPProtocolVersion::V_2026_07_28;
@@ -659,8 +659,8 @@ mcp_supports_subscriptions_listen(const MCPProtocolVersion version) noexcept
 ///
 /// @see
 /// https://modelcontextprotocol.io/specification/2026-07-28/basic/patterns/mrtr
-constexpr auto mcp_supports_mrtr(const MCPProtocolVersion version) noexcept
-    -> bool {
+[[nodiscard]] constexpr auto
+mcp_supports_mrtr(const MCPProtocolVersion version) noexcept -> bool {
   return version == MCPProtocolVersion::V_2026_07_28;
 }
 
@@ -681,7 +681,7 @@ constexpr auto mcp_supports_mrtr(const MCPProtocolVersion version) noexcept
 ///
 /// @see
 /// https://modelcontextprotocol.io/specification/2026-07-28/basic/transports/streamable-http
-constexpr auto
+[[nodiscard]] constexpr auto
 mcp_supports_protocol_sessions(const MCPProtocolVersion version) noexcept
     -> bool {
   return version != MCPProtocolVersion::V_2026_07_28;
@@ -704,7 +704,7 @@ mcp_supports_protocol_sessions(const MCPProtocolVersion version) noexcept
 ///
 /// @see
 /// https://modelcontextprotocol.io/specification/2026-07-28/server/tools
-constexpr auto
+[[nodiscard]] constexpr auto
 mcp_supports_output_schema(const MCPProtocolVersion version) noexcept -> bool {
   return mcp_protocol_version_at_least(version,
                                        MCPProtocolVersion::V_2025_06_18);
@@ -726,7 +726,7 @@ mcp_supports_output_schema(const MCPProtocolVersion version) noexcept -> bool {
 ///
 /// @see
 /// https://modelcontextprotocol.io/specification/2026-07-28/server/tools
-constexpr auto
+[[nodiscard]] constexpr auto
 mcp_supports_structured_content(const MCPProtocolVersion version) noexcept
     -> bool {
   return mcp_protocol_version_at_least(version,
@@ -749,7 +749,7 @@ mcp_supports_structured_content(const MCPProtocolVersion version) noexcept
 ///
 /// @see
 /// https://modelcontextprotocol.io/specification/2026-07-28/schema
-constexpr auto
+[[nodiscard]] constexpr auto
 mcp_supports_resource_link_content(const MCPProtocolVersion version) noexcept
     -> bool {
   return mcp_protocol_version_at_least(version,
@@ -772,7 +772,7 @@ mcp_supports_resource_link_content(const MCPProtocolVersion version) noexcept
 ///
 /// @see
 /// https://modelcontextprotocol.io/specification/2026-07-28/schema
-constexpr auto
+[[nodiscard]] constexpr auto
 mcp_supports_implementation_title(const MCPProtocolVersion version) noexcept
     -> bool {
   return mcp_protocol_version_at_least(version,
@@ -796,7 +796,7 @@ mcp_supports_implementation_title(const MCPProtocolVersion version) noexcept
 ///
 /// @see
 /// https://modelcontextprotocol.io/specification/2026-07-28/schema
-constexpr auto mcp_supports_implementation_description(
+[[nodiscard]] constexpr auto mcp_supports_implementation_description(
     const MCPProtocolVersion version) noexcept -> bool {
   return mcp_protocol_version_at_least(version,
                                        MCPProtocolVersion::V_2025_11_25);
@@ -819,7 +819,7 @@ constexpr auto mcp_supports_implementation_description(
 ///
 /// @see
 /// https://modelcontextprotocol.io/specification/2026-07-28/schema
-constexpr auto mcp_supports_implementation_website_url(
+[[nodiscard]] constexpr auto mcp_supports_implementation_website_url(
     const MCPProtocolVersion version) noexcept -> bool {
   return mcp_protocol_version_at_least(version,
                                        MCPProtocolVersion::V_2025_11_25);
@@ -841,7 +841,7 @@ constexpr auto mcp_supports_implementation_website_url(
 ///
 /// @see
 /// https://modelcontextprotocol.io/specification/2026-07-28/basic/transports/streamable-http
-constexpr auto
+[[nodiscard]] constexpr auto
 mcp_supports_jsonrpc_batching(const MCPProtocolVersion version) noexcept
     -> bool {
   return version == MCPProtocolVersion::V_2025_03_26;
@@ -863,9 +863,9 @@ mcp_supports_jsonrpc_batching(const MCPProtocolVersion version) noexcept
 ///
 /// @see
 /// https://modelcontextprotocol.io/specification/2026-07-28/schema
-constexpr auto mcp_is_request_method(const MCPProtocolVersion version,
-                                     const JSON::StringView method) noexcept
-    -> bool {
+[[nodiscard]] constexpr auto
+mcp_is_request_method(const MCPProtocolVersion version,
+                      const JSON::StringView method) noexcept -> bool {
   switch (version) {
     case MCPProtocolVersion::V_2025_03_26:
     case MCPProtocolVersion::V_2025_06_18:
@@ -931,7 +931,7 @@ constexpr auto mcp_is_request_method(const MCPProtocolVersion version,
 ///
 /// @see
 /// https://modelcontextprotocol.io/specification/2026-07-28/schema
-constexpr auto
+[[nodiscard]] constexpr auto
 mcp_is_server_request_method(const MCPProtocolVersion version,
                              const JSON::StringView method) noexcept -> bool {
   switch (version) {
@@ -978,7 +978,7 @@ mcp_is_server_request_method(const MCPProtocolVersion version,
 ///
 /// @see
 /// https://modelcontextprotocol.io/specification/2026-07-28/schema
-constexpr auto
+[[nodiscard]] constexpr auto
 mcp_is_notification_method(const MCPProtocolVersion version,
                            const JSON::StringView method) noexcept -> bool {
   switch (version) {
@@ -1040,7 +1040,7 @@ mcp_is_notification_method(const MCPProtocolVersion version,
 ///
 /// @see
 /// https://modelcontextprotocol.io/specification/2026-07-28/basic/patterns/mrtr
-constexpr auto
+[[nodiscard]] constexpr auto
 mcp_is_input_request_method(const MCPProtocolVersion version,
                             const JSON::StringView method) noexcept -> bool {
   switch (version) {
@@ -1078,9 +1078,9 @@ mcp_is_input_request_method(const MCPProtocolVersion version,
 ///
 /// @see
 /// https://modelcontextprotocol.io/specification/2026-07-28/schema
-constexpr auto mcp_supports_method(const MCPProtocolVersion version,
-                                   const JSON::StringView method) noexcept
-    -> bool {
+[[nodiscard]] constexpr auto
+mcp_supports_method(const MCPProtocolVersion version,
+                    const JSON::StringView method) noexcept -> bool {
   switch (version) {
     case MCPProtocolVersion::V_2025_03_26:
       return method == MCP_METHOD_COMPLETION_COMPLETE ||
@@ -1202,8 +1202,8 @@ constexpr auto mcp_supports_method(const MCPProtocolVersion version,
 ///
 /// @see
 /// https://modelcontextprotocol.io/specification/2026-07-28/basic/patterns/mrtr
-constexpr auto mcp_is_mrtr_method(const JSON::StringView method) noexcept
-    -> bool {
+[[nodiscard]] constexpr auto
+mcp_is_mrtr_method(const JSON::StringView method) noexcept -> bool {
   return method == MCP_METHOD_TOOLS_CALL ||
          method == MCP_METHOD_RESOURCES_READ ||
          method == MCP_METHOD_PROMPTS_GET;
@@ -1223,8 +1223,8 @@ constexpr auto mcp_is_mrtr_method(const JSON::StringView method) noexcept
 ///
 /// @see
 /// https://modelcontextprotocol.io/specification/2026-07-28/server/utilities/caching#cacheable-results
-constexpr auto mcp_is_cacheable_method(const JSON::StringView method) noexcept
-    -> bool {
+[[nodiscard]] constexpr auto
+mcp_is_cacheable_method(const JSON::StringView method) noexcept -> bool {
   return method == MCP_METHOD_SERVER_DISCOVER ||
          method == MCP_METHOD_TOOLS_LIST || method == MCP_METHOD_PROMPTS_LIST ||
          method == MCP_METHOD_RESOURCES_LIST ||
@@ -1250,7 +1250,7 @@ constexpr auto mcp_is_cacheable_method(const JSON::StringView method) noexcept
 ///
 /// @see
 /// https://modelcontextprotocol.io/specification/2026-07-28/schema
-constexpr auto
+[[nodiscard]] constexpr auto
 mcp_is_client_notification_method(MCPProtocolVersion version,
                                   JSON::StringView method) noexcept -> bool {
   switch (version) {
@@ -1294,7 +1294,7 @@ mcp_is_client_notification_method(MCPProtocolVersion version,
 ///
 /// @see
 /// https://modelcontextprotocol.io/specification/2026-07-28/schema
-constexpr auto
+[[nodiscard]] constexpr auto
 mcp_is_server_notification_method(MCPProtocolVersion version,
                                   JSON::StringView method) noexcept -> bool {
   switch (version) {
