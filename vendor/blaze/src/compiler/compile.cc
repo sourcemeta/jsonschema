@@ -18,6 +18,7 @@
 #include "compile_helpers.h"
 #include "keyword_iterator.h"
 #include "postprocess.h"
+#include "unevaluated.h"
 
 namespace {
 
@@ -31,17 +32,27 @@ auto is_metaschema_reference(const sourcemeta::core::WeakPointer &origin)
 
 // Draft 6 introduced boolean schemas. Draft 4 and earlier have none, and the
 // only places they accept a boolean are `additionalProperties` and
-// `additionalItems`, whose own definitions spell that out
+// `additionalItems`, whose own definitions spell that out. The OpenAPI 3.0
+// Schema Object has none either, and offers a boolean at
+// `additionalProperties` alone
 auto booleans_are_schemas(
     const sourcemeta::core::SchemaVocabularies &vocabularies) -> bool {
   using Known = sourcemeta::core::SchemaVocabularies::Known;
   return !vocabularies.contains_any(
       {Known::JSON_SCHEMA_DRAFT_3, Known::JSON_SCHEMA_DRAFT_3_HYPER,
-       Known::JSON_SCHEMA_DRAFT_4, Known::JSON_SCHEMA_DRAFT_4_HYPER});
+       Known::JSON_SCHEMA_DRAFT_4, Known::JSON_SCHEMA_DRAFT_4_HYPER,
+       Known::OPENAPI_3_0_BASE});
 }
 
+// Draft 7 and earlier let `$ref` override whatever sits beside it, so such a
+// sibling is not a keyword of the schema at all and nothing about it, not even
+// its shape, is this compiler's business
 // Draft 4 and earlier spell these as flags on a sibling bound rather than as
-// bounds of their own, and their meta-schemas ask for that sibling to be there
+// bounds of their own, and their meta-schemas ask for that sibling to be
+// there. The OpenAPI 3.0 Schema Object is deliberately absent: it spells them
+// as flags the way Draft 4 does, but its meta-schema declares no dependency
+// between a flag and the bound it modifies, so one standing on its own is
+// well-formed there and merely has nothing to modify
 auto exclusive_bounds_need_a_sibling(
     const sourcemeta::core::SchemaVocabularies &vocabularies) -> bool {
   using Known = sourcemeta::core::SchemaVocabularies::Known;
@@ -57,7 +68,17 @@ auto is_schema(const sourcemeta::core::JSON &value, const bool allow_boolean)
 
 // The reason the keyword's value is not the shape the meta-schema asks for, or
 // `nullptr` when it is. The location the error carries names the keyword, so
-// these read as statements about it
+// these read as statements about it.
+//
+// What a dialect's meta-schema states is what settles this, rather than what
+// its prose asks for, so that a schema the meta-schema accepts is one that
+// compiles. A dialect whose prose carries a rule its meta-schema leaves
+// unencoded therefore goes unenforced here: OpenAPI 3.0 asks that `items` be
+// present whenever `type` is `"array"`, and that a Discriminator Object stand
+// beside a composite keyword, while its meta-schema expresses neither, and it
+// omits the lower bound that would keep `allOf`, `anyOf` and `oneOf` from
+// standing empty. Catching those belongs to a linter, which is free to be
+// stricter than the document the dialect publishes
 auto keyword_shape_error(
     const sourcemeta::core::JSON::String &keyword,
     const sourcemeta::core::SchemaKeywordType type, const bool known,
@@ -72,6 +93,11 @@ auto keyword_shape_error(
       "This keyword was expected to be set to a boolean"};
   static constexpr auto EXPECTED_NUMBER{
       "This keyword was expected to be set to a number"};
+  static constexpr auto EXPECTED_OBJECT{
+      "This keyword was expected to be set to an object"};
+  static constexpr auto EXPECTED_DIALECT_OBJECT{
+      "This keyword was expected to be set to an object of the shape this "
+      "dialect defines"};
   static constexpr auto EXPECTED_NON_NEGATIVE_INTEGER{
       "This keyword was expected to be set to a non-negative integer"};
   static constexpr auto EXPECTED_SCHEMA{
@@ -96,11 +122,85 @@ auto keyword_shape_error(
       return value.is_string() ? nullptr : EXPECTED_STRING;
     }
     if (keyword == "uniqueItems" || keyword == "deprecated" ||
-        keyword == "readOnly" || keyword == "writeOnly") {
+        keyword == "readOnly" || keyword == "writeOnly" ||
+        keyword == "nullable") {
       return value.is_boolean() ? nullptr : EXPECTED_BOOLEAN;
     }
     if (keyword == "examples") {
       return value.is_array() ? nullptr : EXPECTED_ARRAY;
+    }
+    // The OpenAPI dialects define these three as objects of their own. What
+    // follows is what their meta-schemas state, other than the `format`
+    // annotations two of their members carry, which assert nothing by default
+    if (keyword == "discriminator" || keyword == "xml" ||
+        keyword == "externalDocs") {
+      if (!value.is_object()) {
+        return EXPECTED_OBJECT;
+      }
+
+      // Each OpenAPI version defines these objects for itself, and the later
+      // ones carry members this does not know about, so only the dialect this
+      // was written against is held to the shape below
+      if (!vocabularies.contains(
+              sourcemeta::core::SchemaVocabularies::Known::OPENAPI_3_0_BASE)) {
+        return nullptr;
+      }
+
+      if (keyword == "discriminator") {
+        const auto *property_name{value.try_at("propertyName")};
+        if (property_name == nullptr || !property_name->is_string()) {
+          return EXPECTED_DIALECT_OBJECT;
+        }
+
+        const auto *mapping{value.try_at("mapping")};
+        if (mapping != nullptr &&
+            (!mapping->is_object() ||
+             std::ranges::any_of(mapping->as_object(),
+                                 [](const auto &entry) -> bool {
+                                   return !entry.second.is_string();
+                                 }))) {
+          return EXPECTED_DIALECT_OBJECT;
+        }
+
+        // Unlike the other two, this one its meta-schema leaves open
+        return nullptr;
+      }
+
+      if (keyword == "externalDocs") {
+        const auto *url{value.try_at("url")};
+        if (url == nullptr || !url->is_string()) {
+          return EXPECTED_DIALECT_OBJECT;
+        }
+      }
+
+      for (const auto &entry : value.as_object()) {
+        if (entry.first.starts_with("x-")) {
+          continue;
+        }
+
+        const auto expected_string{
+            keyword == "externalDocs"
+                ? (entry.first == "description" || entry.first == "url")
+                : (entry.first == "name" || entry.first == "namespace" ||
+                   entry.first == "prefix")};
+        const auto expected_boolean{
+            keyword == "xml" &&
+            (entry.first == "attribute" || entry.first == "wrapped")};
+        if (expected_string) {
+          if (!entry.second.is_string()) {
+            return EXPECTED_DIALECT_OBJECT;
+          }
+        } else if (expected_boolean) {
+          if (!entry.second.is_boolean()) {
+            return EXPECTED_DIALECT_OBJECT;
+          }
+        } else {
+          // Both of their meta-schemas close them to the members they name
+          return EXPECTED_DIALECT_OBJECT;
+        }
+      }
+
+      return nullptr;
     }
     if (keyword == "maxContains" || keyword == "minContains") {
       // These only exist from 2019-09 onwards, where a number whose fractional
@@ -117,7 +217,8 @@ auto keyword_shape_error(
                    JSON_SCHEMA_DRAFT_3_HYPER,
                sourcemeta::core::SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_4,
                sourcemeta::core::SchemaVocabularies::Known::
-                   JSON_SCHEMA_DRAFT_4_HYPER})
+                   JSON_SCHEMA_DRAFT_4_HYPER,
+               sourcemeta::core::SchemaVocabularies::Known::OPENAPI_3_0_BASE})
               ? (value.is_boolean() ? nullptr : EXPECTED_BOOLEAN)
               : (value.is_number() ? nullptr : EXPECTED_NUMBER));
     }
@@ -292,11 +393,16 @@ auto compile_subschema(const sourcemeta::blaze::Context &context,
     const auto *shape_error{keyword_shape_error(
         keyword, metadata.type, official, schema_context.schema.at(keyword),
         allow_boolean, schema_context.vocabularies)};
+    static const sourcemeta::core::JSON::String KEYWORD_REF{"$ref"};
+    const auto overridden_by_ref{
+        keyword != KEYWORD_REF && schema_context.schema.defines(KEYWORD_REF) &&
+        ref_object_ignores_siblings(schema_context.vocabularies)};
+
     // Draft 3 spells these as flags on a sibling bound rather than as bounds of
     // their own, and its meta-schema asks for that sibling to be there
     static const sourcemeta::core::JSON::String KEYWORD_MINIMUM{"minimum"};
     static const sourcemeta::core::JSON::String KEYWORD_MAXIMUM{"maximum"};
-    if (official &&
+    if (!overridden_by_ref && official &&
         exclusive_bounds_need_a_sibling(schema_context.vocabularies) &&
         ((keyword == "exclusiveMinimum" &&
           !schema_context.schema.defines(KEYWORD_MINIMUM)) ||
@@ -311,7 +417,7 @@ auto compile_subschema(const sourcemeta::blaze::Context &context,
           "This keyword was expected to accompany the bound it applies to");
     }
 
-    if (shape_error != nullptr) [[unlikely]] {
+    if (!overridden_by_ref && shape_error != nullptr) [[unlikely]] {
       throw sourcemeta::blaze::CompilerError(
           schema_context.base,
           absolute_schema_location(

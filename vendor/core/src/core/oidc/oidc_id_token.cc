@@ -55,9 +55,9 @@ auto oidc_id_token_checks(const JWT &token, const std::string_view issuer,
     return std::nullopt;
   }
 
-  // OpenID Connect Core 1.0 Section 3.1.3.7 step 5: when the audience carries
-  // more than one value the authorized party is REQUIRED and must be the
-  // client, and when it is present at all it must be the client
+  // OpenID Connect Core 1.0 Section 3.1.3.7 step 3: the audience must name the
+  // client, and a token naming other parties as well is only accepted where
+  // those are trusted
   const auto *audience{payload.try_at("aud"sv, HASH_AUD)};
 
   // A malformed audience array, one carrying a non-string member, is rejected
@@ -97,6 +97,12 @@ auto oidc_id_token_checks(const JWT &token, const std::string_view issuer,
     }
   }
 
+  // OpenID Connect Core 1.0 Section 2 makes the authorized party OPTIONAL and
+  // says only that where it is present it carries the client identifier of the
+  // party the token was issued to, which Section 3.1.3.7 step 5 leaves the
+  // relying party to check. Nothing there asks for it once the audience names
+  // more than one party, so requiring it below is a deliberate tightening
+  // rather than something the specification demands
   const bool multiple_audiences{audience != nullptr && audience->is_array() &&
                                 audience->size() > 1};
   const auto *authorized_party{payload.try_at("azp"sv, HASH_AZP)};
@@ -164,10 +170,11 @@ auto oidc_id_token_checks(const JWT &token, const std::string_view issuer,
   std::optional<std::chrono::system_clock::time_point> authentication_time;
   const auto *auth_time{payload.try_at("auth_time"sv, HASH_AUTH_TIME)};
   if (auth_time != nullptr && auth_time->is_number()) {
-    // A NumericDate may be non-integer (RFC 7519 Section 2), and a value beyond
-    // the range of a double cannot stand for a usable timestamp, so it is
-    // treated as absent rather than aborting, matching how the JWT layer reads
-    // the registered time claims
+    // A NumericDate may be non-integer (RFC 7519 Section 2). A value past what
+    // a double stands for refuses to be read as one at all, and one the clock
+    // cannot stand for comes back as no time, so either way the claim reads as
+    // absent rather than aborting, matching how the JWT layer reads the
+    // registered time claims
     try {
       authentication_time = from_unix_timestamp(
           std::chrono::duration<double>{auth_time->as_real()});

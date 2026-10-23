@@ -99,6 +99,7 @@ private:
         !schema.defines("patternProperties") &&
         vocabularies.contains_any(
             {SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_3,
+             SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_3_HYPER,
              SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_4,
              SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_6,
              SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_7,
@@ -137,6 +138,7 @@ private:
               SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_6,
               SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_4,
               SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_3,
+              SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_3_HYPER,
               SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_2,
               SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_1,
               SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_0}));
@@ -146,6 +148,7 @@ private:
          SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_1,
          SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_2,
          SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_3,
+         SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_3_HYPER,
          SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_4,
          SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_6,
          SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_7})};
@@ -156,7 +159,8 @@ private:
         {SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_0,
          SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_1,
          SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_2,
-         SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_3});
+         SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_3,
+         SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_3_HYPER});
 
     this->has_work_ = this->add_pattern_properties_ ||
                       this->add_property_names_ || this->add_min_properties_ ||
@@ -172,6 +176,7 @@ private:
              SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_1,
              SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_2,
              SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_3,
+             SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_3_HYPER,
              SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_4,
              SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_6,
              SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_7,
@@ -191,6 +196,7 @@ private:
          SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_1,
          SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_2,
          SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_3,
+         SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_3_HYPER,
          SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_4})};
 
     this->add_unique_items_ =

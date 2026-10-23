@@ -12,15 +12,18 @@ public:
             const sourcemeta::core::SchemaFrame::Location &,
             const sourcemeta::core::SchemaWalker &,
             const sourcemeta::core::SchemaResolver &) const -> bool override {
-    ONLY_CONTINUE_IF(vocabularies.contains_any(
-                         {SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_0,
-                          SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_1,
-                          SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_2,
-                          SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_3}) &&
-                     schema.is_object() && schema.defines("disallow"));
+    ONLY_CONTINUE_IF(
+        vocabularies.contains_any(
+            {SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_0,
+             SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_1,
+             SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_2,
+             SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_3,
+             SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_3_HYPER}) &&
+        schema.is_object() && schema.defines("disallow"));
 
-    this->convert_to_schemas_ =
-        vocabularies.contains(SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_3);
+    this->convert_to_schemas_ = vocabularies.contains_any(
+        {SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_3,
+         SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_3_HYPER});
 
     const auto &disallow{schema.at("disallow")};
     if (disallow.is_string()) {

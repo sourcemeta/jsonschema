@@ -8,6 +8,7 @@
 #include <sourcemeta/core/http_method.h>
 #include <sourcemeta/core/http_status.h>
 
+#include <chrono>    // std::chrono::milliseconds
 #include <cstdint>   // std::uint16_t
 #include <stdexcept> // std::runtime_error
 #include <string>    // std::string
@@ -57,6 +58,39 @@ public:
 private:
   HTTPMethod method_;
   std::string url_;
+};
+
+/// @ingroup http
+/// An error for a request that did not complete within its configured
+/// timeout. For example:
+///
+/// ```cpp
+/// #include <sourcemeta/core/http.h>
+/// #include <cassert>
+///
+/// const sourcemeta::core::HTTPTimeoutError error{
+///     sourcemeta::core::HTTPMethod::GET,
+///     "https://example.com", std::chrono::seconds{30}};
+/// assert(error.timeout() == std::chrono::seconds{30});
+/// ```
+class SOURCEMETA_CORE_HTTP_EXPORT HTTPTimeoutError : public HTTPError {
+public:
+  /// Construct an error from the request method, URL, and the total timeout
+  /// that was configured for the request
+  HTTPTimeoutError(const HTTPMethod method, std::string url,
+                   const std::chrono::milliseconds timeout)
+      : HTTPError{method, std::move(url), "The HTTP request timed out"},
+        timeout_{timeout} {}
+
+  /// Get the total timeout that was configured for the request. A backend
+  /// does not report which of the configured bounds elapsed, so this is the
+  /// total timeout even when a narrower connection timeout was the one hit
+  [[nodiscard]] auto timeout() const noexcept -> std::chrono::milliseconds {
+    return this->timeout_;
+  }
+
+private:
+  std::chrono::milliseconds timeout_;
 };
 
 /// @ingroup http

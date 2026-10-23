@@ -36,6 +36,7 @@ auto Decoder::read(const Encoding &encoding) -> sourcemeta::core::JSON {
     HANDLE_DECODING(19, ROOF_TYPED_ARRAY)
     HANDLE_DECODING(20, FIXED_TYPED_ARBITRARY_OBJECT)
     HANDLE_DECODING(21, VARINT_TYPED_ARBITRARY_OBJECT)
+    HANDLE_DECODING(22, NUMBER_VARINT_TUPLE)
 #undef HANDLE_DECODING
     default:
       // We should never get here. If so, it is definitely a bug

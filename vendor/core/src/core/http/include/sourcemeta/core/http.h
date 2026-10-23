@@ -7,6 +7,7 @@
 
 // NOLINTBEGIN(misc-include-cleaner)
 #include <sourcemeta/core/http_aws_sigv4.h>
+#include <sourcemeta/core/http_baggage.h>
 #include <sourcemeta/core/http_error.h>
 #include <sourcemeta/core/http_message.h>
 #include <sourcemeta/core/http_method.h>
@@ -14,6 +15,7 @@
 #include <sourcemeta/core/http_status.h>
 #include <sourcemeta/core/http_syntax.h>
 #include <sourcemeta/core/http_system.h>
+#include <sourcemeta/core/http_tracecontext.h>
 // NOLINTEND(misc-include-cleaner)
 
 #include <chrono>           // std::chrono::system_clock
@@ -232,7 +234,7 @@ auto http_negotiate_encoding(
 ///     "Sun Nov  6 08:49:37 1994").has_value());
 /// ```
 SOURCEMETA_CORE_HTTP_EXPORT
-auto http_from_date(const std::string_view value) noexcept
+auto http_from_date(const std::string_view value)
     -> std::optional<std::chrono::system_clock::time_point>;
 
 /// @ingroup http

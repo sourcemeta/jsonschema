@@ -11,6 +11,7 @@
 
 #include <algorithm>   // std::min
 #include <array>       // std::array
+#include <cassert>     // assert
 #include <cstddef>     // std::size_t, std::ptrdiff_t
 #include <cstdint>     // std::uint8_t, std::uint32_t
 #include <cstring>     // std::memchr
@@ -233,7 +234,6 @@ private:
     const auto character{this->input_[this->position_]};
     switch (character) {
       case '\n':
-      case '\r':
         this->handle_newline();
         return;
       case '`':
@@ -342,14 +342,10 @@ private:
 
   auto handle_newline() -> void {
     const auto newline_position{this->position_};
-    if (this->input_[this->position_] == '\r') {
-      ++this->position_;
-    }
-
-    if (this->peek() == '\n') {
-      ++this->position_;
-    }
-
+    // A block holds every one of its lines with a line feed ending, so that is
+    // the only ending the text of one can carry
+    assert(this->input_[this->position_] == '\n');
+    ++this->position_;
     this->column_offset_ = -static_cast<std::ptrdiff_t>(this->position_);
     skip_spaces(this->input_, this->position_);
     if (newline_position > 1 && this->input_[newline_position - 1] == ' ' &&
@@ -427,12 +423,7 @@ private:
     bool contains_nonspace{false};
     for (std::size_t read{0}; read < size; ++read) {
       const auto character{buffer[read]};
-      if (character == '\r') {
-        if (read + 1 >= size || buffer[read + 1] != '\n') {
-          buffer[write] = ' ';
-          ++write;
-        }
-      } else if (character == '\n') {
+      if (character == '\n') {
         buffer[write] = ' ';
         ++write;
       } else {
@@ -483,7 +474,7 @@ private:
       return;
     }
 
-    if (next == '\r' || next == '\n') {
+    if (next == '\n') {
       skip_line_end(this->input_, this->position_);
       this->append(NodeType::LineBreak, {});
       return;

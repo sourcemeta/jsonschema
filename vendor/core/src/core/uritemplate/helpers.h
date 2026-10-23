@@ -7,6 +7,7 @@
 
 #include <algorithm>   // std::min
 #include <array>       // std::array
+#include <cassert>     // assert
 #include <cstddef>     // std::size_t
 #include <cstdint>     // std::uint16_t
 #include <string>      // std::string
@@ -267,11 +268,9 @@ parse_variable_list(const std::string_view input, std::size_t position,
   while (true) {
     const auto start = position;
     position = parse_varname(input, position);
-
-    if (position == start) {
-      throw URITemplateParseError(position + 1);
-    }
-
+    // A name is read whole or refused, so what comes back always stands past
+    // where the reading began
+    assert(position > start);
     [[maybe_unused]] const auto name = input.substr(start, position - start);
     [[maybe_unused]] std::uint16_t length = 0;
     [[maybe_unused]] bool explode = false;
@@ -298,15 +297,16 @@ parse_variable_list(const std::string_view input, std::size_t position,
 
       const auto prefix_str =
           input.substr(prefix_start, position - prefix_start);
-      std::uint16_t value = 0;
+      [[maybe_unused]] std::uint16_t value = 0;
       for (const char character : prefix_str) {
         value = static_cast<std::uint16_t>(
             (value * 10) + static_cast<std::uint16_t>(character - '0'));
       }
 
-      if (value > 9999 || value == 0) {
-        throw URITemplateParseError(prefix_start + 1);
-      }
+      // RFC 6570 Section 2.4.1 writes the modifier as `%x31-39 0*3DIGIT`, so
+      // the checks above, which refuse a leading zero and stop at a fifth
+      // digit, already hold what is read to the range the grammar names
+      assert(value >= 1 && value <= 9999);
 
       if constexpr (!CheckOnly) {
         length = value;
@@ -348,9 +348,10 @@ auto parse_expression(const std::string_view input)
     -> std::conditional_t<CheckOnly, std::optional<std::size_t>,
                           URITemplateParseResult> {
   if constexpr (std::is_same_v<T, URITemplateTokenLiteral>) {
-    if (input.empty() || input[0] == '{') {
-      return std::nullopt;
-    }
+    // A literal is read last of all, after everything that opens an expression
+    // has either taken what stands here or refused the template outright, and
+    // the walk that asks only ever hands over what it has left to read
+    assert(!input.empty() && input[0] != '{');
 
     std::size_t position = 0;
     while (position < input.size()) {
@@ -394,7 +395,10 @@ auto parse_expression(const std::string_view input)
 
     std::size_t var_start;
     if constexpr (HasOp<T>::value) {
-      if (input.size() < 3 || input[1] != T::OPERATOR) {
+      // The operator settles which expansion stands here, so once it is read,
+      // running out of input is the template failing to name a variable rather
+      // than this reading of it not applying
+      if (input.size() < 2 || input[1] != T::OPERATOR) {
         return std::nullopt;
       }
       var_start = 2;
@@ -402,10 +406,11 @@ auto parse_expression(const std::string_view input)
       if (input.size() < 2) {
         throw URITemplateParseError(1);
       }
-      // Not a simple variable if it has an operator
-      if (is_operator(input[1])) {
-        return std::nullopt;
-      }
+
+      // RFC 6570 Section 2.2 has an operator name which expansion stands here,
+      // and every one of those is read before this is, so what reaches here
+      // never carries one
+      assert(!is_operator(input[1]));
       var_start = 1;
     }
 

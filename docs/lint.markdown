@@ -162,13 +162,13 @@ object entry with `topLevel` set to `true` marks the rule as top-level only.
 OpenAPI Descriptions
 --------------------
 
-If the input is an OpenAPI spec v3.1 or v3.2 (v3.0 and older are NOT fully
-compliant with the JSON Schema specification), the `lint` command treats it as
-an [OpenAPI](https://spec.openapis.org/oas/latest.html) description rather than
-as a schema. Every Schema Object in the description (for example, the ones
+If the input is an OpenAPI spec v3.0, v3.1 or v3.2, the `lint` command treats
+it as an [OpenAPI](https://spec.openapis.org/oas/latest.html) description rather
+than as a schema. Every Schema Object in the description (for example, the ones
 under `components/schemas` or the `schema` of a parameter, request body, or
 response) is linted, and every warning reports its location from the root of
-the description.
+the description. An unsupported `openapi` revision is rejected rather than read
+as a schema.
 
 With `--format/-m`, the whole description is formatted, not only the Schema
 Objects the rules ran against.

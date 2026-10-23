@@ -138,7 +138,7 @@ inline auto openapi_check_parameter(const JSON &value, const Pointer &base,
   // value". An enumeration is as much a part of a revision's field table as
   // the field names are
   const auto parameter_location{
-      walk.version == OpenAPIVersion::OPENAPI_3_2
+      walk.version >= OpenAPIVersion::OPENAPI_3_2
           ? openapi_expect_enumeration(
                 location_field, base, "in"sv,
                 {"query"sv, "header"sv, "path"sv, "cookie"sv, "querystring"sv},
@@ -191,7 +191,7 @@ inline auto openapi_check_parameter(const JSON &value, const Pointer &base,
     openapi_reject_unknown_fields(
         value, OPENAPI_PARAMETER_QUERY_SCHEMA_FIELDS, base,
         "The Parameter Object does not define this field");
-  } else if (walk.version == OpenAPIVersion::OPENAPI_3_2 &&
+  } else if (walk.version >= OpenAPIVersion::OPENAPI_3_2 &&
              openapi_parameter_admits_reserved(parameter_location, value)) {
     openapi_reject_unknown_fields(
         value, OPENAPI_PARAMETER_RESERVED_SCHEMA_FIELDS_3_2, base,
@@ -246,7 +246,7 @@ inline auto openapi_check_parameter(const JSON &value, const Pointer &base,
     // also leave it nothing to declare, as the expression of `/a/{x{y}` reads
     // as `x{y` there and the correspondence below would then ask for the very
     // name this turns down
-    if (walk.version == OpenAPIVersion::OPENAPI_3_2 &&
+    if (walk.version >= OpenAPIVersion::OPENAPI_3_2 &&
         (parameter_name.find('{') != JSON::StringView::npos ||
          parameter_name.find('}') != JSON::StringView::npos)) {
       throw OpenAPIError{openapi_child(base, "name"sv),
@@ -289,8 +289,7 @@ inline auto openapi_check_parameter(const JSON &value, const Pointer &base,
     return {parameter_name, parameter_location};
   }
 
-  openapi_expect_schema(*schema, openapi_child(base, "schema"sv),
-                        "A Schema Object must be an object or a boolean", walk);
+  openapi_expect_schema(*schema, openapi_child(base, "schema"sv), walk);
 
   // Section 4.8.12.3 gives the styles an `in` column, and both revisions fill
   // it with the same four locations. 3.2.1 Section 4.12.3 goes on to close the
@@ -320,7 +319,7 @@ inline auto openapi_check_parameter(const JSON &value, const Pointer &base,
           {"form"sv, "spaceDelimited"sv, "pipeDelimited"sv, "deepObject"sv},
           "The Parameter Object style must be a string",
           "The Parameter Object style is not one a query parameter admits");
-    } else if (walk.version == OpenAPIVersion::OPENAPI_3_2) {
+    } else if (walk.version >= OpenAPIVersion::OPENAPI_3_2) {
       // 3.2.1 Section 4.12.3 adds a `cookie` style, "Analogous to `form`, but
       // following [RFC6265] `Cookie` syntax rules", which no revision of 3.1
       // carries

@@ -241,7 +241,14 @@ static auto load_rule(sourcemeta::blaze::SchemaTransformer &bundle,
                       const std::optional<sourcemeta::blaze::Tweaks> &tweaks,
                       const sourcemeta::blaze::SchemaRule::Scope scope)
     -> void {
-  auto rule_schema{sourcemeta::core::read_yaml_or_json(rule_path)};
+  auto parsed_rule{sourcemeta::jsonschema::read_file(rule_path)};
+  if (parsed_rule.multidocument) {
+    throw sourcemeta::jsonschema::MultiDocumentInputError{
+        "A lint rule cannot be read from input with multiple documents",
+        rule_path};
+  }
+
+  auto rule_schema{std::move(parsed_rule.document)};
   if (!rule_schema.defines("description")) {
     rule_schema.assign("description",
                        sourcemeta::core::JSON{"<no description>"});
@@ -290,6 +297,9 @@ static auto load_rule(sourcemeta::blaze::SchemaTransformer &bundle,
   } catch (const sourcemeta::core::SchemaAnchorCollisionError &error) {
     throw sourcemeta::core::FileError<
         sourcemeta::core::SchemaAnchorCollisionError>(rule_path, error);
+  } catch (const sourcemeta::core::SchemaDialectImpossibleError &error) {
+    throw sourcemeta::core::FileError<
+        sourcemeta::core::SchemaDialectImpossibleError>(rule_path, error);
   } catch (const sourcemeta::core::SchemaReferenceError &error) {
     throw sourcemeta::core::FileError<sourcemeta::core::SchemaReferenceError>(
         rule_path, error.identifier(), error.location(), error.what());
@@ -693,6 +703,24 @@ auto sourcemeta::jsonschema::lint(const sourcemeta::core::Options &options)
               throw sourcemeta::core::FileError<
                   sourcemeta::core::SchemaAnchorCollisionError>(
                   entry.resolution_base, error);
+            } catch (
+                const sourcemeta::core::SchemaDialectImpossibleError &error) {
+              if (printed_progress) {
+                std::cerr << "\n";
+              }
+
+              const auto position{entry.positions.get(error.location())};
+              if (position.has_value()) {
+                throw PositionError<sourcemeta::core::FileError<
+                    sourcemeta::core::SchemaDialectImpossibleError>>(
+                    std::get<0>(position.value()),
+                    std::get<1>(position.value()), entry.resolution_base,
+                    error);
+              }
+
+              throw sourcemeta::core::FileError<
+                  sourcemeta::core::SchemaDialectImpossibleError>(
+                  entry.resolution_base, error);
             } catch (const sourcemeta::core::SchemaUnknownBaseDialectError &) {
               if (printed_progress) {
                 std::cerr << "\n";
@@ -734,6 +762,13 @@ auto sourcemeta::jsonschema::lint(const sourcemeta::core::Options &options)
               throw sourcemeta::core::FileError<
                   sourcemeta::core::SchemaReferenceObjectResourceError>(
                   entry.resolution_base, error.identifier());
+            } catch (const sourcemeta::core::SchemaError &error) {
+              if (printed_progress) {
+                std::cerr << "\n";
+              }
+
+              throw sourcemeta::core::FileError<sourcemeta::core::SchemaError>(
+                  entry.resolution_base, error.what());
             } catch (...) {
               if (printed_progress) {
                 std::cerr << "\n";
@@ -900,6 +935,20 @@ auto sourcemeta::jsonschema::lint(const sourcemeta::core::Options &options)
               throw sourcemeta::core::FileError<
                   sourcemeta::core::SchemaAnchorCollisionError>(
                   entry.resolution_base, error);
+            } catch (
+                const sourcemeta::core::SchemaDialectImpossibleError &error) {
+              const auto position{entry.positions.get(error.location())};
+              if (position.has_value()) {
+                throw PositionError<sourcemeta::core::FileError<
+                    sourcemeta::core::SchemaDialectImpossibleError>>(
+                    std::get<0>(position.value()),
+                    std::get<1>(position.value()), entry.resolution_base,
+                    error);
+              }
+
+              throw sourcemeta::core::FileError<
+                  sourcemeta::core::SchemaDialectImpossibleError>(
+                  entry.resolution_base, error);
             } catch (const sourcemeta::core::SchemaUnknownBaseDialectError &) {
               throw sourcemeta::core::FileError<
                   sourcemeta::core::SchemaUnknownBaseDialectError>(
@@ -921,6 +970,9 @@ auto sourcemeta::jsonschema::lint(const sourcemeta::core::Options &options)
               throw sourcemeta::core::FileError<
                   sourcemeta::core::SchemaReferenceObjectResourceError>(
                   entry.resolution_base, error.identifier());
+            } catch (const sourcemeta::core::SchemaError &error) {
+              throw sourcemeta::core::FileError<sourcemeta::core::SchemaError>(
+                  entry.resolution_base, error.what());
             }
           });
 

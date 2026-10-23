@@ -23,7 +23,7 @@ REPLACE $CWD_URI WITH '[CWD_URI]' IN result.txt
 
 WRITE expected.txt UNTIL EOF
 1> [
-1>   7,
+1>   9,
 1>   false,
 1>   true,
 1>   [
@@ -44,7 +44,7 @@ WRITE expected.txt UNTIL EOF
 1>         ]
 1>       ],
 1>       [
-1>         61,
+1>         63,
 1>         [ "properties" ],
 1>         [],
 1>         "[CWD_URI]/openapi.json#/components/schemas/Person/properties",
@@ -62,7 +62,7 @@ WRITE expected.txt UNTIL EOF
 1>             [ 8, 4 ]
 1>           ],
 1>           [
-1>             51,
+1>             53,
 1>             [],
 1>             [],
 1>             "[CWD_URI]/openapi.json#/components/schemas/Person/properties",

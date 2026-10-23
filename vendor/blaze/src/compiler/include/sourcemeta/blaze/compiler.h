@@ -6,7 +6,6 @@
 #endif
 
 #include <sourcemeta/blaze/compiler_error.h>
-#include <sourcemeta/blaze/compiler_unevaluated.h>
 
 #include <sourcemeta/blaze/evaluator.h>
 
@@ -21,6 +20,7 @@
 #include <limits>        // std::numeric_limits
 #include <map>           // std::map
 #include <optional>      // std::optional, std::nullopt
+#include <set>           // std::set
 #include <string>        // std::string
 #include <string_view>   // std::string_view
 #include <tuple>         // std::tuple
@@ -33,6 +33,23 @@
 /// evaluation
 
 namespace sourcemeta::blaze {
+
+/// @ingroup compiler
+struct SchemaUnevaluatedEntry {
+  /// The absolute pointers of the static keyword dependencies
+  std::set<sourcemeta::core::WeakPointer> static_dependencies;
+  /// The absolute pointers of the dynamic keyword dependencies, along with the
+  /// references that lead to them
+  std::set<sourcemeta::core::WeakPointer> dynamic_dependencies;
+  /// Whether the entry cannot be fully resolved, which means
+  /// there might be unknown dynamic dependencies
+  bool unresolved{false};
+};
+
+/// @ingroup compiler
+/// The flattened set of unevaluated cases in the schema by absolute URI
+using SchemaUnevaluatedEntries =
+    std::map<sourcemeta::core::JSON::String, SchemaUnevaluatedEntry>;
 
 /// @ingroup compiler
 /// The schema compiler context is the current subschema information you have at

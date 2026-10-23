@@ -414,6 +414,15 @@ auto parse_case_folding(const std::filesystem::path &input_path)
   return result;
 }
 
+// The Canonical_Combining_Class of a code point, which is zero for every code
+// point the data file gives none to
+auto canonical_combining_class(
+    const std::unordered_map<std::uint32_t, std::uint8_t> &ccc,
+    const std::uint32_t codepoint) -> std::uint8_t {
+  const auto found{ccc.find(codepoint)};
+  return found == ccc.end() ? std::uint8_t{0} : found->second;
+}
+
 auto build_canonical_compositions(
     const std::map<std::uint32_t, std::vector<std::uint32_t>> &decompositions,
     const std::unordered_map<std::uint32_t, std::uint8_t> &ccc,
@@ -427,14 +436,12 @@ auto build_canonical_compositions(
                       "Full_Composition_Exclusion"}};
     }
   }
-  const auto ccc_of{[&](const std::uint32_t codepoint) -> std::uint8_t {
-    const auto found{ccc.find(codepoint)};
-    return found == ccc.end() ? std::uint8_t{0} : found->second;
-  }};
   std::vector<CanonicalCompositionTriple> triples;
   for (const auto &[composed, decomposition] : decompositions) {
-    if (decomposition.size() != 2 || ccc_of(composed) != 0 ||
-        ccc_of(decomposition[0]) != 0 || full_exclusions.contains(composed)) {
+    if (decomposition.size() != 2 ||
+        canonical_combining_class(ccc, composed) != 0 ||
+        canonical_combining_class(ccc, decomposition[0]) != 0 ||
+        full_exclusions.contains(composed)) {
       continue;
     }
     triples.push_back({.starter = decomposition[0],

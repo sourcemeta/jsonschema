@@ -9,6 +9,7 @@
 #include "oauth_authorization_parse.h"
 #include "oauth_json.h"
 
+#include <cassert>     // assert
 #include <chrono>      // std::chrono::seconds
 #include <cstdint>     // std::int64_t
 #include <functional>  // std::function
@@ -97,10 +98,8 @@ auto oauth_build_par_authorization_url(const std::string_view endpoint,
   // one (RFC 6749 Section 3.1)
   char separator{'?'};
   if (endpoint.contains('?')) {
-    separator =
-        (endpoint.empty() || endpoint.back() == '?' || endpoint.back() == '&')
-            ? '\0'
-            : '&';
+    assert(!endpoint.empty());
+    separator = (endpoint.back() == '?' || endpoint.back() == '&') ? '\0' : '&';
   }
 
   if (separator != '\0') {

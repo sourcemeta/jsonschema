@@ -24,13 +24,13 @@ RUN compile schema.json --resolve metaschema.json STDIN /dev/null IN . INTO resu
 REPLACE $CWD_URI WITH '[CWD_URI]' IN result.txt
 WRITE expected.txt UNTIL EOF
 1> [
-1>   7,
+1>   9,
 1>   false,
 1>   true,
 1>   [
 1>     [
 1>       [
-1>         40,
+1>         42,
 1>         [ "format" ],
 1>         [],
 1>         "[CWD_URI]/schema.json#/format",
@@ -39,7 +39,7 @@ WRITE expected.txt UNTIL EOF
 1>         [ 14, 5 ]
 1>       ],
 1>       [
-1>         97,
+1>         99,
 1>         [],
 1>         [],
 1>         "[CWD_URI]/schema.json#/format",
@@ -48,7 +48,7 @@ WRITE expected.txt UNTIL EOF
 1>         [ 8, 4 ],
 1>         [
 1>           [
-1>             50,
+1>             52,
 1>             [ "format" ],
 1>             [],
 1>             "[CWD_URI]/schema.json#/format",

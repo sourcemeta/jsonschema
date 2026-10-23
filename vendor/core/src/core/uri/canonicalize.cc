@@ -60,7 +60,7 @@ auto unescape_iunreserved_inplace(std::string &input) -> void {
       codepoint = static_cast<char32_t>(lead & 0x07U);
     }
 
-    bool decodable{length >= 2 && length <= 4};
+    bool decodable{length >= 2};
     for (std::uint8_t offset{1}; decodable && offset < length; offset += 1) {
       const auto continuation_position{
           position + (static_cast<std::string::size_type>(offset) * 3)};

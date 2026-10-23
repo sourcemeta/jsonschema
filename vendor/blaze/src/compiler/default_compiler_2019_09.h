@@ -3,6 +3,8 @@
 
 #include <sourcemeta/blaze/compiler.h>
 
+#include <utility> // std::to_underlying
+
 #include "compile_helpers.h"
 #include "default_compiler_draft4.h"
 
@@ -149,28 +151,41 @@ auto compiler_2019_09_applicator_contains_with_options(
     return {};
   }
 
+  // These bounds accept any integral number, including one spelled with a
+  // fractional or exponent part like `1.0` or `1e0`, as this dialect reads
+  // every number with a zero fractional part as an integer. A bound too large
+  // to hold is left out, as the general check below cannot carry it
   std::size_t minimum{1};
-  if (schema_context.schema.defines("minContains")) {
-    if (schema_context.schema.at("minContains").is_integer() &&
-        schema_context.schema.at("minContains").is_positive()) {
-      minimum = static_cast<std::size_t>(
-          schema_context.schema.at("minContains").to_integer());
-    } else if (schema_context.schema.at("minContains").is_real() &&
-               schema_context.schema.at("minContains").is_positive()) {
+  bool minimum_is_unreachable{false};
+  if (schema_context.schema.defines("minContains") &&
+      schema_context.schema.at("minContains").is_integral() &&
+      schema_context.schema.at("minContains").is_positive()) {
+    if (bound_is_representable(schema_context.schema.at("minContains"))) {
       minimum = static_cast<std::size_t>(
           schema_context.schema.at("minContains").as_integer());
+    } else {
+      minimum_is_unreachable = true;
     }
   }
 
   std::optional<std::size_t> maximum;
-  if (schema_context.schema.defines("maxContains")) {
-    if (schema_context.schema.at("maxContains").is_integer() &&
-        schema_context.schema.at("maxContains").is_positive()) {
-      maximum = schema_context.schema.at("maxContains").to_integer();
-    } else if (schema_context.schema.at("maxContains").is_real() &&
-               schema_context.schema.at("maxContains").is_positive()) {
-      maximum = schema_context.schema.at("maxContains").as_integer();
-    }
+  if (schema_context.schema.defines("maxContains") &&
+      schema_context.schema.at("maxContains").is_integral() &&
+      schema_context.schema.at("maxContains").is_positive() &&
+      bound_is_representable(schema_context.schema.at("maxContains"))) {
+    maximum = static_cast<std::size_t>(
+        schema_context.schema.at("maxContains").as_integer());
+  }
+
+  // A lower bound too large to hold is one no array has enough items to meet,
+  // so every array fails and non-arrays are left alone, which is what this
+  // keyword asks for. Carrying such a bound into the general check below would
+  // instead report a count the schema never stated
+  if (minimum_is_unreachable) {
+    ValueTypes types;
+    types.set(std::to_underlying(sourcemeta::core::JSON::Type::Array));
+    return {make(sourcemeta::blaze::InstructionIndex::AssertionNotTypeStrictAny,
+                 context, schema_context, dynamic_context, types)};
   }
 
   // An unsatisfiable range is deliberately left for the general check below,

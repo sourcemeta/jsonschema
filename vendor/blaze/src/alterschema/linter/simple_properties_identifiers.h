@@ -30,7 +30,8 @@ public:
          SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_2,
          SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_2_HYPER,
          SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_1,
-         SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_1_HYPER}));
+         SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_1_HYPER,
+         SchemaVocabularies::Known::OPENAPI_3_0_BASE}));
     ONLY_CONTINUE_IF(schema.is_object());
     const auto *properties{schema.try_at("properties")};
     ONLY_CONTINUE_IF(properties && properties->is_object() &&

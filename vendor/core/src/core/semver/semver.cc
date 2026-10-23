@@ -229,6 +229,20 @@ auto compare_pre_release(const std::string_view left,
   return 0;
 }
 
+// A core number runs up to the dot that separates it from the next. The loose
+// reading also lets it run up to the pre-release, the build, or the end of the
+// version itself, which is what stands in for the parts that never arrived
+template <bool Loose>
+auto can_end_core(const std::string_view input, const std::size_t position)
+    -> bool {
+  if (position >= input.size() || input[position] == '-' ||
+      input[position] == '+') {
+    return Loose;
+  }
+
+  return input[position] == '.';
+}
+
 template <bool ShouldThrow, bool Loose>
 auto parse_semver(const std::string_view input, std::uint64_t &major,
                   std::uint64_t &minor, std::uint64_t &patch,
@@ -247,34 +261,25 @@ auto parse_semver(const std::string_view input, std::uint64_t &major,
   if (major_result == NumericParseResult::Overflow) {
     if constexpr (ShouldThrow) {
       throw sourcemeta::core::SemVerOverflowError(position + 1);
+    } else {
+      return false;
     }
-
-    return false;
   }
 
   if (major_result == NumericParseResult::Invalid) {
     if constexpr (ShouldThrow) {
       throw sourcemeta::core::SemVerParseError(position + 1);
+    } else {
+      return false;
     }
-
-    return false;
   }
 
-  auto can_end_core = [&]() -> bool {
-    if (position >= input.size() || input[position] == '-' ||
-        input[position] == '+') {
-      return Loose;
-    }
-
-    return input[position] == '.';
-  };
-
-  if (!can_end_core()) {
+  if (!can_end_core<Loose>(input, position)) {
     if constexpr (ShouldThrow) {
       throw sourcemeta::core::SemVerParseError(position + 1);
+    } else {
+      return false;
     }
-
-    return false;
   }
 
   if (position < input.size() && input[position] == '.') {
@@ -284,25 +289,25 @@ auto parse_semver(const std::string_view input, std::uint64_t &major,
     if (minor_result == NumericParseResult::Overflow) {
       if constexpr (ShouldThrow) {
         throw sourcemeta::core::SemVerOverflowError(position + 1);
+      } else {
+        return false;
       }
-
-      return false;
     }
 
     if (minor_result == NumericParseResult::Invalid) {
       if constexpr (ShouldThrow) {
         throw sourcemeta::core::SemVerParseError(position + 1);
+      } else {
+        return false;
       }
-
-      return false;
     }
 
-    if (!can_end_core()) {
+    if (!can_end_core<Loose>(input, position)) {
       if constexpr (ShouldThrow) {
         throw sourcemeta::core::SemVerParseError(position + 1);
+      } else {
+        return false;
       }
-
-      return false;
     }
 
     if (position < input.size() && input[position] == '.') {
@@ -313,17 +318,17 @@ auto parse_semver(const std::string_view input, std::uint64_t &major,
       if (patch_result == NumericParseResult::Overflow) {
         if constexpr (ShouldThrow) {
           throw sourcemeta::core::SemVerOverflowError(position + 1);
+        } else {
+          return false;
         }
-
-        return false;
       }
 
       if (patch_result == NumericParseResult::Invalid) {
         if constexpr (ShouldThrow) {
           throw sourcemeta::core::SemVerParseError(position + 1);
+        } else {
+          return false;
         }
-
-        return false;
       }
     }
   }
@@ -341,9 +346,9 @@ auto parse_semver(const std::string_view input, std::uint64_t &major,
     if (!validate_dot_separated<validate_pre_release_identifier>(pre_release)) {
       if constexpr (ShouldThrow) {
         throw sourcemeta::core::SemVerParseError(start + 1);
+      } else {
+        return false;
       }
-
-      return false;
     }
   }
 
@@ -356,21 +361,21 @@ auto parse_semver(const std::string_view input, std::uint64_t &major,
     if (!validate_dot_separated<validate_build_identifier>(build)) {
       if constexpr (ShouldThrow) {
         throw sourcemeta::core::SemVerParseError(start + 1);
+      } else {
+        return false;
       }
-
-      return false;
     }
   }
 
-  if (position != input.size()) {
-    if constexpr (ShouldThrow) {
-      throw sourcemeta::core::SemVerParseError(position + 1);
-    }
+  if (position == input.size()) {
+    return true;
+  }
 
+  if constexpr (ShouldThrow) {
+    throw sourcemeta::core::SemVerParseError(position + 1);
+  } else {
     return false;
   }
-
-  return true;
 }
 
 } // namespace

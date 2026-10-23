@@ -107,7 +107,7 @@ sourcemeta_core_stacktrace_crash_handler(EXCEPTION_POINTERS *information)
   if (length > 0) {
     ::_write(file_descriptor, header, static_cast<unsigned int>(length));
   }
-  write_frames(file_descriptor, /*frames_to_skip=*/1);
+  write_frames(file_descriptor, 1);
   write_text(file_descriptor, separator);
   return EXCEPTION_CONTINUE_SEARCH;
 }
@@ -133,7 +133,7 @@ __declspec(noinline) auto stacktrace() -> void {
   if (length > 0) {
     ::_write(file_descriptor, header, static_cast<unsigned int>(length));
   }
-  write_frames(file_descriptor, /*frames_to_skip=*/1);
+  write_frames(file_descriptor, 1);
   write_text(file_descriptor, separator);
 }
 

@@ -33,7 +33,11 @@ auto to_message_digest(
       return EVP_sha512();
   }
 
+    // Clang settles that no other value arrives, so only GCC and MSVC
+    // need to be told that the end of this function is never reached
+#if !defined(__clang__)
   std::unreachable();
+#endif
 }
 
 auto to_group_name(const sourcemeta::core::EllipticCurve curve) noexcept
@@ -47,7 +51,11 @@ auto to_group_name(const sourcemeta::core::EllipticCurve curve) noexcept
       return "P-521";
   }
 
+    // Clang settles that no other value arrives, so only GCC and MSVC
+    // need to be told that the end of this function is never reached
+#if !defined(__clang__)
   std::unreachable();
+#endif
 }
 
 auto to_pkey_id(const sourcemeta::core::EdwardsCurve curve) noexcept -> int {
@@ -58,7 +66,11 @@ auto to_pkey_id(const sourcemeta::core::EdwardsCurve curve) noexcept -> int {
       return EVP_PKEY_ED448;
   }
 
+    // Clang settles that no other value arrives, so only GCC and MSVC
+    // need to be told that the end of this function is never reached
+#if !defined(__clang__)
   std::unreachable();
+#endif
 }
 
 auto native_rsa_key(const std::string_view modulus,

@@ -34,6 +34,63 @@ constexpr std::array<JSON::StringView, 11> OPENAPI_COMPONENTS_FIELDS_3_2{
      "requestBodies"sv, "headers"sv, "securitySchemes"sv, "links"sv,
      "callbacks"sv, "pathItems"sv, "mediaTypes"sv}};
 
+// OpenAPI Specification 3.1.1, Section 4.8.7 adds `pathItems`. 3.0.4,
+// Components Object, tables nine containers without it, there being no Path
+// Item Object to hold until 3.1 lets `webhooks` and a reference reach one
+constexpr std::array<JSON::StringView, 1> OPENAPI_COMPONENTS_FIELDS_FROM_3_1{
+    {"pathItems"sv}};
+static_assert(openapi_every_field_is_tabled(OPENAPI_COMPONENTS_FIELDS_FROM_3_1,
+                                            OPENAPI_COMPONENTS_FIELDS_3_1));
+
+// What a name in the security schemes map ends at, which is the Object written
+// there unless that Object is a Reference Object. The rule below is about the
+// type of the scheme a requirement names rather than about the reference that
+// names it, so an alias of a scheme is held to what it leads to. A reference
+// out of this document leads somewhere framing has not been, and so does one
+// that lands on nothing, and neither says what it ends at.
+//
+// Which of the two a reference is cannot be read off its spelling. A fragment,
+// a relative reference and an absolute one may all name this very document,
+// and what settles it is where the reference resolves against the base in
+// force rather than how much of that base it chose to write out
+inline auto
+openapi_resolved_security_scheme(const JSON &document, const JSON::String &base,
+                                 const JSON &scheme, std::size_t remaining)
+    -> const JSON * {
+  const auto *current{&scheme};
+  while (openapi_is_reference(*current)) {
+    // A chain that steps more times than there are schemes for it to land on
+    // has come round on itself, and nothing is where a cycle ends
+    if (remaining == 0) {
+      return nullptr;
+    }
+
+    remaining -= 1;
+    const auto *reference{current->try_at("$ref", OPENAPI_HASH_REF)};
+    if (reference == nullptr || !reference->is_string()) {
+      return nullptr;
+    }
+
+    const auto target{openapi_resolve_uri(reference->to_string(), base)};
+    if (!target.has_value() ||
+        !openapi_within_document(target.value().recompose(), base)) {
+      return nullptr;
+    }
+
+    const auto pointer{fragment_to_pointer(target.value())};
+    if (!pointer.has_value()) {
+      return nullptr;
+    }
+
+    current = try_get(document, pointer.value());
+    if (current == nullptr) {
+      return nullptr;
+    }
+  }
+
+  return current;
+}
+
 // The names the document declares as security schemes, read before the walk
 // goes anywhere because the Components Object may hold a Path Item Object
 // whose operations declare a requirement, and the order that Object writes its
@@ -56,6 +113,28 @@ inline auto openapi_collect_security_schemes(const JSON &document,
 
   for (const auto &entry : schemes->as_object()) {
     walk.security_schemes.insert(entry.first, entry.hash);
+
+    // Which types admit a scope name is a question only 3.0 asks, so the
+    // reading that answers it is one only a document of that revision pays for
+    if (walk.version >= OpenAPIVersion::OPENAPI_3_1) {
+      continue;
+    }
+
+    if (!entry.second.is_object()) {
+      continue;
+    }
+
+    const auto *scheme{openapi_resolved_security_scheme(
+        document, walk.base, entry.second, schemes->size())};
+    if (scheme == nullptr || !scheme->is_object()) {
+      continue;
+    }
+
+    const auto *type{scheme->try_at("type", OPENAPI_HASH_TYPE)};
+    if (type != nullptr && type->is_string() && type->to_string() != "oauth2" &&
+        type->to_string() != "openIdConnect") {
+      walk.security_schemes_without_scopes.insert(entry.first, entry.hash);
+    }
   }
 }
 
@@ -140,6 +219,11 @@ inline auto openapi_check_components(const JSON &document, OpenAPIWalk &walk)
       *components, OPENAPI_COMPONENTS_FIELDS_3_1, OPENAPI_COMPONENTS_FIELDS_3_2,
       base, "The Components Object does not define this field", walk);
 
+  openapi_reject_fields_of_a_later_revision(
+      *components, OPENAPI_COMPONENTS_FIELDS_FROM_3_1,
+      OpenAPIVersion::OPENAPI_3_1, base,
+      "The Components Object does not define this field", walk);
+
   for (const auto &entry : components->as_object()) {
     if (entry.first.starts_with(OPENAPI_EXTENSION_PREFIX)) {
       continue;
@@ -174,9 +258,7 @@ inline auto openapi_check_components(const JSON &document, OpenAPIWalk &walk)
 
       const auto entry_location{openapi_child(location, component.first)};
       if (holds_schemas) {
-        openapi_expect_schema(component.second, entry_location,
-                              "A Schema Object must be an object or a boolean",
-                              walk);
+        openapi_expect_schema(component.second, entry_location, walk);
         continue;
       }
 

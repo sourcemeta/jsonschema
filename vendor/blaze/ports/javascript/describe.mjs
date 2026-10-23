@@ -18,6 +18,8 @@ import {
   ASSERTION_UNIQUE, ASSERTION_DIVISIBLE,
   ASSERTION_TYPE_INTEGER_BOUNDED, ASSERTION_TYPE_INTEGER_BOUNDED_STRICT,
   ASSERTION_TYPE_INTEGER_LOWER_BOUND, ASSERTION_TYPE_INTEGER_LOWER_BOUND_STRICT,
+  ASSERTION_NUMBER_INTEGER_BOUNDED,
+  ASSERTION_NUMBER_TYPE,
   ASSERTION_STRING_TYPE,
   ASSERTION_PROPERTY_TYPE, ASSERTION_PROPERTY_TYPE_EVALUATE,
   ASSERTION_PROPERTY_TYPE_STRICT, ASSERTION_PROPERTY_TYPE_STRICT_EVALUATE,
@@ -702,6 +704,12 @@ export function describe(valid, instruction, evaluatePath,
       return message;
     }
 
+    if (keyword === 'x-format-assertion' && typeof annotation === 'boolean') {
+      return annotation
+        ? 'A sibling `format` keyword was expected to be enforced as an assertion'
+        : 'A sibling `format` keyword was expected to be collected as an annotation';
+    }
+
     return 'The unrecognized keyword ' + escapeString(keyword) +
       ' was collected as the annotation ' + stringifyValue(annotation);
   }
@@ -830,6 +838,21 @@ export function describe(valid, instruction, evaluatePath,
   if (opcode === ASSERTION_TYPE_INTEGER_LOWER_BOUND ||
       opcode === ASSERTION_TYPE_INTEGER_LOWER_BOUND_STRICT) {
     return 'The value was expected to be an integer above the given minimum';
+  }
+
+  if (opcode === ASSERTION_NUMBER_TYPE) {
+    return 'The ' + valueTypeName(target) + ' value ' +
+      stringifyValue(target) +
+      ' was expected to be exactly representable as an IEEE 754 ' +
+      (value === 0 ? 'single' : 'double') +
+      ' precision floating point number';
+  }
+
+  if (opcode === ASSERTION_NUMBER_INTEGER_BOUNDED) {
+    return 'The ' + valueTypeName(target) + ' value ' +
+      stringifyValue(target) +
+      ' was expected to be an integer between ' + value[0] +
+      ' and ' + value[1];
   }
 
   if (opcode === ASSERTION_OBJECT_PROPERTIES_SIMPLE) {
@@ -1047,6 +1070,30 @@ export function describe(valid, instruction, evaluatePath,
     if (keyword === 'maxLength') {
       return 'The value was expected to be of a type other than string, as no ' +
         'string is short enough to satisfy a negative maximum length';
+    }
+
+    // The lower bounds below compile the same way when the bound is too large
+    // to hold, as nothing can be big enough to satisfy one
+    if (keyword === 'minLength') {
+      return 'The value was expected to be of a type other than string, as no ' +
+        'string is long enough to satisfy a minimum length that large';
+    }
+
+    if (keyword === 'minItems') {
+      return 'The value was expected to be of a type other than array, as no ' +
+        'array has enough items to satisfy a minimum size that large';
+    }
+
+    if (keyword === 'minProperties') {
+      return 'The value was expected to be of a type other than object, as no ' +
+        'object has enough properties to satisfy a minimum size that large';
+    }
+
+    // `contains` compiles the same way when its `minContains` is too large to
+    // hold, as no array has that many items for the subschema to match
+    if (keyword === 'contains') {
+      return 'The value was expected to be of a type other than array, as no ' +
+        'array has enough matching items to satisfy a minimum count that large';
     }
 
     return describeNotTypesCheck(valid, targetType, value);

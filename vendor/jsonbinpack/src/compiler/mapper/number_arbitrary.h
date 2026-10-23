@@ -25,7 +25,7 @@ public:
       sourcemeta::core::JSON &schema,
       [[maybe_unused]] const sourcemeta::blaze::SchemaTransformRule::Result
           &result) const -> void override {
-    make_encoding(schema, "DOUBLE_VARINT_TUPLE",
+    make_encoding(schema, "NUMBER_VARINT_TUPLE",
                   sourcemeta::core::JSON::make_object());
   }
 };

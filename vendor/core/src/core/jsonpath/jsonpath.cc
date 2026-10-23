@@ -11,6 +11,7 @@
 #include <functional> // std::cref
 #include <optional>   // std::optional
 #include <string>     // std::to_string
+#include <utility>    // std::unreachable
 #include <variant> // std::get, std::get_if, std::holds_alternative, std::monostate, std::variant
 #include <vector> // std::vector
 
@@ -306,9 +307,9 @@ auto filter_query_visit_iterative(
     const auto *const selectors_end{selector + segment.selectors.size()};
     for (; selector != selectors_end; ++selector) {
       switch (static_cast<JSONPath::SelectorKind>(selector->index())) {
-        case JSONPath::SelectorKind::Name: {
-          const auto *entry{std::get_if<JSONPath::SelectorName>(selector)};
+        case JSONPath::SelectorKind::Name:
           if (type == JSON::Type::Object) {
+            const auto *entry{std::get_if<JSONPath::SelectorName>(selector)};
             const auto *child{current.try_at(entry->name, entry->hash)};
             if (child != nullptr) {
               pool.push_back({.node = child, .cursor = item.cursor + 1});
@@ -316,7 +317,6 @@ auto filter_query_visit_iterative(
           }
 
           break;
-        }
         case JSONPath::SelectorKind::Wildcard:
           if (type == JSON::Type::Object) {
             const auto &object{current.as_object()};
@@ -334,9 +334,9 @@ auto filter_query_visit_iterative(
           }
 
           break;
-        case JSONPath::SelectorKind::Index: {
-          const auto *entry{std::get_if<JSONPath::SelectorIndex>(selector)};
+        case JSONPath::SelectorKind::Index:
           if (type == JSON::Type::Array) {
+            const auto *entry{std::get_if<JSONPath::SelectorIndex>(selector)};
             const auto &array{current.as_array()};
             const auto size{static_cast<std::int64_t>(array.size())};
             const auto index{entry->index < 0 ? entry->index + size
@@ -349,7 +349,6 @@ auto filter_query_visit_iterative(
           }
 
           break;
-        }
         case JSONPath::SelectorKind::Slice: {
           const auto *entry{std::get_if<JSONPath::SelectorSlice>(selector)};
           if (type == JSON::Type::Array) {
@@ -752,9 +751,10 @@ inline auto evaluate_value_function(const JSONPath::FilterFunctionCall &call,
                          });
       return count == 1 ? single : nullptr;
     }
+    // The two functions that answer with a truth value rather than with a node
+    // are weighed where a test stands rather than here
     default:
-      assert(false);
-      return nullptr;
+      std::unreachable();
   }
 }
 
@@ -854,8 +854,32 @@ inline auto filter_compare(const JSONPath::FilterComparison &comparison,
       return filter_less(right, left) || filter_equals(left, right);
   }
 
-  assert(false);
-  return false;
+    // Clang settles that no other value arrives, so only GCC and MSVC
+    // need to be told that the end of this function is never reached
+#if !defined(__clang__)
+  std::unreachable();
+#endif
+}
+
+// A test either runs a query and answers whether it reached anything or calls
+// a function that answers on its own, and what it comes to may be negated
+// either way
+inline auto filter_test_matches(const JSONPath::FilterTest &test,
+                                const JSON &candidate, const JSON &root)
+    -> bool {
+  bool result{false};
+  if (test.subject.index() == 0) {
+    const auto &query{*std::get_if<JSONPath::FilterQuery>(&test.subject)};
+    result = !filter_query_visit(query.segments, 0,
+                                 query.relative ? candidate : root, root,
+                                 [](const JSON &) -> bool { return false; });
+  } else {
+    result = evaluate_logical_function(
+        *std::get_if<JSONPath::FilterFunctionCall>(&test.subject), candidate,
+        root);
+  }
+
+  return test.negated ? !result : result;
 }
 
 inline auto filter_matches(const JSONPath::FilterExpression &expression,
@@ -866,22 +890,10 @@ inline auto filter_matches(const JSONPath::FilterExpression &expression,
       return filter_compare(
           *std::get_if<JSONPath::FilterComparison>(&expression.value),
           candidate, root);
-    case JSONPath::FilterExpressionKind::Test: {
-      const auto &test{*std::get_if<JSONPath::FilterTest>(&expression.value)};
-      bool result{false};
-      if (test.subject.index() == 0) {
-        const auto &query{*std::get_if<JSONPath::FilterQuery>(&test.subject)};
-        result = !filter_query_visit(
-            query.segments, 0, query.relative ? candidate : root, root,
-            [](const JSON &) -> bool { return false; });
-      } else {
-        result = evaluate_logical_function(
-            *std::get_if<JSONPath::FilterFunctionCall>(&test.subject),
-            candidate, root);
-      }
-
-      return test.negated ? !result : result;
-    }
+    case JSONPath::FilterExpressionKind::Test:
+      return filter_test_matches(
+          *std::get_if<JSONPath::FilterTest>(&expression.value), candidate,
+          root);
     case JSONPath::FilterExpressionKind::Conjunction: {
       const auto &conjunction{
           *std::get_if<JSONPath::FilterConjunction>(&expression.value)};
@@ -915,8 +927,11 @@ inline auto filter_matches(const JSONPath::FilterExpression &expression,
           candidate, root);
   }
 
-  assert(false);
-  return false;
+    // Clang settles that no other value arrives, so only GCC and MSVC
+    // need to be told that the end of this function is never reached
+#if !defined(__clang__)
+  std::unreachable();
+#endif
 }
 
 // The main walk is iterative over an explicit stack, so document depth
@@ -997,9 +1012,9 @@ inline auto evaluate_query(const std::vector<JSONPath::Segment> &segments,
     const auto *const selectors_end{selector + segment.selectors.size()};
     for (; selector != selectors_end; ++selector) {
       switch (static_cast<JSONPath::SelectorKind>(selector->index())) {
-        case JSONPath::SelectorKind::Name: {
-          const auto *entry{std::get_if<JSONPath::SelectorName>(selector)};
+        case JSONPath::SelectorKind::Name:
           if (type == JSON::Type::Object) {
+            const auto *entry{std::get_if<JSONPath::SelectorName>(selector)};
             const auto *child{current.try_at(entry->name, entry->hash)};
             if (child != nullptr) {
               stack.push_visit_property(child, item.cursor + 1, child_depth,
@@ -1008,7 +1023,6 @@ inline auto evaluate_query(const std::vector<JSONPath::Segment> &segments,
           }
 
           break;
-        }
         case JSONPath::SelectorKind::Wildcard:
           if (type == JSON::Type::Object) {
             const auto &object{current.as_object()};
@@ -1029,9 +1043,9 @@ inline auto evaluate_query(const std::vector<JSONPath::Segment> &segments,
           }
 
           break;
-        case JSONPath::SelectorKind::Index: {
-          const auto *entry{std::get_if<JSONPath::SelectorIndex>(selector)};
+        case JSONPath::SelectorKind::Index:
           if (type == JSON::Type::Array) {
+            const auto *entry{std::get_if<JSONPath::SelectorIndex>(selector)};
             const auto &array{current.as_array()};
             const auto size{static_cast<std::int64_t>(array.size())};
             const auto index{entry->index < 0 ? entry->index + size
@@ -1045,7 +1059,6 @@ inline auto evaluate_query(const std::vector<JSONPath::Segment> &segments,
           }
 
           break;
-        }
         case JSONPath::SelectorKind::Slice: {
           const auto *entry{std::get_if<JSONPath::SelectorSlice>(selector)};
           if (type == JSON::Type::Array) {
@@ -1182,9 +1195,9 @@ inline auto evaluate_selectors(const std::vector<JSONPath::Segment> &segments,
   const auto *const selectors_end{selector + segment.selectors.size()};
   for (; selector != selectors_end; ++selector) {
     switch (static_cast<JSONPath::SelectorKind>(selector->index())) {
-      case JSONPath::SelectorKind::Name: {
-        const auto *entry{std::get_if<JSONPath::SelectorName>(selector)};
+      case JSONPath::SelectorKind::Name:
         if (type == JSON::Type::Object) {
+          const auto *entry{std::get_if<JSONPath::SelectorName>(selector)};
           const auto *child{current.try_at(entry->name, entry->hash)};
           if (child != nullptr) {
             state.frames.push_property(entry->name, entry->hash);
@@ -1194,7 +1207,6 @@ inline auto evaluate_selectors(const std::vector<JSONPath::Segment> &segments,
         }
 
         break;
-      }
       case JSONPath::SelectorKind::Wildcard:
         if (type == JSON::Type::Object) {
           const auto &object{current.as_object()};
@@ -1217,9 +1229,9 @@ inline auto evaluate_selectors(const std::vector<JSONPath::Segment> &segments,
         }
 
         break;
-      case JSONPath::SelectorKind::Index: {
-        const auto *entry{std::get_if<JSONPath::SelectorIndex>(selector)};
+      case JSONPath::SelectorKind::Index:
         if (type == JSON::Type::Array) {
+          const auto *entry{std::get_if<JSONPath::SelectorIndex>(selector)};
           const auto &array{current.as_array()};
           const auto size{static_cast<std::int64_t>(array.size())};
           const auto index{entry->index < 0 ? entry->index + size
@@ -1235,7 +1247,6 @@ inline auto evaluate_selectors(const std::vector<JSONPath::Segment> &segments,
         }
 
         break;
-      }
       case JSONPath::SelectorKind::Slice: {
         const auto *entry{std::get_if<JSONPath::SelectorSlice>(selector)};
         if (type == JSON::Type::Array) {

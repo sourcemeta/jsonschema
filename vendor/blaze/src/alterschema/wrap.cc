@@ -80,7 +80,7 @@ auto wrap(const sourcemeta::core::JSON &schema,
   sourcemeta::core::URI uri{identifier};
 
   try {
-    schema_reidentify(copy, identifier, resolver, location.dialect);
+    schema_reidentify(copy, identifier, walker, resolver, location.dialect);
 
     // Otherwise we will get an error with the `WRAPPER_IDENTIFIER`, which will
     // be confusing to end users

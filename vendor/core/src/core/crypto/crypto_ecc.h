@@ -12,6 +12,7 @@
 #include "crypto_bignum.h"
 
 #include <array>       // std::array
+#include <cassert>     // assert
 #include <cstddef>     // std::size_t
 #include <cstdint>     // std::uint8_t, std::uint64_t
 #include <string_view> // std::string_view
@@ -316,9 +317,13 @@ inline auto point_is_infinity(const JacobianPoint &point) noexcept -> bool {
 inline auto point_double(const JacobianPoint &point,
                          const EllipticCurveParameters &curve)
     -> JacobianPoint {
-  if (point_is_infinity(point) || bignum_is_zero(point.y)) {
+  if (point_is_infinity(point)) {
     return {};
   }
+
+  // A point whose ordinate is zero has order two, which a curve of prime order
+  // does not have
+  assert(!bignum_is_zero(point.y));
 
   // The doubling formula for curves with coefficient -3 (EFD dbl-2001-b),
   // which trades the coefficient multiplication and a squaring for one more
@@ -359,13 +364,11 @@ inline auto point_double(const JacobianPoint &point,
 // Point addition in Jacobian coordinates
 inline auto point_add(const JacobianPoint &left, const JacobianPoint &right,
                       const EllipticCurveParameters &curve) -> JacobianPoint {
-  if (point_is_infinity(left)) {
-    return right;
-  }
-
-  if (point_is_infinity(right)) {
-    return left;
-  }
+  // The one caller combines two points it built with a unit third coordinate,
+  // so neither is the point at infinity. The mixed addition below is the one
+  // that accumulates from there
+  assert(!point_is_infinity(left));
+  assert(!point_is_infinity(right));
 
   const auto &prime{curve.prime};
   const auto left_z_squared{field_mod_multiply(left.z, left.z, curve)};

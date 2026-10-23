@@ -35,15 +35,6 @@ enum class URIEscapeMode : std::uint8_t {
   UserInfo
 };
 
-inline auto uri_percent_encode_byte(std::string &output,
-                                    const unsigned char byte) -> void {
-  const auto high{(byte >> 4) & 0x0F};
-  const auto low{byte & 0x0F};
-  output += URI_PERCENT;
-  output += static_cast<char>(high < 10 ? '0' + high : 'A' + high - 10);
-  output += static_cast<char>(low < 10 ? '0' + low : 'A' + low - 10);
-}
-
 inline auto uri_is_percent_encoded(const std::string &input,
                                    std::string::size_type position) -> bool {
   return position < input.size() && input[position] == URI_PERCENT &&

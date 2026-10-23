@@ -7,6 +7,7 @@
 #include <cassert>     // assert
 #include <cstddef>     // std::size_t
 #include <cstdint>     // std::uint8_t, std::uint16_t
+#include <span>        // std::span
 #include <string_view> // std::string_view
 #include <utility>     // std::pair
 
@@ -130,9 +131,11 @@ inline auto http_for_each_parameter(const std::string_view parameters,
                                     Visitor visit) -> void {
   std::size_t position{0};
   while (position < parameters.size()) {
-    if (parameters[position] == ';') {
-      ++position;
-    }
+    // Splitting an entry from its parameters keeps the semicolon with them,
+    // and the scan of each parameter ends on the next one, so one always
+    // stands where a parameter begins
+    assert(parameters[position] == ';');
+    ++position;
     while (position < parameters.size() && http_is_ows(parameters[position])) {
       ++position;
     }
@@ -339,9 +342,8 @@ inline auto http_split_media_range(const std::string_view parameters) noexcept
   float quality{1.0F};
   while (position < parameters.size()) {
     const std::size_t separator{position};
-    if (parameters[position] == ';') {
-      ++position;
-    }
+    assert(parameters[position] == ';');
+    ++position;
     while (position < parameters.size() && http_is_ows(parameters[position])) {
       ++position;
     }

@@ -343,9 +343,10 @@ auto URITemplateRouter::add(const std::string_view uri_template,
           [&previous_identifier](const auto &candidate) -> bool {
             return std::get<0>(candidate) == previous_identifier;
           });
-      if (existing != this->entries_.end()) {
-        *existing = std::make_tuple(identifier, context, uri_template);
-      }
+      // An identifier is only ever handed out together with the entry that
+      // holds it, and nothing drops an entry once it is there
+      assert(existing != this->entries_.end());
+      *existing = std::make_tuple(identifier, context, uri_template);
       std::erase_if(this->operations_,
                     [&previous_identifier](const auto &entry) -> bool {
                       return entry.second.first == previous_identifier;
@@ -587,9 +588,10 @@ auto URITemplateRouter::add(const std::string_view uri_template,
           [&previous_identifier](const auto &candidate) -> bool {
             return std::get<0>(candidate) == previous_identifier;
           });
-      if (existing != this->entries_.end()) {
-        *existing = std::make_tuple(identifier, context, uri_template);
-      }
+      // An identifier is only ever handed out together with the entry that
+      // holds it, and nothing drops an entry once it is there
+      assert(existing != this->entries_.end());
+      *existing = std::make_tuple(identifier, context, uri_template);
       std::erase_if(this->operations_,
                     [&previous_identifier](const auto &entry) -> bool {
                       return entry.second.first == previous_identifier;
@@ -727,7 +729,11 @@ auto URITemplateRouter::match(const std::string_view path,
     ++position;
   }
 
-  if ((current != nullptr) && current->identifier == 0 && current->variable &&
+  // Every way out of the walk above either answers on its own or settles on a
+  // node, which is what stepping past that node's own literals relies on too
+  assert(current != nullptr);
+
+  if (current->identifier == 0 && current->variable &&
       current->variable->type == NodeType::OptionalExpansion) {
     assert(variable_index <=
            std::numeric_limits<URITemplateRouter::Index>::max());
@@ -737,11 +743,8 @@ auto URITemplateRouter::match(const std::string_view path,
                           current->variable->context);
   }
 
-  return (current != nullptr)
-             ? finalize_match(this->otherwise_, current->identifier,
-                              current->context)
-             : finalize_match(this->otherwise_, this->root_.identifier,
-                              this->root_.context);
+  return finalize_match(this->otherwise_, current->identifier,
+                        current->context);
 }
 
 } // namespace sourcemeta::core

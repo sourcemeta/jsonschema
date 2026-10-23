@@ -57,13 +57,18 @@ auto absent_or_string(const JSON &data, const JSON::StringView name,
 }
 
 // RFC 6749 Section 3.1.2: a redirection URI is an absolute URI without a
-// fragment
-auto is_absolute_uri_without_fragment(const std::string_view value) -> bool {
+// fragment. What it was read as is handed back, so the rules that the
+// application type carries are held to that rather than to the text again
+auto read_redirect_uri(const std::string_view value) -> std::optional<URI> {
   try {
-    const URI uri{value};
-    return uri.scheme().has_value() && !uri.fragment().has_value();
+    URI uri{value};
+    if (!uri.scheme().has_value() || uri.fragment().has_value()) {
+      return std::nullopt;
+    }
+
+    return uri;
   } catch (const URIParseError &) {
-    return false;
+    return std::nullopt;
   }
 }
 
@@ -80,31 +85,21 @@ auto is_https_url_with_host(const std::string_view value) -> bool {
 // OpenID Connect Dynamic Client Registration 1.0 Section 2: a web client using
 // the implicit grant "MUST only register URLs using the https scheme as
 // redirect_uris" and "they MUST NOT use localhost as the hostname"
-auto is_web_implicit_redirect_uri(const std::string_view value) -> bool {
-  try {
-    const URI uri{value};
-    return uri.is_https() && uri.host().has_value() &&
-           !uri.host().value().empty() && !uri.is_localhost();
-  } catch (const URIParseError &) {
-    return false;
-  }
+auto is_web_implicit_redirect_uri(const URI &uri) -> bool {
+  return uri.is_https() && uri.host().has_value() &&
+         !uri.host().value().empty() && !uri.is_localhost();
 }
 
 // OpenID Connect Dynamic Client Registration 1.0 Section 2: a native client
 // "MUST only register redirect_uris using custom URI schemes or loopback URLs
 // using the http scheme", where a loopback URL names localhost or an IP
 // loopback literal
-auto is_native_redirect_uri(const std::string_view value) -> bool {
-  try {
-    const URI uri{value};
-    if (uri.is_http()) {
-      return uri.is_loopback() || uri.is_localhost();
-    }
-
-    return uri.scheme().has_value() && !uri.is_https();
-  } catch (const URIParseError &) {
-    return false;
+auto is_native_redirect_uri(const URI &uri) -> bool {
+  if (uri.is_http()) {
+    return uri.is_loopback() || uri.is_localhost();
   }
+
+  return uri.scheme().has_value() && !uri.is_https();
 }
 
 auto validate_client_metadata(const OAuthClientMetadata &oauth) -> void {
@@ -118,13 +113,6 @@ auto validate_client_metadata(const OAuthClientMetadata &oauth) -> void {
   if (redirect_uris == nullptr || !redirect_uris->is_array() ||
       redirect_uris->empty()) {
     throw OIDCRegistrationParseError{};
-  }
-
-  for (const auto &element : redirect_uris->as_array()) {
-    if (!element.is_string() ||
-        !is_absolute_uri_without_fragment(element.to_string())) {
-      throw OIDCRegistrationParseError{};
-    }
   }
 
   // A present member whose JSON type is wrong is rejected rather than read as
@@ -157,13 +145,22 @@ auto validate_client_metadata(const OAuthClientMetadata &oauth) -> void {
     throw OIDCRegistrationParseError{};
   }
   const bool native{application_type == "native"sv};
-  if (native || oauth.supports_grant_type("implicit"sv)) {
-    for (const auto &element : redirect_uris->as_array()) {
-      const std::string_view redirect_uri{element.to_string()};
-      if (native ? !is_native_redirect_uri(redirect_uri)
-                 : !is_web_implicit_redirect_uri(redirect_uri)) {
-        throw OIDCRegistrationParseError{};
-      }
+  const bool restricted{native || oauth.supports_grant_type("implicit"sv)};
+
+  for (const auto &element : redirect_uris->as_array()) {
+    if (!element.is_string()) {
+      throw OIDCRegistrationParseError{};
+    }
+
+    const auto parsed{read_redirect_uri(element.to_string())};
+    if (!parsed.has_value()) {
+      throw OIDCRegistrationParseError{};
+    }
+
+    if (restricted &&
+        (native ? !is_native_redirect_uri(parsed.value())
+                : !is_web_implicit_redirect_uri(parsed.value()))) {
+      throw OIDCRegistrationParseError{};
     }
   }
 

@@ -13,6 +13,8 @@
 #include <sourcemeta/core/time.h>
 #include <sourcemeta/core/uritemplate.h>
 
+#include <cassert> // assert
+
 // TODO(C++23): Replace SOURCEMETA_ASSUME with [[assume]] when available
 // across all compilers (Clang 19, GCC 13)
 #if defined(__clang__)
@@ -240,6 +242,33 @@ inline auto effective_type_strict_real(const JSON &instance) noexcept
     default:
       return real_type;
   }
+}
+
+// An integral number that no 64-bit integer can hold cannot be narrowed to one
+// to be compared, and `as_integer` throws rather than saturating, so the
+// comparison happens in a domain wide enough to hold any of them instead.
+// A real converts through `exact_from` because the constructor spells a double
+// with 17 significant digits, which is too few to tell apart two integers that
+// a bound of this width can sit between
+inline auto as_decimal(const JSON &instance) -> Decimal {
+  assert(instance.is_integral());
+  return instance.is_decimal() ? instance.to_decimal()
+                               : Decimal::exact_from(instance.to_real());
+}
+
+inline auto integer_within_bounds(const JSON &target,
+                                  const ValueIntegerBounds &value) -> bool {
+  if (target.is_integer()) {
+    const auto integer{target.to_integer()};
+    return integer >= value.first && integer <= value.second;
+  }
+
+  if (target.is_integral()) {
+    const auto decimal{as_decimal(target)};
+    return decimal >= Decimal{value.first} && decimal <= Decimal{value.second};
+  }
+
+  return false;
 }
 
 template <typename T>
@@ -837,15 +866,7 @@ INSTRUCTION_HANDLER(AssertionDivisible) {
 }
 
 INSTRUCTION_DIRECT(AssertionTypeIntegerBounded, ValueIntegerBounds) {
-  if (target.is_integer()) {
-    const auto integer{target.to_integer()};
-    return integer >= value.first && integer <= value.second;
-  }
-  if (target.is_integral()) {
-    const auto integer{target.as_integer()};
-    return integer >= value.first && integer <= value.second;
-  }
-  return false;
+  return integer_within_bounds(target, value);
 }
 
 INSTRUCTION_HANDLER(AssertionTypeIntegerBounded) {
@@ -875,7 +896,7 @@ INSTRUCTION_DIRECT(AssertionTypeIntegerLowerBound, ValueIntegerBounds) {
     return target.to_integer() >= value.first;
   }
   if (target.is_integral()) {
-    return target.as_integer() >= value.first;
+    return as_decimal(target) >= Decimal{value.first};
   }
   return false;
 }
@@ -891,6 +912,13 @@ INSTRUCTION_DIRECT(AssertionTypeIntegerLowerBoundStrict, ValueIntegerBounds) {
   if (target.is_integer()) {
     return target.to_integer() >= value.first;
   }
+  // An integer too large for 64 bits is held as a decimal, which the strict
+  // type check still reads as an integer when it was written as digits alone.
+  // The bounded counterpart needs no such branch, as a value out of that range
+  // cannot sit within bounds of that width either way
+  if (effective_type_strict_real(target) == JSON::Type::Integer) {
+    return target.to_decimal() >= Decimal{value.first};
+  }
   return false;
 }
 
@@ -899,6 +927,30 @@ INSTRUCTION_HANDLER(AssertionTypeIntegerLowerBoundStrict) {
   result = DIRECT(AssertionTypeIntegerLowerBoundStrict, target,
                   assume_value_copy<ValueIntegerBounds>(instruction.value));
   EVALUATE_END(AssertionTypeIntegerLowerBoundStrict);
+}
+
+INSTRUCTION_DIRECT(AssertionNumberIntegerBounded, ValueIntegerBounds) {
+  return integer_within_bounds(target, value);
+}
+
+INSTRUCTION_HANDLER(AssertionNumberIntegerBounded) {
+  EVALUATE_BEGIN_NON_STRING(AssertionNumberIntegerBounded, target.is_number());
+  result = DIRECT(AssertionNumberIntegerBounded, target,
+                  assume_value_copy<ValueIntegerBounds>(instruction.value));
+  EVALUATE_END(AssertionNumberIntegerBounded);
+}
+
+INSTRUCTION_HANDLER(AssertionNumberType) {
+  EVALUATE_BEGIN_NON_STRING(AssertionNumberType, target.is_number());
+  switch (assume_value_copy<ValueNumberType>(instruction.value)) {
+    case ValueNumberType::Float:
+      result = target.is_float();
+      break;
+    case ValueNumberType::Double:
+      result = target.is_double();
+      break;
+  }
+  EVALUATE_END(AssertionNumberType);
 }
 
 INSTRUCTION_HANDLER(AssertionStringType) {
@@ -967,6 +1019,9 @@ INSTRUCTION_HANDLER(AssertionStringType) {
       break;
     case ValueStringType::Color:
       result = is_css2_color(target);
+      break;
+    case ValueStringType::Base64:
+      result = sourcemeta::core::is_base64(target);
       break;
     default:
       std::unreachable();
@@ -2484,11 +2539,11 @@ INSTRUCTION_HANDLER(LoopItemsPropertiesExactlyTypeStrictHash) {
   // Otherwise why emit this instruction?
   assert(!value.second.first.empty());
 
+  result = true;
+
   if (!target.is_array()) [[unlikely]] {
     EVALUATE_END(LoopItemsPropertiesExactlyTypeStrictHash);
   }
-
-  result = true;
 
   const auto hashes_size{value.second.first.size()};
   for (const auto &item : target.as_array()) {
@@ -2595,6 +2650,7 @@ INSTRUCTION_HANDLER(LoopItemsPropertiesExactlyTypeStrictHash3) {
   assert(!value.second.first.empty());
 
   if (!target.is_array()) [[unlikely]] {
+    result = true;
     EVALUATE_END(LoopItemsPropertiesExactlyTypeStrictHash3);
   }
 
@@ -2826,7 +2882,7 @@ using DispatchHandler = bool (*)(
 template <bool Track, bool Dynamic, bool HasCallback>
 // Must have same order as InstructionIndex
 // NOLINTNEXTLINE(modernize-avoid-c-arrays)
-static constexpr DispatchHandler<Track, Dynamic, HasCallback> HANDLERS[101] = {
+static constexpr DispatchHandler<Track, Dynamic, HasCallback> HANDLERS[103] = {
     AssertionFail,
     AssertionDefines,
     AssertionDefinesStrict,
@@ -2867,6 +2923,8 @@ static constexpr DispatchHandler<Track, Dynamic, HasCallback> HANDLERS[101] = {
     AssertionTypeIntegerBoundedStrict,
     AssertionTypeIntegerLowerBound,
     AssertionTypeIntegerLowerBoundStrict,
+    AssertionNumberIntegerBounded,
+    AssertionNumberType,
     AssertionStringType,
     AssertionPropertyType,
     AssertionPropertyTypeEvaluate,

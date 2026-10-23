@@ -40,7 +40,7 @@ WRITE expected_0.txt UNTIL EOF
 1>       "title": "Test",
 1>       "description": "Test schema",
 1>       "type": "integer",
-1>       "exclusiveMaximum": 9.223372036854776000e+18
+1>       "exclusiveMaximum": 9223372036854776000
 1>     }
 1>   }
 1> }

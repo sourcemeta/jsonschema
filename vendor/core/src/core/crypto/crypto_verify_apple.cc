@@ -33,7 +33,11 @@ auto to_sec_key_pkcs1_v15_algorithm(
       return kSecKeyAlgorithmRSASignatureMessagePKCS1v15SHA512;
   }
 
+    // Clang settles that no other value arrives, so only GCC and MSVC
+    // need to be told that the end of this function is never reached
+#if !defined(__clang__)
   std::unreachable();
+#endif
 }
 
 // These algorithm variants fix the salt length to the hash function output,
@@ -50,7 +54,11 @@ auto to_sec_key_pss_algorithm(
       return kSecKeyAlgorithmRSASignatureMessagePSSSHA512;
   }
 
+    // Clang settles that no other value arrives, so only GCC and MSVC
+    // need to be told that the end of this function is never reached
+#if !defined(__clang__)
   std::unreachable();
+#endif
 }
 
 auto to_sec_key_ecdsa_algorithm(
@@ -65,7 +73,11 @@ auto to_sec_key_ecdsa_algorithm(
       return kSecKeyAlgorithmECDSASignatureMessageX962SHA512;
   }
 
+    // Clang settles that no other value arrives, so only GCC and MSVC
+    // need to be told that the end of this function is never reached
+#if !defined(__clang__)
   std::unreachable();
+#endif
 }
 
 auto make_data(const std::string_view value) -> CFDataRef {
@@ -355,7 +367,11 @@ auto eddsa_verify(const PublicKey &key, const std::string_view message,
       return edwards448_verify(internal->edwards_point, message, signature);
   }
 
+    // Clang settles that no other value arrives, so only GCC and MSVC
+    // need to be told that the end of this function is never reached
+#if !defined(__clang__)
   std::unreachable();
+#endif
 }
 
 auto rsa_public_components(const PublicKey &key)

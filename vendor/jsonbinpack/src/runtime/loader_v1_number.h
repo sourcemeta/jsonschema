@@ -16,6 +16,11 @@ auto DOUBLE_VARINT_TUPLE([[maybe_unused]] const sourcemeta::core::JSON &options)
   return sourcemeta::jsonbinpack::DOUBLE_VARINT_TUPLE{};
 }
 
+auto NUMBER_VARINT_TUPLE([[maybe_unused]] const sourcemeta::core::JSON &options)
+    -> Encoding {
+  return sourcemeta::jsonbinpack::NUMBER_VARINT_TUPLE{};
+}
+
 // NOLINTEND(readability-identifier-naming)
 } // namespace sourcemeta::jsonbinpack::v1
 

@@ -23,6 +23,7 @@ struct FLOOR_MULTIPLE_ENUM_VARINT;
 struct ROOF_MULTIPLE_MIRROR_ENUM_VARINT;
 struct ARBITRARY_MULTIPLE_ZIGZAG_VARINT;
 struct DOUBLE_VARINT_TUPLE;
+struct NUMBER_VARINT_TUPLE;
 struct BYTE_CHOICE_INDEX;
 struct LARGE_CHOICE_INDEX;
 struct TOP_LEVEL_BYTE_CHOICE_INDEX;
@@ -55,7 +56,8 @@ using Encoding = std::variant<
     BOUNDED_8BIT_PREFIX_UTF8_STRING_SHARED, RFC3339_DATE_INTEGER_TRIPLET,
     PREFIX_VARINT_LENGTH_STRING_SHARED, FIXED_TYPED_ARRAY,
     BOUNDED_8BITS_TYPED_ARRAY, FLOOR_TYPED_ARRAY, ROOF_TYPED_ARRAY,
-    FIXED_TYPED_ARBITRARY_OBJECT, VARINT_TYPED_ARBITRARY_OBJECT>;
+    FIXED_TYPED_ARBITRARY_OBJECT, VARINT_TYPED_ARBITRARY_OBJECT,
+    NUMBER_VARINT_TUPLE>;
 
 // The encoding names are the ones the JSON BinPack specification
 // defines, so they keep their casing rather than following the C++
@@ -265,6 +267,57 @@ struct ARBITRARY_MULTIPLE_ZIGZAG_VARINT {
 // clang-format on
 struct DOUBLE_VARINT_TUPLE {};
 
+// clang-format off
+/// @brief The encoding consists of a sequence of two integers. The first is
+/// the signed coefficient of the number as a ZigZag-encoded Base-128 64-bit
+/// Little Endian variable-length unsigned integer. The second is the base-10
+/// exponent that the coefficient is scaled by, ZigZag-encoded and shifted left
+/// by one bit, whose least significant bit is set when the number is an
+/// arbitrary-precision decimal rather than a double, as a Base-128 64-bit
+/// Little Endian variable-length unsigned integer.
+///
+/// Unlike DOUBLE_VARINT_TUPLE, this encoding covers both of the numeric
+/// representations that a JSON document may hold, and the schema-driven mode
+/// relies on that: a schema that permits a number cannot tell which of the two
+/// an instance will carry, so the distinction travels with the data. The
+/// exponent is signed so that magnitudes a decimal mark cannot reach, such as
+/// 1e300, remain within the encoding.
+///
+/// ### Options
+///
+/// None
+///
+/// ### Conditions
+///
+/// The coefficient must fit in a signed 64-bit integer, which holds every
+/// number of up to 19 significant digits
+///
+/// ### Examples
+///
+/// Given the decimal input value 2.1, the encoding results in the
+/// variable-length integer 42 (the ZigZag encoding of 21) followed by the
+/// variable-length unsigned integer 3 (the ZigZag encoding of the exponent -1,
+/// shifted left by one bit, with the decimal bit set).
+///
+/// ```
+/// +------+------+
+/// | 0x2a | 0x03 |
+/// +------+------+
+/// ```
+///
+/// Given the double input value 3.14, the encoding results in the
+/// variable-length integer 628 (the ZigZag encoding of 314) followed by the
+/// variable-length unsigned integer 6 (the ZigZag encoding of the exponent -2,
+/// shifted left by one bit, with the decimal bit clear).
+///
+/// ```
+/// +------+------+------+
+/// | 0xf4 | 0x04 | 0x06 |
+/// +------+------+------+
+/// ```
+// clang-format on
+struct NUMBER_VARINT_TUPLE {};
+
 /// @}
 
 /// @ingroup runtime
@@ -445,6 +498,7 @@ constexpr std::uint8_t SUBTYPE_LONG_STRING_BASE_EXPONENT_7 = 0b00000111;
 constexpr std::uint8_t SUBTYPE_LONG_STRING_BASE_EXPONENT_8 = 0b00001000;
 constexpr std::uint8_t SUBTYPE_LONG_STRING_BASE_EXPONENT_9 = 0b00001001;
 constexpr std::uint8_t SUBTYPE_LONG_STRING_BASE_EXPONENT_10 = 0b00001010;
+constexpr std::uint8_t SUBTYPE_DECIMAL = 0b00001011;
 
 static_assert(SUBTYPE_FALSE <= sourcemeta::core::uint_max<SUBTYPE_SIZE>);
 static_assert(SUBTYPE_TRUE <= sourcemeta::core::uint_max<SUBTYPE_SIZE>);
@@ -464,6 +518,7 @@ static_assert(SUBTYPE_LONG_STRING_BASE_EXPONENT_9 <=
               sourcemeta::core::uint_max<SUBTYPE_SIZE>);
 static_assert(SUBTYPE_LONG_STRING_BASE_EXPONENT_10 <=
               sourcemeta::core::uint_max<SUBTYPE_SIZE>);
+static_assert(SUBTYPE_DECIMAL <= sourcemeta::core::uint_max<SUBTYPE_SIZE>);
 
 // Note that the binary values actually match the declared exponents
 static_assert(SUBTYPE_LONG_STRING_BASE_EXPONENT_7 == 7);

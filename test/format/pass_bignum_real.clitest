@@ -19,7 +19,7 @@ WRITE expected_file_0.txt UNTIL EOF
   "$schema": "http://json-schema.org/draft-04/schema#",
   "title": "Test",
   "description": "Test schema",
-  "minimum": 1e-5
+  "minimum": 0.00001
 }
 EOF
 

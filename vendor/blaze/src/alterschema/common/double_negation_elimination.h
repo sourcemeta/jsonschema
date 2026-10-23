@@ -18,6 +18,9 @@ public:
             const sourcemeta::core::SchemaResolver &) const
       -> SchemaTransformRule::Result override {
     static const JSON::String KEYWORD{"not"};
+    // The OpenAPI 3.0 Schema Object is deliberately absent, as merging the
+    // inner schema can place a `nullable` beside a `type` it never sat next
+    // to, which widens what that type admits
     ONLY_CONTINUE_IF(
         vocabularies.contains_any(
             {SchemaVocabularies::Known::JSON_SCHEMA_2020_12_APPLICATOR,

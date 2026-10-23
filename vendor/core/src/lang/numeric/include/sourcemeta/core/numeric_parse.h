@@ -17,6 +17,26 @@ SOURCEMETA_CORE_NUMERIC_EXPORT
 auto to_double(const std::string_view input) noexcept -> std::optional<double>;
 
 /// @ingroup numeric
+/// Attempt to parse a fixed point decimal string as one of the values of the
+/// double precision interchange format of IEEE 754-2019, reporting no value
+/// unless the string denotes one of them exactly. A number the format does not
+/// hold, a string carrying an exponent, and a run of digits wider than a
+/// 64-bit accumulator each report no value, which leaves them to an arbitrary
+/// precision representation. For example:
+///
+/// ```cpp
+/// #include <sourcemeta/core/numeric.h>
+///
+/// #include <cassert>
+///
+/// assert(sourcemeta::core::to_double_exact("0.5").value() == 0.5);
+/// assert(!sourcemeta::core::to_double_exact("0.1").has_value());
+/// ```
+SOURCEMETA_CORE_NUMERIC_EXPORT
+auto to_double_exact(const std::string_view input) noexcept
+    -> std::optional<double>;
+
+/// @ingroup numeric
 /// Attempt to parse a string as a signed 64-bit integer
 SOURCEMETA_CORE_NUMERIC_EXPORT
 auto to_int64_t(const std::string_view input) noexcept

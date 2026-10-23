@@ -35,7 +35,11 @@ auto to_message_digest(
       return EVP_sha512();
   }
 
+    // Clang settles that no other value arrives, so only GCC and MSVC
+    // need to be told that the end of this function is never reached
+#if !defined(__clang__)
   std::unreachable();
+#endif
 }
 
 // Refuse encrypted documents by offering no password, rather than letting the
@@ -53,7 +57,11 @@ auto to_group_name(const sourcemeta::core::EllipticCurve curve) noexcept
       return "P-521";
   }
 
+    // Clang settles that no other value arrives, so only GCC and MSVC
+    // need to be told that the end of this function is never reached
+#if !defined(__clang__)
   std::unreachable();
+#endif
 }
 
 auto to_pkey_id(const sourcemeta::core::EdwardsCurve curve) noexcept -> int {
@@ -64,7 +72,11 @@ auto to_pkey_id(const sourcemeta::core::EdwardsCurve curve) noexcept -> int {
       return EVP_PKEY_ED448;
   }
 
+    // Clang settles that no other value arrives, so only GCC and MSVC
+    // need to be told that the end of this function is never reached
+#if !defined(__clang__)
   std::unreachable();
+#endif
 }
 
 // The signing functions only cover the three NIST prime curves, so a parsed key
@@ -511,7 +523,11 @@ auto derive_public_key(const PrivateKey &key) -> std::optional<PublicKey> {
     }
   }
 
+    // Clang settles that no other value arrives, so only GCC and MSVC
+    // need to be told that the end of this function is never reached
+#if !defined(__clang__)
   std::unreachable();
+#endif
 }
 
 } // namespace sourcemeta::core

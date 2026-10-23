@@ -192,6 +192,25 @@ SOURCEMETA_CORE_JSONRPC_EXPORT
 auto jsonrpc_is_notification(const sourcemeta::core::JSON &request) -> bool;
 
 /// @ingroup jsonrpc
+/// Construct a JSON-RPC 2.0 notification with object or array parameters.
+/// The envelope has no identifier. The parameters must be an object or array.
+/// This precondition is checked in debug builds. For example:
+///
+/// ```cpp
+/// #include <sourcemeta/core/json.h>
+/// #include <sourcemeta/core/jsonrpc.h>
+/// #include <cassert>
+///
+/// const auto notification{sourcemeta::core::jsonrpc_make_notification(
+///     "update", sourcemeta::core::parse_json("[1, 2, 3]"))};
+/// assert(sourcemeta::core::jsonrpc_is_notification(notification));
+/// ```
+/// @see https://www.jsonrpc.org/specification#notification
+SOURCEMETA_CORE_JSONRPC_EXPORT
+auto jsonrpc_make_notification(JSON::StringView method, JSON parameters)
+    -> JSON;
+
+/// @ingroup jsonrpc
 /// Construct a successful JSON-RPC 2.0 response envelope with the given
 /// identifier and result. For example:
 ///

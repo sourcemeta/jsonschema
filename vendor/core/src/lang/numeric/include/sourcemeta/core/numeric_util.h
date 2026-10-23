@@ -3,7 +3,7 @@
 
 #include <sourcemeta/core/numeric_decimal.h>
 
-#include <bit>      // std::bit_cast
+#include <bit>      // std::bit_cast, std::bit_width, std::countr_zero
 #include <cassert>  // assert
 #include <cmath>    // std::modf, std::floor, std::isfinite
 #include <concepts> // std::floating_point, std::integral, std::same_as
@@ -397,6 +397,87 @@ auto real_equal(const Real left, const Real right) -> bool {
               ? left_biased - right_biased
               : right_biased - left_biased) <= MAXIMUM_UNITS_IN_LAST_PLACE;
 }
+
+/// @ingroup numeric
+/// Check whether an integer is exactly one of the values an IEEE 754-2019
+/// binary interchange format holds. Section 3.3 of that standard makes every
+/// finite value of such a format an integral significand scaled by a power of
+/// two. An integer scales by a non negative power of two whose leading bit sits
+/// no higher than the width of the integer itself, which every format here
+/// reaches, so the width of its odd part is all that can leave it outside. For
+/// example:
+///
+/// ```cpp
+/// #include <sourcemeta/core/numeric.h>
+///
+/// #include <cassert>
+///
+/// assert(sourcemeta::core::is_representable_as<float>(16777215));
+/// assert(!sourcemeta::core::is_representable_as<float>(16777217));
+/// ```
+template <std::floating_point Real, std::integral Integer>
+constexpr auto is_representable_as(const Integer value) -> bool {
+  static_assert(sizeof(Integer) <= sizeof(std::uint64_t),
+                "The magnitude of the integer must fit in 64 bits");
+  const auto magnitude{sourcemeta::core::abs(value)};
+  return magnitude == 0 ||
+         std::bit_width(magnitude >> std::countr_zero(magnitude)) <=
+             std::numeric_limits<Real>::digits;
+}
+
+// The narrowing in the function below is reached only for a magnitude the
+// guard before it admits. A caller naming a constant too large for the
+// narrower format has that cast folded where the guard is not yet in play,
+// though, and the fold is reported as an overflow. The push sits ahead of the
+// documentation so that nothing comes between it and what it documents
+#if defined(_MSC_VER)
+#pragma warning(push)
+#pragma warning(disable : 4756)
+#endif
+
+/// @ingroup numeric
+/// Check whether a floating-point value is exactly one of the values a
+/// narrower IEEE 754-2019 binary interchange format holds. The magnitude is
+/// settled before narrowing, as a conversion the narrower format cannot reach
+/// is not defined, and what returns from the round trip unchanged is what that
+/// format holds exactly. A value too small for it falls to zero and fails that
+/// comparison, while an infinity and every NaN belong to either format. For
+/// example:
+///
+/// ```cpp
+/// #include <sourcemeta/core/numeric.h>
+///
+/// #include <cassert>
+///
+/// assert(sourcemeta::core::is_representable_as<float>(0.5));
+/// assert(!sourcemeta::core::is_representable_as<float>(3.14));
+/// ```
+template <std::floating_point Real, std::floating_point Wider>
+auto is_representable_as(const Wider value) -> bool {
+  // A format whose significand and exponent range both cover those of another
+  // holds every one of its values, which the width in bytes only stands in for
+  if constexpr (std::numeric_limits<Real>::digits >=
+                    std::numeric_limits<Wider>::digits &&
+                std::numeric_limits<Real>::max_exponent >=
+                    std::numeric_limits<Wider>::max_exponent &&
+                std::numeric_limits<Real>::min_exponent <=
+                    std::numeric_limits<Wider>::min_exponent) {
+    return true;
+  } else {
+    if (!std::isfinite(value)) {
+      return true;
+    }
+
+    constexpr auto LIMIT{static_cast<Wider>(std::numeric_limits<Real>::max())};
+    // Bound the operand itself so constant folding cannot overflow the cast.
+    const auto bounded{value > LIMIT || value < -LIMIT ? Wider{0} : value};
+    return static_cast<Wider>(static_cast<Real>(bounded)) == value;
+  }
+}
+
+#if defined(_MSC_VER)
+#pragma warning(pop)
+#endif
 
 } // namespace sourcemeta::core
 

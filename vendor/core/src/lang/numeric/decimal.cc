@@ -1,9 +1,12 @@
 #include <sourcemeta/core/numeric_decimal.h>
 #include <sourcemeta/core/numeric_error.h>
+#include <sourcemeta/core/numeric_parse.h>
+#include <sourcemeta/core/numeric_util.h>
 
 #include "big_coefficient.h"
 
 #include <array>       // std::array
+#include <bit>         // std::bit_width, std::countr_zero
 #include <cassert>     // assert
 #include <charconv>    // std::to_chars
 #include <cmath>       // std::isfinite, std::isnan, std::isinf, std::abs,
@@ -17,6 +20,7 @@
 #include <stdexcept>   // std::out_of_range
 #include <string>      // std::string, std::stof, std::stod
 #include <string_view> // std::string_view
+#include <utility>     // std::cmp_greater
 #include <vector>      // std::vector
 
 namespace {
@@ -160,11 +164,14 @@ struct ParsedDecimal {
 auto parse_digit_payload(const char *cursor, std::size_t count)
     -> std::optional<std::int64_t> {
   // The diagnostic payload of a NaN is a sequence of digits, so a non-digit
-  // byte makes the whole token invalid rather than being silently accepted. A
-  // payload longer than the storage saturates rather than overflowing, which
-  // would otherwise be signed integer overflow (undefined behaviour)
-  constexpr auto MAXIMUM{
-      static_cast<std::uint64_t>(std::numeric_limits<std::int64_t>::max())};
+  // byte makes the whole token invalid rather than being silently accepted. The
+  // storage holds every digit the whole width of the coefficient reaches, and
+  // one longer than that is refused rather than brought within it, since a
+  // payload standing for a number the input never named is one no caller could
+  // tell apart from one it did. The General Decimal Arithmetic Specification
+  // asks for the same of a payload longer than the precision allows, which the
+  // corpus spells out in row dqbas725 of dqBasic.decTest
+  constexpr auto MAXIMUM{std::numeric_limits<std::uint64_t>::max()};
   std::uint64_t payload = 0;
   for (std::size_t index = 0; index < count; index++) {
     if (cursor[index] < '0' || cursor[index] > '9') {
@@ -173,7 +180,7 @@ auto parse_digit_payload(const char *cursor, std::size_t count)
 
     const auto digit = static_cast<std::uint64_t>(cursor[index] - '0');
     if (payload > (MAXIMUM - digit) / 10) {
-      return std::numeric_limits<std::int64_t>::max();
+      return std::nullopt;
     }
 
     payload = (payload * 10) + digit;
@@ -427,68 +434,308 @@ auto parse_decimal_string(const char *input, std::size_t length)
   return result;
 }
 
+// How far a power of five climbs before it outgrows a given significand. This
+// only ever answers for a bound that is itself known at compile time, so it is
+// immediate, which also keeps it out of the runtime image
+consteval auto highest_power_of_five(const std::uint64_t limit)
+    -> std::int64_t {
+  std::int64_t power{0};
+  std::uint64_t value{1};
+  while (value <= limit / 5) {
+    value *= 5;
+    power++;
+  }
+
+  return power;
+}
+
+// IEEE 754-2019 Section 3.3: every finite value of a binary interchange format
+// is an integral significand scaled by a power of two, where the significand
+// fits the precision of the format and the scale stays inside the exponent
+// range it reaches, the subnormal reach included. Requiring the significand to
+// be odd leaves exactly one such decomposition, so a decimal has an exact
+// counterpart precisely when its own odd decomposition clears these bounds,
+// which are named after the properties the standard gives them rather than
+// after the biased encoding they are stored in
 template <typename FloatingPointType>
-auto is_representable_as_floating_point(
-    const sourcemeta::core::Decimal &decimal) -> bool {
-  if (decimal.is_nan() || decimal.is_infinite()) {
+constexpr std::int64_t IEEE754_PRECISION{
+    std::numeric_limits<FloatingPointType>::digits};
+
+// The exponent of the least significant bit of the smallest subnormal
+template <typename FloatingPointType>
+constexpr std::int64_t IEEE754_MINIMUM_EXPONENT{
+    std::numeric_limits<FloatingPointType>::min_exponent -
+    IEEE754_PRECISION<FloatingPointType>};
+
+// The exponent of the leading bit of the largest finite value
+template <typename FloatingPointType>
+constexpr std::int64_t IEEE754_MAXIMUM_EXPONENT{
+    std::numeric_limits<FloatingPointType>::max_exponent - 1};
+
+// The widest significand the format can hold
+template <typename FloatingPointType>
+constexpr std::uint64_t IEEE754_MAXIMUM_SIGNIFICAND{
+    (static_cast<std::uint64_t>(1) << IEEE754_PRECISION<FloatingPointType>)-1};
+
+// A power of ten carries a power of five, and five being odd means no scaling
+// takes it back out, so the width of the significand bounds how far a positive
+// exponent reaches
+template <typename FloatingPointType>
+constexpr std::int64_t MAXIMUM_POSITIVE_POWER{
+    highest_power_of_five(IEEE754_MAXIMUM_SIGNIFICAND<FloatingPointType>)};
+
+// Whether an odd significand scaled by a power of two is one of the values the
+// format holds
+template <typename FloatingPointType>
+constexpr auto fits_binary_format(const std::uint64_t significand,
+                                  const std::int64_t scale) -> bool {
+  const auto width{static_cast<std::int64_t>(std::bit_width(significand))};
+  // The leading bit is compared against the highest the format reaches without
+  // forming their sum, which a scale near the limit of its own type would
+  // otherwise overflow
+  return width <= IEEE754_PRECISION<FloatingPointType> &&
+         scale >= IEEE754_MINIMUM_EXPONENT<FloatingPointType> &&
+         scale <= IEEE754_MAXIMUM_EXPONENT<FloatingPointType> - (width - 1);
+}
+
+// The powers of five that a positive exponent can call for before the
+// significand of the widest format here runs out of room
+constexpr std::array<std::uint64_t, 23> POWERS_OF_FIVE{{1ULL,
+                                                        5ULL,
+                                                        25ULL,
+                                                        125ULL,
+                                                        625ULL,
+                                                        3125ULL,
+                                                        15625ULL,
+                                                        78125ULL,
+                                                        390625ULL,
+                                                        1953125ULL,
+                                                        9765625ULL,
+                                                        48828125ULL,
+                                                        244140625ULL,
+                                                        1220703125ULL,
+                                                        6103515625ULL,
+                                                        30517578125ULL,
+                                                        152587890625ULL,
+                                                        762939453125ULL,
+                                                        3814697265625ULL,
+                                                        19073486328125ULL,
+                                                        95367431640625ULL,
+                                                        476837158203125ULL,
+                                                        2384185791015625ULL}};
+
+static_assert(MAXIMUM_POSITIVE_POWER<double> <
+              static_cast<std::int64_t>(POWERS_OF_FIVE.size()));
+
+// Hands a positive exponent to an odd significand, refusing the product the
+// significand cannot hold rather than letting it wrap
+template <typename FloatingPointType>
+auto scale_by_positive_power(std::uint64_t &significand,
+                             const std::int32_t exponent, std::int64_t &scale)
+    -> bool {
+  if (exponent > MAXIMUM_POSITIVE_POWER<FloatingPointType>) {
+    return false;
+  }
+
+  const auto power{POWERS_OF_FIVE[static_cast<std::size_t>(exponent)]};
+  if (significand > IEEE754_MAXIMUM_SIGNIFICAND<FloatingPointType> / power) {
+    return false;
+  }
+
+  significand *= power;
+  scale += exponent;
+  return true;
+}
+
+// Taking the powers of two out of a coefficient that fits one word leaves the
+// odd significand, which the exponent then scales
+template <typename FloatingPointType>
+auto is_representable_compact(std::uint64_t coefficient,
+                              const std::int32_t exponent) -> bool {
+  auto scale{static_cast<std::int64_t>(std::countr_zero(coefficient))};
+  coefficient >>= scale;
+
+  if (exponent >= 0) {
+    return scale_by_positive_power<FloatingPointType>(coefficient, exponent,
+                                                      scale) &&
+           fits_binary_format<FloatingPointType>(coefficient, scale);
+  }
+
+  // A negative exponent puts a power of five underneath the value, so only a
+  // coefficient that carries the same power back out leaves a scaled integer.
+  // The search ends on its own, as an odd coefficient of one word parts with a
+  // factor of five no more than a couple of dozen times
+  for (auto remaining{-static_cast<std::int64_t>(exponent)}; remaining > 0;
+       remaining--) {
+    if (coefficient % 5 != 0) {
+      return false;
+    }
+
+    coefficient /= 5;
+  }
+
+  scale += exponent;
+  return fits_binary_format<FloatingPointType>(coefficient, scale);
+}
+
+// A coefficient of several words is wider than any significand, so the work is
+// to bring it down to one, which only parting with its powers of two and the
+// power of five a negative exponent asks of it can do
+template <typename FloatingPointType>
+auto is_representable_big(BigCoefficient &coefficient,
+                          const std::int32_t exponent) -> bool {
+  std::int64_t scale{0};
+
+  if (exponent < 0) {
+    const auto power{-static_cast<std::int64_t>(exponent)};
+
+    // Parting with a power of five costs the coefficient about seven digits for
+    // every ten of that power, so one too short to pay is refused before any
+    // division runs
+    if (std::cmp_greater(power, (coefficient.digit_count() * 3 / 2) + 1)) {
+      return false;
+    }
+
+    for (auto remaining{power}; remaining > 0; remaining--) {
+      if (coefficient.words[0] % 5 != 0) {
+        return false;
+      }
+
+      coefficient.divide_by_base_factor(5);
+    }
+
+    scale = -power;
+  }
+
+  // The word base is even, so the lowest word alone says whether another power
+  // of two comes out. A scale already past what the format reaches cannot come
+  // back, which is what ends this for a coefficient of any width
+  while (coefficient.words[0] % 2 == 0) {
+    if (scale > IEEE754_MAXIMUM_EXPONENT<FloatingPointType>) {
+      return false;
+    }
+
+    coefficient.divide_by_base_factor(2);
+    scale++;
+  }
+
+  if (coefficient.length > 1) {
+    return false;
+  }
+
+  auto significand{coefficient.words[0]};
+  if (exponent > 0 && !scale_by_positive_power<FloatingPointType>(
+                          significand, exponent, scale)) {
+    return false;
+  }
+
+  return fits_binary_format<FloatingPointType>(significand, scale);
+}
+
+// Both NaN and the infinities are values of every binary interchange format, as
+// is zero whichever sign it carries, so each of those has an exact counterpart
+template <typename FloatingPointType>
+auto is_representable_as_floating_point(const std::int64_t coefficient,
+                                        const std::uint64_t coefficient_high,
+                                        const std::int32_t exponent,
+                                        const std::uint8_t flags) -> bool {
+  if ((flags & (FLAG_NAN | FLAG_SNAN | FLAG_INFINITE)) != 0) {
     return true;
   }
 
-  if (!decimal.is_finite()) {
-    return false;
-  }
-
-  const std::string decimal_string{decimal.to_scientific_string()};
-  FloatingPointType converted_value;
-  try {
-    if constexpr (std::is_same_v<FloatingPointType, float>) {
-      converted_value = std::stof(decimal_string);
-    } else if constexpr (std::is_same_v<FloatingPointType, double>) {
-      converted_value = std::stod(decimal_string);
+  if ((flags & FLAG_BIG) != 0) {
+    auto big{coefficient_as_big(coefficient, coefficient_high, flags)};
+    if (big.is_zero()) {
+      return true;
     }
 
-  } catch (const std::out_of_range &) {
-    return false;
+    return is_representable_big<FloatingPointType>(big, exponent);
   }
 
-  if (!std::isfinite(converted_value)) {
-    return false;
+  if (coefficient == 0) {
+    return true;
   }
 
-  std::ostringstream stream;
-  stream << std::setprecision(
-                std::numeric_limits<FloatingPointType>::max_digits10)
-         << converted_value;
-  const sourcemeta::core::Decimal roundtrip{stream.str()};
-  return decimal == roundtrip;
+  return is_representable_compact<FloatingPointType>(
+      static_cast<std::uint64_t>(coefficient), exponent);
 }
 
 // Rounding to the working precision raises the exponent by the positions it
 // drops, so what must fit is where the exponent ends up rather than the deeper
 // place the working digits put it. A result the storage cannot hold is refused
 // from the coefficient width alone, before anything is committed, which leaves
-// the operand as it was
-void check_rounded_exponent(const std::int64_t exponent,
-                            const std::uint64_t digits) {
+// the operand as it was.
+//
+// The width predicts the lower of the two places rounding can leave the
+// exponent at, since an increment that carries past the precision drops one
+// further digit and raises it once more. Raising it is what carries a result
+// over the top of the range, so the prediction settles that end outright, while
+// at the bottom it is the carry that can bring one back inside and only the
+// rounding itself can tell
+auto check_rounded_exponent(const std::int64_t exponent,
+                            const std::uint64_t digits) -> void {
   const auto rounded{exponent + precision_excess(digits)};
   if (rounded > std::numeric_limits<std::int32_t>::max() ||
-      rounded < std::numeric_limits<std::int32_t>::min()) {
+      rounded + 1 < std::numeric_limits<std::int32_t>::min()) {
     throw sourcemeta::core::NumericOverflowError{};
   }
 }
 
-void check_exponent_overflow(std::int32_t left_exponent,
-                             std::int32_t right_exponent) {
-  if (left_exponent == std::numeric_limits<std::int32_t>::max() ||
-      left_exponent == std::numeric_limits<std::int32_t>::min() ||
-      right_exponent == std::numeric_limits<std::int32_t>::max() ||
-      right_exponent == std::numeric_limits<std::int32_t>::min()) {
+// Holds a result that has not reached an operand yet, so that whatever was
+// allocated for it is given back however the attempt ends. Rounding one takes
+// room of its own to read the digits apart, and running out of it leaves this
+// the only thing still holding what was staged
+struct StagedResult {
+  std::int64_t coefficient{0};
+  std::uint64_t coefficient_high{0};
+  std::uint8_t flags{0};
+
+  StagedResult() = default;
+  ~StagedResult() { free_big_coefficient(this->coefficient, this->flags); }
+
+  StagedResult(const StagedResult &) = delete;
+  auto operator=(const StagedResult &) -> StagedResult & = delete;
+  StagedResult(StagedResult &&) = delete;
+  auto operator=(StagedResult &&) -> StagedResult & = delete;
+
+  // Called once the operand holds what was staged, so that it is not given
+  // back twice over
+  auto release() -> void {
+    this->coefficient = 0;
+    this->coefficient_high = 0;
+    this->flags = 0;
+  }
+};
+
+// What the digit count predicts above is one short wherever the increment that
+// rounding applies carries into a further position, which drops one more digit
+// and raises the exponent again. So the result is rounded where it stands and
+// weighed there, and only reaches the operand once it is known to fit. The
+// carry is what reveals the need to refuse, which is why the refusal cannot be
+// made before rounding, and staging it here is what keeps the operand as it
+// was when one is made
+auto settle_rounded_result(std::int64_t &coefficient,
+                           std::uint64_t &coefficient_high,
+                           std::int32_t &exponent, std::uint8_t &flags,
+                           StagedResult &staged, std::int64_t staged_exponent,
+                           const bool residue = false) -> void {
+  round_to_precision(staged.coefficient, staged.coefficient_high,
+                     staged_exponent, staged.flags, residue);
+  if (staged_exponent > std::numeric_limits<std::int32_t>::max() ||
+      staged_exponent < std::numeric_limits<std::int32_t>::min()) {
     throw sourcemeta::core::NumericOverflowError{};
   }
+
+  free_big_coefficient(coefficient, flags);
+  coefficient = staged.coefficient;
+  coefficient_high = staged.coefficient_high;
+  exponent = static_cast<std::int32_t>(staged_exponent);
+  flags = staged.flags;
+  staged.release();
 }
 
 auto format_special_value(std::string &result, std::uint8_t flags,
-                          std::int64_t coefficient) -> bool {
+                          std::uint64_t payload) -> bool {
   if ((flags & FLAG_NAN) != 0) {
     if ((flags & FLAG_SIGN) != 0) {
       result += '-';
@@ -500,8 +747,11 @@ auto format_special_value(std::string &result, std::uint8_t flags,
       result += "NaN";
     }
 
-    if (coefficient > 0) {
-      result += std::to_string(coefficient);
+    // The payload counts over the whole width of the coefficient it is held in,
+    // so reading it as the signed number the storage spells would drop every
+    // payload past the signed half of that width
+    if (payload > 0) {
+      result += std::to_string(payload);
     }
 
     return true;
@@ -544,6 +794,28 @@ auto propagate_nan(const sourcemeta::core::Decimal &left,
   return source.is_signed() ? -result : result;
 }
 
+// The ordering IEEE 754 compare_total lays over the classes of a value, where
+// a sign turns the class it belongs to into its negative
+auto total_order_class(const sourcemeta::core::Decimal &value) -> int {
+  if (value.is_qnan()) {
+    return value.is_signed() ? -6 : 6;
+  }
+
+  if (value.is_snan()) {
+    return value.is_signed() ? -5 : 5;
+  }
+
+  if (value.is_infinite()) {
+    return value.is_signed() ? -4 : 4;
+  }
+
+  if (value.is_zero()) {
+    return value.is_signed() ? -2 : 2;
+  }
+
+  return value.is_signed() ? -3 : 3;
+}
+
 } // namespace
 
 namespace sourcemeta::core {
@@ -575,15 +847,22 @@ Decimal::Decimal(Decimal &&other) noexcept
 auto Decimal::operator=(const Decimal &other) -> Decimal & {
   if (this != &other) {
     if ((other.flags_ & FLAG_HEAP) != 0) {
-      // Copy the heap coefficient before releasing the current one, so that a
-      // failed allocation leaves this value intact rather than owning storage
-      // shared with the source, which would then be released twice
-      auto cloned{load_big_pointer(other.coefficient_)->clone()};
+      // Copy the heap coefficient, and take over somewhere to point at it
+      // from, before releasing the current one, so that a failed allocation
+      // along the way leaves this value intact rather than owning storage
+      // shared with the source, which would then be released twice. Carrying
+      // the flags over is what hands the copy what it points at, and what is
+      // left to do once it holds it cannot fail
+      StagedResult staged;
+      store_big_pointer(staged.coefficient,
+                        load_big_pointer(other.coefficient_)->clone());
+      staged.flags = other.flags_;
       free_big_coefficient(this->coefficient_, this->flags_);
+      this->coefficient_ = staged.coefficient;
       this->coefficient_high_ = other.coefficient_high_;
       this->exponent_ = other.exponent_;
-      this->flags_ = other.flags_;
-      store_big_pointer(this->coefficient_, std::move(cloned));
+      this->flags_ = staged.flags;
+      staged.release();
     } else {
       free_big_coefficient(this->coefficient_, this->flags_);
       this->coefficient_ = other.coefficient_;
@@ -753,7 +1032,8 @@ auto Decimal::exact_from(const double value) -> Decimal {
 auto Decimal::to_scientific_string() const -> std::string {
   std::string result;
 
-  if (format_special_value(result, this->flags_, this->coefficient_)) {
+  if (format_special_value(result, this->flags_,
+                           static_cast<std::uint64_t>(this->coefficient_))) {
     return result;
   }
 
@@ -791,7 +1071,8 @@ auto Decimal::to_scientific_string() const -> std::string {
 auto Decimal::to_string() const -> std::string {
   std::string result;
 
-  if (format_special_value(result, this->flags_, this->coefficient_)) {
+  if (format_special_value(result, this->flags_,
+                           static_cast<std::uint64_t>(this->coefficient_))) {
     return result;
   }
 
@@ -961,11 +1242,21 @@ auto Decimal::to_double() const -> double {
     return std::numeric_limits<double>::quiet_NaN();
   }
 
-  try {
-    return std::stod(this->to_scientific_string());
-  } catch (const std::out_of_range &) {
+  if (this->is_infinite()) {
+    return this->is_signed() ? -std::numeric_limits<double>::infinity()
+                             : std::numeric_limits<double>::infinity();
+  }
+
+  // Read back through this module's own conversion rather than the C library
+  // one, which reads the separator the running locale names rather than the
+  // one a written decimal carries, and which reports a result too small to be
+  // written in full as out of range although the format holds it
+  const auto result{sourcemeta::core::to_double(this->to_scientific_string())};
+  if (!result.has_value()) {
     throw NumericOutOfRangeError{};
   }
+
+  return result.value();
 }
 
 auto Decimal::is_zero() const -> bool {
@@ -1001,7 +1292,10 @@ auto Decimal::is_integral() const -> bool {
     auto big = coefficient_as_big(this->coefficient_, this->coefficient_high_,
                                   this->flags_);
     auto stripped = big.strip_trailing_zeros();
-    return stripped >= -this->exponent_;
+    // The bottom of the exponent range has no positive counterpart of the same
+    // width, so the positions it stands for are counted more widely
+    return static_cast<std::int64_t>(stripped) >=
+           -static_cast<std::int64_t>(this->exponent_);
   }
 
   auto coefficient = this->coefficient_;
@@ -1015,11 +1309,15 @@ auto Decimal::is_integral() const -> bool {
 }
 
 auto Decimal::is_float() const -> bool {
-  return is_representable_as_floating_point<float>(*this);
+  return is_representable_as_floating_point<float>(
+      this->coefficient_, this->coefficient_high_, this->exponent_,
+      this->flags_);
 }
 
 auto Decimal::is_double() const -> bool {
-  return is_representable_as_floating_point<double>(*this);
+  return is_representable_as_floating_point<double>(
+      this->coefficient_, this->coefficient_high_, this->exponent_,
+      this->flags_);
 }
 
 auto Decimal::is_int32() const -> bool {
@@ -1047,6 +1345,14 @@ auto Decimal::is_uint64() const -> bool {
 }
 
 auto Decimal::to_integral() const -> Decimal {
+  // The General Decimal Arithmetic Specification signals invalid-operation
+  // whenever "an operand to an operation is [s,sNaN] or [s,sNaN,d] (any
+  // signaling NaN)", and the corpus spells out the outcome for this operation
+  // in tointegral.decTest rows intx123 to intx157
+  if (this->is_snan()) {
+    throw NumericInvalidOperationError{};
+  }
+
   if (!this->is_finite()) {
     return *this;
   }
@@ -1061,8 +1367,10 @@ auto Decimal::to_integral() const -> Decimal {
   if ((this->flags_ & FLAG_BIG) != 0) {
     auto digit_string = coefficient_to_digit_string(
         this->coefficient_, this->coefficient_high_, this->flags_);
-    auto number_of_digits = static_cast<std::int32_t>(digit_string.size());
-    auto digits_to_remove = -this->exponent_;
+    auto number_of_digits = static_cast<std::int64_t>(digit_string.size());
+    // The bottom of the exponent range has no positive counterpart of the same
+    // width, so the positions to remove are counted more widely
+    const auto digits_to_remove{-static_cast<std::int64_t>(this->exponent_)};
 
     if (digits_to_remove > number_of_digits) {
       Decimal result;
@@ -1094,10 +1402,12 @@ auto Decimal::to_integral() const -> Decimal {
   }
 
   auto coefficient = this->coefficient_;
-  auto digits_to_remove = -this->exponent_;
+  // The bottom of the exponent range has no positive counterpart of the same
+  // width, so the positions to remove are counted more widely
+  const auto digits_to_remove{-static_cast<std::int64_t>(this->exponent_)};
 
-  if (static_cast<std::uint32_t>(digits_to_remove) >
-      digit_count(static_cast<std::uint64_t>(coefficient))) {
+  if (std::cmp_greater(digits_to_remove,
+                       digit_count(static_cast<std::uint64_t>(coefficient)))) {
     Decimal result;
     if ((this->flags_ & FLAG_SIGN) != 0) {
       result.flags_ = FLAG_SIGN;
@@ -1106,21 +1416,21 @@ auto Decimal::to_integral() const -> Decimal {
     return result;
   }
 
-  std::int64_t divisor = 1;
-  for (std::int32_t index = 0; index < digits_to_remove; index++) {
-    divisor *= 10;
-  }
-
-  auto quotient = coefficient / divisor;
-  auto remainder = coefficient % divisor;
-  auto half = divisor / 2;
+  // An addition stores a sum of two compact coefficients, which reaches one
+  // digit further than either of them, and dropping that many positions calls
+  // for a power of ten that only an unsigned integer holds
+  const auto divisor{POWERS_OF_10[static_cast<std::size_t>(digits_to_remove)]};
+  const auto magnitude{static_cast<std::uint64_t>(coefficient)};
+  auto quotient = magnitude / divisor;
+  const auto remainder = magnitude % divisor;
+  const auto half = divisor / 2;
 
   if (remainder > half || (remainder == half && quotient % 2 != 0)) {
     quotient++;
   }
 
   Decimal result;
-  result.coefficient_ = quotient;
+  result.coefficient_ = static_cast<std::int64_t>(quotient);
   result.exponent_ = 0;
   if ((this->flags_ & FLAG_SIGN) != 0) {
     result.flags_ = FLAG_SIGN;
@@ -1163,17 +1473,21 @@ auto Decimal::divisible_by(const Decimal &divisor) const -> bool {
           static_cast<std::uint64_t>(this->coefficient_) % divisor_value;
     }
 
+    // Two exponents at opposite ends of their range are further apart than
+    // that range can hold, so the distance between them is measured more
+    // widely
     if (this->exponent_ >= divisor.exponent_) {
-      auto difference =
-          static_cast<std::uint32_t>(this->exponent_ - divisor.exponent_);
-      auto pow_mod = modular_pow10(difference, divisor_value);
+      const auto difference{static_cast<std::uint64_t>(
+          static_cast<std::int64_t>(this->exponent_) - divisor.exponent_)};
+      auto pow_mod =
+          modular_pow10(static_cast<std::uint32_t>(difference), divisor_value);
       return static_cast<std::uint64_t>(
                  static_cast<sourcemeta::core::uint128_t>(dividend_mod) *
                  pow_mod % divisor_value) == 0;
     }
 
-    auto difference =
-        static_cast<std::uint32_t>(divisor.exponent_ - this->exponent_);
+    const auto difference{static_cast<std::uint64_t>(
+        static_cast<std::int64_t>(divisor.exponent_) - this->exponent_)};
     if (difference > 36) {
       return false;
     }
@@ -1191,7 +1505,7 @@ auto Decimal::divisible_by(const Decimal &divisor) const -> bool {
 
     auto diff_left = difference;
     while (diff_left > 0) {
-      auto chunk = std::min(diff_left, static_cast<std::uint32_t>(19));
+      auto chunk = std::min(diff_left, static_cast<std::uint64_t>(19));
       auto power = POWERS_OF_10[chunk];
       if (static_cast<std::uint64_t>(remaining % power) != 0) {
         return false;
@@ -1292,6 +1606,17 @@ auto Decimal::remove_trailing_zeros(const std::int32_t allowance) const
 }
 
 auto Decimal::reduce() const -> Decimal {
+  // The General Decimal Arithmetic Specification signals invalid-operation
+  // whenever "an operand to an operation is [s,sNaN] or [s,sNaN,d] (any
+  // signaling NaN)", and the corpus spells out the outcome for this operation
+  // in reduce.decTest rows redx823 to redx830
+  // The check sits here rather than in the shared helper, because trim is not
+  // a specification operation and its corpus keeps a signaling NaN whole in
+  // trim.decTest rows trmx323 to trmx329
+  if (this->is_snan()) {
+    throw NumericInvalidOperationError{};
+  }
+
   return this->remove_trailing_zeros(std::numeric_limits<std::int32_t>::max());
 }
 
@@ -1308,6 +1633,14 @@ auto Decimal::trim() const -> Decimal {
 }
 
 auto Decimal::logb() const -> Decimal {
+  // The General Decimal Arithmetic Specification signals invalid-operation
+  // whenever "an operand to an operation is [s,sNaN] or [s,sNaN,d] (any
+  // signaling NaN)", and the corpus spells out the outcome for this operation
+  // in logb.decTest rows logbx824 to logbx826
+  if (this->is_snan()) {
+    throw NumericInvalidOperationError{};
+  }
+
   if (this->is_nan()) {
     return *this;
   }
@@ -1355,10 +1688,6 @@ auto Decimal::scale_by(const Decimal &scale) const -> Decimal {
     throw NumericInvalidOperationError{};
   }
 
-  if (this->is_infinite()) {
-    return *this;
-  }
-
   if (!scale.is_int64()) {
     throw NumericOverflowError{};
   }
@@ -1367,12 +1696,22 @@ auto Decimal::scale_by(const Decimal &scale) const -> Decimal {
   // travel, rather than after being added to it, because a scale near either
   // signed limit would overflow that sum. Both bounds stay narrow enough to
   // work out, since the exponent and the range it must land in are the same
-  // width
+  // width. An infinity carries the exponent every one of them is built with,
+  // which leaves the bounds standing at the ends of the range the scale itself
+  // has to fall inside
   const auto exponent{static_cast<std::int64_t>(this->exponent_)};
   const auto scale_value{scale.to_int64()};
   if (scale_value > std::numeric_limits<std::int32_t>::max() - exponent ||
       scale_value < std::numeric_limits<std::int32_t>::min() - exponent) {
     throw NumericOverflowError{};
+  }
+
+  // The General Decimal Arithmetic Specification reads the scale before it
+  // reads the value, stating that the second operand "must be a finite integer
+  // with an exponent of zero" in a bounded range, and only then that "if the
+  // first operand is infinite then that Infinity is returned"
+  if (this->is_infinite()) {
+    return *this;
   }
 
   const auto new_exponent{exponent + scale_value};
@@ -1383,28 +1722,9 @@ auto Decimal::scale_by(const Decimal &scale) const -> Decimal {
 }
 
 auto Decimal::compare_total(const Decimal &other) const -> Decimal {
-  auto classify = [](const Decimal &value) -> int {
-    if (value.is_qnan()) {
-      return value.is_signed() ? -6 : 6;
-    }
 
-    if (value.is_snan()) {
-      return value.is_signed() ? -5 : 5;
-    }
-
-    if (value.is_infinite()) {
-      return value.is_signed() ? -4 : 4;
-    }
-
-    if (value.is_zero()) {
-      return value.is_signed() ? -2 : 2;
-    }
-
-    return value.is_signed() ? -3 : 3;
-  };
-
-  auto left_class = classify(*this);
-  auto right_class = classify(other);
+  auto left_class = total_order_class(*this);
+  auto right_class = total_order_class(other);
 
   if (left_class != right_class) {
     if (left_class < right_class) {
@@ -1671,6 +1991,21 @@ auto Decimal::operator==(const Decimal &other) const -> bool {
                                        this->coefficient_high_, this->flags_);
     auto right_big = coefficient_as_big(other.coefficient_,
                                         other.coefficient_high_, other.flags_);
+
+    // Two values of the same sign stand at the same order of magnitude before
+    // they can be the same number, which the ordering settles the same way. The
+    // distance between two exponents reaches past the range either of them
+    // spans, so a pair that answers here would otherwise be lined up over a
+    // coefficient as long as that distance
+    const auto left_digit_count{
+        static_cast<std::int64_t>(left_big.digit_count())};
+    const auto right_digit_count{
+        static_cast<std::int64_t>(right_big.digit_count())};
+    if (left_exponent + left_digit_count !=
+        right_exponent + right_digit_count) {
+      return false;
+    }
+
     BigCoefficient::align_exponents(left_big, right_big, left_exponent,
                                     right_exponent);
     return left_big.compare(right_big) == 0;
@@ -1870,8 +2205,6 @@ auto Decimal::operator+=(const Decimal &other) -> Decimal & {
     return *this;
   }
 
-  check_exponent_overflow(this->exponent_, other.exponent_);
-
   // The General Decimal Arithmetic Specification states that for addition "the
   // exponent of the result is the minimum of the exponents of the two
   // operands", and that "the sign of a zero result is 0 unless either both
@@ -1915,9 +2248,12 @@ auto Decimal::operator+=(const Decimal &other) -> Decimal & {
   auto result_exponent = std::min(this->exponent_, other.exponent_);
 
   if (!needs_big) {
+    // Two exponents at opposite ends of their range are further apart than
+    // that range can hold, so the distance between them is measured more
+    // widely
     if (this->exponent_ < other.exponent_) {
-      auto difference =
-          static_cast<std::uint32_t>(other.exponent_ - this->exponent_);
+      const auto difference{static_cast<std::uint64_t>(
+          static_cast<std::int64_t>(other.exponent_) - this->exponent_)};
       if (difference <= 18) {
         auto scaled =
             static_cast<sourcemeta::core::uint128_t>(right_coefficient) *
@@ -1933,8 +2269,8 @@ auto Decimal::operator+=(const Decimal &other) -> Decimal & {
       }
 
     } else if (other.exponent_ < this->exponent_) {
-      auto difference =
-          static_cast<std::uint32_t>(this->exponent_ - other.exponent_);
+      const auto difference{static_cast<std::uint64_t>(
+          static_cast<std::int64_t>(this->exponent_) - other.exponent_)};
       if (difference <= 18) {
         auto scaled =
             static_cast<sourcemeta::core::uint128_t>(left_coefficient) *
@@ -1964,10 +2300,20 @@ auto Decimal::operator+=(const Decimal &other) -> Decimal & {
       result_negative = false;
     }
 
-    free_big_coefficient(this->coefficient_, this->flags_);
-    store_big_result(this->coefficient_, this->coefficient_high_, this->flags_,
+    // Storing the sum takes room of its own, and running out of it after the
+    // operand gave its own room back would leave the operand pointing at
+    // storage already handed in, which its destructor would hand in once more.
+    // So the sum reaches somewhere that owns it first, and the operand only
+    // gives up what it held once there is something to put in its place
+    StagedResult staged;
+    store_big_result(staged.coefficient, staged.coefficient_high, staged.flags,
                      std::move(result_big), result_negative);
+    free_big_coefficient(this->coefficient_, this->flags_);
+    this->coefficient_ = staged.coefficient;
+    this->coefficient_high_ = staged.coefficient_high;
+    this->flags_ = staged.flags;
     this->exponent_ = result_exponent;
+    staged.release();
     return *this;
   }
 
@@ -1987,6 +2333,19 @@ auto Decimal::operator+=(const Decimal &other) -> Decimal & {
 
   if (result_coefficient == 0) {
     result_negative = false;
+  }
+
+  // A sum of two compact coefficients reaches one digit further than either of
+  // them, so it can land beyond the compact range even though both addends sat
+  // inside it. Storing it compact anyway would break the invariant the compact
+  // arithmetic paths rely on, and the next addition over such a value overflows
+  if (result_coefficient > COMPACT_MAX) {
+    store_big_result(this->coefficient_, this->coefficient_high_, this->flags_,
+                     BigCoefficient::from_uint64(
+                         static_cast<std::uint64_t>(result_coefficient)),
+                     result_negative);
+    this->exponent_ = result_exponent;
+    return *this;
   }
 
   this->coefficient_ = result_coefficient;
@@ -2043,8 +2402,6 @@ auto Decimal::operator*=(const Decimal &other) -> Decimal & {
     return *this;
   }
 
-  check_exponent_overflow(this->exponent_, other.exponent_);
-
   bool result_negative = ((this->flags_ ^ other.flags_) & FLAG_SIGN) != 0;
   auto result_exponent_64 =
       static_cast<std::int64_t>(this->exponent_) + other.exponent_;
@@ -2052,8 +2409,6 @@ auto Decimal::operator*=(const Decimal &other) -> Decimal & {
       result_exponent_64 < std::numeric_limits<std::int32_t>::min()) {
     throw NumericOverflowError{};
   }
-
-  auto result_exponent = static_cast<std::int32_t>(result_exponent_64);
 
   if (((this->flags_ & FLAG_BIG) != 0) || ((other.flags_ & FLAG_BIG) != 0)) {
     auto left_big = coefficient_as_big(this->coefficient_,
@@ -2063,29 +2418,28 @@ auto Decimal::operator*=(const Decimal &other) -> Decimal & {
     auto product = left_big.multiply(right_big);
     check_rounded_exponent(result_exponent_64, product.digit_count());
 
-    free_big_coefficient(this->coefficient_, this->flags_);
-    store_big_result(this->coefficient_, this->coefficient_high_, this->flags_,
+    StagedResult staged;
+    store_big_result(staged.coefficient, staged.coefficient_high, staged.flags,
                      std::move(product), result_negative);
-    auto rounded_exponent{result_exponent_64};
-    round_to_precision(this->coefficient_, this->coefficient_high_,
-                       rounded_exponent, this->flags_);
-    this->exponent_ = static_cast<std::int32_t>(rounded_exponent);
+    settle_rounded_result(this->coefficient_, this->coefficient_high_,
+                          this->exponent_, this->flags_, staged,
+                          result_exponent_64);
     return *this;
   }
 
   auto product = static_cast<sourcemeta::core::uint128_t>(this->coefficient_) *
                  static_cast<sourcemeta::core::uint128_t>(other.coefficient_);
 
+  StagedResult staged;
   if (product <= static_cast<sourcemeta::core::uint128_t>(COMPACT_MAX)) {
     check_rounded_exponent(result_exponent_64,
                            digit_count(static_cast<std::uint64_t>(product)));
 
-    this->coefficient_ = static_cast<std::int64_t>(product);
-    this->exponent_ = result_exponent;
+    staged.coefficient = static_cast<std::int64_t>(product);
     // The General Decimal Arithmetic Specification states that "the sign of
     // the result of a multiplication or division will be 1 only if the
     // operands have different signs", which holds for a zero product too
-    this->flags_ = result_negative ? FLAG_SIGN : 0;
+    staged.flags = result_negative ? FLAG_SIGN : 0;
   } else {
     auto left_big = coefficient_as_big(this->coefficient_,
                                        this->coefficient_high_, this->flags_);
@@ -2094,15 +2448,13 @@ auto Decimal::operator*=(const Decimal &other) -> Decimal & {
     auto result = left_big.multiply(right_big);
     check_rounded_exponent(result_exponent_64, result.digit_count());
 
-    store_big_result(this->coefficient_, this->coefficient_high_, this->flags_,
+    store_big_result(staged.coefficient, staged.coefficient_high, staged.flags,
                      std::move(result), result_negative);
-    this->exponent_ = result_exponent;
   }
 
-  auto rounded_exponent{static_cast<std::int64_t>(this->exponent_)};
-  round_to_precision(this->coefficient_, this->coefficient_high_,
-                     rounded_exponent, this->flags_);
-  this->exponent_ = static_cast<std::int32_t>(rounded_exponent);
+  settle_rounded_result(this->coefficient_, this->coefficient_high_,
+                        this->exponent_, this->flags_, staged,
+                        result_exponent_64);
   return *this;
 }
 
@@ -2195,19 +2547,19 @@ auto Decimal::operator/=(const Decimal &other) -> Decimal & {
 
   check_rounded_exponent(result_exponent, quotient.digit_count());
 
-  free_big_coefficient(this->coefficient_, this->flags_);
+  StagedResult staged;
   // The specification states that "the sign of the result of a multiplication
   // or division will be 1 only if the operands have different signs", which
   // holds for a zero quotient too
-  store_big_result(this->coefficient_, this->coefficient_high_, this->flags_,
+  store_big_result(staged.coefficient, staged.coefficient_high, staged.flags,
                    std::move(quotient), result_negative);
 
   // The specification rounds the quotient "taking into account the remainder
   // from the division", so what the long division left behind decides a tie
   // among the positions the working precision drops
-  round_to_precision(this->coefficient_, this->coefficient_high_,
-                     result_exponent, this->flags_, residue);
-  this->exponent_ = static_cast<std::int32_t>(result_exponent);
+  settle_rounded_result(this->coefficient_, this->coefficient_high_,
+                        this->exponent_, this->flags_, staged, result_exponent,
+                        residue);
   return *this;
 }
 
@@ -2265,10 +2617,18 @@ auto Decimal::operator%=(const Decimal &other) -> Decimal & {
       static_cast<std::int64_t>(this->exponent_) - other.exponent_;
   auto remainder = dividend_big.modulo_scaled(divisor_big, exponent_difference);
 
-  free_big_coefficient(this->coefficient_, this->flags_);
-  store_big_result(this->coefficient_, this->coefficient_high_, this->flags_,
+  // The residue reaches somewhere that owns it before the dividend gives up
+  // what it held, so that running out of room to store it never leaves the
+  // dividend pointing at storage it has already handed in
+  StagedResult staged;
+  store_big_result(staged.coefficient, staged.coefficient_high, staged.flags,
                    std::move(remainder), result_negative);
+  free_big_coefficient(this->coefficient_, this->flags_);
+  this->coefficient_ = staged.coefficient;
+  this->coefficient_high_ = staged.coefficient_high;
+  this->flags_ = staged.flags;
   this->exponent_ = result_exponent;
+  staged.release();
   return *this;
 }
 

@@ -45,7 +45,6 @@ public:
   /// has no effect.
   SOURCEMETA_FORCEINLINE auto close() -> HTMLWriter & {
     this->tag_open_ = false;
-    assert(!this->tag_stack_.empty());
     if (this->tag_stack_.empty()) [[unlikely]] {
       return *this;
     }

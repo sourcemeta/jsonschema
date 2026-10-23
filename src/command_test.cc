@@ -392,11 +392,6 @@ auto parse_test_suite(const sourcemeta::jsonschema::InputJSON &entry,
     throw sourcemeta::core::FileError<sourcemeta::core::OpenAPIResolutionError>{
         entry.resolution_base, error};
   } catch (const sourcemeta::core::OpenAPIReferenceError &error) {
-    // TODO: A reference of the description itself that names a plain schema
-    // reports "This reference must name a place within the document it points
-    // at", which never says that what it had to point at is another
-    // description. The message belongs to Core, so sharpening it is upstream's
-    // to do
     throw sourcemeta::core::FileError<sourcemeta::core::OpenAPIReferenceError>{
         entry.resolution_base, error};
   } catch (const sourcemeta::core::OpenAPIError &error) {
@@ -452,6 +447,12 @@ auto parse_test_suite(const sourcemeta::jsonschema::InputJSON &entry,
     throw sourcemeta::core::FileError<
         sourcemeta::core::SchemaAnchorCollisionError>{entry.resolution_base,
                                                       error};
+  } catch (const sourcemeta::core::SchemaDialectImpossibleError &error) {
+    // No position, as what compiles here is the schema the document targets
+    // while the positions on hand describe the test document itself
+    throw sourcemeta::core::FileError<
+        sourcemeta::core::SchemaDialectImpossibleError>{entry.resolution_base,
+                                                        error};
   } catch (const sourcemeta::core::SchemaReferenceError &error) {
     // No position, as what compiles here is the schema the document targets
     // while the positions on hand describe the test document itself

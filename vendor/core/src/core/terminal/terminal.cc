@@ -70,9 +70,13 @@ auto terminal_color_enabled(TerminalStream stream) noexcept -> bool {
       return true;
     case TerminalColorPolicy::Disabled:
       return false;
-    default:
-      std::unreachable();
   }
+
+    // Clang settles that no other value arrives, so only GCC and MSVC
+    // need to be told that the end of this function is never reached
+#if !defined(__clang__)
+  std::unreachable();
+#endif
 }
 
 auto terminal_sgr_reset() noexcept -> std::string_view {
@@ -104,11 +108,10 @@ auto terminal_sgr_sequence(TerminalStyle style) noexcept -> std::string_view {
     return has_bold ? internal::ESCAPE_BOLD_CYAN : internal::ESCAPE_CYAN;
   }
 
-  if (has_bold) {
-    return internal::ESCAPE_BOLD;
-  }
-
-  return {};
+  // A valid style names at most one colour and nothing besides the bold bit,
+  // so one that is neither None nor a colour names bold on its own
+  assert(has_bold);
+  return internal::ESCAPE_BOLD;
 }
 
 auto terminal_paint(std::string_view text, TerminalStyle style, bool enabled)
@@ -119,11 +122,9 @@ auto terminal_paint(std::string_view text, TerminalStyle style, bool enabled)
     return std::string{text};
   }
 
+  // Only the empty style names no sequence, which the branch above has already
+  // answered for
   const std::string_view sequence{terminal_sgr_sequence(style)};
-  if (sequence.empty()) {
-    return std::string{text};
-  }
-
   const std::string_view reset{terminal_sgr_reset()};
   std::string styled_text;
   styled_text.reserve(sequence.size() + text.size() + reset.size());
@@ -155,13 +156,9 @@ auto terminal_paint(std::ostream &output, std::string_view text,
     return output;
   }
 
-  const std::string_view sequence{terminal_sgr_sequence(style)};
-  if (sequence.empty()) {
-    output << text;
-    return output;
-  }
-
-  output << sequence << text << terminal_sgr_reset();
+  // Only the empty style names no sequence, which the branch above has already
+  // answered for
+  output << terminal_sgr_sequence(style) << text << terminal_sgr_reset();
   return output;
 }
 

@@ -66,7 +66,7 @@ inline auto scan_link_label(const std::string_view input, std::size_t &position,
   return true;
 }
 
-// A link destination of GFM section 6.3, returning the length it takes
+// A link destination of GFM section 6.6, returning the length it takes
 // including any angle brackets, or minus one if there is none
 inline auto scan_link_destination(const std::string_view input,
                                   const std::size_t offset,
@@ -83,14 +83,14 @@ inline auto scan_link_destination(const std::string_view input,
         break;
       }
 
-      // GFM section 6.3: a link destination can be "a sequence of zero or
+      // GFM section 6.6: a link destination can be "a sequence of zero or
       // more characters between an opening < and a closing > that contains
-      // no line breaks or unescaped < or > characters", where GFM section 2.4
+      // no line breaks or unescaped < or > characters", where GFM section 6.1
       // only lets "Any ASCII punctuation character" be backslash-escaped
       if (character == '\\' && index + 1 < size &&
           sourcemeta::core::is_punctuation(input[index + 1])) {
         index += 2;
-      } else if (character == '\n' || character == '\r' || character == '<') {
+      } else if (character == '\n' || character == '<') {
         return -1;
       } else {
         ++index;
@@ -199,12 +199,9 @@ inline auto skip_spaces(const std::string_view input,
 
 inline auto skip_line_end(const std::string_view input,
                           std::size_t &position) noexcept -> bool {
+  // A block holds every one of its lines with a line feed ending, so that is
+  // the only ending there is to step over
   bool seen{false};
-  if (character_at(input, position) == '\r') {
-    ++position;
-    seen = true;
-  }
-
   if (character_at(input, position) == '\n') {
     ++position;
     seen = true;

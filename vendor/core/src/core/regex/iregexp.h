@@ -3,6 +3,7 @@
 
 #include <sourcemeta/core/unicode.h>
 
+#include <cassert>      // assert
 #include <charconv>     // std::from_chars
 #include <cstddef>      // std::size_t
 #include <cstdint>      // std::uint32_t
@@ -315,9 +316,10 @@ inline auto iregexp_branches(const std::string_view pattern,
         return false;
       }
 
-      if (position >= pattern.size() || pattern[position] != ')') {
-        return false;
-      }
+      // Running out of input hands back `depth == 0`, which is false for the
+      // nested call above, so the only way it reports success is by stopping
+      // on the closing parenthesis it found
+      assert(position < pattern.size() && pattern[position] == ')');
 
       output += ')';
       position += 1;

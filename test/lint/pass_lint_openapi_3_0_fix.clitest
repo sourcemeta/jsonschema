@@ -1,0 +1,53 @@
+// What the fixes leave behind must remain a v3.0 Schema Object. The single
+// remaining `enum` choice stays an `enum`, as the dialect has no `const`
+
+WRITE openapi.json UNTIL EOF
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "Example",
+    "version": "1.0.0"
+  },
+  "paths": {},
+  "components": {
+    "schemas": {
+      "Pet": {
+        "title": "Pet ",
+        "description": "A pet in the store.",
+        "type": "string",
+        "enum": [ "dog", "dog" ]
+      }
+    }
+  }
+}
+EOF
+
+RUN lint openapi.json --fix STDIN /dev/null IN . INTO result_0.txt EXPECTING 0
+
+WRITE expected_0.txt UNTIL EOF
+2> ....
+EOF
+
+COMPARE result_0.txt AGAINST expected_0.txt
+
+WRITE expected_file_0.txt UNTIL EOF
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "Example",
+    "version": "1.0.0"
+  },
+  "paths": {},
+  "components": {
+    "schemas": {
+      "Pet": {
+        "title": "Pet",
+        "description": "A pet in the store",
+        "enum": [ "dog" ]
+      }
+    }
+  }
+}
+EOF
+
+COMPARE openapi.json AGAINST expected_file_0.txt

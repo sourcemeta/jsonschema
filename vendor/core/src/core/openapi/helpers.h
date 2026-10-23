@@ -8,6 +8,7 @@
 
 #include <algorithm>        // std::ranges::find
 #include <array>            // std::array
+#include <cassert>          // assert
 #include <cstddef>          // std::size_t
 #include <cstdint>          // std::uint8_t, std::uint64_t
 #include <functional>       // std::less
@@ -211,6 +212,11 @@ struct OpenAPIWalk {
   /// The names the entry document declares as security schemes, which is what
   /// a Security Requirement Object anywhere in the description may name
   JSONPropertySet security_schemes;
+  /// Of those, the ones whose declared type is neither `oauth2` nor
+  /// `openIdConnect`, which 3.0 allows no scope names against. A scheme
+  /// written as a Reference Object says nothing here, its type being somewhere
+  /// this has not been yet, and a rule cannot be applied to what is not known
+  JSONPropertySet security_schemes_without_scopes;
   /// Where a Security Requirement Object names a Security Scheme Object by the
   /// URI of one rather than by the name of a component, and what each of those
   /// names leads to. OpenAPI Specification 3.2.1 admits both spellings. This
@@ -258,6 +264,46 @@ struct OpenAPIWalk {
   std::uint64_t remaining{std::numeric_limits<std::uint64_t>::max()};
   std::uint64_t limit{std::numeric_limits<std::uint64_t>::max()};
 };
+
+// Whether a Schema Object of this revision may carry the keywords that name the
+// dialect it is written against and the identity it answers to. OpenAPI
+// Specification 3.0.4, Schema Object, lists the twenty-seven keywords it takes
+// from JSON Schema, tables eight of its own, and closes the set: "Additional
+// keywords defined by the JSON Schema specification that are not mentioned here
+// are strictly unsupported". Neither keyword is among them, so a Schema Object
+// of that revision can say neither what it is written against nor what it
+// answers to, and writing either leaves a declaration that reading the result
+// back refuses
+inline auto
+openapi_schema_object_is_self_describing(const OpenAPIVersion version) noexcept
+    -> bool {
+  return version >= OpenAPIVersion::OPENAPI_3_1;
+}
+
+// Whether a Schema Object of this revision may be a boolean. OpenAPI
+// Specification 3.1.1, Section 4.8.24: "The empty schema (which allows any
+// instance to validate) MAY be represented by the boolean value `true` and a
+// schema which allows no instance to validate MAY be represented by the
+// boolean value `false`". 3.0.4, Schema Object, instead has one be "an
+// extended subset of the JSON Schema Specification Draft Wright-00", whose
+// Section 4.4 reads "A JSON schema MUST be an object", so the boolean form is
+// one the later revision brings and the earlier one has no room for
+inline auto
+openapi_schema_object_is_boolean(const OpenAPIVersion version) noexcept
+    -> bool {
+  return version >= OpenAPIVersion::OPENAPI_3_1;
+}
+
+// Whether the Components Object of this revision holds a Path Item Object.
+// OpenAPI Specification 3.1.1, Section 4.8.7 adds `pathItems`, there being no
+// Path Item Object to hold until that revision lets `webhooks` and a reference
+// reach one. 3.0.4, Components Object, tables nine containers without it and
+// closes the Object to everything but a `^x-` field
+inline auto
+openapi_components_hold_path_items(const OpenAPIVersion version) noexcept
+    -> bool {
+  return version >= OpenAPIVersion::OPENAPI_3_1;
+}
 
 // Where a position that stands in for another leads, following as far as the
 // chain goes. A Reference Object may name another one, so this is a walk
@@ -368,6 +414,48 @@ auto openapi_reject_unknown_fields(
   }
 }
 
+// A field that a revision introduces is one the revisions before it do not
+// define, and their own field tables are closed to anything but an extension,
+// which OpenAPI Specification 3.0.4, Specification Extensions, holds to a
+// "field name [that] MUST begin with `x-`". So such a field is turned down
+// under the earlier revision. Naming the arrivals beside the table that holds
+// them says what the specification says when it gives the revision a field
+// arrived in, and costs one array of the few names rather than a second table
+// of all of them
+template <std::size_t Size>
+auto openapi_reject_fields_of_a_later_revision(
+    const JSON &object, const std::array<JSON::StringView, Size> &arrivals,
+    const OpenAPIVersion arrival, const Pointer &base, const char *message,
+    const OpenAPIWalk &walk) -> void {
+  if (walk.version >= arrival) {
+    return;
+  }
+
+  for (const auto &entry : object.as_object()) {
+    if (std::ranges::find(arrivals, entry.first) != arrivals.cend()) {
+      throw OpenAPIError{openapi_child(base, entry.first), message};
+    }
+  }
+}
+
+// Whether every name an arrivals array holds is one the table it was taken
+// from holds too, which is what the assertions beside those arrays check so
+// that a name misspelled in one of them is a build failure rather than a field
+// silently admitted everywhere
+template <std::size_t Size, std::size_t Table>
+consteval auto
+openapi_every_field_is_tabled(const std::array<JSON::StringView, Size> &fields,
+                              const std::array<JSON::StringView, Table> &table)
+    -> bool {
+  for (const auto field : fields) {
+    if (std::ranges::find(table, field) == table.cend()) {
+      return false;
+    }
+  }
+
+  return true;
+}
+
 // A field table is a property of the revision a document declares, so an
 // Object whose table grew between revisions has one array per revision and
 // which of them applies is asked here rather than at every call site
@@ -376,7 +464,7 @@ auto openapi_reject_unknown_fields(
     const JSON &object, const std::array<JSON::StringView, Size> &fields,
     const std::array<JSON::StringView, Later> &later, const Pointer &base,
     const char *message, const OpenAPIWalk &walk) -> void {
-  if (walk.version == OpenAPIVersion::OPENAPI_3_2) {
+  if (walk.version >= OpenAPIVersion::OPENAPI_3_2) {
     openapi_reject_unknown_fields(object, later, base, message);
   } else {
     openapi_reject_unknown_fields(object, fields, base, message);
@@ -390,7 +478,7 @@ auto openapi_reject_unknown_fields(
     const char *message, const OpenAPIWalk &walk,
     const std::array<JSON::StringView, Restricted> &restricted,
     const char *restricted_message) -> void {
-  if (walk.version == OpenAPIVersion::OPENAPI_3_2) {
+  if (walk.version >= OpenAPIVersion::OPENAPI_3_2) {
     openapi_reject_unknown_fields(object, later, base, message, restricted,
                                   restricted_message);
   } else {
@@ -511,10 +599,11 @@ inline auto openapi_canonical_base(const std::string_view input)
   // every location this frame reports
   if (base.has_value() && base.value().scheme().has_value()) {
     base.value().canonicalize();
+    // A URI that names a scheme writes out as at least that scheme, so what
+    // comes back of it is never nothing
     const auto result{base.value().recompose_without_fragment()};
-    if (result.has_value()) {
-      return result.value();
-    }
+    assert(result.has_value());
+    return result.value();
   }
 
   throw OpenAPIError{EMPTY_POINTER,
@@ -596,10 +685,24 @@ inline auto openapi_expect_boolean(const JSON &value, const Pointer &base,
 // dialect in force, which is everything a JSON Schema implementation needs to
 // take it from here
 inline auto openapi_expect_schema(const JSON &value, const Pointer &location,
-                                  const char *message, OpenAPIWalk &walk)
-    -> void {
-  if (!value.is_object() && !value.is_boolean()) {
-    throw OpenAPIError{location, message};
+                                  OpenAPIWalk &walk) -> void {
+  // OpenAPI Specification 3.1.1, Section 4.8.24: "The empty schema (which
+  // allows any instance to validate) MAY be represented by the boolean value
+  // `true` and a schema which allows no instance to validate MAY be
+  // represented by the boolean value `false`".
+  //
+  // No release of 3.0 says anything of the kind. What it says instead is that
+  // a Schema Object "is an extended subset of JSON Schema Specification Draft
+  // Wright-00", and Section 4.4 of that draft reads "A JSON schema MUST be an
+  // object", so the boolean form is one the later revision brings and the
+  // earlier one has no room for
+  if (walk.version >= OpenAPIVersion::OPENAPI_3_1) {
+    if (!value.is_object() && !value.is_boolean()) {
+      throw OpenAPIError{location,
+                         "A Schema Object must be an object or a boolean"};
+    }
+  } else if (!value.is_object()) {
+    throw OpenAPIError{location, "A Schema Object must be an object"};
   }
 
   // A Schema Object is a handoff rather than something this module reads, so
@@ -636,29 +739,49 @@ inline auto openapi_check_array_of_strings(const JSON &value,
   }
 }
 
-// The expressions a template declares between curly braces. OpenAPI
+// Where an expression a template declares sits, as the offsets of the braces
+// delimiting it. No opening offset means none begins, and an opening without a
+// closing one means a run that never closes
+struct OpenAPIBraceExpression {
+  JSON::StringView::size_type opening{JSON::StringView::npos};
+  JSON::StringView::size_type closing{JSON::StringView::npos};
+};
+
+// The next expression a template declares at or after a position. OpenAPI
 // Specification 3.1.1, Section 3.5: "Path templating refers to the usage of
 // template expressions, delimited by curly braces (`{}`), to mark a section of
 // a URL path as replaceable using path parameters", and Section 4.8.5 names
 // server variables the same way. Nothing there says what an unbalanced brace
-// means, so a run that never closes is no expression
+// means, so a run that never closes is no expression, and what each reader
+// makes of one is left to it
+inline auto
+openapi_next_brace_expression(const JSON::StringView value,
+                              const JSON::StringView::size_type cursor)
+    -> OpenAPIBraceExpression {
+  const auto opening{value.find('{', cursor)};
+  if (opening == JSON::StringView::npos) {
+    return {};
+  }
+
+  return {.opening = opening, .closing = value.find('}', opening)};
+}
+
+// The expressions a template declares between curly braces, where a run that
+// never closes ends the reading
 inline auto openapi_brace_expressions(const JSON::StringView value)
     -> std::vector<JSON::StringView> {
   std::vector<JSON::StringView> result;
-  std::size_t cursor{0};
+  JSON::StringView::size_type cursor{0};
   while (cursor < value.size()) {
-    const auto open{value.find('{', cursor)};
-    if (open == JSON::StringView::npos) {
+    const auto expression{openapi_next_brace_expression(value, cursor)};
+    if (expression.opening == JSON::StringView::npos ||
+        expression.closing == JSON::StringView::npos) {
       break;
     }
 
-    const auto close{value.find('}', open)};
-    if (close == JSON::StringView::npos) {
-      break;
-    }
-
-    result.push_back(value.substr(open + 1, close - open - 1));
-    cursor = close + 1;
+    result.push_back(value.substr(expression.opening + 1,
+                                  expression.closing - expression.opening - 1));
+    cursor = expression.closing + 1;
   }
 
   return result;

@@ -18,6 +18,8 @@ public:
             const sourcemeta::core::SchemaResolver &) const
       -> SchemaTransformRule::Result override {
     ONLY_CONTINUE_IF(schema.is_object() && schema.defines("type"));
+    // The OpenAPI 3.0 Schema Object is deliberately absent, as the branch this
+    // rewrites to the `false` schema has no spelling in that dialect
     ONLY_CONTINUE_IF(vocabularies.contains_any(
         {SchemaVocabularies::Known::JSON_SCHEMA_2020_12_VALIDATION,
          SchemaVocabularies::Known::JSON_SCHEMA_2019_09_VALIDATION,

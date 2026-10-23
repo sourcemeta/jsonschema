@@ -20,7 +20,11 @@ auto to_selector(const sourcemeta::core::KDFHash hash) noexcept -> int {
       return 2;
   }
 
+    // Clang settles that no other value arrives, so only GCC and MSVC
+    // need to be told that the end of this function is never reached
+#if !defined(__clang__)
   std::unreachable();
+#endif
 }
 
 auto octets(const std::string_view value) noexcept -> const unsigned char * {

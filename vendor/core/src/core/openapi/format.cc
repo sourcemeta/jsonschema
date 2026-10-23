@@ -34,7 +34,12 @@ namespace {
 // The order in which the fields of each Object are meant to appear, where the
 // position of an entry is the rank of the field it names. Each table unions
 // what 3.1 and 3.2 define, and what every variant of an Object defines, so
-// nothing here branches on the revision a document declares.
+// nothing here branches on the revision a document declares. The revision
+// before those two asks for no entry of its own, as what it admits is what 3.1
+// admits less the fields 3.1 brings, and the assertions below hold every table
+// here to the whole of 3.1 already. The Reference Object is the one exception,
+// for the reason given beside its table, and the only field any release of
+// that revision gives that Object is the reference itself.
 //
 // An entry of `x-` stands for every Specification Extension rather than for a
 // field of that name, and it sits where it does because such a member is almost
@@ -293,6 +298,14 @@ static_assert(ranks_every_field(FIELDS_LINK, OPENAPI_LINK_FIELDS));
 static_assert(defines_every_rank(FIELDS_LINK, OPENAPI_LINK_FIELDS));
 
 static_assert(ranks_every_field(FIELDS_SECURITY_SCHEME,
+                                OPENAPI_SECURITY_SCHEME_APIKEY_FIELDS_3_1));
+static_assert(ranks_every_field(
+    FIELDS_SECURITY_SCHEME, OPENAPI_SECURITY_SCHEME_HTTP_BEARER_FIELDS_3_1));
+static_assert(ranks_every_field(FIELDS_SECURITY_SCHEME,
+                                OPENAPI_SECURITY_SCHEME_OAUTH2_FIELDS_3_1));
+static_assert(ranks_every_field(FIELDS_SECURITY_SCHEME,
+                                OPENAPI_SECURITY_SCHEME_OIDC_FIELDS_3_1));
+static_assert(ranks_every_field(FIELDS_SECURITY_SCHEME,
                                 OPENAPI_SECURITY_SCHEME_APIKEY_FIELDS_3_2));
 static_assert(ranks_every_field(
     FIELDS_SECURITY_SCHEME, OPENAPI_SECURITY_SCHEME_HTTP_BEARER_FIELDS_3_2));
@@ -425,7 +438,11 @@ auto row_of(const OpenAPIObjectKind kind) -> KindRow {
       return {};
   }
 
+    // Clang settles that no other value arrives, so only GCC and MSVC
+    // need to be told that the end of this function is never reached
+#if !defined(__clang__)
   std::unreachable();
+#endif
 }
 
 // Byte order on the key, which is the whole of what a map whose keys the author

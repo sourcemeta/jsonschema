@@ -151,20 +151,14 @@ auto compiler_draft6_validation_type(const Context &context,
 
       // A preceding array loop at this location already rejects a non-array,
       // so the type assertion is redundant. The array size bounds are only
-      // redundant when there are none to enforce, as the loops other than the
-      // sized one do not check the item count. Only a loop that truly rejects
-      // a non-array qualifies: some item loops instead pass a non-array
-      // untouched, so they are deliberately excluded below
+      // redundant when there are none to enforce, as the loop may be
+      // carrying bounds fused from a different schema. Only a loop that
+      // truly rejects a non-array qualifies: every other item loop holds
+      // vacuously on a non-array, as `items` asserts nothing on one
       if (context.mode == Mode::FastValidation && minimum == 0 &&
           !maximum.has_value() && !current.empty() &&
-          (current.back().type ==
-               sourcemeta::blaze::InstructionIndex::
-                   LoopItemsPropertiesExactlyTypeStrictHash ||
-           current.back().type ==
-               sourcemeta::blaze::InstructionIndex::
-                   LoopItemsPropertiesExactlyTypeStrictHash3 ||
-           current.back().type == sourcemeta::blaze::InstructionIndex::
-                                      LoopItemsIntegerBoundedSized) &&
+          current.back().type == sourcemeta::blaze::InstructionIndex::
+                                     LoopItemsIntegerBoundedSized &&
           current.back().relative_instance_location ==
               to_pointer(dynamic_context.base_instance_location)) {
         return {};

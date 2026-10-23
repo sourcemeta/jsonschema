@@ -16,11 +16,11 @@ evaluation step. This is often useful for debugging purposes.
 OpenAPI Descriptions
 --------------------
 
-If the input is an OpenAPI spec v3.1 or v3.2, the `inspect` command treats it as
-an [OpenAPI](https://spec.openapis.org/oas/latest.html) description rather than
-as a schema, and inspects it in a similar fashion, reporting on the Objects it
-holds, the operations it exposes, and the Schema Objects within it. Any other
-revision, such as v3.0, is rejected rather than read as a schema.
+If the input is an OpenAPI spec v3.0, v3.1 or v3.2, the `inspect` command treats
+it as an [OpenAPI](https://spec.openapis.org/oas/latest.html) description rather
+than as a schema, and inspects it in a similar fashion, reporting on the Objects
+it holds, the operations it exposes, and the Schema Objects within it. An
+unsupported `openapi` revision is rejected rather than read as a schema.
 
 Examples
 --------

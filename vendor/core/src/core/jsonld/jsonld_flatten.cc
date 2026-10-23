@@ -4,6 +4,7 @@
 #include "jsonld_keywords.h"
 
 #include <algorithm> // std::ranges::sort
+#include <cassert>   // assert
 #include <optional>  // std::nullopt
 #include <utility>   // std::move
 #include <vector>    // std::vector
@@ -13,8 +14,10 @@ namespace sourcemeta::core {
 namespace {
 
 // The node with the only entry @id carries no statements, so it is dropped.
+// Flattening gives every node an identifier, so the single entry is that one
 auto is_reference_only(const JSON &node) -> bool {
-  return node.object_size() == 1 && node.defines(KEYWORD_ID, KEYWORD_ID_HASH);
+  assert(node.object_size() != 1 || node.defines(KEYWORD_ID, KEYWORD_ID_HASH));
+  return node.object_size() == 1;
 }
 
 // The identifiers of a graph's nodes in lexicographical order. The views are

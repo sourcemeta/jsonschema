@@ -17,6 +17,7 @@ public:
              SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_1,
              SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_2,
              SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_3,
+             SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_3_HYPER,
              SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_4,
              SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_6,
              SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_7,
@@ -32,23 +33,12 @@ public:
 
     const auto declared_types{parse_schema_type(*type)};
     ONLY_CONTINUE_IF(declared_types.any());
-    const bool integer_matches_integral{
-        vocabularies.contains_any(
-            {SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_6,
-             SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_7,
-             SchemaVocabularies::Known::JSON_SCHEMA_2019_09_VALIDATION,
-             SchemaVocabularies::Known::JSON_SCHEMA_2020_12_VALIDATION}) &&
-        declared_types.test(
-            std::to_underlying(sourcemeta::core::JSON::Type::Integer))};
 
     this->matching_indices_.clear();
     bool has_mismatch{false};
     std::size_t index{0};
     for (const auto &value : enum_value->as_array()) {
-      const bool matches{
-          declared_types.test(std::to_underlying(value.type())) ||
-          (integer_matches_integral && value.is_integral())};
-      if (matches) {
+      if (type_can_equal(declared_types, value)) {
         this->matching_indices_.push_back(index);
       } else {
         has_mismatch = true;

@@ -48,11 +48,12 @@ inline auto is_filtered_tag(const std::string_view tag) noexcept -> bool {
       continue;
     }
 
+    // A block holds every one of its lines with a line feed ending, so the
+    // whitespace a tag may carry is every kind but a carriage return
     switch (tag[index]) {
       case '\t':
       case '\n':
       case '\f':
-      case '\r':
       case ' ':
       case '/':
       case '>':

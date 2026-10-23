@@ -41,6 +41,12 @@ auto sourcemeta::jsonschema::compile(const sourcemeta::core::Options &options)
   const auto is_openapi{is_openapi_document(parsed_schema.document)};
   const std::filesystem::path display_path{schema_path};
 
+  if (parsed_schema.multidocument) {
+    throw MultiDocumentInputError{
+        "This command does not support input with multiple documents",
+        display_path};
+  }
+
   reject_unsupported_openapi(parsed_schema.document, display_path);
 
   if (!is_openapi && !parsed_schema.document.is_object() &&
@@ -169,6 +175,17 @@ auto sourcemeta::jsonschema::compile(const sourcemeta::core::Options &options)
 
     throw sourcemeta::core::FileError<
         sourcemeta::core::SchemaAnchorCollisionError>(schema_path, error);
+  } catch (const sourcemeta::core::SchemaDialectImpossibleError &error) {
+    const auto position{parsed_schema.positions.get(error.location())};
+    if (position.has_value()) {
+      throw PositionError<sourcemeta::core::FileError<
+          sourcemeta::core::SchemaDialectImpossibleError>>(
+          std::get<0>(position.value()), std::get<1>(position.value()),
+          schema_path, error);
+    }
+
+    throw sourcemeta::core::FileError<
+        sourcemeta::core::SchemaDialectImpossibleError>(schema_path, error);
   } catch (const sourcemeta::core::SchemaReferenceError &error) {
     const auto position{parsed_schema.positions.get(error.location())};
     if (position.has_value()) {

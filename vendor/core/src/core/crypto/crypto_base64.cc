@@ -19,7 +19,9 @@ constexpr std::string_view BASE64_ALPHABET{
 constexpr std::string_view BASE64URL_ALPHABET{
     "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_"};
 
-constexpr std::uint8_t INVALID_SEXTET{0xFF};
+// The greatest value either alphabet denotes, so that a table entry above it
+// stands for an octet outside the alphabet
+constexpr std::uint32_t MAX_SEXTET{0x3F};
 
 // The inverse of each alphabet, mapping every octet to the sextet it denotes,
 // or to the invalid sextet when the octet is not part of that alphabet
@@ -106,23 +108,20 @@ auto encode(const std::string_view input, const std::string_view alphabet,
   }
 }
 
-template <typename Output>
-auto decode_into(const std::string_view input,
-                 const std::array<std::uint8_t, 256> &table, const bool padding,
-                 Output &output) -> bool {
-  // Decoding appends to the output, so a failure after some bytes were written
-  // rolls the output back to its original length rather than leaving a partial
-  // decode in a reused buffer
-  const auto base{output.size()};
+// The characters that carry data, with any trailing padding removed, for an
+// input whose overall shape is accepted. RFC 4648 Section 4: "Special
+// processing is performed if fewer than 24 bits are available at the end of the
+// data being encoded. A full encoding quantum is always completed at the end of
+// a quantity", hence the padded form must be a multiple of four characters. A
+// trailing quantum of a single character carries no whole octet and is never
+// produced by either form
+auto significant(const std::string_view input, const bool padding)
+    -> std::optional<std::string_view> {
   auto data{input};
 
   if (padding) {
-    // RFC 4648 Section 4: "Special processing is performed if fewer than 24
-    // bits are available at the end of the data being encoded. A full encoding
-    // quantum is always completed at the end of a quantity", hence the padded
-    // form must be a multiple of four characters
     if (data.size() % 4 != 0) {
-      return false;
+      return std::nullopt;
     }
 
     if (data.ends_with('=')) {
@@ -134,9 +133,64 @@ auto decode_into(const std::string_view input,
   }
 
   if (data.size() % 4 == 1) {
+    return std::nullopt;
+  }
+
+  return data;
+}
+
+// RFC 4648 Section 3.5: "Implementations MAY chose to reject the encoding if
+// the pad bits have not been set to zero". We reject so that every value has
+// exactly one accepted encoding. Only the last character of a trailing partial
+// quantum carries such bits
+auto canonical(const std::string_view data,
+               const std::array<std::uint8_t, 256> &table) -> bool {
+  const auto remaining{data.size() % 4};
+  if (remaining == 0) {
+    return true;
+  }
+
+  const std::uint32_t last{table[static_cast<std::uint8_t>(data.back())]};
+  if (remaining == 2) {
+    return (last & 0x0FU) == 0;
+  }
+
+  return (last & 0x03U) == 0;
+}
+
+// Deciding validity never needs an assembled octet, so the characters are only
+// looked up to accumulate whether any of them fell outside the alphabet
+auto validate(const std::string_view input,
+              const std::array<std::uint8_t, 256> &table, const bool padding)
+    -> bool {
+  const auto data{significant(input, padding)};
+  if (!data.has_value()) {
     return false;
   }
 
+  std::uint32_t combined{0};
+  for (const auto character : data.value()) {
+    combined |= table[static_cast<std::uint8_t>(character)];
+  }
+
+  return combined <= MAX_SEXTET && canonical(data.value(), table);
+}
+
+template <typename Output>
+auto decode_into(const std::string_view input,
+                 const std::array<std::uint8_t, 256> &table, const bool padding,
+                 Output &output) -> bool {
+  const auto accepted{significant(input, padding)};
+  if (!accepted.has_value()) {
+    return false;
+  }
+
+  const auto data{accepted.value()};
+
+  // Decoding appends to the output, so a failure after some bytes were written
+  // rolls the output back to its original length rather than leaving a partial
+  // decode in a reused buffer
+  const auto base{output.size()};
   output.reserve(output.size() + ((data.size() / 4) * 3) + 2);
 
   std::size_t index{0};
@@ -148,8 +202,7 @@ auto decode_into(const std::string_view input,
         table[static_cast<std::uint8_t>(data[index + 2])]};
     const std::uint32_t fourth{
         table[static_cast<std::uint8_t>(data[index + 3])]};
-    if (first == INVALID_SEXTET || second == INVALID_SEXTET ||
-        third == INVALID_SEXTET || fourth == INVALID_SEXTET) {
+    if ((first | second | third | fourth) > MAX_SEXTET) {
       output.resize(base, '\0');
       return false;
     }
@@ -162,16 +215,12 @@ auto decode_into(const std::string_view input,
     index += 4;
   }
 
-  // RFC 4648 Section 3.5: "Implementations MAY chose to reject the encoding
-  // if the pad bits have not been set to zero". We reject so that every value
-  // has exactly one accepted encoding
   const auto remaining{data.size() - index};
   if (remaining == 2) {
     const std::uint32_t first{table[static_cast<std::uint8_t>(data[index])]};
     const std::uint32_t second{
         table[static_cast<std::uint8_t>(data[index + 1])]};
-    if (first == INVALID_SEXTET || second == INVALID_SEXTET ||
-        (second & 0x0FU) != 0) {
+    if ((first | second) > MAX_SEXTET || !canonical(data, table)) {
       output.resize(base, '\0');
       return false;
     }
@@ -183,8 +232,7 @@ auto decode_into(const std::string_view input,
         table[static_cast<std::uint8_t>(data[index + 1])]};
     const std::uint32_t third{
         table[static_cast<std::uint8_t>(data[index + 2])]};
-    if (first == INVALID_SEXTET || second == INVALID_SEXTET ||
-        third == INVALID_SEXTET || (third & 0x03U) != 0) {
+    if ((first | second | third) > MAX_SEXTET || !canonical(data, table)) {
       output.resize(base, '\0');
       return false;
     }
@@ -237,6 +285,10 @@ auto base64_decode(const std::string_view input, SecureString &output) -> bool {
                      output);
 }
 
+auto is_base64(const std::string_view input) -> bool {
+  return validate(input, BASE64_DECODE_TABLE, true);
+}
+
 auto base64url_encode(const std::string_view input, std::ostream &output)
     -> void {
   output << base64url_encode(input);
@@ -278,6 +330,10 @@ auto base64url_decode(const std::string_view input)
   }
 
   return output;
+}
+
+auto is_base64url(const std::string_view input) -> bool {
+  return validate(input, BASE64URL_DECODE_TABLE, false);
 }
 
 } // namespace sourcemeta::core

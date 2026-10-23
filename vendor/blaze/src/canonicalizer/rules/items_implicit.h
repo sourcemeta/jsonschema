@@ -31,19 +31,17 @@ public:
           vocabularies.contains_any(
               {SchemaVocabularies::Known::JSON_SCHEMA_2020_12_UNEVALUATED,
                SchemaVocabularies::Known::JSON_SCHEMA_2019_09_APPLICATOR})));
-    ONLY_CONTINUE_IF(
-        !walk_up_in_place_applicators(
-             root, frame, location, walker, resolver,
-             [](const sourcemeta::core::JSON &ancestor,
-                const SchemaVocabularies &ancestor_vocabularies) -> bool {
-               return ancestor.defines("unevaluatedItems") &&
-                      ancestor_vocabularies.contains_any(
-                          {SchemaVocabularies::Known::
-                               JSON_SCHEMA_2020_12_UNEVALUATED,
-                           SchemaVocabularies::Known::
-                               JSON_SCHEMA_2019_09_APPLICATOR});
-             })
-             .has_value());
+    ONLY_CONTINUE_IF(!walk_up_in_place_applicators_across_references(
+        root, frame, location, walker, resolver,
+        [](const sourcemeta::core::JSON &ancestor,
+           const SchemaVocabularies &ancestor_vocabularies) -> bool {
+          return ancestor.defines("unevaluatedItems") &&
+                 ancestor_vocabularies.contains_any(
+                     {SchemaVocabularies::Known::
+                          JSON_SCHEMA_2020_12_UNEVALUATED,
+                      SchemaVocabularies::Known::
+                          JSON_SCHEMA_2019_09_APPLICATOR});
+        }));
     return true;
   }
 

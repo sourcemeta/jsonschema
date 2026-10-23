@@ -1,6 +1,7 @@
 #include <sourcemeta/core/numeric.h>
 #include <sourcemeta/core/time.h>
 
+#include <cassert> // assert
 #include <cstdint> // std::uint8_t
 
 namespace sourcemeta::core {
@@ -118,9 +119,10 @@ auto is_rfc3339_duration(const std::string_view value) -> bool {
     }
   }
 
-  // Reject if no element was parsed at all ("P") or if a "T" was seen but
-  // no time unit followed ("PT", "P1YT")
-  return state != DurationState::Start && state != DurationState::TimeStart;
+  // A lone "P" is turned away by the length guard above, so what is left to
+  // reject here is a "T" that no time unit followed ("PT", "P1YT")
+  assert(state != DurationState::Start);
+  return state != DurationState::TimeStart;
 }
 
 } // namespace sourcemeta::core

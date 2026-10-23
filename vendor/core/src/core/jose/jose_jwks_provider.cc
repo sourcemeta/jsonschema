@@ -200,7 +200,7 @@ auto JWKSProvider::verify_at(
     refreshed = this->refetch_for_unknown_kid_locked(now);
   }
 
-  if (refreshed == nullptr || refreshed == snapshot) {
+  if (refreshed == nullptr) {
     return error;
   }
 

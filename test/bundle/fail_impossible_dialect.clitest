@@ -1,0 +1,42 @@
+WRITE schema.json UNTIL EOF
+{
+  "$schema": "tag:spec.openapis.org,2024-10-18:oas/3.0/dialect",
+  "type": "string"
+}
+EOF
+
+// Schema input error
+RUN bundle schema.json STDIN /dev/null IN . INTO result.txt EXPECTING 4
+
+REPLACE $CWD WITH '[CWD]' IN result.txt
+
+WRITE expected.txt UNTIL EOF
+2> error: The dialect that this schema declares does not define the keyword that declares it
+2>   at keyword $schema
+2>   at dialect tag:spec.openapis.org,2024-10-18:oas/3.0/dialect
+2>   at line 1
+2>   at column 1
+2>   at file path [CWD]/schema.json
+2>   at location ""
+EOF
+
+COMPARE result.txt AGAINST expected.txt
+
+// Schema input error
+RUN bundle schema.json --json STDIN /dev/null IN . INTO result_json.txt EXPECTING 4
+
+REPLACE $CWD WITH '[CWD]' IN result_json.txt
+
+WRITE expected_json.txt UNTIL EOF
+1> {
+1>   "error": "The dialect that this schema declares does not define the keyword that declares it",
+1>   "keyword": "$schema",
+1>   "dialect": "tag:spec.openapis.org,2024-10-18:oas/3.0/dialect",
+1>   "line": 1,
+1>   "column": 1,
+1>   "filePath": "[CWD]/schema.json",
+1>   "location": ""
+1> }
+EOF
+
+COMPARE result_json.txt AGAINST expected_json.txt

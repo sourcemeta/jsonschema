@@ -18,6 +18,7 @@ public:
              SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_1,
              SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_2,
              SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_3,
+             SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_3_HYPER,
              SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_4,
              SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_6,
              SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_7,
@@ -33,19 +34,9 @@ public:
 
     const auto declared_types{parse_schema_type(*type)};
     ONLY_CONTINUE_IF(declared_types.any());
-    const bool integer_matches_integral{
-        vocabularies.contains_any(
-            {SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_6,
-             SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_7,
-             SchemaVocabularies::Known::JSON_SCHEMA_2019_09_VALIDATION,
-             SchemaVocabularies::Known::JSON_SCHEMA_2020_12_VALIDATION}) &&
-        declared_types.test(
-            std::to_underlying(sourcemeta::core::JSON::Type::Integer))};
     ONLY_CONTINUE_IF(std::ranges::none_of(
-        enum_value->as_array(),
-        [&declared_types, integer_matches_integral](const auto &value) -> auto {
-          return declared_types.test(std::to_underlying(value.type())) ||
-                 (integer_matches_integral && value.is_integral());
+        enum_value->as_array(), [&declared_types](const auto &value) -> auto {
+          return type_can_equal(declared_types, value);
         }));
     this->unsatisfiable_ = unsatisfiable_schema(vocabularies);
     return true;

@@ -664,10 +664,7 @@ public:
 
           break;
         case State::StoredLength:
-          if (!this->read_stored_length(buffers)) {
-            return this->leave(buffers, InflateStatus::NeedInput);
-          }
-
+          this->read_stored_length(buffers);
           break;
         case State::StoredData: {
           const auto progress{this->copy_stored_data(buffers)};
@@ -1100,13 +1097,12 @@ private:
     }
   }
 
-  auto read_stored_length(InflateBuffers &buffers) -> bool {
+  // A block header is only read once the whole margin is in hand, and reading
+  // it gives back more input than it takes, so these four bytes always stand
+  // behind it unless the source ended in the middle of them
+  auto read_stored_length(InflateBuffers &buffers) -> void {
     if (available_input(buffers) < 4) {
-      if (buffers.input_final) {
-        unexpected_end();
-      }
-
-      return false;
+      unexpected_end();
     }
 
     const auto length{static_cast<std::uint32_t>(buffers.input_next[0]) |
@@ -1121,7 +1117,6 @@ private:
     buffers.input_next += 4;
     this->stored_remaining_ = length;
     this->state_ = State::StoredData;
-    return true;
   }
 
   auto copy_stored_data(InflateBuffers &buffers) -> InflateStatus {

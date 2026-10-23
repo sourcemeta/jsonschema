@@ -24,7 +24,8 @@ public:
          SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_3_HYPER,
          SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_2,
          SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_1,
-         SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_0}));
+         SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_0,
+         SchemaVocabularies::Known::OPENAPI_3_0_BASE}));
     ONLY_CONTINUE_IF(schema.is_object() && schema.defines("$ref"));
 
     std::vector<Pointer> locations;

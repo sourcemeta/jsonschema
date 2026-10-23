@@ -22,7 +22,11 @@ auto to_message_digest(const RSAOAEPHash hash) -> const EVP_MD * {
       return EVP_sha256();
   }
 
+    // Clang settles that no other value arrives, so only GCC and MSVC
+    // need to be told that the end of this function is never reached
+#if !defined(__clang__)
   std::unreachable();
+#endif
 }
 
 auto configure(EVP_PKEY_CTX *context, const RSAOAEPHash hash) -> bool {

@@ -872,12 +872,28 @@ private:
       return JSON{value.value()};
     }
 
-    const auto value{to_double(text)};
-    if (!value.has_value()) {
+    // RFC 9535 Section 2.1 restricts a query to I-JSON, which RFC 7493
+    // Section 2.2 keeps within the range the double precision format reaches
+    if (!to_double(text).has_value()) {
       this->fail();
     }
 
-    return JSON{value.value()};
+    // Within that range a literal is stored the way the JSON parser stores it,
+    // so that a comparison against a document number turns on the value
+    // rather than on how either side was spelled
+    const auto exact{to_double_exact(text)};
+    if (exact.has_value()) {
+      return JSON{exact.value()};
+    }
+
+    // The range check above is on the value, which a literal of zero passes
+    // however it spells its exponent, so what is read here can still name a
+    // scale no decimal carries
+    try {
+      return JSON{Decimal{text}};
+    } catch (const DecimalParseError &) {
+      this->fail();
+    }
   }
 
   // filter-query = rel-query / jsonpath-query

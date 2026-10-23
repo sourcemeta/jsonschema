@@ -3,7 +3,7 @@
 
 WRITE openapi.json UNTIL EOF
 {
-  "openapi": "3.0.3",
+  "openapi": "4.0.0",
   "info": { "title": "Example", "version": "1.0.0" },
   "paths": {}
 }
@@ -20,7 +20,7 @@ REPLACE $CWD WITH '[CWD]' IN result_0.txt
 
 WRITE expected_0.txt UNTIL EOF
 2> error: This OpenAPI Specification revision is not supported
-2>   at value 3.0.3
+2>   at value 4.0.0
 2>   at file path [CWD]/openapi.json
 EOF
 
@@ -34,7 +34,7 @@ REPLACE $CWD WITH '[CWD]' IN result_1.txt
 WRITE expected_1.txt UNTIL EOF
 1> {
 1>   "error": "This OpenAPI Specification revision is not supported",
-1>   "value": "3.0.3",
+1>   "value": "4.0.0",
 1>   "filePath": "[CWD]/openapi.json"
 1> }
 EOF

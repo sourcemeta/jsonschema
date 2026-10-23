@@ -92,20 +92,27 @@ struct SOURCEMETA_CORE_JSONSCHEMA_EXPORT SchemaVocabularies {
     /// The 2020-12 content vocabulary
     JSON_SCHEMA_2020_12_CONTENT = 28,
     // OpenAPI
+    // The OpenAPI Initiative never published a vocabulary for the Schema
+    // Object of this revision, so this one is of our own making
+    /// The OpenAPI 3.0 base vocabulary
+    OPENAPI_3_0_BASE = 29,
     // https://spec.openapis.org/oas/v3.1.0.html#fixed-fields-19
     /// The OpenAPI 3.1 base vocabulary
-    OPENAPI_3_1_BASE = 29,
+    OPENAPI_3_1_BASE = 30,
     // https://spec.openapis.org/oas/v3.2.0.html#base-vocabulary
     /// The OpenAPI 3.2 base vocabulary
-    OPENAPI_3_2_BASE = 30,
+    OPENAPI_3_2_BASE = 31,
     // Sourcemeta
     /// The first version of the Sourcemeta extension vocabulary
-    SOURCEMETA_EXTENSION_V1 = 31
+    SOURCEMETA_EXTENSION_V1 = 32
   };
 
-  // NOTE: Must be kept in sync with the Known enum above
+  // Membership is a bit per vocabulary, indexed by the value of the
+  // enumerator, so one that falls outside this bound reads and writes past the
+  // end of the sets below. The implementation file asserts that none does,
+  // over the same list the compiler already holds it to
   /// How many vocabularies this implementation recognises out of the box
-  static constexpr std::size_t KNOWN_VOCABULARY_COUNT = 32;
+  static constexpr std::size_t KNOWN_VOCABULARY_COUNT = 33;
 
   /// A vocabulary URI type that can be either a known vocabulary enum or a
   /// custom string URI

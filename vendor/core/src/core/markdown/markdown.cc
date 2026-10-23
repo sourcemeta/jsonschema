@@ -9,9 +9,8 @@
 #include "postprocess.h"
 #include "render.h"
 
+#include <algorithm>   // std::min
 #include <cstddef>     // std::size_t
-#include <cstdint>     // std::uint32_t
-#include <limits>      // std::numeric_limits
 #include <optional>    // std::optional
 #include <string>      // std::string
 #include <string_view> // std::string_view
@@ -60,8 +59,8 @@ auto replace_invalid_characters(const std::string_view input,
 
 namespace sourcemeta::core {
 
-auto markdown_to_html(const std::string_view input, const bool safe)
-    -> std::string {
+auto markdown_to_html(const std::string_view input, const bool safe,
+                      const std::size_t maximum_input_bytes) -> std::string {
   thread_local std::optional<MarkdownConverter> state;
   if (!state.has_value()) {
     state.emplace();
@@ -80,8 +79,10 @@ auto markdown_to_html(const std::string_view input, const bool safe)
     source = converter.repaired;
   }
 
-  // The parser addresses the input through 32-bit offsets
-  if (source.size() > std::numeric_limits<std::uint32_t>::max()) {
+  // The parser addresses the input through 32-bit offsets, so what a caller
+  // names only ever tightens the reach those offsets have
+  if (source.size() >
+      std::min(maximum_input_bytes, MARKDOWN_MAXIMUM_INPUT_BYTES)) {
     throw MarkdownError{"The input is larger than the supported size bound"};
   }
 

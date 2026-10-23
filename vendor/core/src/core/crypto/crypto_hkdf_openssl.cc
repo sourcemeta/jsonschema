@@ -40,7 +40,11 @@ auto digest_name(const sourcemeta::core::KDFHash hash) noexcept -> const
       return "SHA512";
   }
 
+    // Clang settles that no other value arrives, so only GCC and MSVC
+    // need to be told that the end of this function is never reached
+#if !defined(__clang__)
   std::unreachable();
+#endif
 }
 
 // An empty view may carry a null pointer, which the parameter interface would

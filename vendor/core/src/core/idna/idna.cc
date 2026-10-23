@@ -5,6 +5,7 @@
 #include <sourcemeta/core/unicode.h>
 
 #include <algorithm>   // std::ranges::lower_bound
+#include <cassert>     // assert
 #include <cstddef>     // std::size_t
 #include <optional>    // std::optional, std::nullopt
 #include <string>      // std::string, std::u32string
@@ -67,11 +68,10 @@ auto validate_a_label_body(const std::string_view encoded,
   // RFC 5891 §4.2.1: "verify that the A-label produced by the step in
   // Section 4.4 matches the one provided as input", so re-encoding the decoded
   // U-label must yield the lowercased bytes we decoded from
-  try {
-    return utf32_to_punycode(decoded) == body;
-  } catch (const PunycodeError &) {
-    return false;
-  }
+  // The A-label this decoded came from is held to the octet count a label may
+  // carry, which leaves what is re-encoded far shorter than what the position
+  // counters of the encoding could run past, so the encoding always answers
+  return utf32_to_punycode(decoded) == body;
 }
 
 } // namespace
@@ -408,10 +408,15 @@ auto idna_passes_bidi_rule(const std::u32string_view label) noexcept -> bool {
   }
 
   // RFC 5893 §2 conditions 3 and 6: the label must end with a specific
-  // class, optionally followed by NSM characters.
-  for (std::size_t index = label.size(); index-- > 0;) {
+  // class, optionally followed by NSM characters. The first character was held
+  // to L, R, or AL above and none of those is an NSM, so walking back from the
+  // end always reaches a character that answers, which is why the walk is
+  // spelled without an exit of its own
+  for (std::size_t index{label.size()};;) {
+    index -= 1;
     const auto class_value{bidi_class(label[index])};
     if (class_value == BidiClass::NonspacingMark) {
+      assert(index > 0);
       continue;
     }
     if (is_rtl_label) {
@@ -423,8 +428,6 @@ auto idna_passes_bidi_rule(const std::u32string_view label) noexcept -> bool {
     return class_value == BidiClass::LeftToRight ||
            class_value == BidiClass::EuropeanNumber;
   }
-
-  return false;
 }
 
 auto idna_is_valid_a_label(const std::string_view label) -> bool {

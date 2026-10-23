@@ -17,7 +17,10 @@ namespace sourcemeta::core {
 
 /// @ingroup numeric
 /// Cross-platform 128-bit unsigned integer type.
-#if defined(__SIZEOF_INT128__) || defined(__clang__)
+// The compiler announces the builtin through this macro alone. Taking the
+// compiler itself as the condition claims the builtin on the targets where that
+// compiler does not offer it, such as the 32-bit ones
+#if defined(__SIZEOF_INT128__)
 using uint128_t = __uint128_t;
 #else
 // We keep the full implementation header-only to allow the compiler to better

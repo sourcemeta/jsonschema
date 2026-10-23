@@ -5,6 +5,7 @@
 
 #include "ecma262_properties.h"
 
+#include <cassert>       // assert
 #include <cstddef>       // std::size_t
 #include <optional>      // std::optional
 #include <string>        // std::string, std::u32string
@@ -912,9 +913,10 @@ struct Ecma262Reader {
       }
     }
 
-    if (!this->consume(U'}')) {
-      return std::nullopt;
-    }
+    // The loop above leaves only on a closing brace or on a bar, and a bar is
+    // taken by the consume that ends it, so a brace is what stands here
+    [[maybe_unused]] const auto closed{this->consume(U'}')};
+    assert(closed);
 
     return Ecma262SetOperand{.is_character = false,
                              .value = 0,
