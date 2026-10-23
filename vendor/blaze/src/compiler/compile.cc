@@ -1034,15 +1034,30 @@ auto compile(const Context &context, const SchemaContext &schema_context,
                 .recompose_without_fragment()
                 .value_or("")
           : schema_context.base.recompose_without_fragment().value_or("")};
+  const auto new_vocabularies{
+      entry.has_value()
+          ? context.frame.vocabularies(entry.value().get(), context.resolver)
+          : schema_context.vocabularies};
+
+  // The root check on dialects without boolean schemas cannot see a boolean
+  // reference target, as a target compiles with the pointer of wherever it
+  // sits rather than as the root of a resource. Only a reference lands here
+  // with a URI: a boolean a keyword admits in place of a schema comes in
+  // through the suffixes instead, so it stays out of this one's way
+  if (uri.has_value() && new_schema.is_boolean() &&
+      new_vocabularies.contains(
+          sourcemeta::core::SchemaVocabularies::Known::OPENAPI_3_0_BASE))
+      [[unlikely]] {
+    throw sourcemeta::blaze::CompilerError(
+        new_base, sourcemeta::core::to_pointer(target),
+        "This dialect does not support boolean schemas");
+  }
 
   return compile_subschema(
       context,
       {.relative_pointer = new_relative_pointer,
        .schema = new_schema,
-       .vocabularies = entry.has_value()
-                           ? context.frame.vocabularies(entry.value().get(),
-                                                        context.resolver)
-                           : schema_context.vocabularies,
+       .vocabularies = new_vocabularies,
        .base = new_base,
        .is_property_name = schema_context.is_property_name},
       {.keyword = dynamic_context.keyword,

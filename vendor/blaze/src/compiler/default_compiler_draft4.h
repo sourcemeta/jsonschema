@@ -44,13 +44,14 @@ auto compiler_draft4_applicator_allof(const Context &context,
                                       const SchemaContext &schema_context,
                                       const DynamicContext &dynamic_context,
                                       const Instructions &) -> Instructions {
-  if (!is_schema_array(
-          schema_context.schema.at(dynamic_context.keyword),
-          booleans_are_schemas(schema_context.vocabularies),
-          in_place_applicators_may_be_empty(schema_context.vocabularies))) {
+  const auto allows_empty{
+      in_place_applicators_may_be_empty(schema_context.vocabularies)};
+  if (!is_schema_array(schema_context.schema.at(dynamic_context.keyword),
+                       booleans_are_schemas(schema_context.vocabularies),
+                       allows_empty)) {
     throw sourcemeta::blaze::CompilerError(
         schema_context.base, absolute_schema_location(context, schema_context),
-        EXPECTED_SCHEMA_ARRAY);
+        allows_empty ? EXPECTED_SCHEMA_ARRAY_ANY_SIZE : EXPECTED_SCHEMA_ARRAY);
   }
 
   Instructions children;
@@ -94,13 +95,14 @@ auto compiler_draft4_applicator_anyof(const Context &context,
                                       const SchemaContext &schema_context,
                                       const DynamicContext &dynamic_context,
                                       const Instructions &) -> Instructions {
-  if (!is_schema_array(
-          schema_context.schema.at(dynamic_context.keyword),
-          booleans_are_schemas(schema_context.vocabularies),
-          in_place_applicators_may_be_empty(schema_context.vocabularies))) {
+  const auto allows_empty{
+      in_place_applicators_may_be_empty(schema_context.vocabularies)};
+  if (!is_schema_array(schema_context.schema.at(dynamic_context.keyword),
+                       booleans_are_schemas(schema_context.vocabularies),
+                       allows_empty)) {
     throw sourcemeta::blaze::CompilerError(
         schema_context.base, absolute_schema_location(context, schema_context),
-        EXPECTED_SCHEMA_ARRAY);
+        allows_empty ? EXPECTED_SCHEMA_ARRAY_ANY_SIZE : EXPECTED_SCHEMA_ARRAY);
   }
 
   // A disjunction over no branches can never be satisfied. Only a dialect that
@@ -180,13 +182,14 @@ auto compiler_draft4_applicator_oneof(const Context &context,
                                       const SchemaContext &schema_context,
                                       const DynamicContext &dynamic_context,
                                       const Instructions &) -> Instructions {
-  if (!is_schema_array(
-          schema_context.schema.at(dynamic_context.keyword),
-          booleans_are_schemas(schema_context.vocabularies),
-          in_place_applicators_may_be_empty(schema_context.vocabularies))) {
+  const auto allows_empty{
+      in_place_applicators_may_be_empty(schema_context.vocabularies)};
+  if (!is_schema_array(schema_context.schema.at(dynamic_context.keyword),
+                       booleans_are_schemas(schema_context.vocabularies),
+                       allows_empty)) {
     throw sourcemeta::blaze::CompilerError(
         schema_context.base, absolute_schema_location(context, schema_context),
-        EXPECTED_SCHEMA_ARRAY);
+        allows_empty ? EXPECTED_SCHEMA_ARRAY_ANY_SIZE : EXPECTED_SCHEMA_ARRAY);
   }
 
   // A disjunction over no branches can never be satisfied. Only a dialect that

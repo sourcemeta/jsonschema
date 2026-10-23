@@ -52,6 +52,11 @@ auto parse_yaml(std::basic_istream<JSON::Char, JSON::CharTraits> &stream)
 }
 
 auto parse_yaml(const JSON::String &input) -> JSON {
+  bool more_documents{false};
+  return parse_yaml(input, more_documents);
+}
+
+auto parse_yaml(const JSON::String &input, bool &more_documents) -> JSON {
   yaml::Lexer lexer{input};
   yaml::Parser parser{&lexer, nullptr};
   auto result{parser.parse()};
@@ -60,22 +65,22 @@ auto parse_yaml(const JSON::String &input) -> JSON {
   // so whatever stands after the first is content nothing could reach. The
   // stream overloads are the ones that read a document at a time, and those
   // leave the rest where the next call will find it
-  parser.validate_end_of_stream();
+  more_documents = parser.validate_end_of_stream();
 
   return result;
 }
 
 auto read_yaml(const std::filesystem::path &path) -> JSON {
+  bool more_documents{false};
+  return read_yaml(path, more_documents);
+}
+
+auto read_yaml(const std::filesystem::path &path, bool &more_documents)
+    -> JSON {
   const auto input{read_file_to_string(path)};
 
   try {
-    yaml::Lexer lexer{input};
-    yaml::Parser parser{&lexer, nullptr};
-    auto result{parser.parse()};
-
-    parser.validate_end_of_stream();
-
-    return result;
+    return parse_yaml(input, more_documents);
   } catch (const YAMLParseError &error) {
     // For producing better error messages
     throw YAMLFileParseError(path, error);
@@ -101,23 +106,31 @@ auto parse_yaml(std::basic_istream<JSON::Char, JSON::CharTraits> &stream,
 
 auto parse_yaml(const JSON::String &input, JSON &output,
                 const JSON::ParseCallback &callback) -> void {
+  bool more_documents{false};
+  parse_yaml(input, more_documents, output, callback);
+}
+
+auto parse_yaml(const JSON::String &input, bool &more_documents, JSON &output,
+                const JSON::ParseCallback &callback) -> void {
   yaml::Lexer lexer{input};
   yaml::Parser parser{&lexer, &callback};
   output = parser.parse();
 
-  parser.validate_end_of_stream();
+  more_documents = parser.validate_end_of_stream();
 }
 
 auto read_yaml(const std::filesystem::path &path, JSON &output,
                const JSON::ParseCallback &callback) -> void {
+  bool more_documents{false};
+  read_yaml(path, more_documents, output, callback);
+}
+
+auto read_yaml(const std::filesystem::path &path, bool &more_documents,
+               JSON &output, const JSON::ParseCallback &callback) -> void {
   const auto input{read_file_to_string(path)};
 
   try {
-    yaml::Lexer lexer{input};
-    yaml::Parser parser{&lexer, &callback};
-    output = parser.parse();
-
-    parser.validate_end_of_stream();
+    parse_yaml(input, more_documents, output, callback);
   } catch (const YAMLParseError &error) {
     // For producing better error messages
     throw YAMLFileParseError(path, error);

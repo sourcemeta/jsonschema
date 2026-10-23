@@ -1,0 +1,39 @@
+class IntegerUpperBoundMultiplier final
+    : public sourcemeta::blaze::SchemaTransformRule {
+public:
+  using mutates = std::true_type;
+  using reframe_after_transform = std::true_type;
+  IntegerUpperBoundMultiplier()
+      : sourcemeta::blaze::SchemaTransformRule{"integer_upper_bound_multiplier",
+                                               ""} {};
+
+  [[nodiscard]] auto condition(
+      const sourcemeta::core::JSON &schema,
+      [[maybe_unused]] const sourcemeta::core::JSON &root,
+      const sourcemeta::core::SchemaVocabularies &vocabularies,
+      [[maybe_unused]] const sourcemeta::core::SchemaFrame &frame,
+      const sourcemeta::core::SchemaFrame::Location &location,
+      [[maybe_unused]] const sourcemeta::core::SchemaWalker &walker,
+      [[maybe_unused]] const sourcemeta::core::SchemaResolver &resolver) const
+      -> sourcemeta::blaze::SchemaTransformRule::Result override {
+    return location.dialect == "https://json-schema.org/draft/2020-12/schema" &&
+           vocabularies.contains(sourcemeta::core::SchemaVocabularies::Known::
+                                     JSON_SCHEMA_2020_12_VALIDATION) &&
+           schema.is_object() && schema.defines("type") &&
+           schema.at("type").to_string() == "integer" &&
+           !schema.defines("minimum") && schema.defines("maximum") &&
+           schema.defines("multipleOf") && schema.at("multipleOf").is_integer();
+  }
+
+  auto transform(
+      sourcemeta::core::JSON &schema,
+      [[maybe_unused]] const sourcemeta::blaze::SchemaTransformRule::Result
+          &result) const -> void override {
+    auto maximum = schema.at("maximum");
+    auto multiplier = schema.at("multipleOf");
+    auto options = sourcemeta::core::JSON::make_object();
+    options.assign("maximum", std::move(maximum));
+    options.assign("multiplier", std::move(multiplier));
+    make_encoding(schema, "ROOF_MULTIPLE_MIRROR_ENUM_VARINT", options);
+  }
+};

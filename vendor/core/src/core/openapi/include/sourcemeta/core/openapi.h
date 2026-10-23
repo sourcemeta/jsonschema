@@ -996,9 +996,10 @@ using OpenAPIResolverResult = OwnedOrReference<JSON>;
 
 /// @ingroup openapi
 /// How bundling reaches the other documents that an OpenAPI Description is
-/// split across. Every document handed back must itself be an OpenAPI
-/// Description, and a URI that names nothing is reported by handing back no
-/// value. For example:
+/// split across. A URI that names nothing is reported by handing back no
+/// value, and whatever else a URI names is handed back as it stands, for
+/// bundling to decide whether it is a document a description may span. For
+/// example:
 ///
 /// ```cpp
 /// #include <sourcemeta/core/json.h>

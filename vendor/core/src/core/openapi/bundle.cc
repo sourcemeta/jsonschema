@@ -55,18 +55,34 @@ struct OpenAPIPending {
 };
 
 // What the description reaches for and does not hold. A reference that names
-// the document being read and lands nowhere is left alone, as OpenAPI
-// Specification 3.1.1, Section 4.8.23 holds a `$ref` to the form of a URI and
-// says nothing about it having to resolve, so there is nothing to fetch here
-// and nothing this specification lets us report
+// the document being read and lands nowhere is settled here rather than
+// collected, as there is no document left to fetch that could supply the
+// place it named. Nothing asks for that. OpenAPI Specification 3.1.1, Section
+// 4.8.23 holds a `$ref` to the form of a URI and says nothing about it having
+// to resolve, so turning one of these down is a choice this makes rather than
+// a rule it follows.
+//
+// What makes the choice is that nothing is left to wait for. The one restraint
+// this specification writes down is Section 4.3.1's "requirement to parse
+// complete documents before deeming a Schema Object reference to be
+// unresolvable", and a Schema Object reference never reaches here, so holding
+// back would be waiting on a document that no reference named. Saying nothing
+// instead would hand back a result that the very same reading calls
+// incomplete, while a reference into another document that lands nowhere is
+// already turned down once that document has been read
 auto pending(const sourcemeta::core::OpenAPIWalk &walk)
     -> std::vector<OpenAPIPending> {
   std::vector<OpenAPIPending> result;
   for (const auto &entry : walk.references) {
-    if (walk.locations.contains(entry.second.destination) ||
-        sourcemeta::core::openapi_within_document(entry.second.destination,
-                                                  walk.base)) {
+    if (walk.locations.contains(entry.second.destination)) {
       continue;
+    }
+
+    if (sourcemeta::core::openapi_within_document(entry.second.destination,
+                                                  walk.base)) {
+      throw sourcemeta::core::OpenAPIReferenceError{
+          walk.base, entry.second.origin, entry.second.destination,
+          "This reference must name a place within the document it points at"};
     }
 
     result.push_back({.origin = entry.second.origin,
@@ -83,10 +99,16 @@ auto pending(const sourcemeta::core::OpenAPIWalk &walk)
   // references above only because a single one of those Objects may name
   // several schemes, which is more than one entry keyed by where it sits
   for (const auto &entry : walk.security_references) {
-    if (walk.locations.contains(entry.second.destination) ||
-        sourcemeta::core::openapi_within_document(entry.second.destination,
-                                                  walk.base)) {
+    if (walk.locations.contains(entry.second.destination)) {
       continue;
+    }
+
+    if (sourcemeta::core::openapi_within_document(entry.second.destination,
+                                                  walk.base)) {
+      throw sourcemeta::core::OpenAPIReferenceError{
+          walk.base, entry.second.origin, entry.second.destination,
+          "This security requirement must name a Security Scheme Object "
+          "within the document it points at"};
     }
 
     result.push_back({.origin = entry.second.origin,

@@ -1,0 +1,213 @@
+#include <sourcemeta/blaze/binpack_encoder.h>
+
+#include <sourcemeta/core/numeric.h>
+
+#include "unreachable.h"
+
+#include <algorithm> // std::find_if
+#include <cassert>   // assert
+#include <cstdint>   // std::uint8_t, std::int64_t, std::uint64_t
+#include <iterator>  // std::cbegin, std::cend, std::distance
+#include <memory>    // std::make_shared
+#include <ranges>    // std::ranges
+#include <utility>   // std::move
+
+namespace sourcemeta::blaze {
+
+auto BinPackEncoder::BYTE_CHOICE_INDEX(const sourcemeta::core::JSON &document,
+                                       const struct BYTE_CHOICE_INDEX &options)
+    -> void {
+  assert(!options.choices.empty());
+  assert(sourcemeta::core::is_byte(options.choices.size()));
+  const auto iterator{std::ranges::find(options.choices, document)};
+  assert(iterator != std::cend(options.choices));
+  const auto cursor{std::distance(std::cbegin(options.choices), iterator)};
+  assert(sourcemeta::core::is_within(
+      cursor, 0, static_cast<std::int64_t>(options.choices.size())));
+  this->put_byte(static_cast<std::uint8_t>(cursor));
+}
+
+auto BinPackEncoder::LARGE_CHOICE_INDEX(
+    const sourcemeta::core::JSON &document,
+    const struct LARGE_CHOICE_INDEX &options) -> void {
+  assert(!options.choices.empty());
+  const auto iterator{std::ranges::find_if(
+      options.choices,
+      [&document](const auto &choice) -> bool { return choice == document; })};
+  assert(iterator != std::cend(options.choices));
+  const auto cursor{std::distance(std::cbegin(options.choices), iterator)};
+  assert(sourcemeta::core::is_within(cursor, static_cast<std::uint64_t>(0),
+                                     options.choices.size() - 1));
+  this->put_varint(static_cast<std::uint64_t>(cursor));
+}
+
+auto BinPackEncoder::TOP_LEVEL_BYTE_CHOICE_INDEX(
+    const sourcemeta::core::JSON &document,
+    const struct TOP_LEVEL_BYTE_CHOICE_INDEX &options) -> void {
+  assert(!options.choices.empty());
+  assert(sourcemeta::core::is_byte(options.choices.size()));
+  const auto iterator{std::ranges::find_if(
+      options.choices,
+      [&document](auto const &choice) -> bool { return choice == document; })};
+  assert(iterator != std::cend(options.choices));
+  const auto cursor{std::distance(std::cbegin(options.choices), iterator)};
+  assert(sourcemeta::core::is_within(
+      cursor, 0, static_cast<std::int64_t>(options.choices.size()) - 1));
+  // This encoding encodes the first option of the enum as "no data"
+  if (cursor > 0) {
+    this->put_byte(static_cast<std::uint8_t>(cursor - 1));
+  }
+}
+
+auto BinPackEncoder::CONST_NONE(
+    [[maybe_unused]] const sourcemeta::core::JSON &document,
+    [[maybe_unused]] const struct CONST_NONE &options) -> void {
+  assert(document == options.value);
+}
+
+auto BinPackEncoder::ANY_PACKED_TYPE_TAG_BYTE_PREFIX(
+    const sourcemeta::core::JSON &document,
+    [[maybe_unused]] const struct ANY_PACKED_TYPE_TAG_BYTE_PREFIX &options)
+    -> void {
+  using namespace any_packed_type_tag_byte_prefix;
+  if (document.is_null()) {
+    this->put_byte(TYPE_OTHER | (SUBTYPE_NULL << TYPE_SIZE));
+  } else if (document.is_boolean()) {
+    const std::uint8_t subtype{document.to_boolean() ? SUBTYPE_TRUE
+                                                     : SUBTYPE_FALSE};
+    this->put_byte(TYPE_OTHER |
+                   static_cast<std::uint8_t>(subtype << TYPE_SIZE));
+  } else if (document.is_real() && document.is_integral()) {
+    const auto value{document.as_integer()};
+    if (value >= 0 && sourcemeta::core::is_byte(value)) {
+      this->put_byte(TYPE_OTHER | SUBTYPE_POSITIVE_REAL_INTEGER_BYTE
+                                      << TYPE_SIZE);
+      this->put_byte(static_cast<std::uint8_t>(value));
+    } else {
+      this->put_byte(TYPE_OTHER | SUBTYPE_NUMBER << TYPE_SIZE);
+      this->DOUBLE_VARINT_TUPLE(document, {});
+    }
+  } else if (document.is_real()) {
+    this->put_byte(TYPE_OTHER | SUBTYPE_NUMBER << TYPE_SIZE);
+    this->DOUBLE_VARINT_TUPLE(document, {});
+  } else if (document.is_integer()) {
+    const std::int64_t value{document.to_integer()};
+    const bool is_positive{value >= 0};
+    const std::uint64_t absolute{is_positive
+                                     ? static_cast<std::uint64_t>(value)
+                                     : sourcemeta::core::abs(value) - 1};
+    if (sourcemeta::core::is_byte(absolute)) {
+      const std::uint8_t type{is_positive ? TYPE_POSITIVE_INTEGER_BYTE
+                                          : TYPE_NEGATIVE_INTEGER_BYTE};
+      const std::uint8_t absolute_byte{static_cast<std::uint8_t>(absolute)};
+      if (absolute < sourcemeta::core::uint_max<5>) {
+        this->put_byte(
+            type | static_cast<std::uint8_t>((absolute_byte + 1) << TYPE_SIZE));
+      } else {
+        this->put_byte(type);
+        this->put_byte(absolute_byte);
+      }
+    } else {
+      const std::uint8_t subtype{is_positive ? SUBTYPE_POSITIVE_INTEGER
+                                             : SUBTYPE_NEGATIVE_INTEGER};
+      this->put_byte(TYPE_OTHER |
+                     static_cast<std::uint8_t>(subtype << TYPE_SIZE));
+      this->put_varint(absolute);
+    }
+  } else if (document.is_decimal()) {
+    this->put_byte(TYPE_OTHER |
+                   static_cast<std::uint8_t>(SUBTYPE_DECIMAL << TYPE_SIZE));
+    this->NUMBER_VARINT_TUPLE(document, {});
+  } else if (document.is_string()) {
+    const sourcemeta::core::JSON::String &value{document.to_string()};
+    const auto size{document.byte_size()};
+    const auto shared{this->cache_.find(value, BinPackCache::Type::Standalone)};
+    if (size < sourcemeta::core::uint_max<5>) {
+      const std::uint8_t type{shared.has_value() ? TYPE_SHARED_STRING
+                                                 : TYPE_STRING};
+      this->put_byte(
+          static_cast<std::uint8_t>(type | ((size + 1) << TYPE_SIZE)));
+      if (shared.has_value()) {
+        this->put_varint(this->position() - shared.value());
+      } else {
+        this->cache_.record(value, this->position(),
+                            BinPackCache::Type::Standalone);
+        this->put_string_utf8(value, size);
+      }
+    } else if (size >= sourcemeta::core::uint_max<5> &&
+               size <
+                   static_cast<std::uint64_t>(sourcemeta::core::uint_max<5>) *
+                       2 &&
+               !shared.has_value()) {
+      this->put_byte(static_cast<std::uint8_t>(
+          TYPE_LONG_STRING |
+          ((size - sourcemeta::core::uint_max<5>) << TYPE_SIZE)));
+      this->put_string_utf8(value, size);
+    } else if (size >= 2 << (SUBTYPE_LONG_STRING_BASE_EXPONENT_7 - 1) &&
+               !shared.has_value()) {
+      const std::uint8_t exponent{sourcemeta::core::closest_smallest_exponent(
+          size, 2, SUBTYPE_LONG_STRING_BASE_EXPONENT_7,
+          SUBTYPE_LONG_STRING_BASE_EXPONENT_10)};
+      this->put_byte(
+          static_cast<std::uint8_t>(TYPE_OTHER | (exponent << TYPE_SIZE)));
+      this->put_varint(size - static_cast<std::uint64_t>(2 << (exponent - 1)));
+      this->put_string_utf8(value, size);
+    } else {
+      // Exploit the fact that a shared string always starts
+      // with an impossible length marker (0) to avoid having
+      // to encode an additional tag
+      if (!shared.has_value()) {
+        this->put_byte(TYPE_STRING);
+      }
+
+      // If we got this far, the string is at least a certain length
+      FLOOR_VARINT_PREFIX_UTF8_STRING_SHARED(
+          document,
+          {static_cast<std::uint64_t>(sourcemeta::core::uint_max<5> * 2)});
+      return;
+    }
+  } else if (document.is_array()) {
+    const auto size{document.size()};
+    if (size >= sourcemeta::core::uint_max<5>) {
+      this->put_byte(TYPE_ARRAY);
+      this->put_varint(size - sourcemeta::core::uint_max<5>);
+    } else {
+      this->put_byte(
+          static_cast<std::uint8_t>(TYPE_ARRAY | ((size + 1) << TYPE_SIZE)));
+    }
+
+    BinPackEncoding encoding{
+        sourcemeta::blaze::ANY_PACKED_TYPE_TAG_BYTE_PREFIX{}};
+    this->FIXED_TYPED_ARRAY(
+        document,
+        {.size = size,
+         .encoding = std::make_shared<BinPackEncoding>(std::move(encoding)),
+         .prefix_encodings = {}});
+  } else if (document.is_object()) {
+    const auto size{document.size()};
+    if (size >= sourcemeta::core::uint_max<5>) {
+      this->put_byte(TYPE_OBJECT);
+      this->put_varint(size - sourcemeta::core::uint_max<5>);
+    } else {
+      this->put_byte(
+          static_cast<std::uint8_t>(TYPE_OBJECT | ((size + 1) << TYPE_SIZE)));
+    }
+
+    BinPackEncoding key_encoding{
+        sourcemeta::blaze::PREFIX_VARINT_LENGTH_STRING_SHARED{}};
+    BinPackEncoding value_encoding{
+        sourcemeta::blaze::ANY_PACKED_TYPE_TAG_BYTE_PREFIX{}};
+    this->FIXED_TYPED_ARBITRARY_OBJECT(
+        document,
+        {.size = size,
+         .key_encoding =
+             std::make_shared<BinPackEncoding>(std::move(key_encoding)),
+         .encoding =
+             std::make_shared<BinPackEncoding>(std::move(value_encoding))});
+  } else {
+    // We should never get here
+    unreachable();
+  }
+}
+
+} // namespace sourcemeta::blaze

@@ -1,0 +1,64 @@
+#include <sourcemeta/blaze/binpack_encoder.h>
+
+#include <sourcemeta/core/numeric.h>
+
+#include <cassert> // assert
+#include <cstdint> // std::uint8_t
+#include <utility> // std::move
+
+namespace sourcemeta::blaze {
+
+auto BinPackEncoder::FIXED_TYPED_ARRAY(const sourcemeta::core::JSON &document,
+                                       const struct FIXED_TYPED_ARRAY &options)
+    -> void {
+  assert(document.is_array());
+  assert(document.size() == options.size);
+  const auto prefix_encodings{options.prefix_encodings.size()};
+  assert(prefix_encodings <= document.size());
+  for (std::size_t index = 0; index < options.size; index++) {
+    const BinPackEncoding &encoding{prefix_encodings > index
+                                        ? options.prefix_encodings[index]
+                                        : *(options.encoding)};
+    this->write(document.at(index), encoding);
+  }
+}
+
+auto BinPackEncoder::BOUNDED_8BITS_TYPED_ARRAY(
+    const sourcemeta::core::JSON &document,
+    const struct BOUNDED_8BITS_TYPED_ARRAY &options) -> void {
+  assert(options.maximum >= options.minimum);
+  const auto size{document.size()};
+  assert(sourcemeta::core::is_within(size, options.minimum, options.maximum));
+  assert(sourcemeta::core::is_byte(options.maximum - options.minimum));
+  this->put_byte(static_cast<std::uint8_t>(size - options.minimum));
+  this->FIXED_TYPED_ARRAY(document,
+                          {.size = size,
+                           .encoding = options.encoding,
+                           .prefix_encodings = options.prefix_encodings});
+}
+
+auto BinPackEncoder::FLOOR_TYPED_ARRAY(const sourcemeta::core::JSON &document,
+                                       const struct FLOOR_TYPED_ARRAY &options)
+    -> void {
+  const auto size{document.size()};
+  assert(size >= options.minimum);
+  this->put_varint(size - options.minimum);
+  this->FIXED_TYPED_ARRAY(document,
+                          {.size = size,
+                           .encoding = options.encoding,
+                           .prefix_encodings = options.prefix_encodings});
+}
+
+auto BinPackEncoder::ROOF_TYPED_ARRAY(const sourcemeta::core::JSON &document,
+                                      const struct ROOF_TYPED_ARRAY &options)
+    -> void {
+  const auto size{document.size()};
+  assert(size <= options.maximum);
+  this->put_varint(options.maximum - size);
+  this->FIXED_TYPED_ARRAY(document,
+                          {.size = size,
+                           .encoding = options.encoding,
+                           .prefix_encodings = options.prefix_encodings});
+}
+
+} // namespace sourcemeta::blaze
