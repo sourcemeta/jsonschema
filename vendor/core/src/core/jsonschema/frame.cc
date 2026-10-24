@@ -426,7 +426,10 @@ auto locate(const Locations &locations,
 
 // The spelling that every location is framed under and that every reference
 // destination is held to, which is what makes a URI that comes from anywhere
-// else comparable to either of them
+// else comparable to either of them. RFC 3986 Section 6.2.2.2 leaves a
+// percent-encoded reserved character where it stands, and RFC 6901 Section 6
+// only asks for the characters a fragment disallows to be encoded, so one
+// pointer has more than one spelling to begin with
 auto canonicalize_reference(const sourcemeta::core::JSON::String &uri)
     -> std::optional<sourcemeta::core::JSON::String> {
   try {
@@ -437,6 +440,18 @@ auto canonicalize_reference(const sourcemeta::core::JSON::String &uri)
   } catch (const sourcemeta::core::URIParseError &) {
     return std::nullopt;
   }
+}
+
+// A lookup that came up empty is only worth repeating under a spelling it has
+// not tried yet
+auto other_spelling(const sourcemeta::core::JSON::String &uri)
+    -> std::optional<sourcemeta::core::JSON::String> {
+  const auto canonical{canonicalize_reference(uri)};
+  if (!canonical.has_value() || canonical.value() == uri) {
+    return std::nullopt;
+  }
+
+  return canonical;
 }
 
 auto set_base_and_fragment(sourcemeta::core::SchemaFrame::Reference &entry)
@@ -2028,6 +2043,19 @@ auto SchemaFrame::location(const SchemaReferenceType type,
     return result->second;
   }
 
+  // A URI is settled the same way whichever kind of location it is asked
+  // for, as the kind narrows which places answer rather than how the name of
+  // a place is spelled
+  const auto canonical{other_spelling(uri_string)};
+  if (!canonical.has_value()) {
+    return std::nullopt;
+  }
+
+  const auto canonical_result{this->locations_.find({type, canonical.value()})};
+  if (canonical_result != this->locations_.cend()) {
+    return canonical_result->second;
+  }
+
   return std::nullopt;
 }
 
@@ -2122,15 +2150,10 @@ auto SchemaFrame::traverse(const std::string_view uri) const
     return direct;
   }
 
-  // Framing writes every location down under the canonical spelling of its
-  // URI, and holds the destination of every reference to that same spelling,
-  // so one that reaches here spelled any other way names what a reference
-  // spelled identically would reach. RFC 3986 Section 6.2.2.2 leaves a
-  // percent-encoded reserved character where it stands, and RFC 6901 Section
-  // 6 only asks for the characters a fragment disallows to be encoded, so one
-  // pointer has more than one spelling to begin with
-  const auto canonical{canonicalize_reference(uri_string)};
-  if (!canonical.has_value() || canonical.value() == uri_string) {
+  // A URI that reaches here spelled any other way names what a reference
+  // spelled identically would reach
+  const auto canonical{other_spelling(uri_string)};
+  if (!canonical.has_value()) {
     return std::nullopt;
   }
 

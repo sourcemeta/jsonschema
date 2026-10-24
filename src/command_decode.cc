@@ -2,8 +2,7 @@
 #include <sourcemeta/core/json.h>
 #include <sourcemeta/core/jsonschema.h>
 
-#include <sourcemeta/jsonbinpack/compiler.h>
-#include <sourcemeta/jsonbinpack/runtime.h>
+#include <sourcemeta/blaze/binpack.h>
 
 #include <filesystem> // std::filesystem
 #include <fstream>    // std::ifstream
@@ -50,9 +49,9 @@ auto sourcemeta::jsonschema::decode(const sourcemeta::core::Options &options)
   const auto &custom_resolver{
       resolver(options, options.contains("http"), dialect, configuration)};
 
-  sourcemeta::jsonbinpack::compile(schema, sourcemeta::core::schema_walker,
-                                   custom_resolver);
-  const auto encoding{sourcemeta::jsonbinpack::load(schema)};
+  sourcemeta::blaze::binpack_compile(schema, sourcemeta::core::schema_walker,
+                                     custom_resolver);
+  const auto encoding{sourcemeta::blaze::binpack_load(schema)};
 
   auto input_stream{sourcemeta::core::read_file(options.positional().front())};
 
@@ -60,7 +59,7 @@ auto sourcemeta::jsonschema::decode(const sourcemeta::core::Options &options)
   std::ofstream output_stream(sourcemeta::core::weakly_canonical(output),
                               std::ios::binary);
   output_stream.exceptions(std::ios_base::badbit);
-  sourcemeta::jsonbinpack::Decoder decoder{input_stream};
+  sourcemeta::blaze::BinPackDecoder decoder{input_stream};
 
   try {
     if (output.extension() == ".jsonl") {
