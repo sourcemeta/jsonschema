@@ -214,7 +214,9 @@ public:
             const sourcemeta::core::WeakPointer &pointer) const
       -> std::optional<std::reference_wrapper<const Reference>>;
 
-  /// Get a specific location entry by reference type and URI
+  /// Get a specific location entry by reference type and URI, settling the
+  /// spelling of the URI the way framing settles the one it files a location
+  /// under
   [[nodiscard]] auto location(const SchemaReferenceType type,
                               const std::string_view uri) const
       -> std::optional<std::reference_wrapper<const Location>>;

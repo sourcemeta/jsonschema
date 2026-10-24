@@ -27,7 +27,6 @@ if(NOT JSONSCHEMA_PORTABLE OR APPLE)
 endif()
 
 find_package(Blaze REQUIRED)
-find_package(JSONBinPack REQUIRED)
 
 add_subdirectory(src)
 

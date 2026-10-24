@@ -409,9 +409,10 @@ auto to_pointer(
     -> Pointer;
 
 /// @ingroup jsonpointer
-/// Parse the URI fragment representation of a JSON Pointer, percent-decoding
-/// the fragment data before interpretation as mandated by RFC 3986, Section
-/// 2.4 and RFC 6901, Section 6. The result is not set if the URI has no
+/// Parse the URI fragment representation of a JSON Pointer. Reference tokens
+/// are separated before their octets are decoded, so a percent-encoded slash
+/// neither separates two tokens, per RFC 3986, Section 2.2, nor belongs to
+/// one, per RFC 6901, Section 3. The result is not set if the URI has no
 /// fragment or if its fragment is not a valid JSON Pointer. For example:
 ///
 /// ```cpp

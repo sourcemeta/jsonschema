@@ -4,8 +4,7 @@
 #include <sourcemeta/core/jsonschema.h>
 #include <sourcemeta/core/yaml.h>
 
-#include <sourcemeta/jsonbinpack/compiler.h>
-#include <sourcemeta/jsonbinpack/runtime.h>
+#include <sourcemeta/blaze/binpack.h>
 
 #include <filesystem> // std::filesystem
 #include <fstream>    // std::ofstream
@@ -41,9 +40,9 @@ auto sourcemeta::jsonschema::encode(const sourcemeta::core::Options &options)
   const auto &custom_resolver{
       resolver(options, options.contains("http"), dialect, configuration)};
 
-  sourcemeta::jsonbinpack::compile(schema, sourcemeta::core::schema_walker,
-                                   custom_resolver);
-  const auto encoding{sourcemeta::jsonbinpack::load(schema)};
+  sourcemeta::blaze::binpack_compile(schema, sourcemeta::core::schema_walker,
+                                     custom_resolver);
+  const auto encoding{sourcemeta::blaze::binpack_load(schema)};
 
   const std::filesystem::path document{options.positional().front()};
   const auto original_size{std::filesystem::file_size(document)};
@@ -60,7 +59,7 @@ auto sourcemeta::jsonschema::encode(const sourcemeta::core::Options &options)
         sourcemeta::core::weakly_canonical(options.positional().at(1)),
         std::ios::binary);
     output_stream.exceptions(std::ios_base::badbit);
-    sourcemeta::jsonbinpack::Encoder encoder{output_stream};
+    sourcemeta::blaze::BinPackEncoder encoder{output_stream};
     std::size_t count{0};
     for (const auto &entry : sourcemeta::core::JSONL{stream}) {
       LOG_VERBOSE(options) << "Encoding entry #" << count << "\n";
@@ -87,7 +86,7 @@ auto sourcemeta::jsonschema::encode(const sourcemeta::core::Options &options)
         sourcemeta::core::weakly_canonical(options.positional().at(1)),
         std::ios::binary);
     output_stream.exceptions(std::ios_base::badbit);
-    sourcemeta::jsonbinpack::Encoder encoder{output_stream};
+    sourcemeta::blaze::BinPackEncoder encoder{output_stream};
     encoder.write(entry, encoding);
     output_stream.flush();
     const auto total_size{static_cast<std::uint64_t>(output_stream.tellp())};
