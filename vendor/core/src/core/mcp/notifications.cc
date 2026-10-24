@@ -206,20 +206,20 @@ auto mcp_make_notification(const MCPProtocolVersion version,
   } else if (method == MCP_METHOD_NOTIFICATIONS_MESSAGE) {
     const auto *level{
         parameters.try_at("level", sourcemeta::core::MCP_HASH_LEVEL)};
+    const auto resolved_level{(level != nullptr && level->is_string())
+                                  ? mcp_resolve_log_level(level->to_string())
+                                  : std::nullopt};
     internal::require(
-        (level != nullptr) && level->is_string() &&
-            internal::valid_log_level(level->to_string()) &&
+        resolved_level.has_value() &&
             parameters.defines("data", sourcemeta::core::MCP_HASH_DATA) &&
             optional_string(parameters, "logger",
                             sourcemeta::core::MCP_HASH_LOGGER),
         "Invalid logging notification");
     if (version == MCPProtocolVersion::V_2026_07_28 && from_server) {
       const auto threshold{mcp_resolve_log_level(*request_context->log_level)};
-      internal::require(
-          threshold.has_value() &&
-              mcp_log_level_enabled(*mcp_resolve_log_level(level->to_string()),
-                                    *threshold),
-          "Logging notification is below the request threshold");
+      internal::require(threshold.has_value() &&
+                            mcp_log_level_enabled(*resolved_level, *threshold),
+                        "Logging notification is below the request threshold");
     }
   } else if (method == MCP_METHOD_NOTIFICATIONS_CANCELLED) {
     const auto *identifier{

@@ -1,0 +1,137 @@
+#ifndef SOURCEMETA_BLAZE_BINPACK_LOADER_V1_ARRAY_H_
+#define SOURCEMETA_BLAZE_BINPACK_LOADER_V1_ARRAY_H_
+
+#include <sourcemeta/blaze/binpack.h>
+
+#include <sourcemeta/core/json.h>
+
+#include <algorithm> // std::transform
+#include <cassert>   // assert
+#include <cstdint>   // std::uint64_t
+#include <iterator>  // std::back_inserter
+#include <memory>    // std::make_shared
+#include <vector>    // std::vector
+
+namespace sourcemeta::blaze::v1 {
+
+// The encoding names are the ones the JSON BinPack specification defines, so
+// they keep their casing rather than following the C++ naming convention
+// NOLINTBEGIN(readability-identifier-naming)
+
+auto FIXED_TYPED_ARRAY(const sourcemeta::core::JSON &options)
+    -> BinPackEncoding {
+  assert(options.defines("size"));
+  assert(options.defines("encoding"));
+  assert(options.defines("prefixEncodings"));
+  const auto &size{options.at("size")};
+  const auto &array_encoding{options.at("encoding")};
+  const auto &prefix_encodings{options.at("prefixEncodings")};
+  assert(size.is_integer());
+  assert(size.is_positive());
+  assert(array_encoding.is_object());
+  assert(prefix_encodings.is_array());
+  std::vector<BinPackEncoding> encodings;
+  std::transform(prefix_encodings.as_array().cbegin(),
+                 prefix_encodings.as_array().cend(),
+                 std::back_inserter(encodings),
+                 [](const auto &element) -> BinPackEncoding {
+                   return binpack_load(element);
+                 });
+  assert(encodings.size() == prefix_encodings.size());
+  return sourcemeta::blaze::FIXED_TYPED_ARRAY{
+      .size = static_cast<std::uint64_t>(size.to_integer()),
+      .encoding =
+          std::make_shared<BinPackEncoding>(binpack_load(array_encoding)),
+      .prefix_encodings = std::move(encodings)};
+}
+
+auto BOUNDED_8BITS_TYPED_ARRAY(const sourcemeta::core::JSON &options)
+    -> BinPackEncoding {
+  assert(options.defines("minimum"));
+  assert(options.defines("maximum"));
+  assert(options.defines("encoding"));
+  assert(options.defines("prefixEncodings"));
+  const auto &minimum{options.at("minimum")};
+  const auto &maximum{options.at("maximum")};
+  const auto &array_encoding{options.at("encoding")};
+  const auto &prefix_encodings{options.at("prefixEncodings")};
+  assert(minimum.is_integer());
+  assert(maximum.is_integer());
+  assert(minimum.is_positive());
+  assert(maximum.is_positive());
+  assert(array_encoding.is_object());
+  assert(prefix_encodings.is_array());
+  std::vector<BinPackEncoding> encodings;
+  std::transform(prefix_encodings.as_array().cbegin(),
+                 prefix_encodings.as_array().cend(),
+                 std::back_inserter(encodings),
+                 [](const auto &element) -> BinPackEncoding {
+                   return binpack_load(element);
+                 });
+  assert(encodings.size() == prefix_encodings.size());
+  return sourcemeta::blaze::BOUNDED_8BITS_TYPED_ARRAY{
+      .minimum = static_cast<std::uint64_t>(minimum.to_integer()),
+      .maximum = static_cast<std::uint64_t>(maximum.to_integer()),
+      .encoding =
+          std::make_shared<BinPackEncoding>(binpack_load(array_encoding)),
+      .prefix_encodings = std::move(encodings)};
+}
+
+auto FLOOR_TYPED_ARRAY(const sourcemeta::core::JSON &options)
+    -> BinPackEncoding {
+  assert(options.defines("minimum"));
+  assert(options.defines("encoding"));
+  assert(options.defines("prefixEncodings"));
+  const auto &minimum{options.at("minimum")};
+  const auto &array_encoding{options.at("encoding")};
+  const auto &prefix_encodings{options.at("prefixEncodings")};
+  assert(minimum.is_integer());
+  assert(minimum.is_positive());
+  assert(array_encoding.is_object());
+  assert(prefix_encodings.is_array());
+  std::vector<BinPackEncoding> encodings;
+  std::transform(prefix_encodings.as_array().cbegin(),
+                 prefix_encodings.as_array().cend(),
+                 std::back_inserter(encodings),
+                 [](const auto &element) -> BinPackEncoding {
+                   return binpack_load(element);
+                 });
+  assert(encodings.size() == prefix_encodings.size());
+  return sourcemeta::blaze::FLOOR_TYPED_ARRAY{
+      .minimum = static_cast<std::uint64_t>(minimum.to_integer()),
+      .encoding =
+          std::make_shared<BinPackEncoding>(binpack_load(array_encoding)),
+      .prefix_encodings = std::move(encodings)};
+}
+
+auto ROOF_TYPED_ARRAY(const sourcemeta::core::JSON &options)
+    -> BinPackEncoding {
+  assert(options.defines("maximum"));
+  assert(options.defines("encoding"));
+  assert(options.defines("prefixEncodings"));
+  const auto &maximum{options.at("maximum")};
+  const auto &array_encoding{options.at("encoding")};
+  const auto &prefix_encodings{options.at("prefixEncodings")};
+  assert(maximum.is_integer());
+  assert(maximum.is_positive());
+  assert(array_encoding.is_object());
+  assert(prefix_encodings.is_array());
+  std::vector<BinPackEncoding> encodings;
+  std::transform(prefix_encodings.as_array().cbegin(),
+                 prefix_encodings.as_array().cend(),
+                 std::back_inserter(encodings),
+                 [](const auto &element) -> BinPackEncoding {
+                   return binpack_load(element);
+                 });
+  assert(encodings.size() == prefix_encodings.size());
+  return sourcemeta::blaze::ROOF_TYPED_ARRAY{
+      .maximum = static_cast<std::uint64_t>(maximum.to_integer()),
+      .encoding =
+          std::make_shared<BinPackEncoding>(binpack_load(array_encoding)),
+      .prefix_encodings = std::move(encodings)};
+}
+
+// NOLINTEND(readability-identifier-naming)
+} // namespace sourcemeta::blaze::v1
+
+#endif

@@ -45,8 +45,8 @@ enum class MCPCacheScope : std::uint8_t {
 /// assert(sourcemeta::core::mcp_cache_scope_string(
 ///            sourcemeta::core::MCPCacheScope::Private) == "private");
 /// ```
-constexpr auto mcp_cache_scope_string(const MCPCacheScope scope) noexcept
-    -> JSON::StringView {
+[[nodiscard]] constexpr auto
+mcp_cache_scope_string(const MCPCacheScope scope) noexcept -> JSON::StringView {
   switch (scope) {
     case MCPCacheScope::Public:
       return "public";
@@ -73,7 +73,8 @@ constexpr auto mcp_cache_scope_string(const MCPCacheScope scope) noexcept
 ///        sourcemeta::core::MCPCacheScope::Private);
 /// assert(!sourcemeta::core::mcp_resolve_cache_scope("shared").has_value());
 /// ```
-constexpr auto mcp_resolve_cache_scope(const JSON::StringView scope) noexcept
+[[nodiscard]] constexpr auto
+mcp_resolve_cache_scope(const JSON::StringView scope) noexcept
     -> std::optional<MCPCacheScope> {
   if (scope == "public") {
     return MCPCacheScope::Public;
@@ -183,9 +184,9 @@ struct MCPDescriptorPresentation {
 ///
 /// @see
 /// https://modelcontextprotocol.io/specification/2026-07-28/schema#annotations
-SOURCEMETA_CORE_MCP_EXPORT
-auto mcp_serialize_resource_annotations(
-    MCPProtocolVersion version, const MCPResourceAnnotations &annotations)
+[[nodiscard]] SOURCEMETA_CORE_MCP_EXPORT auto
+mcp_serialize_resource_annotations(MCPProtocolVersion version,
+                                   const MCPResourceAnnotations &annotations)
     -> JSON;
 
 /// @ingroup mcp
@@ -215,11 +216,10 @@ auto mcp_serialize_resource_annotations(
 ///
 /// @see
 /// https://modelcontextprotocol.io/specification/2026-07-28/schema#imagecontent
-SOURCEMETA_CORE_MCP_EXPORT
-auto mcp_make_image_block(MCPProtocolVersion version, JSON::StringView data,
-                          JSON::StringView mime_type,
-                          const MCPResourceAnnotations &annotations = {})
-    -> JSON;
+[[nodiscard]] SOURCEMETA_CORE_MCP_EXPORT auto
+mcp_make_image_block(MCPProtocolVersion version, JSON::StringView data,
+                     JSON::StringView mime_type,
+                     const MCPResourceAnnotations &annotations = {}) -> JSON;
 /// @ingroup mcp
 /// Build a base64 audio block, with the same contracts as the image builder.
 /// For example:
@@ -240,11 +240,10 @@ auto mcp_make_image_block(MCPProtocolVersion version, JSON::StringView data,
 ///
 /// @see
 /// https://modelcontextprotocol.io/specification/2026-07-28/schema#audiocontent
-SOURCEMETA_CORE_MCP_EXPORT
-auto mcp_make_audio_block(MCPProtocolVersion version, JSON::StringView data,
-                          JSON::StringView mime_type,
-                          const MCPResourceAnnotations &annotations = {})
-    -> JSON;
+[[nodiscard]] SOURCEMETA_CORE_MCP_EXPORT auto
+mcp_make_audio_block(MCPProtocolVersion version, JSON::StringView data,
+                     JSON::StringView mime_type,
+                     const MCPResourceAnnotations &annotations = {}) -> JSON;
 /// @ingroup mcp
 /// Embed a checked text/blob resource-content entry in a content block. For
 /// example:
@@ -269,9 +268,9 @@ auto mcp_make_audio_block(MCPProtocolVersion version, JSON::StringView data,
 ///
 /// @see
 /// https://modelcontextprotocol.io/specification/2026-07-28/schema#embeddedresource
-SOURCEMETA_CORE_MCP_EXPORT
-auto mcp_make_embedded_resource(MCPProtocolVersion version, JSON resource,
-                                const MCPResourceAnnotations &annotations = {})
+[[nodiscard]] SOURCEMETA_CORE_MCP_EXPORT auto
+mcp_make_embedded_resource(MCPProtocolVersion version, JSON resource,
+                           const MCPResourceAnnotations &annotations = {})
     -> JSON;
 /// @ingroup mcp
 /// Build a blob resource-content entry. The caller supplies base64-encoded
@@ -292,10 +291,9 @@ auto mcp_make_embedded_resource(MCPProtocolVersion version, JSON resource,
 ///
 /// @see
 /// https://modelcontextprotocol.io/specification/2026-07-28/schema#blobresourcecontents
-SOURCEMETA_CORE_MCP_EXPORT
-auto mcp_make_resource_blob_content(JSON::StringView uri,
-                                    JSON::StringView mime_type,
-                                    JSON::StringView blob) -> JSON;
+[[nodiscard]] SOURCEMETA_CORE_MCP_EXPORT auto
+mcp_make_resource_blob_content(JSON::StringView uri, JSON::StringView mime_type,
+                               JSON::StringView blob) -> JSON;
 /// @ingroup mcp
 /// Build an MCP `text` content block carrying the given text payload. For
 /// example:
@@ -313,8 +311,8 @@ auto mcp_make_resource_blob_content(JSON::StringView uri,
 ///
 /// @see
 /// https://modelcontextprotocol.io/specification/2026-07-28/schema#textcontent
-SOURCEMETA_CORE_MCP_EXPORT
-auto mcp_make_text_block(const JSON::StringView text) -> sourcemeta::core::JSON;
+[[nodiscard]] SOURCEMETA_CORE_MCP_EXPORT auto
+mcp_make_text_block(const JSON::StringView text) -> sourcemeta::core::JSON;
 
 /// @ingroup mcp
 /// Build an MCP content block referencing a resource by URI. This block type
@@ -339,13 +337,10 @@ auto mcp_make_text_block(const JSON::StringView text) -> sourcemeta::core::JSON;
 ///
 /// @see
 /// https://modelcontextprotocol.io/specification/2026-07-28/schema#resourcelink
-SOURCEMETA_CORE_MCP_EXPORT
-auto mcp_make_resource_link(const MCPProtocolVersion version,
-                            const JSON::StringView uri,
-                            const JSON::StringView name,
-                            const JSON::StringView mime_type = {},
-                            const JSON::StringView description = {})
-    -> sourcemeta::core::JSON;
+[[nodiscard]] SOURCEMETA_CORE_MCP_EXPORT auto mcp_make_resource_link(
+    const MCPProtocolVersion version, const JSON::StringView uri,
+    const JSON::StringView name, const JSON::StringView mime_type = {},
+    const JSON::StringView description = {}) -> sourcemeta::core::JSON;
 
 /// @ingroup mcp
 /// Decorate a successful MCP result object with version-appropriate envelope
@@ -373,8 +368,7 @@ auto mcp_make_resource_link(const MCPProtocolVersion version,
 ///
 /// @see
 /// https://modelcontextprotocol.io/specification/2026-07-28/schema#result
-SOURCEMETA_CORE_MCP_EXPORT
-auto mcp_decorate_result(
+[[nodiscard]] SOURCEMETA_CORE_MCP_EXPORT auto mcp_decorate_result(
     const MCPProtocolVersion version, sourcemeta::core::JSON result,
     const std::optional<MCPImplementation> &server_info = std::nullopt)
     -> sourcemeta::core::JSON;
@@ -403,11 +397,9 @@ auto mcp_decorate_result(
 ///
 /// @see
 /// https://modelcontextprotocol.io/specification/2026-07-28/server/utilities/caching#cacheable-results
-SOURCEMETA_CORE_MCP_EXPORT
-auto mcp_decorate_cacheable_result(const MCPProtocolVersion version,
-                                   sourcemeta::core::JSON result,
-                                   const MCPCachePolicy &cache_policy,
-                                   const JSON::StringView method)
+[[nodiscard]] SOURCEMETA_CORE_MCP_EXPORT auto mcp_decorate_cacheable_result(
+    const MCPProtocolVersion version, sourcemeta::core::JSON result,
+    const MCPCachePolicy &cache_policy, const JSON::StringView method)
     -> sourcemeta::core::JSON;
 
 /// @ingroup mcp
@@ -439,8 +431,7 @@ auto mcp_decorate_cacheable_result(const MCPProtocolVersion version,
 /// https://modelcontextprotocol.io/specification/2026-07-28/schema#emptyresult
 /// @see
 /// https://modelcontextprotocol.io/specification/2026-07-28/schema#jsonrpcresultresponse
-SOURCEMETA_CORE_MCP_EXPORT
-auto mcp_make_empty_response(
+[[nodiscard]] SOURCEMETA_CORE_MCP_EXPORT auto mcp_make_empty_response(
     const MCPProtocolVersion version, const sourcemeta::core::JSON &identifier,
     const std::optional<MCPImplementation> &server_info = std::nullopt)
     -> sourcemeta::core::JSON;
@@ -474,8 +465,7 @@ auto mcp_make_empty_response(
 ///
 /// @see
 /// https://modelcontextprotocol.io/specification/2026-07-28/server/tools
-SOURCEMETA_CORE_MCP_EXPORT
-auto mcp_make_tool_success(
+[[nodiscard]] SOURCEMETA_CORE_MCP_EXPORT auto mcp_make_tool_success(
     const MCPProtocolVersion version, const sourcemeta::core::JSON &identifier,
     sourcemeta::core::JSON result,
     const std::optional<MCPImplementation> &server_info = std::nullopt)
@@ -511,8 +501,7 @@ auto mcp_make_tool_success(
 ///
 /// @see
 /// https://modelcontextprotocol.io/specification/2026-07-28/server/tools
-SOURCEMETA_CORE_MCP_EXPORT
-auto mcp_make_tool_success(
+[[nodiscard]] SOURCEMETA_CORE_MCP_EXPORT auto mcp_make_tool_success(
     const MCPProtocolVersion version, const sourcemeta::core::JSON &identifier,
     sourcemeta::core::JSON structured, sourcemeta::core::JSON content_blocks,
     const std::optional<MCPImplementation> &server_info = std::nullopt)
@@ -543,8 +532,7 @@ auto mcp_make_tool_success(
 ///
 /// @see
 /// https://modelcontextprotocol.io/specification/2026-07-28/server/tools#error-handling
-SOURCEMETA_CORE_MCP_EXPORT
-auto mcp_make_tool_error(
+[[nodiscard]] SOURCEMETA_CORE_MCP_EXPORT auto mcp_make_tool_error(
     const MCPProtocolVersion version, const sourcemeta::core::JSON &identifier,
     const JSON::StringView message,
     const std::optional<MCPImplementation> &server_info = std::nullopt)
@@ -571,15 +559,14 @@ auto mcp_make_tool_error(
 ///
 /// @see
 /// https://modelcontextprotocol.io/specification/2026-07-28/schema#resource
-SOURCEMETA_CORE_MCP_EXPORT
-auto mcp_make_resource(const MCPProtocolVersion version,
-                       const JSON::StringView uri, const JSON::StringView name,
-                       const JSON::StringView mime_type,
-                       const JSON::StringView description = {},
-                       const std::optional<std::size_t> size = std::nullopt,
-                       const std::optional<double> priority = std::nullopt,
-                       const MCPDescriptorPresentation &presentation = {},
-                       const MCPResourceAnnotations &annotations = {})
+[[nodiscard]] SOURCEMETA_CORE_MCP_EXPORT auto
+mcp_make_resource(const MCPProtocolVersion version, const JSON::StringView uri,
+                  const JSON::StringView name, const JSON::StringView mime_type,
+                  const JSON::StringView description = {},
+                  const std::optional<std::size_t> size = std::nullopt,
+                  const std::optional<double> priority = std::nullopt,
+                  const MCPDescriptorPresentation &presentation = {},
+                  const MCPResourceAnnotations &annotations = {})
     -> sourcemeta::core::JSON;
 
 /// @ingroup mcp
@@ -601,11 +588,9 @@ auto mcp_make_resource(const MCPProtocolVersion version,
 ///
 /// @see
 /// https://modelcontextprotocol.io/specification/2026-07-28/schema#textresourcecontents
-SOURCEMETA_CORE_MCP_EXPORT
-auto mcp_make_resource_text_content(const JSON::StringView uri,
-                                    const JSON::StringView mime_type,
-                                    const JSON::StringView text)
-    -> sourcemeta::core::JSON;
+[[nodiscard]] SOURCEMETA_CORE_MCP_EXPORT auto mcp_make_resource_text_content(
+    const JSON::StringView uri, const JSON::StringView mime_type,
+    const JSON::StringView text) -> sourcemeta::core::JSON;
 
 /// @ingroup mcp
 /// Wrap a pre-built array of content entries into the MCP `resources/read`
@@ -635,11 +620,9 @@ auto mcp_make_resource_text_content(const JSON::StringView uri,
 ///
 /// @see
 /// https://modelcontextprotocol.io/specification/2026-07-28/server/resources
-SOURCEMETA_CORE_MCP_EXPORT
-auto mcp_make_resources_read_result(const MCPProtocolVersion version,
-                                    sourcemeta::core::JSON contents,
-                                    const MCPCachePolicy &cache_policy)
-    -> sourcemeta::core::JSON;
+[[nodiscard]] SOURCEMETA_CORE_MCP_EXPORT auto mcp_make_resources_read_result(
+    const MCPProtocolVersion version, sourcemeta::core::JSON contents,
+    const MCPCachePolicy &cache_policy) -> sourcemeta::core::JSON;
 
 /// @ingroup mcp
 /// Build a single entry for an MCP `resources/templates/list` response. For
@@ -663,8 +646,7 @@ auto mcp_make_resources_read_result(const MCPProtocolVersion version,
 ///
 /// @see
 /// https://modelcontextprotocol.io/specification/2026-07-28/schema#resourcetemplate
-SOURCEMETA_CORE_MCP_EXPORT
-auto mcp_make_resource_template(
+[[nodiscard]] SOURCEMETA_CORE_MCP_EXPORT auto mcp_make_resource_template(
     const MCPProtocolVersion version, const JSON::StringView uri_template,
     const JSON::StringView name, const JSON::StringView description,
     const JSON::StringView mime_type,
@@ -702,8 +684,7 @@ auto mcp_make_resource_template(
 ///
 /// @see
 /// https://modelcontextprotocol.io/specification/2026-07-28/schema#tool
-SOURCEMETA_CORE_MCP_EXPORT
-auto mcp_make_tool_descriptor(
+[[nodiscard]] SOURCEMETA_CORE_MCP_EXPORT auto mcp_make_tool_descriptor(
     const MCPProtocolVersion version, const JSON::StringView name,
     const JSON::StringView description, sourcemeta::core::JSON input_schema,
     std::optional<sourcemeta::core::JSON> output_schema = std::nullopt,
@@ -735,8 +716,7 @@ auto mcp_make_tool_descriptor(
 ///
 /// @see
 /// https://modelcontextprotocol.io/specification/2026-07-28/server/utilities/caching#cacheable-results
-SOURCEMETA_CORE_MCP_EXPORT
-auto mcp_make_tools_list_result(
+[[nodiscard]] SOURCEMETA_CORE_MCP_EXPORT auto mcp_make_tools_list_result(
     const MCPProtocolVersion version, sourcemeta::core::JSON tools,
     const std::optional<JSON::StringView> next_cursor,
     const MCPCachePolicy &cache_policy) -> sourcemeta::core::JSON;
@@ -771,8 +751,7 @@ auto mcp_make_tools_list_result(
 ///
 /// @see
 /// https://modelcontextprotocol.io/specification/2026-07-28/server/utilities/caching#cacheable-results
-SOURCEMETA_CORE_MCP_EXPORT
-auto mcp_make_resources_list_result(
+[[nodiscard]] SOURCEMETA_CORE_MCP_EXPORT auto mcp_make_resources_list_result(
     const MCPProtocolVersion version, sourcemeta::core::JSON resources,
     const std::optional<JSON::StringView> next_cursor,
     const MCPCachePolicy &cache_policy) -> sourcemeta::core::JSON;
@@ -801,8 +780,8 @@ auto mcp_make_resources_list_result(
 ///
 /// @see
 /// https://modelcontextprotocol.io/specification/2026-07-28/server/utilities/caching#cacheable-results
-SOURCEMETA_CORE_MCP_EXPORT
-auto mcp_make_resource_templates_list_result(
+[[nodiscard]] SOURCEMETA_CORE_MCP_EXPORT auto
+mcp_make_resource_templates_list_result(
     const MCPProtocolVersion version, sourcemeta::core::JSON resource_templates,
     const std::optional<JSON::StringView> next_cursor,
     const MCPCachePolicy &cache_policy) -> sourcemeta::core::JSON;
@@ -833,8 +812,7 @@ auto mcp_make_resource_templates_list_result(
 ///
 /// @see
 /// https://modelcontextprotocol.io/specification/2026-07-28/server/utilities/caching#cacheable-results
-SOURCEMETA_CORE_MCP_EXPORT
-auto mcp_make_prompts_list_result(
+[[nodiscard]] SOURCEMETA_CORE_MCP_EXPORT auto mcp_make_prompts_list_result(
     const MCPProtocolVersion version, sourcemeta::core::JSON prompts,
     const std::optional<JSON::StringView> next_cursor,
     const MCPCachePolicy &cache_policy) -> sourcemeta::core::JSON;
@@ -869,9 +847,9 @@ auto mcp_make_prompts_list_result(
 ///
 /// @see
 /// https://modelcontextprotocol.io/specification/2026-07-28/server/prompts
-SOURCEMETA_CORE_MCP_EXPORT
-auto mcp_make_prompts_get_result(MCPProtocolVersion version,
-                                 JSON::StringView description, JSON messages)
+[[nodiscard]] SOURCEMETA_CORE_MCP_EXPORT auto
+mcp_make_prompts_get_result(MCPProtocolVersion version,
+                            JSON::StringView description, JSON messages)
     -> JSON;
 
 /// @ingroup mcp
@@ -893,10 +871,10 @@ auto mcp_make_prompts_get_result(MCPProtocolVersion version,
 ///
 /// @see
 /// https://modelcontextprotocol.io/specification/2026-07-28/schema#completeresult
-SOURCEMETA_CORE_MCP_EXPORT
-auto mcp_make_completion_result(MCPProtocolVersion version, JSON values,
-                                std::optional<std::int64_t> total,
-                                std::optional<bool> has_more) -> JSON;
+[[nodiscard]] SOURCEMETA_CORE_MCP_EXPORT auto
+mcp_make_completion_result(MCPProtocolVersion version, JSON values,
+                           std::optional<std::int64_t> total,
+                           std::optional<bool> has_more) -> JSON;
 
 /// @ingroup mcp
 /// Serialize a complete MCP response for one of the six cacheable operations.
@@ -941,6 +919,25 @@ SOURCEMETA_CORE_MCP_EXPORT
 auto mcp_write_result(
     std::ostream &stream, MCPProtocolVersion version, JSON::StringView method,
     const JSON &identifier, const JSON &result,
+    std::optional<MCPCachePolicy> cache_policy,
+    std::optional<MCPImplementation> server_info = std::nullopt) -> void;
+
+/// @ingroup mcp
+/// Serialize a complete MCP response for one of the six cacheable operations
+/// using move semantics, decorating the provided result in-place.
+/// A cache policy is mandatory for 2026-07-28. Pass `std::nullopt` for legacy
+/// responses. A precomputed discovery result is held to the same rules as the
+/// builder that produces one, so its advertised revisions must be non-empty,
+/// must include the revision being served, and must each be one this library
+/// models.
+/// This writes JSON only. Stdio callers must append a newline themselves.
+///
+/// @see
+/// https://modelcontextprotocol.io/specification/2026-07-28/server/utilities/caching#cacheable-results
+SOURCEMETA_CORE_MCP_EXPORT
+auto mcp_write_result(
+    std::ostream &stream, MCPProtocolVersion version, JSON::StringView method,
+    const JSON &identifier, JSON &&result,
     std::optional<MCPCachePolicy> cache_policy,
     std::optional<MCPImplementation> server_info = std::nullopt) -> void;
 
@@ -1005,8 +1002,7 @@ auto mcp_write_result(
 ///
 /// @see
 /// https://modelcontextprotocol.io/specification/2025-11-25/basic/lifecycle#initialization
-SOURCEMETA_CORE_MCP_EXPORT
-auto mcp_make_initialize_response(
+[[nodiscard]] SOURCEMETA_CORE_MCP_EXPORT auto mcp_make_initialize_response(
     const sourcemeta::core::JSON &request,
     const MCPServerCapabilities &capabilities, const MCPImplementation &server,
     const std::span<const JSON::StringView> supported_versions,
@@ -1045,8 +1041,7 @@ auto mcp_make_initialize_response(
 ///
 /// @see
 /// https://modelcontextprotocol.io/specification/2026-07-28/schema#discoverresult
-SOURCEMETA_CORE_MCP_EXPORT
-auto mcp_make_server_discover_response(
+[[nodiscard]] SOURCEMETA_CORE_MCP_EXPORT auto mcp_make_server_discover_response(
     const MCPProtocolVersion version, const sourcemeta::core::JSON &identifier,
     const MCPServerCapabilities &capabilities, const MCPImplementation &server,
     const std::span<const JSON::StringView> supported_versions,
@@ -1098,8 +1093,7 @@ auto mcp_make_server_discover_response(
 ///
 /// @see
 /// https://modelcontextprotocol.io/specification/2026-07-28/basic/patterns/mrtr#supported-requests
-SOURCEMETA_CORE_MCP_EXPORT
-auto mcp_make_input_required_response(
+[[nodiscard]] SOURCEMETA_CORE_MCP_EXPORT auto mcp_make_input_required_response(
     const MCPProtocolVersion version, const JSON::StringView method,
     const sourcemeta::core::JSON &identifier,
     std::optional<sourcemeta::core::JSON> input_requests,
@@ -1136,9 +1130,9 @@ auto mcp_make_input_required_response(
 ///
 /// @see
 /// https://modelcontextprotocol.io/specification/2026-07-28/basic/patterns/mrtr
-SOURCEMETA_CORE_MCP_EXPORT
-auto mcp_request_input_responses(MCPProtocolVersion version,
-                                 const sourcemeta::core::JSON &envelope)
+[[nodiscard]] SOURCEMETA_CORE_MCP_EXPORT auto
+mcp_request_input_responses(MCPProtocolVersion version,
+                            const sourcemeta::core::JSON &envelope)
     -> const sourcemeta::core::JSON *;
 
 /// @ingroup mcp
@@ -1162,9 +1156,9 @@ auto mcp_request_input_responses(MCPProtocolVersion version,
 ///
 /// @see
 /// https://modelcontextprotocol.io/specification/2026-07-28/basic/patterns/mrtr
-SOURCEMETA_CORE_MCP_EXPORT
-auto mcp_request_state(MCPProtocolVersion version,
-                       const sourcemeta::core::JSON &envelope)
+[[nodiscard]] SOURCEMETA_CORE_MCP_EXPORT auto
+mcp_request_state(MCPProtocolVersion version,
+                  const sourcemeta::core::JSON &envelope)
     -> std::optional<JSON::StringView>;
 
 /// @ingroup mcp
@@ -1215,9 +1209,9 @@ struct MCPSubscriptionFilter {
 ///
 /// @see
 /// https://modelcontextprotocol.io/specification/2026-07-28/basic/patterns/subscriptions
-SOURCEMETA_CORE_MCP_EXPORT
-auto mcp_parse_subscription_filter(MCPProtocolVersion version,
-                                   const JSON &parameters)
+[[nodiscard]] SOURCEMETA_CORE_MCP_EXPORT auto
+mcp_parse_subscription_filter(MCPProtocolVersion version,
+                              const JSON &parameters)
     -> std::optional<MCPSubscriptionFilter>;
 
 /// @ingroup mcp
@@ -1242,9 +1236,9 @@ auto mcp_parse_subscription_filter(MCPProtocolVersion version,
 ///
 /// @see
 /// https://modelcontextprotocol.io/specification/2026-07-28/basic/patterns/subscriptions
-SOURCEMETA_CORE_MCP_EXPORT
-auto mcp_intersect_subscription_filters(const MCPSubscriptionFilter &requested,
-                                        const MCPSubscriptionFilter &supported)
+[[nodiscard]] SOURCEMETA_CORE_MCP_EXPORT auto
+mcp_intersect_subscription_filters(const MCPSubscriptionFilter &requested,
+                                   const MCPSubscriptionFilter &supported)
     -> MCPSubscriptionFilter;
 
 /// @ingroup mcp
@@ -1269,8 +1263,8 @@ auto mcp_intersect_subscription_filters(const MCPSubscriptionFilter &requested,
 ///
 /// @see
 /// https://modelcontextprotocol.io/specification/2026-07-28/basic/index#result-responses
-SOURCEMETA_CORE_MCP_EXPORT
-auto mcp_result_type(const JSON &result) -> std::optional<JSON::StringView>;
+[[nodiscard]] SOURCEMETA_CORE_MCP_EXPORT auto
+mcp_result_type(const JSON &result) -> std::optional<JSON::StringView>;
 
 /// @ingroup mcp
 /// Recognize base and explicitly negotiated extension result types. The
@@ -1299,8 +1293,7 @@ auto mcp_result_type(const JSON &result) -> std::optional<JSON::StringView>;
 ///
 /// @see
 /// https://modelcontextprotocol.io/specification/2026-07-28/basic/index#result-responses
-SOURCEMETA_CORE_MCP_EXPORT
-auto mcp_resolve_result_type(
+[[nodiscard]] SOURCEMETA_CORE_MCP_EXPORT auto mcp_resolve_result_type(
     MCPProtocolVersion version, const JSON &result,
     std::span<const JSON::StringView> supported_extension_types = {})
     -> std::optional<JSON::StringView>;
@@ -1344,10 +1337,9 @@ auto mcp_resolve_result_type(
 ///
 /// @see
 /// https://modelcontextprotocol.io/specification/2026-07-28/basic/patterns/mrtr#client-requirements-basic-workflow
-SOURCEMETA_CORE_MCP_EXPORT
-auto mcp_validate_continuation(MCPProtocolVersion version,
-                               const JSON &parameters,
-                               const JSON &input_requests) -> bool;
+[[nodiscard]] SOURCEMETA_CORE_MCP_EXPORT auto
+mcp_validate_continuation(MCPProtocolVersion version, const JSON &parameters,
+                          const JSON &input_requests) -> bool;
 
 /// @ingroup mcp
 /// Check continuation fields and the state token, where the expected state
@@ -1382,11 +1374,10 @@ auto mcp_validate_continuation(MCPProtocolVersion version,
 ///
 /// @see
 /// https://modelcontextprotocol.io/specification/2026-07-28/basic/patterns/mrtr
-SOURCEMETA_CORE_MCP_EXPORT
-auto mcp_validate_continuation(MCPProtocolVersion version,
-                               const JSON &parameters,
-                               const JSON &input_requests,
-                               std::optional<JSON::StringView> expected_state)
+[[nodiscard]] SOURCEMETA_CORE_MCP_EXPORT auto
+mcp_validate_continuation(MCPProtocolVersion version, const JSON &parameters,
+                          const JSON &input_requests,
+                          std::optional<JSON::StringView> expected_state)
     -> bool;
 
 /// @ingroup mcp
@@ -1419,13 +1410,12 @@ auto mcp_validate_continuation(MCPProtocolVersion version,
 ///
 /// @see
 /// https://modelcontextprotocol.io/specification/2026-07-28/basic/patterns/subscriptions
-SOURCEMETA_CORE_MCP_EXPORT
-auto mcp_make_notification(MCPProtocolVersion version, bool from_server,
-                           JSON::StringView method, JSON parameters,
-                           std::optional<JSON> subscription_id,
-                           const MCPSubscriptionFilter *acknowledged = nullptr,
-                           const MCPRequestMeta *request_context = nullptr)
-    -> JSON;
+[[nodiscard]] SOURCEMETA_CORE_MCP_EXPORT auto
+mcp_make_notification(MCPProtocolVersion version, bool from_server,
+                      JSON::StringView method, JSON parameters,
+                      std::optional<JSON> subscription_id,
+                      const MCPSubscriptionFilter *acknowledged = nullptr,
+                      const MCPRequestMeta *request_context = nullptr) -> JSON;
 
 /// @ingroup mcp
 /// Build an acknowledgement notification for `subscriptions/listen` with a
@@ -1454,8 +1444,8 @@ auto mcp_make_notification(MCPProtocolVersion version, bool from_server,
 ///
 /// @see
 /// https://modelcontextprotocol.io/specification/2026-07-28/basic/patterns/subscriptions
-SOURCEMETA_CORE_MCP_EXPORT
-auto mcp_make_subscription_acknowledged_notification(
+[[nodiscard]] SOURCEMETA_CORE_MCP_EXPORT auto
+mcp_make_subscription_acknowledged_notification(
     const MCPProtocolVersion version,
     const sourcemeta::core::JSON &subscription_id,
     const MCPSubscriptionFilter &requested,
@@ -1486,8 +1476,8 @@ auto mcp_make_subscription_acknowledged_notification(
 ///
 /// @see
 /// https://modelcontextprotocol.io/specification/2026-07-28/basic/patterns/subscriptions
-SOURCEMETA_CORE_MCP_EXPORT
-auto mcp_make_subscription_acknowledged_notification(
+[[nodiscard]] SOURCEMETA_CORE_MCP_EXPORT auto
+mcp_make_subscription_acknowledged_notification(
     const MCPProtocolVersion version, const JSON::StringView subscription_id,
     const MCPSubscriptionFilter &requested,
     const MCPSubscriptionFilter &supported) -> sourcemeta::core::JSON;
@@ -1508,8 +1498,8 @@ auto mcp_make_subscription_acknowledged_notification(
 ///
 /// @see
 /// https://modelcontextprotocol.io/specification/2026-07-28/basic/patterns/subscriptions
-SOURCEMETA_CORE_MCP_EXPORT
-auto mcp_make_subscription_close_response(
+[[nodiscard]] SOURCEMETA_CORE_MCP_EXPORT auto
+mcp_make_subscription_close_response(
     const MCPProtocolVersion version, const sourcemeta::core::JSON &identifier,
     const std::optional<MCPImplementation> &server_info = std::nullopt)
     -> sourcemeta::core::JSON;
@@ -1537,9 +1527,9 @@ auto mcp_make_subscription_close_response(
 ///
 /// @see
 /// https://modelcontextprotocol.io/specification/2026-07-28/basic/patterns/subscriptions
-SOURCEMETA_CORE_MCP_EXPORT
-auto mcp_request_subscription_id(MCPProtocolVersion version,
-                                 const sourcemeta::core::JSON &envelope)
+[[nodiscard]] SOURCEMETA_CORE_MCP_EXPORT auto
+mcp_request_subscription_id(MCPProtocolVersion version,
+                            const sourcemeta::core::JSON &envelope)
     -> const sourcemeta::core::JSON *;
 
 /// @ingroup mcp
@@ -1564,8 +1554,8 @@ auto mcp_request_subscription_id(MCPProtocolVersion version,
 ///
 /// @see
 /// https://modelcontextprotocol.io/specification/2026-07-28/server/tools
-SOURCEMETA_CORE_MCP_EXPORT
-auto mcp_tool_call_arguments(const sourcemeta::core::JSON &envelope)
+[[nodiscard]] SOURCEMETA_CORE_MCP_EXPORT auto
+mcp_tool_call_arguments(const sourcemeta::core::JSON &envelope)
     -> const sourcemeta::core::JSON *;
 
 } // namespace sourcemeta::core

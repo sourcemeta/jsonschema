@@ -665,6 +665,14 @@ auto embed_references(
       depth == 0 ? default_base : std::string_view{}, remaining};
   charge(remaining, frame);
 
+  // Framing holds the base it resolves against to its canonical spelling, so
+  // every reference destination it reports carries that spelling rather than
+  // the one the caller wrote. Settling it once here is what lets a reference
+  // be compared against it without parsing the base over again for each
+  const JSON::String canonical_base{depth == 0 && !default_base.empty()
+                                        ? URI::canonicalize(default_base)
+                                        : JSON::String{}};
+
   std::vector<std::tuple<JSON, JSON::String, SchemaBaseDialect>> deferred;
   std::vector<std::pair<Pointer, JSON::String>> ref_rewrites;
 
@@ -681,6 +689,16 @@ auto embed_references(
     // If we can't find the destination but there is a base and we can
     // find base, then we are facing an unresolved fragment
     if (!reference.base.empty() && frame.traverse(reference.base).has_value()) {
+      throw SchemaReferenceError(reference.destination, to_pointer(pointer),
+                                 "Could not resolve schema reference");
+    }
+
+    // And so is one whose base is the very document being bundled. A wrapper
+    // format puts the schemas it holds below a root that is no schema
+    // resource of its own, so nothing framed answers to the document's base
+    // and the test above passes it over, even though the fragment is all that
+    // leads nowhere
+    if (!canonical_base.empty() && reference.base == canonical_base) {
       throw SchemaReferenceError(reference.destination, to_pointer(pointer),
                                  "Could not resolve schema reference");
     }

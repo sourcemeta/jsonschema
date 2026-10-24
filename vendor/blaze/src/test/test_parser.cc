@@ -24,6 +24,53 @@ inline auto frame_root(const sourcemeta::core::SchemaFrame &frame)
   return uri.value().get();
 }
 
+// A YAML file may hold more than one document, while a test case names a
+// single instance rather than a stream of them. The combined reader hands back
+// the first document and drops the rest without a word, and has no way of
+// reporting that it did, so how it picks a reader is mirrored here in order to
+// ask the YAML one what remained
+inline auto read_single_document(const std::filesystem::path &path,
+                                 bool &more_documents)
+    -> sourcemeta::core::JSON {
+  const auto extension{path.extension()};
+  if (extension == ".yaml" || extension == ".yml") {
+    return sourcemeta::core::read_yaml(path, more_documents);
+  }
+
+  if (extension == ".json") {
+    return sourcemeta::core::read_json(path);
+  }
+
+  try {
+    return sourcemeta::core::read_json(path);
+  } catch (const sourcemeta::core::JSONParseError &) {
+    return sourcemeta::core::read_yaml(path, more_documents);
+  }
+}
+
+inline auto
+read_single_document(const std::filesystem::path &path, bool &more_documents,
+                     sourcemeta::core::JSON &output,
+                     const sourcemeta::core::JSON::ParseCallback &callback)
+    -> void {
+  const auto extension{path.extension()};
+  if (extension == ".yaml" || extension == ".yml") {
+    sourcemeta::core::read_yaml(path, more_documents, output, callback);
+    return;
+  }
+
+  if (extension == ".json") {
+    sourcemeta::core::read_json(path, output, callback);
+    return;
+  }
+
+  try {
+    sourcemeta::core::read_json(path, output, callback);
+  } catch (const sourcemeta::core::JSONParseError &) {
+    sourcemeta::core::read_yaml(path, more_documents, output, callback);
+  }
+}
+
 inline auto test_error_if(
     bool condition, const sourcemeta::core::PointerPositionTracker &tracker,
     const sourcemeta::core::Pointer &pointer, const char *message) -> void {
@@ -106,7 +153,11 @@ auto TestCase::parse(
   } else if (test_case_json.defines("rdfPath")) {
     const std::filesystem::path rdf_path{sourcemeta::core::weakly_canonical(
         base_path / test_case_json.at("rdfPath").to_string())};
-    rdf = sourcemeta::core::read_yaml_or_json(rdf_path);
+    bool more_documents{false};
+    rdf = read_single_document(rdf_path, more_documents);
+    test_error_if(more_documents, tracker, location.concat("rdfPath"),
+                  "The file referenced by the test case `rdfPath` property "
+                  "must hold a single document");
     test_error_if(!rdf.value().is_array(), tracker, location.concat("rdfPath"),
                   "The document referenced by the test case `rdfPath` "
                   "property must be an array");
@@ -125,7 +176,11 @@ auto TestCase::parse(
   const std::filesystem::path data_path{sourcemeta::core::weakly_canonical(
       base_path / test_case_json.at("dataPath").to_string())};
   sourcemeta::core::JSON data{nullptr};
-  sourcemeta::core::read_yaml_or_json(data_path, data, std::ref(data_tracker));
+  bool more_documents{false};
+  read_single_document(data_path, more_documents, data, std::ref(data_tracker));
+  test_error_if(more_documents, tracker, location.concat("dataPath"),
+                "The file referenced by the test case `dataPath` property "
+                "must hold a single document");
   return TestCase{.description = std::move(description),
                   .valid = test_case_json.at("valid").to_boolean(),
                   .data = std::move(data),

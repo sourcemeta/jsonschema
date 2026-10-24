@@ -237,7 +237,12 @@ public:
     }
   }
 
-  auto validate_end_of_stream() -> void {
+  // Whether anything stood after the document that was read, which is what a
+  // caller holding the whole input has no other way of learning. YAML 1.2.2
+  // Section 9.2 makes a stream "zero or more documents", so one that carries
+  // more than the single document handed back is well formed rather than
+  // malformed, and saying so is all there is to report
+  auto validate_end_of_stream() -> bool {
     // Whatever stands after the document that was read is checked rather than
     // handed over, so nothing of it is announced to whoever is listening for
     // the one document the caller gets
@@ -258,7 +263,7 @@ public:
     bool saw_document_end{this->document_ended_};
     this->skip_document_ends(token, saw_document_end);
     if (token.type == TokenType::StreamEnd) {
-      return;
+      return false;
     }
     while (token.type != TokenType::StreamEnd) {
       // Section 9.2: a document that is not terminated by a document end
@@ -271,7 +276,7 @@ public:
         opened_document = true;
         token = this->next_token();
         if (token.type == TokenType::StreamEnd) {
-          return;
+          return true;
         }
         // Section 8.2.3 admits an empty node, so an explicit document may
         // carry nothing of its own and be closed by its end marker directly
@@ -310,6 +315,8 @@ public:
       token = this->next_token();
       this->skip_document_ends(token, saw_document_end);
     }
+
+    return true;
   }
 
 private:

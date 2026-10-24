@@ -402,6 +402,43 @@ auto canonicalize_pointer_fragment(sourcemeta::core::URI &uri) -> void {
   }
 }
 
+// A static location and a dynamic one of the same spelling are two places, so
+// a URI that names either is looked for under both
+template <typename Locations>
+auto locate(const Locations &locations,
+            const sourcemeta::core::JSON::String &uri)
+    -> std::optional<
+        std::reference_wrapper<const sourcemeta::core::SchemaFrame::Location>> {
+  const auto static_result{
+      locations.find({sourcemeta::core::SchemaReferenceType::Static, uri})};
+  if (static_result != locations.cend()) {
+    return static_result->second;
+  }
+
+  const auto dynamic_result{
+      locations.find({sourcemeta::core::SchemaReferenceType::Dynamic, uri})};
+  if (dynamic_result != locations.cend()) {
+    return dynamic_result->second;
+  }
+
+  return std::nullopt;
+}
+
+// The spelling that every location is framed under and that every reference
+// destination is held to, which is what makes a URI that comes from anywhere
+// else comparable to either of them
+auto canonicalize_reference(const sourcemeta::core::JSON::String &uri)
+    -> std::optional<sourcemeta::core::JSON::String> {
+  try {
+    sourcemeta::core::URI result{uri};
+    result.canonicalize();
+    canonicalize_pointer_fragment(result);
+    return result.recompose();
+  } catch (const sourcemeta::core::URIParseError &) {
+    return std::nullopt;
+  }
+}
+
 auto set_base_and_fragment(sourcemeta::core::SchemaFrame::Reference &entry)
     -> void {
   const std::string_view destination_view{entry.destination};
@@ -2080,19 +2117,24 @@ auto SchemaFrame::traverse(
 auto SchemaFrame::traverse(const std::string_view uri) const
     -> std::optional<std::reference_wrapper<const Location>> {
   const sourcemeta::core::JSON::String uri_string{uri};
-  const auto static_result{
-      this->locations_.find({SchemaReferenceType::Static, uri_string})};
-  if (static_result != this->locations_.cend()) {
-    return static_result->second;
+  const auto direct{locate(this->locations_, uri_string)};
+  if (direct.has_value()) {
+    return direct;
   }
 
-  const auto dynamic_result{
-      this->locations_.find({SchemaReferenceType::Dynamic, uri_string})};
-  if (dynamic_result != this->locations_.cend()) {
-    return dynamic_result->second;
+  // Framing writes every location down under the canonical spelling of its
+  // URI, and holds the destination of every reference to that same spelling,
+  // so one that reaches here spelled any other way names what a reference
+  // spelled identically would reach. RFC 3986 Section 6.2.2.2 leaves a
+  // percent-encoded reserved character where it stands, and RFC 6901 Section
+  // 6 only asks for the characters a fragment disallows to be encoded, so one
+  // pointer has more than one spelling to begin with
+  const auto canonical{canonicalize_reference(uri_string)};
+  if (!canonical.has_value() || canonical.value() == uri_string) {
+    return std::nullopt;
   }
 
-  return std::nullopt;
+  return locate(this->locations_, canonical.value());
 }
 
 auto SchemaFrame::traverse(const sourcemeta::core::WeakPointer &pointer) const

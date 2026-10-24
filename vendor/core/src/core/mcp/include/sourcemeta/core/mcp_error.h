@@ -109,11 +109,11 @@ enum class MCPErrorContext : std::uint8_t {
 ///
 /// @see
 /// https://modelcontextprotocol.io/specification/2026-07-28/basic/index#responses
-SOURCEMETA_CORE_MCP_EXPORT
-auto mcp_make_error(MCPProtocolVersion version, const JSON *identifier,
-                    std::int64_t code, JSON::StringView message,
-                    std::optional<JSON> data = std::nullopt,
-                    MCPErrorContext context = MCPErrorContext::Request) -> JSON;
+[[nodiscard]] SOURCEMETA_CORE_MCP_EXPORT auto
+mcp_make_error(MCPProtocolVersion version, const JSON *identifier,
+               std::int64_t code, JSON::StringView message,
+               std::optional<JSON> data = std::nullopt,
+               MCPErrorContext context = MCPErrorContext::Request) -> JSON;
 
 /// @ingroup mcp
 /// The legacy MCP error code returned when a requested resource cannot be
@@ -196,8 +196,9 @@ constexpr std::int64_t MCP_CODE_UNSUPPORTED_PROTOCOL_VERSION{-32022};
 /// @see
 /// https://modelcontextprotocol.io/specification/2026-07-28/basic/transports/streamable-http#server-validation
 /// https://modelcontextprotocol.io/specification/2026-07-28/basic/index#_meta
-constexpr auto mcp_error_code_to_http_status(const MCPProtocolVersion version,
-                                             const std::int64_t code) noexcept
+[[nodiscard]] constexpr auto
+mcp_error_code_to_http_status(const MCPProtocolVersion version,
+                              const std::int64_t code) noexcept
     -> std::optional<HTTPStatus> {
   if (version != MCPProtocolVersion::V_2026_07_28) {
     return std::nullopt;
@@ -247,8 +248,8 @@ constexpr auto mcp_error_code_to_http_status(const MCPProtocolVersion version,
 ///
 /// @see
 /// https://modelcontextprotocol.io/specification/2026-07-28/basic/index#error-codes
-SOURCEMETA_CORE_MCP_EXPORT
-auto mcp_make_error_unsupported_protocol_version(
+[[nodiscard]] SOURCEMETA_CORE_MCP_EXPORT auto
+mcp_make_error_unsupported_protocol_version(
     const MCPProtocolVersion version, const sourcemeta::core::JSON *identifier,
     const JSON::StringView requested,
     const std::span<const JSON::StringView> supported)
@@ -282,8 +283,8 @@ auto mcp_make_error_unsupported_protocol_version(
 ///
 /// @see
 /// https://modelcontextprotocol.io/specification/2026-07-28/basic/index#error-codes
-SOURCEMETA_CORE_MCP_EXPORT
-auto mcp_make_error_missing_required_capability(
+[[nodiscard]] SOURCEMETA_CORE_MCP_EXPORT auto
+mcp_make_error_missing_required_capability(
     const MCPProtocolVersion version, const sourcemeta::core::JSON *identifier,
     sourcemeta::core::JSON required_capabilities,
     const JSON::StringView message) -> sourcemeta::core::JSON;
@@ -310,11 +311,9 @@ auto mcp_make_error_missing_required_capability(
 ///
 /// @see
 /// https://modelcontextprotocol.io/specification/2026-07-28/basic/transports/streamable-http#schema-extension
-SOURCEMETA_CORE_MCP_EXPORT
-auto mcp_make_error_header_mismatch(const MCPProtocolVersion version,
-                                    const sourcemeta::core::JSON *identifier,
-                                    const JSON::StringView message)
-    -> sourcemeta::core::JSON;
+[[nodiscard]] SOURCEMETA_CORE_MCP_EXPORT auto mcp_make_error_header_mismatch(
+    const MCPProtocolVersion version, const sourcemeta::core::JSON *identifier,
+    const JSON::StringView message) -> sourcemeta::core::JSON;
 
 /// @ingroup mcp
 /// Build a JSON-RPC error response for header mismatch (-32020) with detailed
@@ -346,13 +345,10 @@ auto mcp_make_error_header_mismatch(const MCPProtocolVersion version,
 ///
 /// @see
 /// https://modelcontextprotocol.io/specification/2026-07-28/basic/transports/streamable-http#schema-extension
-SOURCEMETA_CORE_MCP_EXPORT
-auto mcp_make_error_header_mismatch(const MCPProtocolVersion version,
-                                    const sourcemeta::core::JSON *identifier,
-                                    const JSON::StringView header_name,
-                                    const JSON::StringView header_value,
-                                    const JSON::StringView body_value)
-    -> sourcemeta::core::JSON;
+[[nodiscard]] SOURCEMETA_CORE_MCP_EXPORT auto mcp_make_error_header_mismatch(
+    const MCPProtocolVersion version, const sourcemeta::core::JSON *identifier,
+    const JSON::StringView header_name, const JSON::StringView header_value,
+    const JSON::StringView body_value) -> sourcemeta::core::JSON;
 
 /// @ingroup mcp
 /// Build a JSON-RPC error response for header mismatch (-32020) reporting an
@@ -379,11 +375,9 @@ auto mcp_make_error_header_mismatch(const MCPProtocolVersion version,
 ///
 /// @see
 /// https://modelcontextprotocol.io/specification/2026-07-28/basic/transports/streamable-http#schema-extension
-SOURCEMETA_CORE_MCP_EXPORT
-auto mcp_make_error_header_mismatch(const MCPProtocolVersion version,
-                                    const sourcemeta::core::JSON *identifier,
-                                    const JSON::StringView header_name,
-                                    const JSON::StringView header_value)
+[[nodiscard]] SOURCEMETA_CORE_MCP_EXPORT auto mcp_make_error_header_mismatch(
+    const MCPProtocolVersion version, const sourcemeta::core::JSON *identifier,
+    const JSON::StringView header_name, const JSON::StringView header_value)
     -> sourcemeta::core::JSON;
 
 /// @ingroup mcp
@@ -414,9 +408,9 @@ auto mcp_make_error_header_mismatch(const MCPProtocolVersion version,
 ///
 /// @see
 /// https://modelcontextprotocol.io/specification/2026-07-28/server/resources#error-handling
-SOURCEMETA_CORE_MCP_EXPORT
-auto mcp_make_error_resource_not_found(const MCPProtocolVersion version,
-                                       const sourcemeta::core::JSON *identifier)
+[[nodiscard]] SOURCEMETA_CORE_MCP_EXPORT auto
+mcp_make_error_resource_not_found(const MCPProtocolVersion version,
+                                  const sourcemeta::core::JSON *identifier)
     -> sourcemeta::core::JSON;
 
 } // namespace sourcemeta::core

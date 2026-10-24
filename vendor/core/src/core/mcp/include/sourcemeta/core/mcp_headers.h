@@ -141,8 +141,8 @@ struct MCPRequestMeta {
 ///
 /// @see
 /// https://modelcontextprotocol.io/specification/2026-07-28/basic/index#_meta
-SOURCEMETA_CORE_MCP_EXPORT
-auto mcp_validate_request_meta(const sourcemeta::core::JSON &envelope)
+[[nodiscard]] SOURCEMETA_CORE_MCP_EXPORT auto
+mcp_validate_request_meta(const sourcemeta::core::JSON &envelope)
     -> std::pair<MCPRequestMetaStatus, std::optional<MCPRequestMeta>>;
 
 /// @ingroup mcp
@@ -166,8 +166,8 @@ auto mcp_validate_request_meta(const sourcemeta::core::JSON &envelope)
 ///
 /// @see
 /// https://modelcontextprotocol.io/specification/2026-07-28/basic/index#_meta
-SOURCEMETA_CORE_MCP_EXPORT
-auto mcp_validate_request_parameters(const JSON &parameters)
+[[nodiscard]] SOURCEMETA_CORE_MCP_EXPORT auto
+mcp_validate_request_parameters(const JSON &parameters)
     -> std::pair<MCPRequestMetaStatus, std::optional<MCPRequestMeta>>;
 
 /// @ingroup mcp
@@ -216,8 +216,7 @@ auto mcp_validate_request_parameters(const JSON &parameters)
 ///
 /// @see
 /// https://modelcontextprotocol.io/specification/2026-07-28/basic/index#error-codes
-SOURCEMETA_CORE_MCP_EXPORT
-auto mcp_make_error_request_meta(
+[[nodiscard]] SOURCEMETA_CORE_MCP_EXPORT auto mcp_make_error_request_meta(
     const MCPProtocolVersion version, const sourcemeta::core::JSON *identifier,
     const MCPRequestMetaStatus status, const JSON::StringView requested,
     const std::span<const JSON::StringView> supported)
@@ -242,8 +241,8 @@ auto mcp_make_error_request_meta(
 ///
 /// @see
 /// https://modelcontextprotocol.io/specification/2026-07-28/basic/transports/streamable-http#standard-request-headers
-SOURCEMETA_CORE_MCP_EXPORT
-auto mcp_request_name_from_body(const sourcemeta::core::JSON &envelope)
+[[nodiscard]] SOURCEMETA_CORE_MCP_EXPORT auto
+mcp_request_name_from_body(const sourcemeta::core::JSON &envelope)
     -> std::optional<JSON::StringView>;
 
 /// @ingroup mcp
@@ -285,8 +284,7 @@ auto mcp_request_name_from_body(const sourcemeta::core::JSON &envelope)
 ///
 /// @see
 /// https://modelcontextprotocol.io/specification/2026-07-28/basic/transports/streamable-http#server-validation
-SOURCEMETA_CORE_MCP_EXPORT
-auto mcp_validate_request_headers(
+[[nodiscard]] SOURCEMETA_CORE_MCP_EXPORT auto mcp_validate_request_headers(
     const MCPProtocolVersion version,
     const std::optional<JSON::StringView> &protocol_version_header,
     const std::optional<JSON::StringView> &method_header,
@@ -316,8 +314,8 @@ auto mcp_validate_request_headers(
 ///
 /// @see
 /// https://modelcontextprotocol.io/specification/2026-07-28/basic/transports/streamable-http#value-encoding
-SOURCEMETA_CORE_MCP_EXPORT
-auto mcp_encode_header_value(JSON::StringView value) -> std::string;
+[[nodiscard]] SOURCEMETA_CORE_MCP_EXPORT auto
+mcp_encode_header_value(JSON::StringView value) -> std::string;
 
 /// @ingroup mcp
 /// Validate a borrowed HTTP header collection. Names are case insensitive.
@@ -363,8 +361,7 @@ auto mcp_encode_header_value(JSON::StringView value) -> std::string;
 ///
 /// @see
 /// https://modelcontextprotocol.io/specification/2026-07-28/basic/transports/streamable-http#server-validation
-SOURCEMETA_CORE_MCP_EXPORT
-auto mcp_validate_request_headers(
+[[nodiscard]] SOURCEMETA_CORE_MCP_EXPORT auto mcp_validate_request_headers(
     MCPProtocolVersion version,
     std::span<const std::pair<JSON::StringView, JSON::StringView>> headers,
     const JSON &envelope, std::span<const JSON::StringView> supported_versions)
@@ -442,9 +439,9 @@ struct MCPHeaderParameter {
 ///
 /// @see
 /// https://modelcontextprotocol.io/specification/2026-07-28/basic/transports/streamable-http#schema-extension
-SOURCEMETA_CORE_MCP_EXPORT
-auto mcp_make_parameter_headers(std::span<const MCPHeaderParameter> parameters,
-                                const JSON &arguments)
+[[nodiscard]] SOURCEMETA_CORE_MCP_EXPORT auto
+mcp_make_parameter_headers(std::span<const MCPHeaderParameter> parameters,
+                           const JSON &arguments)
     -> std::vector<std::pair<std::string, std::string>>;
 
 /// @ingroup mcp
@@ -478,8 +475,7 @@ auto mcp_make_parameter_headers(std::span<const MCPHeaderParameter> parameters,
 ///
 /// @see
 /// https://modelcontextprotocol.io/specification/2026-07-28/basic/transports/streamable-http#server-validation
-SOURCEMETA_CORE_MCP_EXPORT
-auto mcp_validate_parameter_headers(
+[[nodiscard]] SOURCEMETA_CORE_MCP_EXPORT auto mcp_validate_parameter_headers(
     MCPProtocolVersion version, const JSON &identifier,
     std::span<const MCPHeaderParameter> parameters, const JSON &arguments,
     std::span<const std::pair<JSON::StringView, JSON::StringView>> headers)

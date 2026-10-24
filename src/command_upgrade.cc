@@ -123,7 +123,15 @@ auto sourcemeta::jsonschema::upgrade(const sourcemeta::core::Options &options)
       sourcemeta::jsonschema::default_id(schema_path, schema_from_stdin),
       schema_display_path, parsed_schema.positions);
 
-  sourcemeta::jsonschema::format_schema(schema, custom_resolver, dialect);
+  // A boolean schema is the one shape an upgrade hands over without framing it
+  // first, as there is nothing in it to rewrite, so ordering it is where a
+  // dialect that could never be determined is first asked for
+  try {
+    sourcemeta::jsonschema::format_schema(schema, custom_resolver, dialect);
+  } catch (const sourcemeta::core::SchemaUnknownBaseDialectError &) {
+    throw sourcemeta::core::FileError<
+        sourcemeta::core::SchemaUnknownBaseDialectError>(schema_display_path);
+  }
 
   sourcemeta::jsonschema::write_schema(schema, std::cout, indentation,
                                        parsed_schema.roundtrip);

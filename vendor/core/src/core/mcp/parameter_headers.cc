@@ -64,8 +64,15 @@ auto require_parameters(const std::span<const MCPHeaderParameter> parameters)
 auto safe_parameter(const JSON &value, const MCPHeaderParameter &parameter)
     -> bool {
   if (parameter.type == JSON::Type::Integer) {
-    return value.is_integral() && value >= JSON{INT64_C(-9007199254740991)} &&
-           value <= JSON{INT64_C(9007199254740991)};
+    if (value.is_integer()) {
+      const auto integer{value.to_integer()};
+      return integer >= INT64_C(-9007199254740991) &&
+             integer <= INT64_C(9007199254740991);
+    }
+    static const JSON MIN_SAFE_INTEGER{INT64_C(-9007199254740991)};
+    static const JSON MAX_SAFE_INTEGER{INT64_C(9007199254740991)};
+    return value.is_integral() && value >= MIN_SAFE_INTEGER &&
+           value <= MAX_SAFE_INTEGER;
   }
   return value.type() == parameter.type;
 }
