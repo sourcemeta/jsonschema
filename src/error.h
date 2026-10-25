@@ -18,6 +18,7 @@
 #include <sourcemeta/core/options.h>
 #include <sourcemeta/core/yaml.h>
 
+#include <chrono>           // std::chrono::milliseconds
 #include <concepts>         // std::same_as, std::convertible_to
 #include <cstddef>          // std::size_t
 #include <cstdint>          // std::uint64_t
@@ -416,22 +417,6 @@ public:
 
 private:
   std::string example_;
-};
-
-// A request that ran out of time before an answer arrived. Waiting longer is
-// the one thing the caller can do about it, so what it took is part of what is
-// said
-class LLMTimeoutError : public std::runtime_error {
-public:
-  LLMTimeoutError(const std::string &message, std::string url)
-      : std::runtime_error{message}, url_{std::move(url)} {}
-
-  [[nodiscard]] auto url() const noexcept -> const std::string & {
-    return this->url_;
-  }
-
-private:
-  std::string url_;
 };
 
 class OptionConflictError : public std::runtime_error {
@@ -1339,6 +1324,23 @@ inline auto print_exception(const bool is_json, const Exception &exception)
         std::cerr << status.wire;
       }
       std::cerr << "\n";
+    }
+  }
+
+  // A backend does not report which of its bounds elapsed, so this is the
+  // total that was configured rather than what the request actually took
+  if constexpr (requires(const Exception &current) {
+                  {
+                    current.timeout()
+                  } -> std::same_as<std::chrono::milliseconds>;
+                }) {
+    const auto timeout{exception.timeout()};
+    if (is_json) {
+      error_json.assign(
+          "timeoutMilliseconds",
+          sourcemeta::core::JSON{static_cast<std::size_t>(timeout.count())});
+    } else {
+      std::cerr << "  after " << timeout.count() << " milliseconds\n";
     }
   }
 
@@ -2321,7 +2323,7 @@ inline auto try_catch(const sourcemeta::core::Options &options,
     const auto is_json{options.contains("json")};
     print_exception(is_json, error);
     return EXIT_OTHER_INPUT_ERROR;
-  } catch (const LLMTimeoutError &error) {
+  } catch (const sourcemeta::core::HTTPTimeoutError &error) {
     const auto is_json{options.contains("json")};
     print_exception(is_json, error);
     if (!is_json) {

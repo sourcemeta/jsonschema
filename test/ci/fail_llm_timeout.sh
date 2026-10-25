@@ -40,7 +40,9 @@ EOF
 test "$EXIT_CODE" = "1"
 
 cat << EOF > "$TMP/expected.txt"
-error: The completion request did not answer within 2 seconds
+error: The HTTP request timed out
+  after 2000 milliseconds
+  with method POST
   at url http://localhost:${PORT}/v1/chat/completions
 
 Pass --timeout/-T with a larger number of seconds to wait longer
@@ -57,7 +59,9 @@ test "$EXIT_CODE" = "1"
 
 cat << EOF > "$TMP/expected_json.txt"
 {
-  "error": "The completion request did not answer within 2 seconds",
+  "error": "The HTTP request timed out",
+  "timeoutMilliseconds": 2000,
+  "method": "POST",
   "url": "http://localhost:${PORT}/v1/chat/completions"
 }
 EOF
