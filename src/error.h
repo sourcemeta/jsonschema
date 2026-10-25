@@ -18,6 +18,7 @@
 #include <sourcemeta/core/options.h>
 #include <sourcemeta/core/yaml.h>
 
+#include <chrono>           // std::chrono::milliseconds
 #include <concepts>         // std::same_as, std::convertible_to
 #include <cstddef>          // std::size_t
 #include <cstdint>          // std::uint64_t
@@ -1326,6 +1327,23 @@ inline auto print_exception(const bool is_json, const Exception &exception)
     }
   }
 
+  // A backend does not report which of its bounds elapsed, so this is the
+  // total that was configured rather than what the request actually took
+  if constexpr (requires(const Exception &current) {
+                  {
+                    current.timeout()
+                  } -> std::same_as<std::chrono::milliseconds>;
+                }) {
+    const auto timeout{exception.timeout()};
+    if (is_json) {
+      error_json.assign(
+          "timeoutMilliseconds",
+          sourcemeta::core::JSON{static_cast<std::size_t>(timeout.count())});
+    } else {
+      std::cerr << "  after " << timeout.count() << " milliseconds\n";
+    }
+  }
+
   if constexpr (requires(const Exception &current) {
                   {
                     current.method()
@@ -2305,6 +2323,15 @@ inline auto try_catch(const sourcemeta::core::Options &options,
     const auto is_json{options.contains("json")};
     print_exception(is_json, error);
     return EXIT_OTHER_INPUT_ERROR;
+  } catch (const sourcemeta::core::HTTPTimeoutError &error) {
+    const auto is_json{options.contains("json")};
+    print_exception(is_json, error);
+    if (!is_json) {
+      std::cerr << "\nPass --timeout/-T with a larger number of seconds to "
+                   "wait longer\n";
+    }
+
+    return EXIT_UNEXPECTED_ERROR;
   } catch (const sourcemeta::core::HTTPStatusError &error) {
     const auto is_json{options.contains("json")};
     print_exception(is_json, error);
