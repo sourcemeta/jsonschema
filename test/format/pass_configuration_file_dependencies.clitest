@@ -1,0 +1,35 @@
+WRITE jsonschema.json UNTIL EOF
+{
+  "title": "My project",
+  "lint": {
+    "exclude": [ "apple" ]
+  },
+  "dependencies": {
+    "https://example.com/remote": "./vendor/remote.json"
+  }
+}
+EOF
+
+RUN fmt jsonschema.json STDIN /dev/null IN . INTO result.txt EXPECTING 0
+
+REPLACE $CWD WITH '[CWD]' IN result.txt
+
+WRITE expected.txt UNTIL EOF
+2> Interpreting as a configuration file: [CWD]/jsonschema.json
+EOF
+
+COMPARE result.txt AGAINST expected.txt
+
+WRITE expected_file_0.txt UNTIL EOF
+{
+  "title": "My project",
+  "dependencies": {
+    "https://example.com/remote": "./vendor/remote.json"
+  },
+  "lint": {
+    "exclude": [ "apple" ]
+  }
+}
+EOF
+
+COMPARE jsonschema.json AGAINST expected_file_0.txt
