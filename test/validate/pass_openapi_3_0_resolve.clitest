@@ -1,0 +1,30 @@
+// A v3.0 Schema Object names no dialect and no identifier of its own, so one
+// the resolution context holds is still what a reference across files reaches
+
+WRITE schema.json UNTIL EOF
+{
+  "type": "object",
+  "properties": {
+    "name": { "$ref": "./nested.json" }
+  }
+}
+EOF
+
+WRITE nested.json UNTIL EOF
+{
+  "type": "string",
+  "minLength": 2
+}
+EOF
+
+WRITE instance.json UNTIL EOF
+{ "name": "ok" }
+EOF
+
+RUN validate schema.json instance.json --default-dialect tag:spec.openapis.org,2024-10-18:oas/3.0/dialect --resolve nested.json STDIN /dev/null IN . INTO result.txt EXPECTING 0
+
+WRITE expected.txt UNTIL EOF
+2> 1 validated, 1 passed, 0 failed
+EOF
+
+COMPARE result.txt AGAINST expected.txt

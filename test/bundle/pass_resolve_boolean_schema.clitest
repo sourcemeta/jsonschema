@@ -1,0 +1,39 @@
+// A boolean schema has nowhere to carry an identifier or a dialect
+// declaration, so the resolution context hands one over as the boolean it is
+// rather than trying to write either keyword into it
+
+WRITE schema.json UNTIL EOF
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "name": { "$ref": "./nested.json" }
+  }
+}
+EOF
+
+WRITE nested.json UNTIL EOF
+true
+EOF
+
+RUN bundle schema.json --default-dialect https://json-schema.org/draft/2020-12/schema --resolve nested.json STDIN /dev/null IN . INTO result.txt EXPECTING 0
+
+REPLACE $CWD_URI WITH '[CWD_URI]' IN result.txt
+
+WRITE expected.txt UNTIL EOF
+1> {
+1>   "$schema": "https://json-schema.org/draft/2020-12/schema",
+1>   "$id": "[CWD_URI]/schema.json",
+1>   "type": "object",
+1>   "properties": {
+1>     "name": {
+1>       "$ref": "[CWD_URI]/nested.json"
+1>     }
+1>   },
+1>   "$defs": {
+1>     "[CWD_URI]/nested.json": true
+1>   }
+1> }
+EOF
+
+COMPARE result.txt AGAINST expected.txt

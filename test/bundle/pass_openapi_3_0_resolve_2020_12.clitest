@@ -1,0 +1,59 @@
+// What keywords a schema may carry is settled per resource rather than per
+// document, so a resource that names a dialect of its own keeps the identifier
+// and the dialect declaration that dialect spells, while one written against a
+// dialect that reserves neither sits beside it carrying neither
+
+WRITE schema.json UNTIL EOF
+{
+  "type": "object",
+  "properties": {
+    "name": { "$ref": "https://example.com/nested" },
+    "size": { "$ref": "./plain.json" }
+  }
+}
+EOF
+
+WRITE nested.json UNTIL EOF
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.com/nested",
+  "type": "string"
+}
+EOF
+
+WRITE plain.json UNTIL EOF
+{
+  "type": "integer"
+}
+EOF
+
+RUN bundle schema.json --default-dialect tag:spec.openapis.org,2024-10-18:oas/3.0/dialect --resolve nested.json --resolve plain.json STDIN /dev/null IN . INTO result.txt EXPECTING 0
+
+REPLACE $CWD_URI WITH '[CWD_URI]' IN result.txt
+REPLACE MATCHING 'file:[^"]*~1plain\.json' WITH '[CWD_URI_POINTER]~1plain.json' IN result.txt
+
+WRITE expected.txt UNTIL EOF
+1> {
+1>   "type": "object",
+1>   "properties": {
+1>     "name": {
+1>       "$ref": "https://example.com/nested"
+1>     },
+1>     "size": {
+1>       "$ref": "#/x-definitions/[CWD_URI_POINTER]~1plain.json"
+1>     }
+1>   },
+1>   "x-definitions": {
+1>     "https://example.com/nested": {
+1>       "$schema": "https://json-schema.org/draft/2020-12/schema",
+1>       "$id": "https://example.com/nested",
+1>       "type": "string"
+1>     },
+1>     "[CWD_URI]/plain.json": {
+1>       "type": "integer"
+1>     }
+1>   }
+1> }
+EOF
+
+COMPARE result.txt AGAINST expected.txt
