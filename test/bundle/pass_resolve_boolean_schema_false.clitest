@@ -1,0 +1,72 @@
+// Restating the boolean that refuses everything takes a keyword to say so, so
+// what lands in the container spells it out rather than being left as a name
+// that accepts anything
+
+WRITE schema.json UNTIL EOF
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "name": { "$ref": "./nested.json" }
+  }
+}
+EOF
+
+WRITE nested.json UNTIL EOF
+false
+EOF
+
+WRITE instance.json UNTIL EOF
+{ "name": "anything" }
+EOF
+
+RUN bundle schema.json --default-dialect https://json-schema.org/draft/2020-12/schema --resolve nested.json STDIN /dev/null IN . INTO result.txt EXPECTING 0
+
+EXTRACT STDOUT FROM result.txt INTO bundled.json
+
+REPLACE $CWD_URI WITH '[CWD_URI]' IN result.txt
+
+WRITE expected_0.txt UNTIL EOF
+1> {
+1>   "$schema": "https://json-schema.org/draft/2020-12/schema",
+1>   "$id": "[CWD_URI]/schema.json",
+1>   "type": "object",
+1>   "properties": {
+1>     "name": {
+1>       "$ref": "[CWD_URI]/nested.json"
+1>     }
+1>   },
+1>   "$defs": {
+1>     "[CWD_URI]/nested.json": {
+1>       "$schema": "https://json-schema.org/draft/2020-12/schema",
+1>       "$id": "[CWD_URI]/nested.json",
+1>       "not": {}
+1>     }
+1>   }
+1> }
+EOF
+
+COMPARE result.txt AGAINST expected_0.txt
+
+REMOVE nested.json
+
+// Validation failure
+RUN validate bundled.json instance.json STDIN /dev/null IN . INTO standalone.txt EXPECTING 2
+
+WRITE expected_1.txt UNTIL EOF
+2> fail: instance.json
+2> error: Schema validation failure
+2>   The string value was expected to not validate against the given subschema, but it did
+2>     at instance location "/name" (line 1, column 3)
+2>     at evaluate path "/properties/name/$ref/not"
+2>   The string value was expected to validate against the referenced schema
+2>     at instance location "/name" (line 1, column 3)
+2>     at evaluate path "/properties/name/$ref"
+2>   The object value was expected to validate against the single defined property subschema
+2>     at instance location "" (line 1, column 1)
+2>     at evaluate path "/properties"
+2>
+2> 1 validated, 0 passed, 1 failed
+EOF
+
+COMPARE standalone.txt AGAINST expected_1.txt
