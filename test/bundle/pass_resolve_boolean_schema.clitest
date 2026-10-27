@@ -1,0 +1,58 @@
+// A boolean schema has nowhere to carry an identifier, so bundling restates it
+// as the object that says the same thing and names that, which is what leaves
+// the reference to it resolvable once the file it came from is gone
+
+WRITE schema.json UNTIL EOF
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "name": { "$ref": "./nested.json" }
+  }
+}
+EOF
+
+WRITE nested.json UNTIL EOF
+true
+EOF
+
+WRITE instance.json UNTIL EOF
+{ "name": "anything" }
+EOF
+
+RUN bundle schema.json --default-dialect https://json-schema.org/draft/2020-12/schema --resolve nested.json STDIN /dev/null IN . INTO result.txt EXPECTING 0
+
+EXTRACT STDOUT FROM result.txt INTO bundled.json
+
+REPLACE $CWD_URI WITH '[CWD_URI]' IN result.txt
+
+WRITE expected_0.txt UNTIL EOF
+1> {
+1>   "$schema": "https://json-schema.org/draft/2020-12/schema",
+1>   "$id": "[CWD_URI]/schema.json",
+1>   "type": "object",
+1>   "properties": {
+1>     "name": {
+1>       "$ref": "[CWD_URI]/nested.json"
+1>     }
+1>   },
+1>   "$defs": {
+1>     "[CWD_URI]/nested.json": {
+1>       "$schema": "https://json-schema.org/draft/2020-12/schema",
+1>       "$id": "[CWD_URI]/nested.json"
+1>     }
+1>   }
+1> }
+EOF
+
+COMPARE result.txt AGAINST expected_0.txt
+
+REMOVE nested.json
+
+RUN validate bundled.json instance.json STDIN /dev/null IN . INTO standalone.txt EXPECTING 0
+
+WRITE expected_1.txt UNTIL EOF
+2> 1 validated, 1 passed, 0 failed
+EOF
+
+COMPARE standalone.txt AGAINST expected_1.txt

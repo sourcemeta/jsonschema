@@ -118,7 +118,28 @@ auto schema_identifier_keyword(const SchemaBaseDialect base_dialect)
 /// @ingroup jsonschema
 ///
 /// A shortcut to sourcemeta::core::schema_reidentify if you know the base
-/// dialect of the schema.
+/// dialect of the schema. A base dialect names the keyword that declares an
+/// identifier without saying whether the dialect in force gives that keyword
+/// any meaning, so this overload cannot make that check and the caller has to
+/// make it instead. For example:
+///
+/// ```cpp
+/// #include <sourcemeta/core/json.h>
+/// #include <sourcemeta/core/jsonschema.h>
+/// #include <cassert>
+///
+/// sourcemeta::core::JSON document =
+///     sourcemeta::core::parse_json(R"JSON({
+///   "$schema": "http://json-schema.org/draft-04/schema#"
+/// })JSON");
+///
+/// sourcemeta::core::schema_reidentify(document,
+///   "https://example.com/my-new-id",
+///   sourcemeta::core::SchemaBaseDialect::JSON_SCHEMA_DRAFT_4);
+///
+/// assert(document.at("id").to_string() ==
+///   "https://example.com/my-new-id");
+/// ```
 SOURCEMETA_CORE_JSONSCHEMA_EXPORT
 auto schema_reidentify(sourcemeta::core::JSON &schema,
                        std::string_view new_identifier,

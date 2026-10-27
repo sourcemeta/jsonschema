@@ -4,18 +4,19 @@
 #include "document.h"
 #include "helpers.h"
 
-#include <algorithm>    // std::min
-#include <cassert>      // assert
-#include <charconv>     // std::from_chars
-#include <cstddef>      // std::size_t
-#include <cstdint>      // std::uint64_t
-#include <map>          // std::map
-#include <optional>     // std::optional
-#include <set>          // std::set
-#include <string>       // std::to_string
-#include <system_error> // std::errc
-#include <utility>      // std::move, std::make_pair, std::pair
-#include <vector>       // std::vector
+#include <algorithm>     // std::min
+#include <cassert>       // assert
+#include <charconv>      // std::from_chars
+#include <cstddef>       // std::size_t
+#include <cstdint>       // std::uint64_t
+#include <map>           // std::map
+#include <optional>      // std::optional
+#include <set>           // std::set
+#include <string>        // std::to_string
+#include <system_error>  // std::errc
+#include <unordered_set> // std::unordered_set
+#include <utility>       // std::move, std::make_pair, std::pair
+#include <vector>        // std::vector
 
 namespace {
 
@@ -872,7 +873,11 @@ auto bundle_schemas(sourcemeta::core::JSON &document,
   // the revision settles for the same reason
   const auto booleans{
       sourcemeta::core::openapi_schema_object_is_boolean(walk.version)};
-  const auto standalone_resolver{[&resolver, &standalone, &base, booleans,
+  // Which schemas answered as a boolean, which is the only record of the ones
+  // whose dialect has to be declared for them once they have landed
+  std::unordered_set<sourcemeta::core::JSON::String> standalone_booleans;
+  const auto standalone_resolver{[&resolver, &standalone, &base,
+                                  &standalone_booleans, booleans,
                                   nameable](const std::string_view identifier)
                                      -> sourcemeta::core::SchemaResolverResult {
     auto result{resolver(identifier)};
@@ -909,6 +914,16 @@ auto bundle_schemas(sourcemeta::core::JSON &document,
           "A Schema Object must be an object"};
     }
 
+    // Schema bundling restates a boolean as the object saying the same thing
+    // so that it can be named, but the declaration below is one a boolean has
+    // nowhere to hold, so what this hands over cannot carry it. Which of them
+    // arrived this way is remembered instead, and the declaration written once
+    // the object that replaced it has landed
+    if (result.has_value() && result.value().is_boolean()) {
+      standalone_booleans.insert(sourcemeta::core::JSON::String{identifier});
+      return result;
+    }
+
     if (!result.has_value() || !result.value().is_object() ||
         result.value().defines("$schema")) {
       return result;
@@ -943,14 +958,6 @@ auto bundle_schemas(sourcemeta::core::JSON &document,
   }
 
   auto &schemas{sourcemeta::core::get(document, container)};
-  // A resource that travels this way has to say who it is, which is what JSON
-  // Schema 2020-12 Section 9.3.1 asks of a Compound Schema Document: "Each
-  // embedded JSON Schema Resource MUST identify itself with a URI using the
-  // `$id` keyword". A description is not one of those, so nothing binds it
-  // here, but a reference that named a schema by URI goes on naming nothing
-  // unless the schema carries that URI. Section 4.8.24 lets a Schema Object be
-  // a boolean, which carries no keyword at all and so can say nothing, which
-  // writing it out as the object saying the same thing settles
   // What each key became, for the sake of whatever was written to point at the
   // old one
   std::vector<
@@ -959,17 +966,13 @@ auto bundle_schemas(sourcemeta::core::JSON &document,
   for (const auto &entry : landed) {
     const auto &identifier{entry.first};
     const auto &key{entry.second.back().to_property()};
-    auto &schema{schemas.at(key)};
-    if (schema.is_boolean()) {
-      spell_out(schema);
-      // A schema that can neither name its dialect nor name itself answers to
-      // where it sits, and what pointed at it was written as a pointer for
-      // that reason, so there is nothing here for it to be told to answer to
-      // instead
-      if (nameable) {
-        schema.assign("$schema", sourcemeta::core::JSON{standalone});
-        schema.assign("$id", sourcemeta::core::JSON{identifier});
-      }
+    // Section 4.8.24.5 reads "For standalone JSON Schema documents that do not
+    // set `$schema` [...] the dialect SHOULD be assumed to be the OAS
+    // dialect", and schema bundling handed the object that replaced a boolean
+    // the dialect it was bundling under instead, there being nothing on the
+    // boolean to tell it otherwise
+    if (nameable && standalone_booleans.contains(identifier)) {
+      schemas.at(key).assign("$schema", sourcemeta::core::JSON{standalone});
     }
 
     const auto name{schema_name(schemas, identifier, namer)};
@@ -2328,9 +2331,9 @@ auto bundle_internal(JSON &document, const SchemaWalker &walker,
       // being the last thing that happens.
       //
       // Going round again is safe as well as needed. Every schema that lands
-      // says who it is, and the one kind that cannot, a boolean, has whatever
-      // named it written out to name where it went, so a second pass finds
-      // nothing left outside to ask for rather than landing a second copy
+      // says who it is, a boolean being restated as the object that can say
+      // it, so a second pass finds nothing left outside to ask for rather than
+      // landing a second copy
       if (bundle_schemas(document, walk, walker, schema_resolver, base,
                          remaining, options)) {
         continue;

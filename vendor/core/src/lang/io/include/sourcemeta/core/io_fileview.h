@@ -9,6 +9,7 @@
 #include <cstddef>    // std::size_t
 #include <cstdint>    // std::uint8_t
 #include <filesystem> // std::filesystem::path
+#include <span>       // std::span
 
 namespace sourcemeta::core {
 
@@ -42,6 +43,21 @@ public:
 
   /// The size of the memory-mapped data in bytes
   [[nodiscard]] auto size() const noexcept -> std::size_t;
+
+  /// The memory-mapped data as a sequence of bytes, which is what lets a
+  /// reader hand out views into the mapping rather than copies of it. For
+  /// example:
+  ///
+  /// ```cpp
+  /// #include <sourcemeta/core/io.h>
+  /// #include <cassert>
+  ///
+  /// const sourcemeta::core::FileView view{"/path/to/file.bin"};
+  /// assert(view.bytes().size() == view.size());
+  /// ```
+  [[nodiscard]] auto bytes() const noexcept -> std::span<const std::uint8_t> {
+    return {this->data_, this->size_};
+  }
 
   /// Interpret the memory-mapped data as a pointer to T at the given offset.
   /// The caller must ensure that the offset yields a pointer suitably aligned

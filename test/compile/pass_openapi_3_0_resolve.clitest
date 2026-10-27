@@ -1,0 +1,78 @@
+// A v3.0 Schema Object carries no identifier, so what a reference across files
+// reaches is named by where it landed in the container that revision spells
+
+WRITE schema.json UNTIL EOF
+{
+  "allOf": [
+    { "$ref": "./nested.json" }
+  ]
+}
+EOF
+
+WRITE nested.json UNTIL EOF
+{
+  "type": "string",
+  "minLength": 2
+}
+EOF
+
+RUN compile schema.json --default-dialect tag:spec.openapis.org,2024-10-18:oas/3.0/dialect --resolve nested.json STDIN /dev/null IN . INTO result.txt EXPECTING 0
+
+REPLACE $CWD_URI WITH '[CWD_URI]' IN result.txt
+REPLACE MATCHING 'file:[^"]*~1nested\.json' WITH '[CWD_URI_POINTER]~1nested.json' IN result.txt
+
+WRITE expected.txt UNTIL EOF
+1> [
+1>   9,
+1>   false,
+1>   true,
+1>   [
+1>     [
+1>       [
+1>         60,
+1>         [ "allOf" ],
+1>         [],
+1>         "[CWD_URI]/schema.json#/allOf",
+1>         1,
+1>         1,
+1>         [ 0 ],
+1>         [
+1>           [
+1>             102,
+1>             [ 0, "$ref" ],
+1>             [],
+1>             "[CWD_URI]/schema.json#/allOf/0/$ref",
+1>             1,
+1>             1,
+1>             [ 10, 1 ]
+1>           ]
+1>         ]
+1>       ]
+1>     ],
+1>     [
+1>       [
+1>         22,
+1>         [ "minLength" ],
+1>         [],
+1>         "[CWD_URI]/schema.json#/x-definitions/[CWD_URI_POINTER]~1nested.json/minLength",
+1>         1,
+1>         1,
+1>         [ 10, 1 ]
+1>       ],
+1>       [
+1>         11,
+1>         [ "type" ],
+1>         [],
+1>         "[CWD_URI]/schema.json#/x-definitions/[CWD_URI_POINTER]~1nested.json/type",
+1>         1,
+1>         1,
+1>         [ 8, 4 ]
+1>       ]
+1>     ]
+1>   ],
+1>   [],
+1>   [ "tag:spec.openapis.org,2017:oas/3.0/vocab/base" ]
+1> ]
+EOF
+
+COMPARE result.txt AGAINST expected.txt

@@ -1,0 +1,44 @@
+// What a v3.0 Schema Object reaches across files is in force rather than
+// merely resolvable, so the keywords the referenced schema spells are the ones
+// an instance answers to
+
+WRITE schema.json UNTIL EOF
+{
+  "type": "object",
+  "properties": {
+    "name": { "$ref": "./nested.json" }
+  }
+}
+EOF
+
+WRITE nested.json UNTIL EOF
+{
+  "type": "string",
+  "minLength": 2
+}
+EOF
+
+WRITE instance.json UNTIL EOF
+{ "name": "x" }
+EOF
+
+// Validation failure
+RUN validate schema.json instance.json --default-dialect tag:spec.openapis.org,2024-10-18:oas/3.0/dialect --resolve nested.json STDIN /dev/null IN . INTO result.txt EXPECTING 2
+
+WRITE expected.txt UNTIL EOF
+2> fail: instance.json
+2> error: Schema validation failure
+2>   The string value "x" was expected to consist of at least 2 characters but it consisted of 1 character
+2>     at instance location "/name" (line 1, column 3)
+2>     at evaluate path "/properties/name/$ref/minLength"
+2>   The string value was expected to validate against the referenced schema
+2>     at instance location "/name" (line 1, column 3)
+2>     at evaluate path "/properties/name/$ref"
+2>   The object value was expected to validate against the single defined property subschema
+2>     at instance location "" (line 1, column 1)
+2>     at evaluate path "/properties"
+2>
+2> 1 validated, 0 passed, 1 failed
+EOF
+
+COMPARE result.txt AGAINST expected.txt

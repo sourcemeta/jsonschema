@@ -353,6 +353,16 @@ anonymous_base_dialect(const sourcemeta::core::JSON &schema,
 
 enum class IdentifierKeyword : std::uint8_t { Unknown, Modern, Legacy };
 
+// Whether the dialect in force gives a keyword any meaning at all, which is
+// what the vocabularies it draws on say rather than what its base dialect
+// happens to name
+static inline auto
+dialect_defines(const sourcemeta::core::SchemaVocabularies &vocabularies,
+                const std::string_view keyword) -> bool {
+  return sourcemeta::core::schema_walker(keyword, vocabularies).type !=
+         sourcemeta::core::SchemaKeywordType::Unknown;
+}
+
 // Every official meta-schema identifies itself using the keyword that its own
 // dialect relies on, which reveals that keyword without framing anything
 static inline auto identifier_keyword(const std::string_view dialect)
@@ -607,7 +617,7 @@ public:
             const sourcemeta::core::SchemaFrame::Location &entry) -> void {
           // Reject a resource whose vocabularies we cannot make sense of
           // upfront, rather than at the point some consumer relies on them
-          [[maybe_unused]] const auto &subschema_vocabularies{
+          const auto &subschema_vocabularies{
               frame.vocabularies(entry, std::ref(*this))};
 
           // A file stands for the single schema it declares. A resource that
@@ -634,11 +644,25 @@ public:
           }
 
           auto subschema{sourcemeta::core::get(schema, entry.pointer)};
-          // Fully resolve the dialect and identifier, otherwise the
-          // consumer might have no idea what to do with them
-          subschema.assign("$schema", sourcemeta::core::JSON{entry.dialect});
-          sourcemeta::core::schema_reidentify(subschema, uri,
-                                              entry.base_dialect);
+          // Fully resolve the dialect and identifier, otherwise the consumer
+          // might have no idea what to do with them. Neither keyword has
+          // anywhere to go in a boolean schema, and a dialect that reserves
+          // neither, as OpenAPI 3.0 does, admits no schema that writes one.
+          // Such a schema is registered as it stands, and whoever reads it
+          // names its dialect from the outside
+          if (subschema.is_object()) {
+            if (dialect_defines(subschema_vocabularies, "$schema")) {
+              subschema.assign("$schema",
+                               sourcemeta::core::JSON{entry.dialect});
+            }
+
+            if (dialect_defines(subschema_vocabularies,
+                                sourcemeta::core::schema_identifier_keyword(
+                                    entry.base_dialect))) {
+              sourcemeta::core::schema_reidentify(subschema, uri,
+                                                  entry.base_dialect);
+            }
+          }
 
           const std::string identifier{uri};
           const auto result{this->schemas_.emplace(identifier, subschema)};
