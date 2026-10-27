@@ -41,6 +41,48 @@ enum class JSONLDVersion : std::uint8_t {
 };
 
 /// @ingroup jsonld
+/// The reason expansion discarded a position in the input document
+enum class JSONLDExpandDropReason : std::uint8_t {
+  /// The active context does not define the key, and the key is not itself an
+  /// absolute IRI, so it cannot name a property
+  UndefinedKey,
+  /// The key has the form of a keyword without being one, so no context may
+  /// give it a meaning
+  KeywordFormKey,
+  /// The active context defines the key as a term that keeps no identifier,
+  /// which retires it from expansion while leaving it to be redefined
+  RetiredKey,
+  /// A type that expands to no absolute IRI, which cannot name a type
+  UndefinedType,
+  /// A keyword that carries no expanded value, so expansion has nothing to add
+  /// to the result for it
+  UnhandledKeyword,
+  /// A value object whose value is null
+  NullValueObject,
+  /// A value object that carries a language or a direction but no value
+  IncompleteValueObject,
+  /// A value with no property standing over it, where only a node object may
+  /// stand
+  FreeFloatingValue,
+  /// A null written where a value was expected
+  NullValue
+};
+
+/// @ingroup jsonld
+/// A callback for reporting the input that expansion discards. Given why the
+/// position was discarded, a pointer to it in the input document, and the
+/// value that goes no further, neither of the latter two outliving the call.
+///
+/// A key the active context does not define is never refused. It is dropped
+/// along with its value and everything nested below it (JSON-LD 1.1 API
+/// Section 5.1.2 step 13.3), which leaves a mistyped key indistinguishable
+/// from a document that says nothing, and is what this reports. See "A
+/// JSON-LD Handbook" by Wolodymyr Pawlyshyn, chapter 2,
+/// https://dr-json-ld.com/book/#expansion
+using JSONLDExpandDropCallback = std::function<void(
+    JSONLDExpandDropReason, const WeakPointer &, const JSON &)>;
+
+/// @ingroup jsonld
 ///
 /// Expand a JSON-LD document into its expanded form, resolving relative
 /// references against the given base IRI and loading any remote context through
@@ -63,7 +105,8 @@ enum class JSONLDVersion : std::uint8_t {
 SOURCEMETA_CORE_JSONLD_EXPORT
 auto jsonld_expand(const JSON &input, const JSON::StringView base_iri = "",
                    const JSONLDResolver &resolver = {},
-                   const JSONLDVersion version = JSONLDVersion::V1_1) -> JSON;
+                   const JSONLDVersion version = JSONLDVersion::V1_1,
+                   const JSONLDExpandDropCallback &drop_callback = {}) -> JSON;
 
 /// @ingroup jsonld
 ///
@@ -89,7 +132,8 @@ SOURCEMETA_CORE_JSONLD_EXPORT
 auto jsonld_expand(const JSON &input, const JSON &expand_context,
                    const JSON::StringView base_iri = "",
                    const JSONLDResolver &resolver = {},
-                   const JSONLDVersion version = JSONLDVersion::V1_1) -> JSON;
+                   const JSONLDVersion version = JSONLDVersion::V1_1,
+                   const JSONLDExpandDropCallback &drop_callback = {}) -> JSON;
 
 /// @ingroup jsonld
 ///

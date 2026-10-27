@@ -96,6 +96,8 @@ struct ExpansionState {
 
   // Used to load remote contexts. The chain detects recursive inclusion.
   const JSONLDResolver *resolver{nullptr};
+  // Used to report the input that expansion discards.
+  const JSONLDExpandDropCallback *drop_callback{nullptr};
   // Whether a reference already in the chain is an error. A scoped context is
   // validated against the contexts that are loading it, where meeting one of
   // them again is the recursion the validation must not follow (JSON-LD 1.1
@@ -144,6 +146,29 @@ struct ExpansionState {
     }
     return this->document_base;
   }
+};
+
+// RAII guard that silences drop reporting for the duration of a diagnostic
+// re-expansion, restoring it on every exit path. Locating an error must not
+// change what is reported, and whatever such a re-expansion discards was
+// already reported by the expansion that ran into the error
+struct SuspendedDropReportingScope {
+  ExpansionState &state;
+  const JSONLDExpandDropCallback *previous;
+
+  explicit SuspendedDropReportingScope(ExpansionState &value)
+      : state{value}, previous{value.drop_callback} {
+    this->state.drop_callback = nullptr;
+  }
+
+  ~SuspendedDropReportingScope() { this->state.drop_callback = this->previous; }
+
+  SuspendedDropReportingScope(const SuspendedDropReportingScope &) = delete;
+  auto operator=(const SuspendedDropReportingScope &)
+      -> SuspendedDropReportingScope & = delete;
+  SuspendedDropReportingScope(SuspendedDropReportingScope &&) = delete;
+  auto operator=(SuspendedDropReportingScope &&)
+      -> SuspendedDropReportingScope & = delete;
 };
 
 // RAII guard for where the context being processed reports what it says wrong,

@@ -47,10 +47,12 @@ auto run_expansion(ExpansionState &state, ActiveContext &active_context,
 // Set up the shared expansion state and initial active context from the public
 // entry-point arguments.
 auto initialise_expansion(const JSONLDResolver &resolver,
+                          const JSONLDExpandDropCallback *const drop_callback,
                           const JSON::StringView base_iri,
                           const JSONLDVersion version, ExpansionState &state,
                           ActiveContext &active_context) -> void {
   state.resolver = &resolver;
+  state.drop_callback = drop_callback;
   state.processing_1_0 = version == JSONLDVersion::V1_0;
   active_context.processing_1_0 = state.processing_1_0;
   if (!base_iri.empty()) {
@@ -81,21 +83,23 @@ auto process_expansion_context(ExpansionState &state,
 namespace sourcemeta::core {
 
 auto jsonld_expand(const JSON &input, const JSON::StringView base_iri,
-                   const JSONLDResolver &resolver, const JSONLDVersion version)
-    -> JSON {
+                   const JSONLDResolver &resolver, const JSONLDVersion version,
+                   const JSONLDExpandDropCallback &drop_callback) -> JSON {
   ExpansionState state;
   ActiveContext active_context;
-  initialise_expansion(resolver, base_iri, version, state, active_context);
+  initialise_expansion(resolver, &drop_callback, base_iri, version, state,
+                       active_context);
   return run_expansion(state, active_context, input);
 }
 
 auto jsonld_expand(const JSON &input, const JSON &expand_context,
                    const JSON::StringView base_iri,
-                   const JSONLDResolver &resolver, const JSONLDVersion version)
-    -> JSON {
+                   const JSONLDResolver &resolver, const JSONLDVersion version,
+                   const JSONLDExpandDropCallback &drop_callback) -> JSON {
   ExpansionState state;
   ActiveContext active_context;
-  initialise_expansion(resolver, base_iri, version, state, active_context);
+  initialise_expansion(resolver, &drop_callback, base_iri, version, state,
+                       active_context);
   const auto &context{
       expand_context.is_object() &&
               expand_context.defines(KEYWORD_CONTEXT, KEYWORD_CONTEXT_HASH)
@@ -116,7 +120,8 @@ auto jsonld_compact(const JSON &input, const JSON &context,
 
   ExpansionState state;
   ActiveContext active_context;
-  initialise_expansion(resolver, base_iri, version, state, active_context);
+  initialise_expansion(resolver, nullptr, base_iri, version, state,
+                       active_context);
   active_context.compact_to_relative = compact_to_relative;
   const auto &local_context{
       context.is_object() &&

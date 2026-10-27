@@ -22,6 +22,15 @@ auto into_array(JSON &&value) -> JSON {
   return result;
 }
 
+auto report_drop(const ExpansionState &state,
+                 const JSONLDExpandDropReason reason,
+                 const WeakPointer &pointer, const JSON &value) -> void {
+  if (state.drop_callback == nullptr || !*state.drop_callback) {
+    return;
+  }
+  (*state.drop_callback)(reason, pointer, value);
+}
+
 // The entries of an object in sorted key order, which is the order expansion
 // uses so that values merged from several keys are deterministic. The keys and
 // values are referenced from the object (which must outlive the result), never
@@ -109,6 +118,7 @@ auto forbidden_member_pointer(
     ExpansionState &state, ActiveContext &active_context,
     const std::optional<JSON::String> &active_property, const JSON &member,
     const WeakPointer &pointer, const ForbiddenMember forbidden) -> Pointer {
+  const SuspendedDropReportingScope silent{state};
   try {
     if (member.is_array()) {
       std::size_t index{0};
@@ -415,6 +425,8 @@ auto expand_object(ExpansionState &state, ActiveContext active_context,
     }
     const auto &content{*value_entry};
     if (content.is_null() && !is_json) {
+      report_drop(state, JSONLDExpandDropReason::NullValueObject, pointer,
+                  element);
       return JSON{nullptr};
     }
     if (result.defines(KEYWORD_LANGUAGE, KEYWORD_LANGUAGE_HASH) &&
@@ -485,17 +497,26 @@ auto expand_object(ExpansionState &state, ActiveContext active_context,
       }
     }
     if (only_value_keys) {
+      report_drop(state, JSONLDExpandDropReason::IncompleteValueObject, pointer,
+                  element);
       return JSON{nullptr};
     }
   }
 
-  // Drop free-floating values when not under a property.
+  // Drop free-floating values when not under a property. A map that expanded
+  // to nothing is left unreported, as whatever it held was already reported
+  // where it was discarded
   if (!active_property.has_value() ||
       active_property.value() == KEYWORD_GRAPH) {
-    if (result.empty() || result.defines(KEYWORD_VALUE, KEYWORD_VALUE_HASH) ||
+    if (result.defines(KEYWORD_VALUE, KEYWORD_VALUE_HASH) ||
         result.defines(KEYWORD_LIST, KEYWORD_LIST_HASH) ||
         (result.object_size() == 1 &&
          result.defines(KEYWORD_ID, KEYWORD_ID_HASH))) {
+      report_drop(state, JSONLDExpandDropReason::FreeFloatingValue, pointer,
+                  element);
+      return JSON{nullptr};
+    }
+    if (result.empty()) {
       return JSON{nullptr};
     }
   }
@@ -560,11 +581,18 @@ auto expand_entries(ExpansionState &state, ActiveContext &active_context,
       continue;
     }
     if (!expanded_property.has_value()) {
+      report_drop(state,
+                  has_keyword_form(property)
+                      ? JSONLDExpandDropReason::KeywordFormKey
+                      : JSONLDExpandDropReason::RetiredKey,
+                  entry_pointer, entry.second);
       continue;
     }
 
     const auto &name{expanded_property.value()};
     if (!name.contains(':') && !is_keyword(name)) {
+      report_drop(state, JSONLDExpandDropReason::UndefinedKey, entry_pointer,
+                  entry.second);
       continue;
     }
 
@@ -612,13 +640,18 @@ auto expand_entries(ExpansionState &state, ActiveContext &active_context,
       JSON expanded_type{nullptr};
       if (entry.second.is_array()) {
         expanded_type = JSON::make_array();
+        std::size_t expanded_type_index{0};
         for (const auto &item : entry.second.as_array()) {
           // A value that does not expand to an IRI is omitted, so @type stays
           // an array of strings.
           auto type{expand_type(state, type_context, item)};
-          if (!type.is_null()) {
+          if (type.is_null()) {
+            report_drop(state, JSONLDExpandDropReason::UndefinedType,
+                        entry_pointer.concat(expanded_type_index), item);
+          } else {
             expanded_type.push_back(std::move(type));
           }
+          expanded_type_index += 1;
         }
       } else {
         expanded_type = expand_type(state, type_context, entry.second);
@@ -626,6 +659,8 @@ auto expand_entries(ExpansionState &state, ActiveContext &active_context,
       // A lone @type value that does not expand to an IRI carries nothing,
       // which includes carrying no blame for what the element ends up with
       if (expanded_type.is_null()) {
+        report_drop(state, JSONLDExpandDropReason::UndefinedType, entry_pointer,
+                    entry.second);
         continue;
       }
       origins.type = entry_pointer;
@@ -678,6 +713,8 @@ auto expand_entries(ExpansionState &state, ActiveContext &active_context,
       // (JSON-LD 1.1 API Section 5.1.2 step 13.4.11.1)
       if (name == KEYWORD_LIST && (!active_property.has_value() ||
                                    active_property.value() == KEYWORD_GRAPH)) {
+        report_drop(state, JSONLDExpandDropReason::FreeFloatingValue,
+                    entry_pointer, entry.second);
         continue;
       }
 
@@ -686,6 +723,8 @@ auto expand_entries(ExpansionState &state, ActiveContext &active_context,
       // for the enclosing property to carry (JSON-LD 1.1 API Section 5.1.2
       // steps 13.4.12 and 18.2)
       if (name == KEYWORD_SET && entry.second.is_null()) {
+        report_drop(state, JSONLDExpandDropReason::NullValue, entry_pointer,
+                    entry.second);
         origins.collection = source_pointer;
         result.assign(name, JSON{nullptr});
         continue;
@@ -816,6 +855,7 @@ auto expand_entries(ExpansionState &state, ActiveContext &active_context,
             const auto reverse_values{into_array(JSON{reverse_entry.second})};
             for (const auto &item : reverse_values.as_array()) {
               if (is_value_or_list_object(item)) {
+                const SuspendedDropReportingScope silent{state};
                 // The map carries its own context into how its keys expand, so
                 // what it says wrong is located against that same context,
                 // which is only worth putting together to report it. Reading
@@ -878,6 +918,8 @@ auto expand_entries(ExpansionState &state, ActiveContext &active_context,
       // Keywords with no property-level handler (such as @vocab or @none
       // reached through an alias) carry no expanded value, so the Expansion
       // algorithm adds nothing to the result for them.
+      report_drop(state, JSONLDExpandDropReason::UnhandledKeyword,
+                  entry_pointer, entry.second);
       continue;
     }
 
@@ -993,6 +1035,8 @@ auto expand_entries(ExpansionState &state, ActiveContext &active_context,
                              : language_pointer};
           language_index += 1;
           if (item.is_null()) {
+            report_drop(state, JSONLDExpandDropReason::NullValue, item_pointer,
+                        item);
             continue;
           }
           if (!item.is_string()) {
@@ -1307,6 +1351,7 @@ auto expand(ExpansionState &state, ActiveContext &active_context,
   }
 
   if (element.is_null()) {
+    report_drop(state, JSONLDExpandDropReason::NullValue, pointer, element);
     return JSON{nullptr};
   }
 
@@ -1324,6 +1369,8 @@ auto expand(ExpansionState &state, ActiveContext &active_context,
   if (!element.is_object() && !element.is_array()) {
     if (!active_property.has_value() ||
         active_property.value() == KEYWORD_GRAPH) {
+      report_drop(state, JSONLDExpandDropReason::FreeFloatingValue, pointer,
+                  element);
       return JSON{nullptr};
     }
 
