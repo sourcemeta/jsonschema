@@ -491,6 +491,7 @@ auto apply(const std::vector<Rule> &rules, sourcemeta::core::JSON &schema,
   }
 }
 
+#include "rules/carried_annotation_becomes_keyword.h"
 #include "rules/definitions_to_defs.h"
 #include "rules/dependencies_to_dependent.h"
 #include "rules/dialect_override_becomes_dollar_schema.h"
@@ -509,6 +510,7 @@ auto apply(const std::vector<Rule> &rules, sourcemeta::core::JSON &schema,
 #include "rules/prefix_promoted_draft_7_keywords.h"
 #include "rules/prefix_promoted_openapi_3_1_keywords.h"
 #include "rules/sanitize_draft_4_anchors.h"
+#include "rules/shadow_reserved_carried_name.h"
 #include "rules/shadow_stray_dialect_declaration.h"
 #include "rules/upgrade_2019_09_to_2020_12.h"
 #include "rules/upgrade_2020_12_to_openapi_3_1.h"
@@ -533,9 +535,14 @@ auto convert(sourcemeta::core::JSON &schema,
   // spelling the ladder does not name is one it cannot answer for, so these
   // run to completion first rather than alongside
   std::vector<Rule> spellings;
-  spellings.reserve(8);
+  spellings.reserve(9);
   spellings.push_back(make_rule<DialectOverrideBecomesDollarSchema>());
   spellings.push_back(make_rule<ShadowStrayDialectDeclaration>());
+
+  // Not a spelling, but it belongs to the same moment: what the author wrote
+  // has to be moved out of the conversion's own namespace before any rule
+  // writes into it, or the two can no longer be told apart
+  spellings.push_back(make_rule<ShadowReservedCarriedName>());
   spellings.push_back(make_rule<DraftOfficialDialectWithHttps>());
   spellings.push_back(make_rule<DraftOfficialDialectWithoutEmptyFragment>());
   spellings.push_back(make_rule<ModernOfficialDialectWithEmptyFragment>());
@@ -558,27 +565,6 @@ auto convert(sourcemeta::core::JSON &schema,
   // the rungs carry on from there
   rules.push_back(make_rule<UpgradeOpenAPI30ToDraft4>(target));
 
-  // Whether this conversion starts from OpenAPI 3.0. Usually only the caller
-  // can say, because the Schema Object admits no `$schema` member of its own,
-  // so a document written in that dialect is named from the outside. The
-  // exception is the override marker, which names a dialect for a document that
-  // cannot declare one, and which `declared_dialect` reads ahead of `$schema`
-  // exactly as core frames it.
-  //
-  // So the question is what the document says it is, and only where it says
-  // nothing does the default the caller passed decide. Asking merely whether a
-  // `$schema` member is present answers both halves wrongly: a document naming
-  // this dialect through the marker is read as not being on it, and one naming
-  // another dialect that way is read as being on it.
-  //
-  // What this buys is the keywords the fork carries across as themselves. Each
-  // is author data to the rung that promotes it, and shadowing it there would
-  // undo the fork, so the rules that would are told to leave it be
-  const auto declared{declared_dialect(schema)};
-  const auto from_openapi_3_0{
-      names_openapi_3_0_dialect(declared) ||
-      (declared.empty() && names_openapi_3_0_dialect(default_dialect))};
-
   rules.push_back(make_rule<PrefixPromotedDraft4Keywords>());
   rules.push_back(make_rule<UpgradeDraft3ToDraft4>());
 
@@ -598,10 +584,7 @@ auto convert(sourcemeta::core::JSON &schema,
       target == ConvertTarget::Draft202012 ||
       target == ConvertTarget::OpenAPI31 ||
       target == ConvertTarget::OpenAPI32) {
-    rules.push_back(make_rule<PrefixPromotedDraft7Keywords>(
-        from_openapi_3_0
-            ? std::vector<std::string_view>{"readOnly", "writeOnly"}
-            : std::vector<std::string_view>{}));
+    rules.push_back(make_rule<PrefixPromotedDraft7Keywords>());
     rules.push_back(make_rule<UpgradeDraft6ToDraft7>());
   }
 
@@ -609,9 +592,7 @@ auto convert(sourcemeta::core::JSON &schema,
       target == ConvertTarget::Draft202012 ||
       target == ConvertTarget::OpenAPI31 ||
       target == ConvertTarget::OpenAPI32) {
-    rules.push_back(make_rule<PrefixPromoted201909Keywords>(
-        from_openapi_3_0 ? std::vector<std::string_view>{"deprecated"}
-                         : std::vector<std::string_view>{}));
+    rules.push_back(make_rule<PrefixPromoted201909Keywords>());
     rules.push_back(make_rule<UpgradeDraft7To201909>());
     rules.push_back(make_rule<DefinitionsToDefs>());
     rules.push_back(make_rule<DependenciesToDependent>());
@@ -626,11 +607,7 @@ auto convert(sourcemeta::core::JSON &schema,
 
   if (target == ConvertTarget::OpenAPI31 ||
       target == ConvertTarget::OpenAPI32) {
-    rules.push_back(make_rule<PrefixPromotedOpenAPI31Keywords>(
-        from_openapi_3_0
-            ? std::vector<std::string_view>{"example", "discriminator",
-                                            "externalDocs", "xml"}
-            : std::vector<std::string_view>{}));
+    rules.push_back(make_rule<PrefixPromotedOpenAPI31Keywords>());
     rules.push_back(make_rule<Upgrade202012ToOpenAPI31>());
   }
 
@@ -638,8 +615,18 @@ auto convert(sourcemeta::core::JSON &schema,
     rules.push_back(make_rule<UpgradeOpenAPI31ToOpenAPI32>());
   }
 
+  // What the OpenAPI 3.0 fork parked goes back under its own name once every
+  // rung is behind the document. It cannot run alongside the ladder: a rung
+  // reads the dialect in front of it and would promote the very keyword the
+  // parking was there to keep from it
+  std::vector<Rule> restorations;
+  restorations.reserve(1);
+  restorations.push_back(make_rule<CarriedAnnotationBecomesKeyword>());
+
   apply(spellings, schema, walker, resolver, default_dialect, default_id, true);
   apply(rules, schema, walker, resolver, default_dialect, default_id, false);
+  apply(restorations, schema, walker, resolver, default_dialect, default_id,
+        false);
 }
 
 } // namespace sourcemeta::blaze

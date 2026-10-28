@@ -32,6 +32,9 @@ constexpr auto JSONSCHEMA_HASH_RECURSIVE_ANCHOR{
 constexpr auto JSONSCHEMA_HASH_VOCABULARY{JSON::Object::hash("$vocabulary"sv)};
 constexpr auto JSONSCHEMA_HASH_DEFS{JSON::Object::hash("$defs"sv)};
 constexpr auto JSONSCHEMA_HASH_DEFINITIONS{JSON::Object::hash("definitions"sv)};
+constexpr auto JSONSCHEMA_HASH_EXTERNAL_DOCS{
+    JSON::Object::hash("externalDocs"sv)};
+constexpr auto JSONSCHEMA_HASH_URL{JSON::Object::hash("url"sv)};
 constexpr auto EXTENSION_DEFINITIONS_KEYWORD{"x-definitions"sv};
 constexpr auto DIALECT_OVERRIDE_KEYWORD{
     "x-sourcemeta-dialect-override-subschema"sv};

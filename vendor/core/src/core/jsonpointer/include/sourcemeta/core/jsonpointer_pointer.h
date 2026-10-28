@@ -536,7 +536,9 @@ public:
   /// ```
   [[nodiscard]] auto concat(const GenericPointer<PropertyT, Hash> &other) const
       -> GenericPointer<PropertyT, Hash> {
-    GenericPointer<PropertyT, Hash> result{*this};
+    GenericPointer<PropertyT, Hash> result;
+    result.reserve(this->data_.size() + other.data_.size());
+    result.push_back(*this);
     result.push_back(other);
     return result;
   }
@@ -553,7 +555,9 @@ public:
   /// ```
   [[nodiscard]] auto concat(const Token::Property &property) const
       -> GenericPointer<PropertyT, Hash> {
-    GenericPointer<PropertyT, Hash> result{*this};
+    GenericPointer<PropertyT, Hash> result;
+    result.reserve(this->data_.size() + 1);
+    result.push_back(*this);
     result.push_back(property);
     return result;
   }
@@ -570,7 +574,9 @@ public:
   /// ```
   [[nodiscard]] auto concat(const Token::Index &index) const
       -> GenericPointer<PropertyT, Hash> {
-    GenericPointer<PropertyT, Hash> result{*this};
+    GenericPointer<PropertyT, Hash> result;
+    result.reserve(this->data_.size() + 1);
+    result.push_back(*this);
     result.push_back(index);
     return result;
   }

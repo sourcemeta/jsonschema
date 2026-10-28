@@ -1,9 +1,7 @@
 class PrefixPromoted201909Keywords final : public SchemaTransformRule {
 public:
-  PrefixPromoted201909Keywords(
-      std::vector<std::string_view> &&keywords_left_alone = {})
-      : SchemaTransformRule{"prefix_promoted_2019_09_keywords"},
-        keywords_left_alone_{std::move(keywords_left_alone)} {};
+  PrefixPromoted201909Keywords()
+      : SchemaTransformRule{"prefix_promoted_2019_09_keywords"} {};
 
   [[nodiscard]] auto
   condition(const sourcemeta::core::JSON &schema,
@@ -19,7 +17,7 @@ public:
         promoted_keyword_is_author_data(schema, PROMOTING_DIALECT));
 
     for (const auto &keyword : KEYWORDS) {
-      if (schema.defines(keyword) && !this->is_left_alone(schema, keyword)) {
+      if (schema.defines(keyword)) {
         return true;
       }
     }
@@ -32,8 +30,7 @@ public:
     this->renames_.clear();
     for (const auto &keyword : KEYWORDS) {
       const std::string keyword_name{keyword};
-      if (!schema.defines(keyword_name) ||
-          this->is_left_alone(schema, keyword)) {
+      if (!schema.defines(keyword_name)) {
         continue;
       }
 
@@ -69,28 +66,5 @@ private:
        "unevaluatedProperties", "maxContains", "minContains", "contentSchema",
        "deprecated"}};
 
-  // A keyword the caller asked to carry across as the keyword it already was,
-  // rather than as the author data it would otherwise be read as.
-  //
-  // The caller names the dialect of a document, not of each position in it, and
-  // a document may embed a resource written in another dialect whose members
-  // are exactly the author data this rule exists to protect. What tells the two
-  // apart is the value: the source dialect constrained the keyword it named, so
-  // one carrying a shape that dialect never allowed was never that keyword
-  [[nodiscard]] auto is_left_alone(const sourcemeta::core::JSON &schema,
-                                   const std::string_view keyword) const
-      -> bool {
-    if (std::ranges::find(this->keywords_left_alone_, keyword) ==
-        this->keywords_left_alone_.cend()) {
-      return false;
-    }
-
-    // Only a boolean is the annotation this names. A value of any other shape
-    // was never that keyword, whatever it is called, and carrying it across as
-    // one would leave an output the target's own meta-schema rejects
-    return schema.at(sourcemeta::core::JSON::String{keyword}).is_boolean();
-  }
-
-  const std::vector<std::string_view> keywords_left_alone_;
   mutable std::unordered_map<std::string, std::string> renames_;
 };

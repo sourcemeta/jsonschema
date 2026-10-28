@@ -1,0 +1,42 @@
+WRITE openapi.json UNTIL EOF
+{
+  "openapi": "3.2.0",
+  "$self": "https://example.com/openapi",
+  "info": { "title": "Example", "version": "1.0.0" },
+  "paths": {},
+  "components": {
+    "schemas": {
+      "pet": {
+        "externalDocs": { "url": "docs/pet.html" },
+        "type": "object"
+      }
+    }
+  }
+}
+EOF
+
+RUN bundle openapi.json STDIN /dev/null IN . INTO result.txt EXPECTING 0
+
+WRITE expected.txt UNTIL EOF
+1> {
+1>   "openapi": "3.2.0",
+1>   "$self": "https://example.com/openapi",
+1>   "info": {
+1>     "title": "Example",
+1>     "version": "1.0.0"
+1>   },
+1>   "paths": {},
+1>   "components": {
+1>     "schemas": {
+1>       "pet": {
+1>         "externalDocs": {
+1>           "url": "https://example.com/docs/pet.html"
+1>         },
+1>         "type": "object"
+1>       }
+1>     }
+1>   }
+1> }
+EOF
+
+COMPARE result.txt AGAINST expected.txt

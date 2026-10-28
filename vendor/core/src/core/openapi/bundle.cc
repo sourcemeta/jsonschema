@@ -316,6 +316,15 @@ auto absolutize_schemas(sourcemeta::core::JSON &value,
       continue;
     }
 
+    // One that names its target on its own needs no base, so moving the
+    // Object holding it cannot change what it names and what the description
+    // wrote is what travels. A mapping that goes by a name is not one of
+    // those, as Section 4.3.3 resolves a name from the entry document rather
+    // than from where it sits, which is what writing the URI out settles
+    if (sourcemeta::core::openapi_names_its_own_target(written->to_string())) {
+      continue;
+    }
+
     if (written->to_string() != discriminator.destination) {
       sourcemeta::core::set(value, held,
                             sourcemeta::core::JSON{discriminator.destination});
@@ -355,9 +364,12 @@ auto absolutize_schemas(sourcemeta::core::JSON &value,
   // The frame of the shell never reaches inside a Schema Object, so the one
   // URI a schema carries that is neither a reference nor an identifier is
   // written back here
-  frame.for_each_location([&value, &origin, &moved, &frame, &walker,
-                           &resolver](const auto, const auto &,
-                                      const auto &location) -> void {
+  // Asking for every location would reach a place that a reference names
+  // without it being a schema of its own, a keyword value such as the instance
+  // an enumeration or a constant holds, and writing a URI into one of those
+  // would be rewriting what a description says an instance must look like
+  frame.for_each_subschema([&value, &origin, &moved, &frame, &walker,
+                            &resolver](const auto &location) -> void {
     if (!location.pointer.starts_with(moved)) {
       return;
     }
@@ -383,11 +395,11 @@ auto absolutize_schemas(sourcemeta::core::JSON &value,
       return;
     }
 
-    const auto absolute{sourcemeta::core::openapi_resolve_uri(
+    const auto restated{sourcemeta::core::openapi_restated_uri(
         written->to_string(), sourcemeta::core::JSON::String{location.base})};
-    if (absolute.has_value()) {
+    if (restated.has_value()) {
       sourcemeta::core::set(
-          value, held, sourcemeta::core::JSON{absolute.value().recompose()});
+          value, held, sourcemeta::core::JSON{restated.value().recompose()});
     }
   });
 
@@ -1421,10 +1433,41 @@ auto absolutize(JSON &value, const OpenAPIWalk &remote, const Pointer &origin,
         continue;
       }
 
-      const auto absolute{
-          openapi_reference_target(written->to_string(), remote)};
-      if (absolute.has_value()) {
-        set(value, held, JSON{absolute.value().recompose()});
+      const auto restated{
+          openapi_restated_uri(written->to_string(), remote.base)};
+      if (restated.has_value()) {
+        set(value, held, JSON{restated.value().recompose()});
+      }
+    }
+  }
+}
+
+// And so is every URI the document the caller gave carries, which moving
+// nothing leaves resolving against a base that the bundle is meant to travel
+// away from. Spelling those out is what keeps one documentation URI from
+// reading differently to another over nothing but which document it was
+// written in, as what is gathered in is spelled out where it came from and
+// what is already here would otherwise be left as it was. Only the shell is
+// reached from here, a Schema Object being spelled out by JSON Schema
+// bundling under the same rule
+auto restate_entry_uris(sourcemeta::core::JSON &document,
+                        const sourcemeta::core::OpenAPIWalk &walk) -> void {
+  for (const auto &entry : walk.locations) {
+    for (const auto &field :
+         sourcemeta::core::openapi_embedded_uri_fields(entry.second.type)) {
+      const auto held{
+          (entry.second.pointer).concat(sourcemeta::core::JSON::String{field})};
+      const auto *written{sourcemeta::core::try_get(document, held)};
+      if (written == nullptr || !written->is_string()) {
+        continue;
+      }
+
+      const auto restated{sourcemeta::core::openapi_restated_uri(
+          written->to_string(), walk.base)};
+      if (restated.has_value()) {
+        sourcemeta::core::set(
+            document, held,
+            sourcemeta::core::JSON{restated.value().recompose()});
       }
     }
   }
@@ -1908,6 +1951,10 @@ auto bundle_internal(JSON &document, const SchemaWalker &walker,
       names.tags = walk.tags;
       names.tag_names = walk.tag_names;
       named = true;
+      // On this pass alone, as nothing has been gathered in yet and so every
+      // place the walk reports is one the caller wrote. What arrives later is
+      // spelled out against the base it was read under instead
+      restate_entry_uris(document, walk);
     }
 
     charge(remaining, walk.locations.size());

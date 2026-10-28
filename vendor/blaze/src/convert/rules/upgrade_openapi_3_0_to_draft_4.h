@@ -19,7 +19,7 @@ public:
 
     return holds_openapi_3_0_override(schema) ||
            holds_ignored_sibling(schema) ||
-           this->has_pending_openapi_3_0_pattern(schema) ||
+           has_pending_openapi_3_0_pattern(schema) ||
            holds_promoted_keyword(schema) ||
            holds_movable_definitions(schema) || holds_pending_shape(schema) ||
            at_dialect_declaration(schema, site);
@@ -87,12 +87,15 @@ public:
       }
 
       for (const auto &keyword : KEYWORDS) {
-        if (!schema.defines(sourcemeta::core::JSON::String{keyword}) ||
-            this->carries_as_keyword(schema, keyword)) {
+        if (!schema.defines(sourcemeta::core::JSON::String{keyword})) {
           continue;
         }
 
-        this->shadow(schema, keyword);
+        if (this->carries_as_keyword(schema, keyword)) {
+          this->carry(schema, keyword);
+        } else {
+          this->shadow(schema, keyword);
+        }
       }
 
       // Taken out before the shadowing below, so that what moves is the map the
@@ -233,17 +236,35 @@ private:
     schema.rename(keyword_name, std::move(prefixed_name));
   }
 
+  // Park an annotation under the name the last phase reads it back from.
+  //
+  // Handing it to the ladder under its own name would ask every rung that
+  // promotes that name to recognise this one and stand down, and no rung can:
+  // by the time one runs, the dialect this edge moved off is gone from the
+  // document, and a position this edge rewrote reads exactly like one written
+  // in the dialect it now declares. Under a name no dialect reads, the
+  // annotation climbs as the author data it looks like and no rung has to be
+  // told anything at all.
+  //
+  // The name is free wherever this runs, because a member the author wrote
+  // under it is moved aside before any rung is planned
+  auto carry(sourcemeta::core::JSON &schema,
+             const std::string_view keyword) const -> void {
+    const sourcemeta::core::JSON::String keyword_name{keyword};
+    auto parked{carried_name(keyword)};
+    this->renames_.emplace(keyword_name, parked);
+    schema.rename(keyword_name, std::move(parked));
+  }
+
   // Whether this subschema still carries something of the dialect that the
-  // transform will act on. Each of those is either consumed or shadowed, so the
-  // answer turns false once it has run and the conversion stops finding work
-  // here. One carried across as itself is not work, or the answer would never
-  // turn false
-  [[nodiscard]] auto
-  has_pending_openapi_3_0_pattern(const sourcemeta::core::JSON &subschema) const
+  // transform will act on. Each of those is consumed, shadowed or parked, so
+  // the answer turns false once it has run and the conversion stops finding
+  // work here
+  static auto
+  has_pending_openapi_3_0_pattern(const sourcemeta::core::JSON &subschema)
       -> bool {
     for (const auto &keyword : KEYWORDS) {
-      if (subschema.defines(sourcemeta::core::JSON::String{keyword}) &&
-          !this->carries_as_keyword(subschema, keyword)) {
+      if (subschema.defines(sourcemeta::core::JSON::String{keyword})) {
         return true;
       }
     }
@@ -261,16 +282,24 @@ private:
   // Draft 4 cannot express any of the three, so what the waypoint should carry
   // is only answerable from where the document is going. The cost is that
   // converting by way of Draft 4 no longer reproduces the direct result for
-  // these three, which `convertsuite` records per fixture
+  // these three, which `convertsuite` records per fixture.
+  //
+  // The value answers as well as the target. This dialect constrained each of
+  // these, so a member carrying a shape it never allowed was never the keyword
+  // it is named after, and handing that to the target would leave an output
+  // the target's own meta-schema rejects. It goes across as the author data it
+  // has to be instead
   [[nodiscard]] auto carries_as_keyword(const sourcemeta::core::JSON &subschema,
                                         const std::string_view keyword) const
       -> bool {
+    const auto &value{subschema.at(sourcemeta::core::JSON::String{keyword})};
+
     if (keyword == "readOnly" || keyword == "writeOnly") {
-      return this->keeps_read_only_;
+      return this->keeps_read_only_ && value.is_boolean();
     }
 
     if (keyword == "deprecated") {
-      return this->keeps_deprecated_;
+      return this->keeps_deprecated_ && value.is_boolean();
     }
 
     if (!this->keeps_openapi_annotations_) {
@@ -279,18 +308,20 @@ private:
 
     // Of the four the OpenAPI dialects name for themselves, only this one is
     // stated more loosely by 3.0 than by the dialects above it, so only this
-    // one has a shape to answer for
+    // one has more than a shape to answer for
     if (keyword == "discriminator") {
-      const auto &discriminator{
-          subschema.at(sourcemeta::core::JSON::String{keyword})};
-      return this->is_expressible_discriminator(discriminator) &&
-             mapping_survives_the_move(discriminator);
+      return this->is_expressible_discriminator(value) &&
+             mapping_survives_the_move(value);
+    }
+
+    if (keyword == "xml" || keyword == "externalDocs") {
+      return value.is_object();
     }
 
     // `nullable` is not among them: no OpenAPI dialect above 3.0 has it, as a
-    // type union says it there instead
-    return keyword == "xml" || keyword == "externalDocs" ||
-           keyword == "example";
+    // type union says it there instead. `example` names anything at all, so
+    // there is no shape of it to refuse
+    return keyword == "example";
   }
 
   // A `mapping` value may name a schema by reference, and the frame indexes no

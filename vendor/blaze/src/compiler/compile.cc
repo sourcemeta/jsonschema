@@ -429,10 +429,16 @@ auto compile_subschema(const sourcemeta::blaze::Context &context,
 
     // Bases must not contain fragments
     assert(!schema_context.base.fragment().has_value());
+
+    // `SchemaContext` holds this pointer by reference, so it has to outlive the
+    // loop. A temporary in the range-initializer would only do so through the
+    // C++23 lifetime extension, which leaks it when the compiler throws from
+    // here, as the depth and instruction limits do
+    const auto keyword_pointer{
+        schema_context.relative_pointer.concat(make_weak_pointer(keyword))};
     for (auto &&step : context.compiler(
              context,
-             {.relative_pointer = schema_context.relative_pointer.concat(
-                  make_weak_pointer(keyword)),
+             {.relative_pointer = keyword_pointer,
               .schema = schema_context.schema,
               .vocabularies = schema_context.vocabularies,
               .base = schema_context.base,
