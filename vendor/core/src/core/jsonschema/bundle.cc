@@ -76,6 +76,123 @@ auto rebase_reference(const JSON::String &base,
   return result.recompose();
 }
 
+// The URI that a relative reference spelled against a base resolves to, or
+// nothing where the spelling already names its target on its own, where the
+// base cannot settle what it names, or where what is spelled is no URI
+// reference at all. An absolute base is what the last of those asks for, as
+// resolving against a relative one settles nothing and the module merges what
+// it can rather than refusing
+//
+// Resolution is the whole of it, with no normalisation after. RFC 3986,
+// section 6.2.3 holds that "two URIs that differ only by the suffix \"#\" are
+// considered different regardless of the scheme", and the normalisation that
+// drops such a fragment answers to section 8.2.1 of the JSON Schema
+// specification, which asks it of an identifier rather than of every URI a
+// schema writes. Nothing is lost by leaving it out, as section 5.2.2 removes
+// dot segments as part of resolving rather than as normalisation
+auto restated_uri(const std::string_view uri, const std::string_view base)
+    -> std::optional<JSON::String> {
+  try {
+    URI result{uri};
+    if (!result.is_relative()) {
+      return std::nullopt;
+    }
+
+    const URI anchor{base};
+    if (!anchor.is_absolute()) {
+      return std::nullopt;
+    }
+
+    result.resolve_from(anchor);
+    return result.recompose();
+  } catch (const URIParseError &) {
+    return std::nullopt;
+  }
+}
+
+// OpenAPI Specification 3.1.1, Section 4.8.24 puts an External Documentation
+// Object on a Schema Object, and Section 4.8.11 makes its `url` "The URI for
+// the target documentation". Section 4.6 has every URI a description writes
+// resolve against the base in effect where it sits, which is the same footing
+// a reference stands on, so this one is spelled out exactly as one, wherever
+// it sits and whatever base it answers to. A document that bundling has
+// gathered is meant to travel away from the bases its parts were read
+// against, and spelling every relative URI out is what lets each of them go
+// on naming what it named. Leaving one of two identical resources behind
+// would also make them differ over nothing
+//
+// What that base is comes from the framing rather than from this field. It is
+// the nearest enclosing identifier wherever the dialect reserves a keyword for
+// one, and otherwise the identity the document itself was read under, which is
+// the only base a revision that reserves no such keyword can offer
+//
+// Earlier revisions read the field the other way around. OpenAPI
+// Specification 3.0.3 calls it a URL and has every relative URL resolve
+// "using the URLs defined in the Server Object as a Base URI", carving out
+// nothing but a reference, and 3.1.0 says as much of a URL too. Only 3.0.4
+// and 3.1.1 put the field back on the footing of every other URI, the former
+// leaving the choice "implementation_defined" while naming this reading
+// RECOMMENDED. One rule serves every revision here, as a Schema Object
+// carries no Server Object of its own and nothing at this level can reach
+// one, so the older reading is not a choice this has to make. It becomes one
+// where a whole description is bundled, which does have those URLs in view
+//
+// RFC 3986, section 4.4 spares an empty or fragment-only reference from this
+// elsewhere, a same-document reference needing no base beyond the one already
+// in effect. That reasoning does not reach here, as the document one of those
+// leads back to is the one the schema was read from rather than whichever one
+// it ends up in
+auto restate_external_documentation(JSON &subschema, const SchemaFrame &frame,
+                                    const SchemaWalker &walker,
+                                    const SchemaResolver &resolver) -> void {
+  // Which keywords a dialect is made of is settled per schema resource rather
+  // than per subschema, and the locations of one resource come together, so
+  // the answer for the last dialect seen carries to the next subschema. An
+  // empty dialect names nothing this could ask about, which is what the
+  // initial state already stands for
+  std::string_view current_dialect;
+  bool dialect_documents{false};
+
+  frame.for_each_subschema([&subschema, &frame, &walker, &resolver,
+                            &current_dialect,
+                            &dialect_documents](const auto &location) -> void {
+    if (location.dialect != current_dialect) {
+      current_dialect = location.dialect;
+      dialect_documents = dialect_defines(
+          walker, frame.vocabularies(location, resolver), "externalDocs");
+    }
+
+    // A dialect that gives the keyword no meaning leaves it holding whatever
+    // the schema put there, which moving cannot break
+    if (!dialect_documents) {
+      return;
+    }
+
+    auto &schema{get(subschema, location.pointer)};
+    if (!schema.is_object()) {
+      return;
+    }
+
+    auto *documentation{
+        schema.try_at("externalDocs"sv, JSONSCHEMA_HASH_EXTERNAL_DOCS)};
+    if (documentation == nullptr || !documentation->is_object()) {
+      return;
+    }
+
+    auto *written{documentation->try_at("url"sv, JSONSCHEMA_HASH_URL)};
+    if (written == nullptr || !written->is_string()) {
+      return;
+    }
+
+    // What a description spells there is its own to answer for, as bundling is
+    // not where a Schema Object is checked
+    auto restated{restated_uri(written->to_string(), location.base)};
+    if (restated.has_value()) {
+      *written = JSON{std::move(restated).value()};
+    }
+  });
+}
+
 // The dialect a schema declares, falling back to the given default
 auto declared_dialect(const JSON &schema,
                       const std::string_view default_dialect)
@@ -711,6 +828,12 @@ auto embed_references(
       depth == 0 ? paths : NESTED_PATHS,
       depth == 0 ? default_base : std::string_view{}, remaining};
   charge(remaining, frame);
+
+  // Every schema this reaches, the one the caller handed over as much as every
+  // remote gathered into it, is spelled out against the base it was read
+  // against, which is what the reference walks below do for a reference and
+  // what keeps two identical resources identical
+  restate_external_documentation(subschema, frame, walker, resolver);
 
   // Framing holds the base it resolves against to its canonical spelling, so
   // every reference destination it reports carries that spelling rather than

@@ -31,7 +31,9 @@ namespace sourcemeta::blaze {
 /// might be edge cases that we cannot cover. The real solution is for popular
 /// editors to fix their JSON Schema language support.
 ///
-/// Note that the input schema is expected to be already bundled.
+/// Note that the input schema is expected to be already bundled. Meta-schema
+/// declarations may remain external, as this function rewrites those to the
+/// base dialect in force at the subschema that declares them.
 ///
 /// ```cpp
 /// #include <sourcemeta/core/json.h>

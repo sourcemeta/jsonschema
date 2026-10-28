@@ -318,6 +318,13 @@ inline auto openapi_resolve_server_url(const JSON::StringView address,
   const auto variable{address.find('{')};
   // A template that declares no variable is a URI reference already
   if (variable == JSON::StringView::npos) {
+    // And one that names its target on its own needs no base, so what the
+    // description wrote travels as written, which is what the branches below
+    // already do for a template that names one
+    if (openapi_names_its_own_target(address)) {
+      return JSON::String{address};
+    }
+
     const auto resolved{openapi_resolve_uri(address, base)};
     return resolved.has_value()
                ? std::optional<JSON::String>{resolved.value().recompose()}

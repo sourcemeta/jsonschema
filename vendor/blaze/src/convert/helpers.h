@@ -157,6 +157,31 @@ inline auto names_openapi_3_0_dialect(const std::string_view dialect) -> bool {
          OPENAPI_3_0_DIALECTS.cend();
 }
 
+// What the OpenAPI 3.0 fork can hand to a target as the keyword it already
+// was, rather than as the author data every rung in between would read it as.
+// Three became keywords of a later draft with the meaning this dialect gave
+// them, and four are named by the OpenAPI dialects above it
+constexpr std::array<std::string_view, 7> CARRIED_ANNOTATIONS{
+    {"readOnly", "writeOnly", "deprecated", "example", "discriminator",
+     "externalDocs", "xml"}};
+
+// Where the fork parks one of those while the ladder climbs past it.
+//
+// Leaving the keyword under its own name would ask every rung that promotes it
+// to recognise it and stand down, and no rung can: by the time one runs, the
+// dialect the fork moved off is gone from the document, and a position the
+// fork rewrote reads exactly like one written in the dialect it now declares.
+// A name no dialect reads needs no such recognition, so the ladder carries it
+// as the author data it looks like and the last phase gives the name back
+constexpr std::string_view CARRIED_PREFIX{"x-sourcemeta-carried-"};
+
+inline auto carried_name(const std::string_view annotation)
+    -> sourcemeta::core::JSON::String {
+  sourcemeta::core::JSON::String result{CARRIED_PREFIX};
+  result.append(annotation);
+  return result;
+}
+
 // Fold an OpenAPI 3.0 `nullable` into the `type` beside it, which is the one
 // member of that dialect carrying an assertion rather than an annotation. Both
 // targets of the fork accept a type array, so the same rewrite serves each.

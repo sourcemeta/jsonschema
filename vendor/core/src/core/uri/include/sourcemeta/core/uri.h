@@ -645,6 +645,11 @@ public:
   /// uri.canonicalize();
   /// assert(uri.recompose() == "http://example.com/TEST");
   /// ```
+  ///
+  /// A fragment that is present and empty is removed too, so a trailing number
+  /// sign does not survive. RFC 3986 section 6.2.3 holds two URIs that differ
+  /// only by that suffix to be different, so a caller that must keep what it
+  /// was given should not canonicalize.
   auto canonicalize() -> URI &;
 
   /// Convert a URI into a filesystem path. If the URI is not under the `file`

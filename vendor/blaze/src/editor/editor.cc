@@ -87,8 +87,10 @@ auto for_editor(sourcemeta::core::JSON &schema,
         sourcemeta::core::SchemaFrame::Mode::References, schema, walker,
         resolver, default_dialect};
 
-    // Otherwise the input is not bundled
-    assert(frame.standalone());
+    // Otherwise the input is not bundled. A meta-schema the caller never
+    // meant to embed is not a reference this needs resolved, as an unresolved
+    // one is rewritten below
+    assert(frame.standalone_ignoring_metaschemas());
 
     // Collect reference changes
     frame.for_each_reference(

@@ -19,7 +19,7 @@
 #include <set>              // std::set
 #include <span>             // std::span
 #include <string_view>      // std::string_view
-#include <utility>          // std::pair, std::move
+#include <utility>          // std::pair, std::move, std::unreachable
 #include <vector>           // std::vector
 
 namespace sourcemeta::core {
@@ -69,20 +69,40 @@ struct OpenAPIField {
 // reading URL does not, as Section 4.7 resolves those "using the URLs defined
 // in the Server Object as a Base URL" rather than against any document. The
 // endpoints of a Security Scheme Object and of an OAuth Flow Object are that
-// second kind, and moving one leaves what it names untouched because the
-// Server Objects it reads against are not what moved.
+// second kind, every row of them reading URL: an authorization endpoint is
+// "The authorization URL to be used for this flow. This MUST be in the form of
+// a URL", and the rest say as much.
+//
+// Those are left alone because nothing here can settle them, not because
+// moving settles nothing. The Server Objects such a field reads against are
+// the ones of whichever description holds it, and no part of this carries a
+// remote's own along, so moving an Object of that kind does change which URLs
+// it answers to. Writing it back against the base of a document would be
+// resolving it against the one thing Section 4.7 says it is not relative to,
+// which is worse than leaving it. Carrying server context is what it would
+// take, and nothing here does.
 //
 // A `$ref` and an `operationRef` are left out, as the frame records those as
 // references of their own. A Server Object `url` is left out too, as Section
 // 4.8.5 makes it a URL template rather than a URI reference, and resolving one
-// through a URI would mangle the variables it is written with. So is every
-// field of the Objects that only ever sit at the root of a document, as those
-// never move anywhere
+// through a URI would mangle the variables it is written with, which is why it
+// has a resolution of its own.
+//
+// Sitting at the root of a document is no reason to be left out, as what this
+// answers for is spelled out wherever it sits rather than only where it moved.
+// The `url` of a Contact Object and of a License Object, and the
+// `termsOfService` of an Info Object, are left out for the reason above
+// instead: Section 4.6 of 3.0.4 reads each of them "A URL [...] This MUST be
+// in the form of a URL", which answers to the Server Object. From 3.1.1 every
+// one of them reads URI, which would bring them in, and telling those two
+// apart is a question of the revision that nothing here answers yet
 constexpr std::array<JSON::StringView, 1> OPENAPI_URI_FIELDS_EXTERNAL_DOCS{
     {"url"sv}};
 constexpr std::array<JSON::StringView, 1> OPENAPI_URI_FIELDS_EXAMPLE{
     {"externalValue"sv}};
 
+// Every kind is named rather than left to a fallback, so that one added later
+// has to be answered for rather than silently reading as carrying no URI
 inline auto openapi_embedded_uri_fields(const OpenAPIObjectKind kind) noexcept
     -> std::span<const JSON::StringView> {
   switch (kind) {
@@ -90,9 +110,54 @@ inline auto openapi_embedded_uri_fields(const OpenAPIObjectKind kind) noexcept
       return OPENAPI_URI_FIELDS_EXTERNAL_DOCS;
     case OpenAPIObjectKind::Example:
       return OPENAPI_URI_FIELDS_EXAMPLE;
-    default:
+
+    // Whose URI fields are URLs, and so answer to the Server Objects of
+    // whichever description holds them rather than to any document
+    case OpenAPIObjectKind::SecurityScheme:
+    case OpenAPIObjectKind::OAuthFlow:
+    case OpenAPIObjectKind::Server:
+    case OpenAPIObjectKind::ServerVariable:
+
+    // Whose only URI is one the frame records as a reference of its own, and
+    // which the rebasing of references settles rather than this
+    case OpenAPIObjectKind::Reference:
+    case OpenAPIObjectKind::Link:
+    case OpenAPIObjectKind::Schema:
+
+    // Whose one URI is the identity of the document itself, which establishing
+    // a base is what reads rather than anything that writes
+    case OpenAPIObjectKind::Document:
+
+    // Whose URI fields read as URLs in 3.0 and as URIs from 3.1.1, which the
+    // comment above leaves open
+    case OpenAPIObjectKind::Info:
+    case OpenAPIObjectKind::Contact:
+    case OpenAPIObjectKind::License:
+
+    // Which carry no URI field of their own at all
+    case OpenAPIObjectKind::PathItem:
+    case OpenAPIObjectKind::Parameter:
+    case OpenAPIObjectKind::RequestBody:
+    case OpenAPIObjectKind::Response:
+    case OpenAPIObjectKind::Header:
+    case OpenAPIObjectKind::Callbacks:
+    case OpenAPIObjectKind::MediaType:
+    case OpenAPIObjectKind::Components:
+    case OpenAPIObjectKind::Paths:
+    case OpenAPIObjectKind::Operation:
+    case OpenAPIObjectKind::Encoding:
+    case OpenAPIObjectKind::Responses:
+    case OpenAPIObjectKind::Tag:
+    case OpenAPIObjectKind::OAuthFlows:
+    case OpenAPIObjectKind::SecurityRequirement:
       return {};
   }
+
+    // Clang settles that no other value arrives, so only GCC and MSVC need to
+    // be told that the end of this function is never reached
+#if !defined(__clang__)
+  std::unreachable();
+#endif
 }
 
 /// What a Path Item Object declares that the endpoints reaching it need. Two
@@ -534,6 +599,72 @@ inline auto openapi_resolve_uri(const JSON::StringView reference,
     return target;
   } catch (const URIParseError &) {
     return std::nullopt;
+  }
+}
+
+// What a relative reference spelled against a base comes to, for a field that
+// a description writes and bundling writes back rather than compares. Nothing
+// comes back where the spelling already names its target on its own, as a URI
+// that needs no base cannot be made to name somewhere else by moving, so
+// resolving it would only spend what the description wrote.
+//
+// Unlike the resolution a reference goes through, this one does not
+// canonicalise. RFC 3986, section 6.2.3 holds that "two URIs that differ only
+// by the suffix \"#\" are considered different regardless of the scheme", and
+// the normalisation that drops such a fragment answers to JSON Schema
+// 2020-12, section 8.2.1, which asks it of an identifier rather than of every
+// URI a description writes. Resolution alone is enough and takes nothing away:
+// section 5.2.2 removes dot segments as part of resolving rather than as
+// normalisation.
+//
+// One base serves every revision, though they do not agree. Section 4.6 of
+// 3.0.3 resolves every relative URL "using the URLs defined in the Server
+// Object as a Base URI" and carves out nothing but a reference, and 3.1.0 says
+// as much of a URL, while 3.0.4 reopens the field by leaving it
+// "implementation_defined" between that and the process a reference goes
+// through and naming the latter RECOMMENDED "For compatibility with future
+// versions of this specification", which 3.1.1 then settles by calling the
+// field a URI. Telling those apart would mean telling patch releases apart,
+// which this module does not do anywhere. It would also only be half a
+// telling, as what sits inside a Schema Object is resolved by JSON Schema
+// bundling against a base of its own whatever revision is in force, so a
+// description would answer to two readings at once. And the earlier reading is
+// underdetermined where it would matter most, a description being free to
+// declare several Server Objects
+//
+// What that costs is worth writing down: under the earlier reading a relative
+// URL answers to Server Objects, and no part of bundling carries a document's
+// own along, so for those revisions a bundled description does not read quite
+// as the one it came from
+inline auto openapi_restated_uri(const JSON::StringView reference,
+                                 const JSON::String &base)
+    -> std::optional<URI> {
+  if (base.empty()) {
+    return std::nullopt;
+  }
+
+  try {
+    URI target{JSON::String{reference}};
+    if (!target.is_relative()) {
+      return std::nullopt;
+    }
+
+    target.resolve_from(URI{base});
+    return target;
+  } catch (const URIParseError &) {
+    return std::nullopt;
+  }
+}
+
+// Whether what is spelled names its target without a base, which is what
+// decides between carrying it over as written and resolving it. What cannot be
+// read as a URI reference at all is no such spelling
+inline auto openapi_names_its_own_target(const JSON::StringView reference)
+    -> bool {
+  try {
+    return !URI{JSON::String{reference}}.is_relative();
+  } catch (const URIParseError &) {
+    return false;
   }
 }
 
