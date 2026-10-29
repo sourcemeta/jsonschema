@@ -390,6 +390,7 @@ inline auto compile_non_standalone_subschema(
 #include "linter/unsatisfiable_max_contains.h"
 #include "linter/unsatisfiable_min_properties.h"
 #include "linter/valid_default.h"
+#include "linter/valid_example.h"
 #include "linter/valid_examples.h"
 
 #undef ONLY_CONTINUE_IF
@@ -497,6 +498,7 @@ auto add(SchemaTransformer &bundle, const AlterSchemaMode mode) -> void {
     bundle.add<InvalidExternalRef>();
     bundle.add<UnknownFormatPrefix>();
     bundle.add<ValidDefault>();
+    bundle.add<ValidExample>();
     bundle.add<ValidExamples>();
   }
 

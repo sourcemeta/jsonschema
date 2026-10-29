@@ -304,7 +304,10 @@ WRITE expected_0.txt UNTIL EOF
 1> unsatisfiable_min_properties
 1>   Setting `minProperties` to a number less than `required` does not add any further constraint
 1>
-1> Number of rules: 101
+1> valid_example
+1>   Only set an `example` value that validates against the schema
+1>
+1> Number of rules: 102
 EOF
 
 COMPARE result_0.txt AGAINST expected_0.txt
