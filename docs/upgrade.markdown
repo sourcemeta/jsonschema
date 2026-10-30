@@ -21,7 +21,10 @@ rewrites a schema to conform to a newer dialect, taking every subtletly across
 specifications into account, including re-writing references that point at
 locations whose path has changed. By default, schemas are upgraded to the
 latest JSON Schema dialect, 2020-12, and the result is printed to standard
-output.
+output. To learn more about the motivation and design behind this feature,
+refer to our [Solving the JSON Schema dialect fragmentation problem with
+auto-upgrades](https://www.sourcemeta.com/blog/json-schema-dialect-auto-upgrade/)
+blog post.
 
 The dialects it walks through are the official JSON Schema ones up to 2020-12,
 and then the OpenAPI Schema Object dialects, each of which is 2020-12 plus a
