@@ -52,10 +52,10 @@ jobs:
             cc: clang
             cxx: clang++
             shell: sh
-          - os: windows-2022
+          - os: windows-latest
             type: native
             shell: pwsh
-          - os: windows-2022
+          - os: windows-latest
             type: wsl-2
             cc: gcc-14
             cxx: g++-14
