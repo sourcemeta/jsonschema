@@ -254,7 +254,7 @@ auto process_entry(const sourcemeta::jsonschema::InputJSON &entry,
                    const sourcemeta::core::Options &options,
                    sourcemeta::jsonschema::ValidationSummary &summary) -> bool {
   try {
-    sourcemeta::blaze::SimpleOutput output{entry.second};
+    sourcemeta::blaze::SimpleOutput output{schema_template, entry.second};
     sourcemeta::blaze::TraceOutput trace_output{
         schema_template,
         sourcemeta::jsonschema::trace_callback(entry.positions, std::cout)};
@@ -565,7 +565,7 @@ auto sourcemeta::jsonschema::validate(const sourcemeta::core::Options &options)
             return sourcemeta::core::read_yaml_or_json(instance_path);
           }()};
           summary.validated += 1;
-          sourcemeta::blaze::SimpleOutput output{instance};
+          sourcemeta::blaze::SimpleOutput output{schema_template, instance};
           sourcemeta::blaze::TraceOutput trace_output{
               schema_template, trace_callback(tracker, std::cout)};
           bool subresult{true};

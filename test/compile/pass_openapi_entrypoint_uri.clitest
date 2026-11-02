@@ -15,7 +15,7 @@ RUN compile openapi.json --entrypoint https://example.com/api#/components/schema
 
 WRITE expected.txt UNTIL EOF
 1> [
-1>   9,
+1>   15,
 1>   false,
 1>   true,
 1>   [
@@ -27,12 +27,18 @@ WRITE expected.txt UNTIL EOF
 1>         "https://example.com/api#/components/schemas/Person/type",
 1>         1,
 1>         1,
+1>         1,
+1>         2,
 1>         [ 8, 4 ]
 1>       ]
 1>     ]
 1>   ],
 1>   [],
-1>   [ "https://json-schema.org/draft/2020-12/vocab/validation" ]
+1>   [ "https://json-schema.org/draft/2020-12/vocab/validation" ],
+1>   [
+1>     "{0} was expected to be of type {1}",
+1>     "{0} was expected to be of type {1} but it was of type {2}"
+1>   ]
 1> ]
 EOF
 

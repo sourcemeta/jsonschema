@@ -5,36 +5,26 @@
 #include <sourcemeta/core/process_export.h>
 #endif
 
-#include <exception>        // std::exception
+#include <sourcemeta/core/error.h>
+
 #include <initializer_list> // std::initializer_list
 #include <span>             // std::span
 #include <string>           // std::string
 #include <string_view>      // std::string_view
-#include <utility>          // std::move
 #include <vector>           // std::vector
 
 namespace sourcemeta::core {
 
-// Exporting symbols that depends on the standard C++ library is considered
-// safe.
-// https://learn.microsoft.com/en-us/cpp/error-messages/compiler-warnings/compiler-warning-level-2-c4275?view=msvc-170&redirectedfrom=MSDN
-#if defined(_MSC_VER)
-#pragma warning(push)
-#pragma warning(disable : 4251 4275)
-#endif
+SOURCEMETA_CORE_ERROR_WARNINGS_PUSH
 
 /// @ingroup process
 /// An executable program could not be found
 class SOURCEMETA_CORE_PROCESS_EXPORT ProcessProgramNotFoundError
-    : public std::exception {
+    : public Error {
 public:
   /// Construct the error given the offending program.
   ProcessProgramNotFoundError(const std::string_view program)
-      : program_{program} {}
-
-  [[nodiscard]] auto what() const noexcept -> const char * override {
-    return "Could not locate the requested program";
-  }
+      : Error{"Could not locate the requested program"}, program_{program} {}
 
   /// The offending program.
   [[nodiscard]] auto program() const noexcept -> std::string_view {
@@ -47,21 +37,19 @@ private:
 
 /// @ingroup process
 /// A spawned process terminated abnormally
-class SOURCEMETA_CORE_PROCESS_EXPORT ProcessSpawnError : public std::exception {
+class SOURCEMETA_CORE_PROCESS_EXPORT ProcessSpawnError : public Error {
 public:
   /// Construct the error given the offending program and its arguments.
   ProcessSpawnError(const std::string_view program,
                     std::initializer_list<std::string_view> arguments)
-      : program_{program}, arguments_{arguments.begin(), arguments.end()} {}
+      : Error{"Process terminated abnormally"}, program_{program},
+        arguments_{arguments.begin(), arguments.end()} {}
 
   /// Construct the error given the offending program and its arguments.
   ProcessSpawnError(const std::string_view program,
                     std::span<const std::string_view> arguments)
-      : program_{program}, arguments_{arguments.begin(), arguments.end()} {}
-
-  [[nodiscard]] auto what() const noexcept -> const char * override {
-    return "Process terminated abnormally";
-  }
+      : Error{"Process terminated abnormally"}, program_{program},
+        arguments_{arguments.begin(), arguments.end()} {}
 
   /// The offending program.
   [[nodiscard]] auto program() const noexcept -> std::string_view {
@@ -79,9 +67,7 @@ private:
   std::vector<std::string> arguments_;
 };
 
-#if defined(_MSC_VER)
-#pragma warning(pop)
-#endif
+SOURCEMETA_CORE_ERROR_WARNINGS_POP
 
 } // namespace sourcemeta::core
 

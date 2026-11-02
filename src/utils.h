@@ -382,11 +382,11 @@ auto with_openapi_diagnostics(
       throw PositionError<
           sourcemeta::core::FileError<sourcemeta::core::SchemaReferenceError>>(
           std::get<0>(position.value()), std::get<1>(position.value()),
-          display_path, error.identifier(), error.location(), error.what());
+          display_path, error);
     }
 
     throw sourcemeta::core::FileError<sourcemeta::core::SchemaReferenceError>(
-        display_path, error.identifier(), error.location(), error.what());
+        display_path, error);
   } catch (
       const sourcemeta::core::SchemaRelativeMetaschemaResolutionError &error) {
     throw sourcemeta::core::FileError<
@@ -403,7 +403,7 @@ auto with_openapi_diagnostics(
         sourcemeta::core::SchemaUnknownDialectError>(display_path);
   } catch (const sourcemeta::core::SchemaError &error) {
     throw sourcemeta::core::FileError<sourcemeta::core::SchemaError>(
-        display_path, error.what());
+        display_path, error);
   }
 }
 
@@ -621,11 +621,11 @@ bundle_for_evaluation(const sourcemeta::core::JSON &schema,
       throw PositionError<
           sourcemeta::core::FileError<sourcemeta::core::SchemaReferenceError>>(
           std::get<0>(position.value()), std::get<1>(position.value()),
-          resolution_base, error.identifier(), error.location(), error.what());
+          resolution_base, error);
     }
 
     throw sourcemeta::core::FileError<sourcemeta::core::SchemaReferenceError>(
-        resolution_base, error.identifier(), error.location(), error.what());
+        resolution_base, error);
   } catch (
       const sourcemeta::core::SchemaRelativeMetaschemaResolutionError &error) {
     throw sourcemeta::core::FileError<
@@ -642,7 +642,7 @@ bundle_for_evaluation(const sourcemeta::core::JSON &schema,
         sourcemeta::core::SchemaUnknownDialectError>(resolution_base);
   } catch (const sourcemeta::core::SchemaError &error) {
     throw sourcemeta::core::FileError<sourcemeta::core::SchemaError>(
-        resolution_base, error.what());
+        resolution_base, error);
   } catch (const sourcemeta::core::SchemaReferenceObjectResourceError &error) {
     throw sourcemeta::core::FileError<
         sourcemeta::core::SchemaReferenceObjectResourceError>(
@@ -699,11 +699,11 @@ frame_for_evaluation(const sourcemeta::core::JSON &bundled,
       throw PositionError<
           sourcemeta::core::FileError<sourcemeta::core::SchemaReferenceError>>(
           std::get<0>(position.value()), std::get<1>(position.value()),
-          resolution_base, error.identifier(), error.location(), error.what());
+          resolution_base, error);
     }
 
     throw sourcemeta::core::FileError<sourcemeta::core::SchemaReferenceError>(
-        resolution_base, error.identifier(), error.location(), error.what());
+        resolution_base, error);
   } catch (
       const sourcemeta::core::SchemaRelativeMetaschemaResolutionError &error) {
     throw sourcemeta::core::FileError<
@@ -720,7 +720,7 @@ frame_for_evaluation(const sourcemeta::core::JSON &bundled,
         sourcemeta::core::SchemaUnknownDialectError>(resolution_base);
   } catch (const sourcemeta::core::SchemaError &error) {
     throw sourcemeta::core::FileError<sourcemeta::core::SchemaError>(
-        resolution_base, error.what());
+        resolution_base, error);
   }
 }
 
@@ -810,11 +810,11 @@ inline auto compile_for_evaluation(
       throw PositionError<
           sourcemeta::core::FileError<sourcemeta::core::SchemaReferenceError>>(
           std::get<0>(position.value()), std::get<1>(position.value()),
-          resolution_base, error.identifier(), error.location(), error.what());
+          resolution_base, error);
     }
 
     throw sourcemeta::core::FileError<sourcemeta::core::SchemaReferenceError>(
-        resolution_base, error.identifier(), error.location(), error.what());
+        resolution_base, error);
   } catch (
       const sourcemeta::core::SchemaRelativeMetaschemaResolutionError &error) {
     throw sourcemeta::core::FileError<
@@ -831,10 +831,10 @@ inline auto compile_for_evaluation(
         sourcemeta::core::SchemaUnknownDialectError>(resolution_base);
   } catch (const sourcemeta::core::SchemaVocabularyError &error) {
     throw sourcemeta::core::FileError<sourcemeta::core::SchemaVocabularyError>(
-        resolution_base, error.uri(), error.what());
+        resolution_base, error);
   } catch (const sourcemeta::core::SchemaError &error) {
     throw sourcemeta::core::FileError<sourcemeta::core::SchemaError>(
-        resolution_base, error.what());
+        resolution_base, error);
   }
 }
 
@@ -931,13 +931,11 @@ upgrade_schema(sourcemeta::core::JSON &schema,
       throw PositionError<
           sourcemeta::core::FileError<sourcemeta::core::SchemaReferenceError>>(
           std::get<0>(position.value()), std::get<1>(position.value()),
-          schema_display_path, error.identifier(), error.location(),
-          error.what());
+          schema_display_path, error);
     }
 
     throw sourcemeta::core::FileError<sourcemeta::core::SchemaReferenceError>(
-        schema_display_path, error.identifier(), error.location(),
-        error.what());
+        schema_display_path, error);
   } catch (
       const sourcemeta::core::SchemaRelativeMetaschemaResolutionError &error) {
     throw sourcemeta::core::FileError<
@@ -954,7 +952,7 @@ upgrade_schema(sourcemeta::core::JSON &schema,
         sourcemeta::core::SchemaUnknownDialectError>(schema_display_path);
   } catch (const sourcemeta::core::SchemaError &error) {
     throw sourcemeta::core::FileError<sourcemeta::core::SchemaError>(
-        schema_display_path, error.what());
+        schema_display_path, error);
   }
 }
 

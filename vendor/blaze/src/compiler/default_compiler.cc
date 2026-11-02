@@ -18,6 +18,7 @@ namespace {
 // Whether any element of the array is a schema
 auto any_element_is_a_schema(const sourcemeta::core::JSON &value,
                              const bool allow_boolean) -> bool {
+  using namespace sourcemeta::blaze;
   return value.is_array() &&
          std::ranges::any_of(value.as_array(),
                              [allow_boolean](const auto &element) -> bool {
@@ -34,6 +35,7 @@ auto any_element_is_a_schema(const sourcemeta::core::JSON &value,
 auto holds_schema(const sourcemeta::core::SchemaKeywordType type,
                   const sourcemeta::core::JSON &value, const bool allow_boolean)
     -> bool {
+  using namespace sourcemeta::blaze;
   switch (type) {
     case sourcemeta::core::SchemaKeywordType::Unknown:
     case sourcemeta::core::SchemaKeywordType::Assertion:

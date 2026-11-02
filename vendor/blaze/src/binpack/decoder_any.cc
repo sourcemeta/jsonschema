@@ -77,16 +77,16 @@ auto BinPackDecoder::ANY_PACKED_TYPE_TAG_BYTE_PREFIX(
             -static_cast<std::int64_t>(this->get_varint()) - 1};
       case SUBTYPE_LONG_STRING_BASE_EXPONENT_7:
         return sourcemeta::core::JSON{
-            this->get_string_utf8(this->get_varint() + 128)};
+            this->get_string(this->get_varint() + 128)};
       case SUBTYPE_LONG_STRING_BASE_EXPONENT_8:
         return sourcemeta::core::JSON{
-            this->get_string_utf8(this->get_varint() + 256)};
+            this->get_string(this->get_varint() + 256)};
       case SUBTYPE_LONG_STRING_BASE_EXPONENT_9:
         return sourcemeta::core::JSON{
-            this->get_string_utf8(this->get_varint() + 512)};
+            this->get_string(this->get_varint() + 512)};
       case SUBTYPE_LONG_STRING_BASE_EXPONENT_10:
         return sourcemeta::core::JSON{
-            this->get_string_utf8(this->get_varint() + 1024)};
+            this->get_string(this->get_varint() + 1024)};
       default:
         unreachable();
     }
@@ -108,7 +108,7 @@ auto BinPackDecoder::ANY_PACKED_TYPE_TAG_BYTE_PREFIX(
                                 : subtype - 1;
         const std::uint64_t position{this->position()};
         const std::uint64_t current{this->rewind(this->get_varint(), position)};
-        const sourcemeta::core::JSON value{this->get_string_utf8(length)};
+        const sourcemeta::core::JSON value{this->get_string(length)};
         this->seek(current);
         return value;
       };
@@ -118,10 +118,10 @@ auto BinPackDecoder::ANY_PACKED_TYPE_TAG_BYTE_PREFIX(
                          {static_cast<std::uint64_t>(
                               sourcemeta::core::uint_max<5>) *
                           2})
-                   : sourcemeta::core::JSON{this->get_string_utf8(subtype - 1)};
+                   : sourcemeta::core::JSON{this->get_string(subtype - 1)};
       case TYPE_LONG_STRING:
         return sourcemeta::core::JSON{
-            this->get_string_utf8(subtype + sourcemeta::core::uint_max<5>)};
+            this->get_string(subtype + sourcemeta::core::uint_max<5>)};
       case TYPE_ARRAY:
         return subtype == 0
                    ? this->FIXED_TYPED_ARRAY(

@@ -50,7 +50,7 @@ namespace sourcemeta::blaze {
 ///
 /// const sourcemeta::core::JSON instance{5};
 ///
-/// sourcemeta::blaze::SimpleOutput output{instance};
+/// sourcemeta::blaze::SimpleOutput output{schema_template, instance};
 /// sourcemeta::blaze::Evaluator evaluator;
 /// const auto result{evaluator.validate(
 ///   schema_template, instance, std::ref(output))};
@@ -67,7 +67,8 @@ namespace sourcemeta::blaze {
 /// ```
 class SOURCEMETA_BLAZE_OUTPUT_EXPORT SimpleOutput {
 public:
-  SimpleOutput(const sourcemeta::core::JSON &instance,
+  SimpleOutput(const Template &schema_template,
+               const sourcemeta::core::JSON &instance,
                sourcemeta::core::WeakPointer base =
                    sourcemeta::core::EMPTY_WEAK_POINTER);
 
@@ -139,6 +140,13 @@ private:
   /// Classify an instruction according to how it absorbs failures
   static auto mask_kind(const Instruction &step) noexcept -> MaskKind;
 
+  /// Where the trace of an instruction at the given evaluation path belongs,
+  /// which is the innermost branching keyword that encloses it, or the output
+  /// itself when none does. A null result means the trace cannot ever surface
+  /// and is to be dropped without even assembling its message
+  auto destination(const sourcemeta::core::WeakPointer &evaluate_path)
+      -> container_type *;
+
   /// An in-flight branching keyword, along with the number of annotations
   /// collected before it started and the error traces it buffers
   struct MaskEntry {
@@ -149,6 +157,7 @@ private:
     std::vector<Entry> buffered_traces;
   };
 
+  const Template &schema_template_;
   const sourcemeta::core::JSON &instance_;
   const sourcemeta::core::WeakPointer base_;
   container_type output_;

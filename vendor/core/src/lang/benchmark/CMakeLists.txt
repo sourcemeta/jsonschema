@@ -12,6 +12,8 @@ target_link_libraries(sourcemeta_core_benchmark
 target_link_libraries(sourcemeta_core_benchmark
   PRIVATE sourcemeta::core::json)
 target_link_libraries(sourcemeta_core_benchmark
+  PRIVATE sourcemeta::core::numeric)
+target_link_libraries(sourcemeta_core_benchmark
   PRIVATE sourcemeta::core::options)
 target_link_libraries(sourcemeta_core_benchmark
   PRIVATE sourcemeta::core::process)

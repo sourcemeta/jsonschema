@@ -9,7 +9,7 @@ namespace sourcemeta::blaze {
 
 auto BinPackDecoder::UTF8_STRING_NO_LENGTH(
     const struct UTF8_STRING_NO_LENGTH &options) -> sourcemeta::core::JSON {
-  return sourcemeta::core::JSON{this->get_string_utf8(options.size)};
+  return sourcemeta::core::JSON{this->get_string(options.size)};
 }
 
 auto BinPackDecoder::FLOOR_VARINT_PREFIX_UTF8_STRING_SHARED(
@@ -24,7 +24,7 @@ auto BinPackDecoder::FLOOR_VARINT_PREFIX_UTF8_STRING_SHARED(
   if (is_shared) {
     const std::uint64_t position{this->position()};
     const std::uint64_t current{this->rewind(this->get_varint(), position)};
-    const sourcemeta::core::JSON value{this->get_string_utf8(length)};
+    const sourcemeta::core::JSON value{this->get_string(length)};
     this->seek(current);
     return value;
   }
@@ -113,7 +113,7 @@ auto BinPackDecoder::PREFIX_VARINT_LENGTH_STRING_SHARED(
     return value;
   }
 
-  return sourcemeta::core::JSON{this->get_string_utf8(prefix - 1)};
+  return sourcemeta::core::JSON{this->get_string(prefix - 1)};
 }
 
 } // namespace sourcemeta::blaze

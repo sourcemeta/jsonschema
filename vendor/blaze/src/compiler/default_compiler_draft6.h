@@ -49,18 +49,11 @@ auto compiler_draft6_validation_type(const Context &context,
     const auto &type{
         schema_context.schema.at(dynamic_context.keyword).to_string()};
     if (type == "null") {
-      if (context.mode == Mode::FastValidation &&
-          schema_context.schema.defines("enum") &&
-          schema_context.schema.at("enum").is_array() &&
-          std::ranges::all_of(
-              schema_context.schema.at("enum").as_array(),
-              [](const auto &value) -> auto { return value.is_null(); })) {
+      if (type_covered_by_enum(context, schema_context, "null")) {
         return {};
       }
 
-      if (context.mode == Mode::FastValidation &&
-          schema_context.schema.defines("const") &&
-          schema_context.schema.at("const").is_null()) {
+      if (type_covered_by_const(context, schema_context, "null")) {
         return {};
       }
 
@@ -69,18 +62,11 @@ auto compiler_draft6_validation_type(const Context &context,
                    sourcemeta::core::JSON::Type::Null)};
     }
     if (type == "boolean") {
-      if (context.mode == Mode::FastValidation &&
-          schema_context.schema.defines("enum") &&
-          schema_context.schema.at("enum").is_array() &&
-          std::ranges::all_of(
-              schema_context.schema.at("enum").as_array(),
-              [](const auto &value) -> auto { return value.is_boolean(); })) {
+      if (type_covered_by_enum(context, schema_context, "boolean")) {
         return {};
       }
 
-      if (context.mode == Mode::FastValidation &&
-          schema_context.schema.defines("const") &&
-          schema_context.schema.at("const").is_boolean()) {
+      if (type_covered_by_const(context, schema_context, "boolean")) {
         return {};
       }
 
@@ -94,38 +80,19 @@ auto compiler_draft6_validation_type(const Context &context,
       const auto maximum{
           unsigned_integer_property(schema_context.schema, "maxProperties")};
 
-      if (context.mode == Mode::FastValidation) {
-        if (maximum.has_value() && minimum > maximum.value()) {
-          return {make(sourcemeta::blaze::InstructionIndex::AssertionFail,
-                       context, schema_context, dynamic_context, ValueNone{})};
-        }
-
-        if (maximum.has_value() && minimum == 0) {
-          return {make(
-              sourcemeta::blaze::InstructionIndex::AssertionTypeObjectUpper,
-              context, schema_context, dynamic_context,
-              ValueUnsignedInteger{maximum.value()})};
-        }
-        if (minimum > 0 || maximum.has_value()) {
-          return {make(
-              sourcemeta::blaze::InstructionIndex::AssertionTypeObjectBounded,
-              context, schema_context, dynamic_context,
-              ValueRange{minimum, maximum, false})};
-        }
+      const auto fused{fuse_type_size_bound(
+          context, schema_context, dynamic_context, minimum, maximum,
+          sourcemeta::blaze::InstructionIndex::AssertionTypeObjectUpper,
+          sourcemeta::blaze::InstructionIndex::AssertionTypeObjectBounded)};
+      if (fused.has_value()) {
+        return fused.value();
       }
 
-      if (context.mode == Mode::FastValidation &&
-          schema_context.schema.defines("enum") &&
-          schema_context.schema.at("enum").is_array() &&
-          std::ranges::all_of(
-              schema_context.schema.at("enum").as_array(),
-              [](const auto &value) -> auto { return value.is_object(); })) {
+      if (type_covered_by_enum(context, schema_context, "object")) {
         return {};
       }
 
-      if (context.mode == Mode::FastValidation &&
-          schema_context.schema.defines("const") &&
-          schema_context.schema.at("const").is_object()) {
+      if (type_covered_by_const(context, schema_context, "object")) {
         return {};
       }
 
@@ -164,38 +131,19 @@ auto compiler_draft6_validation_type(const Context &context,
         return {};
       }
 
-      if (context.mode == Mode::FastValidation) {
-        if (maximum.has_value() && minimum > maximum.value()) {
-          return {make(sourcemeta::blaze::InstructionIndex::AssertionFail,
-                       context, schema_context, dynamic_context, ValueNone{})};
-        }
-
-        if (maximum.has_value() && minimum == 0) {
-          return {
-              make(sourcemeta::blaze::InstructionIndex::AssertionTypeArrayUpper,
-                   context, schema_context, dynamic_context,
-                   ValueUnsignedInteger{maximum.value()})};
-        }
-        if (minimum > 0 || maximum.has_value()) {
-          return {make(
-              sourcemeta::blaze::InstructionIndex::AssertionTypeArrayBounded,
-              context, schema_context, dynamic_context,
-              ValueRange{minimum, maximum, false})};
-        }
+      const auto fused{fuse_type_size_bound(
+          context, schema_context, dynamic_context, minimum, maximum,
+          sourcemeta::blaze::InstructionIndex::AssertionTypeArrayUpper,
+          sourcemeta::blaze::InstructionIndex::AssertionTypeArrayBounded)};
+      if (fused.has_value()) {
+        return fused.value();
       }
 
-      if (context.mode == Mode::FastValidation &&
-          schema_context.schema.defines("enum") &&
-          schema_context.schema.at("enum").is_array() &&
-          std::ranges::all_of(
-              schema_context.schema.at("enum").as_array(),
-              [](const auto &value) -> auto { return value.is_array(); })) {
+      if (type_covered_by_enum(context, schema_context, "array")) {
         return {};
       }
 
-      if (context.mode == Mode::FastValidation &&
-          schema_context.schema.defines("const") &&
-          schema_context.schema.at("const").is_array()) {
+      if (type_covered_by_const(context, schema_context, "array")) {
         return {};
       }
 
@@ -204,18 +152,11 @@ auto compiler_draft6_validation_type(const Context &context,
                    sourcemeta::core::JSON::Type::Array)};
     }
     if (type == "number") {
-      if (context.mode == Mode::FastValidation &&
-          schema_context.schema.defines("enum") &&
-          schema_context.schema.at("enum").is_array() &&
-          std::ranges::all_of(
-              schema_context.schema.at("enum").as_array(),
-              [](const auto &value) -> auto { return value.is_number(); })) {
+      if (type_covered_by_enum(context, schema_context, "number")) {
         return {};
       }
 
-      if (context.mode == Mode::FastValidation &&
-          schema_context.schema.defines("const") &&
-          schema_context.schema.at("const").is_number()) {
+      if (type_covered_by_const(context, schema_context, "number")) {
         return {};
       }
 
@@ -227,18 +168,11 @@ auto compiler_draft6_validation_type(const Context &context,
                    context, schema_context, dynamic_context, types)};
     }
     if (type == "integer") {
-      if (context.mode == Mode::FastValidation &&
-          schema_context.schema.defines("enum") &&
-          schema_context.schema.at("enum").is_array() &&
-          std::ranges::all_of(
-              schema_context.schema.at("enum").as_array(),
-              [](const auto &value) -> auto { return value.is_integral(); })) {
+      if (type_covered_by_enum(context, schema_context, "integer")) {
         return {};
       }
 
-      if (context.mode == Mode::FastValidation &&
-          schema_context.schema.defines("const") &&
-          (schema_context.schema.at("const").is_integral())) {
+      if (type_covered_by_const(context, schema_context, "integer")) {
         return {};
       }
 
@@ -252,38 +186,19 @@ auto compiler_draft6_validation_type(const Context &context,
       const auto maximum{
           unsigned_integer_property(schema_context.schema, "maxLength")};
 
-      if (context.mode == Mode::FastValidation) {
-        if (maximum.has_value() && minimum > maximum.value()) {
-          return {make(sourcemeta::blaze::InstructionIndex::AssertionFail,
-                       context, schema_context, dynamic_context, ValueNone{})};
-        }
-
-        if (maximum.has_value() && minimum == 0) {
-          return {make(
-              sourcemeta::blaze::InstructionIndex::AssertionTypeStringUpper,
-              context, schema_context, dynamic_context,
-              ValueUnsignedInteger{maximum.value()})};
-        }
-        if (minimum > 0 || maximum.has_value()) {
-          return {make(
-              sourcemeta::blaze::InstructionIndex::AssertionTypeStringBounded,
-              context, schema_context, dynamic_context,
-              ValueRange{minimum, maximum, false})};
-        }
+      const auto fused{fuse_type_size_bound(
+          context, schema_context, dynamic_context, minimum, maximum,
+          sourcemeta::blaze::InstructionIndex::AssertionTypeStringUpper,
+          sourcemeta::blaze::InstructionIndex::AssertionTypeStringBounded)};
+      if (fused.has_value()) {
+        return fused.value();
       }
 
-      if (context.mode == Mode::FastValidation &&
-          schema_context.schema.defines("enum") &&
-          schema_context.schema.at("enum").is_array() &&
-          std::ranges::all_of(
-              schema_context.schema.at("enum").as_array(),
-              [](const auto &value) -> auto { return value.is_string(); })) {
+      if (type_covered_by_enum(context, schema_context, "string")) {
         return {};
       }
 
-      if (context.mode == Mode::FastValidation &&
-          schema_context.schema.defines("const") &&
-          schema_context.schema.at("const").is_string()) {
+      if (type_covered_by_const(context, schema_context, "string")) {
         return {};
       }
 
@@ -298,46 +213,13 @@ auto compiler_draft6_validation_type(const Context &context,
   if (schema_context.schema.at(dynamic_context.keyword).is_array() &&
       schema_context.schema.at(dynamic_context.keyword).size() == 1 &&
       schema_context.schema.at(dynamic_context.keyword).front().is_string()) {
-    const auto &type{
-        schema_context.schema.at(dynamic_context.keyword).front().to_string()};
-    if (type == "null") {
-      return {make(sourcemeta::blaze::InstructionIndex::AssertionTypeStrict,
-                   context, schema_context, dynamic_context,
-                   sourcemeta::core::JSON::Type::Null)};
+    auto assertion{make_type_assertion(
+        context, schema_context, dynamic_context,
+        schema_context.schema.at(dynamic_context.keyword).front().to_string())};
+    if (assertion.has_value()) {
+      return {std::move(assertion).value()};
     }
-    if (type == "boolean") {
-      return {make(sourcemeta::blaze::InstructionIndex::AssertionTypeStrict,
-                   context, schema_context, dynamic_context,
-                   sourcemeta::core::JSON::Type::Boolean)};
-    }
-    if (type == "object") {
-      return {make(sourcemeta::blaze::InstructionIndex::AssertionTypeStrict,
-                   context, schema_context, dynamic_context,
-                   sourcemeta::core::JSON::Type::Object)};
-    }
-    if (type == "array") {
-      return {make(sourcemeta::blaze::InstructionIndex::AssertionTypeStrict,
-                   context, schema_context, dynamic_context,
-                   sourcemeta::core::JSON::Type::Array)};
-    }
-    if (type == "number") {
-      ValueTypes types{};
-      types.set(std::to_underlying(sourcemeta::core::JSON::Type::Real));
-      types.set(std::to_underlying(sourcemeta::core::JSON::Type::Integer));
-      types.set(std::to_underlying(sourcemeta::core::JSON::Type::Decimal));
-      return {make(sourcemeta::blaze::InstructionIndex::AssertionTypeStrictAny,
-                   context, schema_context, dynamic_context, types)};
-    }
-    if (type == "integer") {
-      return {make(sourcemeta::blaze::InstructionIndex::AssertionType, context,
-                   schema_context, dynamic_context,
-                   sourcemeta::core::JSON::Type::Integer)};
-    }
-    if (type == "string") {
-      return {make(sourcemeta::blaze::InstructionIndex::AssertionTypeStrict,
-                   context, schema_context, dynamic_context,
-                   sourcemeta::core::JSON::Type::String)};
-    }
+
     throw sourcemeta::blaze::CompilerError(
         schema_context.base, absolute_schema_location(context, schema_context),
         EXPECTED_TYPE_NAMES);

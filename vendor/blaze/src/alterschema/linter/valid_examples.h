@@ -53,7 +53,7 @@ public:
       }
 
       for (const auto &example : examples->as_array()) {
-        SimpleOutput output{example};
+        SimpleOutput output{schema_template, example};
         Evaluator evaluator;
         const auto result{
             evaluator.validate(schema_template, example, std::ref(output))};
@@ -87,7 +87,7 @@ public:
     ONLY_CONTINUE_IF(schema_template.has_value());
 
     for (const auto &example : schema.at("examples").as_array()) {
-      SimpleOutput output{example, base};
+      SimpleOutput output{schema_template.value(), example, base};
       Evaluator evaluator;
       const auto result{evaluator.validate(schema_template.value(), example,
                                            std::ref(output))};

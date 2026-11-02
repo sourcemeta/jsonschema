@@ -302,7 +302,7 @@ static auto load_rule(sourcemeta::blaze::SchemaTransformer &bundle,
         sourcemeta::core::SchemaDialectImpossibleError>(rule_path, error);
   } catch (const sourcemeta::core::SchemaReferenceError &error) {
     throw sourcemeta::core::FileError<sourcemeta::core::SchemaReferenceError>(
-        rule_path, error.identifier(), error.location(), error.what());
+        rule_path, error);
   } catch (const sourcemeta::core::SchemaUnknownBaseDialectError &) {
     throw sourcemeta::core::FileError<
         sourcemeta::core::SchemaUnknownBaseDialectError>(rule_path);
@@ -311,7 +311,7 @@ static auto load_rule(sourcemeta::blaze::SchemaTransformer &bundle,
         sourcemeta::core::SchemaUnknownDialectError>(rule_path);
   } catch (const sourcemeta::core::SchemaVocabularyError &error) {
     throw sourcemeta::core::FileError<sourcemeta::core::SchemaVocabularyError>(
-        rule_path, error.uri(), error.what());
+        rule_path, error);
   } catch (
       const sourcemeta::core::SchemaRelativeMetaschemaResolutionError &error) {
     throw sourcemeta::core::FileError<
@@ -325,8 +325,8 @@ static auto load_rule(sourcemeta::blaze::SchemaTransformer &bundle,
         sourcemeta::core::SchemaReferenceObjectResourceError>(
         rule_path, error.identifier());
   } catch (const sourcemeta::core::SchemaError &error) {
-    throw sourcemeta::core::FileError<sourcemeta::core::SchemaError>(
-        rule_path, error.what());
+    throw sourcemeta::core::FileError<sourcemeta::core::SchemaError>(rule_path,
+                                                                     error);
   }
 }
 
@@ -744,7 +744,7 @@ auto sourcemeta::jsonschema::lint(const sourcemeta::core::Options &options)
 
               throw sourcemeta::core::FileError<
                   sourcemeta::core::SchemaVocabularyError>(
-                  entry.resolution_base, error.uri(), error.what());
+                  entry.resolution_base, error);
             } catch (const sourcemeta::core::SchemaResolutionError &error) {
               if (printed_progress) {
                 std::cerr << "\n";
@@ -768,7 +768,7 @@ auto sourcemeta::jsonschema::lint(const sourcemeta::core::Options &options)
               }
 
               throw sourcemeta::core::FileError<sourcemeta::core::SchemaError>(
-                  entry.resolution_base, error.what());
+                  entry.resolution_base, error);
             } catch (...) {
               if (printed_progress) {
                 std::cerr << "\n";
@@ -960,7 +960,7 @@ auto sourcemeta::jsonschema::lint(const sourcemeta::core::Options &options)
             } catch (const sourcemeta::core::SchemaVocabularyError &error) {
               throw sourcemeta::core::FileError<
                   sourcemeta::core::SchemaVocabularyError>(
-                  entry.resolution_base, error.uri(), error.what());
+                  entry.resolution_base, error);
             } catch (const sourcemeta::core::SchemaResolutionError &error) {
               throw sourcemeta::core::FileError<
                   sourcemeta::core::SchemaResolutionError>(
@@ -972,7 +972,7 @@ auto sourcemeta::jsonschema::lint(const sourcemeta::core::Options &options)
                   entry.resolution_base, error.identifier());
             } catch (const sourcemeta::core::SchemaError &error) {
               throw sourcemeta::core::FileError<sourcemeta::core::SchemaError>(
-                  entry.resolution_base, error.what());
+                  entry.resolution_base, error);
             }
           });
 

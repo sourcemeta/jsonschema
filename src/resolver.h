@@ -1087,7 +1087,8 @@ private:
     if (!entry.second.is_object() && !entry.second.is_boolean()) {
       throw sourcemeta::core::FileError<sourcemeta::core::SchemaError>(
           entry.resolution_base,
-          "The file you provided does not represent a valid JSON Schema");
+          sourcemeta::core::StaticString{
+              "The file you provided does not represent a valid JSON Schema"});
     }
 
     try {
@@ -1125,7 +1126,7 @@ private:
           entry.resolution_base, error);
     } catch (const sourcemeta::core::SchemaFrameError &error) {
       throw sourcemeta::core::FileError<sourcemeta::core::SchemaFrameError>(
-          entry.resolution_base, error.identifier(), error.what());
+          entry.resolution_base, error);
     } catch (const sourcemeta::core::SchemaAnchorCollisionError &error) {
       const auto position{entry.positions.get(error.location())};
       if (position.has_value()) {
@@ -1156,13 +1157,11 @@ private:
         throw PositionError<sourcemeta::core::FileError<
             sourcemeta::core::SchemaReferenceError>>(
             std::get<0>(position.value()), std::get<1>(position.value()),
-            entry.resolution_base, error.identifier(), error.location(),
-            error.what());
+            entry.resolution_base, error);
       }
 
       throw sourcemeta::core::FileError<sourcemeta::core::SchemaReferenceError>(
-          entry.resolution_base, error.identifier(), error.location(),
-          error.what());
+          entry.resolution_base, error);
     } catch (const sourcemeta::core::SchemaUnknownBaseDialectError &) {
       throw sourcemeta::core::FileError<
           sourcemeta::core::SchemaUnknownBaseDialectError>(
@@ -1177,11 +1176,11 @@ private:
           entry.resolution_base, error);
     } catch (const sourcemeta::core::SchemaResolutionError &error) {
       throw sourcemeta::core::FileError<
-          sourcemeta::core::SchemaResolutionError>(
-          entry.resolution_base, error.identifier(), error.what());
+          sourcemeta::core::SchemaResolutionError>(entry.resolution_base,
+                                                   error);
     } catch (const sourcemeta::core::SchemaError &error) {
       throw sourcemeta::core::FileError<sourcemeta::core::SchemaError>(
-          entry.resolution_base, error.what());
+          entry.resolution_base, error);
     }
   }
 

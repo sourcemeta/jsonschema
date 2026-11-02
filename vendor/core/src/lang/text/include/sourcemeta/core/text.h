@@ -5,6 +5,10 @@
 #include <sourcemeta/core/text_export.h>
 #endif
 
+// NOLINTBEGIN(misc-include-cleaner)
+#include <sourcemeta/core/text_static_string.h>
+// NOLINTEND(misc-include-cleaner)
+
 #include <algorithm>   // std::max
 #include <array>       // std::array
 #include <charconv>    // std::to_chars

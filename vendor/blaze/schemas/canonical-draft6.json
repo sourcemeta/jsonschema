@@ -2,21 +2,31 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "tag:sourcemeta.com,2026:canonical:draft6",
   "title": "Canonical JSON Schema Draft 6",
-  "description": "Meta-schema that validates whether a given JSON Schema Draft 6 document is in canonical form",
+  "description": "Meta-schema that validates whether a given JSON Schema Draft 6 document is in canonical graph form",
   "examples": [
-    true,
     {
-      "$ref": "#/definitions/foo"
-    },
-    {
-      "enum": [ 1, 2, 3 ]
-    },
-    {
-      "type": "string",
-      "minLength": 0
+      "$schema": "http://json-schema.org/draft-06/schema#",
+      "allOf": [
+        {
+          "$ref": "#/definitions/0"
+        }
+      ],
+      "definitions": {
+        "0": {
+          "type": "string",
+          "minLength": 0
+        }
+      }
     }
   ],
-  "$ref": "#/$defs/schema",
+  "anyOf": [
+    {
+      "$ref": "#/$defs/document"
+    },
+    {
+      "type": "boolean"
+    }
+  ],
   "$defs": {
     "metadata": {
       "properties": {
@@ -37,33 +47,71 @@
         "^x-": true
       }
     },
-    "core": {
+    "document": {
       "x-lint-exclude": "simple_properties_identifiers",
+      "type": "object",
+      "required": [ "allOf", "definitions" ],
       "properties": {
         "$schema": {
           "type": "string"
         },
-        "$id": {
-          "type": "string"
+        "allOf": {
+          "type": "array",
+          "maxItems": 1,
+          "minItems": 1,
+          "items": {
+            "x-lint-exclude": "simple_properties_identifiers",
+            "$ref": "#/$defs/edge",
+            "properties": {
+              "$ref": {
+                "const": "#/definitions/0"
+              }
+            }
+          }
         },
         "definitions": {
           "type": "object",
           "minProperties": 1,
+          "propertyNames": {
+            "pattern": "^(0|[1-9][0-9]*)$"
+          },
           "additionalProperties": {
-            "$ref": "#/$defs/schema"
+            "$ref": "#/$defs/node"
           }
         }
-      }
+      },
+      "unevaluatedProperties": false
     },
-    "schema": {
+    "edge": {
+      "x-lint-exclude": "simple_properties_identifiers",
+      "type": "object",
+      "required": [ "$ref" ],
+      "properties": {
+        "$ref": {
+          "type": "string",
+          "pattern": "^#/definitions/(0|[1-9][0-9]*)$"
+        }
+      },
+      "unevaluatedProperties": false
+    },
+    "node": {
       "anyOf": [
         {
-          "type": "boolean"
+          "const": true
         },
         {
           "x-lint-exclude": "simple_properties_identifiers",
           "$ref": "#/$defs/metadata",
           "type": "object",
+          "not": {
+            "x-lint-exclude": "simple_properties_identifiers",
+            "maxProperties": 1,
+            "properties": {
+              "$ref": {
+                "pattern": "^#"
+              }
+            }
+          },
           "required": [ "$ref" ],
           "properties": {
             "$ref": {
@@ -74,15 +122,8 @@
         },
         {
           "x-lint-exclude": "simple_properties_identifiers",
+          "$ref": "#/$defs/metadata",
           "type": "object",
-          "allOf": [
-            {
-              "$ref": "#/$defs/metadata"
-            },
-            {
-              "$ref": "#/$defs/core"
-            }
-          ],
           "required": [ "enum" ],
           "properties": {
             "enum": {
@@ -127,15 +168,8 @@
         },
         {
           "x-lint-exclude": "simple_properties_identifiers",
+          "$ref": "#/$defs/metadata",
           "type": "object",
-          "allOf": [
-            {
-              "$ref": "#/$defs/metadata"
-            },
-            {
-              "$ref": "#/$defs/core"
-            }
-          ],
           "required": [ "type", "minLength" ],
           "properties": {
             "type": {
@@ -160,15 +194,8 @@
         },
         {
           "x-lint-exclude": "simple_properties_identifiers",
+          "$ref": "#/$defs/metadata",
           "type": "object",
-          "allOf": [
-            {
-              "$ref": "#/$defs/metadata"
-            },
-            {
-              "$ref": "#/$defs/core"
-            }
-          ],
           "required": [ "type", "multipleOf" ],
           "properties": {
             "type": {
@@ -189,15 +216,8 @@
         },
         {
           "x-lint-exclude": "simple_properties_identifiers",
+          "$ref": "#/$defs/metadata",
           "type": "object",
-          "allOf": [
-            {
-              "$ref": "#/$defs/metadata"
-            },
-            {
-              "$ref": "#/$defs/core"
-            }
-          ],
           "required": [ "type" ],
           "properties": {
             "type": {
@@ -224,15 +244,8 @@
         },
         {
           "x-lint-exclude": "simple_properties_identifiers",
+          "$ref": "#/$defs/metadata",
           "type": "object",
-          "allOf": [
-            {
-              "$ref": "#/$defs/metadata"
-            },
-            {
-              "$ref": "#/$defs/core"
-            }
-          ],
           "required": [
             "type",
             "properties",
@@ -248,20 +261,20 @@
             "properties": {
               "type": "object",
               "additionalProperties": {
-                "$ref": "#/$defs/schema"
+                "$ref": "#/$defs/edge"
               }
             },
             "patternProperties": {
               "type": "object",
               "additionalProperties": {
-                "$ref": "#/$defs/schema"
+                "$ref": "#/$defs/edge"
               }
             },
             "additionalProperties": {
-              "$ref": "#/$defs/schema"
+              "$ref": "#/$defs/edge"
             },
             "propertyNames": {
-              "$ref": "#/$defs/schema"
+              "$ref": "#/$defs/edge"
             },
             "required": {
               "type": "array",
@@ -284,25 +297,18 @@
         },
         {
           "x-lint-exclude": "simple_properties_identifiers",
+          "$ref": "#/$defs/metadata",
           "type": "object",
-          "allOf": [
-            {
-              "$ref": "#/$defs/metadata"
-            },
-            {
-              "$ref": "#/$defs/core"
-            }
-          ],
           "required": [ "type", "items", "minItems", "uniqueItems" ],
           "properties": {
             "type": {
               "const": "array"
             },
             "items": {
-              "$ref": "#/$defs/schema"
+              "$ref": "#/$defs/edge"
             },
             "contains": {
-              "$ref": "#/$defs/schema"
+              "$ref": "#/$defs/edge"
             },
             "minItems": {
               "type": "integer",
@@ -320,15 +326,8 @@
         },
         {
           "x-lint-exclude": "simple_properties_identifiers",
+          "$ref": "#/$defs/metadata",
           "type": "object",
-          "allOf": [
-            {
-              "$ref": "#/$defs/metadata"
-            },
-            {
-              "$ref": "#/$defs/core"
-            }
-          ],
           "required": [
             "type",
             "items",
@@ -344,14 +343,14 @@
               "type": "array",
               "minItems": 1,
               "items": {
-                "$ref": "#/$defs/schema"
+                "$ref": "#/$defs/edge"
               }
             },
             "additionalItems": {
-              "$ref": "#/$defs/schema"
+              "$ref": "#/$defs/edge"
             },
             "contains": {
-              "$ref": "#/$defs/schema"
+              "$ref": "#/$defs/edge"
             },
             "minItems": {
               "type": "integer",
@@ -369,15 +368,8 @@
         },
         {
           "x-lint-exclude": "simple_properties_identifiers",
+          "$ref": "#/$defs/metadata",
           "type": "object",
-          "allOf": [
-            {
-              "$ref": "#/$defs/metadata"
-            },
-            {
-              "$ref": "#/$defs/core"
-            }
-          ],
           "required": [ "anyOf" ],
           "properties": {
             "anyOf": {
@@ -385,7 +377,7 @@
               "minItems": 2,
               "uniqueItems": true,
               "items": {
-                "$ref": "#/$defs/schema"
+                "$ref": "#/$defs/edge"
               }
             }
           },
@@ -393,15 +385,8 @@
         },
         {
           "x-lint-exclude": "simple_properties_identifiers",
+          "$ref": "#/$defs/metadata",
           "type": "object",
-          "allOf": [
-            {
-              "$ref": "#/$defs/metadata"
-            },
-            {
-              "$ref": "#/$defs/core"
-            }
-          ],
           "required": [ "allOf" ],
           "properties": {
             "allOf": {
@@ -409,7 +394,7 @@
               "minItems": 2,
               "uniqueItems": true,
               "items": {
-                "$ref": "#/$defs/schema"
+                "$ref": "#/$defs/edge"
               }
             }
           },
@@ -417,22 +402,15 @@
         },
         {
           "x-lint-exclude": "simple_properties_identifiers",
+          "$ref": "#/$defs/metadata",
           "type": "object",
-          "allOf": [
-            {
-              "$ref": "#/$defs/metadata"
-            },
-            {
-              "$ref": "#/$defs/core"
-            }
-          ],
           "required": [ "oneOf" ],
           "properties": {
             "oneOf": {
               "type": "array",
               "minItems": 2,
               "items": {
-                "$ref": "#/$defs/schema"
+                "$ref": "#/$defs/edge"
               }
             }
           },
@@ -440,19 +418,12 @@
         },
         {
           "x-lint-exclude": "simple_properties_identifiers",
+          "$ref": "#/$defs/metadata",
           "type": "object",
-          "allOf": [
-            {
-              "$ref": "#/$defs/metadata"
-            },
-            {
-              "$ref": "#/$defs/core"
-            }
-          ],
           "required": [ "not" ],
           "properties": {
             "not": {
-              "$ref": "#/$defs/schema"
+              "$ref": "#/$defs/edge"
             }
           },
           "unevaluatedProperties": false

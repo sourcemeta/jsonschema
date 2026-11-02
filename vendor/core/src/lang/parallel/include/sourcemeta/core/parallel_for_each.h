@@ -1,6 +1,8 @@
 #ifndef SOURCEMETA_CORE_PARALLEL_FOR_EACH_H_
 #define SOURCEMETA_CORE_PARALLEL_FOR_EACH_H_
 
+#include <sourcemeta/core/parallel_error.h>
+
 #include <algorithm> // std::max
 #include <climits>   // UINT_MAX
 #include <concepts>  // std::copyable, std::invocable
@@ -8,8 +10,8 @@
 #include <functional> // std::function
 #include <iterator>   // std::input_iterator, std::iter_reference_t
 #include <mutex>      // std::mutex, std::scoped_lock, std::unique_lock
+#include <optional>   // std::optional, std::nullopt
 #include <queue>      // std::queue
-#include <stdexcept>  // std::runtime_error
 #include <thread>     // std::thread
 #include <utility>    // std::forward
 #include <vector>     // std::vector
@@ -152,7 +154,7 @@ auto parallel_for_each(
     }
   };
 
-  const char *creation_error{nullptr};
+  std::optional<StaticString> creation_error;
 
   // TODO: Replace std::function with std::move_only_function once
   // Apple Clang ships libc++ 19+ (__cpp_lib_move_only_function)
@@ -162,7 +164,8 @@ auto parallel_for_each(
     if (stack_size_bytes > static_cast<std::size_t>(UINT_MAX)) {
       delete heap_function;
       creation_error =
-          "The requested stack size is too large for this platform";
+          StaticString{"The requested stack size is too large for this "
+                       "platform"};
       break;
     }
 
@@ -171,7 +174,7 @@ auto parallel_for_each(
         &parallel_for_each_windows_thread_start, heap_function, 0, nullptr);
     if (raw_handle == 0) {
       delete heap_function;
-      creation_error = "Could not create thread";
+      creation_error = StaticString{"Could not create thread"};
       break;
     }
 
@@ -194,8 +197,9 @@ auto parallel_for_each(
     if (stack_size_bytes > 0 &&
         pthread_attr_setstacksize(&attr, stack_size_bytes) != 0) {
       pthread_attr_destroy(&attr);
-      creation_error = "The requested stack size is not supported by this "
-                       "platform";
+      creation_error =
+          StaticString{"The requested stack size is not supported by this "
+                       "platform"};
       break;
     }
 
@@ -213,7 +217,7 @@ auto parallel_for_each(
     if (raw_handle != 0) {
       pthread_attr_destroy(&attr);
       delete heap_function;
-      creation_error = "Could not create thread";
+      creation_error = StaticString{"Could not create thread"};
       break;
     }
     workers.emplace_back(
@@ -227,7 +231,7 @@ auto parallel_for_each(
   // them must be avoided. Drain the remaining tasks so the running workers stop
   // pulling new work and exit, then join every already-created worker before
   // propagating the failure
-  if (creation_error != nullptr) {
+  if (creation_error.has_value()) {
     std::scoped_lock lock{queue_mutex};
     std::queue<Iterator> empty;
     tasks.swap(empty);
@@ -237,8 +241,8 @@ auto parallel_for_each(
     worker_thread.join();
   }
 
-  if (creation_error != nullptr) {
-    throw std::runtime_error(creation_error);
+  if (creation_error.has_value()) {
+    throw ParallelThreadError{creation_error.value()};
   }
 
   if (exception) {

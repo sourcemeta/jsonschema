@@ -1,0 +1,209 @@
+sourcemeta_library(NAMESPACE sourcemeta PROJECT core NAME crypto
+  PRIVATE_HEADERS sha256.h hmac_sha256.h hmac_sha384.h hmac_sha512.h sha384.h
+    sha512.h sha1.h
+    fnv128.h
+    uuid.h crc32.h base64.h secure.h verify.h sign.h aes_gcm.h aes_cbc_hmac.h
+    aes_kw.h rsa_oaep.h ecdh.h hkdf.h error.h
+  SOURCES crypto_sha256.cc crypto_hmac_sha256.cc crypto_hmac_sha384.cc
+    crypto_hmac_sha512.cc
+    crypto_sha384.cc
+    crypto_sha512.cc crypto_sha1.cc
+    crypto_uuid.cc crypto_fnv128.cc crypto_crc32.cc crypto_base64.cc
+    crypto_random.cc crypto_sign_rsa.cc crypto_aes_gcm.cc crypto_aes_cbc_hmac.cc
+    crypto_aes_kw.cc crypto_ecdh.cc crypto_hkdf.cc
+    crypto_sha2_64.h crypto_sha256_other.h crypto_random.h crypto_helpers.h
+    crypto_der.h crypto_aes.h crypto_kdf.h crypto_hkdf_loop.h)
+
+target_link_libraries(sourcemeta_core_crypto
+  PUBLIC sourcemeta::core::error)
+target_link_libraries(sourcemeta_core_crypto
+  PRIVATE sourcemeta::core::text sourcemeta::core::numeric)
+
+if(SOURCEMETA_CORE_CRYPTO_BACKEND STREQUAL "apple")
+  enable_language(OBJCXX)
+
+  # Ed25519 is verified through CryptoKit (Swift), reached from Objective-C++.
+  # The Swift shim is compiled to an object and its generated Objective-C
+  # interface header out of band, since the rest of the library is C++
+  set(CRYPTOKIT_SWIFT "${CMAKE_CURRENT_SOURCE_DIR}/crypto_eddsa_cryptokit.swift")
+  set(CRYPTOKIT_HEADER
+    "${CMAKE_CURRENT_BINARY_DIR}/sourcemeta_core_cryptokit-Swift.h")
+  if(CMAKE_OSX_SYSROOT)
+    set(CRYPTOKIT_SDK "${CMAKE_OSX_SYSROOT}")
+  else()
+    execute_process(COMMAND xcrun --show-sdk-path
+      OUTPUT_VARIABLE CRYPTOKIT_SDK OUTPUT_STRIP_TRAILING_WHITESPACE)
+  endif()
+
+  # The toolchain directory holding the Swift runtime back-deployment archives
+  # that the shim autolinks for older deployment targets
+  execute_process(COMMAND xcrun --find swiftc
+    OUTPUT_VARIABLE CRYPTOKIT_SWIFTC OUTPUT_STRIP_TRAILING_WHITESPACE)
+  get_filename_component(CRYPTOKIT_TOOLCHAIN_BIN "${CRYPTOKIT_SWIFTC}" DIRECTORY)
+  get_filename_component(CRYPTOKIT_RUNTIME_LIB
+    "${CRYPTOKIT_TOOLCHAIN_BIN}/../lib/swift/macosx" ABSOLUTE)
+  if(CMAKE_OSX_DEPLOYMENT_TARGET)
+    set(CRYPTOKIT_DEPLOYMENT "${CMAKE_OSX_DEPLOYMENT_TARGET}")
+  else()
+    # CryptoKit signing over Curve25519 is available since macOS 10.15
+    set(CRYPTOKIT_DEPLOYMENT "10.15")
+  endif()
+  if(CMAKE_OSX_ARCHITECTURES)
+    set(CRYPTOKIT_ARCHITECTURES ${CMAKE_OSX_ARCHITECTURES})
+  else()
+    set(CRYPTOKIT_ARCHITECTURES "${CMAKE_SYSTEM_PROCESSOR}")
+  endif()
+
+  # One object per architecture, emitting the architecture independent header
+  # only on the first, combined afterwards into a single object
+  set(CRYPTOKIT_OBJECTS)
+  set(CRYPTOKIT_HEADER_OUTPUT "${CRYPTOKIT_HEADER}")
+  set(CRYPTOKIT_EMIT_HEADER
+    -emit-objc-header -emit-objc-header-path "${CRYPTOKIT_HEADER}")
+  foreach(architecture IN LISTS CRYPTOKIT_ARCHITECTURES)
+    set(CRYPTOKIT_ARCH_OBJECT
+      "${CMAKE_CURRENT_BINARY_DIR}/crypto_eddsa_cryptokit_${architecture}.o")
+    add_custom_command(
+      OUTPUT "${CRYPTOKIT_ARCH_OBJECT}" ${CRYPTOKIT_HEADER_OUTPUT}
+      COMMAND xcrun swiftc
+        -sdk "${CRYPTOKIT_SDK}"
+        -target "${architecture}-apple-macosx${CRYPTOKIT_DEPLOYMENT}"
+        -module-name sourcemeta_core_cryptokit
+        -parse-as-library -O
+        ${CRYPTOKIT_EMIT_HEADER}
+        -emit-object -o "${CRYPTOKIT_ARCH_OBJECT}"
+        "${CRYPTOKIT_SWIFT}"
+      DEPENDS "${CRYPTOKIT_SWIFT}"
+      COMMENT "Building CryptoKit Swift shim (${architecture})"
+      VERBATIM)
+    list(APPEND CRYPTOKIT_OBJECTS "${CRYPTOKIT_ARCH_OBJECT}")
+    set(CRYPTOKIT_HEADER_OUTPUT)
+    set(CRYPTOKIT_EMIT_HEADER)
+  endforeach()
+
+  list(LENGTH CRYPTOKIT_OBJECTS CRYPTOKIT_OBJECT_COUNT)
+  if(CRYPTOKIT_OBJECT_COUNT GREATER 1)
+    set(CRYPTOKIT_OBJECT "${CMAKE_CURRENT_BINARY_DIR}/crypto_eddsa_cryptokit.o")
+    add_custom_command(
+      OUTPUT "${CRYPTOKIT_OBJECT}"
+      COMMAND lipo -create ${CRYPTOKIT_OBJECTS} -output "${CRYPTOKIT_OBJECT}"
+      DEPENDS ${CRYPTOKIT_OBJECTS}
+      COMMENT "Combining CryptoKit Swift shim architectures"
+      VERBATIM)
+  else()
+    set(CRYPTOKIT_OBJECT "${CRYPTOKIT_OBJECTS}")
+  endif()
+
+  set_source_files_properties("${CRYPTOKIT_OBJECT}"
+    PROPERTIES EXTERNAL_OBJECT TRUE GENERATED TRUE)
+  set_source_files_properties("${CRYPTOKIT_HEADER}" PROPERTIES GENERATED TRUE)
+  set_source_files_properties(crypto_eddsa_cryptokit.mm
+    PROPERTIES OBJECT_DEPENDS "${CRYPTOKIT_HEADER}")
+
+  target_sources(sourcemeta_core_crypto PRIVATE
+    crypto_sha1_apple.cc crypto_sha256_apple.cc crypto_hmac_sha256_apple.cc
+    crypto_hmac_sha384_apple.cc crypto_hmac_sha512_apple.cc
+    crypto_sha384_apple.cc
+    crypto_sha512_apple.cc crypto_random_apple.cc
+    crypto_verify_apple.cc crypto_secure_equals_apple.cc
+    crypto_sign_apple.cc crypto_aes_gcm_apple.cc crypto_aes_cbc_apple.cc
+    crypto_aes_kw_apple.cc crypto_rsa_oaep_apple.cc crypto_ecdh_apple.cc
+    crypto_hkdf_apple.cc
+    crypto_eddsa_cryptokit.mm "${CRYPTOKIT_OBJECT}"
+    crypto_eddsa.h crypto_eddsa_apple.h crypto_apple.h crypto_aes_apple.h
+    crypto_kdf_apple.h
+    crypto_bignum.h crypto_shake256.h crypto_pkcs8.h crypto_system.h)
+
+  # The generated Objective-C interface header lives in the build tree
+  target_include_directories(sourcemeta_core_crypto
+    PRIVATE "${CMAKE_CURRENT_BINARY_DIR}")
+
+  # Resolve the frameworks to absolute bundle paths rather than passing raw
+  # linker flags, as the exported interface is also read by build systems that
+  # only understand a path to a library
+  find_library(CRYPTOKIT_SECURITY_FRAMEWORK Security REQUIRED)
+  find_library(CRYPTOKIT_CORE_FOUNDATION_FRAMEWORK CoreFoundation REQUIRED)
+  find_library(CRYPTOKIT_CRYPTOKIT_FRAMEWORK CryptoKit REQUIRED)
+  find_library(CRYPTOKIT_FOUNDATION_FRAMEWORK Foundation REQUIRED)
+  target_link_libraries(sourcemeta_core_crypto
+    PRIVATE "${CRYPTOKIT_SECURITY_FRAMEWORK}")
+  target_link_libraries(sourcemeta_core_crypto
+    PRIVATE "${CRYPTOKIT_CORE_FOUNDATION_FRAMEWORK}")
+  target_link_libraries(sourcemeta_core_crypto
+    PRIVATE "${CRYPTOKIT_CRYPTOKIT_FRAMEWORK}")
+  target_link_libraries(sourcemeta_core_crypto
+    PRIVATE "${CRYPTOKIT_FOUNDATION_FRAMEWORK}")
+
+  # Resolve the Swift runtime that the shim autolinks, both at link and at load.
+  # PUBLIC rather than INTERFACE so that a shared build of this library, which
+  # has its own link step pulling in the Swift object, also gets the flags.
+  # Every option is a single token, as the multi-token spellings need a SHELL:
+  # prefix that only CMake knows how to strip back out of the exported
+  # interface, and every one of them addresses the linker directly, as these
+  # paths serve libraries that no command line asks for by name and a build
+  # system that resolves the named ones itself would drop a plain search path
+  target_link_options(sourcemeta_core_crypto PUBLIC
+    "-Wl,-L${CRYPTOKIT_SDK}/usr/lib/swift"
+    "-Wl,-L${CRYPTOKIT_RUNTIME_LIB}"
+    "-Wl,-rpath,/usr/lib/swift")
+elseif(SOURCEMETA_CORE_CRYPTO_BACKEND STREQUAL "windows")
+  target_sources(sourcemeta_core_crypto PRIVATE
+    crypto_sha1_windows.cc crypto_sha256_windows.cc
+    crypto_hmac_sha256_windows.cc crypto_hmac_sha384_windows.cc
+    crypto_hmac_sha512_windows.cc
+    crypto_sha384_windows.cc
+    crypto_sha512_windows.cc crypto_random_windows.cc
+    crypto_verify_windows.cc crypto_secure_equals_generic.cc
+    crypto_sign_windows.cc crypto_aes_gcm_windows.cc crypto_aes_cbc_windows.cc
+    crypto_aes_kw_windows.cc crypto_rsa_oaep_windows.cc crypto_ecdh_windows.cc
+    crypto_hkdf_windows.cc
+    crypto_eddsa.h
+    crypto_windows.h crypto_aes_kw_loop.h
+    crypto_bignum.h crypto_ecc.h crypto_shake256.h crypto_pkcs8.h
+    crypto_system.h)
+
+  # The raw secret agreement and the key derivation provider are declared from
+  # Windows 10 version 1803 onwards, and the headers hide both unless the
+  # targeted system version says so, which MinGW otherwise defaults far below
+  target_compile_definitions(sourcemeta_core_crypto
+    PRIVATE _WIN32_WINNT=0x0A00 NTDDI_VERSION=0x0A000005)
+
+  target_link_libraries(sourcemeta_core_crypto PRIVATE bcrypt)
+elseif(SOURCEMETA_CORE_CRYPTO_BACKEND STREQUAL "openssl")
+  target_sources(sourcemeta_core_crypto PRIVATE
+    crypto_sha1_openssl.cc crypto_sha256_openssl.cc
+    crypto_hmac_sha256_openssl.cc crypto_hmac_sha384_openssl.cc
+    crypto_hmac_sha512_openssl.cc
+    crypto_sha384_openssl.cc
+    crypto_sha512_openssl.cc crypto_random_openssl.cc
+    crypto_verify_openssl.cc crypto_secure_equals_openssl.cc
+    crypto_sign_openssl.cc crypto_aes_gcm_openssl.cc crypto_aes_cbc_openssl.cc
+    crypto_aes_kw_openssl.cc crypto_rsa_oaep_openssl.cc crypto_ecdh_openssl.cc
+    crypto_hkdf_openssl.cc
+    crypto_openssl.h crypto_pkcs8.h crypto_system.h)
+  target_link_libraries(sourcemeta_core_crypto PRIVATE OpenSSL::Crypto)
+else()
+  message(WARNING "Building the reference cryptography backend instead of a "
+    "system provided production one")
+  target_sources(sourcemeta_core_crypto PRIVATE
+    crypto_sha1_other.cc crypto_sha256_other.cc crypto_hmac_sha256_other.cc
+    crypto_hmac_sha384_other.cc crypto_hmac_sha512_other.cc
+    crypto_sha384_other.cc
+    crypto_sha512_other.cc crypto_random_other.cc crypto_verify_other.cc
+    crypto_secure_equals_generic.cc crypto_sign_other.cc
+    crypto_aes_gcm_other.cc crypto_aes_cbc_other.cc crypto_aes_kw_other.cc
+    crypto_rsa_oaep_other.cc crypto_ecdh_other.cc crypto_hkdf_other.cc
+    crypto_aes_block.h crypto_ghash.h crypto_aes_kw_loop.h crypto_sha1_other.h
+    crypto_bignum.h crypto_ecc.h crypto_eddsa.h crypto_shake256.h
+    crypto_pkcs8.h crypto_other.h crypto_rsa_other.h)
+
+  if(WIN32)
+    # Even here the entropy comes from the system, as no portable source is
+    # guaranteed to be a cryptographic one
+    target_link_libraries(sourcemeta_core_crypto PRIVATE bcrypt)
+  endif()
+endif()
+
+if(SOURCEMETA_CORE_INSTALL)
+  sourcemeta_library_install(NAMESPACE sourcemeta PROJECT core NAME crypto)
+endif()

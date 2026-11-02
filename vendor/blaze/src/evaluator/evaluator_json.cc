@@ -45,6 +45,7 @@ auto value_from_json(const sourcemeta::core::JSON &wrapper)
     case 23: return sourcemeta::core::from_json<ValueIntegerBoundsWithSize>(value);
     case 24: return sourcemeta::core::from_json<ValueObjectProperties>(value);
     case 25: return sourcemeta::core::from_json<ValueNumberType>(value);
+    case 26: return sourcemeta::core::from_json<ValueTypesWithSize>(value);
     // clang-format on
     default:
       std::unreachable();
@@ -62,7 +63,7 @@ auto instructions_from_json(
   sourcemeta::blaze::Instructions result;
   result.reserve(instructions.size());
   for (const auto &instruction : instructions.as_array()) {
-    if (!instruction.is_array() || instruction.array_size() < 7) {
+    if (!instruction.is_array() || instruction.array_size() < 9) {
       return std::nullopt;
     }
 
@@ -72,7 +73,9 @@ auto instructions_from_json(
     const auto &keyword_location{instruction.at(3)};
     const auto &schema_resource{instruction.at(4)};
     const auto &vocabulary{instruction.at(5)};
-    const auto &value{instruction.at(6)};
+    const auto &message{instruction.at(6)};
+    const auto &message_detail{instruction.at(7)};
+    const auto &value{instruction.at(8)};
 
     auto type_result{
         sourcemeta::core::from_json<sourcemeta::blaze::InstructionIndex>(type)};
@@ -88,12 +91,15 @@ auto instructions_from_json(
         sourcemeta::core::from_json<std::size_t>(schema_resource)};
     auto vocabulary_result{
         sourcemeta::core::from_json<std::size_t>(vocabulary)};
+    auto message_result{sourcemeta::core::from_json<std::size_t>(message)};
+    auto message_detail_result{
+        sourcemeta::core::from_json<std::size_t>(message_detail)};
     auto value_result{value_from_json(value)};
 
     // Parse children if there
     std::optional<sourcemeta::blaze::Instructions> children_result{
-        instruction.array_size() == 8
-            ? instructions_from_json(instruction.at(7), extra)
+        instruction.array_size() == 10
+            ? instructions_from_json(instruction.at(9), extra)
             : sourcemeta::blaze::Instructions{}};
 
     if (!type_result.has_value() ||
@@ -101,6 +107,7 @@ auto instructions_from_json(
         !relative_instance_location_result.has_value() ||
         !keyword_location_result.has_value() ||
         !schema_resource_result.has_value() || !vocabulary_result.has_value() ||
+        !message_result.has_value() || !message_detail_result.has_value() ||
         !value_result.has_value() || !children_result.has_value()) {
       return std::nullopt;
     }
@@ -111,7 +118,9 @@ auto instructions_from_json(
              std::move(relative_schema_location_result).value(),
          .keyword_location = std::move(keyword_location_result).value(),
          .schema_resource = std::move(schema_resource_result).value(),
-         .vocabulary = std::move(vocabulary_result).value()});
+         .vocabulary = std::move(vocabulary_result).value(),
+         .message = std::move(message_result).value(),
+         .message_detail = std::move(message_detail_result).value()});
 
     // TODO: Maybe we should emplace here?
     result.push_back({.type = std::move(type_result).value(),
@@ -130,7 +139,7 @@ auto instructions_from_json(
 namespace sourcemeta::blaze {
 
 auto from_json(const sourcemeta::core::JSON &json) -> std::optional<Template> {
-  if (!json.is_array() || json.array_size() != 6) {
+  if (!json.is_array() || json.array_size() != 7) {
     return std::nullopt;
   }
 
@@ -194,12 +203,38 @@ auto from_json(const sourcemeta::core::JSON &json) -> std::optional<Template> {
     vocabularies_result.push_back(vocabulary.to_string());
   }
 
+  const auto &messages{json.at(6)};
+  if (!messages.is_array()) {
+    return std::nullopt;
+  }
+
+  std::vector<std::string> messages_result;
+  messages_result.reserve(messages.size());
+  for (const auto &message : messages.as_array()) {
+    if (!message.is_string()) {
+      return std::nullopt;
+    }
+    messages_result.push_back(message.to_string());
+  }
+
+  // Both pools are read after the instructions that point into them, so this
+  // is the first place the indices can be checked. Letting one through would
+  // only move the failure to whoever renders a description
+  for (const auto &metadata : template_extra) {
+    if (metadata.vocabulary > vocabularies_result.size() ||
+        metadata.message > messages_result.size() ||
+        metadata.message_detail > messages_result.size()) {
+      return std::nullopt;
+    }
+  }
+
   return Template{.dynamic = dynamic.to_boolean(),
                   .track = track.to_boolean(),
                   .targets = std::move(targets_result),
                   .labels = std::move(labels_result),
                   .extra = std::move(template_extra),
-                  .vocabularies = std::move(vocabularies_result)};
+                  .vocabularies = std::move(vocabularies_result),
+                  .messages = std::move(messages_result)};
 }
 
 } // namespace sourcemeta::blaze

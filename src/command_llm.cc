@@ -919,7 +919,7 @@ auto sourcemeta::jsonschema::llm(const sourcemeta::core::Options &options)
         evaluator.validate(schema_template, document, std::ref(trace_output));
   } else {
     print_verbatim(generated, std::cout);
-    sourcemeta::blaze::SimpleOutput output{document};
+    sourcemeta::blaze::SimpleOutput output{schema_template, document};
     result = evaluator.validate(schema_template, document, std::ref(output));
     if (!result) {
       std::cerr << "\n"

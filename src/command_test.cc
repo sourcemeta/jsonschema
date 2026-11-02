@@ -294,7 +294,7 @@ auto resolve_base(const sourcemeta::core::SchemaResolver &schema_resolver,
     // it would have the user import what they already did
     custom_resolver.report_description_resource(base);
     throw sourcemeta::core::SchemaResolutionError{
-        base, "Could not resolve the reference to an external schema"};
+        "Could not resolve the reference to an external schema", base};
   }
 
   auto document{std::make_unique<sourcemeta::core::JSON>(description.value())};
@@ -437,7 +437,7 @@ auto parse_test_suite(const sourcemeta::jsonschema::InputJSON &entry,
         sourcemeta::core::SchemaUnknownBaseDialectError>{entry.resolution_base};
   } catch (const sourcemeta::core::SchemaVocabularyError &error) {
     throw sourcemeta::core::FileError<sourcemeta::core::SchemaVocabularyError>{
-        entry.resolution_base, error.uri(), error.what()};
+        entry.resolution_base, error};
   } catch (const sourcemeta::core::SchemaUnknownDialectError &) {
     throw sourcemeta::core::FileError<
         sourcemeta::core::SchemaUnknownDialectError>{entry.resolution_base};
@@ -457,15 +457,14 @@ auto parse_test_suite(const sourcemeta::jsonschema::InputJSON &entry,
     // No position, as what compiles here is the schema the document targets
     // while the positions on hand describe the test document itself
     throw sourcemeta::core::FileError<sourcemeta::core::SchemaReferenceError>{
-        entry.resolution_base, error.identifier(), error.location(),
-        error.what()};
+        entry.resolution_base, error};
   } catch (const sourcemeta::core::SchemaReferenceObjectResourceError &error) {
     throw sourcemeta::core::FileError<
         sourcemeta::core::SchemaReferenceObjectResourceError>{
         entry.resolution_base, error.identifier()};
   } catch (const sourcemeta::core::SchemaError &error) {
     throw sourcemeta::core::FileError<sourcemeta::core::SchemaError>{
-        entry.resolution_base, error.what()};
+        entry.resolution_base, error};
   }
 }
 
@@ -572,7 +571,8 @@ auto run_suite_as_text(const sourcemeta::core::Options &options,
               stream << "\n";
             }
           } else if (!outcome.valid) {
-            sourcemeta::blaze::SimpleOutput output{test_case.data};
+            sourcemeta::blaze::SimpleOutput output{
+                test_suite.exhaustive(target_index), test_case.data};
             test_suite.evaluator.validate(test_suite.exhaustive(target_index),
                                           test_case.data, std::ref(output));
 
@@ -796,7 +796,8 @@ auto run_suite_as_ctrf(const sourcemeta::core::Options &options,
                                                         "expected to fail"});
             } else if (!outcome.valid) {
               std::ostringstream trace_stream;
-              sourcemeta::blaze::SimpleOutput output{test_case.data};
+              sourcemeta::blaze::SimpleOutput output{
+                  test_suite.exhaustive(target_index), test_case.data};
               test_suite.evaluator.validate(test_suite.exhaustive(target_index),
                                             test_case.data, std::ref(output));
               sourcemeta::jsonschema::print(output, test_case.tracker,

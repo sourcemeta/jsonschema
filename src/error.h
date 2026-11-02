@@ -75,13 +75,13 @@ private:
   std::size_t entry_;
 };
 
-class SchemaIdentifierConflictError : public std::runtime_error {
+class SchemaIdentifierConflictError : public sourcemeta::core::Error {
 public:
   SchemaIdentifierConflictError(std::string identifier,
                                 sourcemeta::core::Pointer location,
                                 std::filesystem::path other_path,
                                 sourcemeta::core::Pointer other)
-      : std::runtime_error{"Conflicting schemas for the same identifier"},
+      : sourcemeta::core::Error{"Conflicting schemas for the same identifier"},
         identifier_{std::move(identifier)}, location_{std::move(location)},
         other_path_{std::move(other_path)}, other_{std::move(other)} {}
 
@@ -116,12 +116,13 @@ private:
 // nothing even though the file holding it was imported. Saying that outright
 // beats the generic diagnostic, which would advise importing what is already
 // imported
-class SchemaEmbeddedResourceError : public std::runtime_error {
+class SchemaEmbeddedResourceError : public sourcemeta::core::Error {
 public:
   SchemaEmbeddedResourceError(std::string identifier,
                               sourcemeta::core::Pointer location)
-      : std::runtime_error{"This identifier is embedded in an imported schema, "
-                           "so only that schema can reach it"},
+      : sourcemeta::core::
+            Error{"This identifier is embedded in an imported schema, "
+                  "so only that schema can reach it"},
         identifier_{std::move(identifier)}, location_{std::move(location)} {}
 
   [[nodiscard]] auto identifier() const noexcept -> const std::string & {
@@ -140,13 +141,14 @@ private:
 
 // The counterpart for a description, whose Schema Objects declare their
 // identifiers within it in just the same way
-class OpenAPIEmbeddedResourceError : public std::runtime_error {
+class OpenAPIEmbeddedResourceError : public sourcemeta::core::Error {
 public:
   OpenAPIEmbeddedResourceError(std::string identifier,
                                sourcemeta::core::Pointer location)
-      : std::runtime_error{"This identifier is declared by a Schema Object of "
-                           "an imported OpenAPI description, so only that "
-                           "description can reach it"},
+      : sourcemeta::core::
+            Error{"This identifier is declared by a Schema Object of "
+                  "an imported OpenAPI description, so only that "
+                  "description can reach it"},
         identifier_{std::move(identifier)}, location_{std::move(location)} {}
 
   [[nodiscard]] auto identifier() const noexcept -> const std::string & {
@@ -163,12 +165,12 @@ private:
   sourcemeta::core::Pointer location_;
 };
 
-class OpenAPIIdentifierConflictError : public std::runtime_error {
+class OpenAPIIdentifierConflictError : public sourcemeta::core::Error {
 public:
   OpenAPIIdentifierConflictError(std::string identifier,
                                  std::filesystem::path other_path)
-      : std::runtime_error{"Conflicting OpenAPI descriptions for the same "
-                           "identifier"},
+      : sourcemeta::core::Error{"Conflicting OpenAPI descriptions for the same "
+                                "identifier"},
         identifier_{std::move(identifier)}, other_path_{std::move(other_path)} {
   }
 
@@ -186,10 +188,11 @@ private:
   std::filesystem::path other_path_;
 };
 
-class PositionalArgumentError : public std::runtime_error {
+class PositionalArgumentError : public sourcemeta::core::Error {
 public:
-  PositionalArgumentError(const std::string &message, std::string example)
-      : std::runtime_error{message}, example_{std::move(example)} {}
+  PositionalArgumentError(const sourcemeta::core::StaticString message,
+                          std::string example)
+      : sourcemeta::core::Error{message}, example_{std::move(example)} {}
 
   [[nodiscard]] auto example() const noexcept -> const std::string & {
     return this->example_;
@@ -199,12 +202,12 @@ private:
   std::string example_;
 };
 
-class InvalidOptionEnumerationValueError : public std::runtime_error {
+class InvalidOptionEnumerationValueError : public sourcemeta::core::Error {
 public:
-  InvalidOptionEnumerationValueError(const std::string &message,
-                                     std::string option,
-                                     std::initializer_list<std::string> values)
-      : std::runtime_error{message}, option_{std::move(option)},
+  InvalidOptionEnumerationValueError(
+      const sourcemeta::core::StaticString message, std::string option,
+      std::initializer_list<std::string> values)
+      : sourcemeta::core::Error{message}, option_{std::move(option)},
         values_{values} {}
 
   [[nodiscard]] auto option() const noexcept -> const std::string & {
@@ -221,10 +224,11 @@ private:
   std::vector<std::string> values_;
 };
 
-class InvalidDefaultDialectError : public std::runtime_error {
+class InvalidDefaultDialectError : public sourcemeta::core::Error {
 public:
   InvalidDefaultDialectError(std::string value)
-      : std::runtime_error{"The default dialect is not a valid URI reference"},
+      : sourcemeta::core::
+            Error{"The default dialect is not a valid URI reference"},
         value_{std::move(value)} {}
 
   [[nodiscard]] auto value() const noexcept -> const std::string & {
@@ -237,11 +241,12 @@ private:
 
 // A target names the schema under test by URI, and a fragment is part of that
 // URI, so a Schema Object under a templated path is named percent-encoded
-class InvalidTestTargetError : public std::runtime_error {
+class InvalidTestTargetError : public sourcemeta::core::Error {
 public:
   InvalidTestTargetError(std::string value)
-      : std::runtime_error{"The test document `target` property is not a valid "
-                           "URI"},
+      : sourcemeta::core::
+            Error{"The test document `target` property is not a valid "
+                  "URI"},
         value_{std::move(value)} {}
 
   [[nodiscard]] auto value() const noexcept -> const std::string & {
@@ -263,11 +268,12 @@ private:
 // The document that holds what a target names was read, so what went wrong is
 // that nothing within it answers to the target rather than anything about
 // reaching the document itself
-class TestTargetNotSchemaError : public std::runtime_error {
+class TestTargetNotSchemaError : public sourcemeta::core::Error {
 public:
-  TestTargetNotSchemaError(const char *message, std::string identifier,
-                           const bool description, const bool names_document)
-      : std::runtime_error{message}, identifier_{std::move(identifier)},
+  TestTargetNotSchemaError(const sourcemeta::core::StaticString message,
+                           std::string identifier, const bool description,
+                           const bool names_document)
+      : sourcemeta::core::Error{message}, identifier_{std::move(identifier)},
         description_{description}, names_document_{names_document} {}
 
   [[nodiscard]] auto identifier() const noexcept -> const std::string & {
@@ -292,12 +298,13 @@ private:
   bool names_document_;
 };
 
-class NotSchemaError : public std::runtime_error {
+class NotSchemaError : public sourcemeta::core::Error {
 public:
   NotSchemaError(std::filesystem::path path)
-      : std::runtime_error{"The schema file you provided does not represent a "
-                           "valid JSON "
-                           "Schema"},
+      : sourcemeta::core::
+            Error{"The schema file you provided does not represent a "
+                  "valid JSON "
+                  "Schema"},
         path_{std::move(path)} {}
 
   [[nodiscard]] auto path() const noexcept -> const std::filesystem::path & {
@@ -308,11 +315,11 @@ private:
   std::filesystem::path path_;
 };
 
-class MultiDocumentInputError : public std::runtime_error {
+class MultiDocumentInputError : public sourcemeta::core::Error {
 public:
-  MultiDocumentInputError(const std::string &message,
+  MultiDocumentInputError(const sourcemeta::core::StaticString message,
                           std::filesystem::path path)
-      : std::runtime_error{message}, path_{std::move(path)} {}
+      : sourcemeta::core::Error{message}, path_{std::move(path)} {}
 
   [[nodiscard]] auto path() const noexcept -> const std::filesystem::path & {
     return this->path_;
@@ -322,21 +329,22 @@ private:
   std::filesystem::path path_;
 };
 
-class UnsupportedOpenAPIWithoutIdError : public std::runtime_error {
+class UnsupportedOpenAPIWithoutIdError : public sourcemeta::core::Error {
 public:
   UnsupportedOpenAPIWithoutIdError()
-      : std::runtime_error{"The --without-id option is not supported for "
-                           "OpenAPI descriptions"} {}
+      : sourcemeta::core::Error{"The --without-id option is not supported for "
+                                "OpenAPI descriptions"} {}
 };
 
 // What a description holds are Schema Objects rather than one schema with
 // subschemas, so an entry point that reaches neither is told apart in those
 // terms rather than in the ones a plain schema would be
-class OpenAPIEntryPointError : public std::runtime_error {
+class OpenAPIEntryPointError : public sourcemeta::core::Error {
 public:
   OpenAPIEntryPointError(std::string identifier)
-      : std::runtime_error{"The given entry point URI does not name a Schema "
-                           "Object of the OpenAPI description"},
+      : sourcemeta::core::
+            Error{"The given entry point URI does not name a Schema "
+                  "Object of the OpenAPI description"},
         identifier_{std::move(identifier)} {}
 
   [[nodiscard]] auto identifier() const noexcept -> const std::string & {
@@ -350,21 +358,23 @@ private:
 // Upgrading a description means moving every Schema Object it holds and the
 // revision it declares, which is a larger piece of work than upgrading a
 // schema, so it is turned down outright rather than half done
-class UnsupportedOpenAPIUpgradeError : public std::runtime_error {
+class UnsupportedOpenAPIUpgradeError : public sourcemeta::core::Error {
 public:
   UnsupportedOpenAPIUpgradeError()
-      : std::runtime_error{"Upgrading OpenAPI descriptions is not supported "
-                           "yet"} {}
+      : sourcemeta::core::Error{
+            "Upgrading OpenAPI descriptions is not supported "
+            "yet"} {}
 };
 
 // Generating code for a description means a type for every Schema Object it
 // holds, and a way to name each one, which is a larger piece of work than
 // generating for a schema, so it is turned down outright rather than half done
-class UnsupportedOpenAPICodegenError : public std::runtime_error {
+class UnsupportedOpenAPICodegenError : public sourcemeta::core::Error {
 public:
   UnsupportedOpenAPICodegenError()
-      : std::runtime_error{"Generating code for OpenAPI descriptions is not "
-                           "supported yet"} {}
+      : sourcemeta::core::Error{
+            "Generating code for OpenAPI descriptions is not "
+            "supported yet"} {}
 };
 
 // What a provider takes is a single schema, and a description holds many and
@@ -372,28 +382,29 @@ public:
 // one yet, as naming a Schema Object within a description and getting a schema
 // that stands on its own is not something we can do, so this is turned down
 // outright rather than half done
-class UnsupportedOpenAPILLMError : public std::runtime_error {
+class UnsupportedOpenAPILLMError : public sourcemeta::core::Error {
 public:
   UnsupportedOpenAPILLMError()
-      : std::runtime_error{"Sending OpenAPI descriptions to a model is not "
-                           "supported yet"} {}
+      : sourcemeta::core::Error{
+            "Sending OpenAPI descriptions to a model is not "
+            "supported yet"} {}
 };
 
 // A boolean schema answers the same way whatever it is handed: `false` can
 // never be satisfied and `true` constrains nothing. Either way what a model
 // returns would be judged without reference to it, so there is no conformance
 // to find out about, which is the whole of what this command is for
-class BooleanSchemaLLMError : public std::runtime_error {
+class BooleanSchemaLLMError : public sourcemeta::core::Error {
 public:
   BooleanSchemaLLMError()
-      : std::runtime_error{"A boolean schema cannot be sent to a model"} {}
+      : sourcemeta::core::Error{"A boolean schema cannot be sent to a model"} {}
 };
 
-class UnsupportedOpenAPIVersionError : public std::runtime_error {
+class UnsupportedOpenAPIVersionError : public sourcemeta::core::Error {
 public:
   UnsupportedOpenAPIVersionError(std::string value)
-      : std::runtime_error{"This OpenAPI Specification revision is not "
-                           "supported"},
+      : sourcemeta::core::Error{"This OpenAPI Specification revision is not "
+                                "supported"},
         value_{std::move(value)} {}
 
   [[nodiscard]] auto value() const noexcept -> const std::string & {
@@ -406,10 +417,11 @@ private:
 
 // An option this command cannot proceed without. What to pass is not always
 // obvious from the name, so one that would have worked travels along
-class MissingOptionError : public std::runtime_error {
+class MissingOptionError : public sourcemeta::core::Error {
 public:
-  MissingOptionError(const std::string &message, std::string example)
-      : std::runtime_error{message}, example_{std::move(example)} {}
+  MissingOptionError(const sourcemeta::core::StaticString message,
+                     std::string example)
+      : sourcemeta::core::Error{message}, example_{std::move(example)} {}
 
   [[nodiscard]] auto example() const noexcept -> const std::string & {
     return this->example_;
@@ -419,50 +431,53 @@ private:
   std::string example_;
 };
 
-class OptionConflictError : public std::runtime_error {
+class OptionConflictError : public sourcemeta::core::Error {
 public:
-  OptionConflictError(const std::string &message)
-      : std::runtime_error{message} {}
+  OptionConflictError(const sourcemeta::core::StaticString message)
+      : sourcemeta::core::Error{message} {}
 };
 
-class StdinError : public std::runtime_error {
+class StdinError : public sourcemeta::core::Error {
 public:
-  explicit StdinError(const std::string &message)
-      : std::runtime_error{message} {}
+  explicit StdinError(const sourcemeta::core::StaticString message)
+      : sourcemeta::core::Error{message} {}
 };
 
-class NoInputFilesError : public std::runtime_error {
+class NoInputFilesError : public sourcemeta::core::Error {
 public:
-  NoInputFilesError() : std::runtime_error{"No input files found"} {}
+  NoInputFilesError() : sourcemeta::core::Error{"No input files found"} {}
 };
 
-class InvalidJobsError : public std::runtime_error {
+class InvalidJobsError : public sourcemeta::core::Error {
 public:
   InvalidJobsError()
-      : std::runtime_error{"The --jobs option must be a positive integer"} {}
+      : sourcemeta::core::Error{
+            "The --jobs option must be a positive integer"} {}
 };
 
-class InvalidIndentationError : public std::runtime_error {
+class InvalidIndentationError : public sourcemeta::core::Error {
 public:
   InvalidIndentationError()
-      : std::runtime_error{
+      : sourcemeta::core::Error{
             "The --indentation option must be a non-negative integer"} {}
 };
 
-class InvalidTimeoutError : public std::runtime_error {
+class InvalidTimeoutError : public sourcemeta::core::Error {
 public:
   InvalidTimeoutError()
-      : std::runtime_error{"The --timeout option must be a positive integer "
-                           "number of seconds"} {}
+      : sourcemeta::core::Error{
+            "The --timeout option must be a positive integer "
+            "number of seconds"} {}
 };
 
 // A parameter that is not shaped like one at all, so what it was meant to say
 // cannot be read out of it. This is the only case where showing what one looks
 // like helps, as the rest are well formed and refused on their merits
-class MalformedParameterError : public std::runtime_error {
+class MalformedParameterError : public sourcemeta::core::Error {
 public:
-  MalformedParameterError(const std::string &message, std::string value)
-      : std::runtime_error{message}, value_{std::move(value)} {}
+  MalformedParameterError(const sourcemeta::core::StaticString message,
+                          std::string value)
+      : sourcemeta::core::Error{message}, value_{std::move(value)} {}
 
   [[nodiscard]] auto value() const noexcept -> const std::string & {
     return this->value_;
@@ -474,10 +489,11 @@ private:
 
 // A parameter that reads as one but cannot be carried out, either because of
 // what sits along the way to where it writes or because of what it would write
-class InvalidParameterError : public std::runtime_error {
+class InvalidParameterError : public sourcemeta::core::Error {
 public:
-  InvalidParameterError(const std::string &message, std::string value)
-      : std::runtime_error{message}, value_{std::move(value)} {}
+  InvalidParameterError(const sourcemeta::core::StaticString message,
+                        std::string value)
+      : sourcemeta::core::Error{message}, value_{std::move(value)} {}
 
   [[nodiscard]] auto value() const noexcept -> const std::string & {
     return this->value_;
@@ -487,10 +503,11 @@ private:
   std::string value_;
 };
 
-class InvalidLintRuleError : public std::runtime_error {
+class InvalidLintRuleError : public sourcemeta::core::Error {
 public:
-  InvalidLintRuleError(const std::string &message, std::string rule)
-      : std::runtime_error{message}, rule_{std::move(rule)} {}
+  InvalidLintRuleError(const sourcemeta::core::StaticString message,
+                       std::string rule)
+      : sourcemeta::core::Error{message}, rule_{std::move(rule)} {}
 
   [[nodiscard]] auto rule() const noexcept -> const std::string & {
     return this->rule_;
@@ -500,10 +517,10 @@ private:
   std::string rule_;
 };
 
-class DuplicateLintRuleError : public std::runtime_error {
+class DuplicateLintRuleError : public sourcemeta::core::Error {
 public:
   DuplicateLintRuleError(std::string rule)
-      : std::runtime_error{"A lint rule with this name already exists"},
+      : sourcemeta::core::Error{"A lint rule with this name already exists"},
         rule_{std::move(rule)} {}
 
   [[nodiscard]] auto rule() const noexcept -> const std::string & {
@@ -514,11 +531,11 @@ private:
   std::string rule_;
 };
 
-class InvalidIncludeIdentifier : public std::runtime_error {
+class InvalidIncludeIdentifier : public sourcemeta::core::Error {
 public:
   InvalidIncludeIdentifier(std::string identifier)
-      : std::runtime_error{"The include identifier is not a valid C/C++ "
-                           "identifier"},
+      : sourcemeta::core::Error{"The include identifier is not a valid C/C++ "
+                                "identifier"},
         identifier_{std::move(identifier)} {}
 
   [[nodiscard]] auto identifier() const noexcept -> const std::string & {
@@ -550,12 +567,12 @@ private:
   sourcemeta::core::Pointer location_;
 };
 
-class InvalidReferenceUpgradeError : public std::runtime_error {
+class InvalidReferenceUpgradeError : public sourcemeta::core::Error {
 public:
   InvalidReferenceUpgradeError(std::filesystem::path path,
                                sourcemeta::core::Pointer location,
                                std::string reference)
-      : std::runtime_error{"The reference does not point to a schema"},
+      : sourcemeta::core::Error{"The reference does not point to a schema"},
         path_{std::move(path)}, location_{std::move(location)},
         reference_{std::move(reference)} {}
 
@@ -578,12 +595,12 @@ private:
   std::string reference_;
 };
 
-class BrokenReferenceUpgradeError : public std::runtime_error {
+class BrokenReferenceUpgradeError : public sourcemeta::core::Error {
 public:
   BrokenReferenceUpgradeError(std::filesystem::path path,
                               sourcemeta::core::Pointer location,
                               std::string reference)
-      : std::runtime_error{"The reference broke after upgrading"},
+      : sourcemeta::core::Error{"The reference broke after upgrading"},
         path_{std::move(path)}, location_{std::move(location)},
         reference_{std::move(reference)} {}
 
@@ -606,13 +623,13 @@ private:
   std::string reference_;
 };
 
-class MetaschemaUpgradeError : public std::runtime_error {
+class MetaschemaUpgradeError : public sourcemeta::core::Error {
 public:
   MetaschemaUpgradeError(std::filesystem::path path,
                          sourcemeta::core::Pointer location,
                          std::string dialect)
-      : std::runtime_error{"Cannot upgrade a schema that is itself a "
-                           "meta-schema"},
+      : sourcemeta::core::Error{"Cannot upgrade a schema that is itself a "
+                                "meta-schema"},
         path_{std::move(path)}, location_{std::move(location)},
         dialect_{std::move(dialect)} {}
 
@@ -635,13 +652,13 @@ private:
   std::string dialect_;
 };
 
-class CustomMetaschemaUpgradeError : public std::runtime_error {
+class CustomMetaschemaUpgradeError : public sourcemeta::core::Error {
 public:
   CustomMetaschemaUpgradeError(std::filesystem::path path,
                                sourcemeta::core::Pointer location,
                                std::string dialect)
-      : std::runtime_error{"Cannot upgrade a schema that uses a custom "
-                           "meta-schema"},
+      : sourcemeta::core::Error{"Cannot upgrade a schema that uses a custom "
+                                "meta-schema"},
         path_{std::move(path)}, location_{std::move(location)},
         dialect_{std::move(dialect)} {}
 
@@ -669,14 +686,14 @@ private:
 // of one's own is the exception: nothing published suggests any of them reads a
 // dialect declaration, so a schema written against one is very unlikely to be
 // understood as written
-class CustomMetaschemaLLMError : public std::runtime_error {
+class CustomMetaschemaLLMError : public sourcemeta::core::Error {
 public:
   CustomMetaschemaLLMError(std::filesystem::path path,
                            sourcemeta::core::Pointer location,
                            std::string dialect)
-      : std::
-            runtime_error{"Schemas that declare a custom meta-schema cannot be "
-                          "sent to a model"},
+      : sourcemeta::core::
+            Error{"Schemas that declare a custom meta-schema cannot be "
+                  "sent to a model"},
         path_{std::move(path)}, location_{std::move(location)},
         dialect_{std::move(dialect)} {}
 
@@ -750,12 +767,13 @@ private:
   std::filesystem::path path_;
 };
 
-class UnsupportedDialectCodegenError : public std::runtime_error {
+class UnsupportedDialectCodegenError : public sourcemeta::core::Error {
 public:
   UnsupportedDialectCodegenError(std::filesystem::path path,
                                  std::string dialect)
-      : std::runtime_error{"This command requires the schema to declare JSON "
-                           "Schema 2020-12"},
+      : sourcemeta::core::
+            Error{"This command requires the schema to declare JSON "
+                  "Schema 2020-12"},
         path_{std::move(path)}, dialect_{std::move(dialect)} {}
 
   [[nodiscard]] auto path() const noexcept -> const std::filesystem::path & {
@@ -771,11 +789,12 @@ private:
   std::string dialect_;
 };
 
-class UnsupportedDialectRdfError : public std::runtime_error {
+class UnsupportedDialectRdfError : public sourcemeta::core::Error {
 public:
   UnsupportedDialectRdfError(std::filesystem::path path, std::string dialect)
-      : std::runtime_error{"This command requires the schema to declare JSON "
-                           "Schema 2019-09 or newer"},
+      : sourcemeta::core::
+            Error{"This command requires the schema to declare JSON "
+                  "Schema 2019-09 or newer"},
         path_{std::move(path)}, dialect_{std::move(dialect)} {}
 
   [[nodiscard]] auto path() const noexcept -> const std::filesystem::path & {
@@ -791,13 +810,13 @@ private:
   std::string dialect_;
 };
 
-class UnsupportedDialectUpgradeError : public std::runtime_error {
+class UnsupportedDialectUpgradeError : public sourcemeta::core::Error {
 public:
   UnsupportedDialectUpgradeError(std::filesystem::path path,
                                  sourcemeta::core::Pointer location,
                                  std::string dialect)
-      : std::runtime_error{"Upgrading schemas from this dialect is not "
-                           "supported yet"},
+      : sourcemeta::core::Error{"Upgrading schemas from this dialect is not "
+                                "supported yet"},
         path_{std::move(path)}, location_{std::move(location)},
         dialect_{std::move(dialect)} {}
 
@@ -820,10 +839,11 @@ private:
   std::string dialect_;
 };
 
-class UnknownCommandError : public std::runtime_error {
+class UnknownCommandError : public sourcemeta::core::Error {
 public:
   UnknownCommandError(std::string command)
-      : std::runtime_error{"Unknown command"}, command_{std::move(command)} {}
+      : sourcemeta::core::Error{"Unknown command"},
+        command_{std::move(command)} {}
 
   [[nodiscard]] auto command() const noexcept -> const std::string & {
     return this->command_;
@@ -833,11 +853,12 @@ private:
   std::string command_;
 };
 
-class ConfigurationNotFoundError : public std::runtime_error {
+class ConfigurationNotFoundError : public sourcemeta::core::Error {
 public:
   ConfigurationNotFoundError(std::filesystem::path path)
-      : std::runtime_error{"Could not find a jsonschema.json configuration "
-                           "file"},
+      : sourcemeta::core::
+            Error{"Could not find a jsonschema.json configuration "
+                  "file"},
         path_{std::move(path)} {}
 
   [[nodiscard]] auto path() const noexcept -> const std::filesystem::path & {
@@ -848,10 +869,10 @@ private:
   std::filesystem::path path_;
 };
 
-class ConfigurationFileNotFoundError : public std::runtime_error {
+class ConfigurationFileNotFoundError : public sourcemeta::core::Error {
 public:
   ConfigurationFileNotFoundError(std::filesystem::path path)
-      : std::runtime_error{"The given configuration file does not exist"},
+      : sourcemeta::core::Error{"The given configuration file does not exist"},
         path_{std::move(path)} {}
 
   [[nodiscard]] auto path() const noexcept -> const std::filesystem::path & {
@@ -862,10 +883,11 @@ private:
   std::filesystem::path path_;
 };
 
-class LockNotFoundError : public std::runtime_error {
+class LockNotFoundError : public sourcemeta::core::Error {
 public:
   LockNotFoundError(std::filesystem::path path)
-      : std::runtime_error{"Lock file not found"}, path_{std::move(path)} {}
+      : sourcemeta::core::Error{"Lock file not found"}, path_{std::move(path)} {
+  }
 
   [[nodiscard]] auto path() const noexcept -> const std::filesystem::path & {
     return this->path_;
@@ -875,10 +897,11 @@ private:
   std::filesystem::path path_;
 };
 
-class LockParseError : public std::runtime_error {
+class LockParseError : public sourcemeta::core::Error {
 public:
   LockParseError(std::filesystem::path path)
-      : std::runtime_error{"Lock file is corrupted"}, path_{std::move(path)} {}
+      : sourcemeta::core::Error{"Lock file is corrupted"},
+        path_{std::move(path)} {}
 
   [[nodiscard]] auto path() const noexcept -> const std::filesystem::path & {
     return this->path_;
@@ -901,14 +924,14 @@ private:
   std::string uri_;
 };
 
-class ConfigurationResolveFileNotFoundError : public std::runtime_error {
+class ConfigurationResolveFileNotFoundError : public sourcemeta::core::Error {
 public:
   ConfigurationResolveFileNotFoundError(
       std::filesystem::path configuration_path,
       sourcemeta::core::Pointer location, std::filesystem::path resolve_path,
       std::uint64_t line, std::uint64_t column)
-      : std::runtime_error{"The resolve target does not exist on the "
-                           "filesystem"},
+      : sourcemeta::core::Error{"The resolve target does not exist on the "
+                                "filesystem"},
         configuration_path_{std::move(configuration_path)},
         location_{std::move(location)}, resolve_path_{std::move(resolve_path)},
         line_{line}, column_{column} {}
@@ -943,9 +966,10 @@ private:
   std::uint64_t column_;
 };
 
-class Fail : public std::runtime_error {
+class Fail : public sourcemeta::core::Error {
 public:
-  Fail(int exit_code) : std::runtime_error{"Fail"}, exit_code_{exit_code} {}
+  Fail(int exit_code)
+      : sourcemeta::core::Error{"Fail"}, exit_code_{exit_code} {}
 
   [[nodiscard]] auto exit_code() const noexcept -> int {
     return this->exit_code_;

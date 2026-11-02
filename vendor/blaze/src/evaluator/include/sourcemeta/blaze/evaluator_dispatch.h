@@ -213,6 +213,15 @@ inline auto resolve_instance(const JSON &instance,
     return instance;
   }
 
+  // A single property is what almost every instruction that navigates at all
+  // carries, and resolving it here keeps the lookup inline, rather than
+  // calling out to the pointer walk that the general case needs
+  if (relative_instance_location.size() == 1 &&
+      relative_instance_location.at(0).is_property()) {
+    return instance.at(relative_instance_location.at(0).to_property(),
+                       relative_instance_location.at(0).property_hash());
+  }
+
   return get(instance, relative_instance_location);
 }
 
@@ -230,6 +239,64 @@ resolve_string_target(const JSON::String *property_target, const JSON &instance,
   } else {
     return &target.to_string();
   }
+}
+
+inline auto named_index(const ValueNamedIndexes &indexes,
+                        const JSON::String &name,
+                        const JSON::Object::hash_type &name_hash) noexcept
+    -> const ValueUnsignedInteger * {
+  // Few enough names come without a table of contents, as reaching one costs
+  // more than scanning them, so the whole range is the candidate range
+  std::size_t first{1};
+  std::size_t last{indexes.first.size()};
+  if (!indexes.second.empty()) {
+    // A name whose size no entry has cannot match, which settles most of the
+    // misses without comparing against any entry at all
+    if (name.size() >= indexes.second.size()) {
+      return nullptr;
+    }
+
+    const auto &bounds{indexes.second[name.size()]};
+    if (bounds.second == 0) {
+      return nullptr;
+    }
+
+    first = bounds.first;
+    last = bounds.second;
+  }
+
+  // A perfect hash records the name's size, so matching one is proof the names
+  // are equal and only a longer name needs comparing. Whether the hash is
+  // perfect depends on the name alone, so it is decided once rather than per
+  // entry, as `JSONObject` does for the same reason
+  constexpr sourcemeta::core::PropertyHashJSON<JSON::String> HASHER{};
+  if (HASHER.is_perfect(name_hash)) {
+    for (auto position = first; position <= last; position++) {
+      const auto &entry{indexes.first[position - 1]};
+      if (std::get<0>(entry) == name_hash) {
+        return &std::get<1>(entry);
+      }
+    }
+  } else {
+    for (auto position = first; position <= last; position++) {
+      const auto &entry{indexes.first[position - 1]};
+      if (std::get<0>(entry) == name_hash && std::get<2>(entry) == name) {
+        return &std::get<1>(entry);
+      }
+    }
+  }
+
+  return nullptr;
+}
+
+// `std::bitset::test` bounds-checks its index and throws when it is out of
+// range, which every type check would pay on every value it looks at. A
+// `JSON::Type` is always a valid index into a set that holds one bit per type,
+// so the check can never fire and the subscript is used instead
+inline auto type_set_test(const ValueTypes &types,
+                          const JSON::Type type) noexcept -> bool {
+  assert(std::to_underlying(type) < types.size());
+  return types[std::to_underlying(type)];
 }
 
 inline auto effective_type_strict_real(const JSON &instance) noexcept
@@ -250,6 +317,71 @@ inline auto effective_type_strict_real(const JSON &instance) noexcept
 // A real converts through `exact_from` because the constructor spells a double
 // with 17 significant digits, which is too few to tell apart two integers that
 // a bound of this width can sit between
+// Normalising a decimal to the integer or real it represents cannot change
+// whether a type set holds it when the set treats all three number kinds
+// alike, which is what `"type": "number"` compiles to. Deciding this once per
+// instruction keeps the normalisation out of the loop, rather than trading its
+// call for a branch on every element
+inline auto type_set_spans_numbers(const ValueTypes &types) noexcept -> bool {
+  const auto integer{types[std::to_underlying(JSON::Type::Integer)]};
+  return types[std::to_underlying(JSON::Type::Real)] == integer &&
+         types[std::to_underlying(JSON::Type::Decimal)] == integer;
+}
+
+template <bool Normalise>
+inline auto type_in_set(const JSON &instance, const ValueTypes &types) noexcept
+    -> bool {
+  if constexpr (Normalise) {
+    return type_set_test(types, effective_type_strict_real(instance));
+  } else {
+    return type_set_test(types, instance.type());
+  }
+}
+
+template <bool Normalise>
+inline auto array_items_in_type_set(const JSON &target,
+                                    const ValueTypes &types) noexcept -> bool {
+  for (const auto &entry : target.as_array()) {
+    if (!type_in_set<Normalise>(entry, types)) [[unlikely]] {
+      return false;
+    }
+  }
+
+  return true;
+}
+
+template <bool Normalise>
+inline auto object_values_in_type_set(const JSON &target,
+                                      const ValueTypes &types) noexcept
+    -> bool {
+  for (const auto &entry : target.as_object()) {
+    if (!type_in_set<Normalise>(entry.second, types)) [[unlikely]] {
+      return false;
+    }
+  }
+
+  return true;
+}
+
+template <bool Normalise>
+inline auto items_are_bounded_arrays_in_type_set(
+    const JSON &target, const ValueTypes &types, const std::size_t minimum,
+    const std::optional<std::size_t> &maximum) noexcept -> bool {
+  for (const auto &item : target.as_array()) {
+    if (item.type() != JSON::Type::Array || item.array_size() < minimum ||
+        (maximum.has_value() && item.array_size() > maximum.value()))
+        [[unlikely]] {
+      return false;
+    }
+
+    if (!array_items_in_type_set<Normalise>(item, types)) [[unlikely]] {
+      return false;
+    }
+  }
+
+  return true;
+}
+
 inline auto as_decimal(const JSON &instance) -> Decimal {
   assert(instance.is_integral());
   return instance.is_decimal() ? instance.to_decimal()
@@ -454,46 +586,28 @@ INSTRUCTION_HANDLER(AssertionDefinesExactlyStrictHash3) {
     assert(value.first.size() == 3);
     const auto &object{target.as_object()};
 
-    // A perfect hash captures the key bytes but not its length, so each
-    // pairing confirms the size alongside the hash while keeping the unrolled
-    // permutation check over the three keys
-    result = object.size() == 3 &&
-             ((value.first.at(0).first == object.at(0).hash &&
-               value.first.at(0).second.size() == object.at(0).first.size() &&
-               value.first.at(1).first == object.at(1).hash &&
-               value.first.at(1).second.size() == object.at(1).first.size() &&
-               value.first.at(2).first == object.at(2).hash &&
-               value.first.at(2).second.size() == object.at(2).first.size()) ||
-              (value.first.at(0).first == object.at(0).hash &&
-               value.first.at(0).second.size() == object.at(0).first.size() &&
-               value.first.at(1).first == object.at(2).hash &&
-               value.first.at(1).second.size() == object.at(2).first.size() &&
-               value.first.at(2).first == object.at(1).hash &&
-               value.first.at(2).second.size() == object.at(1).first.size()) ||
-              (value.first.at(0).first == object.at(1).hash &&
-               value.first.at(0).second.size() == object.at(1).first.size() &&
-               value.first.at(1).first == object.at(0).hash &&
-               value.first.at(1).second.size() == object.at(0).first.size() &&
-               value.first.at(2).first == object.at(2).hash &&
-               value.first.at(2).second.size() == object.at(2).first.size()) ||
-              (value.first.at(0).first == object.at(1).hash &&
-               value.first.at(0).second.size() == object.at(1).first.size() &&
-               value.first.at(1).first == object.at(2).hash &&
-               value.first.at(1).second.size() == object.at(2).first.size() &&
-               value.first.at(2).first == object.at(0).hash &&
-               value.first.at(2).second.size() == object.at(0).first.size()) ||
-              (value.first.at(0).first == object.at(2).hash &&
-               value.first.at(0).second.size() == object.at(2).first.size() &&
-               value.first.at(1).first == object.at(0).hash &&
-               value.first.at(1).second.size() == object.at(0).first.size() &&
-               value.first.at(2).first == object.at(1).hash &&
-               value.first.at(2).second.size() == object.at(1).first.size()) ||
-              (value.first.at(0).first == object.at(2).hash &&
-               value.first.at(0).second.size() == object.at(2).first.size() &&
-               value.first.at(1).first == object.at(1).hash &&
-               value.first.at(1).second.size() == object.at(1).first.size() &&
-               value.first.at(2).first == object.at(0).hash &&
-               value.first.at(2).second.size() == object.at(0).first.size()));
+    // A perfect hash records the key's size, which the compiler requires of
+    // every key here, so matching one proves the keys equal and the unrolled
+    // permutation check compares nothing but hashes
+    result =
+        object.size() == 3 && ((value.first.at(0).first == object.at(0).hash &&
+                                value.first.at(1).first == object.at(1).hash &&
+                                value.first.at(2).first == object.at(2).hash) ||
+                               (value.first.at(0).first == object.at(0).hash &&
+                                value.first.at(1).first == object.at(2).hash &&
+                                value.first.at(2).first == object.at(1).hash) ||
+                               (value.first.at(0).first == object.at(1).hash &&
+                                value.first.at(1).first == object.at(0).hash &&
+                                value.first.at(2).first == object.at(2).hash) ||
+                               (value.first.at(0).first == object.at(1).hash &&
+                                value.first.at(1).first == object.at(2).hash &&
+                                value.first.at(2).first == object.at(0).hash) ||
+                               (value.first.at(0).first == object.at(2).hash &&
+                                value.first.at(1).first == object.at(0).hash &&
+                                value.first.at(2).first == object.at(1).hash) ||
+                               (value.first.at(0).first == object.at(2).hash &&
+                                value.first.at(1).first == object.at(1).hash &&
+                                value.first.at(2).first == object.at(0).hash));
   }
 
   EVALUATE_END(AssertionDefinesExactlyStrictHash3);
@@ -547,9 +661,8 @@ INSTRUCTION_HANDLER(AssertionType) {
 INSTRUCTION_DIRECT(AssertionTypeAny, ValueTypes) {
   // In non-strict mode, we consider a real number that represents an
   // integer to be an integer
-  return value.test(std::to_underlying(target.type())) ||
-         (value.test(std::to_underlying(JSON::Type::Integer)) &&
-          target.is_integral());
+  return type_set_test(value, target.type()) ||
+         (type_set_test(value, JSON::Type::Integer) && target.is_integral());
 }
 
 INSTRUCTION_HANDLER(AssertionTypeAny) {
@@ -576,7 +689,7 @@ INSTRUCTION_HANDLER(AssertionTypeStrict) {
 }
 
 INSTRUCTION_DIRECT(AssertionTypeStrictAny, ValueTypes) {
-  return value.test(std::to_underlying(effective_type_strict_real(target)));
+  return type_set_test(value, effective_type_strict_real(target));
 }
 
 INSTRUCTION_HANDLER(AssertionTypeStrictAny) {
@@ -590,7 +703,7 @@ INSTRUCTION_HANDLER(AssertionTypeStrictAny) {
 }
 
 INSTRUCTION_DIRECT(AssertionNotTypeStrictAny, ValueTypes) {
-  return !value.test(std::to_underlying(effective_type_strict_real(target)));
+  return !type_set_test(value, effective_type_strict_real(target));
 }
 
 INSTRUCTION_HANDLER(AssertionNotTypeStrictAny) {
@@ -1061,9 +1174,7 @@ INSTRUCTION_HANDLER(AssertionPropertyTypeStrict) {
   EVALUATE_BEGIN_TRY_TARGET(AssertionPropertyTypeStrict);
   // Now here we refer to the actual property
   const auto value{assume_value_copy<ValueType>(instruction.value)};
-  result = target_check->type() == value ||
-           (value == JSON::Type::Integer && target_check->is_decimal() &&
-            target_check->to_decimal().is_integer());
+  result = effective_type_strict_real(*target_check) == value;
   EVALUATE_END(AssertionPropertyTypeStrict);
 }
 
@@ -1071,7 +1182,7 @@ INSTRUCTION_HANDLER(AssertionPropertyTypeStrictEvaluate) {
   EVALUATE_BEGIN_TRY_TARGET(AssertionPropertyTypeStrictEvaluate);
   // Now here we refer to the actual property
   const auto value{assume_value_copy<ValueType>(instruction.value)};
-  result = target_check->type() == value;
+  result = effective_type_strict_real(*target_check) == value;
 
   if (result) {
     context.evaluator->evaluate(target_check);
@@ -1080,16 +1191,20 @@ INSTRUCTION_HANDLER(AssertionPropertyTypeStrictEvaluate) {
   EVALUATE_END(AssertionPropertyTypeStrictEvaluate);
 }
 
+INSTRUCTION_HANDLER(AssertionPropertyEqual) {
+  EVALUATE_BEGIN_TRY_TARGET(AssertionPropertyEqual);
+  const auto &value{assume_value<ValueJSON>(instruction.value)};
+  // Now here we refer to the actual property
+  result = DIRECT(AssertionEqual, *target_check, value);
+  EVALUATE_END(AssertionPropertyEqual);
+}
+
 INSTRUCTION_HANDLER(AssertionPropertyTypeStrictAny) {
   EVALUATE_BEGIN_TRY_TARGET(AssertionPropertyTypeStrictAny);
   const auto value{assume_value_copy<ValueTypes>(instruction.value)};
   assert(value.any());
   // Now here we refer to the actual property
-  const auto type_index{std::to_underlying(target_check->type())};
-  result =
-      value.test(type_index) ||
-      (value.test(std::to_underlying(JSON::Type::Integer)) &&
-       target_check->is_decimal() && target_check->to_decimal().is_integer());
+  result = type_set_test(value, effective_type_strict_real(*target_check));
   EVALUATE_END(AssertionPropertyTypeStrictAny);
 }
 
@@ -1098,8 +1213,7 @@ INSTRUCTION_HANDLER(AssertionPropertyTypeStrictAnyEvaluate) {
   const auto value{assume_value_copy<ValueTypes>(instruction.value)};
   assert(value.any());
   // Now here we refer to the actual property
-  const auto type_index{std::to_underlying(target_check->type())};
-  result = value.test(type_index);
+  result = type_set_test(value, effective_type_strict_real(*target_check));
 
   if (result) {
     context.evaluator->evaluate(target_check);
@@ -1129,13 +1243,11 @@ INSTRUCTION_HANDLER(AssertionObjectPropertiesSimple) {
     for (std::size_t schema_index = 0; schema_index < schema_size;
          schema_index++) {
       const auto &schema_hash{std::get<1>(value[schema_index])};
-      // A perfect hash captures the key bytes but not its length, so its size
-      // is confirmed rather than trusting the hash match alone
+      // A perfect hash records the key's size, so matching one proves the keys
+      // equal and only a longer key needs comparing
       if (schema_hash == instance_hash &&
-          (PROPERTY_HASHER.is_perfect(instance_hash)
-               ? instance_entry.first.size() ==
-                     std::get<0>(value[schema_index]).size()
-               : instance_entry.first == std::get<0>(value[schema_index]))) {
+          (PROPERTY_HASHER.is_perfect(instance_hash) ||
+           instance_entry.first == std::get<0>(value[schema_index]))) {
         seen |= (static_cast<std::uint32_t>(1) << schema_index);
         if (schema_index < instruction.children.size()) {
           const auto &child{instruction.children[schema_index]};
@@ -1798,10 +1910,20 @@ INSTRUCTION_HANDLER(LoopPropertiesUnevaluatedExcept) {
 INSTRUCTION_HANDLER(LoopPropertiesMatch) {
   EVALUATE_BEGIN_NON_STRING(LoopPropertiesMatch, target.is_object());
   const auto &value{assume_value<ValueNamedIndexes>(instruction.value)};
-  assert(!value.empty());
+  assert(!value.first.empty());
   result = true;
+  // The loop already holds each property's value, so a child that only looks at
+  // that value is decided here, rather than dispatched to and left to find the
+  // property in the object a second time. The evaluation-marking variants of
+  // those assertions are deliberately absent, as skipping them would skip the
+  // marker. Dynamic pushes and pops a resource per instruction that the direct
+  // path would skip, and children are evaluated at `depth + 1`, which the
+  // direct path does not route through the depth check. Every condition holds
+  // for every child, so decide once rather than per property
+  const auto direct_children{!Track && !HasCallback && !Dynamic &&
+                             depth < DEPTH_LIMIT};
   for (const auto &entry : target.as_object()) {
-    const auto *index{value.try_at(entry.first, entry.hash)};
+    const auto *index{named_index(value, entry.first, entry.hash)};
     if (!index) {
       continue;
     }
@@ -1810,7 +1932,34 @@ INSTRUCTION_HANDLER(LoopPropertiesMatch) {
     assert(subinstruction.type ==
            sourcemeta::blaze::InstructionIndex::ControlGroup);
     for (const auto &child : subinstruction.children) {
-      if (!EVALUATE_RECURSE(child, target)) [[unlikely]] {
+      bool child_ok;
+      // A child whose instance location is not just the matched property is not
+      // about the value this loop holds, which inlining a reference into the
+      // group can produce, so it resolves its own target as usual
+      if (direct_children && child.relative_instance_location.size() == 1)
+          [[likely]] {
+        switch (child.type) {
+          case InstructionIndex::AssertionPropertyTypeStrict:
+            child_ok = DIRECT(AssertionTypeStrict, entry.second,
+                              assume_value_copy<ValueType>(child.value));
+            break;
+          case InstructionIndex::AssertionPropertyType:
+            child_ok = DIRECT(AssertionType, entry.second,
+                              assume_value_copy<ValueType>(child.value));
+            break;
+          case InstructionIndex::AssertionPropertyTypeStrictAny:
+            child_ok = DIRECT(AssertionTypeStrictAny, entry.second,
+                              assume_value<ValueTypes>(child.value));
+            break;
+          default:
+            child_ok = EVALUATE_RECURSE(child, target);
+            break;
+        }
+      } else {
+        child_ok = EVALUATE_RECURSE(child, target);
+      }
+
+      if (!child_ok) [[unlikely]] {
         result = false;
         EVALUATE_END(LoopPropertiesMatch);
       }
@@ -1823,10 +1972,20 @@ INSTRUCTION_HANDLER(LoopPropertiesMatch) {
 INSTRUCTION_HANDLER(LoopPropertiesMatchClosed) {
   EVALUATE_BEGIN_NON_STRING(LoopPropertiesMatchClosed, target.is_object());
   const auto &value{assume_value<ValueNamedIndexes>(instruction.value)};
-  assert(!value.empty());
+  assert(!value.first.empty());
   result = true;
+  // The loop already holds each property's value, so a child that only looks at
+  // that value is decided here, rather than dispatched to and left to find the
+  // property in the object a second time. The evaluation-marking variants of
+  // those assertions are deliberately absent, as skipping them would skip the
+  // marker. Dynamic pushes and pops a resource per instruction that the direct
+  // path would skip, and children are evaluated at `depth + 1`, which the
+  // direct path does not route through the depth check. Every condition holds
+  // for every child, so decide once rather than per property
+  const auto direct_children{!Track && !HasCallback && !Dynamic &&
+                             depth < DEPTH_LIMIT};
   for (const auto &entry : target.as_object()) {
-    const auto *index{value.try_at(entry.first, entry.hash)};
+    const auto *index{named_index(value, entry.first, entry.hash)};
     if (!index) [[unlikely]] {
       result = false;
       break;
@@ -1836,7 +1995,34 @@ INSTRUCTION_HANDLER(LoopPropertiesMatchClosed) {
     assert(subinstruction.type ==
            sourcemeta::blaze::InstructionIndex::ControlGroup);
     for (const auto &child : subinstruction.children) {
-      if (!EVALUATE_RECURSE(child, target)) [[unlikely]] {
+      bool child_ok;
+      // A child whose instance location is not just the matched property is not
+      // about the value this loop holds, which inlining a reference into the
+      // group can produce, so it resolves its own target as usual
+      if (direct_children && child.relative_instance_location.size() == 1)
+          [[likely]] {
+        switch (child.type) {
+          case InstructionIndex::AssertionPropertyTypeStrict:
+            child_ok = DIRECT(AssertionTypeStrict, entry.second,
+                              assume_value_copy<ValueType>(child.value));
+            break;
+          case InstructionIndex::AssertionPropertyType:
+            child_ok = DIRECT(AssertionType, entry.second,
+                              assume_value_copy<ValueType>(child.value));
+            break;
+          case InstructionIndex::AssertionPropertyTypeStrictAny:
+            child_ok = DIRECT(AssertionTypeStrictAny, entry.second,
+                              assume_value<ValueTypes>(child.value));
+            break;
+          default:
+            child_ok = EVALUATE_RECURSE(child, target);
+            break;
+        }
+      } else {
+        child_ok = EVALUATE_RECURSE(child, target);
+      }
+
+      if (!child_ok) [[unlikely]] {
         result = false;
         EVALUATE_END(LoopPropertiesMatchClosed);
       }
@@ -2267,14 +2453,9 @@ INSTRUCTION_HANDLER(LoopPropertiesTypeStrictAny) {
   result = true;
   const auto value{assume_value_copy<ValueTypes>(instruction.value)};
   assert(value.any());
-  for (const auto &entry : target.as_object()) {
-    const auto type_index{
-        std::to_underlying(effective_type_strict_real(entry.second))};
-    if (!value.test(type_index)) [[unlikely]] {
-      result = false;
-      break;
-    }
-  }
+  result = type_set_spans_numbers(value)
+               ? object_values_in_type_set<false>(target, value)
+               : object_values_in_type_set<true>(target, value);
 
   EVALUATE_END(LoopPropertiesTypeStrictAny);
 }
@@ -2285,13 +2466,11 @@ INSTRUCTION_HANDLER(LoopPropertiesTypeStrictAnyEvaluate) {
   result = true;
   const auto value{assume_value_copy<ValueTypes>(instruction.value)};
   assert(value.any());
-  for (const auto &entry : target.as_object()) {
-    const auto type_index{
-        std::to_underlying(effective_type_strict_real(entry.second))};
-    if (!value.test(type_index)) [[unlikely]] {
-      result = false;
-      EVALUATE_END(LoopPropertiesTypeStrictAnyEvaluate);
-    }
+  result = type_set_spans_numbers(value)
+               ? object_values_in_type_set<false>(target, value)
+               : object_values_in_type_set<true>(target, value);
+  if (!result) [[unlikely]] {
+    EVALUATE_END(LoopPropertiesTypeStrictAnyEvaluate);
   }
 
   context.evaluator->evaluate(&target);
@@ -2517,15 +2696,9 @@ INSTRUCTION_HANDLER(LoopItemsTypeStrictAny) {
   const auto value{assume_value_copy<ValueTypes>(instruction.value)};
   assert(value.any());
 
-  result = true;
-  for (const auto &entry : target.as_array()) {
-    const auto type_index{
-        std::to_underlying(effective_type_strict_real(entry))};
-    if (!value.test(type_index)) [[unlikely]] {
-      result = false;
-      break;
-    }
-  }
+  result = type_set_spans_numbers(value)
+               ? array_items_in_type_set<false>(target, value)
+               : array_items_in_type_set<true>(target, value);
 
   EVALUATE_END(LoopItemsTypeStrictAny);
 }
@@ -2560,8 +2733,8 @@ INSTRUCTION_HANDLER(LoopItemsPropertiesExactlyTypeStrictHash) {
     }
 
     // Unroll, for performance reasons, for small collections. A perfect hash
-    // captures the key bytes but not its length, so every match confirms the
-    // size alongside the hash
+    // records the key's size, which the compiler requires of every key here,
+    // so matching one proves the keys equal
     if (hashes_size == 3) {
       for (const auto &entry : object) {
         if (effective_type_strict_real(entry.second) != value.first)
@@ -2569,15 +2742,9 @@ INSTRUCTION_HANDLER(LoopItemsPropertiesExactlyTypeStrictHash) {
             [[unlikely]] {
           result = false;
           EVALUATE_END(LoopItemsPropertiesExactlyTypeStrictHash);
-        } else if (!((entry.hash == value.second.first[0].first &&
-                      entry.first.size() ==
-                          value.second.first[0].second.size()) ||
-                     (entry.hash == value.second.first[1].first &&
-                      entry.first.size() ==
-                          value.second.first[1].second.size()) ||
-                     (entry.hash == value.second.first[2].first &&
-                      entry.first.size() ==
-                          value.second.first[2].second.size()))) {
+        } else if (!(entry.hash == value.second.first[0].first ||
+                     entry.hash == value.second.first[1].first ||
+                     entry.hash == value.second.first[2].first)) {
           result = false;
           EVALUATE_END(LoopItemsPropertiesExactlyTypeStrictHash);
         }
@@ -2589,12 +2756,8 @@ INSTRUCTION_HANDLER(LoopItemsPropertiesExactlyTypeStrictHash) {
             [[unlikely]] {
           result = false;
           EVALUATE_END(LoopItemsPropertiesExactlyTypeStrictHash);
-        } else if (!((entry.hash == value.second.first[0].first &&
-                      entry.first.size() ==
-                          value.second.first[0].second.size()) ||
-                     (entry.hash == value.second.first[1].first &&
-                      entry.first.size() ==
-                          value.second.first[1].second.size()))) {
+        } else if (!(entry.hash == value.second.first[0].first ||
+                     entry.hash == value.second.first[1].first)) {
           result = false;
           EVALUATE_END(LoopItemsPropertiesExactlyTypeStrictHash);
         }
@@ -2602,9 +2765,7 @@ INSTRUCTION_HANDLER(LoopItemsPropertiesExactlyTypeStrictHash) {
     } else if (hashes_size == 1) {
       const auto &entry{*object.cbegin()};
       if (effective_type_strict_real(entry.second) != value.first ||
-          entry.hash != value.second.first[0].first ||
-          entry.first.size() != value.second.first[0].second.size())
-          [[unlikely]] {
+          entry.hash != value.second.first[0].first) [[unlikely]] {
         result = false;
         EVALUATE_END(LoopItemsPropertiesExactlyTypeStrictHash);
       }
@@ -2616,16 +2777,13 @@ INSTRUCTION_HANDLER(LoopItemsPropertiesExactlyTypeStrictHash) {
             [[unlikely]] {
           result = false;
           EVALUATE_END(LoopItemsPropertiesExactlyTypeStrictHash);
-        } else if (entry.hash == value.second.first[index].first &&
-                   entry.first.size() ==
-                       value.second.first[index].second.size()) {
+        } else if (entry.hash == value.second.first[index].first) {
           index += 1;
           continue;
         } else if (!std::ranges::any_of(
                        value.second.first,
                        [&entry](const auto &hash_entry) -> bool {
-                         return hash_entry.first == entry.hash &&
-                                hash_entry.second.size() == entry.first.size();
+                         return hash_entry.first == entry.hash;
                        })) {
           result = false;
           EVALUATE_END(LoopItemsPropertiesExactlyTypeStrictHash);
@@ -2675,45 +2833,27 @@ INSTRUCTION_HANDLER(LoopItemsPropertiesExactlyTypeStrictHash3) {
       EVALUATE_END(LoopItemsPropertiesExactlyTypeStrictHash3);
     }
 
-    // A perfect hash captures the key bytes but not its length, so each
-    // pairing confirms the size alongside the hash while keeping the unrolled
-    // permutation check over the three keys
+    // A perfect hash records the key's size, which the compiler requires of
+    // every key here, so matching one proves the keys equal and the unrolled
+    // permutation check compares nothing but hashes
     if ((value_1.hash == value.second.first[0].first &&
-         value_1.first.size() == value.second.first[0].second.size() &&
          value_2.hash == value.second.first[1].first &&
-         value_2.first.size() == value.second.first[1].second.size() &&
-         value_3.hash == value.second.first[2].first &&
-         value_3.first.size() == value.second.first[2].second.size()) ||
+         value_3.hash == value.second.first[2].first) ||
         (value_1.hash == value.second.first[0].first &&
-         value_1.first.size() == value.second.first[0].second.size() &&
          value_2.hash == value.second.first[2].first &&
-         value_2.first.size() == value.second.first[2].second.size() &&
-         value_3.hash == value.second.first[1].first &&
-         value_3.first.size() == value.second.first[1].second.size()) ||
+         value_3.hash == value.second.first[1].first) ||
         (value_1.hash == value.second.first[1].first &&
-         value_1.first.size() == value.second.first[1].second.size() &&
          value_2.hash == value.second.first[0].first &&
-         value_2.first.size() == value.second.first[0].second.size() &&
-         value_3.hash == value.second.first[2].first &&
-         value_3.first.size() == value.second.first[2].second.size()) ||
+         value_3.hash == value.second.first[2].first) ||
         (value_1.hash == value.second.first[1].first &&
-         value_1.first.size() == value.second.first[1].second.size() &&
          value_2.hash == value.second.first[2].first &&
-         value_2.first.size() == value.second.first[2].second.size() &&
-         value_3.hash == value.second.first[0].first &&
-         value_3.first.size() == value.second.first[0].second.size()) ||
+         value_3.hash == value.second.first[0].first) ||
         (value_1.hash == value.second.first[2].first &&
-         value_1.first.size() == value.second.first[2].second.size() &&
          value_2.hash == value.second.first[0].first &&
-         value_2.first.size() == value.second.first[0].second.size() &&
-         value_3.hash == value.second.first[1].first &&
-         value_3.first.size() == value.second.first[1].second.size()) ||
+         value_3.hash == value.second.first[1].first) ||
         (value_1.hash == value.second.first[2].first &&
-         value_1.first.size() == value.second.first[2].second.size() &&
          value_2.hash == value.second.first[1].first &&
-         value_2.first.size() == value.second.first[1].second.size() &&
-         value_3.hash == value.second.first[0].first &&
-         value_3.first.size() == value.second.first[0].second.size())) {
+         value_3.hash == value.second.first[0].first)) {
       continue;
     }
     EVALUATE_END(LoopItemsPropertiesExactlyTypeStrictHash3);
@@ -2809,6 +2949,29 @@ INSTRUCTION_HANDLER(LoopItemsIntegerBoundedSized) {
   EVALUATE_END(LoopItemsIntegerBoundedSized);
 }
 
+// `items` whose subschema is itself an `items` with a size bound compiles to a
+// loop whose body is two instructions that both only look at the item, which
+// means a dispatch per item of the outer array. Nesting the two loops here
+// decides the whole shape in one instruction instead
+INSTRUCTION_HANDLER(LoopItemsArrayBoundedTypeStrictAny) {
+  EVALUATE_BEGIN_NON_STRING(LoopItemsArrayBoundedTypeStrictAny,
+                            target.is_array());
+  const auto &value{assume_value<ValueTypesWithSize>(instruction.value)};
+  const auto types{value.first};
+  const auto minimum{std::get<0>(value.second)};
+  const auto &maximum{std::get<1>(value.second)};
+  assert(types.any());
+  // Require early breaking
+  assert(!std::get<2>(value.second));
+  result = type_set_spans_numbers(types)
+               ? items_are_bounded_arrays_in_type_set<false>(target, types,
+                                                             minimum, maximum)
+               : items_are_bounded_arrays_in_type_set<true>(target, types,
+                                                            minimum, maximum);
+
+  EVALUATE_END(LoopItemsArrayBoundedTypeStrictAny);
+}
+
 INSTRUCTION_HANDLER(LoopContains) {
   EVALUATE_BEGIN_NON_STRING(LoopContains, target.is_array());
   // The subschema may compile to no children, in which case every array
@@ -2882,7 +3045,7 @@ using DispatchHandler = bool (*)(
 template <bool Track, bool Dynamic, bool HasCallback>
 // Must have same order as InstructionIndex
 // NOLINTNEXTLINE(modernize-avoid-c-arrays)
-static constexpr DispatchHandler<Track, Dynamic, HasCallback> HANDLERS[103] = {
+static constexpr DispatchHandler<Track, Dynamic, HasCallback> HANDLERS[105] = {
     AssertionFail,
     AssertionDefines,
     AssertionDefinesStrict,
@@ -2932,6 +3095,7 @@ static constexpr DispatchHandler<Track, Dynamic, HasCallback> HANDLERS[103] = {
     AssertionPropertyTypeStrictEvaluate,
     AssertionPropertyTypeStrictAny,
     AssertionPropertyTypeStrictAnyEvaluate,
+    AssertionPropertyEqual,
     AssertionArrayPrefix,
     AssertionArrayPrefixEvaluate,
     AssertionObjectPropertiesSimple,
@@ -2978,6 +3142,7 @@ static constexpr DispatchHandler<Track, Dynamic, HasCallback> HANDLERS[103] = {
     LoopItemsPropertiesExactlyTypeStrictHash3,
     LoopItemsIntegerBounded,
     LoopItemsIntegerBoundedSized,
+    LoopItemsArrayBoundedTypeStrictAny,
     LoopContains,
     ControlGroup,
     ControlGroupWhenDefines,

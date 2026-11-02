@@ -1,6 +1,7 @@
 #include <sourcemeta/core/benchmark.h>
 #include <sourcemeta/core/io.h>
 #include <sourcemeta/core/json.h>
+#include <sourcemeta/core/numeric.h>
 #include <sourcemeta/core/options.h>
 #include <sourcemeta/core/process.h>
 
@@ -61,6 +62,7 @@ struct RegisteredBenchmark {
 struct Measurement {
   std::string name;
   std::uint64_t iterations;
+  std::uint64_t repetitions;
   double real_time;
   std::optional<double> cpu_time;
   // What the very first execution cost, before anything the benchmark touches
@@ -118,14 +120,17 @@ auto next_iterations(const std::uint64_t current,
   return std::min(static_cast<std::uint64_t>(grown), MAXIMUM_ITERATIONS);
 }
 
-auto measure(const RegisteredBenchmark &benchmark)
+auto measure(const RegisteredBenchmark &benchmark,
+             const std::optional<std::uint64_t> repeat)
     -> std::optional<Measurement> {
   auto iterations{INITIAL_ITERATIONS};
   std::optional<double> cold{std::nullopt};
   std::optional<double> real{std::nullopt};
   std::optional<double> cpu{std::nullopt};
-  std::size_t repetitions{0};
-  auto settled{false};
+  std::uint64_t repetitions{0};
+  // Explicit repetition bypasses calibration: each body runs one iteration.
+  auto settled{repeat.has_value()};
+  const auto runs{repeat.value_or(REPETITIONS)};
 
   while (true) {
     sourcemeta::core::BenchmarkState state{iterations};
@@ -164,9 +169,10 @@ auto measure(const RegisteredBenchmark &benchmark)
     }
 
     repetitions += 1;
-    if (repetitions >= REPETITIONS) {
+    if (repetitions >= runs) {
       return Measurement{.name = benchmark.name,
                          .iterations = iterations,
+                         .repetitions = repetitions,
                          .real_time = real.value(),
                          .cpu_time = cpu,
                          .cold_time = cold.value()};
@@ -180,9 +186,11 @@ auto print_usage(const std::string_view program) -> void {
             << "Run the registered benchmarks.\n\n"
             << "Options:\n"
             << "  -f, --filter <text>  Only run benchmarks whose name "
-               "contains <text>\n"
+               "contains <text> (repeatable)\n"
             << "  -o, --output <path>  Also write the results as JSON to "
                "<path>\n"
+            << "  -r, --repeat <n>     Run each selected benchmark <n> times, "
+               "one iteration per run\n"
             << "  -h, --help           Show this message\n";
 }
 
@@ -232,7 +240,7 @@ auto print_measurement(const Measurement &measurement) -> void {
 }
 
 // Every duration is nanoseconds for one iteration, and the real one is the
-// fastest of the repetitions rather than an average over them
+// fastest of the measured runs rather than an average over them
 auto to_json(const std::vector<Measurement> &measurements)
     -> sourcemeta::core::JSON {
   auto context{sourcemeta::core::JSON::make_object()};
@@ -252,10 +260,10 @@ auto to_json(const std::vector<Measurement> &measurements)
                             sourcemeta::core::JSON{static_cast<std::int64_t>(
                                 measurement.iterations)},
                             BENCHMARK_HASH_ITERATIONS);
-    entry.assign_assume_new(
-        "repetitions",
-        sourcemeta::core::JSON{static_cast<std::int64_t>(REPETITIONS)},
-        BENCHMARK_HASH_REPETITIONS);
+    entry.assign_assume_new("repetitions",
+                            sourcemeta::core::JSON{static_cast<std::int64_t>(
+                                measurement.repetitions)},
+                            BENCHMARK_HASH_REPETITIONS);
     entry.assign_assume_new("realTime",
                             sourcemeta::core::JSON{measurement.real_time},
                             BENCHMARK_HASH_REAL_TIME);
@@ -346,6 +354,7 @@ auto benchmark_run(int argc, char **argv) -> int {
   Options options;
   options.option("filter", {"f"});
   options.option("output", {"o"});
+  options.option("repeat", {"r"});
   options.flag("help", {"h"});
 
   try {
@@ -360,22 +369,37 @@ auto benchmark_run(int argc, char **argv) -> int {
     return EXIT_SUCCESS;
   }
 
-  std::string_view needle;
-  if (options.contains("filter") && !options.at("filter").empty()) {
-    needle = options.at("filter").front();
+  std::optional<std::uint64_t> repeat;
+  if (options.contains("repeat")) {
+    const auto &values{options.at("repeat")};
+    const auto count{values.size() == 1 ? to_int64_t(values.front())
+                                        : std::nullopt};
+    if (!count.has_value() || count.value() <= 0 ||
+        !options.positional().empty()) {
+      std::cerr << "error: --repeat needs a positive integer count and no "
+                   "positional arguments\n";
+      return EXIT_FAILURE;
+    }
+    repeat = static_cast<std::uint64_t>(count.value());
   }
 
+  const auto &filters{options.at("filter")};
   std::vector<const RegisteredBenchmark *> selected;
   for (const auto &entry : registry()) {
-    if (needle.empty() || entry.name.contains(needle)) {
+    if (filters.empty() ||
+        std::ranges::any_of(filters, [&entry](const auto filter) {
+          return entry.name.contains(filter);
+        })) {
       selected.push_back(&entry);
     }
   }
 
-  // An unfiltered run that selects nothing means registration is broken, which
-  // must not pass as a successful run. A filter that matches nothing is instead
-  // an ordinary thing to ask for interactively
-  if (selected.empty() && needle.empty()) {
+  // An empty registry is broken registration; a filter selecting nothing is
+  // instead an ordinary thing to ask for interactively.
+  if (registry().empty() &&
+      (filters.empty() || std::ranges::any_of(filters, [](const auto &filter) {
+         return filter.empty();
+       }))) {
     std::cerr << "error: No benchmarks were registered\n";
     return EXIT_FAILURE;
   }
@@ -385,7 +409,7 @@ auto benchmark_run(int argc, char **argv) -> int {
   std::vector<Measurement> measurements;
   measurements.reserve(selected.size());
   for (const auto *entry : selected) {
-    auto measurement{measure(*entry)};
+    auto measurement{measure(*entry, repeat)};
     if (!measurement.has_value()) {
       std::cerr << "error: The benchmark did not iterate over its state\n"
                 << "  at benchmark " << entry->name << "\n"

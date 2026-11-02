@@ -72,8 +72,8 @@ auto dependencies_internal(
 
     if (reference.base.empty()) {
       throw sourcemeta::core::SchemaReferenceError(
-          reference.destination, sourcemeta::core::to_pointer(pointer),
-          "Could not resolve schema reference");
+          "Could not resolve schema reference", reference.destination,
+          sourcemeta::core::to_pointer(pointer));
     }
 
     // To not infinitely loop on circular references
@@ -85,8 +85,8 @@ auto dependencies_internal(
     // find the base, then we are facing an unresolved fragment
     if (frame.traverse(reference.base).has_value()) {
       throw sourcemeta::core::SchemaReferenceError(
-          reference.destination, sourcemeta::core::to_pointer(pointer),
-          "Could not resolve schema reference");
+          "Could not resolve schema reference", reference.destination,
+          sourcemeta::core::to_pointer(pointer));
     }
 
     assert(!reference.base.empty());
@@ -94,13 +94,13 @@ auto dependencies_internal(
     auto remote{resolver(identifier)};
     if (!remote.has_value()) {
       throw sourcemeta::core::SchemaResolutionError(
-          identifier, "Could not resolve the reference to an external schema");
+          "Could not resolve the reference to an external schema", identifier);
     }
 
     if (!remote.value().is_object() && !remote.value().is_boolean()) {
       throw sourcemeta::core::SchemaReferenceError(
-          identifier, sourcemeta::core::to_pointer(pointer),
-          "The JSON document is not a valid JSON Schema");
+          "The JSON document is not a valid JSON Schema", identifier,
+          sourcemeta::core::to_pointer(pointer));
     }
 
     try {
@@ -118,8 +118,8 @@ auto dependencies_internal(
       charge(remaining, remote_frame);
     } catch (const sourcemeta::core::SchemaUnknownBaseDialectError &) {
       throw sourcemeta::core::SchemaReferenceError(
-          identifier, sourcemeta::core::to_pointer(pointer),
-          "The JSON document is not a valid JSON Schema");
+          "The JSON document is not a valid JSON Schema", identifier,
+          sourcemeta::core::to_pointer(pointer));
     }
 
     callback(origin, pointer, identifier, remote.value());
