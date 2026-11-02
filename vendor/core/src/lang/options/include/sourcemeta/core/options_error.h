@@ -5,45 +5,32 @@
 #include <sourcemeta/core/options_export.h>
 #endif
 
-#include <exception>   // std::exception
+#include <sourcemeta/core/error.h>
+
 #include <string>      // std::string
 #include <string_view> // std::string_view
 
 namespace sourcemeta::core {
 
-// Exporting symbols that depends on the standard C++ library is considered
-// safe.
-// https://learn.microsoft.com/en-us/cpp/error-messages/compiler-warnings/compiler-warning-level-2-c4275?view=msvc-170&redirectedfrom=MSDN
-#if defined(_MSC_VER)
-#pragma warning(push)
-#pragma warning(disable : 4251 4275)
-#endif
+SOURCEMETA_CORE_ERROR_WARNINGS_PUSH
 
 /// @ingroup options
 /// This class represents a general options error
-class SOURCEMETA_CORE_OPTIONS_EXPORT OptionsError : public std::exception {
+class SOURCEMETA_CORE_OPTIONS_EXPORT OptionsError : public Error {
 public:
   /// Construct the error given a message.
-  explicit OptionsError(const char *message) : message_{message} {}
-  explicit OptionsError(std::string message) = delete;
-  explicit OptionsError(std::string &&message) = delete;
-  explicit OptionsError(std::string_view message) = delete;
-
-  [[nodiscard]] auto what() const noexcept -> const char * override {
-    return this->message_;
-  }
-
-private:
-  const char *message_;
+  OptionsError(const StaticString message) noexcept : Error{message} {}
 };
 
 /// @ingroup options
 /// This class represents a unknown option error
-struct SOURCEMETA_CORE_OPTIONS_EXPORT OptionsUnknownOptionError
+class SOURCEMETA_CORE_OPTIONS_EXPORT OptionsUnknownOptionError
     : public OptionsError {
+public:
   /// Construct the error given the offending option.
-  explicit OptionsUnknownOptionError(const std::string_view option)
+  OptionsUnknownOptionError(const std::string_view option)
       : OptionsError{"Unknown option"}, option_{option} {}
+
   /// The offending option.
   [[nodiscard]] auto option() const noexcept -> std::string_view {
     return this->option_;
@@ -55,11 +42,13 @@ private:
 
 /// @ingroup options
 /// This class represents a value being passed to a flag
-struct SOURCEMETA_CORE_OPTIONS_EXPORT OptionsUnexpectedValueFlagError
+class SOURCEMETA_CORE_OPTIONS_EXPORT OptionsUnexpectedValueFlagError
     : public OptionsError {
+public:
   /// Construct the error given the offending option.
-  explicit OptionsUnexpectedValueFlagError(const std::string_view option)
+  OptionsUnexpectedValueFlagError(const std::string_view option)
       : OptionsError{"This flag cannot take a value"}, option_{option} {}
+
   /// The offending option.
   [[nodiscard]] auto option() const noexcept -> std::string_view {
     return this->option_;
@@ -71,11 +60,13 @@ private:
 
 /// @ingroup options
 /// This class represents a missing value from an option
-struct SOURCEMETA_CORE_OPTIONS_EXPORT OptionsMissingOptionValueError
+class SOURCEMETA_CORE_OPTIONS_EXPORT OptionsMissingOptionValueError
     : public OptionsError {
+public:
   /// Construct the error given the offending option.
-  explicit OptionsMissingOptionValueError(const std::string_view option)
+  OptionsMissingOptionValueError(const std::string_view option)
       : OptionsError{"This option must take a value"}, option_{option} {}
+
   /// The offending option.
   [[nodiscard]] auto option() const noexcept -> std::string_view {
     return this->option_;
@@ -85,9 +76,7 @@ private:
   std::string option_;
 };
 
-#if defined(_MSC_VER)
-#pragma warning(pop)
-#endif
+SOURCEMETA_CORE_ERROR_WARNINGS_POP
 
 } // namespace sourcemeta::core
 

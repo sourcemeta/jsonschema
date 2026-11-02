@@ -111,12 +111,6 @@ using ValueRange = std::tuple<std::size_t, std::optional<std::size_t>, bool>;
 using ValueBoolean = bool;
 
 /// @ingroup evaluator
-/// Represents a compiler step string to index map
-using ValueNamedIndexes = sourcemeta::core::JSONObject<
-    ValueString, ValueUnsignedInteger,
-    sourcemeta::core::PropertyHashJSON<ValueString>>;
-
-/// @ingroup evaluator
 /// Represents a compiler step string logical type
 enum class ValueStringType : std::uint8_t {
   URI,
@@ -163,6 +157,21 @@ using ValueIndexPair = std::pair<std::size_t, std::size_t>;
 using ValuePointer = sourcemeta::core::Pointer;
 
 /// @ingroup evaluator
+/// Represents the precomputed hash of a property name, the index of the child
+/// instruction that applies to it, and the name itself. The hash comes first
+/// as it is what a lookup compares against
+using ValueNamedIndex = std::tuple<sourcemeta::core::JSON::Object::hash_type,
+                                   ValueUnsignedInteger, ValueString>;
+
+/// @ingroup evaluator
+/// Represents a compiler step string to index map. The entries are sorted by
+/// the size of the name, and the table of contents gives, for every name size,
+/// the one-based inclusive range of entries that have that size, so that a
+/// lookup only ever compares the names whose size can match
+using ValueNamedIndexes =
+    std::pair<std::vector<ValueNamedIndex>, std::vector<ValueIndexPair>>;
+
+/// @ingroup evaluator
 /// Represents a compiler step types properties value
 using ValueTypedProperties = std::pair<ValueType, ValueStringSet>;
 
@@ -185,6 +194,10 @@ using ValueIntegerBounds = std::pair<std::int64_t, std::int64_t>;
 using ValueIntegerBoundsWithSize = std::pair<ValueIntegerBounds, ValueRange>;
 
 /// @ingroup evaluator
+/// Represents a set of types combined with an array size range
+using ValueTypesWithSize = std::pair<ValueTypes, ValueRange>;
+
+/// @ingroup evaluator
 /// Represents a list of object property entries: (name, hash, required)
 using ValueObjectProperties = std::vector<
     std::tuple<ValueString, sourcemeta::core::JSON::Object::hash_type, bool>>;
@@ -202,7 +215,7 @@ using Value =
                  ValuePropertyFilter, ValueIndexPair, ValuePointer,
                  ValueTypedProperties, ValueStringHashes, ValueTypedHashes,
                  ValueIntegerBounds, ValueIntegerBoundsWithSize,
-                 ValueObjectProperties, ValueNumberType>;
+                 ValueObjectProperties, ValueNumberType, ValueTypesWithSize>;
 
 } // namespace sourcemeta::blaze
 

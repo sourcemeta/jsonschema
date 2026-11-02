@@ -111,6 +111,28 @@ private:
   bool committed_{false};
 };
 
+// The standard library reports a failed rename as an error of its own, which
+// would leave this function raising one kind of error on the platforms that
+// swap atomically and another on the platforms that fall back
+auto rename_or_throw(const std::filesystem::path &source,
+                     const std::filesystem::path &destination) -> void {
+  std::error_code error_code;
+  std::filesystem::rename(source, destination, error_code);
+  if (!error_code) {
+    return;
+  }
+
+  if (error_code == std::errc::no_such_file_or_directory) {
+    throw sourcemeta::core::IOFileNotFoundError{source};
+  }
+  if (error_code == std::errc::permission_denied) {
+    throw sourcemeta::core::IOFilePermissionError{source};
+  }
+
+  throw sourcemeta::core::IOFilesystemError{"Failed to rename the directory",
+                                            source, destination, error_code};
+}
+
 } // namespace
 
 namespace sourcemeta::core {
@@ -147,7 +169,7 @@ auto atomic_directory_swap(const std::filesystem::path &original,
   assert(!original.parent_path().empty());
 
   if (!std::filesystem::exists(original)) {
-    std::filesystem::rename(replacement, original);
+    rename_or_throw(replacement, original);
     return;
   }
 
@@ -163,9 +185,8 @@ auto atomic_directory_swap(const std::filesystem::path &original,
       throw IOFilePermissionError{original};
     }
 
-    throw std::filesystem::filesystem_error{
-        "failed to atomically swap directories", replacement, original,
-        error_code};
+    throw IOFilesystemError{"Failed to atomically swap the directories",
+                            replacement, original, error_code};
   }
 
   // Atomic swap via renameatx_np with RENAME_SWAP
@@ -180,9 +201,8 @@ auto atomic_directory_swap(const std::filesystem::path &original,
       throw IOFilePermissionError{original};
     }
 
-    throw std::filesystem::filesystem_error{
-        "failed to atomically swap directories", replacement, original,
-        error_code};
+    throw IOFilesystemError{"Failed to atomically swap the directories",
+                            replacement, original, error_code};
   }
 
 #else
@@ -191,16 +211,22 @@ auto atomic_directory_swap(const std::filesystem::path &original,
   // Note we cannot safely use the temporary directory of the system as it
   // might be in another volume
   TemporaryDirectory temporary{original.parent_path(), ".swap-"};
-  std::filesystem::remove(temporary.path());
-  std::filesystem::rename(original, temporary.path());
+  std::error_code remove_error_code;
+  std::filesystem::remove(temporary.path(), remove_error_code);
+  if (remove_error_code) {
+    throw IOFilesystemError{"Failed to clear the staging directory",
+                            temporary.path(), remove_error_code};
+  }
+
+  rename_or_throw(original, temporary.path());
   try {
-    std::filesystem::rename(replacement, original);
+    rename_or_throw(replacement, original);
   } catch (...) {
-    std::filesystem::rename(temporary.path(), original);
+    rename_or_throw(temporary.path(), original);
     throw;
   }
 
-  std::filesystem::rename(temporary.path(), replacement);
+  rename_or_throw(temporary.path(), replacement);
 #endif
 }
 

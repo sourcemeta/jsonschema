@@ -5,14 +5,13 @@
 #include <sourcemeta/core/jsonschema.h>
 #include <sourcemeta/core/uri.h>
 
-#include <algorithm>  // std::ranges::find, std::ranges::any_of
+#include <algorithm> // std::ranges::find, std::ranges::any_of, std::ranges::all_of
 #include <cassert>    // assert
 #include <functional> // std::cref
 #include <iterator>   // std::distance
 #include <limits>     // std::numeric_limits
 #include <optional>   // std::optional
 #include <regex>      // std::regex, std::regex_match, std::smatch
-#include <stdexcept>  // std::out_of_range
 #include <utility>    // std::declval, std::move
 
 namespace sourcemeta::blaze {
@@ -172,7 +171,9 @@ inline auto make_with_resource(const InstructionIndex type,
        .vocabulary = vocabulary_id(
            context.vocabularies, context.frame, context.walker,
            dynamic_context.keyword, schema_context.relative_pointer,
-           schema_context.base, schema_context.vocabularies)});
+           schema_context.base, schema_context.vocabularies),
+       .message = 0,
+       .message_detail = 0});
   return {.type = type,
           .relative_instance_location =
               to_pointer(dynamic_context.base_instance_location),
@@ -211,7 +212,9 @@ inline auto make(const InstructionIndex type, const Context &context,
        .vocabulary = vocabulary_id(
            context.vocabularies, context.frame, context.walker,
            dynamic_context.keyword, schema_context.relative_pointer,
-           schema_context.base, schema_context.vocabularies)});
+           schema_context.base, schema_context.vocabularies),
+       .message = 0,
+       .message_detail = 0});
   return {.type = type,
           .relative_instance_location =
               to_pointer(dynamic_context.base_instance_location),
@@ -272,7 +275,7 @@ inline auto is_numeric_integral_multiple_check(const Instruction &instruction)
   // divisor is never one, so a failed conversion just means no fusion
   try {
     return divisor.as_integer() == 1;
-  } catch (const std::out_of_range &) {
+  } catch (const sourcemeta::core::JSONIntegerRangeError &) {
     return false;
   }
 }
@@ -338,6 +341,44 @@ inline auto bound_is_representable(const sourcemeta::core::JSON &value)
   return value <= LIMIT;
 }
 
+// Draft 6 introduced boolean schemas. Draft 4 and earlier have none, and the
+// only places they accept a boolean are `additionalProperties` and
+// `additionalItems`, whose own definitions spell that out. The OpenAPI 3.0
+// Schema Object has none either, and offers a boolean at
+// `additionalProperties` alone
+inline auto
+booleans_are_schemas(const sourcemeta::core::SchemaVocabularies &vocabularies)
+    -> bool {
+  using Known = sourcemeta::core::SchemaVocabularies::Known;
+  return !vocabularies.contains_any(
+      {Known::JSON_SCHEMA_DRAFT_3, Known::JSON_SCHEMA_DRAFT_3_HYPER,
+       Known::JSON_SCHEMA_DRAFT_4, Known::JSON_SCHEMA_DRAFT_4_HYPER,
+       Known::OPENAPI_3_0_BASE});
+}
+
+inline auto is_schema(const sourcemeta::core::JSON &value,
+                      const bool allow_boolean) -> bool {
+  return value.is_object() || (allow_boolean && value.is_boolean());
+}
+
+inline auto all_are_schemas(const sourcemeta::core::JSON &value,
+                            const bool allow_boolean) -> bool {
+  return std::ranges::all_of(value.as_array(),
+                             [allow_boolean](const auto &entry) -> bool {
+                               return is_schema(entry, allow_boolean);
+                             });
+}
+
+// The meta-schema describes these as a non-empty array of schemas. A keyword
+// that does not satisfy that is not a constraint at all, so we ignore it
+// rather than compile part of it or turn it into a failure
+inline auto is_schema_array(const sourcemeta::core::JSON &value,
+                            const bool allow_boolean,
+                            const bool allow_empty = false) -> bool {
+  return value.is_array() && (allow_empty || !value.empty()) &&
+         all_are_schemas(value, allow_boolean);
+}
+
 // Draft 3 to 7 let `$ref` replace every sibling keyword, so nothing those
 // siblings say ever takes effect, and the OpenAPI 3.0 Schema Object answers
 // with Draft 4 here. Core's schema walker frames nothing under one of those
@@ -387,7 +428,7 @@ unsigned_integer_property(const sourcemeta::core::JSON &document,
       }
 
       return static_cast<std::size_t>(value);
-    } catch (const std::out_of_range &) {
+    } catch (const sourcemeta::core::JSONIntegerRangeError &) {
       return std::nullopt;
     }
   }

@@ -7,7 +7,8 @@
 
 namespace sourcemeta::blaze {
 
-BinPackEncoder::BinPackEncoder(Stream &output) : BinPackOutputStream{output} {}
+BinPackEncoder::BinPackEncoder(Stream &output)
+    : sourcemeta::core::BinaryWriter{output} {}
 
 auto BinPackEncoder::write(const sourcemeta::core::JSON &document,
                            const BinPackEncoding &encoding) -> void {

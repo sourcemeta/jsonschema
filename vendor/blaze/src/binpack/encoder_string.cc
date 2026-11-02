@@ -8,10 +8,11 @@ namespace sourcemeta::blaze {
 
 auto BinPackEncoder::UTF8_STRING_NO_LENGTH(
     const sourcemeta::core::JSON &document,
-    const struct UTF8_STRING_NO_LENGTH &options) -> void {
+    [[maybe_unused]] const struct UTF8_STRING_NO_LENGTH &options) -> void {
   assert(document.is_string());
   const sourcemeta::core::JSON::String &value{document.to_string()};
-  this->put_string_utf8(value, options.size);
+  assert(value.size() == options.size);
+  this->put_string(value);
 }
 
 auto BinPackEncoder::FLOOR_VARINT_PREFIX_UTF8_STRING_SHARED(
@@ -37,7 +38,7 @@ auto BinPackEncoder::FLOOR_VARINT_PREFIX_UTF8_STRING_SHARED(
   } else {
     this->cache_.record(value, this->position(),
                         BinPackCache::Type::Standalone);
-    this->put_string_utf8(value, size);
+    this->put_string(value);
   }
 }
 
@@ -65,7 +66,7 @@ auto BinPackEncoder::ROOF_VARINT_PREFIX_UTF8_STRING_SHARED(
   } else {
     this->cache_.record(value, this->position(),
                         BinPackCache::Type::Standalone);
-    this->put_string_utf8(value, size);
+    this->put_string(value);
   }
 }
 
@@ -95,7 +96,7 @@ auto BinPackEncoder::BOUNDED_8BIT_PREFIX_UTF8_STRING_SHARED(
   } else {
     this->cache_.record(value, this->position(),
                         BinPackCache::Type::Standalone);
-    this->put_string_utf8(value, size);
+    this->put_string(value);
   }
 }
 
@@ -149,7 +150,7 @@ auto BinPackEncoder::PREFIX_VARINT_LENGTH_STRING_SHARED(
     // Also record a standalone variant of it
     this->cache_.record(value, this->position(),
                         BinPackCache::Type::Standalone);
-    this->put_string_utf8(value, size);
+    this->put_string(value);
   }
 }
 

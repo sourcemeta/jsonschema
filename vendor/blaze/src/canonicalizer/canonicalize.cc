@@ -264,23 +264,31 @@ auto is_openapi_3_0(const std::string_view dialect) -> bool {
          OPENAPI_3_0_DIALECTS.cend();
 }
 
-/// The drafts that spell the identifier `id` and let it nest anywhere, so
-/// that a subschema can change the base URI the references around it resolve
-/// against. Draft 6 renamed the keyword to `$id` and the rules there differ.
+/// The drafts that let an identifier nest anywhere, so that a subschema can
+/// change the base URI the references around it resolve against. Draft 6
+/// renames `id` to `$id`, which for this pass is only a spelling: the frame
+/// registers a resource and resolves a reference through it the same way
+/// under either name, and the name itself comes from the core library.
 ///
 /// Erasing an identifier is only worth doing where the graph form follows,
-/// since the form is what cannot carry one. These must therefore name exactly
+/// since the form is what cannot carry one. This must therefore name exactly
 /// the dialects `profile_for` covers: a dialect that lost its identifiers
 /// without being lifted would keep every nested document it had while no
-/// longer being able to address them. That is why Draft 4 hyper-schema is
-/// absent, as it is there, and why the OpenAPI 3.0 Schema Object is turned
-/// down although it frames as Draft 4
+/// longer being able to address them. That is why the hyper-schema variants
+/// of Draft 4 and Draft 6 are absent, as they are there, and why the OpenAPI
+/// 3.0 Schema Object is turned down although it frames as Draft 4
 auto has_nested_id(const core::SchemaBaseDialect base_dialect,
                    const std::string_view dialect) -> bool {
-  return base_dialect == core::SchemaBaseDialect::JSON_SCHEMA_DRAFT_3 ||
-         base_dialect == core::SchemaBaseDialect::JSON_SCHEMA_DRAFT_3_HYPER ||
-         (base_dialect == core::SchemaBaseDialect::JSON_SCHEMA_DRAFT_4 &&
-          !is_openapi_3_0(dialect));
+  switch (base_dialect) {
+    case core::SchemaBaseDialect::JSON_SCHEMA_DRAFT_3:
+    case core::SchemaBaseDialect::JSON_SCHEMA_DRAFT_3_HYPER:
+    case core::SchemaBaseDialect::JSON_SCHEMA_DRAFT_6:
+      return true;
+    case core::SchemaBaseDialect::JSON_SCHEMA_DRAFT_4:
+      return !is_openapi_3_0(dialect);
+    default:
+      return false;
+  }
 }
 
 /// Remove every `id`, including anchors and the identifier of the root. Every
@@ -304,7 +312,8 @@ auto eliminate_identifiers(sourcemeta::core::JSON &schema,
   }
 
   std::vector<std::pair<core::Pointer, core::JSON::String>> reference_changes;
-  std::vector<core::Pointer> identifier_owners;
+  // Each owner is kept with the spelling its own dialect uses
+  std::vector<std::pair<core::Pointer, std::string_view>> identifier_owners;
 
   {
     const core::SchemaFrame frame{core::SchemaFrame::Mode::References,
@@ -340,9 +349,14 @@ auto eliminate_identifiers(sourcemeta::core::JSON &schema,
 
     frame.for_each_subschema(
         [&](const core::SchemaFrame::Location &location) -> void {
+          // Every location got past the check above, so each one spells its
+          // identifier in a way this pass is prepared to erase
+          const auto keyword{
+              core::schema_identifier_keyword(location.base_dialect)};
           const auto &subschema{core::get(schema, location.pointer)};
-          if (subschema.is_object() && subschema.defines("id")) {
-            identifier_owners.push_back(core::to_pointer(location.pointer));
+          if (subschema.is_object() && subschema.defines(keyword)) {
+            identifier_owners.emplace_back(core::to_pointer(location.pointer),
+                                           keyword);
           }
         });
   }
@@ -352,10 +366,10 @@ auto eliminate_identifiers(sourcemeta::core::JSON &schema,
   }
 
   // Rewriting a reference cannot turn a subschema into something else
-  for (const auto &pointer : identifier_owners) {
+  for (const auto &[pointer, keyword] : identifier_owners) {
     auto &subschema{core::get(schema, pointer)};
     assert(subschema.is_object());
-    subschema.erase("id");
+    subschema.erase(keyword);
   }
 }
 
@@ -460,11 +474,29 @@ auto draft4_profile() -> const Profile & {
   return PROFILE;
 }
 
+/// Draft 6 keeps Draft 4's four logical keywords and adds two more places a
+/// subschema can sit, `contains` and `propertyNames`. Unlike Draft 4 it also
+/// makes a boolean a schema in its own right, so one can be an entry again
+auto draft6_profile() -> const Profile & {
+  static const Profile PROFILE{
+      .wrapper = "allOf",
+      .mappings = {"properties", "patternProperties", "dependencies"},
+      .singles = {"additionalProperties", "additionalItems", "not", "contains",
+                  "propertyNames"},
+      .branches = {"items", "allOf", "anyOf", "oneOf"},
+      .unique_branches = {"allOf", "anyOf"},
+      .property_marker = false,
+      .boolean_nodes = true};
+  return PROFILE;
+}
+
 /// The profile for a dialect, when the graph form covers it at all. Draft 3
 /// hyper-schema shares the Draft 3 profile: by the time this runs the rules
 /// have dropped the keywords its vocabulary adds, none of which takes part
-/// in whether an instance is valid. Draft 4 hyper-schema has no such rule
-/// yet, so its `links` would be lifted as though they were subschemas
+/// in whether an instance is valid. The Draft 4 and Draft 6 hyper-schemas
+/// have no such rule yet, so their `links` would be lifted as though they
+/// were subschemas. The OpenAPI 3.0 Schema Object is turned down for the
+/// same reason it is above: it frames as Draft 4 without being it
 auto profile_for(const core::SchemaBaseDialect base_dialect,
                  const std::string_view dialect) -> const Profile * {
   switch (base_dialect) {
@@ -473,6 +505,8 @@ auto profile_for(const core::SchemaBaseDialect base_dialect,
       return &draft3_profile();
     case core::SchemaBaseDialect::JSON_SCHEMA_DRAFT_4:
       return is_openapi_3_0(dialect) ? nullptr : &draft4_profile();
+    case core::SchemaBaseDialect::JSON_SCHEMA_DRAFT_6:
+      return &draft6_profile();
     default:
       return nullptr;
   }
@@ -1207,6 +1241,7 @@ auto lift_subschemas(sourcemeta::core::JSON &schema,
 #include "rules/exclusive_minimum_integer_to_minimum.h"
 #include "rules/exclusive_minimum_number_and_minimum.h"
 #include "rules/extends_to_array.h"
+#include "rules/false_to_negation.h"
 #include "rules/flatten_nested_allof.h"
 #include "rules/flatten_nested_anyof.h"
 #include "rules/flatten_nested_extends.h"
@@ -1340,6 +1375,7 @@ auto canonicalize(sourcemeta::core::JSON &schema,
   rules.push_back(make_rule<IgnoredMetaschema>());
   rules.push_back(make_rule<MaxContainsWithoutContains>());
   rules.push_back(make_rule<MinContainsWithoutContains>());
+  rules.push_back(make_rule<FalseToNegation>());
   rules.push_back(make_rule<NotFalse>());
   rules.push_back(make_rule<ThenWithoutIf>());
   rules.push_back(make_rule<DependenciesPropertyTautology>());

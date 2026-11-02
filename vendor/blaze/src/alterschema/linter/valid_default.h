@@ -51,7 +51,7 @@ public:
       } catch (...) {
         return false;
       }
-      SimpleOutput output{instance};
+      SimpleOutput output{schema_template, instance};
       Evaluator evaluator;
       const auto result{
           evaluator.validate(schema_template, instance, std::ref(output))};
@@ -77,7 +77,7 @@ public:
     const auto schema_template{compile_non_standalone_subschema(
         root, frame, location, walker, resolver, this->compiler_, base)};
     ONLY_CONTINUE_IF(schema_template.has_value());
-    SimpleOutput output{instance, base};
+    SimpleOutput output{schema_template.value(), instance, base};
     Evaluator evaluator;
     const auto result{evaluator.validate(schema_template.value(), instance,
                                          std::ref(output))};

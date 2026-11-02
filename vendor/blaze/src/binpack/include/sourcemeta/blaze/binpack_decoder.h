@@ -6,16 +6,20 @@
 #endif
 
 #include <sourcemeta/blaze/binpack_encoding.h>
-#include <sourcemeta/blaze/binpack_input_stream.h>
 
+#include <sourcemeta/core/io.h>
 #include <sourcemeta/core/json.h>
+
+#include <istream> // std::basic_istream
 
 namespace sourcemeta::blaze {
 
 /// @ingroup binpack
 class SOURCEMETA_BLAZE_BINPACK_EXPORT BinPackDecoder
-    : private BinPackInputStream {
+    : private sourcemeta::core::BinaryReader {
 public:
+  using Stream = std::basic_istream<sourcemeta::core::JSON::Char,
+                                    sourcemeta::core::JSON::CharTraits>;
   BinPackDecoder(Stream &input);
   auto read(const BinPackEncoding &encoding) -> sourcemeta::core::JSON;
 

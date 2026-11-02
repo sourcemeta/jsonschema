@@ -175,6 +175,17 @@ inline auto unsatisfiable_schema(const SchemaVocabularies &vocabularies)
     return result;
   }
 
+  // Draft 6 does have boolean schemas, but the graph form needs a document
+  // it can wrap, and a bare boolean carries neither `$schema` nor a node to
+  // point at. Negating the schema that every instance satisfies says the
+  // same thing in a shape the form can hold
+  if (vocabularies.contains_any(
+          {SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_6})) {
+    auto result{sourcemeta::core::JSON::make_object()};
+    result.assign("not", sourcemeta::core::JSON{true});
+    return result;
+  }
+
   if (vocabularies.contains_any(
           {SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_3,
            SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_3_HYPER})) {

@@ -265,16 +265,16 @@ auto flush(const std::filesystem::path &path) -> void {
       throw IOFilePermissionError{path};
     }
 
-    throw std::filesystem::filesystem_error{"failed to open file for flushing",
-                                            path, error_code};
+    throw IOFilesystemError{"Failed to open the file for flushing", path,
+                            error_code};
   }
 
   if (!FlushFileBuffers(hFile)) {
     const auto error_code = std::error_code{static_cast<int>(GetLastError()),
                                             std::system_category()};
     CloseHandle(hFile);
-    throw std::filesystem::filesystem_error{"failed to flush the file to disk",
-                                            path, error_code};
+    throw IOFilesystemError{"Failed to flush the file to disk", path,
+                            error_code};
   }
 
   CloseHandle(hFile);
@@ -290,15 +290,15 @@ auto flush(const std::filesystem::path &path) -> void {
       throw IOFilePermissionError{path};
     }
 
-    throw std::filesystem::filesystem_error{"failed to open file for flushing",
-                                            path, error_code};
+    throw IOFilesystemError{"Failed to open the file for flushing", path,
+                            error_code};
   }
 
   if (::fsync(descriptor) == -1) {
     const auto error_code = std::error_code{errno, std::generic_category()};
     ::close(descriptor);
-    throw std::filesystem::filesystem_error{"failed to flush the file to disk",
-                                            path, error_code};
+    throw IOFilesystemError{"Failed to flush the file to disk", path,
+                            error_code};
   }
 
   ::close(descriptor);
@@ -311,8 +311,8 @@ auto flush(const std::filesystem::path &path) -> void {
     if (::fsync(directory_fd) == -1) {
       const auto error_code = std::error_code{errno, std::generic_category()};
       ::close(directory_fd);
-      throw std::filesystem::filesystem_error{
-          "failed to flush the parent directory to disk", path, error_code};
+      throw IOFilesystemError{"Failed to flush the parent directory to disk",
+                              path, error_code};
     }
 
     ::close(directory_fd);

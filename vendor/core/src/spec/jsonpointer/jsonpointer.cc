@@ -1,0 +1,491 @@
+#include <sourcemeta/core/json.h>
+#include <sourcemeta/core/json_hash.h>
+#include <sourcemeta/core/json_value.h>
+#include <sourcemeta/core/jsonpointer.h>
+#include <sourcemeta/core/jsonpointer_pointer.h>
+#include <sourcemeta/core/numeric.h>
+#include <sourcemeta/core/text.h>
+#include <sourcemeta/core/uri.h>
+
+#include "parser.h"
+#include "stringify.h"
+
+#include <cassert>     // assert
+#include <iterator>    // std::cbegin, std::cend, std::prev, std::advance
+#include <memory>      // std::allocator
+#include <optional>    // std::optional, std::nullopt
+#include <ostream>     // std::basic_ostream
+#include <sstream>     // std::basic_ostringstream, std::basic_stringstream
+#include <string>      // std::basic_string
+#include <string_view> // std::string_view
+#include <type_traits> // std::is_same_v
+#include <utility>     // std::move
+
+namespace {
+
+// The slash that belongs to a reference token is spelled `~1`, and the
+// transformation evaluation applies to a token is alone in turning that back
+// into one, so a token still holding a slash once its octets are decoded
+// conforms to no reference token and is an error condition rather than a
+// member name
+// See https://www.rfc-editor.org/rfc/rfc6901#section-3
+// See https://www.rfc-editor.org/rfc/rfc6901#section-4
+auto append_reference_token(sourcemeta::core::JSON::String &output,
+                            const std::string_view token) -> bool {
+  if (token.find('%') == std::string_view::npos) {
+    output.append(token);
+    return true;
+  }
+
+  const auto decoded{sourcemeta::core::URI::unescape(token)};
+  if (decoded.find('/') != std::string::npos) {
+    return false;
+  }
+
+  output.append(decoded);
+  return true;
+}
+
+template <typename V,
+          typename PointerT = sourcemeta::core::GenericPointer<
+              typename V::String,
+              sourcemeta::core::PropertyHashJSON<typename V::String>>>
+auto traverse(V &document, typename PointerT::const_iterator begin,
+              typename PointerT::const_iterator end) -> V & {
+  // Make sure types match
+  static_assert(
+      std::is_same_v<typename PointerT::Value, std::remove_const_t<V>>);
+  V *current = &document;
+
+  // Evaluation of a JSON Pointer begins with a reference to the root
+  // value of a JSON document and completes with a reference to some value
+  // within the document.  Each reference token in the JSON Pointer is
+  // evaluated sequentially.
+  // See https://www.rfc-editor.org/rfc/rfc6901#section-4
+  for (auto iterator = begin; iterator != end; ++iterator) {
+    if (iterator->is_property()) {
+      // If the currently referenced value is a JSON object, the new
+      // referenced value is the object member with the name identified by
+      // the reference token.  The member name is equal to the token if it
+      // has the same number of Unicode characters as the token and their
+      // code points are byte-by-byte equal.  No Unicode character
+      // normalization is performed.
+      // See https://www.rfc-editor.org/rfc/rfc6901#section-4
+      current =
+          &current->at(iterator->to_property(), iterator->property_hash());
+    } else {
+      // If the currently referenced value is a JSON array, the reference
+      // token MUST contain [...] characters comprised of digits (see ABNF
+      // below; note that leading zeros are not allowed) that represent an
+      // unsigned base-10 integer value, making the new referenced value the
+      // array element with the zero-based index identified by the
+      // token.
+      // See https://www.rfc-editor.org/rfc/rfc6901#section-4
+      if (current->is_object()) {
+        sourcemeta::core::DigitsBuffer buffer;
+        current = &current->at(
+            sourcemeta::core::digits_view(iterator->to_index(), buffer));
+      } else {
+        current = &current->at(iterator->to_index());
+      }
+    }
+  }
+
+  return *current;
+}
+
+// A single reference token is evaluated the same way wherever it appears, and
+// the spelling of an index as a member name is kept here rather than in the
+// header so that an inlined traversal stays small
+// See https://www.rfc-editor.org/rfc/rfc6901#section-4
+template <typename V, typename TokenT>
+auto resolve_token(V &document, const TokenT &token) -> V & {
+  if (token.is_property()) {
+    return document.at(token.to_property(), token.property_hash());
+  }
+
+  if (document.is_object()) {
+    sourcemeta::core::DigitsBuffer buffer;
+    return document.at(sourcemeta::core::digits_view(token.to_index(), buffer));
+  }
+
+  return document.at(token.to_index());
+}
+
+template <typename TokenT>
+auto try_resolve_token(const sourcemeta::core::JSON &document,
+                       const TokenT &token) -> const sourcemeta::core::JSON * {
+  if (token.is_property()) {
+    if (!document.is_object()) {
+      return nullptr;
+    }
+
+    return document.try_at(token.to_property(), token.property_hash());
+  }
+
+  if (document.is_object()) {
+    sourcemeta::core::DigitsBuffer buffer;
+    return document.try_at(
+        sourcemeta::core::digits_view(token.to_index(), buffer));
+  }
+
+  if (!document.is_array()) {
+    return nullptr;
+  }
+
+  const auto index{token.to_index()};
+  if (index >= document.size()) {
+    return nullptr;
+  }
+
+  return &document.at(index);
+}
+
+} // namespace
+
+namespace sourcemeta::core {
+
+auto get(const JSON &document, const Pointer::Token &token) -> const JSON & {
+  return resolve_token(document, token);
+}
+
+auto get(const JSON &document, const WeakPointer::Token &token)
+    -> const JSON & {
+  return resolve_token(document, token);
+}
+
+auto get(JSON &document, const Pointer::Token &token) -> JSON & {
+  return resolve_token(document, token);
+}
+
+auto get(JSON &document, const WeakPointer::Token &token) -> JSON & {
+  return resolve_token(document, token);
+}
+
+auto try_get(const JSON &document, const Pointer::Token &token)
+    -> const JSON * {
+  return try_resolve_token(document, token);
+}
+
+auto try_get(const JSON &document, const WeakPointer::Token &token)
+    -> const JSON * {
+  return try_resolve_token(document, token);
+}
+
+auto set(JSON &document, const Pointer &pointer, const JSON &value) -> void {
+  if (pointer.empty()) {
+    document.into(value);
+    return;
+  }
+
+  JSON &current{traverse<JSON>(document, std::cbegin(pointer),
+                               std::prev(std::cend(pointer)))};
+  const auto &last{pointer.back()};
+  // Handle the hyphen as a last constant
+  // If the currently referenced value is a JSON array, the reference
+  // token [can be ] the single character "-", making the new referenced value
+  // the (nonexistent) member after the last array element.
+  // See https://www.rfc-editor.org/rfc/rfc6901#section-4
+  if (current.is_array() && last.is_hyphen()) {
+    current.push_back(value);
+  } else if (last.is_property()) {
+    current.at(last.to_property()).into(value);
+  } else {
+    if (current.is_object()) {
+      DigitsBuffer buffer;
+      current.at(digits_view(last.to_index(), buffer)).into(value);
+    } else {
+      current.at(last.to_index()).into(value);
+    }
+  }
+}
+
+auto set(JSON &document, const Pointer &pointer, JSON &&value) -> void {
+  if (pointer.empty()) {
+    document.into(value);
+    return;
+  }
+
+  JSON &current{traverse<JSON>(document, std::cbegin(pointer),
+                               std::prev(std::cend(pointer)))};
+  const auto &last{pointer.back()};
+  // Handle the hyphen as a last constant
+  // If the currently referenced value is a JSON array, the reference
+  // token [can be ] the single character "-", making the new referenced value
+  // the (nonexistent) member after the last array element.
+  // See https://www.rfc-editor.org/rfc/rfc6901#section-4
+  if (current.is_array() && last.is_hyphen()) {
+    current.push_back(std::move(value));
+  } else if (last.is_property()) {
+    current.at(last.to_property()).into(std::move(value));
+  } else {
+    if (current.is_object()) {
+      DigitsBuffer buffer;
+      current.at(digits_view(last.to_index(), buffer)).into(std::move(value));
+    } else {
+      current.at(last.to_index()).into(std::move(value));
+    }
+  }
+}
+
+template <typename PointerT>
+auto remove_pointer(JSON &document, const PointerT &pointer) -> bool {
+  // Current implementation doesn't support removing an empty JSON pointer
+  // because we don't have a reference to the parent JSON object and there may
+  // be none (i.e. current object is the root JSON object). Here we are copying
+  // RapidJSON by making this a noop.
+  // https://github.com/Tencent/rapidjson/blob/24b5e7a8b27f42fa16b96fc70aade9106cf7102f/include/rapidjson/pointer.h#L835C9-L835C55
+  if (pointer.empty()) {
+    return false;
+  }
+
+  JSON &current{traverse<JSON, PointerT>(document, std::cbegin(pointer),
+                                         std::prev(std::cend(pointer)))};
+  const auto &last{pointer.back()};
+
+  if (last.is_property()) {
+    const auto current_size{current.size()};
+    return current.erase(last.to_property()) < current_size;
+  }
+  if (current.is_object()) {
+    DigitsBuffer buffer;
+    const auto current_size{current.size()};
+    return current.erase(digits_view(last.to_index(), buffer)) < current_size;
+  }
+  const auto index{last.to_index()};
+  const auto &array{current.as_array()};
+
+  if (index >= array.size()) {
+    return false;
+  }
+
+  auto iterator{array.cbegin()};
+  std::advance(iterator, index);
+  current.erase(iterator);
+  return true;
+}
+
+auto remove(JSON &document, const Pointer &pointer) -> bool {
+  return remove_pointer(document, pointer);
+}
+
+auto remove(JSON &document, const WeakPointer &pointer) -> bool {
+  return remove_pointer(document, pointer);
+}
+
+auto to_pointer(const JSON &document) -> Pointer {
+  assert(document.is_string());
+  auto stream{document.to_stringstream()};
+  return parse_pointer<false>(stream);
+}
+
+auto to_pointer(
+    const std::basic_string_view<JSON::Char, JSON::CharTraits> input)
+    -> Pointer {
+  std::basic_istringstream<JSON::Char, JSON::CharTraits,
+                           std::allocator<JSON::Char>>
+      stream{std::basic_string<JSON::Char, JSON::CharTraits,
+                               std::allocator<JSON::Char>>{input}};
+  return parse_pointer<false>(stream);
+}
+
+auto fragment_to_pointer(const URI &uri) -> std::optional<Pointer> {
+  const auto fragment{uri.fragment()};
+  if (!fragment.has_value()) {
+    return std::nullopt;
+  }
+
+  const auto &value{fragment.value()};
+  if (value.empty()) {
+    return Pointer{};
+  }
+
+  // When a URI is dereferenced, the components and subcomponents significant
+  // to the dereferencing process must be parsed and separated before the
+  // percent-encoded octets within them can be safely decoded, as the data
+  // would otherwise be mistaken for a delimiter. The only exception is an
+  // octet that stands for an unreserved character, which may be decoded at
+  // any time.
+  // See https://www.rfc-editor.org/rfc/rfc3986#section-2.4
+  //
+  // The slash that precedes every reference token is the delimiter here, and
+  // a reserved character is not equivalent to the octet that stands for it,
+  // so a slash that was percent-encoded never separates two tokens.
+  // See https://www.rfc-editor.org/rfc/rfc3986#section-2.2
+  // See https://www.rfc-editor.org/rfc/rfc6901#section-3
+  if (value.front() != '/') {
+    return std::nullopt;
+  }
+
+  JSON::String input;
+  input.reserve(value.size());
+  auto rest{value.substr(1)};
+  while (true) {
+    const auto parts{split_once(rest, '/')};
+    input.push_back('/');
+    if (!append_reference_token(input,
+                                parts.has_value() ? parts->first : rest)) {
+      return std::nullopt;
+    }
+
+    if (!parts.has_value()) {
+      break;
+    }
+
+    rest = parts->second;
+  }
+
+  try {
+    return to_pointer(input);
+  } catch (const PointerParseError &) {
+    return std::nullopt;
+  }
+}
+
+auto to_pointer(const WeakPointer &pointer) -> Pointer {
+  Pointer result;
+  for (const auto &token : pointer) {
+    if (token.is_property()) {
+      result.push_back(token.to_property());
+    } else {
+      result.push_back(token.to_index());
+    }
+  }
+
+  return result;
+}
+
+auto to_weak_pointer(const Pointer &pointer) -> WeakPointer {
+  WeakPointer result;
+  for (const auto &token : pointer) {
+    if (token.is_property()) {
+      result.push_back(token.to_property());
+    } else {
+      result.push_back(token.to_index());
+    }
+  }
+
+  return result;
+}
+
+auto stringify(const Pointer &pointer,
+               std::basic_ostream<JSON::Char, JSON::CharTraits> &stream)
+    -> void {
+  stringify<JSON::Char, JSON::CharTraits, std::allocator>(pointer, stream);
+}
+
+auto stringify(const WeakPointer &pointer,
+               std::basic_ostream<JSON::Char, JSON::CharTraits> &stream)
+    -> void {
+  stringify<JSON::Char, JSON::CharTraits, std::allocator>(pointer, stream);
+}
+
+auto to_string(const Pointer &pointer)
+    -> std::basic_string<JSON::Char, JSON::CharTraits,
+                         std::allocator<JSON::Char>> {
+  std::basic_ostringstream<JSON::Char, JSON::CharTraits,
+                           std::allocator<JSON::Char>>
+      result;
+  stringify(pointer, result);
+  return result.str();
+}
+
+auto to_string(const WeakPointer &pointer)
+    -> std::basic_string<JSON::Char, JSON::CharTraits,
+                         std::allocator<JSON::Char>> {
+  std::basic_ostringstream<JSON::Char, JSON::CharTraits,
+                           std::allocator<JSON::Char>>
+      result;
+  stringify(pointer, result);
+  return result.str();
+}
+
+auto to_uri(const Pointer &pointer) -> URI {
+  std::basic_ostringstream<JSON::Char, JSON::CharTraits,
+                           std::allocator<JSON::Char>>
+      result;
+  stringify<JSON::Char, JSON::CharTraits, std::allocator>(pointer, result);
+  // RFC 6901 Section 6: "A JSON Pointer can be represented in a URI fragment
+  // identifier by encoding it into octets using UTF-8, while percent-encoding
+  // those characters not allowed by the fragment rule in [RFC3986]". The
+  // stringified pointer is the literal text to encode, so a token that already
+  // reads as an escape sequence must not be taken as one
+  return URI::from_unescaped_fragment(result.str());
+}
+
+auto to_uri(const Pointer &pointer, const URI &base) -> URI {
+  return to_uri(pointer).resolve_from(base).canonicalize();
+}
+
+auto to_uri(const WeakPointer &pointer) -> URI {
+  std::basic_ostringstream<JSON::Char, JSON::CharTraits,
+                           std::allocator<JSON::Char>>
+      result;
+  stringify(pointer, result);
+  return URI::from_unescaped_fragment(result.str());
+}
+
+auto to_uri(const WeakPointer &pointer, const URI &base) -> URI {
+  return to_uri(pointer).resolve_from(base).canonicalize();
+}
+
+auto to_uri(const WeakPointer &pointer, const std::string_view base) -> URI {
+  if (base.empty()) {
+    return to_uri(pointer);
+  }
+
+  return to_uri(pointer).resolve_from(URI{base}).canonicalize();
+}
+
+auto is_pointer(const std::string_view input) noexcept -> bool {
+  try {
+    std::basic_istringstream<JSON::Char> stream{std::string{input}};
+    parse_pointer<true>(stream);
+    return true;
+  } catch (...) {
+    return false;
+  }
+}
+
+auto is_relative_pointer(const std::string_view input) noexcept -> bool {
+  const auto size{input.size()};
+  if (size == 0) {
+    return false;
+  }
+
+  // non-negative-integer = "0" / (%x31-39 *DIGIT)
+  // The "0" case is a single character; otherwise consume every digit
+  std::string_view::size_type position{0};
+  if (input[0] == '0') {
+    position = 1;
+  } else if (is_positive_digit(input[0])) {
+    position = 1;
+    while (position < size && is_digit(input[position])) {
+      position += 1;
+    }
+  } else {
+    return false;
+  }
+
+  // After the integer:
+  // - end of string: zero-length json-pointer suffix, valid
+  // - "#": must be the only remaining character
+  // - "/": the remainder (including the "/") must be a valid RFC 6901
+  //   json-pointer
+  if (position == size) {
+    return true;
+  }
+
+  if (input[position] == '#') {
+    return position + 1 == size;
+  }
+
+  if (input[position] == '/') {
+    return is_pointer(
+        std::string_view{input.data() + position, size - position});
+  }
+
+  return false;
+}
+
+} // namespace sourcemeta::core

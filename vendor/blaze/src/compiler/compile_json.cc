@@ -19,6 +19,8 @@ auto to_json(const sourcemeta::blaze::Instruction &instruction,
   result.push_back(sourcemeta::core::to_json(meta.keyword_location));
   result.push_back(sourcemeta::core::to_json(meta.schema_resource));
   result.push_back(sourcemeta::core::to_json(meta.vocabulary));
+  result.push_back(sourcemeta::core::to_json(meta.message));
+  result.push_back(sourcemeta::core::to_json(meta.message_detail));
 
   // Note that we purposely avoid objects to help consumers avoid potentially
   // expensive hash-map or flat-map lookups when parsing back
@@ -85,6 +87,12 @@ auto to_json(const Template &schema_template) -> sourcemeta::core::JSON {
     vocabularies.push_back(sourcemeta::core::JSON{vocabulary});
   }
   result.push_back(std::move(vocabularies));
+
+  auto messages{sourcemeta::core::JSON::make_array()};
+  for (const auto &message : schema_template.messages) {
+    messages.push_back(sourcemeta::core::JSON{message});
+  }
+  result.push_back(std::move(messages));
 
   return result;
 }

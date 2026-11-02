@@ -7,16 +7,20 @@
 
 #include <sourcemeta/blaze/binpack_encoder_cache.h>
 #include <sourcemeta/blaze/binpack_encoding.h>
-#include <sourcemeta/blaze/binpack_output_stream.h>
 
+#include <sourcemeta/core/io.h>
 #include <sourcemeta/core/json.h>
+
+#include <ostream> // std::basic_ostream
 
 namespace sourcemeta::blaze {
 
 /// @ingroup binpack
 class SOURCEMETA_BLAZE_BINPACK_EXPORT BinPackEncoder
-    : private BinPackOutputStream {
+    : private sourcemeta::core::BinaryWriter {
 public:
+  using Stream = std::basic_ostream<sourcemeta::core::JSON::Char,
+                                    sourcemeta::core::JSON::CharTraits>;
   BinPackEncoder(Stream &output);
   auto write(const sourcemeta::core::JSON &document,
              const BinPackEncoding &encoding) -> void;

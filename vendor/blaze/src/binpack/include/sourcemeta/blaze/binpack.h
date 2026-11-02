@@ -11,8 +11,6 @@
 #include <sourcemeta/blaze/binpack_encoder_cache.h>
 #include <sourcemeta/blaze/binpack_encoding.h>
 #include <sourcemeta/blaze/binpack_error.h>
-#include <sourcemeta/blaze/binpack_input_stream.h>
-#include <sourcemeta/blaze/binpack_output_stream.h>
 // NOLINTEND(misc-include-cleaner)
 
 #include <sourcemeta/core/json.h>

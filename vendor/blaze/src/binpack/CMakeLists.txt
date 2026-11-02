@@ -4,8 +4,6 @@ sourcemeta_library(NAMESPACE sourcemeta PROJECT blaze NAME binpack
     error.h
     decoder.h
     encoder.h
-    input_stream.h
-    output_stream.h
     encoder_cache.h
     encoding.h
   SOURCES
@@ -26,8 +24,6 @@ sourcemeta_library(NAMESPACE sourcemeta PROJECT blaze NAME binpack
     mapper/integer_upper_bound_multiplier.h
     mapper/number_arbitrary.h
 
-    input_stream.cc
-    output_stream.cc
     unreachable.h
     cache.cc
 

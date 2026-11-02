@@ -11,13 +11,16 @@
 #include <cstdint> // std::uint8_t, std::uint16_t, std::uint32_t, std::uint64_t
 #include <istream> // std::istream
 #include <ostream> // std::ostream
+#include <string>  // std::string
+#include <string_view> // std::string_view
 #include <type_traits> // std::is_trivially_copyable_v
 
 namespace sourcemeta::core {
 
 /// @ingroup io
 ///
-/// Typed wrapper over an output stream.
+/// Typed wrapper over an output stream. It tracks the position it writes at,
+/// so the stream must not be repositioned elsewhere while it is alive.
 ///
 /// ```cpp
 /// #include <sourcemeta/core/io.h>
@@ -30,7 +33,7 @@ namespace sourcemeta::core {
 class SOURCEMETA_CORE_IO_EXPORT BinaryWriter {
 public:
   /// Construct a writer over the given output stream.
-  BinaryWriter(std::ostream &stream) noexcept;
+  BinaryWriter(std::ostream &stream);
 
   // Prevent copying, as this class is tied to a stream resource
   BinaryWriter(const BinaryWriter &) = delete;
@@ -47,11 +50,18 @@ public:
   /// Write a 64-bit unsigned integer.
   auto put_qword(const std::uint64_t value) -> void;
 
+  /// Write an unsigned integer as a variable-length integer.
+  auto put_varint(const std::uint64_t value) -> void;
+  /// Write a signed integer as a zigzag variable-length integer.
+  auto put_varint_zigzag(const std::int64_t value) -> void;
+
   /// Write a raw sequence of bytes.
   auto put_bytes(const std::byte *data, const std::size_t size) -> void;
+  /// Write the characters of a string.
+  auto put_string(const std::string_view value) -> void;
 
-  /// The number of bytes written so far.
-  [[nodiscard]] auto position() const -> std::size_t;
+  /// The current position in bytes.
+  [[nodiscard]] auto position() const noexcept -> std::size_t;
 
 private:
   template <typename T>
@@ -61,11 +71,14 @@ private:
   }
 
   std::ostream *stream_;
+  std::size_t offset_{0};
 };
 
 /// @ingroup io
 ///
-/// Cursor-tracking reader over a `FileView` or an `std::istream`.
+/// Cursor-tracking reader over a `FileView` or an `std::istream`. It tracks
+/// the position it reads from, so the stream must not be repositioned
+/// elsewhere while it is alive.
 ///
 /// ```cpp
 /// #include <sourcemeta/core/io.h>
@@ -79,7 +92,7 @@ public:
   /// Construct a reader over the given file view.
   BinaryReader(const FileView &view) noexcept;
   /// Construct a reader over the given input stream.
-  BinaryReader(std::istream &stream) noexcept;
+  BinaryReader(std::istream &stream);
 
   // Prevent copying, as this class is tied to an input resource
   BinaryReader(const BinaryReader &) = delete;
@@ -96,14 +109,26 @@ public:
   /// Read a 64-bit unsigned integer.
   [[nodiscard]] auto get_qword() -> std::uint64_t;
 
+  /// Read a variable-length integer as an unsigned integer.
+  [[nodiscard]] auto get_varint() -> std::uint64_t;
+  /// Read a zigzag variable-length integer as a signed integer.
+  [[nodiscard]] auto get_varint_zigzag() -> std::int64_t;
+
   /// Read a raw sequence of bytes.
   auto get_bytes(std::byte *destination, const std::size_t size) -> void;
+  /// Read the given number of bytes as a string.
+  [[nodiscard]] auto get_string(const std::size_t size) -> std::string;
 
   /// The current cursor position in bytes.
-  [[nodiscard]] auto position() const -> std::size_t;
+  [[nodiscard]] auto position() const noexcept -> std::size_t;
 
   /// Move the cursor to `position`.
   auto seek(const std::size_t position) -> void;
+
+  /// Move the cursor back by the given number of bytes relative to the given
+  /// position, returning the position it moved from.
+  auto rewind(const std::size_t relative_offset, const std::size_t position)
+      -> std::size_t;
 
   /// Whether the source has unconsumed bytes at the current cursor.
   [[nodiscard]] auto has_more_data() const -> bool;

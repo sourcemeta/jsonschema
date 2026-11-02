@@ -31,9 +31,8 @@ TemporaryDirectory::TemporaryDirectory(const std::filesystem::path &parent,
 #if defined(_WIN32)
   const auto error{_mktemp_s(name.data(), name.size() + 1)};
   if (error != 0) {
-    throw std::filesystem::filesystem_error{
-        "failed to create temporary directory", parent,
-        std::error_code{error, std::generic_category()}};
+    throw IOFilesystemError{"Failed to create the temporary directory", parent,
+                            std::error_code{error, std::generic_category()}};
   }
 
   // The name the platform settled on may still be one the file system cannot
@@ -42,17 +41,16 @@ TemporaryDirectory::TemporaryDirectory(const std::filesystem::path &parent,
   std::error_code code;
   if (!std::filesystem::create_directory(name, code)) {
     if (code) {
-      throw std::filesystem::filesystem_error{
-          "failed to create temporary directory", parent, code};
+      throw IOFilesystemError{"Failed to create the temporary directory",
+                              parent, code};
     }
 
     throw IOFileAlreadyExistsError{std::filesystem::path{name}};
   }
 #else
   if (mkdtemp(name.data()) == nullptr) {
-    throw std::filesystem::filesystem_error{
-        "failed to create temporary directory", parent,
-        std::error_code{errno, std::generic_category()}};
+    throw IOFilesystemError{"Failed to create the temporary directory", parent,
+                            std::error_code{errno, std::generic_category()}};
   }
 #endif
 

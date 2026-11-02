@@ -32,23 +32,23 @@ FileView::FileView(const std::filesystem::path &path) {
     // different account of itself depending on the system it ran on
     std::error_code directory_error;
     if (std::filesystem::is_directory(path, directory_error)) {
-      throw FileViewError(path, "Could not map a directory into memory");
+      throw FileViewError("Could not map a directory into memory", path);
     }
 
-    throw FileViewError(path, "Could not open the file");
+    throw FileViewError("Could not open the file", path);
   }
 
   // Only a file on disk reports a size that says what can be read from it, so
   // anything else is refused here rather than handed back as a view of nothing
   if (GetFileType(this->file_handle_) != FILE_TYPE_DISK) {
     CloseHandle(this->file_handle_);
-    throw FileViewError(path, "Could not map this kind of file into memory");
+    throw FileViewError("Could not map this kind of file into memory", path);
   }
 
   LARGE_INTEGER file_size;
   if (GetFileSizeEx(this->file_handle_, &file_size) == 0) {
     CloseHandle(this->file_handle_);
-    throw FileViewError(path, "Could not determine the file size");
+    throw FileViewError("Could not determine the file size", path);
   }
   this->size_ = static_cast<std::size_t>(file_size.QuadPart);
 
@@ -62,7 +62,7 @@ FileView::FileView(const std::filesystem::path &path) {
                                              PAGE_READONLY, 0, 0, nullptr);
   if (this->mapping_handle_ == nullptr) {
     CloseHandle(this->file_handle_);
-    throw FileViewError(path, "Could not create a file mapping");
+    throw FileViewError("Could not create a file mapping", path);
   }
 
   this->data_ = static_cast<const std::uint8_t *>(
@@ -70,7 +70,7 @@ FileView::FileView(const std::filesystem::path &path) {
   if (this->data_ == nullptr) {
     CloseHandle(this->mapping_handle_);
     CloseHandle(this->file_handle_);
-    throw FileViewError(path, "Could not map the file into memory");
+    throw FileViewError("Could not map the file into memory", path);
   }
 }
 
@@ -95,13 +95,13 @@ FileView::FileView(const std::filesystem::path &path) {
   // NOLINTNEXTLINE(cppcoreguidelines-pro-type-vararg)
   this->file_descriptor_ = open(path.c_str(), O_RDONLY);
   if (this->file_descriptor_ == -1) {
-    throw FileViewError(path, "Could not open the file");
+    throw FileViewError("Could not open the file", path);
   }
 
   struct stat file_stat;
   if (fstat(this->file_descriptor_, &file_stat) != 0) {
     close(this->file_descriptor_);
-    throw FileViewError(path, "Could not determine the file size");
+    throw FileViewError("Could not determine the file size", path);
   }
 
   // Opening something that is not a regular file is allowed, the size it
@@ -112,12 +112,12 @@ FileView::FileView(const std::filesystem::path &path) {
   // a view of nothing rather than refusing
   if (S_ISDIR(file_stat.st_mode)) {
     close(this->file_descriptor_);
-    throw FileViewError(path, "Could not map a directory into memory");
+    throw FileViewError("Could not map a directory into memory", path);
   }
 
   if (!S_ISREG(file_stat.st_mode)) {
     close(this->file_descriptor_);
-    throw FileViewError(path, "Could not map this kind of file into memory");
+    throw FileViewError("Could not map this kind of file into memory", path);
   }
 
   this->size_ = static_cast<std::size_t>(file_stat.st_size);
@@ -132,7 +132,7 @@ FileView::FileView(const std::filesystem::path &path) {
                       this->file_descriptor_, 0);
   if (mapped == MAP_FAILED) {
     close(this->file_descriptor_);
-    throw FileViewError(path, "Could not map the file into memory");
+    throw FileViewError("Could not map the file into memory", path);
   }
 
   this->data_ = static_cast<const std::uint8_t *>(mapped);

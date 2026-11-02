@@ -11,7 +11,9 @@
 #include <cstdint>   // std::int32_t, std::int64_t
 #include <initializer_list> // std::initializer_list
 #include <limits>           // std::numeric_limits
+#include <optional>         // std::optional, std::nullopt
 #include <set>              // std::set
+#include <string_view>      // std::string_view
 #include <utility>          // std::move, std::to_underlying
 
 #include "compile_helpers.h"
@@ -182,20 +184,6 @@ auto is_dialect_integer(
          (value.is_decimal() && value.to_decimal().is_integer());
 }
 
-// Draft 6 introduced boolean schemas. Draft 4 and earlier have none, and the
-// only places they accept a boolean are `additionalProperties` and
-// `additionalItems`, whose own definitions spell that out. The OpenAPI 3.0
-// Schema Object has none either, and offers a boolean at
-// `additionalProperties` alone
-auto booleans_are_schemas(
-    const sourcemeta::core::SchemaVocabularies &vocabularies) -> bool {
-  using Known = sourcemeta::core::SchemaVocabularies::Known;
-  return !vocabularies.contains_any(
-      {Known::JSON_SCHEMA_DRAFT_3, Known::JSON_SCHEMA_DRAFT_3_HYPER,
-       Known::JSON_SCHEMA_DRAFT_4, Known::JSON_SCHEMA_DRAFT_4_HYPER,
-       Known::OPENAPI_3_0_BASE});
-}
-
 // OpenAPI 3.0 bans `type: "null"` and offers `nullable` in its place, which
 // widens a sibling `type` and nothing else. It takes effect only where `type`
 // is present, so on its own it constrains nothing, and it does not relax any
@@ -224,29 +212,6 @@ auto assume_type(const sourcemeta::core::SchemaVocabularies &vocabularies,
          schema.at("type").is_string() &&
          schema.at("type").to_string() == name &&
          !is_nullable(vocabularies, schema);
-}
-
-auto is_schema(const sourcemeta::core::JSON &value, const bool allow_boolean)
-    -> bool {
-  return value.is_object() || (allow_boolean && value.is_boolean());
-}
-
-auto all_are_schemas(const sourcemeta::core::JSON &value,
-                     const bool allow_boolean) -> bool {
-  return std::ranges::all_of(value.as_array(),
-                             [allow_boolean](const auto &entry) -> bool {
-                               return is_schema(entry, allow_boolean);
-                             });
-}
-
-// The meta-schema describes these as a non-empty array of schemas. A keyword
-// that does not satisfy that is not a constraint at all, so we ignore it
-// rather than compile part of it or turn it into a failure
-auto is_schema_array(const sourcemeta::core::JSON &value,
-                     const bool allow_boolean, const bool allow_empty = false)
-    -> bool {
-  return value.is_array() && (allow_empty || !value.empty()) &&
-         all_are_schemas(value, allow_boolean);
 }
 
 // Draft 4 onwards give `allOf`, `anyOf` and `oneOf` a `minItems` of one, so an
@@ -412,6 +377,52 @@ static auto to_string_hashes(
   return result;
 }
 
+static auto to_named_indexes(
+    std::vector<std::pair<sourcemeta::blaze::ValueString,
+                          sourcemeta::blaze::ValueUnsignedInteger>> &names)
+    -> sourcemeta::blaze::ValueNamedIndexes {
+  assert(!names.empty());
+  std::ranges::sort(names, [](const auto &left, const auto &right) -> auto {
+    return left.first.size() < right.first.size();
+  });
+
+  // The table of contents costs a load of its own before a lookup can compare
+  // anything, which only pays off once there are enough names that scanning
+  // them all is worse. Below that, the entries are left without one and the
+  // evaluator scans them, as it did before the table of contents existed
+  constexpr std::size_t MINIMUM_NAMES_FOR_TABLE_OF_CONTENTS{12};
+
+  sourcemeta::blaze::ValueNamedIndexes result;
+  // The table of contents works as in `to_string_hashes`: each index marks the
+  // starting and end positions of the names whose size is equal to the index
+  if (names.size() > MINIMUM_NAMES_FOR_TABLE_OF_CONTENTS) {
+    result.second.resize(names.back().first.size() + 1, std::make_pair(0, 0));
+  }
+
+  result.first.reserve(names.size());
+  // TODO(C++23): Use std::views::enumerate when available in libc++
+  for (std::size_t index = 0; index < names.size(); index++) {
+    const auto &name{names[index].first};
+    result.first.emplace_back(sourcemeta::core::JSON::Object::hash(name),
+                              names[index].second, name);
+    if (result.second.empty()) {
+      continue;
+    }
+
+    // We leave position 0 to represent the absence of a size
+    const auto position{index + 1};
+    assert(name.size() < result.second.size());
+    auto &bounds{result.second[name.size()]};
+    bounds.first =
+        (bounds.first == 0) ? position : std::min(bounds.first, position);
+    bounds.second =
+        (bounds.second == 0) ? position : std::max(bounds.second, position);
+    assert(bounds.first <= bounds.second);
+  }
+
+  return result;
+}
+
 namespace internal {
 using namespace sourcemeta::blaze;
 
@@ -531,8 +542,9 @@ auto compiler_draft3_core_ref(const Context &context,
   const auto reference{context.frame.reference(type, entry_pointer)};
   if (!reference.has_value()) [[unlikely]] {
     throw sourcemeta::core::SchemaReferenceError(
+        "Could not resolve schema reference",
         schema_context.schema.at(dynamic_context.keyword).to_string(),
-        to_pointer(entry_pointer), "Could not resolve schema reference");
+        to_pointer(entry_pointer));
   }
 
   const auto key{std::make_tuple(type,
@@ -653,6 +665,150 @@ auto draft3_any_type_instructions(const Context &context,
   types.set(std::to_underlying(JSON::Type::String));
   return {make(sourcemeta::blaze::InstructionIndex::AssertionTypeStrictAny,
                context, schema_context, dynamic_context, types)};
+}
+
+// The instruction that asserts a single type name, or nothing at all for a
+// name this does not know, which constrains nothing
+auto make_type_assertion(const Context &context,
+                         const SchemaContext &schema_context,
+                         const DynamicContext &dynamic_context,
+                         const std::string_view name)
+    -> std::optional<Instruction> {
+  using sourcemeta::core::JSON;
+
+  if (name == "number") {
+    ValueTypes types{};
+    types.set(std::to_underlying(JSON::Type::Real));
+    types.set(std::to_underlying(JSON::Type::Integer));
+    types.set(std::to_underlying(JSON::Type::Decimal));
+    return make(sourcemeta::blaze::InstructionIndex::AssertionTypeStrictAny,
+                context, schema_context, dynamic_context, types);
+  }
+
+  // A dialect that reads a number written with a fractional part as an integer
+  // needs the check that accepts one
+  if (name == "integer") {
+    return make(integral_reals_are_integers(schema_context.vocabularies)
+                    ? sourcemeta::blaze::InstructionIndex::AssertionType
+                    : sourcemeta::blaze::InstructionIndex::AssertionTypeStrict,
+                context, schema_context, dynamic_context, JSON::Type::Integer);
+  }
+
+  JSON::Type type{};
+  if (name == "null") {
+    type = JSON::Type::Null;
+  } else if (name == "boolean") {
+    type = JSON::Type::Boolean;
+  } else if (name == "object") {
+    type = JSON::Type::Object;
+  } else if (name == "array") {
+    type = JSON::Type::Array;
+  } else if (name == "string") {
+    type = JSON::Type::String;
+  } else {
+    return std::nullopt;
+  }
+
+  return make(sourcemeta::blaze::InstructionIndex::AssertionTypeStrict, context,
+              schema_context, dynamic_context, type);
+}
+
+// A pair of sibling size bounds folds into the type assertion itself, which
+// then settles the type and the size in one instruction. Bounds that cross
+// leave nothing for an instance to satisfy
+auto fuse_type_size_bound(const Context &context,
+                          const SchemaContext &schema_context,
+                          const DynamicContext &dynamic_context,
+                          const std::size_t minimum,
+                          const std::optional<std::size_t> maximum,
+                          const sourcemeta::blaze::InstructionIndex upper,
+                          const sourcemeta::blaze::InstructionIndex bounded)
+    -> std::optional<Instructions> {
+  if (context.mode != Mode::FastValidation) {
+    return std::nullopt;
+  }
+
+  if (maximum.has_value() && minimum > maximum.value()) {
+    return Instructions{make(sourcemeta::blaze::InstructionIndex::AssertionFail,
+                             context, schema_context, dynamic_context,
+                             ValueNone{})};
+  }
+
+  if (maximum.has_value() && minimum == 0) {
+    return Instructions{make(upper, context, schema_context, dynamic_context,
+                             ValueUnsignedInteger{maximum.value()})};
+  }
+
+  if (minimum > 0 || maximum.has_value()) {
+    return Instructions{make(bounded, context, schema_context, dynamic_context,
+                             ValueRange{minimum, maximum, false})};
+  }
+
+  return std::nullopt;
+}
+
+// Whether a value is of the type this name stands for. Note that `integer`
+// asks whether the value is integral rather than whether it is held as an
+// integer, as equality reads a number by its value, so an option written with
+// a fractional part still matches an integer instance
+auto value_matches_type_name(const sourcemeta::core::JSON &value,
+                             const std::string_view name) -> bool {
+  if (name == "null") {
+    return value.is_null();
+  }
+  if (name == "boolean") {
+    return value.is_boolean();
+  }
+  if (name == "object") {
+    return value.is_object();
+  }
+  if (name == "array") {
+    return value.is_array();
+  }
+  if (name == "number") {
+    return value.is_number();
+  }
+  if (name == "integer") {
+    return value.is_integral();
+  }
+  if (name == "string") {
+    return value.is_string();
+  }
+
+  return false;
+}
+
+// A type assertion says nothing that the options of a sibling `enum` do not
+// already say, as every one of them is of the type anyway. An `enum` that
+// stands empty admits nothing at all, which its own keyword turns into a
+// failure, so the type assertion is just as spare there
+auto type_covered_by_enum(const Context &context,
+                          const SchemaContext &schema_context,
+                          const std::string_view name) -> bool {
+  if (context.mode != Mode::FastValidation) {
+    return false;
+  }
+
+  const auto *options{schema_context.schema.try_at("enum")};
+  return options != nullptr && options->is_array() &&
+         std::ranges::all_of(options->as_array(),
+                             [name](const auto &option) -> bool {
+                               return value_matches_type_name(option, name);
+                             });
+}
+
+// The same, for the one option that `const` spells on its own. Only a dialect
+// that defines the keyword may be asked, as a member by that name elsewhere is
+// author data rather than a constraint
+auto type_covered_by_const(const Context &context,
+                           const SchemaContext &schema_context,
+                           const std::string_view name) -> bool {
+  if (context.mode != Mode::FastValidation) {
+    return false;
+  }
+
+  const auto *value{schema_context.schema.try_at("const")};
+  return value != nullptr && value_matches_type_name(*value, name);
 }
 
 auto draft3_set_type_bits(const std::string &name, ValueTypes &types) -> bool {
@@ -810,13 +966,13 @@ auto compiler_draft3_applicator_properties_with_options(
 
   if (properties_as_loop(context, schema_context,
                          schema_context.schema.at(dynamic_context.keyword))) {
-    ValueNamedIndexes indexes;
+    std::vector<std::pair<ValueString, ValueUnsignedInteger>> names;
     Instructions children;
     std::size_t cursor = 0;
 
     for (auto &&[name, substeps] : compile_properties(
              context, schema_context, relative_dynamic_context(), current)) {
-      indexes.emplace(name, cursor);
+      names.emplace_back(name, cursor);
 
       if (track_evaluation) {
         substeps.push_back(make(
@@ -846,13 +1002,13 @@ auto compiler_draft3_applicator_properties_with_options(
         !schema_context.schema.at("additionalProperties").to_boolean()) {
       return {
           make(sourcemeta::blaze::InstructionIndex::LoopPropertiesMatchClosed,
-               context, schema_context, dynamic_context, std::move(indexes),
-               std::move(children))};
+               context, schema_context, dynamic_context,
+               to_named_indexes(names), std::move(children))};
     }
 
     return {make(sourcemeta::blaze::InstructionIndex::LoopPropertiesMatch,
-                 context, schema_context, dynamic_context, std::move(indexes),
-                 std::move(children))};
+                 context, schema_context, dynamic_context,
+                 to_named_indexes(names), std::move(children))};
   }
 
   Instructions children;
@@ -1787,6 +1943,51 @@ auto is_integer_bounded_pattern(const Instructions &children) -> bool {
   return has_type && has_min && has_max;
 }
 
+auto is_bounded_array_items_pattern(const Instructions &children) -> bool {
+  if (children.size() != 2) {
+    return false;
+  }
+
+  bool has_types{false};
+  bool has_bounds{false};
+  for (const auto &child : children) {
+    // A child that looks anywhere other than the item itself is not part of
+    // the shape, whatever its type says
+    if (!child.relative_instance_location.empty()) {
+      return false;
+    }
+
+    if (child.type == InstructionIndex::LoopItemsTypeStrictAny) {
+      has_types = true;
+    } else if (child.type == InstructionIndex::AssertionTypeArrayBounded) {
+      // The fused instruction stops at the first item that does not match,
+      // which an exhaustive bound does not allow
+      if (std::get<2>(std::get<ValueRange>(child.value))) {
+        return false;
+      }
+
+      has_bounds = true;
+    }
+  }
+
+  return has_types && has_bounds;
+}
+
+auto extract_bounded_array_items(const Instructions &children)
+    -> ValueTypesWithSize {
+  ValueTypes types;
+  ValueRange bounds;
+  for (const auto &child : children) {
+    if (child.type == InstructionIndex::LoopItemsTypeStrictAny) {
+      types = std::get<ValueTypes>(child.value);
+    } else if (child.type == InstructionIndex::AssertionTypeArrayBounded) {
+      bounds = std::get<ValueRange>(child.value);
+    }
+  }
+
+  return {types, bounds};
+}
+
 auto compiler_draft3_applicator_items_with_options(
     const Context &context, const SchemaContext &schema_context,
     const DynamicContext &dynamic_context, const bool annotate,
@@ -1881,6 +2082,14 @@ auto compiler_draft3_applicator_items_with_options(
       return {make(sourcemeta::blaze::InstructionIndex::LoopItemsIntegerBounded,
                    context, schema_context, dynamic_context,
                    extract_integer_bounds(children))};
+    }
+
+    if (context.mode == Mode::FastValidation && children.size() == 2 &&
+        is_bounded_array_items_pattern(children)) {
+      return {make(sourcemeta::blaze::InstructionIndex::
+                       LoopItemsArrayBoundedTypeStrictAny,
+                   context, schema_context, dynamic_context,
+                   extract_bounded_array_items(children))};
     }
 
     if (context.mode == Mode::FastValidation && children.size() == 1) {
@@ -2138,68 +2347,154 @@ auto compiler_draft3_validation_uniqueitems(
                schema_context, dynamic_context, ValueNone{})};
 }
 
-auto compiler_draft3_validation_maxlength(const Context &context,
-                                          const SchemaContext &schema_context,
-                                          const DynamicContext &dynamic_context,
-                                          const Instructions &)
+// `maxLength`, `maxItems` and `maxProperties`, along with their lower-bound
+// counterparts, differ only in the type whose size they bound. Only a bound on
+// the size of a string says anything about a property name, which is always a
+// string, so only that one has to stand its ground where the type assertion
+// would otherwise absorb it
+struct SizeBound {
+  sourcemeta::core::JSON::Type type;
+  std::string_view name;
+  sourcemeta::blaze::InstructionIndex instruction;
+};
+
+// Draft 3 asks only that `maxLength` be an integer, unlike the bounds around
+// it, which it also asks to be non-negative. Pass `tolerate_negative` there,
+// as a negative upper bound is one that no value of the type can ever be
+// small enough to meet
+auto compile_size_upper_bound(const Context &context,
+                              const SchemaContext &schema_context,
+                              const DynamicContext &dynamic_context,
+                              const SizeBound &bound,
+                              const bool tolerate_negative = false)
     -> Instructions {
-  if (!is_dialect_integer(schema_context.schema.at(dynamic_context.keyword),
-                          schema_context.vocabularies)) {
+  const auto &value{schema_context.schema.at(dynamic_context.keyword)};
+  if (!is_dialect_integer(value, schema_context.vocabularies)) {
     throw sourcemeta::blaze::CompilerError(
         schema_context.base, absolute_schema_location(context, schema_context),
         EXPECTED_INTEGER);
   }
 
-  // Draft 3 asks only that `maxLength` be an integer, unlike the bounds
-  // around it, which it also asks to be non-negative
-  using Known = sourcemeta::core::SchemaVocabularies::Known;
-  if (!schema_context.vocabularies.contains_any(
-          {Known::JSON_SCHEMA_DRAFT_3, Known::JSON_SCHEMA_DRAFT_3_HYPER}) &&
-      !schema_context.schema.at(dynamic_context.keyword).is_positive()) {
+  if (!tolerate_negative && !value.is_positive()) {
     throw sourcemeta::blaze::CompilerError(
         schema_context.base, absolute_schema_location(context, schema_context),
         EXPECTED_NON_NEGATIVE);
   }
 
-  if (narrows_type_away(schema_context.schema, {"string"})) {
+  if (narrows_type_away(schema_context.schema, {bound.name})) {
     return {};
   }
 
-  // Draft 3 permits a negative bound, which no string can ever be short
-  // enough to meet. Converting it would wrap around and drop the constraint,
-  // so we say what it means instead: every string fails, and nothing else is
-  // affected
-  if (!schema_context.schema.at(dynamic_context.keyword).is_positive()) {
+  // Converting a negative bound would wrap around and drop the constraint, so
+  // we say what it means instead: every value of the type fails, and nothing
+  // else is affected
+  if (!value.is_positive()) {
     ValueTypes types;
-    types.set(std::to_underlying(sourcemeta::core::JSON::Type::String));
+    types.set(std::to_underlying(bound.type));
     return {make(sourcemeta::blaze::InstructionIndex::AssertionNotTypeStrictAny,
                  context, schema_context, dynamic_context, types)};
   }
 
   // We'll handle it at the type level as an optimization. Note that the type
   // compiler bails out before it reads these bounds when it is compiling a
-  // property name, so there we must still emit them ourselves
+  // property name, so there a string bound must still emit itself
   if (context.mode == Mode::FastValidation &&
-      !schema_context.is_property_name &&
+      !(schema_context.is_property_name &&
+        bound.type == sourcemeta::core::JSON::Type::String) &&
       assume_type(schema_context.vocabularies, schema_context.schema,
-                  "string")) {
+                  bound.name)) {
     return {};
   }
 
-  // A bound too large to hold sits beyond the length of anything that can
-  // exist, so every string meets it and there is nothing left to assert
-  if (!bound_is_representable(
-          schema_context.schema.at(dynamic_context.keyword))) {
+  // A bound too large to hold sits beyond the size of anything that can
+  // exist, so every value of the type meets it and there is nothing left to
+  // assert
+  if (!bound_is_representable(value)) {
     return {};
   }
 
-  return {make(
-      sourcemeta::blaze::InstructionIndex::AssertionStringSizeLess, context,
-      schema_context, dynamic_context,
-      ValueUnsignedInteger{
-          static_cast<unsigned long>(
-              schema_context.schema.at(dynamic_context.keyword).as_integer()) +
-          1})};
+  return {make(bound.instruction, context, schema_context, dynamic_context,
+               ValueUnsignedInteger{
+                   static_cast<unsigned long>(value.as_integer()) + 1})};
+}
+
+auto compile_size_lower_bound(const Context &context,
+                              const SchemaContext &schema_context,
+                              const DynamicContext &dynamic_context,
+                              const SizeBound &bound) -> Instructions {
+  const auto &value{schema_context.schema.at(dynamic_context.keyword)};
+  if (!is_dialect_integer(value, schema_context.vocabularies)) {
+    throw sourcemeta::blaze::CompilerError(
+        schema_context.base, absolute_schema_location(context, schema_context),
+        EXPECTED_INTEGER);
+  }
+
+  if (!value.is_positive()) {
+    throw sourcemeta::blaze::CompilerError(
+        schema_context.base, absolute_schema_location(context, schema_context),
+        EXPECTED_NON_NEGATIVE);
+  }
+
+  if (narrows_type_away(schema_context.schema, {bound.name})) {
+    return {};
+  }
+
+  // A bound too large to hold is beyond the size of anything that can exist,
+  // so no value of the type can meet it, and nothing else is affected. A
+  // property name is always a string, so a string bound leaves it no way out
+  // while any other bound has nothing to say about it
+  if (!bound_is_representable(value)) {
+    if (schema_context.is_property_name) {
+      if (bound.type != sourcemeta::core::JSON::Type::String) {
+        return {};
+      }
+
+      return {make(sourcemeta::blaze::InstructionIndex::AssertionFail, context,
+                   schema_context, dynamic_context, ValueNone{})};
+    }
+
+    ValueTypes types;
+    types.set(std::to_underlying(bound.type));
+    return {make(sourcemeta::blaze::InstructionIndex::AssertionNotTypeStrictAny,
+                 context, schema_context, dynamic_context, types)};
+  }
+
+  // We'll handle it at the type level as an optimization. Note that the type
+  // compiler bails out before it reads these bounds when it is compiling a
+  // property name, so there a string bound must still emit itself
+  if (context.mode == Mode::FastValidation &&
+      !(schema_context.is_property_name &&
+        bound.type == sourcemeta::core::JSON::Type::String) &&
+      assume_type(schema_context.vocabularies, schema_context.schema,
+                  bound.name)) {
+    return {};
+  }
+
+  const auto bound_value{value.as_integer()};
+  if (bound_value <= 0) {
+    return {};
+  }
+
+  return {
+      make(bound.instruction, context, schema_context, dynamic_context,
+           ValueUnsignedInteger{static_cast<unsigned long>(bound_value - 1)})};
+}
+
+auto compiler_draft3_validation_maxlength(const Context &context,
+                                          const SchemaContext &schema_context,
+                                          const DynamicContext &dynamic_context,
+                                          const Instructions &)
+    -> Instructions {
+  return compile_size_upper_bound(
+      context, schema_context, dynamic_context,
+      {.type = sourcemeta::core::JSON::Type::String,
+       .name = "string",
+       .instruction =
+           sourcemeta::blaze::InstructionIndex::AssertionStringSizeLess},
+      schema_context.vocabularies.contains_any(
+          {sourcemeta::core::SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_3,
+           sourcemeta::core::SchemaVocabularies::Known::
+               JSON_SCHEMA_DRAFT_3_HYPER}));
 }
 
 auto compiler_draft3_validation_minlength(const Context &context,
@@ -2207,156 +2502,36 @@ auto compiler_draft3_validation_minlength(const Context &context,
                                           const DynamicContext &dynamic_context,
                                           const Instructions &)
     -> Instructions {
-  if (!is_dialect_integer(schema_context.schema.at(dynamic_context.keyword),
-                          schema_context.vocabularies)) {
-    throw sourcemeta::blaze::CompilerError(
-        schema_context.base, absolute_schema_location(context, schema_context),
-        EXPECTED_INTEGER);
-  }
-
-  if (!schema_context.schema.at(dynamic_context.keyword).is_positive()) {
-    throw sourcemeta::blaze::CompilerError(
-        schema_context.base, absolute_schema_location(context, schema_context),
-        EXPECTED_NON_NEGATIVE);
-  }
-
-  if (narrows_type_away(schema_context.schema, {"string"})) {
-    return {};
-  }
-
-  // A bound too large to hold is beyond the length of anything that can
-  // exist, so no string can meet it, and nothing else is affected. A property
-  // name is always a string, which leaves the type check nothing to spare
-  if (!bound_is_representable(
-          schema_context.schema.at(dynamic_context.keyword))) {
-    if (schema_context.is_property_name) {
-      return {make(sourcemeta::blaze::InstructionIndex::AssertionFail, context,
-                   schema_context, dynamic_context, ValueNone{})};
-    }
-
-    ValueTypes types;
-    types.set(std::to_underlying(sourcemeta::core::JSON::Type::String));
-    return {make(sourcemeta::blaze::InstructionIndex::AssertionNotTypeStrictAny,
-                 context, schema_context, dynamic_context, types)};
-  }
-
-  // We'll handle it at the type level as an optimization. Note that the type
-  // compiler bails out before it reads these bounds when it is compiling a
-  // property name, so there we must still emit them ourselves
-  if (context.mode == Mode::FastValidation &&
-      !schema_context.is_property_name &&
-      assume_type(schema_context.vocabularies, schema_context.schema,
-                  "string")) {
-    return {};
-  }
-
-  const auto value{
-      schema_context.schema.at(dynamic_context.keyword).as_integer()};
-  if (value <= 0) {
-    return {};
-  }
-
-  return {make(sourcemeta::blaze::InstructionIndex::AssertionStringSizeGreater,
-               context, schema_context, dynamic_context,
-               ValueUnsignedInteger{static_cast<unsigned long>(value - 1)})};
+  return compile_size_lower_bound(
+      context, schema_context, dynamic_context,
+      {.type = sourcemeta::core::JSON::Type::String,
+       .name = "string",
+       .instruction =
+           sourcemeta::blaze::InstructionIndex::AssertionStringSizeGreater});
 }
 
 auto compiler_draft3_validation_maxitems(const Context &context,
                                          const SchemaContext &schema_context,
                                          const DynamicContext &dynamic_context,
                                          const Instructions &) -> Instructions {
-  if (!is_dialect_integer(schema_context.schema.at(dynamic_context.keyword),
-                          schema_context.vocabularies)) {
-    throw sourcemeta::blaze::CompilerError(
-        schema_context.base, absolute_schema_location(context, schema_context),
-        EXPECTED_INTEGER);
-  }
-
-  if (!schema_context.schema.at(dynamic_context.keyword).is_positive()) {
-    throw sourcemeta::blaze::CompilerError(
-        schema_context.base, absolute_schema_location(context, schema_context),
-        EXPECTED_NON_NEGATIVE);
-  }
-
-  if (narrows_type_away(schema_context.schema, {"array"})) {
-    return {};
-  }
-
-  // We'll handle it at the type level as an optimization
-  if (context.mode == Mode::FastValidation &&
-      assume_type(schema_context.vocabularies, schema_context.schema,
-                  "array")) {
-    return {};
-  }
-
-  // A bound too large to hold sits beyond the size of anything that can
-  // exist, so every array meets it and there is nothing left to assert
-  if (!bound_is_representable(
-          schema_context.schema.at(dynamic_context.keyword))) {
-    return {};
-  }
-
-  return {make(
-      sourcemeta::blaze::InstructionIndex::AssertionArraySizeLess, context,
-      schema_context, dynamic_context,
-      ValueUnsignedInteger{
-          static_cast<unsigned long>(
-              schema_context.schema.at(dynamic_context.keyword).as_integer()) +
-          1})};
+  return compile_size_upper_bound(
+      context, schema_context, dynamic_context,
+      {.type = sourcemeta::core::JSON::Type::Array,
+       .name = "array",
+       .instruction =
+           sourcemeta::blaze::InstructionIndex::AssertionArraySizeLess});
 }
 
 auto compiler_draft3_validation_minitems(const Context &context,
                                          const SchemaContext &schema_context,
                                          const DynamicContext &dynamic_context,
                                          const Instructions &) -> Instructions {
-  if (!is_dialect_integer(schema_context.schema.at(dynamic_context.keyword),
-                          schema_context.vocabularies)) {
-    throw sourcemeta::blaze::CompilerError(
-        schema_context.base, absolute_schema_location(context, schema_context),
-        EXPECTED_INTEGER);
-  }
-
-  if (!schema_context.schema.at(dynamic_context.keyword).is_positive()) {
-    throw sourcemeta::blaze::CompilerError(
-        schema_context.base, absolute_schema_location(context, schema_context),
-        EXPECTED_NON_NEGATIVE);
-  }
-
-  if (narrows_type_away(schema_context.schema, {"array"})) {
-    return {};
-  }
-
-  // A bound too large to hold is beyond the size of anything that can
-  // exist, so no array can meet it, and nothing else is affected. A property
-  // name is always a string, which no array bound applies to
-  if (!bound_is_representable(
-          schema_context.schema.at(dynamic_context.keyword))) {
-    if (schema_context.is_property_name) {
-      return {};
-    }
-
-    ValueTypes types;
-    types.set(std::to_underlying(sourcemeta::core::JSON::Type::Array));
-    return {make(sourcemeta::blaze::InstructionIndex::AssertionNotTypeStrictAny,
-                 context, schema_context, dynamic_context, types)};
-  }
-
-  // We'll handle it at the type level as an optimization
-  if (context.mode == Mode::FastValidation &&
-      assume_type(schema_context.vocabularies, schema_context.schema,
-                  "array")) {
-    return {};
-  }
-
-  const auto value{
-      schema_context.schema.at(dynamic_context.keyword).as_integer()};
-  if (value <= 0) {
-    return {};
-  }
-
-  return {make(sourcemeta::blaze::InstructionIndex::AssertionArraySizeGreater,
-               context, schema_context, dynamic_context,
-               ValueUnsignedInteger{static_cast<unsigned long>(value - 1)})};
+  return compile_size_lower_bound(
+      context, schema_context, dynamic_context,
+      {.type = sourcemeta::core::JSON::Type::Array,
+       .name = "array",
+       .instruction =
+           sourcemeta::blaze::InstructionIndex::AssertionArraySizeGreater});
 }
 
 auto compiler_draft3_validation_maximum(const Context &context,
@@ -2502,50 +2677,14 @@ auto compiler_draft3_validation_type(const Context &context,
                 context, schema_context, relative_dynamic_context(),
                 {static_cast<sourcemeta::core::Pointer::Token::Index>(index)});
           } else if (element.is_string()) {
-            const auto &type_string{element.to_string()};
-            if (type_string == "null") {
-              branch.push_back(
-                  make(sourcemeta::blaze::InstructionIndex::AssertionTypeStrict,
-                       context, schema_context, relative_dynamic_context(),
-                       sourcemeta::core::JSON::Type::Null));
-            } else if (type_string == "boolean") {
-              branch.push_back(
-                  make(sourcemeta::blaze::InstructionIndex::AssertionTypeStrict,
-                       context, schema_context, relative_dynamic_context(),
-                       sourcemeta::core::JSON::Type::Boolean));
-            } else if (type_string == "object") {
-              branch.push_back(
-                  make(sourcemeta::blaze::InstructionIndex::AssertionTypeStrict,
-                       context, schema_context, relative_dynamic_context(),
-                       sourcemeta::core::JSON::Type::Object));
-            } else if (type_string == "array") {
-              branch.push_back(
-                  make(sourcemeta::blaze::InstructionIndex::AssertionTypeStrict,
-                       context, schema_context, relative_dynamic_context(),
-                       sourcemeta::core::JSON::Type::Array));
-            } else if (type_string == "number") {
-              ValueTypes types{};
-              types.set(std::to_underlying(sourcemeta::core::JSON::Type::Real));
-              types.set(
-                  std::to_underlying(sourcemeta::core::JSON::Type::Integer));
-              types.set(
-                  std::to_underlying(sourcemeta::core::JSON::Type::Decimal));
-              branch.push_back(make(
-                  sourcemeta::blaze::InstructionIndex::AssertionTypeStrictAny,
-                  context, schema_context, relative_dynamic_context(), types));
-            } else if (type_string == "integer") {
-              branch.push_back(
-                  make(sourcemeta::blaze::InstructionIndex::AssertionTypeStrict,
-                       context, schema_context, relative_dynamic_context(),
-                       sourcemeta::core::JSON::Type::Integer));
-            } else if (type_string == "string") {
-              branch.push_back(
-                  make(sourcemeta::blaze::InstructionIndex::AssertionTypeStrict,
-                       context, schema_context, relative_dynamic_context(),
-                       sourcemeta::core::JSON::Type::String));
-            } else {
+            auto assertion{make_type_assertion(context, schema_context,
+                                               relative_dynamic_context(),
+                                               element.to_string())};
+            if (!assertion.has_value()) {
               continue;
             }
+
+            branch.push_back(std::move(assertion).value());
           } else {
             continue;
           }
@@ -2566,13 +2705,7 @@ auto compiler_draft3_validation_type(const Context &context,
   if (value.is_string()) {
     const auto &type{value.to_string()};
     if (type == "null") {
-      if (context.mode == Mode::FastValidation &&
-          schema_context.schema.defines("enum") &&
-          schema_context.schema.at("enum").is_array() &&
-          std::ranges::all_of(schema_context.schema.at("enum").as_array(),
-                              [](const auto &candidate) -> auto {
-                                return candidate.is_null();
-                              })) {
+      if (type_covered_by_enum(context, schema_context, "null")) {
         return {};
       }
 
@@ -2581,13 +2714,7 @@ auto compiler_draft3_validation_type(const Context &context,
                    sourcemeta::core::JSON::Type::Null)};
     }
     if (type == "boolean") {
-      if (context.mode == Mode::FastValidation &&
-          schema_context.schema.defines("enum") &&
-          schema_context.schema.at("enum").is_array() &&
-          std::ranges::all_of(schema_context.schema.at("enum").as_array(),
-                              [](const auto &candidate) -> auto {
-                                return candidate.is_boolean();
-                              })) {
+      if (type_covered_by_enum(context, schema_context, "boolean")) {
         return {};
       }
 
@@ -2602,35 +2729,16 @@ auto compiler_draft3_validation_type(const Context &context,
         const auto maximum{
             unsigned_integer_property(schema_context.schema, "maxProperties")};
 
-        if (context.mode == Mode::FastValidation) {
-          if (maximum.has_value() && minimum > maximum.value()) {
-            return {make(sourcemeta::blaze::InstructionIndex::AssertionFail,
-                         context, schema_context, dynamic_context,
-                         ValueNone{})};
-          }
-
-          if (maximum.has_value() && minimum == 0) {
-            return {make(
-                sourcemeta::blaze::InstructionIndex::AssertionTypeObjectUpper,
-                context, schema_context, dynamic_context,
-                ValueUnsignedInteger{maximum.value()})};
-          }
-          if (minimum > 0 || maximum.has_value()) {
-            return {make(
-                sourcemeta::blaze::InstructionIndex::AssertionTypeObjectBounded,
-                context, schema_context, dynamic_context,
-                ValueRange{minimum, maximum, false})};
-          }
+        const auto fused{fuse_type_size_bound(
+            context, schema_context, dynamic_context, minimum, maximum,
+            sourcemeta::blaze::InstructionIndex::AssertionTypeObjectUpper,
+            sourcemeta::blaze::InstructionIndex::AssertionTypeObjectBounded)};
+        if (fused.has_value()) {
+          return fused.value();
         }
       }
 
-      if (context.mode == Mode::FastValidation &&
-          schema_context.schema.defines("enum") &&
-          schema_context.schema.at("enum").is_array() &&
-          std::ranges::all_of(schema_context.schema.at("enum").as_array(),
-                              [](const auto &candidate) -> auto {
-                                return candidate.is_object();
-                              })) {
+      if (type_covered_by_enum(context, schema_context, "object")) {
         return {};
       }
 
@@ -2654,33 +2762,15 @@ auto compiler_draft3_validation_type(const Context &context,
       const auto maximum{
           unsigned_integer_property(schema_context.schema, "maxItems")};
 
-      if (context.mode == Mode::FastValidation) {
-        if (maximum.has_value() && minimum > maximum.value()) {
-          return {make(sourcemeta::blaze::InstructionIndex::AssertionFail,
-                       context, schema_context, dynamic_context, ValueNone{})};
-        }
-
-        if (maximum.has_value() && minimum == 0) {
-          return {
-              make(sourcemeta::blaze::InstructionIndex::AssertionTypeArrayUpper,
-                   context, schema_context, dynamic_context,
-                   ValueUnsignedInteger{maximum.value()})};
-        }
-        if (minimum > 0 || maximum.has_value()) {
-          return {make(
-              sourcemeta::blaze::InstructionIndex::AssertionTypeArrayBounded,
-              context, schema_context, dynamic_context,
-              ValueRange{minimum, maximum, false})};
-        }
+      const auto fused{fuse_type_size_bound(
+          context, schema_context, dynamic_context, minimum, maximum,
+          sourcemeta::blaze::InstructionIndex::AssertionTypeArrayUpper,
+          sourcemeta::blaze::InstructionIndex::AssertionTypeArrayBounded)};
+      if (fused.has_value()) {
+        return fused.value();
       }
 
-      if (context.mode == Mode::FastValidation &&
-          schema_context.schema.defines("enum") &&
-          schema_context.schema.at("enum").is_array() &&
-          std::ranges::all_of(schema_context.schema.at("enum").as_array(),
-                              [](const auto &candidate) -> auto {
-                                return candidate.is_array();
-                              })) {
+      if (type_covered_by_enum(context, schema_context, "array")) {
         return {};
       }
 
@@ -2689,13 +2779,7 @@ auto compiler_draft3_validation_type(const Context &context,
                    sourcemeta::core::JSON::Type::Array)};
     }
     if (type == "number") {
-      if (context.mode == Mode::FastValidation &&
-          schema_context.schema.defines("enum") &&
-          schema_context.schema.at("enum").is_array() &&
-          std::ranges::all_of(schema_context.schema.at("enum").as_array(),
-                              [](const auto &candidate) -> auto {
-                                return candidate.is_number();
-                              })) {
+      if (type_covered_by_enum(context, schema_context, "number")) {
         return {};
       }
 
@@ -2723,33 +2807,15 @@ auto compiler_draft3_validation_type(const Context &context,
       const auto maximum{
           unsigned_integer_property(schema_context.schema, "maxLength")};
 
-      if (context.mode == Mode::FastValidation) {
-        if (maximum.has_value() && minimum > maximum.value()) {
-          return {make(sourcemeta::blaze::InstructionIndex::AssertionFail,
-                       context, schema_context, dynamic_context, ValueNone{})};
-        }
-
-        if (maximum.has_value() && minimum == 0) {
-          return {make(
-              sourcemeta::blaze::InstructionIndex::AssertionTypeStringUpper,
-              context, schema_context, dynamic_context,
-              ValueUnsignedInteger{maximum.value()})};
-        }
-        if (minimum > 0 || maximum.has_value()) {
-          return {make(
-              sourcemeta::blaze::InstructionIndex::AssertionTypeStringBounded,
-              context, schema_context, dynamic_context,
-              ValueRange{minimum, maximum, false})};
-        }
+      const auto fused{fuse_type_size_bound(
+          context, schema_context, dynamic_context, minimum, maximum,
+          sourcemeta::blaze::InstructionIndex::AssertionTypeStringUpper,
+          sourcemeta::blaze::InstructionIndex::AssertionTypeStringBounded)};
+      if (fused.has_value()) {
+        return fused.value();
       }
 
-      if (context.mode == Mode::FastValidation &&
-          schema_context.schema.defines("enum") &&
-          schema_context.schema.at("enum").is_array() &&
-          std::ranges::all_of(schema_context.schema.at("enum").as_array(),
-                              [](const auto &candidate) -> auto {
-                                return candidate.is_string();
-                              })) {
+      if (type_covered_by_enum(context, schema_context, "string")) {
         return {};
       }
 
@@ -2767,50 +2833,18 @@ auto compiler_draft3_validation_type(const Context &context,
         EXPECTED_TYPE_NAMES);
   }
   if (value.is_array() && value.size() == 1 && value.front().is_string()) {
-    const auto &type{value.front().to_string()};
-    if (type == "null") {
-      return {make(sourcemeta::blaze::InstructionIndex::AssertionTypeStrict,
-                   context, schema_context, dynamic_context,
-                   sourcemeta::core::JSON::Type::Null)};
+    auto assertion{make_type_assertion(context, schema_context, dynamic_context,
+                                       value.front().to_string())};
+    if (assertion.has_value()) {
+      return {std::move(assertion).value()};
     }
-    if (type == "boolean") {
-      return {make(sourcemeta::blaze::InstructionIndex::AssertionTypeStrict,
-                   context, schema_context, dynamic_context,
-                   sourcemeta::core::JSON::Type::Boolean)};
-    }
-    if (type == "object") {
-      return {make(sourcemeta::blaze::InstructionIndex::AssertionTypeStrict,
-                   context, schema_context, dynamic_context,
-                   sourcemeta::core::JSON::Type::Object)};
-    }
-    if (type == "array") {
-      return {make(sourcemeta::blaze::InstructionIndex::AssertionTypeStrict,
-                   context, schema_context, dynamic_context,
-                   sourcemeta::core::JSON::Type::Array)};
-    }
-    if (type == "number") {
-      ValueTypes types{};
-      types.set(std::to_underlying(sourcemeta::core::JSON::Type::Real));
-      types.set(std::to_underlying(sourcemeta::core::JSON::Type::Integer));
-      types.set(std::to_underlying(sourcemeta::core::JSON::Type::Decimal));
-      return {make(sourcemeta::blaze::InstructionIndex::AssertionTypeStrictAny,
-                   context, schema_context, dynamic_context, types)};
-    }
-    if (type == "integer") {
-      return {make(sourcemeta::blaze::InstructionIndex::AssertionTypeStrict,
-                   context, schema_context, dynamic_context,
-                   sourcemeta::core::JSON::Type::Integer)};
-    }
-    if (type == "string") {
-      return {make(sourcemeta::blaze::InstructionIndex::AssertionTypeStrict,
-                   context, schema_context, dynamic_context,
-                   sourcemeta::core::JSON::Type::String)};
-    }
+
     if (is_draft3) {
       // Draft 3 puts no enumeration on `type`, so any name at all satisfies
       // the meta-schema, and one we do not know constrains nothing
       return {};
     }
+
     throw sourcemeta::blaze::CompilerError(
         schema_context.base, absolute_schema_location(context, schema_context),
         EXPECTED_TYPE_NAMES);

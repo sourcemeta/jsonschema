@@ -34,7 +34,8 @@ static auto describe(const std::string_view script, const std::size_t line,
 static auto describe(const std::string_view script,
                      const sourcemeta::core::CLITestProblem &problem)
     -> std::string {
-  return describe(script, problem.line, problem.message, problem.context);
+  return describe(script, problem.line, problem.message.data(),
+                  problem.context);
 }
 
 static auto describe(const std::string_view script,

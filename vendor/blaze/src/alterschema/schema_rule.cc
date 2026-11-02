@@ -86,7 +86,7 @@ auto SchemaRule::condition(
     return false;
   }
 
-  SimpleOutput output{schema};
+  SimpleOutput output{this->template_, schema};
   Evaluator evaluator;
   const auto result{
       evaluator.validate(this->template_, schema, std::ref(output))};

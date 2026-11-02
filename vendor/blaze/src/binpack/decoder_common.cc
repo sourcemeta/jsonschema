@@ -7,7 +7,8 @@
 
 namespace sourcemeta::blaze {
 
-BinPackDecoder::BinPackDecoder(Stream &input) : BinPackInputStream{input} {}
+BinPackDecoder::BinPackDecoder(Stream &input)
+    : sourcemeta::core::BinaryReader{input} {}
 
 auto BinPackDecoder::read(const BinPackEncoding &encoding)
     -> sourcemeta::core::JSON {

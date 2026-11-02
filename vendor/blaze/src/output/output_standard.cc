@@ -77,7 +77,7 @@ auto handle_standard(Evaluator &evaluator, const Template &schema,
     return result;
   }
   assert(format == StandardOutput::Basic);
-  SimpleOutput output{instance};
+  SimpleOutput output{schema, instance};
   const auto valid{evaluator.validate(schema, instance, std::ref(output))};
 
   if (valid) {

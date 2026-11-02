@@ -61,7 +61,9 @@ For lower-level integration, `validate` also accepts a callback that fires for
 every instruction with `(type, valid, instruction, evaluatePath,
 instanceLocation, annotation)`. The exported `describe(valid, instruction,
 evaluatePath, instanceLocation, instance, annotation)` helper turns any such
-event into a human-readable message.
+event into a human-readable message. The wording comes from the compiled
+template, so the instruction has to be one the callback handed you rather than
+one read straight out of the template JSON.
 
 ### Parsing large integers
 

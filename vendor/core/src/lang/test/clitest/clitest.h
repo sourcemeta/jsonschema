@@ -3,6 +3,7 @@
 
 #include <sourcemeta/core/crypto.h>
 #include <sourcemeta/core/diff.h>
+#include <sourcemeta/core/error.h>
 #include <sourcemeta/core/gzip.h>
 #include <sourcemeta/core/io.h>
 #include <sourcemeta/core/numeric.h>
@@ -18,7 +19,6 @@
 #include <cstddef>      // std::size_t
 #include <cstdint>      // std::uint8_t
 #include <cstdlib>      // std::getenv
-#include <exception>    // std::exception
 #include <filesystem>   // std::filesystem::path
 #include <functional>   // std::less
 #include <iterator>     // std::make_move_iterator
@@ -38,23 +38,16 @@ namespace sourcemeta::core {
 /// A failure attributed to the line of a script that caused it. The message is
 /// a fixed phrase and whatever varies rides alongside it, so that whoever
 /// catches this is the one that decides how the result is worded
-class CLITestError : public std::exception {
+class CLITestError : public Error {
 public:
-  CLITestError(const std::size_t line, const char *message)
-      : line_{line}, message_{message} {}
-  CLITestError(const std::size_t line, const char *message, std::string context)
-      : line_{line}, message_{message}, context_{std::move(context)} {}
-  CLITestError(const std::size_t line, const char *message, std::string context,
-               const std::error_code code)
-      : line_{line}, message_{message}, context_{std::move(context)},
-        code_{code} {}
-
-  CLITestError(std::size_t, std::string) = delete;
-  CLITestError(std::size_t, std::string &&) = delete;
-  CLITestError(std::size_t, std::string_view) = delete;
-
-  [[nodiscard]] auto what() const noexcept -> const char * override {
-    return this->message_;
+  CLITestError(const StaticString message, const std::size_t line)
+      : Error{message}, line_{line} {}
+  CLITestError(const StaticString message, const std::size_t line,
+               std::string context)
+      : Error{message}, line_{line}, context_{std::move(context)} {}
+  CLITestError(const StaticString message, const std::size_t line,
+               std::string context, const std::error_code code)
+      : Error{message}, line_{line}, context_{std::move(context)}, code_{code} {
   }
 
   /// The line of the script that failed
@@ -74,7 +67,6 @@ public:
 
 private:
   std::size_t line_;
-  const char *message_;
   std::string context_;
   std::error_code code_;
 };
@@ -412,7 +404,7 @@ inline auto clitest_split_words(const std::string_view line,
 
     if (character == '\\') {
       if (index + 1 >= line.size()) {
-        throw CLITestError{number, "a trailing backslash escapes nothing"};
+        throw CLITestError{"a trailing backslash escapes nothing", number};
       }
 
       index += 1;
@@ -436,7 +428,7 @@ inline auto clitest_split_words(const std::string_view line,
   }
 
   if (quote != '\0') {
-    throw CLITestError{number, "a quote is left open at the end of the line"};
+    throw CLITestError{"a quote is left open at the end of the line", number};
   }
 
   if (started) {
@@ -484,7 +476,7 @@ inline auto clitest_parse(const std::vector<std::string_view> &lines)
 
     if (statement.keyword == "WRITE") {
       if (statement.operands.size() != 3 || statement.operands[1] != "UNTIL") {
-        throw CLITestError{number, "usage: WRITE <path> UNTIL <terminator>"};
+        throw CLITestError{"usage: WRITE <path> UNTIL <terminator>", number};
       }
 
       // The terminator is compared against the line exactly as it stands, so it
@@ -499,7 +491,7 @@ inline auto clitest_parse(const std::vector<std::string_view> &lines)
       }
 
       if (index >= lines.size()) {
-        throw CLITestError{number, "this body is never closed", terminator};
+        throw CLITestError{"this body is never closed", number, terminator};
       }
 
       index += 1;
@@ -519,7 +511,7 @@ using CLITestTargets = std::set<std::string, std::less<>>;
 struct CLITestProduction {
   std::string target;
   std::size_t line{0};
-  const char *message{nullptr};
+  StaticString message{""};
 };
 
 // A name bound by a checksum, kept in statement order so that binding it again
@@ -535,7 +527,7 @@ struct CLITestDefinition {
 // is the one that decides how the result is worded
 struct CLITestProblem {
   std::size_t line{0};
-  const char *message{nullptr};
+  StaticString message{""};
   std::string context;
 
   // Ordered by what a reader sees rather than by where the phrase happens to
@@ -545,7 +537,8 @@ struct CLITestProblem {
       return this->line < other.line;
     }
 
-    const auto ordering{std::string_view{this->message}.compare(other.message)};
+    const auto ordering{
+        std::string_view{this->message.data()}.compare(other.message.data())};
     if (ordering != 0) {
       return ordering < 0;
     }
@@ -874,7 +867,7 @@ inline auto clitest_expand(const CLITestEnvironment &environment,
     -> std::string {
   auto expansion{clitest_substitute(token, environment.bindings)};
   if (!expansion.missing.empty()) {
-    throw CLITestError{line, "undefined variable",
+    throw CLITestError{"undefined variable", line,
                        std::string{expansion.missing}};
   }
 
@@ -1019,21 +1012,21 @@ struct CLITestCommand {
   }
 
   [[noreturn]] auto usage(const std::string_view form) const -> void {
-    throw CLITestError{this->line(), "usage", std::string{form}};
+    throw CLITestError{"usage", this->line(), std::string{form}};
   }
 
-  [[noreturn]] auto fail(const char *message) const -> void {
-    throw CLITestError{this->line(), message};
+  [[noreturn]] auto fail(const StaticString message) const -> void {
+    throw CLITestError{message, this->line()};
   }
 
-  [[noreturn]] auto fail(const char *message, std::string context) const
+  [[noreturn]] auto fail(const StaticString message, std::string context) const
       -> void {
-    throw CLITestError{this->line(), message, std::move(context)};
+    throw CLITestError{message, this->line(), std::move(context)};
   }
 
-  [[noreturn]] auto fail(const char *message, std::string context,
+  [[noreturn]] auto fail(const StaticString message, std::string context,
                          const std::error_code code) const -> void {
-    throw CLITestError{this->line(), message, std::move(context), code};
+    throw CLITestError{message, this->line(), std::move(context), code};
   }
 };
 
@@ -1206,8 +1199,8 @@ inline auto clitest_command_replace(const CLITestCommand &command) -> void {
   // that names the pattern form stays possible
   const auto matching{command.size() == 6 && command.at(0) == "MATCHING" &&
                       command.at(2) == "WITH" && command.at(4) == "IN"};
-  if (!matching && !(command.size() == 5 && command.at(1) == "WITH" &&
-                     command.at(3) == "IN")) {
+  if (!matching && (command.size() != 5 || command.at(1) != "WITH" ||
+                    command.at(3) != "IN")) {
     command.usage("REPLACE [MATCHING] <pattern> WITH <replacement> IN <file>");
   }
 
@@ -1455,7 +1448,7 @@ inline auto clitest_interpret(const std::vector<CLITestStatement> &statements,
     } else if (keyword == "MAKE") {
       clitest_command_make_directory(command);
     } else {
-      throw CLITestError{statement.line, "unknown command", keyword};
+      throw CLITestError{"unknown command", statement.line, keyword};
     }
   }
 }

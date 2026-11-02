@@ -7,6 +7,7 @@
 #include <sourcemeta/core/uri.h>
 
 #include <algorithm>
+#include <array> // std::array
 #include <cstddef>
 #include <optional> // std::optional
 #include <string>   // std::string
@@ -289,7 +290,9 @@ inline auto fuse_numeric_bounds(Instructions &instructions,
         {.relative_schema_location = minimum_metadata.relative_schema_location,
          .keyword_location = minimum_metadata.keyword_location,
          .schema_resource = type_metadata.schema_resource,
-         .vocabulary = type_metadata.vocabulary});
+         .vocabulary = type_metadata.vocabulary,
+         .message = type_metadata.message,
+         .message_detail = type_metadata.message_detail});
 
     Instructions result;
     result.reserve(instructions.size() - bound_indices.size());
@@ -316,6 +319,60 @@ inline auto fuse_numeric_bounds(Instructions &instructions,
   }
 
   return false;
+}
+
+// A loop whose only child is a type check folds into a single instruction that
+// applies that check to every entry, as the loop type that admits the fusion,
+// the child type that triggers it, and what the two become
+struct LoopTypeFusion {
+  InstructionIndex loop;
+  InstructionIndex child;
+  InstructionIndex result;
+};
+
+inline constexpr std::array<LoopTypeFusion, 6> LOOP_TYPE_FUSIONS{
+    {{.loop = InstructionIndex::LoopProperties,
+      .child = InstructionIndex::AssertionTypeStrict,
+      .result = InstructionIndex::LoopPropertiesTypeStrict},
+     {.loop = InstructionIndex::LoopProperties,
+      .child = InstructionIndex::AssertionType,
+      .result = InstructionIndex::LoopPropertiesType},
+     {.loop = InstructionIndex::LoopProperties,
+      .child = InstructionIndex::AssertionTypeStrictAny,
+      .result = InstructionIndex::LoopPropertiesTypeStrictAny},
+     {.loop = InstructionIndex::LoopPropertiesEvaluate,
+      .child = InstructionIndex::AssertionTypeStrict,
+      .result = InstructionIndex::LoopPropertiesTypeStrictEvaluate},
+     {.loop = InstructionIndex::LoopPropertiesEvaluate,
+      .child = InstructionIndex::AssertionType,
+      .result = InstructionIndex::LoopPropertiesTypeEvaluate},
+     {.loop = InstructionIndex::LoopPropertiesEvaluate,
+      .child = InstructionIndex::AssertionTypeStrictAny,
+      .result = InstructionIndex::LoopPropertiesTypeStrictAnyEvaluate}}};
+
+// The fused instruction stands where the loop stood but says what the child
+// said, so it takes the loop's instance location and the child's metadata,
+// anchored on the loop's own schema location
+inline auto fuse_loop_type(Instruction &instruction, Instruction &child,
+                           const InstructionIndex result, Instructions &output,
+                           InstructionExtras &extra) -> void {
+  const auto new_extra_index{extra.size()};
+  auto &instruction_meta{extra[instruction.extra_index]};
+  auto &child_meta{extra[child.extra_index]};
+  extra.push_back({.relative_schema_location =
+                       instruction_meta.relative_schema_location.concat(
+                           child_meta.relative_schema_location),
+                   .keyword_location = std::move(child_meta.keyword_location),
+                   .schema_resource = child_meta.schema_resource,
+                   .vocabulary = child_meta.vocabulary,
+                   .message = child_meta.message,
+                   .message_detail = child_meta.message_detail});
+  output.push_back(Instruction{.type = result,
+                               .relative_instance_location = std::move(
+                                   instruction.relative_instance_location),
+                               .value = std::move(child.value),
+                               .children = {},
+                               .extra_index = new_extra_index});
 }
 
 inline auto transform_instruction(
@@ -373,136 +430,13 @@ inline auto transform_instruction(
   // TODO: De-duplicate this logic from default_compiler_draft4.h. Just do it
   // all here
 
-  if (instruction.type == InstructionIndex::LoopProperties &&
-      instruction.children.size() == 1) {
+  if (instruction.children.size() == 1) {
     auto &child{instruction.children.front()};
-    if (child.type == InstructionIndex::AssertionTypeStrict) {
-      const auto new_extra_index{extra.size()};
-      auto &instruction_meta{extra[instruction.extra_index]};
-      auto &child_meta{extra[child.extra_index]};
-      extra.push_back(
-          {.relative_schema_location =
-               instruction_meta.relative_schema_location.concat(
-                   child_meta.relative_schema_location),
-           .keyword_location = std::move(child_meta.keyword_location),
-           .schema_resource = child_meta.schema_resource,
-           .vocabulary = child_meta.vocabulary});
-      output.push_back(
-          Instruction{.type = InstructionIndex::LoopPropertiesTypeStrict,
-                      .relative_instance_location =
-                          std::move(instruction.relative_instance_location),
-                      .value = std::move(child.value),
-                      .children = {},
-                      .extra_index = new_extra_index});
-      return true;
-    }
-
-    if (child.type == InstructionIndex::AssertionType) {
-      const auto new_extra_index{extra.size()};
-      auto &instruction_meta{extra[instruction.extra_index]};
-      auto &child_meta{extra[child.extra_index]};
-      extra.push_back(
-          {.relative_schema_location =
-               instruction_meta.relative_schema_location.concat(
-                   child_meta.relative_schema_location),
-           .keyword_location = std::move(child_meta.keyword_location),
-           .schema_resource = child_meta.schema_resource,
-           .vocabulary = child_meta.vocabulary});
-      output.push_back(Instruction{.type = InstructionIndex::LoopPropertiesType,
-                                   .relative_instance_location = std::move(
-                                       instruction.relative_instance_location),
-                                   .value = std::move(child.value),
-                                   .children = {},
-                                   .extra_index = new_extra_index});
-      return true;
-    }
-
-    if (child.type == InstructionIndex::AssertionTypeStrictAny) {
-      const auto new_extra_index{extra.size()};
-      auto &instruction_meta{extra[instruction.extra_index]};
-      auto &child_meta{extra[child.extra_index]};
-      extra.push_back(
-          {.relative_schema_location =
-               instruction_meta.relative_schema_location.concat(
-                   child_meta.relative_schema_location),
-           .keyword_location = std::move(child_meta.keyword_location),
-           .schema_resource = child_meta.schema_resource,
-           .vocabulary = child_meta.vocabulary});
-      output.push_back(
-          Instruction{.type = InstructionIndex::LoopPropertiesTypeStrictAny,
-                      .relative_instance_location =
-                          std::move(instruction.relative_instance_location),
-                      .value = std::move(child.value),
-                      .children = {},
-                      .extra_index = new_extra_index});
-      return true;
-    }
-  }
-
-  if (instruction.type == InstructionIndex::LoopPropertiesEvaluate &&
-      instruction.children.size() == 1) {
-    auto &child{instruction.children.front()};
-    if (child.type == InstructionIndex::AssertionTypeStrict) {
-      const auto new_extra_index{extra.size()};
-      auto &instruction_meta{extra[instruction.extra_index]};
-      auto &child_meta{extra[child.extra_index]};
-      extra.push_back(
-          {.relative_schema_location =
-               instruction_meta.relative_schema_location.concat(
-                   child_meta.relative_schema_location),
-           .keyword_location = std::move(child_meta.keyword_location),
-           .schema_resource = child_meta.schema_resource,
-           .vocabulary = child_meta.vocabulary});
-      output.push_back(Instruction{
-          .type = InstructionIndex::LoopPropertiesTypeStrictEvaluate,
-          .relative_instance_location =
-              std::move(instruction.relative_instance_location),
-          .value = std::move(child.value),
-          .children = {},
-          .extra_index = new_extra_index});
-      return true;
-    }
-
-    if (child.type == InstructionIndex::AssertionType) {
-      const auto new_extra_index{extra.size()};
-      auto &instruction_meta{extra[instruction.extra_index]};
-      auto &child_meta{extra[child.extra_index]};
-      extra.push_back(
-          {.relative_schema_location =
-               instruction_meta.relative_schema_location.concat(
-                   child_meta.relative_schema_location),
-           .keyword_location = std::move(child_meta.keyword_location),
-           .schema_resource = child_meta.schema_resource,
-           .vocabulary = child_meta.vocabulary});
-      output.push_back(
-          Instruction{.type = InstructionIndex::LoopPropertiesTypeEvaluate,
-                      .relative_instance_location =
-                          std::move(instruction.relative_instance_location),
-                      .value = std::move(child.value),
-                      .children = {},
-                      .extra_index = new_extra_index});
-      return true;
-    }
-
-    if (child.type == InstructionIndex::AssertionTypeStrictAny) {
-      const auto new_extra_index{extra.size()};
-      auto &instruction_meta{extra[instruction.extra_index]};
-      auto &child_meta{extra[child.extra_index]};
-      extra.push_back(
-          {.relative_schema_location =
-               instruction_meta.relative_schema_location.concat(
-                   child_meta.relative_schema_location),
-           .keyword_location = std::move(child_meta.keyword_location),
-           .schema_resource = child_meta.schema_resource,
-           .vocabulary = child_meta.vocabulary});
-      output.push_back(Instruction{
-          .type = InstructionIndex::LoopPropertiesTypeStrictAnyEvaluate,
-          .relative_instance_location =
-              std::move(instruction.relative_instance_location),
-          .value = std::move(child.value),
-          .children = {},
-          .extra_index = new_extra_index});
-      return true;
+    for (const auto &fusion : LOOP_TYPE_FUSIONS) {
+      if (fusion.loop == instruction.type && fusion.child == child.type) {
+        fuse_loop_type(instruction, child, fusion.result, output, extra);
+        return true;
+      }
     }
   }
 

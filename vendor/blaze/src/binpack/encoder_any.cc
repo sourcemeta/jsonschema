@@ -132,7 +132,7 @@ auto BinPackEncoder::ANY_PACKED_TYPE_TAG_BYTE_PREFIX(
       } else {
         this->cache_.record(value, this->position(),
                             BinPackCache::Type::Standalone);
-        this->put_string_utf8(value, size);
+        this->put_string(value);
       }
     } else if (size >= sourcemeta::core::uint_max<5> &&
                size <
@@ -142,7 +142,7 @@ auto BinPackEncoder::ANY_PACKED_TYPE_TAG_BYTE_PREFIX(
       this->put_byte(static_cast<std::uint8_t>(
           TYPE_LONG_STRING |
           ((size - sourcemeta::core::uint_max<5>) << TYPE_SIZE)));
-      this->put_string_utf8(value, size);
+      this->put_string(value);
     } else if (size >= 2 << (SUBTYPE_LONG_STRING_BASE_EXPONENT_7 - 1) &&
                !shared.has_value()) {
       const std::uint8_t exponent{sourcemeta::core::closest_smallest_exponent(
@@ -151,7 +151,7 @@ auto BinPackEncoder::ANY_PACKED_TYPE_TAG_BYTE_PREFIX(
       this->put_byte(
           static_cast<std::uint8_t>(TYPE_OTHER | (exponent << TYPE_SIZE)));
       this->put_varint(size - static_cast<std::uint64_t>(2 << (exponent - 1)));
-      this->put_string_utf8(value, size);
+      this->put_string(value);
     } else {
       // Exploit the fact that a shared string always starts
       // with an impossible length marker (0) to avoid having

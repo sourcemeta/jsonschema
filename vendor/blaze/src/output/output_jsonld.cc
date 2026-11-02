@@ -1908,7 +1908,7 @@ namespace sourcemeta::blaze {
 
 auto jsonld(Evaluator &evaluator, const Template &schema,
             const sourcemeta::core::JSON &instance) -> JSONLDOutcome {
-  SimpleOutput output{instance};
+  SimpleOutput output{schema, instance};
   const auto valid{evaluator.validate(schema, instance, std::ref(output))};
   if (!valid) {
     return std::move(output).release();

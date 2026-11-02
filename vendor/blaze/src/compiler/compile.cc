@@ -17,6 +17,7 @@
 
 #include "compile_helpers.h"
 #include "keyword_iterator.h"
+#include "message.h"
 #include "postprocess.h"
 #include "unevaluated.h"
 
@@ -28,20 +29,6 @@ auto is_metaschema_reference(const sourcemeta::core::WeakPointer &origin)
     -> bool {
   return !origin.empty() && origin.back().is_property() &&
          origin.back().to_property() == "$schema";
-}
-
-// Draft 6 introduced boolean schemas. Draft 4 and earlier have none, and the
-// only places they accept a boolean are `additionalProperties` and
-// `additionalItems`, whose own definitions spell that out. The OpenAPI 3.0
-// Schema Object has none either, and offers a boolean at
-// `additionalProperties` alone
-auto booleans_are_schemas(
-    const sourcemeta::core::SchemaVocabularies &vocabularies) -> bool {
-  using Known = sourcemeta::core::SchemaVocabularies::Known;
-  return !vocabularies.contains_any(
-      {Known::JSON_SCHEMA_DRAFT_3, Known::JSON_SCHEMA_DRAFT_3_HYPER,
-       Known::JSON_SCHEMA_DRAFT_4, Known::JSON_SCHEMA_DRAFT_4_HYPER,
-       Known::OPENAPI_3_0_BASE});
 }
 
 // Draft 7 and earlier let `$ref` override whatever sits beside it, so such a
@@ -905,6 +892,10 @@ auto compile(const sourcemeta::core::JSON &schema,
   // (8) Return final template
   ///////////////////////////////////////////////////////////////////
 
+  // The template carries only the message templates this schema refers to
+  std::vector<std::string> template_messages;
+  assign_messages(compiled_targets, instruction_extra, template_messages);
+
   // The template stores vocabularies as plain strings, as the evaluator does
   // not otherwise depend on the schema machinery
   std::vector<std::string> template_vocabularies;
@@ -927,7 +918,8 @@ auto compile(const sourcemeta::core::JSON &schema,
           .targets = std::move(compiled_targets),
           .labels = std::move(labels_map),
           .extra = std::move(instruction_extra).release(),
-          .vocabularies = std::move(template_vocabularies)};
+          .vocabularies = std::move(template_vocabularies),
+          .messages = std::move(template_messages)};
 }
 
 auto compile(const sourcemeta::core::JSON &schema,
@@ -984,8 +976,8 @@ auto compile(const Context &context, const SchemaContext &schema_context,
     // Otherwise the recursion attempt is non-sense
     if (!entry.has_value()) [[unlikely]] {
       throw sourcemeta::core::SchemaReferenceError(
-          destination, absolute_schema_location(context, schema_context),
-          "The target of the reference does not exist in the schema");
+          "The target of the reference does not exist in the schema",
+          destination, absolute_schema_location(context, schema_context));
     }
 
     target = entry.value().get().pointer;
@@ -996,12 +988,12 @@ auto compile(const Context &context, const SchemaContext &schema_context,
     if (sourcemeta::core::try_get(context.root, target) == nullptr)
         [[unlikely]] {
       throw sourcemeta::core::SchemaReferenceError(
+          "The target of the reference does not exist in the schema",
           to_uri(schema_context.relative_pointer.concat(schema_suffix),
                  schema_context.base)
               .canonicalize()
               .recompose(),
-          absolute_schema_location(context, schema_context),
-          "The target of the reference does not exist in the schema");
+          absolute_schema_location(context, schema_context));
     }
 
     // A pointer that sits under more than one base is framed once per base, so

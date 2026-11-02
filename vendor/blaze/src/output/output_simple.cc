@@ -10,9 +10,11 @@
 
 namespace sourcemeta::blaze {
 
-SimpleOutput::SimpleOutput(const sourcemeta::core::JSON &instance,
+SimpleOutput::SimpleOutput(const Template &schema_template,
+                           const sourcemeta::core::JSON &instance,
                            sourcemeta::core::WeakPointer base)
-    : instance_{instance}, base_{std::move(base)} {}
+    : schema_template_{schema_template}, instance_{instance},
+      base_{std::move(base)} {}
 
 auto SimpleOutput::mask_kind(const Instruction &step) noexcept -> MaskKind {
   switch (step.type) {
@@ -28,6 +30,30 @@ auto SimpleOutput::mask_kind(const Instruction &step) noexcept -> MaskKind {
     default:
       return MaskKind::None;
   }
+}
+
+auto SimpleOutput::destination(
+    const sourcemeta::core::WeakPointer &evaluate_path) -> container_type * {
+  container_type *result{&this->output_};
+  for (auto &mask_entry : this->mask_) {
+    if (!evaluate_path.starts_with(mask_entry.evaluate_path)) {
+      continue;
+    }
+
+    // Whatever a subschema mask absorbs never surfaces, however the
+    // instructions below it turn out, so there is nothing to collect and
+    // no message worth assembling for any of it
+    if (mask_entry.kind == MaskKind::Subschema) {
+      return nullptr;
+    }
+
+    // The innermost branching keyword that encloses the instruction is the
+    // one that gets to decide whether its failure surfaces, so keep looking
+    // for a closer one rather than settling for the first match
+    result = &mask_entry.buffered_traces;
+  }
+
+  return result;
 }
 
 auto SimpleOutput::begin() const -> const_iterator {
@@ -111,19 +137,28 @@ auto SimpleOutput::operator()(
                  mask_entry.instance_location == instance_location;
         })};
     if (mask_it != this->mask_.end()) {
-      // Present unexpected traces only when needed
-      if (!result && mask_it->kind != MaskKind::Subschema) {
-#ifdef __cpp_lib_containers_ranges
-        this->output_.append_range(std::move(mask_it->buffered_traces));
-#else
-        this->output_.insert(
-            this->output_.end(),
-            std::make_move_iterator(mask_it->buffered_traces.begin()),
-            std::make_move_iterator(mask_it->buffered_traces.end()));
-#endif
-      }
-
+      // Present unexpected traces only when needed, which is when the
+      // branching keyword ran out of ways to hold and a subschema mask is
+      // not the one that absorbed them
+      auto buffered{std::move(mask_it->buffered_traces)};
+      const auto surfaces{!result && mask_it->kind != MaskKind::Subschema};
       this->mask_.erase(mask_it);
+
+      // The traces move up to whichever branching keyword now encloses the
+      // one that just closed, so that an outer keyword absorbing this
+      // failure still gets to drop them
+      if (surfaces && !buffered.empty()) {
+        auto *target{this->destination(evaluate_path)};
+        if (target != nullptr) {
+#ifdef __cpp_lib_containers_ranges
+          target->append_range(std::move(buffered));
+#else
+          target->insert(target->end(),
+                         std::make_move_iterator(buffered.begin()),
+                         std::make_move_iterator(buffered.end()));
+#endif
+        }
+      }
     }
   }
 
@@ -193,22 +228,14 @@ auto SimpleOutput::operator()(
   if (step.type == InstructionIndex::LogicalCondition) {
     return;
   }
-  for (auto &mask_entry : this->mask_) {
-    if (evaluate_path.starts_with(mask_entry.evaluate_path)) {
-      mask_entry.buffered_traces.push_back(
-          {.message = describe(result, step, evaluate_path, instance_location,
-                               this->instance_, annotation),
-           .instance_location = instance_location,
-           .evaluate_path = std::move(effective_evaluate_path),
-           .schema_location = step_metadata.keyword_location});
-
-      return;
-    }
+  auto *target{this->destination(evaluate_path)};
+  if (target == nullptr) {
+    return;
   }
 
-  this->output_.push_back(
-      {.message = describe(result, step, evaluate_path, instance_location,
-                           this->instance_, annotation),
+  target->push_back(
+      {.message = describe(this->schema_template_, result, step, evaluate_path,
+                           instance_location, this->instance_, annotation),
        .instance_location = instance_location,
        .evaluate_path = std::move(effective_evaluate_path),
        .schema_location = step_metadata.keyword_location});

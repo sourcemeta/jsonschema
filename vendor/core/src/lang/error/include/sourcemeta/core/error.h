@@ -2,6 +2,7 @@
 #define SOURCEMETA_CORE_ERROR_H_
 
 // NOLINTBEGIN(misc-include-cleaner)
+#include <sourcemeta/core/error_base.h>
 #include <sourcemeta/core/error_file.h>
 // NOLINTEND(misc-include-cleaner)
 
