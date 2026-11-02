@@ -56,7 +56,7 @@ RUN validate bundled.json instance.json STDIN /dev/null IN . INTO standalone.txt
 WRITE expected_1.txt UNTIL EOF
 2> fail: instance.json
 2> error: Schema validation failure
-2>   The string value was expected to not validate against the given subschema, but it did
+2>   The string value was expected to not validate against the given subschema
 2>     at instance location "/name" (line 1, column 3)
 2>     at evaluate path "/properties/name/$ref/not"
 2>   The string value was expected to validate against the referenced schema

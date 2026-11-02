@@ -571,13 +571,11 @@ auto sourcemeta::jsonschema::inspect(const sourcemeta::core::Options &options)
       throw PositionError<
           sourcemeta::core::FileError<sourcemeta::core::SchemaReferenceError>>(
           std::get<0>(position.value()), std::get<1>(position.value()),
-          schema_resolution_base, error.identifier(), error.location(),
-          error.what());
+          schema_resolution_base, error);
     }
 
     throw sourcemeta::core::FileError<sourcemeta::core::SchemaReferenceError>(
-        schema_resolution_base, error.identifier(), error.location(),
-        error.what());
+        schema_resolution_base, error);
   } catch (
       const sourcemeta::core::SchemaRelativeMetaschemaResolutionError &error) {
     throw sourcemeta::core::FileError<
@@ -595,7 +593,7 @@ auto sourcemeta::jsonschema::inspect(const sourcemeta::core::Options &options)
         sourcemeta::core::SchemaUnknownDialectError>(schema_resolution_base);
   } catch (const sourcemeta::core::SchemaError &error) {
     throw sourcemeta::core::FileError<sourcemeta::core::SchemaError>(
-        schema_resolution_base, error.what());
+        schema_resolution_base, error);
   }
 
   if (options.contains("json")) {

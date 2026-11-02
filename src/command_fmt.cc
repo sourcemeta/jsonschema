@@ -281,7 +281,7 @@ auto sourcemeta::jsonschema::fmt(const sourcemeta::core::Options &options)
           sourcemeta::core::SchemaUnknownBaseDialectError>(display_path);
     } catch (const sourcemeta::core::SchemaError &error) {
       throw sourcemeta::core::FileError<sourcemeta::core::SchemaError>(
-          display_path, error.what());
+          display_path, error);
     }
   };
 
@@ -412,7 +412,7 @@ auto sourcemeta::jsonschema::fmt(const sourcemeta::core::Options &options)
           sourcemeta::core::SchemaUnknownDialectError>(entry.resolution_base);
     } catch (const sourcemeta::core::SchemaError &error) {
       throw sourcemeta::core::FileError<sourcemeta::core::SchemaError>(
-          entry.resolution_base, error.what());
+          entry.resolution_base, error);
     }
   };
 

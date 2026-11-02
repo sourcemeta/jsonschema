@@ -206,13 +206,11 @@ auto sourcemeta::jsonschema::bundle(const sourcemeta::core::Options &options)
       throw PositionError<
           sourcemeta::core::FileError<sourcemeta::core::SchemaReferenceError>>(
           std::get<0>(position.value()), std::get<1>(position.value()),
-          schema_display_path, error.identifier(), error.location(),
-          error.what());
+          schema_display_path, error);
     }
 
     throw sourcemeta::core::FileError<sourcemeta::core::SchemaReferenceError>(
-        schema_display_path, error.identifier(), error.location(),
-        error.what());
+        schema_display_path, error);
   } catch (
       const sourcemeta::core::SchemaRelativeMetaschemaResolutionError &error) {
     throw sourcemeta::core::FileError<
@@ -233,7 +231,7 @@ auto sourcemeta::jsonschema::bundle(const sourcemeta::core::Options &options)
         schema_display_path, error.identifier());
   } catch (const sourcemeta::core::SchemaError &error) {
     throw sourcemeta::core::FileError<sourcemeta::core::SchemaError>(
-        schema_display_path, error.what());
+        schema_display_path, error);
   }
 
   sourcemeta::jsonschema::write_schema(schema, std::cout, indentation,

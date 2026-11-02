@@ -192,11 +192,11 @@ auto sourcemeta::jsonschema::compile(const sourcemeta::core::Options &options)
       throw PositionError<
           sourcemeta::core::FileError<sourcemeta::core::SchemaReferenceError>>(
           std::get<0>(position.value()), std::get<1>(position.value()),
-          schema_path, error.identifier(), error.location(), error.what());
+          schema_path, error);
     }
 
     throw sourcemeta::core::FileError<sourcemeta::core::SchemaReferenceError>(
-        schema_path, error.identifier(), error.location(), error.what());
+        schema_path, error);
   } catch (
       const sourcemeta::core::SchemaRelativeMetaschemaResolutionError &error) {
     throw sourcemeta::core::FileError<
@@ -213,14 +213,14 @@ auto sourcemeta::jsonschema::compile(const sourcemeta::core::Options &options)
         sourcemeta::core::SchemaUnknownDialectError>(schema_path);
   } catch (const sourcemeta::core::SchemaVocabularyError &error) {
     throw sourcemeta::core::FileError<sourcemeta::core::SchemaVocabularyError>(
-        schema_path, error.uri(), error.what());
+        schema_path, error);
   } catch (const sourcemeta::core::SchemaReferenceObjectResourceError &error) {
     throw sourcemeta::core::FileError<
         sourcemeta::core::SchemaReferenceObjectResourceError>(
         schema_path, error.identifier());
   } catch (const sourcemeta::core::SchemaError &error) {
     throw sourcemeta::core::FileError<sourcemeta::core::SchemaError>(
-        schema_path, error.what());
+        schema_path, error);
   }
 
   const auto template_json{sourcemeta::blaze::to_json(schema_template)};

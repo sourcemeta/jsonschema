@@ -23,27 +23,31 @@ REPLACE MATCHING 'file:[^"]*~1nested\.json' WITH '[CWD_URI_POINTER]~1nested.json
 
 WRITE expected.txt UNTIL EOF
 1> [
-1>   9,
+1>   15,
 1>   false,
 1>   true,
 1>   [
 1>     [
 1>       [
-1>         60,
+1>         61,
 1>         [ "allOf" ],
 1>         [],
 1>         "[CWD_URI]/schema.json#/allOf",
 1>         1,
 1>         1,
+1>         1,
+1>         0,
 1>         [ 0 ],
 1>         [
 1>           [
-1>             102,
+1>             104,
 1>             [ 0, "$ref" ],
 1>             [],
 1>             "[CWD_URI]/schema.json#/allOf/0/$ref",
 1>             1,
 1>             1,
+1>             2,
+1>             0,
 1>             [ 10, 1 ]
 1>           ]
 1>         ]
@@ -57,6 +61,8 @@ WRITE expected.txt UNTIL EOF
 1>         "[CWD_URI]/schema.json#/x-definitions/[CWD_URI_POINTER]~1nested.json/minLength",
 1>         1,
 1>         1,
+1>         3,
+1>         4,
 1>         [ 10, 1 ]
 1>       ],
 1>       [
@@ -66,12 +72,22 @@ WRITE expected.txt UNTIL EOF
 1>         "[CWD_URI]/schema.json#/x-definitions/[CWD_URI_POINTER]~1nested.json/type",
 1>         1,
 1>         1,
+1>         5,
+1>         6,
 1>         [ 8, 4 ]
 1>       ]
 1>     ]
 1>   ],
 1>   [],
-1>   [ "tag:spec.openapis.org,2017:oas/3.0/vocab/base" ]
+1>   [ "tag:spec.openapis.org,2017:oas/3.0/vocab/base" ],
+1>   [
+1>     "The {0} value was expected to validate against the given subschema",
+1>     "The {0} value was expected to validate against the referenced schema",
+1>     "{0} was expected to consist of at least 2 characters and its length was {1}",
+1>     "{0} was expected to consist of at least 2 characters but its length was {1}",
+1>     "{0} was expected to be of type {1}",
+1>     "{0} was expected to be of type {1} but it was of type {2}"
+1>   ]
 1> ]
 EOF
 

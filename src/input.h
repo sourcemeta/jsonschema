@@ -505,8 +505,8 @@ handle_input_file(const std::filesystem::path &canonical,
         index += 1;
       }
     } catch (const sourcemeta::core::GZIPError &error) {
-      throw sourcemeta::core::FileError<sourcemeta::core::GZIPError>(
-          canonical, error.what());
+      throw sourcemeta::core::FileError<sourcemeta::core::GZIPError>(canonical,
+                                                                     error);
     } catch (const sourcemeta::core::JSONParseError &error) {
       throw sourcemeta::core::JSONFileParseError(canonical, error);
     }

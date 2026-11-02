@@ -41,8 +41,8 @@ auto effective_dialect(const sourcemeta::core::JSON &schema,
   if (!dialect->is_string()) {
     std::ostringstream value;
     sourcemeta::core::stringify(*dialect, value);
-    throw sourcemeta::core::SchemaKeywordError{"$schema", value.str(),
-                                               "The dialect value is invalid"};
+    throw sourcemeta::core::SchemaKeywordError{"The dialect value is invalid",
+                                               "$schema", value.str()};
   }
 
   return dialect->to_string();
@@ -119,7 +119,7 @@ auto check_against_metaschema(
     return output.at("valid").to_boolean();
   }
 
-  sourcemeta::blaze::SimpleOutput output{schema};
+  sourcemeta::blaze::SimpleOutput output{schema_template, schema};
   if (evaluator.validate(schema_template, schema, std::ref(output))) {
     sourcemeta::jsonschema::LOG_VERBOSE(options)
         << sourcemeta::jsonschema::format_validation_status(
@@ -338,7 +338,7 @@ auto sourcemeta::jsonschema::metaschema(
     } catch (const sourcemeta::core::SchemaVocabularyError &error) {
       throw sourcemeta::core::FileError<
           sourcemeta::core::SchemaVocabularyError>(entry.resolution_base,
-                                                   error.uri(), error.what());
+                                                   error);
     } catch (const sourcemeta::core::SchemaUnknownBaseDialectError &) {
       throw sourcemeta::core::FileError<
           sourcemeta::core::SchemaUnknownBaseDialectError>(

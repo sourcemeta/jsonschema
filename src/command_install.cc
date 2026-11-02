@@ -59,7 +59,8 @@ auto dependency_fetch(const sourcemeta::core::Options &options,
   }
 
   throw sourcemeta::core::FileError<sourcemeta::core::SchemaResolutionError>(
-      configuration_path, uri, "Could not resolve schema");
+      configuration_path,
+      sourcemeta::core::StaticString{"Could not resolve schema"}, uri);
 }
 
 auto dependency_resolve(
