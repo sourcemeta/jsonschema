@@ -1,0 +1,53 @@
+WRITE jsonschema.json UNTIL EOF
+{
+  "baseUri": "https://example.com",
+  "title": "My project"
+}
+EOF
+
+COPY jsonschema.json TO original.json
+
+// Validation failure
+RUN fmt jsonschema.json --check --json STDIN /dev/null IN . INTO result.txt EXPECTING 2
+
+REPLACE $CWD WITH '[CWD]' IN result.txt
+
+WRITE expected.txt UNTIL EOF
+1> {
+1>   "valid": false,
+1>   "errors": [
+1>     {
+1>       "path": "[CWD]/jsonschema.json",
+1>       "diff": [
+1>         {
+1>           "type": "equal",
+1>           "lines": [ "{" ]
+1>         },
+1>         {
+1>           "type": "delete",
+1>           "lines": [
+1>             "  \"baseUri\": \"https://example.com\",",
+1>             "  \"title\": \"My project\""
+1>           ]
+1>         },
+1>         {
+1>           "type": "insert",
+1>           "lines": [
+1>             "  \"title\": \"My project\",",
+1>             "  \"baseUri\": \"https://example.com\""
+1>           ]
+1>         },
+1>         {
+1>           "type": "equal",
+1>           "lines": [ "}" ]
+1>         }
+1>       ]
+1>     }
+1>   ]
+1> }
+2> Interpreting as a configuration file: [CWD]/jsonschema.json
+EOF
+
+COMPARE result.txt AGAINST expected.txt
+
+COMPARE jsonschema.json AGAINST original.json

@@ -1,0 +1,41 @@
+MAKE DIRECTORY nested
+
+WRITE jsonschema.json UNTIL EOF
+{
+  "title": "The root project"
+}
+EOF
+
+WRITE nested/jsonschema.json UNTIL EOF
+{
+  "baseUri": "https://example.com",
+  "title": "The nested project"
+}
+EOF
+
+RUN fmt nested/jsonschema.json STDIN /dev/null IN . INTO result.txt EXPECTING 0
+
+REPLACE $CWD WITH '[CWD]' IN result.txt
+
+WRITE expected.txt UNTIL EOF
+2> Interpreting as a configuration file: [CWD]/nested/jsonschema.json
+EOF
+
+COMPARE result.txt AGAINST expected.txt
+
+WRITE expected_file_0.txt UNTIL EOF
+{
+  "title": "The nested project",
+  "baseUri": "https://example.com"
+}
+EOF
+
+COMPARE nested/jsonschema.json AGAINST expected_file_0.txt
+
+WRITE expected_file_1.txt UNTIL EOF
+{
+  "title": "The root project"
+}
+EOF
+
+COMPARE jsonschema.json AGAINST expected_file_1.txt
