@@ -18,11 +18,11 @@ WRITE expected.txt UNTIL EOF
 1>   "mode": "pointers",
 1>   "locations": {
 1>     "static": {
-1>       "https://example.com": {
+1>       "https://example.com/": {
 1>         "parent": null,
 1>         "type": "resource",
-1>         "root": "https://example.com",
-1>         "base": "https://example.com",
+1>         "root": "https://example.com/",
+1>         "base": "https://example.com/",
 1>         "pointer": "",
 1>         "position": [ 1, 1, 10, 1 ],
 1>         "relativePointer": "",
@@ -42,11 +42,11 @@ WRITE expected.txt UNTIL EOF
 1>           "https://json-schema.org/draft/2020-12/vocab/content": true
 1>         }
 1>       },
-1>       "https://example.com#/$defs": {
+1>       "https://example.com/#/$defs": {
 1>         "parent": "",
 1>         "type": "pointer",
-1>         "root": "https://example.com",
-1>         "base": "https://example.com",
+1>         "root": "https://example.com/",
+1>         "base": "https://example.com/",
 1>         "pointer": "/$defs",
 1>         "position": [ 7, 3, 9, 3 ],
 1>         "relativePointer": "/$defs",
@@ -66,11 +66,11 @@ WRITE expected.txt UNTIL EOF
 1>           "https://json-schema.org/draft/2020-12/vocab/content": true
 1>         }
 1>       },
-1>       "https://example.com#/$defs/string": {
+1>       "https://example.com/#/$defs/string": {
 1>         "parent": "",
 1>         "type": "subschema",
-1>         "root": "https://example.com",
-1>         "base": "https://example.com",
+1>         "root": "https://example.com/",
+1>         "base": "https://example.com/",
 1>         "pointer": "/$defs/string",
 1>         "position": [ 8, 5, 8, 34 ],
 1>         "relativePointer": "/$defs/string",
@@ -90,11 +90,11 @@ WRITE expected.txt UNTIL EOF
 1>           "https://json-schema.org/draft/2020-12/vocab/content": true
 1>         }
 1>       },
-1>       "https://example.com#/$defs/string/type": {
+1>       "https://example.com/#/$defs/string/type": {
 1>         "parent": "/$defs/string",
 1>         "type": "pointer",
-1>         "root": "https://example.com",
-1>         "base": "https://example.com",
+1>         "root": "https://example.com/",
+1>         "base": "https://example.com/",
 1>         "pointer": "/$defs/string/type",
 1>         "position": [ 8, 17, 8, 32 ],
 1>         "relativePointer": "/$defs/string/type",
@@ -114,11 +114,11 @@ WRITE expected.txt UNTIL EOF
 1>           "https://json-schema.org/draft/2020-12/vocab/content": true
 1>         }
 1>       },
-1>       "https://example.com#/$id": {
+1>       "https://example.com/#/$id": {
 1>         "parent": "",
 1>         "type": "pointer",
-1>         "root": "https://example.com",
-1>         "base": "https://example.com",
+1>         "root": "https://example.com/",
+1>         "base": "https://example.com/",
 1>         "pointer": "/$id",
 1>         "position": [ 5, 3, 5, 30 ],
 1>         "relativePointer": "/$id",
@@ -138,11 +138,11 @@ WRITE expected.txt UNTIL EOF
 1>           "https://json-schema.org/draft/2020-12/vocab/content": true
 1>         }
 1>       },
-1>       "https://example.com#/$ref": {
+1>       "https://example.com/#/$ref": {
 1>         "parent": "",
 1>         "type": "pointer",
-1>         "root": "https://example.com",
-1>         "base": "https://example.com",
+1>         "root": "https://example.com/",
+1>         "base": "https://example.com/",
 1>         "pointer": "/$ref",
 1>         "position": [ 6, 3, 6, 26 ],
 1>         "relativePointer": "/$ref",
@@ -162,11 +162,11 @@ WRITE expected.txt UNTIL EOF
 1>           "https://json-schema.org/draft/2020-12/vocab/content": true
 1>         }
 1>       },
-1>       "https://example.com#/$schema": {
+1>       "https://example.com/#/$schema": {
 1>         "parent": "",
 1>         "type": "pointer",
-1>         "root": "https://example.com",
-1>         "base": "https://example.com",
+1>         "root": "https://example.com/",
+1>         "base": "https://example.com/",
 1>         "pointer": "/$schema",
 1>         "position": [ 2, 3, 2, 59 ],
 1>         "relativePointer": "/$schema",
@@ -186,11 +186,11 @@ WRITE expected.txt UNTIL EOF
 1>           "https://json-schema.org/draft/2020-12/vocab/content": true
 1>         }
 1>       },
-1>       "https://example.com#/description": {
+1>       "https://example.com/#/description": {
 1>         "parent": "",
 1>         "type": "pointer",
-1>         "root": "https://example.com",
-1>         "base": "https://example.com",
+1>         "root": "https://example.com/",
+1>         "base": "https://example.com/",
 1>         "pointer": "/description",
 1>         "position": [ 4, 3, 4, 30 ],
 1>         "relativePointer": "/description",
@@ -210,11 +210,11 @@ WRITE expected.txt UNTIL EOF
 1>           "https://json-schema.org/draft/2020-12/vocab/content": true
 1>         }
 1>       },
-1>       "https://example.com#/title": {
+1>       "https://example.com/#/title": {
 1>         "parent": "",
 1>         "type": "pointer",
-1>         "root": "https://example.com",
-1>         "base": "https://example.com",
+1>         "root": "https://example.com/",
+1>         "base": "https://example.com/",
 1>         "pointer": "/title",
 1>         "position": [ 3, 3, 3, 17 ],
 1>         "relativePointer": "/title",
@@ -243,8 +243,8 @@ WRITE expected.txt UNTIL EOF
 1>       "origin": "/$ref",
 1>       "position": [ 6, 3, 6, 26 ],
 1>       "original": "#/$defs/string",
-1>       "destination": "https://example.com#/$defs/string",
-1>       "base": "https://example.com",
+1>       "destination": "https://example.com/#/$defs/string",
+1>       "base": "https://example.com/",
 1>       "fragment": "/$defs/string"
 1>     },
 1>     {

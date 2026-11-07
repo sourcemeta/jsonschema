@@ -58,12 +58,12 @@ using sourcemeta::core::JSON;
 using sourcemeta::core::MCPProtocolVersion;
 
 inline auto field(const JSON &value, const JSON::StringView name,
-                  const JSON::Object::hash_type hash) -> const JSON * {
+                  const JSON::Object::hash_type &hash) -> const JSON * {
   return value.is_object() ? value.try_at(name, hash) : nullptr;
 }
 
 inline auto string_field(const JSON &value, const JSON::StringView name,
-                         const JSON::Object::hash_type hash,
+                         const JSON::Object::hash_type &hash,
                          const bool required = false) -> bool {
   const auto *item{field(value, name, hash)};
   return item == nullptr ? !required : item->is_string();
@@ -105,7 +105,7 @@ optional_fields(const JSON &value,
 // admits
 // https://www.rfc-editor.org/rfc/rfc3339
 inline auto timestamp_field(const JSON &value, const JSON::StringView name,
-                            const JSON::Object::hash_type hash) -> bool {
+                            const JSON::Object::hash_type &hash) -> bool {
   const auto *item{value.try_at(name, hash)};
   return (item == nullptr) ||
          (item->is_string() &&
@@ -115,7 +115,7 @@ inline auto timestamp_field(const JSON &value, const JSON::StringView name,
 // A media type is the one the HTTP module already parses, since the examples
 // the specification gives are ordinary ones such as "image/svg+xml"
 inline auto media_type_field(const JSON &value, const JSON::StringView name,
-                             const JSON::Object::hash_type hash,
+                             const JSON::Object::hash_type &hash,
                              const bool required = false) -> bool {
   const auto *item{value.try_at(name, hash)};
   if (item == nullptr) {
@@ -133,7 +133,7 @@ inline auto media_type_field(const JSON &value, const JSON::StringView name,
 // https://modelcontextprotocol.io/specification/2026-07-28/schema#icon
 // https://modelcontextprotocol.io/specification/2026-07-28/server/resources#security-considerations
 inline auto uri_field(const JSON &value, const JSON::StringView name,
-                      const JSON::Object::hash_type hash,
+                      const JSON::Object::hash_type &hash,
                       const bool required = false) -> bool {
   const auto *item{value.try_at(name, hash)};
   if (item == nullptr) {

@@ -5,11 +5,12 @@
 #include "document.h"
 #include "helpers.h"
 
-#include <algorithm>     // std::min
-#include <cassert>       // assert
-#include <charconv>      // std::from_chars
-#include <cstddef>       // std::size_t
-#include <cstdint>       // std::uint64_t
+#include <algorithm> // std::min
+#include <cassert>   // assert
+#include <charconv>  // std::from_chars
+#include <cstddef>   // std::size_t
+#include <cstdint>   // std::uint64_t
+#include <exception> // std::exception_ptr, std::current_exception, std::rethrow_exception
 #include <map>           // std::map
 #include <optional>      // std::optional
 #include <set>           // std::set
@@ -2457,6 +2458,77 @@ auto bundle_internal(JSON &document, const SchemaWalker &walker,
   }
 }
 
+// A limit error that one of the caller's own callables raised carries an
+// allowance of theirs rather than the one set for this operation, so marking
+// it on the way out is what keeps it from being restated as this one. There is
+// more than one kind of limit error it could be, so what was raised travels
+// rather than its type
+struct ForeignLimitError {
+  std::exception_ptr error;
+};
+
+auto guard_schema_resolver(const SchemaResolver &resolver) -> SchemaResolver {
+  return
+      [&resolver](const std::string_view identifier) -> SchemaResolverResult {
+        try {
+          return resolver(identifier);
+        } catch (const SchemaFrameLimitError &) {
+          throw ForeignLimitError{std::current_exception()};
+        } catch (const OpenAPIFrameLimitError &) {
+          throw ForeignLimitError{std::current_exception()};
+        }
+      };
+}
+
+auto guard_resolver(const OpenAPIResolver &resolver) -> OpenAPIResolver {
+  return
+      [&resolver](const std::string_view identifier) -> OpenAPIResolverResult {
+        try {
+          return resolver(identifier);
+        } catch (const SchemaFrameLimitError &) {
+          throw ForeignLimitError{std::current_exception()};
+        } catch (const OpenAPIFrameLimitError &) {
+          throw ForeignLimitError{std::current_exception()};
+        }
+      };
+}
+
+auto guard_callback(const OpenAPIBundleOptions::Callback &callback)
+    -> OpenAPIBundleOptions::Callback {
+  if (!callback) {
+    return callback;
+  }
+
+  return [&callback](const JSON::StringView identifier,
+                     const sourcemeta::core::Pointer &location) -> void {
+    try {
+      callback(identifier, location);
+    } catch (const SchemaFrameLimitError &) {
+      throw ForeignLimitError{std::current_exception()};
+    } catch (const OpenAPIFrameLimitError &) {
+      throw ForeignLimitError{std::current_exception()};
+    }
+  };
+}
+
+auto guard_namer(const OpenAPIBundleOptions::Namer &namer)
+    -> OpenAPIBundleOptions::Namer {
+  if (!namer) {
+    return namer;
+  }
+
+  return [&namer](const JSON::StringView identifier,
+                  const JSON::StringView member) -> JSON::String {
+    try {
+      return namer(identifier, member);
+    } catch (const SchemaFrameLimitError &) {
+      throw ForeignLimitError{std::current_exception()};
+    } catch (const OpenAPIFrameLimitError &) {
+      throw ForeignLimitError{std::current_exception()};
+    }
+  };
+}
+
 } // namespace
 
 auto openapi_bundle(JSON &document, const SchemaWalker &walker,
@@ -2464,9 +2536,14 @@ auto openapi_bundle(JSON &document, const SchemaWalker &walker,
                     const OpenAPIResolver &resolver,
                     const OpenAPIBundleOptions &options) -> void {
   auto remaining{options.max_locations};
+  auto guarded{options};
+  guarded.callback = guard_callback(options.callback);
+  guarded.namer = guard_namer(options.namer);
   try {
-    bundle_internal(document, walker, schema_resolver, resolver, options,
-                    remaining);
+    bundle_internal(document, walker, guard_schema_resolver(schema_resolver),
+                    guard_resolver(resolver), guarded, remaining);
+  } catch (const ForeignLimitError &foreign) {
+    std::rethrow_exception(foreign.error);
   } catch (const OpenAPIFrameLimitError &) {
     throw OpenAPIBundleLimitError{options.max_locations};
   } catch (const SchemaFrameLimitError &) {

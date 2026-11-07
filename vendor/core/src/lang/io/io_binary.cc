@@ -139,6 +139,11 @@ auto BinaryReader::get_varint_zigzag() -> std::int64_t {
 }
 
 auto BinaryReader::get_string(const std::size_t size) -> std::string {
+  // A mapped source can reject impossible lengths before allocating.
+  if (this->view_ != nullptr && size > this->view_->size() - this->offset_) {
+    throw IOReadOutOfBoundsError{};
+  }
+
   std::string result;
   result.resize(size);
   this->get_bytes(reinterpret_cast<std::byte *>(result.data()), size);

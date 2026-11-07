@@ -38,7 +38,7 @@ WRITE expected_0.txt UNTIL EOF
 2> Using parallelism: 1
 2> debug: Detecting schema resources from file: [CWD]/schema.json
 2> debug: Importing schema into the resolution context: [CWD_URI]/schema.json
-2> debug: Importing schema into the resolution context: https://example.com
+2> debug: Importing schema into the resolution context: https://example.com/
 EOF
 
 COMPARE result_0.txt AGAINST expected_0.txt

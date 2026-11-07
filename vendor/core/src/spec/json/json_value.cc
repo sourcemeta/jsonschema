@@ -20,28 +20,43 @@
 #include <vector>           // std::vector
 
 // Searching a run of hashes for one value tests many lanes at once on any
-// vector unit. The wider of the two x86 extensions is only present when the
-// build asks for it, while the narrower one and the ARM vector unit belong to
-// every 64-bit baseline, so each is gated on what its architecture guarantees
-// rather than on the flags this project happens to pass, which do not reach a
-// consumer that builds this library as a subproject of its own
-#if defined(__AVX2__)
-#define SOURCEMETA_CORE_JSON_SCAN_AVX2 1
-#elif defined(__SSE4_1__)
-#define SOURCEMETA_CORE_JSON_SCAN_SSE41 1
+// vector unit. Neither x86 extension that does so belongs to a baseline, and
+// which of them the processor running this code offers is not knowable until it
+// runs, so both are compiled in and the widest one the processor reports is
+// chosen on first use. Deciding at build time instead would pin the binary to
+// the machine that produced it, and would leave a consumer that builds this
+// library as a subproject of its own with neither. The ARM vector unit is part
+// of the 64-bit baseline and needs no choice
+#if defined(__x86_64__) || defined(_M_X64) || defined(__i386__) ||             \
+    defined(_M_IX86)
+#define SOURCEMETA_CORE_JSON_SCAN_X86 1
 #elif defined(__aarch64__) || defined(_M_ARM64)
 // The horizontal reduction that answers whether any lane matched at all is only
 // defined for the 64-bit form of the instruction set
 #define SOURCEMETA_CORE_JSON_SCAN_NEON 1
 #endif
 
-#if defined(SOURCEMETA_CORE_JSON_SCAN_AVX2) ||                                 \
-    defined(SOURCEMETA_CORE_JSON_SCAN_SSE41)
+#ifdef SOURCEMETA_CORE_JSON_SCAN_X86
 #include <immintrin.h> // __m256i, _mm256_cmpeq_epi64, __m128i, _mm_cmpeq_epi64
+#if defined(_MSC_VER) && !defined(__clang__)
+#include <array>    // std::array
+#include <intrin.h> // __cpuid, __cpuidex, _xgetbv
+#endif
 #endif
 
 #ifdef SOURCEMETA_CORE_JSON_SCAN_NEON
 #include <arm_neon.h> // uint64x2_t, vceqq_u64, vorrq_u64, vmaxvq_u32
+#endif
+
+// Only the compilers that tie the instructions they emit to the options of the
+// whole translation unit need the promise restated for the functions that
+// step outside them. MSVC accepts the intrinsics regardless
+#if defined(SOURCEMETA_CORE_JSON_SCAN_X86) &&                                  \
+    !(defined(_MSC_VER) && !defined(__clang__))
+#define SOURCEMETA_CORE_JSON_SCAN_TARGET(extension)                            \
+  __attribute__((target(extension)))
+#else
+#define SOURCEMETA_CORE_JSON_SCAN_TARGET(extension)
 #endif
 
 namespace sourcemeta::core {
@@ -50,34 +65,78 @@ static constexpr auto TRIM_WHITESPACE = " \t\n\r\v\f";
 
 namespace {
 
-// Report how far into a run of hashes the first one equal to the given value
-// lies, or the length of the run when none of them is. The caller has already
-// ruled out the first position, so the answer is never zero. The vector loop
-// only narrows the search down to the block that holds a match, and the scalar
-// tail that follows both pinpoints it within that block and covers the last
-// partial one, so a match anywhere in a block costs one test of the whole block
-auto scan_hashes(const std::uint64_t *const data, const std::size_t size,
-                 const std::uint64_t needle) noexcept -> std::size_t {
-  std::size_t offset{0};
+#ifdef SOURCEMETA_CORE_JSON_SCAN_X86
+enum class ScanKernel : std::uint8_t { Scalar, Narrow, Wide };
 
-#if defined(SOURCEMETA_CORE_JSON_SCAN_AVX2)
-  const auto target{_mm256_set1_epi64x(static_cast<long long>(needle))};
-  while (offset + 8 <= size) {
-    const auto lower{_mm256_cmpeq_epi64(
-        _mm256_loadu_si256(reinterpret_cast<const __m256i *>(data + offset)),
-        target)};
-    const auto upper{
-        _mm256_cmpeq_epi64(_mm256_loadu_si256(reinterpret_cast<const __m256i *>(
-                               data + offset + 4)),
-                           target)};
-    const auto matches{_mm256_or_si256(lower, upper)};
-    if (_mm256_testz_si256(matches, matches) == 0) {
-      break;
-    }
+#if defined(_MSC_VER) && !defined(__clang__)
+// Without a builtin that answers on behalf of the processor, the feature bits
+// are read out of it directly. The wide registers are also part of the thread
+// state that the operating system has to agree to preserve, which it reports
+// through the extended control register
+auto detect_scan_kernel() noexcept -> ScanKernel {
+  constexpr auto SSE41_FEATURE_BIT{1 << 19};
+  constexpr auto OSXSAVE_FEATURE_BIT{1 << 27};
+  constexpr auto AVX_FEATURE_BIT{1 << 28};
+  constexpr auto AVX2_FEATURE_BIT{1 << 5};
+  constexpr std::uint64_t VECTOR_STATE_MASK{0x6};
 
-    offset += 8;
+  std::array<int, 4> registers{};
+  __cpuid(registers.data(), 0);
+  const auto highest_leaf{registers[0]};
+  if (highest_leaf < 1) {
+    return ScanKernel::Scalar;
   }
-#elif defined(SOURCEMETA_CORE_JSON_SCAN_SSE41)
+
+  __cpuidex(registers.data(), 1, 0);
+  if ((registers[2] & SSE41_FEATURE_BIT) == 0) {
+    return ScanKernel::Scalar;
+  }
+
+  if (highest_leaf < 7 || (registers[2] & OSXSAVE_FEATURE_BIT) == 0 ||
+      (registers[2] & AVX_FEATURE_BIT) == 0 ||
+      (_xgetbv(0) & VECTOR_STATE_MASK) != VECTOR_STATE_MASK) {
+    return ScanKernel::Narrow;
+  }
+
+  __cpuidex(registers.data(), 7, 0);
+  return (registers[1] & AVX2_FEATURE_BIT) != 0 ? ScanKernel::Wide
+                                                : ScanKernel::Narrow;
+}
+#else
+auto detect_scan_kernel() noexcept -> ScanKernel {
+  // A build that already promises an extension cannot run anywhere the
+  // extension is missing, so there is nothing left to ask
+#if defined(__AVX2__)
+  return ScanKernel::Wide;
+#else
+  if (__builtin_cpu_supports("avx2")) {
+    return ScanKernel::Wide;
+  }
+
+  if (__builtin_cpu_supports("sse4.1")) {
+    return ScanKernel::Narrow;
+  }
+
+  return ScanKernel::Scalar;
+#endif
+}
+#endif
+
+// The processor does not change while the program runs, so the choice is taken
+// once, ahead of anything that could ask for it, rather than on the way through
+// a search. A read that somehow comes first still reads the scalar answer,
+// which is correct and only slower
+const auto SCAN_KERNEL{detect_scan_kernel()};
+
+// An answer that falls short of the first match costs the caller nothing but a
+// few scalar steps, so a run left with too few hashes to fill a whole block
+// ends on a half width step, which is cheaper than the steps it stands in for
+SOURCEMETA_CORE_JSON_SCAN_TARGET("sse4.1")
+auto scan_hashes_blocks_narrow(const std::uint64_t *const data,
+                               const std::size_t size,
+                               const std::uint64_t needle) noexcept
+    -> std::size_t {
+  std::size_t offset{0};
   const auto target{_mm_set1_epi64x(static_cast<long long>(needle))};
   while (offset + 8 <= size) {
     const auto first{_mm_cmpeq_epi64(
@@ -95,12 +154,102 @@ auto scan_hashes(const std::uint64_t *const data, const std::size_t size,
     const auto matches{
         _mm_or_si128(_mm_or_si128(first, second), _mm_or_si128(third, fourth))};
     if (_mm_testz_si128(matches, matches) == 0) {
-      break;
+      return offset;
     }
 
     offset += 8;
   }
-#elif defined(SOURCEMETA_CORE_JSON_SCAN_NEON)
+
+  if (offset + 4 <= size) {
+    const auto first{_mm_cmpeq_epi64(
+        _mm_loadu_si128(reinterpret_cast<const __m128i *>(data + offset)),
+        target)};
+    const auto second{_mm_cmpeq_epi64(
+        _mm_loadu_si128(reinterpret_cast<const __m128i *>(data + offset + 2)),
+        target)};
+    const auto matches{_mm_or_si128(first, second)};
+    if (_mm_testz_si128(matches, matches) != 0) {
+      offset += 4;
+    }
+  }
+
+  return offset;
+}
+
+SOURCEMETA_CORE_JSON_SCAN_TARGET("avx2")
+auto scan_hashes_blocks_wide(const std::uint64_t *const data,
+                             const std::size_t size,
+                             const std::uint64_t needle) noexcept
+    -> std::size_t {
+  std::size_t offset{0};
+  const auto target{_mm256_set1_epi64x(static_cast<long long>(needle))};
+  while (offset + 8 <= size) {
+    const auto lower{_mm256_cmpeq_epi64(
+        _mm256_loadu_si256(reinterpret_cast<const __m256i *>(data + offset)),
+        target)};
+    const auto upper{
+        _mm256_cmpeq_epi64(_mm256_loadu_si256(reinterpret_cast<const __m256i *>(
+                               data + offset + 4)),
+                           target)};
+    const auto matches{_mm256_or_si256(lower, upper)};
+    if (_mm256_testz_si256(matches, matches) == 0) {
+      return offset;
+    }
+
+    offset += 8;
+  }
+
+  // A whole block is two of these, so the half width step this unit ends on is
+  // one of them, and stays within the extension this function is compiled for
+  if (offset + 4 <= size) {
+    const auto matches{_mm256_cmpeq_epi64(
+        _mm256_loadu_si256(reinterpret_cast<const __m256i *>(data + offset)),
+        target)};
+    if (_mm256_testz_si256(matches, matches) != 0) {
+      offset += 4;
+    }
+  }
+
+  return offset;
+}
+#endif
+
+// Narrow a run of hashes down to the block that may hold one equal to the given
+// value, or to the end of the whole blocks when none of them does. A run too
+// short for even the narrowest block is left to the caller, which keeps the
+// choice of vector unit out of the way of the inputs that would never reach one
+#if defined(SOURCEMETA_CORE_JSON_SCAN_X86) ||                                  \
+    defined(SOURCEMETA_CORE_JSON_SCAN_NEON)
+auto scan_hashes_blocks(const std::uint64_t *const data, const std::size_t size,
+                        const std::uint64_t needle) noexcept -> std::size_t {
+#ifdef SOURCEMETA_CORE_JSON_SCAN_X86
+  if (size < 4) {
+    return 0;
+  }
+
+  // A run with too few hashes left to fill a block of the widest unit can
+  // still fill one of the narrower, so what answers is the widest unit the run
+  // has whole blocks for
+  switch (SCAN_KERNEL) {
+    case ScanKernel::Wide:
+      if (size >= 8) {
+        return scan_hashes_blocks_wide(data, size, needle);
+      }
+
+      return scan_hashes_blocks_narrow(data, size, needle);
+    case ScanKernel::Narrow:
+      return scan_hashes_blocks_narrow(data, size, needle);
+    case ScanKernel::Scalar:
+      return 0;
+  }
+
+    // Clang settles that no other value arrives, so only GCC and MSVC need to
+    // be told that the end of this function is never reached
+#if !defined(__clang__)
+  std::unreachable();
+#endif
+#else
+  std::size_t offset{0};
   const auto target{vdupq_n_u64(needle)};
   while (offset + 8 <= size) {
     const auto first{vceqq_u64(vld1q_u64(data + offset), target)};
@@ -115,6 +264,25 @@ auto scan_hashes(const std::uint64_t *const data, const std::size_t size,
 
     offset += 8;
   }
+
+  return offset;
+#endif
+}
+#endif
+
+// Report how far into a run of hashes the first one equal to the given value
+// lies, or the length of the run when none of them is. The caller has already
+// ruled out the first position, so the answer is never zero. The vector unit
+// only narrows the search down to the block that holds a match, and the scalar
+// tail that follows both pinpoints it within that block and covers the last
+// partial one, so a match anywhere in a block costs one test of the whole block
+auto scan_hashes(const std::uint64_t *const data, const std::size_t size,
+                 const std::uint64_t needle) noexcept -> std::size_t {
+#if defined(SOURCEMETA_CORE_JSON_SCAN_X86) ||                                  \
+    defined(SOURCEMETA_CORE_JSON_SCAN_NEON)
+  auto offset{scan_hashes_blocks(data, size, needle)};
+#else
+  std::size_t offset{0};
 #endif
 
   while (offset < size && data[offset] != needle) {
@@ -792,7 +960,7 @@ auto JSON::operator-=(const JSON &substractive) -> JSON & {
       this->data_string};
 }
 
-[[nodiscard]] auto JSON::at_or(const String &key, const Object::hash_type hash,
+[[nodiscard]] auto JSON::at_or(const String &key, const Object::hash_type &hash,
                                const JSON &otherwise) const -> const JSON & {
   assert(this->is_object());
   const auto *const result{this->try_at(key, hash)};
@@ -1162,7 +1330,7 @@ auto JSON::assign_assume_new(JSON::String &&key, JSON &&value) -> void {
 }
 
 auto JSON::assign_assume_new(JSON::String &&key, JSON &&value,
-                             Object::hash_type hash) -> JSON & {
+                             const Object::hash_type &hash) -> JSON & {
   assert(this->is_object());
   return this->data_object.emplace_assume_new(std::move(key), std::move(value),
                                               hash);

@@ -115,10 +115,16 @@ auto URI::canonicalize() -> URI & {
     sourcemeta::core::to_lowercase(this->scheme_.value());
   }
 
-  // Canonicalize path by removing "." and ".." segments
+  // Canonicalize path by removing "." and ".." segments. RFC 3986 Section
+  // 6.2.2.3 holds that "URI normalizers should remove dot-segments by applying
+  // the remove_dot_segments algorithm to the path", and for a URI that carries
+  // a scheme there is no later resolution for a leading block to matter to, so
+  // the algorithm applies as written. Section 5.2.2 settles a reference that
+  // declares a scheme the same way. Only a relative reference keeps the block,
+  // which is what this module's extension is for
   if (this->path_.has_value() && !this->path_.value().empty()) {
     auto &current_path{this->path_.value()};
-    sourcemeta::core::normalize_path(current_path);
+    sourcemeta::core::normalize_path(current_path, this->scheme_.has_value());
     if (current_path.empty()) {
       this->path_ = std::nullopt;
     }
@@ -170,6 +176,33 @@ auto URI::canonicalize() -> URI & {
         (scheme_value == "https" && port_value == 443)) {
       this->port_ = std::nullopt;
     }
+  }
+
+  // RFC 3986 Section 6.2.3 holds that "a URI that uses the generic syntax for
+  // authority with an empty path should be normalized to a path of "/"", and
+  // names that spelling the normal form for the scheme. Eliding a default
+  // port above is the other half of that same paragraph, so doing only the
+  // one would answer a URI written with the port elided with a spelling the
+  // paragraph calls equivalent to the normal form but different from it, and
+  // two names for the one place would stop meeting
+  //
+  // That equivalence is the scheme's to define, which the same section rests
+  // the example on, "because the "http" scheme [...] defines an empty path to
+  // be equivalent to "/"". A scheme that reads an empty path as something
+  // other than a root, rather than as nothing at all, is a scheme this would
+  // be answering for, and Section 6.1 has comparison "strictly avoiding false
+  // positives" where it merely minimises the opposite. So this goes no
+  // further than the two the section spells out, which is as far as the port
+  // above goes
+  //
+  // An authority that names no host is not the generic syntax the rule speaks
+  // of either, and giving one a path matches nothing better, while resolving
+  // a network-path reference leans on it staying as it is
+  if (this->host_.has_value() && !this->host_.value().empty() &&
+      this->scheme_.has_value() &&
+      (this->scheme_.value() == "http" || this->scheme_.value() == "https") &&
+      (!this->path_.has_value() || this->path_.value().empty())) {
+    this->path_ = "/";
   }
 
   return *this;

@@ -1,5 +1,5 @@
 sourcemeta_library(NAMESPACE sourcemeta PROJECT core NAME openapi
-  PRIVATE_HEADERS error.h
+  PRIVATE_HEADERS error.h types.h
   SOURCES helpers.h dialect.h reference.h example.h content.h link.h response.h
           parameter.h request_body.h security.h path_item.h paths.h
           components.h discriminator.h external_documentation.h info.h

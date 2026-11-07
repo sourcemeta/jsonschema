@@ -120,14 +120,14 @@ auto stringify(const double value, const bool is_integral,
 
 template <template <typename T> typename Allocator>
 auto stringify(const typename JSON::String &document,
-               std::basic_ostream<JSON::Char, JSON::CharTraits> &stream)
-    -> void {
+               std::basic_ostream<JSON::Char, JSON::CharTraits> &stream,
+               const std::size_t first_escape = 0) -> void {
   stream.put(internal::TOKEN_STRING_QUOTE<JSON::Char>);
 
   // Emit the characters that need no escaping in runs, as writing a block at
   // a time is considerably cheaper than writing a character at a time
   std::size_t run{0};
-  for (std::size_t index{0}; index < document.size(); index++) {
+  for (std::size_t index{first_escape}; index < document.size(); index++) {
     const auto character{document[index]};
     const auto code_point{static_cast<unsigned char>(character)};
     const auto is_control{code_point < internal::STRING_CONTROL_ESCAPES.size()};
@@ -162,6 +162,39 @@ auto stringify(const typename JSON::String &document,
   stream.put(internal::TOKEN_STRING_QUOTE<JSON::Char>);
 }
 
+namespace internal {
+template <template <typename T> typename Allocator>
+auto stringify_compact_string(
+    const JSON::String &document,
+    std::basic_ostream<JSON::Char, JSON::CharTraits> &stream) -> void {
+  // Most keys and short values can be written with their quotes in one call.
+  constexpr std::size_t MAX_INLINE_LENGTH{32};
+  if (document.size() <= MAX_INLINE_LENGTH) {
+    for (std::size_t index{0}; index < document.size(); index++) {
+      const auto character{document[index]};
+      if (static_cast<unsigned char>(character) <
+              STRING_CONTROL_ESCAPES.size() ||
+          character == TOKEN_STRING_ESCAPE<JSON::Char> ||
+          character == TOKEN_STRING_QUOTE<JSON::Char>) {
+        // The preceding bytes have already been checked for escapes.
+        stringify<Allocator>(document, stream, index);
+        return;
+      }
+    }
+
+    std::array<JSON::Char, MAX_INLINE_LENGTH + 2> quoted;
+    quoted.front() = TOKEN_STRING_QUOTE<JSON::Char>;
+    JSON::CharTraits::copy(quoted.data() + 1, document.data(), document.size());
+    quoted[document.size() + 1] = TOKEN_STRING_QUOTE<JSON::Char>;
+    stream.write(quoted.data(),
+                 static_cast<std::streamsize>(document.size() + 2));
+    return;
+  }
+
+  stringify<Allocator>(document, stream);
+}
+} // namespace internal
+
 template <template <typename T> typename Allocator>
 auto stringify(const typename JSON::Array &document,
                std::basic_ostream<JSON::Char, JSON::CharTraits> &stream)
@@ -186,7 +219,7 @@ auto stringify(const typename JSON::Object &document,
 
   const auto end{std::cend(document)};
   for (auto iterator = std::cbegin(document); iterator != end; ++iterator) {
-    stringify<Allocator>(iterator->first, stream);
+    internal::stringify_compact_string<Allocator>(iterator->first, stream);
     stream.put(internal::TOKEN_OBJECT_KEY_DELIMITER<JSON::Char>);
     stringify<Allocator>(iterator->second, stream);
     if (std::next(iterator) != end) {
@@ -335,7 +368,8 @@ auto stringify(const JSON &document,
       stringify<Allocator>(document.to_real(), document.is_integral(), stream);
       break;
     case JSON::Type::String:
-      stringify<Allocator>(document.to_string(), stream);
+      internal::stringify_compact_string<Allocator>(document.to_string(),
+                                                    stream);
       break;
     case JSON::Type::Array:
       stringify<Allocator>(document.as_array(), stream);

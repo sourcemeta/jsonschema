@@ -16,7 +16,8 @@ public:
                                const SchemaWalker &,
                                const SchemaResolver &) const -> bool override {
     ONLY_CONTINUE_IF(vocabularies.contains_any(
-                         {SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_6}) &&
+                         {SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_6,
+                          SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_7}) &&
                      schema.is_boolean() && !schema.to_boolean());
     return true;
   }

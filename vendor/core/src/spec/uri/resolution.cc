@@ -7,9 +7,14 @@
 
 namespace {
 
-auto remove_dot_segments(const std::string &path) -> std::string {
+// Pass `resolving` where RFC 3986 Section 5.2.2 is what this is following, so
+// that the algorithm of Section 5.2.4 applies with nothing held back. The
+// relative base below is an extension of this module's own, where a leading
+// block is what the caller still needs
+auto remove_dot_segments(const std::string &path, const bool resolving = false)
+    -> std::string {
   std::string result{path};
-  sourcemeta::core::normalize_path(result);
+  sourcemeta::core::normalize_path(result, resolving);
   return result;
 }
 
@@ -50,7 +55,7 @@ auto URI::resolve_from(const URI &base) -> URI & {
   // Reference has a scheme - use as-is (already absolute)
   if (this->scheme_.has_value()) {
     if (this->path_.has_value()) {
-      this->path_ = remove_dot_segments(this->path_.value());
+      this->path_ = remove_dot_segments(this->path_.value(), true);
     }
     return *this;
   }
@@ -88,7 +93,7 @@ auto URI::resolve_from(const URI &base) -> URI & {
   if (this->host_.has_value()) {
     this->scheme_ = base.scheme_;
     if (this->path_.has_value()) {
-      this->path_ = remove_dot_segments(this->path_.value());
+      this->path_ = remove_dot_segments(this->path_.value(), true);
     }
     return *this;
   }
@@ -117,7 +122,7 @@ auto URI::resolve_from(const URI &base) -> URI & {
 
   // Reference path starts with "/" - use reference path as-is
   if (this->path_.value().starts_with('/')) {
-    this->path_ = remove_dot_segments(this->path_.value());
+    this->path_ = remove_dot_segments(this->path_.value(), true);
     return *this;
   }
 
@@ -126,7 +131,7 @@ auto URI::resolve_from(const URI &base) -> URI & {
   const bool base_has_authority = base.host_.has_value();
   auto merged_path =
       merge_paths(base_path, this->path_.value(), base_has_authority);
-  this->path_ = remove_dot_segments(merged_path);
+  this->path_ = remove_dot_segments(merged_path, true);
 
   return *this;
 }
@@ -337,26 +342,45 @@ auto URI::relative_to(const URI &base) -> URI & {
 
 namespace {
 
+// RFC 3986 Section 3.2 writes `authority = [ userinfo "@" ] host [ ":" port
+// ]`, so any one of the three names an authority, which is also how
+// recomposing decides whether to write one out
+auto names_an_authority(const sourcemeta::core::URI &uri) -> bool {
+  return uri.userinfo().has_value() || uri.host().has_value() ||
+         uri.port().has_value();
+}
+
 auto merge_new_base_path(std::optional<std::string> &target_path,
                          std::optional<std::string> &&new_base_path,
-                         std::optional<std::string> &&saved_path) -> void {
-  if (new_base_path.has_value() && saved_path.has_value()) {
-    auto merged{std::move(new_base_path.value())};
-    const auto &relative_path = saved_path.value();
-    // The suffix is what lies below the old base with the separating slash
-    // already removed, so a slash it does start with opens an empty segment
-    // and must not be mistaken for that separator
-    if (!merged.empty() && !merged.ends_with('/')) {
-      merged += '/';
-    }
-
-    merged += relative_path;
-    target_path = std::move(merged);
-  } else if (new_base_path.has_value()) {
+                         std::optional<std::string> &&saved_path,
+                         const bool has_authority) -> void {
+  if (!saved_path.has_value()) {
     target_path = std::move(new_base_path);
-  } else {
-    target_path = std::move(saved_path);
+    return;
   }
+
+  // The separator belongs to the new base, so one that states no path still
+  // has to supply it wherever there is an authority. RFC 3986 Section 3.3
+  // holds that "if a URI contains an authority component, then the path
+  // component must either be empty or begin with a slash ("/") character",
+  // and Section 5.2.3 settles such a base the same way. Section 3.2 writes
+  // `authority = [ userinfo "@" ] host [ ":" port ]`, so any of the three
+  // names one, which is how recomposing decides to write it out
+  //
+  // The suffix is what lies below the old base with that separator already
+  // removed, so a slash it does start with opens an empty segment and must
+  // not be mistaken for the separator
+  auto merged{std::move(new_base_path).value_or("")};
+  if (merged.empty()) {
+    if (has_authority) {
+      merged = "/";
+    }
+  } else if (!merged.ends_with('/')) {
+    merged += '/';
+  }
+
+  merged += saved_path.value();
+  target_path = std::move(merged);
 }
 
 // The portion of a path that lies below a base, or no value when the URI is
@@ -395,7 +419,7 @@ auto URI::rebase(const URI &base, const URI &new_base) -> URI & {
 
   std::optional<std::string> new_base_path_copy{new_base.path_};
   merge_new_base_path(this->path_, std::move(new_base_path_copy),
-                      std::move(relative_path));
+                      std::move(relative_path), names_an_authority(*this));
 
   return *this;
 }
@@ -421,7 +445,7 @@ auto URI::rebase(const URI &base, URI &&new_base) -> URI & {
   this->iri_ = this->iri_ || new_base.iri_;
 
   merge_new_base_path(this->path_, std::move(new_base.path_),
-                      std::move(relative_path));
+                      std::move(relative_path), names_an_authority(*this));
 
   return *this;
 }

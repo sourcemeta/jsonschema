@@ -33,7 +33,7 @@ public:
   LocationStack() { this->storage_.resize(this->capacity_); }
 
   auto push_property(const JSON::String &property,
-                     const JSON::Object::hash_type hash) -> void {
+                     const JSON::Object::hash_type &hash) -> void {
     if (this->depth_ == this->capacity_) {
       this->grow();
     }
@@ -130,7 +130,7 @@ public:
   auto push_visit_property(const JSON *node, const std::size_t cursor,
                            const std::size_t frame_depth,
                            const JSON::String &property,
-                           const JSON::Object::hash_type hash) -> void {
+                           const JSON::Object::hash_type &hash) -> void {
     auto &item{this->next()};
     item.kind = WorkKind::VisitProperty;
     item.node = node;

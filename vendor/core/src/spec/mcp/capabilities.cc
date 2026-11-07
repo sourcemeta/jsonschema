@@ -11,7 +11,7 @@ namespace {
 template <typename Capabilities>
 auto capability_settings(const Capabilities &capabilities,
                          const sourcemeta::core::JSON::StringView name,
-                         const sourcemeta::core::JSON::Object::hash_type hash)
+                         const sourcemeta::core::JSON::Object::hash_type &hash)
     -> sourcemeta::core::JSON {
   const auto *value{capabilities.source && capabilities.source->is_object()
                         ? capabilities.source->try_at(name, hash)
@@ -22,9 +22,9 @@ auto capability_settings(const Capabilities &capabilities,
 auto capability_flag(
     const sourcemeta::core::JSON &capabilities,
     const sourcemeta::core::JSON::StringView parent,
-    const sourcemeta::core::JSON::Object::hash_type parent_hash,
+    const sourcemeta::core::JSON::Object::hash_type &parent_hash,
     const sourcemeta::core::JSON::StringView name,
-    const sourcemeta::core::JSON::Object::hash_type name_hash) -> bool {
+    const sourcemeta::core::JSON::Object::hash_type &name_hash) -> bool {
   const auto *settings{capabilities.try_at(parent, parent_hash)};
   const auto *value{settings != nullptr ? settings->try_at(name, name_hash)
                                         : nullptr};
@@ -35,7 +35,7 @@ auto emit_capability(
     sourcemeta::core::JSON &result,
     const sourcemeta::core::MCPServerCapabilities &capabilities,
     const sourcemeta::core::JSON::StringView name,
-    const sourcemeta::core::JSON::Object::hash_type hash, const bool enabled,
+    const sourcemeta::core::JSON::Object::hash_type &hash, const bool enabled,
     const bool changed, const bool subscribe) -> void {
   using namespace sourcemeta::core;
   if (!enabled && !changed && !subscribe) {

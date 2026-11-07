@@ -9,12 +9,12 @@ EOF
 RUN inspect schema.yaml STDIN /dev/null IN . INTO result.txt EXPECTING 0
 
 WRITE expected.txt UNTIL EOF
-1> (RESOURCE) URI: https://example.com
+1> (RESOURCE) URI: https://example.com/
 1>     Type              : Static
-1>     Root              : https://example.com
+1>     Root              : https://example.com/
 1>     Pointer           :
 1>     File Position     : 1:1
-1>     Base              : https://example.com
+1>     Base              : https://example.com/
 1>     Relative Pointer  :
 1>     Dialect           : https://json-schema.org/draft/2020-12/schema
 1>     Base Dialect      : https://json-schema.org/draft/2020-12/schema
@@ -32,12 +32,12 @@ WRITE expected.txt UNTIL EOF
 1>       https://json-schema.org/draft/2020-12/vocab/format-annotation (required)
 1>       https://json-schema.org/draft/2020-12/vocab/content (required)
 1>
-1> (POINTER) URI: https://example.com#/$defs
+1> (POINTER) URI: https://example.com/#/$defs
 1>     Type              : Static
-1>     Root              : https://example.com
+1>     Root              : https://example.com/
 1>     Pointer           : /$defs
 1>     File Position     : 4:1
-1>     Base              : https://example.com
+1>     Base              : https://example.com/
 1>     Relative Pointer  : /$defs
 1>     Dialect           : https://json-schema.org/draft/2020-12/schema
 1>     Base Dialect      : https://json-schema.org/draft/2020-12/schema
@@ -55,12 +55,12 @@ WRITE expected.txt UNTIL EOF
 1>       https://json-schema.org/draft/2020-12/vocab/format-annotation (required)
 1>       https://json-schema.org/draft/2020-12/vocab/content (required)
 1>
-1> (SUBSCHEMA) URI: https://example.com#/$defs/string
+1> (SUBSCHEMA) URI: https://example.com/#/$defs/string
 1>     Type              : Static
-1>     Root              : https://example.com
+1>     Root              : https://example.com/
 1>     Pointer           : /$defs/string
 1>     File Position     : 5:3
-1>     Base              : https://example.com
+1>     Base              : https://example.com/
 1>     Relative Pointer  : /$defs/string
 1>     Dialect           : https://json-schema.org/draft/2020-12/schema
 1>     Base Dialect      : https://json-schema.org/draft/2020-12/schema
@@ -78,12 +78,12 @@ WRITE expected.txt UNTIL EOF
 1>       https://json-schema.org/draft/2020-12/vocab/format-annotation (required)
 1>       https://json-schema.org/draft/2020-12/vocab/content (required)
 1>
-1> (POINTER) URI: https://example.com#/$defs/string/type
+1> (POINTER) URI: https://example.com/#/$defs/string/type
 1>     Type              : Static
-1>     Root              : https://example.com
+1>     Root              : https://example.com/
 1>     Pointer           : /$defs/string/type
 1>     File Position     : 5:13
-1>     Base              : https://example.com
+1>     Base              : https://example.com/
 1>     Relative Pointer  : /$defs/string/type
 1>     Dialect           : https://json-schema.org/draft/2020-12/schema
 1>     Base Dialect      : https://json-schema.org/draft/2020-12/schema
@@ -101,12 +101,12 @@ WRITE expected.txt UNTIL EOF
 1>       https://json-schema.org/draft/2020-12/vocab/format-annotation (required)
 1>       https://json-schema.org/draft/2020-12/vocab/content (required)
 1>
-1> (POINTER) URI: https://example.com#/$id
+1> (POINTER) URI: https://example.com/#/$id
 1>     Type              : Static
-1>     Root              : https://example.com
+1>     Root              : https://example.com/
 1>     Pointer           : /$id
 1>     File Position     : 2:1
-1>     Base              : https://example.com
+1>     Base              : https://example.com/
 1>     Relative Pointer  : /$id
 1>     Dialect           : https://json-schema.org/draft/2020-12/schema
 1>     Base Dialect      : https://json-schema.org/draft/2020-12/schema
@@ -124,12 +124,12 @@ WRITE expected.txt UNTIL EOF
 1>       https://json-schema.org/draft/2020-12/vocab/format-annotation (required)
 1>       https://json-schema.org/draft/2020-12/vocab/content (required)
 1>
-1> (POINTER) URI: https://example.com#/$ref
+1> (POINTER) URI: https://example.com/#/$ref
 1>     Type              : Static
-1>     Root              : https://example.com
+1>     Root              : https://example.com/
 1>     Pointer           : /$ref
 1>     File Position     : 3:1
-1>     Base              : https://example.com
+1>     Base              : https://example.com/
 1>     Relative Pointer  : /$ref
 1>     Dialect           : https://json-schema.org/draft/2020-12/schema
 1>     Base Dialect      : https://json-schema.org/draft/2020-12/schema
@@ -147,12 +147,12 @@ WRITE expected.txt UNTIL EOF
 1>       https://json-schema.org/draft/2020-12/vocab/format-annotation (required)
 1>       https://json-schema.org/draft/2020-12/vocab/content (required)
 1>
-1> (POINTER) URI: https://example.com#/$schema
+1> (POINTER) URI: https://example.com/#/$schema
 1>     Type              : Static
-1>     Root              : https://example.com
+1>     Root              : https://example.com/
 1>     Pointer           : /$schema
 1>     File Position     : 1:1
-1>     Base              : https://example.com
+1>     Base              : https://example.com/
 1>     Relative Pointer  : /$schema
 1>     Dialect           : https://json-schema.org/draft/2020-12/schema
 1>     Base Dialect      : https://json-schema.org/draft/2020-12/schema
@@ -174,8 +174,8 @@ WRITE expected.txt UNTIL EOF
 1>     Type              : Static
 1>     File Position     : 3:1
 1>     Original          : #/$defs/string
-1>     Destination       : https://example.com#/$defs/string
-1>     - (w/o fragment)  : https://example.com
+1>     Destination       : https://example.com/#/$defs/string
+1>     - (w/o fragment)  : https://example.com/
 1>     - (fragment)      : /$defs/string
 1>
 1> (REFERENCE) ORIGIN: /$schema

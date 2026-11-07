@@ -35,7 +35,7 @@ namespace sourcemeta::core {
 /// ```
 SOURCEMETA_CORE_OAUTH_EXPORT
 auto oauth_json_seconds_member(const JSON &data, const JSON::StringView name,
-                               const JSON::Object::hash_type hash)
+                               const JSON::Object::hash_type &hash)
     -> std::optional<std::chrono::seconds>;
 
 } // namespace sourcemeta::core

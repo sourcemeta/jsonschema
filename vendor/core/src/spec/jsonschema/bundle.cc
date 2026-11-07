@@ -4,16 +4,16 @@
 
 #include "helpers.h"
 
-#include <algorithm>     // std::ranges::any_of, std::ranges::none_of
+#include <algorithm> // std::ranges::any_of, std::ranges::none_of, std::ranges::reverse
 #include <cassert>       // assert
 #include <cstddef>       // std::size_t
 #include <cstdint>       // std::uint64_t
 #include <functional>    // std::cref
+#include <iterator>      // std::make_move_iterator
 #include <map>           // std::map
 #include <optional>      // std::optional
 #include <string>        // std::string
 #include <string_view>   // std::string_view
-#include <tuple>         // std::tuple
 #include <unordered_map> // std::unordered_map
 #include <unordered_set> // std::unordered_set
 #include <utility>       // std::move, std::pair
@@ -805,16 +805,27 @@ auto elevate_embedded_resources(
   }
 }
 
-auto embed_references(
-    JSON &root, const Pointer &container, JSON &subschema,
-    const SchemaWalker &walker, const SchemaResolver &resolver,
+// A remote that the walk resolved and has yet to embed, beside what embedding
+// it takes. A remote is embedded only once everything it reaches has been, so
+// one of these outlives the walk over the document that reached it
+struct PendingEmbed {
+  JSON document;
+  JSON::String identifier;
+  SchemaBaseDialect dialect;
+  bool expanded{false};
+};
+
+// Read one document, settle the references it spells, and hand back the
+// remotes it reaches for the caller to embed
+auto expand_references(
+    JSON &subschema, const SchemaWalker &walker, const SchemaResolver &resolver,
     const SchemaBundleOptions::Mode mode, std::string_view default_dialect,
     std::string_view default_id, const SchemaFrame::Paths &paths,
     std::string_view default_base,
     std::unordered_map<JSON::String, JSON::String> &bundled,
     PositionalReferences &positional, std::string_view container_dialect,
-    std::uint64_t &remaining, const SchemaBundleOptions::Callback &callback,
-    const std::size_t depth = 0) -> void {
+    std::uint64_t &remaining, const bool entry_document,
+    std::vector<PendingEmbed> &pending) -> void {
   // Create a fresh frame for each schema we analyze to avoid key collisions
   // between different schemas that have references at the same pointer paths
   static const SchemaFrame::Paths NESTED_PATHS{EMPTY_WEAK_POINTER};
@@ -825,8 +836,8 @@ auto embed_references(
       // level object, which is also the only one that the
       // base the caller retrieved it from applies to, as
       // every remote carries the identity it was resolved by
-      depth == 0 ? paths : NESTED_PATHS,
-      depth == 0 ? default_base : std::string_view{}, remaining};
+      entry_document ? paths : NESTED_PATHS,
+      entry_document ? default_base : std::string_view{}, remaining};
   charge(remaining, frame);
 
   // Every schema this reaches, the one the caller handed over as much as every
@@ -839,11 +850,10 @@ auto embed_references(
   // every reference destination it reports carries that spelling rather than
   // the one the caller wrote. Settling it once here is what lets a reference
   // be compared against it without parsing the base over again for each
-  const JSON::String canonical_base{depth == 0 && !default_base.empty()
+  const JSON::String canonical_base{entry_document && !default_base.empty()
                                         ? URI::canonicalize(default_base)
                                         : JSON::String{}};
 
-  std::vector<std::tuple<JSON, JSON::String, SchemaBaseDialect>> deferred;
   std::vector<std::pair<Pointer, JSON::String>> ref_rewrites;
 
   frame.for_each_unresolved_reference([&](const auto &pointer,
@@ -1103,8 +1113,9 @@ auto embed_references(
 
     bundled.emplace(identifier, effective_id);
     bundled.emplace(effective_id, effective_id);
-    deferred.emplace_back(std::move(remote), std::move(effective_id),
-                          remote_base_dialect);
+    pending.push_back(PendingEmbed{.document = std::move(remote),
+                                   .identifier = std::move(effective_id),
+                                   .dialect = remote_base_dialect});
   });
 
   // Whatever the walk above reaches is on its way into the document, so its
@@ -1138,19 +1149,55 @@ auto embed_references(
   for (auto &[rewrite_pointer, rewrite_value] : ref_rewrites) {
     set(subschema, rewrite_pointer, JSON{rewrite_value});
   }
+}
 
-  for (auto &[remote, effective_id, remote_dialect] : deferred) {
-    embed_references(root, container, remote, walker, resolver, mode,
-                     default_dialect, effective_id, paths, default_base,
-                     bundled, positional, container_dialect, remaining,
-                     callback, depth + 1);
-    elevate_embedded_resources(remote, root, container, remote_dialect, walker,
-                               resolver, default_dialect, bundled, remaining,
-                               callback);
-    const auto key{embed_schema(root, container, effective_id,
-                                std::move(remote), callback)};
-    if (positional.unnamed.contains(effective_id)) {
-      positional.landings.emplace(effective_id, container.concat(key));
+// Everything a document reaches is embedded before the document itself, as a
+// key that embedding picks has to be free of what went in ahead of it. The
+// walk is a stack of its own rather than the call stack, so how deep a chain
+// of remotes goes is bounded by the allowance rather than by the stack
+auto embed_references(
+    JSON &root, const Pointer &container, JSON &subschema,
+    const SchemaWalker &walker, const SchemaResolver &resolver,
+    const SchemaBundleOptions::Mode mode, std::string_view default_dialect,
+    std::string_view default_id, const SchemaFrame::Paths &paths,
+    std::string_view default_base,
+    std::unordered_map<JSON::String, JSON::String> &bundled,
+    PositionalReferences &positional, std::string_view container_dialect,
+    std::uint64_t &remaining, const SchemaBundleOptions::Callback &callback)
+    -> void {
+  std::vector<PendingEmbed> pending;
+  expand_references(subschema, walker, resolver, mode, default_dialect,
+                    default_id, paths, default_base, bundled, positional,
+                    container_dialect, remaining, true, pending);
+  std::ranges::reverse(pending);
+
+  // Reading a document hands back whatever it reaches, and holding onto the
+  // space that took is what keeps every document after the first from asking
+  // for it again
+  std::vector<PendingEmbed> reached;
+  while (!pending.empty()) {
+    if (!pending.back().expanded) {
+      pending.back().expanded = true;
+      const auto current{pending.size() - 1};
+      reached.clear();
+      expand_references(pending[current].document, walker, resolver, mode,
+                        default_dialect, pending[current].identifier, paths,
+                        default_base, bundled, positional, container_dialect,
+                        remaining, false, reached);
+      pending.insert(pending.cend(), std::make_move_iterator(reached.rbegin()),
+                     std::make_move_iterator(reached.rend()));
+      continue;
+    }
+
+    auto entry{std::move(pending.back())};
+    pending.pop_back();
+    elevate_embedded_resources(entry.document, root, container, entry.dialect,
+                               walker, resolver, default_dialect, bundled,
+                               remaining, callback);
+    const auto key{embed_schema(root, container, entry.identifier,
+                                std::move(entry.document), callback)};
+    if (positional.unnamed.contains(entry.identifier)) {
+      positional.landings.emplace(entry.identifier, container.concat(key));
     }
   }
 }
@@ -1330,6 +1377,22 @@ auto bundle_internal(JSON &schema, const SchemaWalker &walker,
                                remaining, callback);
 }
 
+auto guard_callback(const SchemaBundleOptions::Callback &callback)
+    -> SchemaBundleOptions::Callback {
+  if (!callback) {
+    return callback;
+  }
+
+  return [&callback](const std::string_view identifier,
+                     const sourcemeta::core::WeakPointer &location) -> void {
+    try {
+      callback(identifier, location);
+    } catch (const SchemaFrameLimitError &error) {
+      throw ForeignFrameLimitError{error};
+    }
+  };
+}
+
 } // namespace
 
 auto schema_bundle(JSON &schema, const SchemaWalker &walker,
@@ -1339,9 +1402,12 @@ auto schema_bundle(JSON &schema, const SchemaWalker &walker,
                    const SchemaBundleOptions &options) -> std::uint64_t {
   auto remaining{options.max_locations};
   try {
-    bundle_internal(schema, walker, resolver, options.mode, default_dialect,
-                    default_id, options.default_container, options.paths,
-                    options.default_base, remaining, options.callback);
+    bundle_internal(
+        schema, walker, resolver_within_allowance(resolver), options.mode,
+        default_dialect, default_id, options.default_container, options.paths,
+        options.default_base, remaining, guard_callback(options.callback));
+  } catch (const ForeignFrameLimitError &foreign) {
+    throw foreign.error;
   } catch (const SchemaFrameLimitError &) {
     // Every frame spends from what is left rather than from the whole, so the
     // one that ran out reports what it was handed. The caller set the limit

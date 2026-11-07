@@ -22,9 +22,9 @@ public:
   /// This constructor creates an JSON Pointer token from a string given its
   /// precomputed hash. This is advanced functionality that should be used with
   /// care.
-  GenericToken(Property value, const Hash::HashType property_hash)
-      : as_property_{true}, property_{std::move(value)}, hash_{property_hash},
-        index_{0} {}
+  GenericToken(Property value, const Hash::HashType &property_hash)
+      : as_property_{true}, property_{std::move(value)},
+        data_hash{property_hash} {}
 
   /// This constructor creates an JSON Pointer token from a string. For
   /// example:
@@ -49,7 +49,7 @@ public:
   /// ```
   GenericToken(Property &&value)
       : as_property_{true}, property_{std::move(value)},
-        hash_{HASHER(property_)}, index_{0} {}
+        data_hash{HASHER(property_)} {}
 
   /// This constructor creates an JSON Pointer token from a string. For
   /// example:
@@ -85,8 +85,7 @@ public:
   /// const sourcemeta::core::Pointer::Token token{1};
   /// ```
   GenericToken(const Index value)
-      : as_property_{false}, property_{DEFAULT_PROPERTY}, hash_{0},
-        index_{value} {}
+      : as_property_{false}, property_{DEFAULT_PROPERTY}, data_index{value} {}
 
   /// This constructor creates an JSON Pointer token from an item index. For
   /// example:
@@ -98,8 +97,8 @@ public:
   /// const sourcemeta::core::Pointer::Token token{1};
   /// ```
   GenericToken(const int value)
-      : as_property_{false}, property_{DEFAULT_PROPERTY}, hash_{0},
-        index_{static_cast<Index>(value)} {
+      : as_property_{false}, property_{DEFAULT_PROPERTY},
+        data_index{static_cast<Index>(value)} {
     assert(value >= 0);
   }
 
@@ -114,8 +113,7 @@ public:
   /// const sourcemeta::core::Pointer::Token token{1};
   /// ```
   GenericToken(const unsigned long value)
-      : as_property_{false}, property_{DEFAULT_PROPERTY}, hash_{0},
-        index_{value} {}
+      : as_property_{false}, property_{DEFAULT_PROPERTY}, data_index{value} {}
 #endif
 
   /// Check if a JSON Pointer token represents an object property.
@@ -195,9 +193,9 @@ public:
   /// assert(token.is_property());
   /// assert(token.property_hash() >= 0);
   /// ```
-  [[nodiscard]] auto property_hash() const noexcept -> Hash::HashType {
+  [[nodiscard]] auto property_hash() const noexcept -> const Hash::HashType & {
     assert(this->is_property());
-    return this->hash_;
+    return this->data_hash;
   }
 
   /// Check whether a JSON Pointer property token equals the given string,
@@ -215,16 +213,16 @@ public:
   /// ```
   [[nodiscard]] auto
   property_equals(const JSON::StringView value,
-                  const Hash::HashType value_hash) const noexcept -> bool {
+                  const Hash::HashType &value_hash) const noexcept -> bool {
     assert(this->is_property());
     assert(HASHER(value.data(), value.size()) == value_hash);
     if constexpr (requires { HASHER.is_perfect(value_hash); }) {
       // A perfect hash is unique for the property it was computed from, so
       // matching it settles the comparison on its own
-      return this->hash_ == value_hash &&
+      return this->data_hash == value_hash &&
              (HASHER.is_perfect(value_hash) || this->to_property() == value);
     } else {
-      return this->hash_ == value_hash && this->to_property() == value;
+      return this->data_hash == value_hash && this->to_property() == value;
     }
   }
 
@@ -241,7 +239,7 @@ public:
   /// ```
   [[nodiscard]] auto to_index() const noexcept -> Index {
     assert(this->is_index());
-    return this->index_;
+    return this->data_index;
   }
 
   /// Convert a JSON Pointer token into a JSON document, whether it represents a
@@ -274,18 +272,19 @@ public:
       return false;
     }
     if (this->as_property_) {
-      if constexpr (requires { HASHER.is_perfect(this->hash_); }) {
+      if constexpr (requires { HASHER.is_perfect(this->data_hash); }) {
         // A perfect hash is unique for the property it was computed from, so
         // matching it settles the comparison on its own
-        if (HASHER.is_perfect(this->hash_) && HASHER.is_perfect(other.hash_)) {
-          return this->hash_ == other.hash_;
+        if (HASHER.is_perfect(this->data_hash) &&
+            HASHER.is_perfect(other.data_hash)) {
+          return this->data_hash == other.data_hash;
         }
       }
 
-      return this->hash_ == other.hash_ &&
+      return this->data_hash == other.data_hash &&
              this->to_property() == other.to_property();
     }
-    return this->index_ == other.index_;
+    return this->data_index == other.data_index;
   }
 
   /// Overload to support ordering of JSON Pointer tokens. Typically for sorting
@@ -301,7 +300,7 @@ public:
     if (this->as_property_) {
       return this->to_property() < other.to_property();
     }
-    return this->index_ < other.index_;
+    return this->data_index < other.data_index;
   }
 
 private:
@@ -311,8 +310,12 @@ private:
 
   bool as_property_;
   Property property_;
-  Hash::HashType hash_;
-  Index index_;
+  // A token holds a property or an index and never both, and the flag above
+  // tells which one is live, so the two share their storage
+  union {
+    Hash::HashType data_hash;
+    Index data_index;
+  };
 };
 
 } // namespace sourcemeta::core

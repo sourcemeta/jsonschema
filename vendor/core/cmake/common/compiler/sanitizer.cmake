@@ -28,10 +28,14 @@ function(sourcemeta_sanitizer)
   elseif(SOURCEMETA_COMPILER_LLVM AND "${SOURCEMETA_SANITIZER_TYPE}" STREQUAL "undefined")
     # See https://clang.llvm.org/docs/UndefinedBehaviorSanitizer.html
     message(STATUS "Enabling sanitizer: Clang UndefinedBehaviorSanitizer")
+    # The integer group carries two checks that are not undefined behaviour,
+    # as a shift and an overflow of an unsigned type are both defined to wrap.
+    # Hashing relies on exactly that, in this project and in the standard
+    # library it builds against, so both are left out here
     add_compile_options(-fsanitize=undefined,nullability,integer,implicit-conversion,local-bounds
-      -fno-sanitize=unsigned-integer-overflow)
+      -fno-sanitize=unsigned-integer-overflow,unsigned-shift-base)
     add_link_options(-fsanitize=undefined,nullability,integer,implicit-conversion,local-bounds
-      -fno-sanitize=unsigned-integer-overflow)
+      -fno-sanitize=unsigned-integer-overflow,unsigned-shift-base)
     # Exit after an error, otherwise this sanitizer only prints warnings
     add_compile_options(-fno-sanitize-recover=all)
   else()

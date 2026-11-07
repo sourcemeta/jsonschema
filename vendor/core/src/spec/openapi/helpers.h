@@ -938,7 +938,7 @@ inline auto openapi_expect_string(const JSON &value, const Pointer &base,
 inline auto openapi_check_optional_string(const JSON &value,
                                           const Pointer &base,
                                           const JSON::StringView field,
-                                          const JSON::Object::hash_type hash,
+                                          const JSON::Object::hash_type &hash,
                                           const StaticString message) -> void {
   const auto *member{value.try_at(field, hash)};
   if (member != nullptr) {
@@ -949,7 +949,7 @@ inline auto openapi_check_optional_string(const JSON &value,
 // A field an Object must declare, handed back already found, so that what
 // follows reads what is there rather than what might be
 inline auto openapi_require(const JSON &value, const JSON::StringView field,
-                            const JSON::Object::hash_type hash,
+                            const JSON::Object::hash_type &hash,
                             const Pointer &base, const StaticString message)
     -> const JSON & {
   const auto *member{value.try_at(field, hash)};

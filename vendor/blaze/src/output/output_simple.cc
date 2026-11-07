@@ -101,8 +101,11 @@ auto SimpleOutput::operator()(
     return;
   }
 
-  auto effective_evaluate_path{evaluate_path.resolve_from(this->base_)};
-  if (effective_evaluate_path.empty()) {
+  // Resolving against the base yields nothing only when the path is the base
+  // itself, which leaves the output nothing to report. Checking for that
+  // directly keeps the resolution itself, which copies, out of every event
+  // that never goes on to need it
+  if (evaluate_path == this->base_) {
     return;
   }
 
@@ -110,7 +113,7 @@ auto SimpleOutput::operator()(
     if (type == EvaluationType::Post) {
       this->annotations_.push_back(
           {.instance_location = instance_location,
-           .evaluate_path = std::move(effective_evaluate_path),
+           .evaluate_path = evaluate_path.resolve_from(this->base_),
            .schema_location = step_metadata.keyword_location,
            .value = annotation,
            .is_wrapped = is_wrapped_annotation(step.type)});
@@ -237,7 +240,7 @@ auto SimpleOutput::operator()(
       {.message = describe(this->schema_template_, result, step, evaluate_path,
                            instance_location, this->instance_, annotation),
        .instance_location = instance_location,
-       .evaluate_path = std::move(effective_evaluate_path),
+       .evaluate_path = evaluate_path.resolve_from(this->base_),
        .schema_location = step_metadata.keyword_location});
 }
 

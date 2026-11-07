@@ -7,8 +7,10 @@
 
 #include <array>         // std::array
 #include <deque>         // std::deque
+#include <functional>    // std::equal_to, std::hash
 #include <optional>      // std::optional
 #include <string_view>   // std::string_view
+#include <unordered_map> // std::unordered_map
 #include <unordered_set> // std::unordered_set
 #include <utility>       // std::pair, std::move, std::unreachable
 #include <vector>        // std::vector
@@ -128,6 +130,45 @@ inline auto dialect_defines_identifier(const SchemaWalker &walker,
                                        const SchemaBaseDialect base_dialect)
     -> bool {
   return dialect_defines(walker, vocabularies, id_keyword(base_dialect).name);
+}
+
+// Asking whether a URI is already known happens from whatever view the caller
+// holds, so the question has to be answerable without an owned string
+struct URIHash {
+  using is_transparent = void;
+
+  [[nodiscard]] auto operator()(const std::string_view value) const noexcept
+      -> std::size_t {
+    return std::hash<std::string_view>{}(value);
+  }
+};
+
+using SchemaResolverCache =
+    std::unordered_map<JSON::String, SchemaResolverResult, URIHash,
+                       std::equal_to<>>;
+
+// Framing keeps what it probed for only as long as the frame that probed it,
+// so an operation that builds a frame per document asks for the same
+// meta-schema once per document. What this holds is handed back by reference,
+// which a resolver backed by storage of its own costs nothing to keep, and the
+// map keeps those references put as it grows. The result borrows both of them,
+// so it must not outlive either
+inline auto resolver_with_cache(const SchemaResolver &resolver,
+                                SchemaResolverCache &cache) -> SchemaResolver {
+  return [&resolver,
+          &cache](const std::string_view identifier) -> SchemaResolverResult {
+    auto match{cache.find(identifier)};
+    if (match == cache.cend()) {
+      match =
+          cache.emplace(JSON::String{identifier}, resolver(identifier)).first;
+    }
+
+    if (!match->second.has_value()) {
+      return std::nullopt;
+    }
+
+    return match->second.value();
+  };
 }
 
 // A schema may pin a meta-schema that it carries within itself, so looking
@@ -349,6 +390,28 @@ struct EmbeddedMetaschemaLink {
   sourcemeta::core::JSON::StringView identifier;
   std::string_view container;
 };
+
+// A limit error that the caller's own resolver or callback raised carries an
+// allowance of theirs rather than the one set for this operation, so marking
+// it on the way out is what keeps it from being restated as this one. Framing
+// reaches for the resolver of its own accord, so an operation that bounds its
+// framing cannot tell the two apart without this
+struct ForeignFrameLimitError {
+  SchemaFrameLimitError error;
+};
+
+// The result borrows the resolver, so it must not outlive it
+inline auto resolver_within_allowance(const SchemaResolver &resolver)
+    -> SchemaResolver {
+  return
+      [&resolver](const std::string_view identifier) -> SchemaResolverResult {
+        try {
+          return resolver(identifier);
+        } catch (const SchemaFrameLimitError &error) {
+          throw ForeignFrameLimitError{error};
+        }
+      };
+}
 
 } // namespace sourcemeta::core
 

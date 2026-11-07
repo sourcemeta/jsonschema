@@ -196,7 +196,11 @@ public:
     assert(this->instance_location.empty());
     assert(this->resources.empty());
     this->evaluated.clear();
-    return this->evaluate_impl<true, true, true>(schema, instance, &callback);
+    if (schema.dynamic) [[unlikely]] {
+      return this->evaluate_impl<true, true, true>(schema, instance, &callback);
+    }
+
+    return this->evaluate_impl<true, false, true>(schema, instance, &callback);
   }
 
 #ifndef DOXYGEN

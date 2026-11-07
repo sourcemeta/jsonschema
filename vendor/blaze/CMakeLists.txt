@@ -15,8 +15,8 @@ option(BLAZE_CODEGEN "Build the Blaze codegen library" ON)
 option(BLAZE_CANONICALIZER "Build the Blaze canonicalizer library" ON)
 option(BLAZE_CONVERT "Build the Blaze convert library" ON)
 option(BLAZE_EDITOR "Build the Blaze editor schema compatibility library" ON)
-option(BLAZE_DEPENDENCIES "Build the Blaze dependencies library" ON)
 option(BLAZE_BINPACK "Build the Blaze BinPack serialization library" ON)
+option(BLAZE_DOCUMENTATION "Build the Blaze documentation library" ON)
 option(BLAZE_TESTS "Build the Blaze tests" OFF)
 option(BLAZE_BENCHMARK "Build the Blaze benchmarks" OFF)
 option(BLAZE_CONTRIB "Build the Blaze contrib programs" OFF)
@@ -43,11 +43,6 @@ if(BLAZE_INSTALL)
 endif()
 
 find_package(Core REQUIRED)
-
-# Don't force downstream consumers on it
-if(PROJECT_IS_TOP_LEVEL)
-  sourcemeta_enable_simd()
-endif()
 
 # Enable the sanitizers before defining any target
 if(BLAZE_ADDRESS_SANITIZER)
@@ -96,12 +91,12 @@ if(BLAZE_EDITOR)
   add_subdirectory(src/editor)
 endif()
 
-if(BLAZE_DEPENDENCIES)
-  add_subdirectory(src/dependencies)
-endif()
-
 if(BLAZE_BINPACK)
   add_subdirectory(src/binpack)
+endif()
+
+if(BLAZE_DOCUMENTATION)
+  add_subdirectory(src/documentation)
 endif()
 
 if(BLAZE_CONTRIB)
@@ -192,12 +187,12 @@ if(BLAZE_TESTS)
     add_subdirectory(test/editor)
   endif()
 
-  if(BLAZE_DEPENDENCIES)
-    add_subdirectory(test/dependencies)
-  endif()
-
   if(BLAZE_BINPACK)
     add_subdirectory(test/binpack)
+  endif()
+
+  if(BLAZE_DOCUMENTATION)
+    add_subdirectory(test/documentation)
   endif()
 
   if(PROJECT_IS_TOP_LEVEL)

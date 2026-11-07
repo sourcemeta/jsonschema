@@ -118,6 +118,13 @@ if(NOT Mimalloc_FOUND)
     target_compile_options(mimalloc PRIVATE -Wno-comma)
   endif()
 
+  if(SOURCEMETA_OS_LINUX AND CMAKE_C_COMPILER_ID STREQUAL "Clang" AND
+     CMAKE_C_COMPILER_VERSION VERSION_GREATER_EQUAL 23)
+    # Clang 23 warns about the pointer constness mismatch in mimalloc's
+    # malloc_usable_size alias. Keep the diagnostic visible in strict builds.
+    target_compile_options(mimalloc PRIVATE -Wno-error=attribute-alias)
+  endif()
+
   add_library(Mimalloc::Mimalloc ALIAS mimalloc)
 
   set(Mimalloc_FOUND ON)

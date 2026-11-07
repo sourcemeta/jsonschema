@@ -35,12 +35,12 @@ WRITE expected_0.txt UNTIL EOF
 1>
 1> -> (push) "/type" (AssertionTypeStrict)
 1>    at instance location ""
-1>    at keyword location "https://example.com#/type"
+1>    at keyword location "https://example.com/#/type"
 1>    at vocabulary "http://json-schema.org/draft-04/schema#"
 1>
 1> <- (fail) "/type" (AssertionTypeStrict)
 1>    at instance location ""
-1>    at keyword location "https://example.com#/type"
+1>    at keyword location "https://example.com/#/type"
 1>    at vocabulary "http://json-schema.org/draft-04/schema#"
 EOF
 

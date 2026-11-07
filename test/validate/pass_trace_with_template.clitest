@@ -26,39 +26,39 @@ WRITE expected_1.txt UNTIL EOF
 1> @- (annotation) "/description" (AnnotationEmit)
 1>    value "Test schema"
 1>    at instance location "" (line 1, column 1)
-1>    at keyword location "https://example.com#/description"
+1>    at keyword location "https://example.com/#/description"
 1>    at vocabulary "https://json-schema.org/draft/2020-12/vocab/meta-data"
 1>
 1> @- (annotation) "/title" (AnnotationEmit)
 1>    value "Test"
 1>    at instance location "" (line 1, column 1)
-1>    at keyword location "https://example.com#/title"
+1>    at keyword location "https://example.com/#/title"
 1>    at vocabulary "https://json-schema.org/draft/2020-12/vocab/meta-data"
 1>
 1> -> (push) "/properties" (LogicalWhenType)
 1>    at instance location "" (line 1, column 1)
-1>    at keyword location "https://example.com#/properties"
+1>    at keyword location "https://example.com/#/properties"
 1>    at vocabulary "https://json-schema.org/draft/2020-12/vocab/applicator"
 1>
 1> -> (push) "/properties/foo/type" (AssertionTypeStrict)
 1>    at instance location "/foo" (line 1, column 3)
-1>    at keyword location "https://example.com#/properties/foo/type"
+1>    at keyword location "https://example.com/#/properties/foo/type"
 1>    at vocabulary "https://json-schema.org/draft/2020-12/vocab/validation"
 1>
 1> <- (pass) "/properties/foo/type" (AssertionTypeStrict)
 1>    at instance location "/foo" (line 1, column 3)
-1>    at keyword location "https://example.com#/properties/foo/type"
+1>    at keyword location "https://example.com/#/properties/foo/type"
 1>    at vocabulary "https://json-schema.org/draft/2020-12/vocab/validation"
 1>
 1> @- (annotation) "/properties" (AnnotationEmitWrapped)
 1>    value "foo"
 1>    at instance location "" (line 1, column 1)
-1>    at keyword location "https://example.com#/properties"
+1>    at keyword location "https://example.com/#/properties"
 1>    at vocabulary "https://json-schema.org/draft/2020-12/vocab/applicator"
 1>
 1> <- (pass) "/properties" (LogicalWhenType)
 1>    at instance location "" (line 1, column 1)
-1>    at keyword location "https://example.com#/properties"
+1>    at keyword location "https://example.com/#/properties"
 1>    at vocabulary "https://json-schema.org/draft/2020-12/vocab/applicator"
 EOF
 

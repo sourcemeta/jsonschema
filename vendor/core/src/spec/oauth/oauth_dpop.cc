@@ -75,8 +75,9 @@ auto dpop_normalize_target(const std::string_view url)
   }
 
   // RFC 3986 Section 6.2.3: an authority with an empty path is equivalent to
-  // one with a path of "/", a scheme-based normalization the general
-  // canonicalizer leaves to the caller
+  // one with a path of "/". Canonicalizing above settles that wherever the
+  // authority names a host, which leaves the one case it passes over, and a
+  // target that reaches here goes on to be signed or compared either way
   if (!uri->path().has_value() || uri->path().value().empty()) {
     uri->path(std::string{"/"});
   }
