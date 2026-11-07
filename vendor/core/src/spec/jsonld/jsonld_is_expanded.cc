@@ -174,7 +174,7 @@ auto validate_node(const JSON &value, Pending &pending) -> bool {
 // "MUST NOT contain any other entries" beyond its defining keyword and an
 // optional @index (JSON-LD 1.1 Section 9, "list object" and "set object").
 auto validate_list_or_set(const JSON &value, const JSON::StringView keyword,
-                          const JSON::Object::hash_type keyword_hash,
+                          const JSON::Object::hash_type &keyword_hash,
                           Pending &pending) -> bool {
   for (const auto &entry : value.as_object()) {
     if (entry.key_equals(keyword, keyword_hash)) {

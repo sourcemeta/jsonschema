@@ -11,7 +11,7 @@ namespace {
 using sourcemeta::core::JSON;
 
 auto optional_string(const JSON &value, const JSON::StringView name,
-                     const JSON::Object::hash_type hash) -> bool {
+                     const JSON::Object::hash_type &hash) -> bool {
   const auto *field{value.try_at(name, hash)};
   return (field == nullptr) || field->is_string();
 }

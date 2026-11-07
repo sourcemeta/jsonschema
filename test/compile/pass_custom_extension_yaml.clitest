@@ -17,7 +17,7 @@ WRITE expected.txt UNTIL EOF
 1>         11,
 1>         [ "type" ],
 1>         [],
-1>         "https://example.com#/type",
+1>         "https://example.com/#/type",
 1>         2,
 1>         1,
 1>         1,

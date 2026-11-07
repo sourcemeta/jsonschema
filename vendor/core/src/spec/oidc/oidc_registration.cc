@@ -38,7 +38,7 @@ constexpr auto HASH_POST_LOGOUT_REDIRECT_URIS{
     JSON::Object::hash("post_logout_redirect_uris"sv)};
 
 auto string_member(const JSON &data, const JSON::StringView name,
-                   const JSON::Object::hash_type hash)
+                   const JSON::Object::hash_type &hash)
     -> std::optional<std::string_view> {
   const auto *member{data.try_at(name, hash)};
   if (member == nullptr || !member->is_string()) {
@@ -51,7 +51,7 @@ auto string_member(const JSON &data, const JSON::StringView name,
 // A member that is absent, or present and a string. A present member of any
 // other type is malformed for a field the accessors read as a string
 auto absent_or_string(const JSON &data, const JSON::StringView name,
-                      const JSON::Object::hash_type hash) -> bool {
+                      const JSON::Object::hash_type &hash) -> bool {
   const auto *member{data.try_at(name, hash)};
   return member == nullptr || member->is_string();
 }

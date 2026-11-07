@@ -24,21 +24,21 @@ WRITE expected.txt UNTIL EOF
 1>   "annotations": [
 1>     {
 1>       "keywordLocation": "/description",
-1>       "absoluteKeywordLocation": "https://example.com#/description",
+1>       "absoluteKeywordLocation": "https://example.com/#/description",
 1>       "instanceLocation": "",
 1>       "instancePosition": [ 1, 1, 1, 16 ],
 1>       "annotation": "Test schema"
 1>     },
 1>     {
 1>       "keywordLocation": "/properties",
-1>       "absoluteKeywordLocation": "https://example.com#/properties",
+1>       "absoluteKeywordLocation": "https://example.com/#/properties",
 1>       "instanceLocation": "",
 1>       "instancePosition": [ 1, 1, 1, 16 ],
 1>       "annotation": [ "foo" ]
 1>     },
 1>     {
 1>       "keywordLocation": "/title",
-1>       "absoluteKeywordLocation": "https://example.com#/title",
+1>       "absoluteKeywordLocation": "https://example.com/#/title",
 1>       "instanceLocation": "",
 1>       "instancePosition": [ 1, 1, 1, 16 ],
 1>       "annotation": "Test"

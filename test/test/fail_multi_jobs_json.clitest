@@ -108,7 +108,7 @@ WRITE expected.txt UNTIL EOF
 1>       {
 1>         "name": "First test",
 1>         "status": "passed",
-1>         "suite": [ "https://example.com" ],
+1>         "suite": [ "https://example.com/" ],
 1>         "type": "unit",
 1>         "filePath": "[CWD]/tests/1.json",
 1>         "line": 4,
@@ -118,7 +118,7 @@ WRITE expected.txt UNTIL EOF
 1>       {
 1>         "name": "First test",
 1>         "status": "passed",
-1>         "suite": [ "https://example.com" ],
+1>         "suite": [ "https://example.com/" ],
 1>         "type": "unit",
 1>         "filePath": "[CWD]/tests/2.json",
 1>         "line": 4,
@@ -128,7 +128,7 @@ WRITE expected.txt UNTIL EOF
 1>       {
 1>         "name": "First failure",
 1>         "status": "failed",
-1>         "suite": [ "https://example.com" ],
+1>         "suite": [ "https://example.com/" ],
 1>         "type": "unit",
 1>         "filePath": "[CWD]/tests/2.json",
 1>         "line": 9,
@@ -139,7 +139,7 @@ WRITE expected.txt UNTIL EOF
 1>       {
 1>         "name": "First test",
 1>         "status": "passed",
-1>         "suite": [ "https://example.com" ],
+1>         "suite": [ "https://example.com/" ],
 1>         "type": "unit",
 1>         "filePath": "[CWD]/tests/3.json",
 1>         "line": 4,
@@ -149,7 +149,7 @@ WRITE expected.txt UNTIL EOF
 1>       {
 1>         "name": "First test",
 1>         "status": "passed",
-1>         "suite": [ "https://example.com" ],
+1>         "suite": [ "https://example.com/" ],
 1>         "type": "unit",
 1>         "filePath": "[CWD]/tests/4.json",
 1>         "line": 4,

@@ -180,7 +180,8 @@ inline auto unsatisfiable_schema(const SchemaVocabularies &vocabularies)
   // point at. Negating the schema that every instance satisfies says the
   // same thing in a shape the form can hold
   if (vocabularies.contains_any(
-          {SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_6})) {
+          {SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_6,
+           SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_7})) {
     auto result{sourcemeta::core::JSON::make_object()};
     result.assign("not", sourcemeta::core::JSON{true});
     return result;

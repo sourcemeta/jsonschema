@@ -9,6 +9,7 @@
 #include <sourcemeta/core/jsonpointer.h>
 
 // NOLINTBEGIN(misc-include-cleaner)
+#include <sourcemeta/core/jsonschema_dependencies.h>
 #include <sourcemeta/core/jsonschema_error.h>
 #include <sourcemeta/core/jsonschema_frame.h>
 #include <sourcemeta/core/jsonschema_types.h>
@@ -29,7 +30,8 @@
 /// independently of what that operation is: identification, dialect and
 /// vocabulary detection, resolution of remote schemas, keyword classification
 /// across dialects, framing a schema into the locations and references it
-/// declares, and bundling a schema into a self-contained document. Evaluation
+/// declares, reporting what a schema depends on, and bundling a schema into a
+/// self-contained document. Evaluation
 /// is only one of the consumers of these utilities, alongside linting,
 /// transformation, code generation, and documentation tooling.
 ///
@@ -208,14 +210,14 @@ struct SchemaBundleOptions {
   /// The strategy to follow
   Mode mode{Mode::NonOfficialMetaschemas};
   /// Where to embed what bundling pulls in
-  std::optional<sourcemeta::core::Pointer> default_container;
+  std::optional<sourcemeta::core::Pointer> default_container{};
   /// The paths to bundle within a schema wrapper
   SchemaFrame::Paths paths{sourcemeta::core::EMPTY_WEAK_POINTER};
   /// The base URI that the document was retrieved from, which a relative
   /// reference within any of the given paths resolves against. As with
   /// sourcemeta::core::SchemaFrame, this does not claim that the document
   /// declares an identifier, so bundling never writes it into the document
-  std::string_view default_base;
+  std::string_view default_base{};
   /// The maximum number of frame locations that analysis may register. How
   /// many schemas bundling ends up embedding follows from what the resolver
   /// hands back rather than from the schema the caller passed in, and every
@@ -228,7 +230,7 @@ struct SchemaBundleOptions {
   /// A callback to report where each schema got embedded, which is the only
   /// way to know what a later call has to frame when bundling into a
   /// container that the dialect does not otherwise traverse
-  Callback callback;
+  Callback callback{};
 };
 
 /// @ingroup jsonschema

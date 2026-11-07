@@ -9,7 +9,8 @@
 
 #include <algorithm>     // std::sort, std::unique, std::ranges::contains,
                          // std::ranges::none_of, std::ranges::sort,
-                         // std::ranges::find, std::ranges::find_if
+                         // std::ranges::find, std::ranges::find_if,
+                         // std::ranges::any_of
 #include <array>         // std::array
 #include <bit>           // std::popcount
 #include <cassert>       // assert
@@ -283,12 +284,46 @@ auto has_nested_id(const core::SchemaBaseDialect base_dialect,
     case core::SchemaBaseDialect::JSON_SCHEMA_DRAFT_3:
     case core::SchemaBaseDialect::JSON_SCHEMA_DRAFT_3_HYPER:
     case core::SchemaBaseDialect::JSON_SCHEMA_DRAFT_6:
+    case core::SchemaBaseDialect::JSON_SCHEMA_DRAFT_7:
       return true;
     case core::SchemaBaseDialect::JSON_SCHEMA_DRAFT_4:
       return !is_openapi_3_0(dialect);
     default:
       return false;
   }
+}
+
+/// Whether the document names its own meta-schema: a dialect spelled with an
+/// identifier the document itself declares, with that meta-schema embedded in
+/// it. Erasing the identifiers, or moving the subschemas that carry them into
+/// entries, would leave such a document unable to say what it is written in,
+/// so neither pass touches one
+auto names_itself(const core::SchemaFrame &frame,
+                  const sourcemeta::core::JSON &schema) -> bool {
+  bool found{false};
+  frame.for_each_subschema(
+      [&](const core::SchemaFrame::Location &location) -> void {
+        if (found) {
+          return;
+        }
+
+        const auto &subschema{core::get(schema, location.pointer)};
+        if (!subschema.is_object() || !subschema.defines("$schema") ||
+            !subschema.at("$schema").is_string()) {
+          return;
+        }
+
+        // The frame has already resolved every identifier against its base,
+        // so asking it where the dialect lands settles a relative `$id` too.
+        // A dialect landing on the very subschema that declares it is no
+        // embedded meta-schema, only an identifier that repeats its `$schema`
+        const auto target{frame.traverse(subschema.at("$schema").to_string())};
+        if (target.has_value() && target->get().pointer != location.pointer) {
+          found = true;
+        }
+      });
+
+  return found;
 }
 
 /// Remove every `id`, including anchors and the identifier of the root. Every
@@ -328,6 +363,10 @@ auto eliminate_identifiers(sourcemeta::core::JSON &schema,
             [](const core::SchemaFrame::Location &location) -> bool {
               return !has_nested_id(location.base_dialect, location.dialect);
             })) {
+      return;
+    }
+
+    if (names_itself(frame, schema)) {
       return;
     }
 
@@ -490,6 +529,23 @@ auto draft6_profile() -> const Profile & {
   return PROFILE;
 }
 
+/// Draft 7 keeps everything Draft 6 has and adds the conditional triple, each
+/// member of which holds one subschema. A `then` or an `else` without its
+/// `if` says nothing, and the rules drop it before this runs, so the three
+/// are only ever lifted together
+auto draft7_profile() -> const Profile & {
+  static const Profile PROFILE{
+      .wrapper = "allOf",
+      .mappings = {"properties", "patternProperties", "dependencies"},
+      .singles = {"additionalProperties", "additionalItems", "not", "contains",
+                  "propertyNames", "if", "then", "else"},
+      .branches = {"items", "allOf", "anyOf", "oneOf"},
+      .unique_branches = {"allOf", "anyOf"},
+      .property_marker = false,
+      .boolean_nodes = true};
+  return PROFILE;
+}
+
 /// The profile for a dialect, when the graph form covers it at all. Draft 3
 /// hyper-schema shares the Draft 3 profile: by the time this runs the rules
 /// have dropped the keywords its vocabulary adds, none of which takes part
@@ -507,6 +563,8 @@ auto profile_for(const core::SchemaBaseDialect base_dialect,
       return is_openapi_3_0(dialect) ? nullptr : &draft4_profile();
     case core::SchemaBaseDialect::JSON_SCHEMA_DRAFT_6:
       return &draft6_profile();
+    case core::SchemaBaseDialect::JSON_SCHEMA_DRAFT_7:
+      return &draft7_profile();
     default:
       return nullptr;
   }
@@ -684,7 +742,7 @@ auto lift_subschemas(sourcemeta::core::JSON &schema,
       }
     });
 
-    if (unsupported || profile == nullptr) {
+    if (unsupported || profile == nullptr || names_itself(frame, schema)) {
       return;
     }
 

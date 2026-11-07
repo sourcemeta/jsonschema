@@ -108,7 +108,7 @@ auto build_claim_specification(const OIDCClaimRequest &request) -> JSON {
 }
 
 auto assign_claim_requests(JSON &document, const std::string_view target,
-                           const JSON::Object::hash_type hash,
+                           const JSON::Object::hash_type &hash,
                            const std::span<const OIDCClaimRequest> claims)
     -> void {
   if (claims.empty()) {

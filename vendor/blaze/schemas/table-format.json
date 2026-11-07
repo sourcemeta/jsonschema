@@ -1,0 +1,835 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "tag:sourcemeta.com,2026:table-format/2",
+  "title": "Table format",
+  "description": "A description of data for documentation: which properties there are, what may go in each, and which are required. Independent of the schema language it was converted from",
+  "examples": [
+    {
+      "$schema": "tag:sourcemeta.com,2026:table-format/2",
+      "title": "Order",
+      "language": "https://json-schema.org/draft/2020-12/schema",
+      "root": {
+        "kind": "object",
+        "properties": [
+          {
+            "name": "buyer",
+            "value": {
+              "kind": "ref",
+              "ref": "/$defs/party"
+            }
+          }
+        ]
+      },
+      "shapes": [
+        {
+          "id": "/$defs/party",
+          "name": "party",
+          "value": {
+            "kind": "object",
+            "properties": [
+              {
+                "name": "name",
+                "value": {
+                  "kind": "string"
+                }
+              }
+            ]
+          }
+        }
+      ]
+    }
+  ],
+  "x-lint-exclude": "simple_properties_identifiers",
+  "type": "object",
+  "required": [ "$schema", "title", "language", "root" ],
+  "properties": {
+    "$schema": {
+      "const": "tag:sourcemeta.com,2026:table-format/2"
+    },
+    "title": {
+      "type": "string",
+      "minLength": 1
+    },
+    "description": {
+      "type": "string",
+      "minLength": 1
+    },
+    "language": {
+      "description": "The schema language and version the document was converted from, such as a JSON Schema dialect",
+      "examples": [
+        "https://json-schema.org/draft/2020-12/schema",
+        "https://avro.apache.org/docs/1.11.1/specification/"
+      ],
+      "x-format-assertion": true,
+      "type": "string",
+      "format": "uri"
+    },
+    "root": {
+      "$ref": "#/$defs/value"
+    },
+    "shapes": {
+      "description": "Values described once and referred to by id, most used first",
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/shape"
+      }
+    }
+  },
+  "additionalProperties": false,
+  "$defs": {
+    "shape": {
+      "type": "object",
+      "required": [ "id", "name", "value" ],
+      "properties": {
+        "id": {
+          "description": "A `ref` equal to it means this shape",
+          "type": "string",
+          "minLength": 1
+        },
+        "name": {
+          "type": "string",
+          "minLength": 1
+        },
+        "section": {
+          "description": "A heading to list the shape under",
+          "type": "string",
+          "minLength": 1
+        },
+        "usedAt": {
+          "description": "Every place in this document that refers to the shape",
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "x-format-assertion": true,
+            "type": "string",
+            "format": "json-pointer"
+          }
+        },
+        "value": {
+          "$ref": "#/$defs/value"
+        }
+      },
+      "additionalProperties": false
+    },
+    "value": {
+      "type": "object",
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "kind": {
+                "const": "string"
+              }
+            }
+          },
+          "then": {
+            "propertyNames": {
+              "enum": [
+                "kind",
+                "title",
+                "description",
+                "default",
+                "examples",
+                "deprecated",
+                "nullable",
+                "access",
+                "also",
+                "not",
+                "conditions",
+                "format",
+                "pattern",
+                "length",
+                "content",
+                "otherTypesAllowed"
+              ]
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "kind": {
+                "const": "number"
+              }
+            }
+          },
+          "then": {
+            "propertyNames": {
+              "enum": [
+                "kind",
+                "title",
+                "description",
+                "default",
+                "examples",
+                "deprecated",
+                "nullable",
+                "access",
+                "also",
+                "not",
+                "conditions",
+                "format",
+                "range",
+                "multipleOf",
+                "otherTypesAllowed"
+              ]
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "kind": {
+                "const": "integer"
+              }
+            }
+          },
+          "then": {
+            "propertyNames": {
+              "enum": [
+                "kind",
+                "title",
+                "description",
+                "default",
+                "examples",
+                "deprecated",
+                "nullable",
+                "access",
+                "also",
+                "not",
+                "conditions",
+                "format",
+                "range",
+                "multipleOf",
+                "otherTypesAllowed"
+              ]
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "kind": {
+                "const": "boolean"
+              }
+            }
+          },
+          "then": {
+            "propertyNames": {
+              "enum": [
+                "kind",
+                "title",
+                "description",
+                "default",
+                "examples",
+                "deprecated",
+                "nullable",
+                "access",
+                "also",
+                "not",
+                "conditions",
+                "otherTypesAllowed"
+              ]
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "kind": {
+                "const": "null"
+              }
+            }
+          },
+          "then": {
+            "propertyNames": {
+              "enum": [
+                "kind",
+                "title",
+                "description",
+                "default",
+                "examples",
+                "deprecated",
+                "nullable",
+                "access",
+                "also",
+                "not",
+                "conditions"
+              ]
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "kind": {
+                "const": "object"
+              }
+            }
+          },
+          "then": {
+            "propertyNames": {
+              "enum": [
+                "kind",
+                "title",
+                "description",
+                "default",
+                "examples",
+                "deprecated",
+                "nullable",
+                "access",
+                "also",
+                "not",
+                "conditions",
+                "properties",
+                "patternProperties",
+                "otherProperties",
+                "closed",
+                "keys",
+                "propertyCount",
+                "discriminator",
+                "otherTypesAllowed"
+              ]
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "kind": {
+                "const": "array"
+              }
+            }
+          },
+          "then": {
+            "propertyNames": {
+              "enum": [
+                "kind",
+                "title",
+                "description",
+                "default",
+                "examples",
+                "deprecated",
+                "nullable",
+                "access",
+                "also",
+                "not",
+                "conditions",
+                "item",
+                "slots",
+                "length",
+                "unique",
+                "contains",
+                "otherTypesAllowed"
+              ]
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "kind": {
+                "const": "enum"
+              }
+            }
+          },
+          "then": {
+            "required": [ "values" ],
+            "propertyNames": {
+              "enum": [
+                "kind",
+                "title",
+                "description",
+                "default",
+                "examples",
+                "deprecated",
+                "nullable",
+                "access",
+                "also",
+                "not",
+                "conditions",
+                "values"
+              ]
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "kind": {
+                "const": "choice"
+              }
+            }
+          },
+          "then": {
+            "required": [ "options" ],
+            "propertyNames": {
+              "enum": [
+                "kind",
+                "title",
+                "description",
+                "default",
+                "examples",
+                "deprecated",
+                "nullable",
+                "access",
+                "also",
+                "not",
+                "conditions",
+                "options",
+                "overlap",
+                "otherTypesAllowed"
+              ]
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "kind": {
+                "const": "ref"
+              }
+            }
+          },
+          "then": {
+            "required": [ "ref" ],
+            "propertyNames": {
+              "enum": [
+                "kind",
+                "title",
+                "description",
+                "default",
+                "examples",
+                "deprecated",
+                "nullable",
+                "access",
+                "also",
+                "not",
+                "conditions",
+                "ref"
+              ]
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "kind": {
+                "const": "external"
+              }
+            }
+          },
+          "then": {
+            "required": [ "href" ],
+            "propertyNames": {
+              "enum": [
+                "kind",
+                "title",
+                "description",
+                "default",
+                "examples",
+                "deprecated",
+                "nullable",
+                "access",
+                "also",
+                "not",
+                "conditions",
+                "href"
+              ]
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "kind": {
+                "const": "any"
+              }
+            }
+          },
+          "then": {
+            "propertyNames": {
+              "enum": [
+                "kind",
+                "title",
+                "description",
+                "default",
+                "examples",
+                "deprecated",
+                "nullable",
+                "access",
+                "also",
+                "not",
+                "conditions"
+              ]
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "kind": {
+                "const": "never"
+              }
+            }
+          },
+          "then": {
+            "propertyNames": {
+              "enum": [
+                "kind",
+                "title",
+                "description",
+                "default",
+                "examples",
+                "deprecated",
+                "nullable",
+                "access",
+                "also",
+                "not",
+                "conditions"
+              ]
+            }
+          }
+        }
+      ],
+      "required": [ "kind" ],
+      "properties": {
+        "kind": {
+          "enum": [
+            "string",
+            "number",
+            "integer",
+            "boolean",
+            "null",
+            "object",
+            "array",
+            "enum",
+            "choice",
+            "ref",
+            "external",
+            "any",
+            "never"
+          ]
+        },
+        "title": {
+          "type": "string",
+          "minLength": 1
+        },
+        "description": {
+          "type": "string",
+          "minLength": 1
+        },
+        "default": true,
+        "examples": {
+          "type": "array",
+          "minItems": 1
+        },
+        "deprecated": {
+          "const": true
+        },
+        "nullable": {
+          "const": true
+        },
+        "access": {
+          "enum": [ "read", "write" ]
+        },
+        "also": {
+          "description": "Values the data must also match",
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/value"
+          }
+        },
+        "not": {
+          "$ref": "#/$defs/value"
+        },
+        "conditions": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/condition"
+          }
+        },
+        "otherTypesAllowed": {
+          "description": "Data of a JSON type this value is not about also passes",
+          "const": true
+        },
+        "format": {
+          "description": "A label from the source language, such as `email`. It is not a rule",
+          "type": "string",
+          "minLength": 1
+        },
+        "pattern": {
+          "description": "Found anywhere in the text, unless anchored",
+          "x-format-assertion": true,
+          "type": "string",
+          "format": "regex"
+        },
+        "length": {
+          "description": "Characters for text, entries for a list",
+          "type": "object",
+          "minProperties": 1,
+          "properties": {
+            "min": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "max": {
+              "type": "integer",
+              "minimum": 0
+            }
+          },
+          "additionalProperties": false
+        },
+        "content": {
+          "description": "What the text holds. It is not a rule",
+          "type": "object",
+          "minProperties": 1,
+          "properties": {
+            "mediaType": {
+              "type": "string"
+            },
+            "encoding": {
+              "type": "string"
+            },
+            "value": {
+              "$ref": "#/$defs/value"
+            }
+          },
+          "additionalProperties": false
+        },
+        "range": {
+          "type": "object",
+          "minProperties": 1,
+          "properties": {
+            "min": {
+              "type": "number"
+            },
+            "max": {
+              "type": "number"
+            },
+            "minExclusive": {
+              "const": true
+            },
+            "maxExclusive": {
+              "const": true
+            }
+          },
+          "additionalProperties": false,
+          "dependentRequired": {
+            "minExclusive": [ "min" ],
+            "maxExclusive": [ "max" ]
+          }
+        },
+        "multipleOf": {
+          "type": "number",
+          "exclusiveMinimum": 0
+        },
+        "properties": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/property"
+          }
+        },
+        "patternProperties": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "required": [ "value" ],
+            "properties": {
+              "pattern": {
+                "description": "Absent means every property name",
+                "x-format-assertion": true,
+                "type": "string",
+                "format": "regex"
+              },
+              "except": {
+                "description": "Names, and patterns of names, the entry leaves out",
+                "type": "object",
+                "minProperties": 1,
+                "properties": {
+                  "names": {
+                    "type": "array",
+                    "minItems": 1,
+                    "uniqueItems": true,
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  "patterns": {
+                    "type": "array",
+                    "minItems": 1,
+                    "uniqueItems": true,
+                    "items": {
+                      "x-format-assertion": true,
+                      "type": "string",
+                      "format": "regex"
+                    }
+                  }
+                },
+                "additionalProperties": false
+              },
+              "value": {
+                "$ref": "#/$defs/value"
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        "otherProperties": {
+          "description": "What every property that is not named holds",
+          "$ref": "#/$defs/value"
+        },
+        "closed": {
+          "description": "Only named properties are allowed",
+          "const": true
+        },
+        "keys": {
+          "$ref": "#/$defs/value"
+        },
+        "propertyCount": {
+          "type": "object",
+          "minProperties": 1,
+          "properties": {
+            "min": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "max": {
+              "type": "integer",
+              "minimum": 0
+            }
+          },
+          "additionalProperties": false
+        },
+        "discriminator": {
+          "type": "object",
+          "required": [ "property", "cases" ],
+          "properties": {
+            "property": {
+              "type": "string"
+            },
+            "cases": {
+              "type": "array",
+              "minItems": 1,
+              "items": {
+                "type": "object",
+                "required": [ "is", "ref" ],
+                "properties": {
+                  "is": true,
+                  "ref": {
+                    "type": "string"
+                  }
+                },
+                "additionalProperties": false
+              }
+            }
+          },
+          "additionalProperties": false
+        },
+        "item": {
+          "description": "What every entry holds, or every entry after the slots",
+          "$ref": "#/$defs/value"
+        },
+        "slots": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/value"
+          }
+        },
+        "unique": {
+          "const": true
+        },
+        "contains": {
+          "type": "object",
+          "required": [ "value", "min" ],
+          "properties": {
+            "value": {
+              "$ref": "#/$defs/value"
+            },
+            "min": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "max": {
+              "type": "integer",
+              "minimum": 0
+            }
+          },
+          "additionalProperties": false
+        },
+        "values": {
+          "type": "array",
+          "minItems": 1
+        },
+        "options": {
+          "type": "array",
+          "minItems": 2,
+          "items": {
+            "$ref": "#/$defs/value"
+          }
+        },
+        "overlap": {
+          "description": "More than one form may match",
+          "const": true
+        },
+        "ref": {
+          "description": "The id of a shape, or the empty string for the root",
+          "type": "string"
+        },
+        "href": {
+          "description": "The other document, as an absolute address when the source gives one",
+          "x-format-assertion": true,
+          "type": "string",
+          "format": "uri-reference",
+          "minLength": 1
+        }
+      }
+    },
+    "property": {
+      "type": "object",
+      "required": [ "name" ],
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "required": {
+          "const": true
+        },
+        "value": {
+          "description": "Absent means nothing is said about it",
+          "$ref": "#/$defs/value"
+        }
+      },
+      "additionalProperties": false
+    },
+    "condition": {
+      "type": "object",
+      "anyOf": [
+        {
+          "required": [ "then" ]
+        },
+        {
+          "required": [ "otherwise" ]
+        }
+      ],
+      "required": [ "when" ],
+      "properties": {
+        "when": {
+          "$ref": "#/$defs/value"
+        },
+        "then": {
+          "$ref": "#/$defs/value"
+        },
+        "otherwise": {
+          "$ref": "#/$defs/value"
+        }
+      },
+      "additionalProperties": false
+    }
+  }
+}

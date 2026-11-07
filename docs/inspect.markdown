@@ -41,21 +41,21 @@ reference:
 
 ```
 ...
-(POINTER) URI: https://example.com#/$defs/string/type
+(POINTER) URI: https://example.com/#/$defs/string/type
     Type              : Static
-    Root              : https://example.com
+    Root              : https://example.com/
     Pointer           : /$defs/string/type
-    Base              : https://example.com
+    Base              : https://example.com/
     Relative Pointer  : /$defs/string/type
     Dialect           : https://json-schema.org/draft/2020-12/schema
     Base Dialect      : https://json-schema.org/draft/2020-12/schema
     Parent            : /$defs/string
 ...
-(POINTER) URI: https://example.com#/$ref
+(POINTER) URI: https://example.com/#/$ref
     Type              : Static
-    Root              : https://example.com
+    Root              : https://example.com/
     Pointer           : /$ref
-    Base              : https://example.com
+    Base              : https://example.com/
     Relative Pointer  : /$ref
     Dialect           : https://json-schema.org/draft/2020-12/schema
     Base Dialect      : https://json-schema.org/draft/2020-12/schema
@@ -63,8 +63,8 @@ reference:
 ...
 (REFERENCE) ORIGIN: /$ref
     Type              : Static
-    Destination       : https://example.com#/$defs/string
-    - (w/o fragment)  : https://example.com
+    Destination       : https://example.com/#/$defs/string
+    - (w/o fragment)  : https://example.com/
     - (fragment)      : /$defs/string
 ```
 

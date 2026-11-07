@@ -63,7 +63,7 @@ constexpr auto HASH_REQUIRE_REQUEST_URI_REGISTRATION{
 // Every caller reads the document of a validated server metadata, which is
 // rejected at construction unless it is an object
 auto string_member(const JSON &data, const JSON::StringView name,
-                   const JSON::Object::hash_type hash)
+                   const JSON::Object::hash_type &hash)
     -> std::optional<std::string_view> {
   assert(data.is_object());
   const auto *member{data.try_at(name, hash)};
@@ -99,7 +99,7 @@ auto is_https_url(const std::string_view value) -> bool {
 // than being ignored, since an accessor would otherwise report a malformed
 // member as an absent one
 auto validate_endpoint(const JSON &data, const JSON::StringView name,
-                       const JSON::Object::hash_type hash) -> void {
+                       const JSON::Object::hash_type &hash) -> void {
   const auto *member{data.try_at(name, hash)};
   if (member == nullptr) {
     return;

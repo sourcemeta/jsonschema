@@ -54,10 +54,12 @@ inline auto hold_first_exception(std::mutex &mutex, std::exception_ptr &holder,
 
 /// @ingroup parallel
 ///
-/// Process a collection in parallel. If the parallelism is set to zero, the
-/// function will run using the available number of cores. If the stack size is
-/// set to zero, the platform default applies, and a stack size the platform
-/// cannot honour throws. For example:
+/// Process a collection in parallel. By default, parallelism uses the
+/// available number of cores. Setting parallelism to zero runs sequentially.
+/// When worker threads are created, a stack size of zero uses the platform
+/// default, and an unsupported stack size throws. Sequential execution uses
+/// the calling thread's stack. Single-pass iterators run sequentially and
+/// report an effective parallelism of one to the callback. For example:
 ///
 /// ```c++
 /// #include <sourcemeta/core/parallel.h>
@@ -92,7 +94,8 @@ auto parallel_for_each(
     Iterator first, Iterator last, Callback &&callback,
     const std::size_t parallelism = std::thread::hardware_concurrency(),
     const std::size_t stack_size_bytes = 0) -> void {
-  const auto effective_parallelism{(std::max)(parallelism, 1uz)};
+  const auto effective_parallelism{
+      std::forward_iterator<Iterator> ? (std::max)(parallelism, 1uz) : 1uz};
 
   // Empty list
   if (first == last) {
@@ -101,7 +104,7 @@ auto parallel_for_each(
 
   // If it is a single element or there is no parallelism,
   // just do a normal loop without dealing with threads
-  if (effective_parallelism == 1 || std::next(first) == last) {
+  if (effective_parallelism == 1 || std::ranges::next(first) == last) {
     std::size_t cursor{1};
     for (auto iterator = first; iterator != last; ++iterator, ++cursor) {
       callback(*iterator, effective_parallelism, cursor);
@@ -131,7 +134,8 @@ auto parallel_for_each(
   // environment by reference. It will be heap-copied into the native thread
   // API.
   auto worker_callable = [&tasks, &queue_mutex, &effective_callback, &exception,
-                          &exception_mutex, effective_parallelism, total] {
+                          &exception_mutex,
+                          worker_parallelism = effective_parallelism, total] {
     try {
       while (true) {
         // The lock is given up before the work runs, as holding it across the
@@ -146,7 +150,7 @@ auto parallel_for_each(
         const auto cursor{total - tasks.size() + 1};
         tasks.pop();
         lock.unlock();
-        effective_callback(*iterator, effective_parallelism, cursor);
+        effective_callback(*iterator, worker_parallelism, cursor);
       }
     } catch (...) {
       hold_first_exception(exception_mutex, exception,

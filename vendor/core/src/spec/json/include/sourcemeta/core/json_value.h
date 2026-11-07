@@ -1145,12 +1145,12 @@ public:
   ///   my_object.as_object().hash("foo"),
   ///   default_value).to_integer() == 1);
   /// ```
-  [[nodiscard]] auto at_or(const String &key, const Object::hash_type hash,
+  [[nodiscard]] auto at_or(const String &key, const Object::hash_type &hash,
                            const JSON &otherwise) const -> const JSON &;
 
   /// This overload avoids misuses of returning a const reference parameter as a
   /// constant reference.
-  [[nodiscard]] auto at_or(const String &key, const Object::hash_type hash,
+  [[nodiscard]] auto at_or(const String &key, const Object::hash_type &hash,
                            JSON &&otherwise) const -> const JSON & = delete;
 
   /// This method retrieves a reference to the first element of a JSON array.
@@ -2069,8 +2069,8 @@ public:
 
   /// This method sets an object key with a pre-computed hash, returning the
   /// inserted value
-  auto assign_assume_new(String &&key, JSON &&value, Object::hash_type hash)
-      -> JSON &;
+  auto assign_assume_new(String &&key, JSON &&value,
+                         const Object::hash_type &hash) -> JSON &;
 
   /// This method assigns a string object member with a pre-computed hash unless
   /// the value is empty, in which case the member is left absent, assuming the

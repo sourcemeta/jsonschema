@@ -22,7 +22,7 @@ namespace sourcemeta::core {
 // absent parameter is the empty octet string; a present but malformed one is an
 // error
 inline auto jwe_read_party_info(const JSON &header, const JSON::StringView name,
-                                const JSON::Object::hash_type hash,
+                                const JSON::Object::hash_type &hash,
                                 std::string &output) -> bool {
   const auto *member{header.try_at(name, hash)};
   if (member == nullptr) {

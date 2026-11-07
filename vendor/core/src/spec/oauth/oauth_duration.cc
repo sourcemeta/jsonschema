@@ -9,7 +9,7 @@
 namespace sourcemeta::core {
 
 auto oauth_json_seconds_member(const JSON &data, const JSON::StringView name,
-                               const JSON::Object::hash_type hash)
+                               const JSON::Object::hash_type &hash)
     -> std::optional<std::chrono::seconds> {
   if (!data.is_object()) {
     return std::nullopt;

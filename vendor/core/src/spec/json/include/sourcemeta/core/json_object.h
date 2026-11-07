@@ -750,6 +750,9 @@ public:
   auto clear() noexcept -> void { this->data_.clear(); }
 
   /// Rename an object property in place
+  // Both hashes come in by value, as dropping the target property first can
+  // shift the storage that a caller's reference points into, and the rename
+  // would then record a hash belonging to another property
   auto rename(const Key &key, const hash_type key_hash, Key &&target,
               const hash_type target_hash) -> void {
     this->erase(target, target_hash);

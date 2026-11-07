@@ -13,7 +13,7 @@ namespace sourcemeta::core {
 // object, the member, or its type is absent
 inline auto oauth_json_string_member(const JSON &data,
                                      const JSON::StringView name,
-                                     const JSON::Object::hash_type hash)
+                                     const JSON::Object::hash_type &hash)
     -> std::optional<std::string_view> {
   if (!data.is_object()) {
     return std::nullopt;

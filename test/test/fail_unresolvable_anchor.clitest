@@ -36,7 +36,7 @@ WRITE expected_0.txt UNTIL EOF
 1> [CWD]/test.json:
 2> Using parallelism: 1
 2> error: This target names a place that the document does not hold
-2>   at identifier https://example.com#foo
+2>   at identifier https://example.com/#foo
 2>   at file path [CWD]/test.json
 2>
 2> Use the `inspect` command to find valid schema locations

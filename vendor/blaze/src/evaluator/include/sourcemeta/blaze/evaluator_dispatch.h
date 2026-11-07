@@ -168,13 +168,14 @@
             .relative_schema_location);                                        \
     context.evaluator->instance_location.push_back(                            \
         instruction.relative_instance_location);                               \
+    const auto &reported_location{destination};                                \
     (*context.callback)(EvaluationType::Pre, true, instruction,                \
                         context.schema->extra[instruction.extra_index],        \
-                        context.evaluator->evaluate_path, destination,         \
+                        context.evaluator->evaluate_path, reported_location,   \
                         Evaluator::NULL_VALUE);                                \
     (*context.callback)(EvaluationType::Post, true, instruction,               \
                         context.schema->extra[instruction.extra_index],        \
-                        context.evaluator->evaluate_path, destination,         \
+                        context.evaluator->evaluate_path, reported_location,   \
                         annotation_value);                                     \
     context.evaluator->evaluate_path.pop_back(                                 \
         context.schema->extra[instruction.extra_index]                         \

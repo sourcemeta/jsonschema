@@ -52,7 +52,7 @@ WRITE expected_0.txt UNTIL EOF
 1>       {
 1>         "name": "Should fail but passes",
 1>         "status": "failed",
-1>         "suite": [ "https://example.com" ],
+1>         "suite": [ "https://example.com/" ],
 1>         "type": "unit",
 1>         "filePath": "[CWD]/test.json",
 1>         "line": 4,

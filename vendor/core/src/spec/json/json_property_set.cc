@@ -8,7 +8,7 @@
 
 namespace sourcemeta::core {
 
-auto JSONPropertySet::insert(const string_type &value, const hash_type hash)
+auto JSONPropertySet::insert(const string_type &value, const hash_type &hash)
     -> bool {
   assert(HASHER(value) == hash);
   const auto &entries{this->data_};
@@ -22,7 +22,7 @@ auto JSONPropertySet::insert(const string_type &value, const hash_type hash)
   return true;
 }
 
-auto JSONPropertySet::insert(string_type &&value, const hash_type hash)
+auto JSONPropertySet::insert(string_type &&value, const hash_type &hash)
     -> bool {
   assert(HASHER(value) == hash);
   const auto &entries{this->data_};

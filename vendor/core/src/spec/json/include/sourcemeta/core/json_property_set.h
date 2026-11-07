@@ -90,12 +90,12 @@ public:
   /// Add a property name whose hash is already known to the set, keeping the
   /// set sorted. Returns whether the name was added, so that a caller can tell
   /// a name it had not seen before from one the set already held
-  auto insert(const string_type &value, const hash_type hash) -> bool;
+  auto insert(const string_type &value, const hash_type &hash) -> bool;
 
   /// Add a property name whose hash is already known to the set, keeping the
   /// set sorted. Returns whether the name was added, so that a caller can tell
   /// a name it had not seen before from one the set already held
-  auto insert(string_type &&value, const hash_type hash) -> bool;
+  auto insert(string_type &&value, const hash_type &hash) -> bool;
 
   /// Add a property name to the set, keeping the set sorted. Returns whether
   /// the name was added, so that a caller can tell a name it had not seen

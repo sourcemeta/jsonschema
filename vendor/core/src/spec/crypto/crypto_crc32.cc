@@ -18,11 +18,11 @@
 #endif
 #endif
 
-// Every x86 processor with AVX2 also has carry-less multiplication, which
-// MSVC exposes without a dedicated flag
-#if (defined(__x86_64__) || defined(_M_X64)) &&                                \
-    (defined(__PCLMUL__) ||                                                    \
-     (defined(_MSC_VER) && !defined(__clang__) && defined(__AVX2__)))
+// Carry-less multiplication belongs to no 64-bit x86 baseline, but the folding
+// path can be compiled for it on its own and entered only when the processor
+// running this code reports the instruction, so every 64-bit x86 build carries
+// the path without the binary coming to depend on it
+#if defined(__x86_64__) || defined(_M_X64)
 #define SOURCEMETA_CORE_CRYPTO_CRC32_CLMUL 1
 #endif
 
@@ -37,6 +37,20 @@
 
 #ifdef SOURCEMETA_CORE_CRYPTO_CRC32_CLMUL
 #include <immintrin.h> // __m128i, _mm_clmulepi64_si128, _mm_xor_si128
+#if defined(_MSC_VER) && !defined(__clang__)
+#include <intrin.h> // __cpuid
+#endif
+#endif
+
+// Only the compilers that tie the instructions they emit to the options of the
+// whole translation unit need the promise restated for the functions that step
+// outside them. MSVC accepts the intrinsics regardless
+#if defined(SOURCEMETA_CORE_CRYPTO_CRC32_CLMUL) &&                             \
+    !(defined(_MSC_VER) && !defined(__clang__))
+#define SOURCEMETA_CORE_CRYPTO_CRC32_FOLD_TARGET                               \
+  __attribute__((target("sse2,pclmul")))
+#else
+#define SOURCEMETA_CORE_CRYPTO_CRC32_FOLD_TARGET
 #endif
 
 // The CRC32 operations are reached through compiler builtins rather than the
@@ -644,26 +658,31 @@ auto crc32_reduce(const Crc32Vector folded) noexcept -> std::uint32_t {
 using Crc32Vector = __m128i;
 using Crc32Multipliers = __m128i;
 
+SOURCEMETA_CORE_CRYPTO_CRC32_FOLD_TARGET
 auto crc32_vector_load(const std::uint8_t *data) noexcept -> Crc32Vector {
   return _mm_loadu_si128(reinterpret_cast<const __m128i *>(data));
 }
 
+SOURCEMETA_CORE_CRYPTO_CRC32_FOLD_TARGET
 auto crc32_vector_xor(const Crc32Vector left, const Crc32Vector right) noexcept
     -> Crc32Vector {
   return _mm_xor_si128(left, right);
 }
 
+SOURCEMETA_CORE_CRYPTO_CRC32_FOLD_TARGET
 auto crc32_vector_from_checksum(const std::uint32_t checksum) noexcept
     -> Crc32Vector {
   return _mm_cvtsi32_si128(static_cast<int>(checksum));
 }
 
+SOURCEMETA_CORE_CRYPTO_CRC32_FOLD_TARGET
 auto crc32_load_multipliers(
     const std::array<std::uint64_t, 2> &multipliers) noexcept
     -> Crc32Multipliers {
   return _mm_loadu_si128(reinterpret_cast<const __m128i *>(multipliers.data()));
 }
 
+SOURCEMETA_CORE_CRYPTO_CRC32_FOLD_TARGET
 auto crc32_fold_vector(const Crc32Vector source, const Crc32Vector destination,
                        const Crc32Multipliers multipliers) noexcept
     -> Crc32Vector {
@@ -674,11 +693,32 @@ auto crc32_fold_vector(const Crc32Vector source, const Crc32Vector destination,
 
 // The folded vector is congruent to the data it replaces, so checksumming it
 // as data from an empty register yields the checksum of that data
+SOURCEMETA_CORE_CRYPTO_CRC32_FOLD_TARGET
 auto crc32_reduce(const Crc32Vector folded) noexcept -> std::uint32_t {
   std::array<std::uint8_t, 16> bytes{};
   _mm_storeu_si128(reinterpret_cast<__m128i *>(bytes.data()), folded);
   return crc32_software(0, bytes.data(), bytes.size());
 }
+#endif
+
+// A target the compiler was told to assume already promises the multiplication,
+// and a processor does not change while the program runs, so the answer is
+// taken once, ahead of anything that could ask for it, rather than on the way
+// through a checksum. A read that somehow comes first still reads the software
+// answer, which is correct and only slower
+#if defined(SOURCEMETA_CORE_CRYPTO_CRC32_PMULL) || defined(__PCLMUL__)
+constexpr auto CRC32_FOLD_AVAILABLE{true};
+#elif defined(_MSC_VER) && !defined(__clang__)
+auto detect_crc32_fold() noexcept -> bool {
+  constexpr auto PCLMUL_FEATURE_BIT{1 << 1};
+  std::array<int, 4> registers{};
+  __cpuid(registers.data(), 1);
+  return (registers[2] & PCLMUL_FEATURE_BIT) != 0;
+}
+
+const auto CRC32_FOLD_AVAILABLE{detect_crc32_fold()};
+#else
+const auto CRC32_FOLD_AVAILABLE{__builtin_cpu_supports("pclmul") != 0};
 #endif
 
 // Moving a 128-bit vector forward by a number of 128-bit vectors multiplies
@@ -705,6 +745,7 @@ constexpr std::size_t CRC32_FOLD_WIDE_MINIMUM{576};
 // them modulo the CRC-32 polynomial, which is then reduced to a checksum.
 // Every lane is an independent dependency chain, so the multiplications of
 // all lanes run in parallel
+SOURCEMETA_CORE_CRYPTO_CRC32_FOLD_TARGET
 auto crc32_fold(const std::uint32_t checksum, const std::uint8_t *&data,
                 std::size_t &remaining) noexcept -> std::uint32_t {
   // GCC drops the attributes of the x86 vector type when it is a template
@@ -817,7 +858,7 @@ auto crc32_update(const std::uint32_t previous, const std::string_view input)
 
 #ifdef SOURCEMETA_CORE_CRYPTO_CRC32_FOLD
   // Carry-less multiplication folds a whole vector of input at a time
-  if (remaining >= CRC32_FOLD_MINIMUM) {
+  if (remaining >= CRC32_FOLD_MINIMUM && CRC32_FOLD_AVAILABLE) {
     checksum = crc32_fold(checksum, data, remaining);
   }
 #endif

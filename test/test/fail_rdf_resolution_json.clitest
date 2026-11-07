@@ -69,13 +69,13 @@ WRITE expected.txt UNTIL EOF
 1>       {
 1>         "name": "Conflicting datatypes",
 1>         "status": "failed",
-1>         "suite": [ "https://example.com" ],
+1>         "suite": [ "https://example.com/" ],
 1>         "type": "unit",
 1>         "filePath": "[CWD]/test.json",
 1>         "line": 4,
 1>         "retries": 0,
 1>         "flaky": false,
-1>         "trace": "error: A JSON-LD datatype cannot be assigned more than one value\n  at line 7\n  at column 17\n  at instance location \"/x\"\n  at facet \"datatype\"\n  at schema location https://example.com#/properties/x/allOf/0/x-jsonld-datatype\n  at conflicting schema location https://example.com#/properties/x/allOf/1/x-jsonld-datatype\n  at file path [CWD]/test.json\n"
+1>         "trace": "error: A JSON-LD datatype cannot be assigned more than one value\n  at line 7\n  at column 17\n  at instance location \"/x\"\n  at facet \"datatype\"\n  at schema location https://example.com/#/properties/x/allOf/0/x-jsonld-datatype\n  at conflicting schema location https://example.com/#/properties/x/allOf/1/x-jsonld-datatype\n  at file path [CWD]/test.json\n"
 1>       }
 1>     ]
 1>   }

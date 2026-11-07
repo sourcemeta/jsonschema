@@ -76,7 +76,7 @@ constexpr auto HASH_PROTECTED_RESOURCES{
 // Both documents are rejected at construction unless they are objects, so
 // every accessor below reads an object and none of them has to say so again
 auto string_member(const JSON &data, const JSON::StringView name,
-                   const JSON::Object::hash_type hash)
+                   const JSON::Object::hash_type &hash)
     -> std::optional<std::string_view> {
   assert(data.is_object());
   const auto *member{data.try_at(name, hash)};
@@ -90,7 +90,7 @@ auto string_member(const JSON &data, const JSON::StringView name,
 // A member that advertises a capability, which is on only when it is present
 // and is the boolean true
 auto boolean_member(const JSON &data, const JSON::StringView name,
-                    const JSON::Object::hash_type hash) -> bool {
+                    const JSON::Object::hash_type &hash) -> bool {
   assert(data.is_object());
   const auto *member{data.try_at(name, hash)};
   return member != nullptr && member->is_boolean() && member->to_boolean();
@@ -99,7 +99,7 @@ auto boolean_member(const JSON &data, const JSON::StringView name,
 // A member that lists what the document supports, which falls back to the
 // caller's default when it is absent or is not a list
 auto listed_member(const JSON &data, const JSON::StringView name,
-                   const JSON::Object::hash_type hash) -> const JSON * {
+                   const JSON::Object::hash_type &hash) -> const JSON * {
   assert(data.is_object());
   const auto *member{data.try_at(name, hash)};
   return member != nullptr && member->is_array() ? member : nullptr;
@@ -111,7 +111,7 @@ auto listed_member(const JSON &data, const JSON::StringView name,
 // fails the parse rather than being ignored, since an accessor would otherwise
 // report a malformed member as an absent one
 auto validate_endpoint(const JSON &data, const JSON::StringView name,
-                       const JSON::Object::hash_type hash) -> void {
+                       const JSON::Object::hash_type &hash) -> void {
   const auto *member{data.try_at(name, hash)};
   if (member == nullptr) {
     return;
@@ -130,7 +130,7 @@ auto validate_endpoint(const JSON &data, const JSON::StringView name,
 // than being ignored, since an accessor would otherwise report a malformed
 // member as an absent one
 auto validate_string_array(const JSON &data, const JSON::StringView name,
-                           const JSON::Object::hash_type hash,
+                           const JSON::Object::hash_type &hash,
                            const bool allow_empty) -> void {
   const auto *member{data.try_at(name, hash)};
   if (member == nullptr) {
@@ -149,7 +149,7 @@ auto validate_string_array(const JSON &data, const JSON::StringView name,
 }
 
 auto validate_boolean(const JSON &data, const JSON::StringView name,
-                      const JSON::Object::hash_type hash) -> void {
+                      const JSON::Object::hash_type &hash) -> void {
   const auto *member{data.try_at(name, hash)};
   if (member != nullptr && !member->is_boolean()) {
     throw OAuthMetadataParseError{};
@@ -157,7 +157,7 @@ auto validate_boolean(const JSON &data, const JSON::StringView name,
 }
 
 auto validate_string(const JSON &data, const JSON::StringView name,
-                     const JSON::Object::hash_type hash) -> void {
+                     const JSON::Object::hash_type &hash) -> void {
   const auto *member{data.try_at(name, hash)};
   if (member != nullptr && !member->is_string()) {
     throw OAuthMetadataParseError{};

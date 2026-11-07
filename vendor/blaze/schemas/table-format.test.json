@@ -1,0 +1,776 @@
+{
+  "target": "./table-format.json",
+  "tests": [
+    {
+      "description": "A document of text alone",
+      "valid": true,
+      "data": {
+        "$schema": "tag:sourcemeta.com,2026:table-format/2",
+        "title": "Order",
+        "language": "https://json-schema.org/draft/2020-12/schema",
+        "root": {
+          "kind": "string"
+        }
+      }
+    },
+    {
+      "description": "An object with required and optional properties",
+      "valid": true,
+      "data": {
+        "$schema": "tag:sourcemeta.com,2026:table-format/2",
+        "title": "Schema",
+        "language": "https://json-schema.org/draft/2020-12/schema",
+        "root": {
+          "kind": "object",
+          "properties": [
+            {
+              "name": "id",
+              "required": true
+            }
+          ]
+        }
+      }
+    },
+    {
+      "description": "Properties that only some names may take",
+      "valid": true,
+      "data": {
+        "$schema": "tag:sourcemeta.com,2026:table-format/2",
+        "title": "Schema",
+        "language": "https://json-schema.org/draft/2020-12/schema",
+        "root": {
+          "kind": "object",
+          "properties": [
+            {
+              "name": "abc",
+              "value": {
+                "kind": "string",
+                "also": [
+                  {
+                    "kind": "integer"
+                  }
+                ]
+              }
+            }
+          ],
+          "patternProperties": [
+            {
+              "pattern": "^a",
+              "value": {
+                "kind": "integer"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "description": "An object that holds nothing beyond its properties",
+      "valid": true,
+      "data": {
+        "$schema": "tag:sourcemeta.com,2026:table-format/2",
+        "title": "Schema",
+        "language": "https://json-schema.org/draft/2020-12/schema",
+        "root": {
+          "kind": "object",
+          "properties": [
+            {
+              "name": "id",
+              "required": true,
+              "value": {
+                "kind": "string"
+              }
+            },
+            {
+              "name": "count",
+              "value": {
+                "kind": "integer"
+              }
+            }
+          ],
+          "closed": true
+        }
+      }
+    },
+    {
+      "description": "A count of properties",
+      "valid": true,
+      "data": {
+        "$schema": "tag:sourcemeta.com,2026:table-format/2",
+        "title": "Schema",
+        "language": "https://json-schema.org/draft/2020-12/schema",
+        "root": {
+          "kind": "object",
+          "patternProperties": [
+            {
+              "pattern": "^x-",
+              "value": {
+                "kind": "string"
+              }
+            }
+          ],
+          "otherProperties": {
+            "kind": "integer"
+          },
+          "keys": {
+            "kind": "string",
+            "pattern": "^[a-z]",
+            "otherTypesAllowed": true
+          },
+          "propertyCount": {
+            "min": 1,
+            "max": 4
+          }
+        }
+      }
+    },
+    {
+      "description": "A list with bounds",
+      "valid": true,
+      "data": {
+        "$schema": "tag:sourcemeta.com,2026:table-format/2",
+        "title": "Schema",
+        "language": "https://json-schema.org/draft/2019-09/schema",
+        "root": {
+          "kind": "array",
+          "item": {
+            "kind": "integer"
+          },
+          "length": {
+            "min": 1,
+            "max": 9
+          }
+        }
+      }
+    },
+    {
+      "description": "A list with fixed slots",
+      "valid": true,
+      "data": {
+        "$schema": "tag:sourcemeta.com,2026:table-format/2",
+        "title": "Schema",
+        "language": "http://json-schema.org/draft-07/schema#",
+        "root": {
+          "kind": "array",
+          "slots": [
+            {
+              "kind": "string"
+            }
+          ],
+          "item": {
+            "kind": "integer"
+          }
+        }
+      }
+    },
+    {
+      "description": "A choice between types",
+      "valid": true,
+      "data": {
+        "$schema": "tag:sourcemeta.com,2026:table-format/2",
+        "title": "Schema",
+        "language": "https://json-schema.org/draft/2020-12/schema",
+        "root": {
+          "kind": "choice",
+          "options": [
+            {
+              "kind": "string"
+            },
+            {
+              "kind": "integer"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "description": "A fixed set of values",
+      "valid": true,
+      "data": {
+        "$schema": "tag:sourcemeta.com,2026:table-format/2",
+        "title": "Schema",
+        "language": "http://json-schema.org/draft-06/schema#",
+        "root": {
+          "kind": "enum",
+          "values": [ 3 ]
+        }
+      }
+    },
+    {
+      "description": "A shape referred to by id",
+      "valid": true,
+      "data": {
+        "$schema": "tag:sourcemeta.com,2026:table-format/2",
+        "title": "Schema",
+        "language": "http://json-schema.org/draft-07/schema#",
+        "root": {
+          "kind": "ref",
+          "ref": "/definitions/name"
+        },
+        "shapes": [
+          {
+            "id": "/definitions/name",
+            "name": "name",
+            "value": {
+              "kind": "string"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "description": "A reference to another document",
+      "valid": true,
+      "data": {
+        "$schema": "tag:sourcemeta.com,2026:table-format/2",
+        "title": "Schema",
+        "language": "https://json-schema.org/draft/2020-12/schema",
+        "root": {
+          "kind": "external",
+          "href": "https://example.com/party"
+        }
+      }
+    },
+    {
+      "description": "A condition and what follows from it",
+      "valid": true,
+      "data": {
+        "$schema": "tag:sourcemeta.com,2026:table-format/2",
+        "title": "Schema",
+        "language": "http://json-schema.org/draft-07/schema#",
+        "root": {
+          "kind": "object",
+          "properties": [
+            {
+              "name": "kind",
+              "value": {
+                "kind": "string"
+              }
+            }
+          ],
+          "conditions": [
+            {
+              "when": {
+                "kind": "object",
+                "properties": [
+                  {
+                    "name": "kind",
+                    "required": true,
+                    "value": {
+                      "kind": "enum",
+                      "values": [ "gift" ]
+                    }
+                  }
+                ],
+                "otherTypesAllowed": true
+              },
+              "then": {
+                "kind": "object",
+                "properties": [
+                  {
+                    "name": "note",
+                    "required": true,
+                    "value": {
+                      "kind": "string"
+                    }
+                  }
+                ],
+                "otherTypesAllowed": true
+              },
+              "otherwise": {
+                "kind": "object",
+                "properties": [
+                  {
+                    "name": "plain",
+                    "required": true,
+                    "value": {
+                      "kind": "boolean"
+                    }
+                  }
+                ],
+                "otherTypesAllowed": true
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "description": "Annotations",
+      "valid": true,
+      "data": {
+        "$schema": "tag:sourcemeta.com,2026:table-format/2",
+        "title": "Schema",
+        "language": "https://json-schema.org/draft/2020-12/schema",
+        "root": {
+          "kind": "object",
+          "properties": [
+            {
+              "name": "id",
+              "value": {
+                "kind": "string",
+                "title": "The identifier",
+                "default": "none",
+                "examples": [ "abc" ],
+                "deprecated": true,
+                "access": "read"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "description": "Bounds that exclude their edges",
+      "valid": true,
+      "data": {
+        "$schema": "tag:sourcemeta.com,2026:table-format/2",
+        "title": "Schema",
+        "language": "http://json-schema.org/draft-04/schema#",
+        "root": {
+          "kind": "integer",
+          "range": {
+            "min": 1,
+            "minExclusive": true
+          }
+        }
+      }
+    },
+    {
+      "description": "A step that numbers keep to",
+      "valid": true,
+      "data": {
+        "$schema": "tag:sourcemeta.com,2026:table-format/2",
+        "title": "Schema",
+        "language": "http://json-schema.org/draft-03/schema#",
+        "root": {
+          "kind": "number",
+          "range": {
+            "min": 0,
+            "minExclusive": true
+          },
+          "multipleOf": 0.5
+        }
+      }
+    },
+    {
+      "description": "A value that can never be met",
+      "valid": true,
+      "data": {
+        "$schema": "tag:sourcemeta.com,2026:table-format/2",
+        "title": "Schema",
+        "language": "https://json-schema.org/draft/2020-12/schema",
+        "root": {
+          "kind": "never"
+        }
+      }
+    },
+    {
+      "description": "A shape whose id is a name rather than a pointer",
+      "valid": true,
+      "data": {
+        "$schema": "tag:sourcemeta.com,2026:table-format/2",
+        "title": "Order",
+        "language": "https://json-schema.org/draft/2020-12/schema",
+        "root": {
+          "kind": "ref",
+          "ref": "com.example.Party"
+        },
+        "shapes": [
+          {
+            "id": "com.example.Party",
+            "name": "Party",
+            "usedAt": [ "/root" ],
+            "value": {
+              "kind": "string"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "description": "Every other property, apart from some names and patterns",
+      "valid": true,
+      "data": {
+        "$schema": "tag:sourcemeta.com,2026:table-format/2",
+        "title": "Order",
+        "language": "https://json-schema.org/draft/2020-12/schema",
+        "root": {
+          "kind": "object",
+          "patternProperties": [
+            {
+              "except": {
+                "names": [ "id" ],
+                "patterns": [ "^x-" ]
+              },
+              "value": {
+                "kind": "never"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "description": "A property that says nothing about what goes in it",
+      "valid": true,
+      "data": {
+        "$schema": "tag:sourcemeta.com,2026:table-format/2",
+        "title": "Order",
+        "language": "https://json-schema.org/draft/2020-12/schema",
+        "root": {
+          "kind": "object",
+          "properties": [
+            {
+              "name": "id"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "description": "A document without its format",
+      "valid": false,
+      "data": {
+        "title": "Order",
+        "language": "https://json-schema.org/draft/2020-12/schema",
+        "root": {
+          "kind": "string"
+        }
+      }
+    },
+    {
+      "description": "A document of another format",
+      "valid": false,
+      "data": {
+        "$schema": "tag:sourcemeta.com,2026:table-format/1",
+        "title": "Order",
+        "language": "https://json-schema.org/draft/2020-12/schema",
+        "root": {
+          "kind": "string"
+        }
+      }
+    },
+    {
+      "description": "A document without a root",
+      "valid": false,
+      "data": {
+        "$schema": "tag:sourcemeta.com,2026:table-format/2",
+        "title": "Order",
+        "language": "https://json-schema.org/draft/2020-12/schema"
+      }
+    },
+    {
+      "description": "A document without a title",
+      "valid": false,
+      "data": {
+        "$schema": "tag:sourcemeta.com,2026:table-format/2",
+        "language": "https://json-schema.org/draft/2020-12/schema",
+        "root": {
+          "kind": "string"
+        }
+      }
+    },
+    {
+      "description": "A document with an empty title",
+      "valid": false,
+      "data": {
+        "$schema": "tag:sourcemeta.com,2026:table-format/2",
+        "title": "",
+        "language": "https://json-schema.org/draft/2020-12/schema",
+        "root": {
+          "kind": "string"
+        }
+      }
+    },
+    {
+      "description": "A document without its language",
+      "valid": false,
+      "data": {
+        "$schema": "tag:sourcemeta.com,2026:table-format/2",
+        "title": "Order",
+        "root": {
+          "kind": "string"
+        }
+      }
+    },
+    {
+      "description": "A language that is not an address",
+      "valid": false,
+      "data": {
+        "$schema": "tag:sourcemeta.com,2026:table-format/2",
+        "title": "Order",
+        "language": "draft 7",
+        "root": {
+          "kind": "string"
+        }
+      }
+    },
+    {
+      "description": "A key the format does not know",
+      "valid": false,
+      "data": {
+        "$schema": "tag:sourcemeta.com,2026:table-format/2",
+        "title": "Order",
+        "language": "https://json-schema.org/draft/2020-12/schema",
+        "root": {
+          "kind": "string"
+        },
+        "version": 2
+      }
+    },
+    {
+      "description": "A kind the format does not know",
+      "valid": false,
+      "data": {
+        "$schema": "tag:sourcemeta.com,2026:table-format/2",
+        "title": "Order",
+        "language": "https://json-schema.org/draft/2020-12/schema",
+        "root": {
+          "kind": "date"
+        }
+      }
+    },
+    {
+      "description": "A value without a kind",
+      "valid": false,
+      "data": {
+        "$schema": "tag:sourcemeta.com,2026:table-format/2",
+        "title": "Order",
+        "language": "https://json-schema.org/draft/2020-12/schema",
+        "root": {
+          "description": "Anything"
+        }
+      }
+    },
+    {
+      "description": "A property without a name",
+      "valid": false,
+      "data": {
+        "$schema": "tag:sourcemeta.com,2026:table-format/2",
+        "title": "Order",
+        "language": "https://json-schema.org/draft/2020-12/schema",
+        "root": {
+          "kind": "object",
+          "properties": [
+            {
+              "value": {
+                "kind": "string"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "description": "A property whose name is not text",
+      "valid": false,
+      "data": {
+        "$schema": "tag:sourcemeta.com,2026:table-format/2",
+        "title": "Order",
+        "language": "https://json-schema.org/draft/2020-12/schema",
+        "root": {
+          "kind": "object",
+          "properties": [
+            {
+              "name": 3
+            }
+          ]
+        }
+      }
+    },
+    {
+      "description": "A reference without what it refers to",
+      "valid": false,
+      "data": {
+        "$schema": "tag:sourcemeta.com,2026:table-format/2",
+        "title": "Order",
+        "language": "https://json-schema.org/draft/2020-12/schema",
+        "root": {
+          "kind": "ref"
+        }
+      }
+    },
+    {
+      "description": "A fixed set without its values",
+      "valid": false,
+      "data": {
+        "$schema": "tag:sourcemeta.com,2026:table-format/2",
+        "title": "Order",
+        "language": "https://json-schema.org/draft/2020-12/schema",
+        "root": {
+          "kind": "enum"
+        }
+      }
+    },
+    {
+      "description": "A choice without its options",
+      "valid": false,
+      "data": {
+        "$schema": "tag:sourcemeta.com,2026:table-format/2",
+        "title": "Order",
+        "language": "https://json-schema.org/draft/2020-12/schema",
+        "root": {
+          "kind": "choice"
+        }
+      }
+    },
+    {
+      "description": "A key that belongs to another kind",
+      "valid": false,
+      "data": {
+        "$schema": "tag:sourcemeta.com,2026:table-format/2",
+        "title": "Order",
+        "language": "https://json-schema.org/draft/2020-12/schema",
+        "root": {
+          "kind": "string",
+          "properties": []
+        }
+      }
+    },
+    {
+      "description": "An empty list of shapes",
+      "valid": false,
+      "data": {
+        "$schema": "tag:sourcemeta.com,2026:table-format/2",
+        "title": "Order",
+        "language": "https://json-schema.org/draft/2020-12/schema",
+        "root": {
+          "kind": "string"
+        },
+        "shapes": []
+      }
+    },
+    {
+      "description": "A place that refers to a shape and is not a JSON Pointer",
+      "valid": false,
+      "data": {
+        "$schema": "tag:sourcemeta.com,2026:table-format/2",
+        "title": "Order",
+        "language": "https://json-schema.org/draft/2020-12/schema",
+        "root": {
+          "kind": "ref",
+          "ref": "party"
+        },
+        "shapes": [
+          {
+            "id": "party",
+            "name": "party",
+            "usedAt": [ "root" ],
+            "value": {
+              "kind": "string"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "description": "A pattern that is not a regular expression",
+      "valid": false,
+      "data": {
+        "$schema": "tag:sourcemeta.com,2026:table-format/2",
+        "title": "Order",
+        "language": "https://json-schema.org/draft/2020-12/schema",
+        "root": {
+          "kind": "string",
+          "pattern": "["
+        }
+      }
+    },
+    {
+      "description": "A pattern of property names that is not a regular expression",
+      "valid": false,
+      "data": {
+        "$schema": "tag:sourcemeta.com,2026:table-format/2",
+        "title": "Order",
+        "language": "https://json-schema.org/draft/2020-12/schema",
+        "root": {
+          "kind": "object",
+          "patternProperties": [
+            {
+              "pattern": "[",
+              "value": {
+                "kind": "string"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "description": "Exceptions that leave nothing out",
+      "valid": false,
+      "data": {
+        "$schema": "tag:sourcemeta.com,2026:table-format/2",
+        "title": "Order",
+        "language": "https://json-schema.org/draft/2020-12/schema",
+        "root": {
+          "kind": "object",
+          "patternProperties": [
+            {
+              "except": {},
+              "value": {
+                "kind": "string"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "description": "An exception that is not a regular expression",
+      "valid": false,
+      "data": {
+        "$schema": "tag:sourcemeta.com,2026:table-format/2",
+        "title": "Order",
+        "language": "https://json-schema.org/draft/2020-12/schema",
+        "root": {
+          "kind": "object",
+          "patternProperties": [
+            {
+              "except": {
+                "patterns": [ "(" ]
+              },
+              "value": {
+                "kind": "string"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "description": "An address that is not a URI reference",
+      "valid": false,
+      "data": {
+        "$schema": "tag:sourcemeta.com,2026:table-format/2",
+        "title": "Order",
+        "language": "https://json-schema.org/draft/2020-12/schema",
+        "root": {
+          "kind": "external",
+          "href": "two words"
+        }
+      }
+    },
+    {
+      "description": "A shape without an id",
+      "valid": false,
+      "data": {
+        "$schema": "tag:sourcemeta.com,2026:table-format/2",
+        "title": "Order",
+        "language": "https://json-schema.org/draft/2020-12/schema",
+        "root": {
+          "kind": "string"
+        },
+        "shapes": [
+          {
+            "name": "party",
+            "value": {
+              "kind": "string"
+            }
+          }
+        ]
+      }
+    }
+  ]
+}
