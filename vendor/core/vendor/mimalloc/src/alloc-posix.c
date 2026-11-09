@@ -35,6 +35,16 @@ mi_decl_nodiscard size_t mi_malloc_good_size(size_t size) mi_attr_noexcept {
   return mi_good_size(size);
 }
 
+mi_decl_nodiscard size_t mi_malloc_size(const void* p) mi_attr_noexcept {
+  if (!mi_is_in_heap_region(p)) return 0;
+  return mi_usable_size(p);
+}
+
+mi_decl_nodiscard size_t mi_malloc_usable_size(const void *p) mi_attr_noexcept {
+  if (!mi_is_in_heap_region(p)) return 0;
+  return mi_usable_size(p);
+}
+
 void mi_cfree(void* p) mi_attr_noexcept {
   if (mi_is_in_heap_region(p)) {
     mi_free(p);

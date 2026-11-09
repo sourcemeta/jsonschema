@@ -6,17 +6,18 @@
 
 #include <sourcemeta/core/uri.h>
 
-#include <algorithm>
-#include <array> // std::array
-#include <cstddef>
-#include <optional> // std::optional
-#include <string>   // std::string
-#include <tuple>    // std::tuple
-#include <unordered_map>
+#include <algorithm> // std::ranges::all_of, std::ranges::find, std::max, std::min
+#include <array>     // std::array
+#include <cstddef>   // std::size_t
+#include <cstdint>   // std::int64_t
+#include <limits>    // std::numeric_limits
+#include <optional>      // std::optional, std::nullopt
+#include <string>        // std::string
+#include <tuple>         // std::tuple
+#include <unordered_map> // std::unordered_map
 #include <unordered_set> // std::unordered_set
-#include <vector>
-
-#include "compile_helpers.h"
+#include <utility>       // std::move
+#include <vector>        // std::vector
 
 // TODO: Move all `FastValidation` conditional optimisations from the default
 // compilers here. Only the structural ones from Draft 4 seem to be missing
@@ -203,6 +204,84 @@ inline auto instruction_parent_location(const Instruction &instruction,
                    keyword_location.recompose()};
 }
 
+inline auto is_numeric_integer_type_check(const Instruction &instruction)
+    -> bool {
+  return (instruction.type == InstructionIndex::AssertionType ||
+          instruction.type == InstructionIndex::AssertionTypeStrict) &&
+         std::get<ValueType>(instruction.value) ==
+             sourcemeta::core::JSON::Type::Integer;
+}
+
+// A multiple of one admits exactly the integers, so it bounds a number the way
+// an integer type check does, without saying anything about the type
+inline auto is_numeric_integral_multiple_check(const Instruction &instruction)
+    -> bool {
+  if (instruction.type != InstructionIndex::AssertionDivisible) {
+    return false;
+  }
+
+  const auto &divisor{std::get<ValueJSON>(instruction.value)};
+  if (!divisor.is_integral()) {
+    return false;
+  }
+
+  // A real or decimal may spell an integer too large to represent, and such a
+  // divisor is never one, so a failed conversion just means no fusion
+  try {
+    return divisor.as_integer() == 1;
+  } catch (const sourcemeta::core::JSONIntegerRangeError &) {
+    return false;
+  }
+}
+
+inline auto is_numeric_bound_check(const Instruction &instruction) -> bool {
+  return instruction.type == InstructionIndex::AssertionGreaterEqual ||
+         instruction.type == InstructionIndex::AssertionGreater ||
+         instruction.type == InstructionIndex::AssertionLessEqual ||
+         instruction.type == InstructionIndex::AssertionLess;
+}
+
+inline auto merge_integer_bound(const Instruction &instruction,
+                                std::optional<std::int64_t> &minimum,
+                                std::optional<std::int64_t> &maximum) -> bool {
+  if (!is_numeric_bound_check(instruction)) {
+    return false;
+  }
+
+  const auto &bound{std::get<ValueJSON>(instruction.value)};
+  if (!bound.is_integer()) {
+    return false;
+  }
+
+  const auto value{bound.to_integer()};
+  if (instruction.type == InstructionIndex::AssertionGreaterEqual) {
+    minimum = minimum.has_value() ? std::max(minimum.value(), value) : value;
+  } else if (instruction.type == InstructionIndex::AssertionGreater) {
+    // Tightening the bound past the representable range would wrap around, so
+    // leave such a bound to the standalone instruction that can still hold it
+    if (value == std::numeric_limits<std::int64_t>::max()) {
+      return false;
+    }
+
+    const auto adjusted{value + 1};
+    minimum =
+        minimum.has_value() ? std::max(minimum.value(), adjusted) : adjusted;
+  } else if (instruction.type == InstructionIndex::AssertionLessEqual) {
+    maximum = maximum.has_value() ? std::min(maximum.value(), value) : value;
+  } else if (instruction.type == InstructionIndex::AssertionLess) {
+    if (value == std::numeric_limits<std::int64_t>::min()) {
+      return false;
+    }
+
+    const auto adjusted{value - 1};
+    maximum =
+        maximum.has_value() ? std::min(maximum.value(), adjusted) : adjusted;
+  } else {
+    return false;
+  }
+
+  return true;
+}
 inline auto fuse_numeric_bounds(Instructions &instructions,
                                 InstructionExtras &extra) -> bool {
   for (std::size_t type_index = 0; type_index < instructions.size();

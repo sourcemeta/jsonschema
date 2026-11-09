@@ -114,11 +114,13 @@ inline auto openapi_collect_security_schemes(const JSON &document,
   for (const auto &entry : schemes->as_object()) {
     walk.security_schemes.insert(entry.first, entry.hash);
 
-    // Which types admit a scope name is a question only 3.0 asks, so the
-    // reading that answers it is one only a document of that revision pays for
-    if (walk.version >= OpenAPIVersion::OPENAPI_3_1) {
-      continue;
-    }
+    // Which types admit a scope name is a question only 3.0 asks, as 3.0.4
+    // Section 4.7.30.1 has it that "For other security scheme types, the array
+    // MUST be empty" where 3.1.1 Section 4.8.30.1 lets the same array "contain
+    // a list of role names". What a scheme declares its type to be is the same
+    // fact in either revision though, and only the document a description
+    // begins at reads these, so answering it here rather than where it is
+    // asked is what lets a document of the earlier revision be held to it
 
     if (!entry.second.is_object()) {
       continue;

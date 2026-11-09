@@ -1,4 +1,4 @@
 vendorpull https://github.com/sourcemeta/vendorpull 1dcbac42809cf87cb5b045106b863e17ad84ba02
-core https://github.com/sourcemeta/core caaef8fc8200455d06f5e2253b433b6c3fbdfb4e
-blaze https://github.com/sourcemeta/blaze db923e9b95ec7bcb7b339669fed45b9f1a7f9569
+core https://github.com/sourcemeta/core 9703ef80a7c018958b9b82822972c627d73fe3e4
+blaze https://github.com/sourcemeta/blaze b7d1ff28e86ab611d7b36ba2988bd1cfd3d48d24
 ctrf https://github.com/ctrf-io/ctrf 93ea827d951390190171d37443bff169cf47c808

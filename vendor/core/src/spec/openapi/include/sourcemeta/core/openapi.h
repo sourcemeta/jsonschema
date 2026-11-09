@@ -10,6 +10,7 @@
 #include <sourcemeta/core/jsonschema.h>
 
 // NOLINTBEGIN(misc-include-cleaner)
+#include <sourcemeta/core/openapi_dependencies.h>
 #include <sourcemeta/core/openapi_error.h>
 #include <sourcemeta/core/openapi_types.h>
 // NOLINTEND(misc-include-cleaner)
@@ -427,10 +428,16 @@ public:
   /// dialect or base dialect cannot be settled at all throws
   /// sourcemeta::core::SchemaUnknownDialectError or
   /// sourcemeta::core::SchemaUnknownBaseDialectError
+  ///
+  /// A document that is not the one a description begins at resolves the
+  /// component and tag names it uses from the document that is, which is what
+  /// the entry frame is for. Pass the frame of that document to read this one
+  /// as part of the same description, and nothing to read it on its own
   OpenAPIFrame(
       const JSON &document, const SchemaWalker &walker,
       const SchemaResolver &resolver, const std::string_view default_base = "",
-      std::uint64_t max_locations = std::numeric_limits<std::uint64_t>::max());
+      std::uint64_t max_locations = std::numeric_limits<std::uint64_t>::max(),
+      const OpenAPIFrame *entry = nullptr);
 
   ~OpenAPIFrame();
 

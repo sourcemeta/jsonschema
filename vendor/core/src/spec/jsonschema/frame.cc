@@ -1281,16 +1281,20 @@ SchemaFrame::SchemaFrame(const Mode mode, const sourcemeta::core::JSON &root,
               continue;
             }
 
-            // The identifier that the top of the document carries resolved
-            // against the base the document was retrieved from already, so
-            // registering it from that base again would register the very
-            // same resource a second time. Where the document goes by no
-            // other base, that earlier registration is this one rather than a
-            // second copy of it, and skipping would leave the document as no
-            // resource at all. The name the caller gave is not one of those
-            // other bases, as the check above skips it in its own right
-            if (common_pointer_weak.empty() &&
-                base_string == this->cache_->default_base &&
+            // RFC 3986 Section 5.1 puts the base a document was retrieved
+            // from last, after whatever the document carries within itself,
+            // so an identifier resolves against it only where the document
+            // carries no base of its own. The identifier that the top of the
+            // document carries resolved against it already, and an identifier
+            // below the top resolves against the resource enclosing it, which
+            // JSON Schema 2020-12 Section 8.2.1 names as the one base either
+            // way. Registering from the retrieval base as well would name a
+            // resource that nothing resolves to. Where the document goes by
+            // no other base, that earlier registration is this one rather
+            // than a second copy of it, and skipping would leave the document
+            // as no resource at all. The name the caller gave is not one of
+            // those other bases, as the check above skips it in its own right
+            if (base_string == this->cache_->default_base &&
                 std::ranges::any_of(bases.first,
                                     [this, &default_id_canonical](
                                         const auto &candidate) -> bool {

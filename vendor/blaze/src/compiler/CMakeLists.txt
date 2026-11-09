@@ -3,7 +3,8 @@ sourcemeta_library(NAMESPACE sourcemeta PROJECT blaze NAME compiler
   PRIVATE_HEADERS error.h
   SOURCES
     compile.cc compile_json.cc
-    compile_helpers.h keyword_iterator.h postprocess.h message.h
+    compile_helpers.h postprocess.h message.h
+    upstream.h
     unevaluated.h
     default_compiler.cc
     default_compiler_2020_12.h
@@ -11,7 +12,7 @@ sourcemeta_library(NAMESPACE sourcemeta PROJECT blaze NAME compiler
     default_compiler_draft7.h
     default_compiler_draft6.h
     default_compiler_draft4.h
-    default_compiler_openapi.h)
+    default_compiler_draft3.h)
 
 if(BLAZE_INSTALL)
   sourcemeta_library_install(NAMESPACE sourcemeta PROJECT blaze NAME compiler)
