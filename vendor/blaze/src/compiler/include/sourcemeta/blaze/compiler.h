@@ -14,6 +14,7 @@
 #include <sourcemeta/core/jsonschema.h>
 #include <sourcemeta/core/uri.h>
 
+#include <cassert>       // assert
 #include <cstddef>       // std::size_t
 #include <cstdint>       // std::uint8_t, std::uint64_t
 #include <functional>    // std::function
@@ -76,25 +77,34 @@ struct DynamicContext {
   // NOLINTBEGIN(cppcoreguidelines-avoid-const-or-ref-data-members)
   /// The schema keyword
   const sourcemeta::core::JSON::String &keyword;
+  /// The value of the keyword, null in a context that names none
+  const sourcemeta::core::JSON *keyword_value{nullptr};
   /// The schema base keyword path
   const sourcemeta::core::WeakPointer &base_schema_location;
   /// The base instance location that the keyword must be evaluated to
   const sourcemeta::core::WeakPointer &base_instance_location;
   // NOLINTEND(cppcoreguidelines-avoid-const-or-ref-data-members)
+
+  /// What the keyword this context names is set to. Only a context built to
+  /// compile a keyword carries one
+  [[nodiscard]] auto value() const -> const sourcemeta::core::JSON & {
+    assert(this->keyword_value != nullptr);
+    return *this->keyword_value;
+  }
 };
 
 #if !defined(DOXYGEN)
 struct Context;
+struct KeywordContext;
 #endif
 
 /// @ingroup compiler
 /// A compiler is represented as a function that maps a keyword compiler
-/// contexts into a compiler template. You can provide your own to implement
+/// context into a compiler template. You can provide your own to implement
 /// your own keywords
 using Compiler =
     // TODO(C++23): Use std::move_only_function when available in libc++
-    std::function<Instructions(const Context &, const SchemaContext &,
-                               const DynamicContext &, const Instructions &)>;
+    std::function<Instructions(const KeywordContext &, const Instructions &)>;
 
 /// @ingroup evaluator
 /// Represents the mode of compilation
@@ -227,11 +237,71 @@ struct Context {
 };
 
 /// @ingroup compiler
+/// A global constant instance of the empty schema keyword, which is what a
+/// context that names no keyword carries
+const sourcemeta::core::JSON::String EMPTY_KEYWORD;
+
+/// @ingroup compiler
+/// Everything a keyword is compiled against: the compilation as a whole, the
+/// subschema that declares the keyword, and the keyword itself
+struct KeywordContext {
+  // NOLINTBEGIN(cppcoreguidelines-avoid-const-or-ref-data-members)
+  /// What holds for the entire compilation
+  const Context &global;
+  /// The subschema that the keyword belongs to
+  const SchemaContext &local;
+  // NOLINTEND(cppcoreguidelines-avoid-const-or-ref-data-members)
+  /// The keyword being compiled. Held by value, as the references it carries
+  /// point at storage that outlives any context derived from it
+  DynamicContext target;
+
+  /// The keyword itself
+  [[nodiscard]] auto keyword() const -> const sourcemeta::core::JSON::String & {
+    return this->target.keyword;
+  }
+
+  /// What the keyword is set to
+  [[nodiscard]] auto value() const -> const sourcemeta::core::JSON & {
+    return this->target.value();
+  }
+
+  /// The subschema that declares the keyword
+  [[nodiscard]] auto schema() const -> const sourcemeta::core::JSON & {
+    return this->local.schema;
+  }
+
+  /// The vocabularies in force where the keyword is declared
+  [[nodiscard]] auto vocabularies() const
+      -> const sourcemeta::core::SchemaVocabularies & {
+    return this->local.vocabularies;
+  }
+
+  /// The base URI of the subschema that declares the keyword
+  [[nodiscard]] auto base() const -> const sourcemeta::core::URI & {
+    return this->local.base;
+  }
+
+  /// The mode the whole schema is being compiled in
+  [[nodiscard]] auto mode() const -> Mode { return this->global.mode; }
+
+  /// The same subschema, addressed from where the keyword sits rather than
+  /// from the base, which is what an applicator compiles its children against
+  [[nodiscard]] auto relative() const -> KeywordContext {
+    return {
+        .global = this->global,
+        .local = this->local,
+        .target = {.keyword = EMPTY_KEYWORD,
+                   .base_schema_location = sourcemeta::core::EMPTY_WEAK_POINTER,
+                   .base_instance_location =
+                       sourcemeta::core::EMPTY_WEAK_POINTER}};
+  }
+};
+
+/// @ingroup compiler
 /// A default compiler that aims to implement every keyword for official JSON
 /// Schema dialects.
 auto SOURCEMETA_BLAZE_COMPILER_EXPORT default_schema_compiler(
-    const Context &, const SchemaContext &, const DynamicContext &,
-    const Instructions &) -> Instructions;
+    const KeywordContext &, const Instructions &) -> Instructions;
 
 /// @ingroup compiler
 ///
@@ -301,8 +371,7 @@ auto SOURCEMETA_BLAZE_COMPILER_EXPORT compile(
 /// directly, but instead as a building block for supporting applicators on
 /// compiler functions.
 auto SOURCEMETA_BLAZE_COMPILER_EXPORT
-compile(const Context &context, const SchemaContext &schema_context,
-        const DynamicContext &dynamic_context,
+compile(const KeywordContext &context,
         const sourcemeta::core::WeakPointer &schema_suffix,
         const sourcemeta::core::WeakPointer &instance_suffix =
             sourcemeta::core::EMPTY_WEAK_POINTER,

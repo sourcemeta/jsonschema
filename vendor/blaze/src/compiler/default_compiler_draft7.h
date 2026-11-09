@@ -5,29 +5,25 @@
 
 #include "compile_helpers.h"
 
-namespace internal {
-using namespace sourcemeta::blaze;
+namespace sourcemeta::blaze {
 
 // TODO: Don't generate `if` if neither `then` nor `else` is defined
-auto compiler_draft7_applicator_if(const Context &context,
-                                   const SchemaContext &schema_context,
-                                   const DynamicContext &dynamic_context,
+auto compiler_draft7_applicator_if(const KeywordContext &context,
                                    const Instructions &) -> Instructions {
   // `if`
-  Instructions children{compile(context, schema_context,
-                                relative_dynamic_context(),
+  Instructions children{compile(context.relative(),
                                 sourcemeta::core::EMPTY_WEAK_POINTER,
                                 sourcemeta::core::EMPTY_WEAK_POINTER)};
 
   // `then`
   std::size_t then_cursor{children.size()};
-  if (schema_context.schema.defines("then")) {
+  if (context.schema().defines("then")) {
     const auto destination{
-        to_uri(schema_context.relative_pointer.initial().concat(
+        to_uri(context.local.relative_pointer.initial().concat(
                    make_weak_pointer(KEYWORD_THEN)),
-               schema_context.base)
+               context.base())
             .recompose()};
-    assert(context.frame
+    assert(context.global.frame
                .location(sourcemeta::core::SchemaReferenceType::Static,
                          destination)
                .has_value());
@@ -38,43 +34,46 @@ auto compiler_draft7_applicator_if(const Context &context,
     // current schema resource on the evaluation path for dynamic anchor
     // resolution, as the omitted `LogicalCondition` instruction would have
     // otherwise done it
-    if (then_cursor == 0 && context.uses_dynamic_scopes) {
+    if (then_cursor == 0 && context.global.uses_dynamic_scopes) {
       Instructions substeps{
-          compile(context, schema_context, relative_dynamic_context(),
-                  sourcemeta::core::EMPTY_WEAK_POINTER,
+          compile(context.relative(), sourcemeta::core::EMPTY_WEAK_POINTER,
                   sourcemeta::core::EMPTY_WEAK_POINTER, destination)};
       if (substeps.empty()) {
         return children;
       }
 
-      const auto then_pointer{schema_context.relative_pointer.initial().concat(
+      const auto then_pointer{context.local.relative_pointer.initial().concat(
           make_weak_pointer(KEYWORD_THEN))};
       const SchemaContext then_schema_context{
           .relative_pointer = then_pointer,
-          .schema = schema_context.schema,
-          .vocabularies = schema_context.vocabularies,
-          .base = schema_context.base,
-          .is_property_name = schema_context.is_property_name};
-      return {make(
-          sourcemeta::blaze::InstructionIndex::LogicalAnd, context,
-          then_schema_context,
-          {.keyword = KEYWORD_THEN,
-           .base_schema_location = dynamic_context.base_schema_location,
-           .base_instance_location = dynamic_context.base_instance_location},
-          ValueNone{}, std::move(substeps))};
+          .schema = context.schema(),
+          .vocabularies = context.vocabularies(),
+          .base = context.base(),
+          .is_property_name = context.local.is_property_name};
+      const KeywordContext then_context{
+          .global = context.global,
+          .local = then_schema_context,
+          .target = {
+              .keyword = KEYWORD_THEN,
+              .base_schema_location = context.target.base_schema_location,
+              .base_instance_location = context.target.base_instance_location}};
+      return {make(InstructionIndex::LogicalAnd, then_context, ValueNone{},
+                   std::move(substeps))};
     }
 
     // When hoisting, the `then` children must carry the instance navigation
     // that the omitted `LogicalCondition` wrapper would have performed
-    DynamicContext new_dynamic_context{
-        .keyword = KEYWORD_THEN,
-        .base_schema_location = dynamic_context.base_schema_location,
-        .base_instance_location = then_cursor == 0
-                                      ? dynamic_context.base_instance_location
-                                      : sourcemeta::core::EMPTY_WEAK_POINTER};
+    const KeywordContext then_context{
+        .global = context.global,
+        .local = context.local,
+        .target = {.keyword = KEYWORD_THEN,
+                   .base_schema_location = context.target.base_schema_location,
+                   .base_instance_location =
+                       then_cursor == 0
+                           ? context.target.base_instance_location
+                           : sourcemeta::core::EMPTY_WEAK_POINTER}};
     for (auto &&step :
-         compile(context, schema_context, new_dynamic_context,
-                 sourcemeta::core::EMPTY_WEAK_POINTER,
+         compile(then_context, sourcemeta::core::EMPTY_WEAK_POINTER,
                  sourcemeta::core::EMPTY_WEAK_POINTER, destination)) {
       children.push_back(std::move(step));
     }
@@ -95,39 +94,39 @@ auto compiler_draft7_applicator_if(const Context &context,
 
   // `else`
   std::size_t else_cursor{0};
-  if (schema_context.schema.defines("else")) {
+  if (context.schema().defines("else")) {
     else_cursor = children.size();
     const auto destination{
-        to_uri(schema_context.relative_pointer.initial().concat(
+        to_uri(context.local.relative_pointer.initial().concat(
                    make_weak_pointer(KEYWORD_ELSE)),
-               schema_context.base)
+               context.base())
             .recompose()};
-    assert(context.frame
+    assert(context.global.frame
                .location(sourcemeta::core::SchemaReferenceType::Static,
                          destination)
                .has_value());
-    DynamicContext new_dynamic_context{
-        .keyword = KEYWORD_ELSE,
-        .base_schema_location = dynamic_context.base_schema_location,
-        .base_instance_location = sourcemeta::core::EMPTY_WEAK_POINTER};
+    const KeywordContext else_context{
+        .global = context.global,
+        .local = context.local,
+        .target = {.keyword = KEYWORD_ELSE,
+                   .base_schema_location = context.target.base_schema_location,
+                   .base_instance_location =
+                       sourcemeta::core::EMPTY_WEAK_POINTER}};
     for (auto &&step :
-         compile(context, schema_context, new_dynamic_context,
-                 sourcemeta::core::EMPTY_WEAK_POINTER,
+         compile(else_context, sourcemeta::core::EMPTY_WEAK_POINTER,
                  sourcemeta::core::EMPTY_WEAK_POINTER, destination)) {
       children.push_back(std::move(step));
     }
   }
 
-  return {make(sourcemeta::blaze::InstructionIndex::LogicalCondition, context,
-               schema_context, dynamic_context,
+  return {make(InstructionIndex::LogicalCondition, context,
                ValueIndexPair{then_cursor, else_cursor}, std::move(children))};
 }
 
 // We handle `then` as part of `if`
 // TODO: Stop collapsing this keyword on exhaustive mode for debuggability
 // purposes
-auto compiler_draft7_applicator_then(const Context &, const SchemaContext &,
-                                     const DynamicContext &,
+auto compiler_draft7_applicator_then(const KeywordContext &,
                                      const Instructions &) -> Instructions {
   return {};
 }
@@ -135,11 +134,10 @@ auto compiler_draft7_applicator_then(const Context &, const SchemaContext &,
 // We handle `else` as part of `if`
 // TODO: Stop collapsing this keyword on exhaustive mode for debuggability
 // purposes
-auto compiler_draft7_applicator_else(const Context &, const SchemaContext &,
-                                     const DynamicContext &,
+auto compiler_draft7_applicator_else(const KeywordContext &,
                                      const Instructions &) -> Instructions {
   return {};
 }
 
-} // namespace internal
+} // namespace sourcemeta::blaze
 #endif

@@ -49,9 +49,11 @@ constexpr auto OPENAPI_HASH_PROPERTY_NAME{JSON::Object::hash("propertyName"sv)};
 // "schema names or URI references", so a value that holds up as neither is one
 // nothing can read, which is what every other field this specification types
 // as a URI is held to as well
-inline auto openapi_record_discriminator(
-    std::vector<OpenAPIDiscriminator> &result, const JSON::String &base,
-    Pointer origin, const JSON &value, const JSON::String &scope) -> void {
+inline auto
+openapi_record_discriminator(std::vector<OpenAPIDiscriminator> &result,
+                             const JSON::String &base, Pointer origin,
+                             const JSON &value, const JSON::String &scope,
+                             const JSON::String *names) -> void {
   if (!value.is_string()) {
     throw OpenAPIError{
         "A Discriminator Object mapping must name a schema with a string", base,
@@ -68,9 +70,15 @@ inline auto openapi_record_discriminator(
     named.push_back(JSON::String{"components"});
     named.push_back(JSON::String{"schemas"});
     named.push_back(JSON::String{value.to_string()});
+    // Which document holds the Components Object a name stands for is the
+    // description's to say rather than this document's, so where the caller
+    // names that document this resolves there. The URI form below is the
+    // alternative Section 4.3.3 tables for it, and a URI reference resolves
+    // against whatever writes it, so that one stays with this document
+    const auto &holder{names == nullptr ? base : *names};
     result.push_back({.origin = std::move(origin),
-                      .destination = openapi_location_uri(base, named),
-                      .scope = base});
+                      .destination = openapi_location_uri(holder, named),
+                      .scope = holder});
     return;
   }
 
@@ -94,19 +102,18 @@ inline auto openapi_record_discriminator(
 // Section 4.6 has a relative reference of a Schema Object resolve against
 // "the nearest parent `$id`", which is the base that framing the schemas
 // settles for wherever the Discriminator Object sits
-inline auto
-openapi_discriminators(const JSON &document, const SchemaFrame &schemas,
-                       const JSON::String &base, const SchemaWalker &walker,
-                       const SchemaResolver &resolver)
-    -> std::vector<OpenAPIDiscriminator> {
+inline auto openapi_discriminators(
+    const JSON &document, const SchemaFrame &schemas, const JSON::String &base,
+    const SchemaWalker &walker, const SchemaResolver &resolver,
+    const JSON::String *names = nullptr) -> std::vector<OpenAPIDiscriminator> {
   std::vector<OpenAPIDiscriminator> result;
   // A schema that declares an identifier of its own is registered under every
   // base it can be reached by, and what it holds is the one thing whichever
   // way it is reached
   std::set<JSON::String> seen;
   schemas.for_each_subschema([&document, &schemas, &base, &result, &seen,
-                              &walker,
-                              &resolver](const auto &location) -> void {
+                              &walker, &resolver,
+                              names](const auto &location) -> void {
     const auto *schema{try_get(document, location.pointer)};
     if (schema == nullptr || !schema->is_object()) {
       return;
@@ -178,7 +185,7 @@ openapi_discriminators(const JSON &document, const SchemaFrame &schemas,
 
       for (const auto &entry : mapping->as_object()) {
         openapi_record_discriminator(result, base, mapped.concat(entry.first),
-                                     entry.second, scope);
+                                     entry.second, scope, names);
       }
     }
 
@@ -201,7 +208,7 @@ openapi_discriminators(const JSON &document, const SchemaFrame &schemas,
     if (fallback != nullptr) {
       openapi_record_discriminator(
           result, base, origin.concat(JSON::String{"defaultMapping"}),
-          *fallback, scope);
+          *fallback, scope, names);
     }
   });
 

@@ -770,6 +770,9 @@ struct OpenAPIFrame::Internal {
   // hold rather than one the shell around them does
   std::vector<OpenAPIDiscriminator> discriminators;
   OpenAPIFrame::References security_references;
+  // The component and tag names this document put in scope, which a document
+  // read as part of the same description resolves its own names from
+  OpenAPIWalk names;
   // Reading inside a Schema Object is the business of whatever understands
   // JSON Schema, so this is that pass over every Schema Object position at
   // once. It is declared last so that it is destroyed first, as it holds
@@ -782,13 +785,20 @@ struct OpenAPIFrame::Internal {
 OpenAPIFrame::OpenAPIFrame(const JSON &document, const SchemaWalker &walker,
                            const SchemaResolver &resolver,
                            const std::string_view default_base,
-                           const std::uint64_t max_locations)
+                           const std::uint64_t max_locations,
+                           const OpenAPIFrame *entry)
     : internal_{std::make_unique<Internal>()} {
   auto walk{sourcemeta::core::openapi_analyse(
       document, sourcemeta::core::openapi_canonical_base(default_base),
-      max_locations)};
+      max_locations, entry == nullptr ? nullptr : &entry->internal_->names)};
   this->internal_->version = walk.version;
   this->internal_->info = walk.info;
+  this->internal_->names.base = walk.base;
+  this->internal_->names.security_schemes = walk.security_schemes;
+  this->internal_->names.security_schemes_without_scopes =
+      walk.security_schemes_without_scopes;
+  this->internal_->names.tags = walk.tags;
+  this->internal_->names.tag_names = walk.tag_names;
   // A frame stands alone when everything it references is inside it, which is
   // what a caller asks before deciding whether it has the whole description.
   // Which references leave it is what making it whole comes down to, so each
@@ -897,9 +907,14 @@ OpenAPIFrame::OpenAPIFrame(const JSON &document, const SchemaWalker &walker,
   // description makes. It is the one of them that a schema frame does not
   // read, as the keyword it sits under belongs to the dialect this
   // specification publishes rather than to JSON Schema
-  this->internal_->discriminators =
-      openapi_discriminators(document, *(this->internal_->schemas),
-                             this->internal_->base, walker, resolver);
+  //
+  // The name form of a `mapping` stands for a schema the Components Object of
+  // the description holds, which Section 4.3.3 resolves from the entry
+  // document, so where this reads a document as part of a description the base
+  // a name resolves against is that document's rather than this one's
+  this->internal_->discriminators = openapi_discriminators(
+      document, *(this->internal_->schemas), this->internal_->base, walker,
+      resolver, entry == nullptr ? nullptr : &entry->internal_->names.base);
   auto every_mapping_lands{true};
   for (auto &discriminator : this->internal_->discriminators) {
     discriminator.dangling = !openapi_discriminator_lands(
@@ -921,15 +936,28 @@ OpenAPIFrame::OpenAPIFrame(const JSON &document, const SchemaWalker &walker,
   // unresolvable". A description we do not hold in full is one we cannot say
   // that of, so these wait until the whole of it is settled, which counts what
   // the Schema Objects reach for as much as what the shell around them does
-  if (this->internal_->standalone) {
+  //
+  // A document read as part of a description that another document begins is
+  // one we do not hold in full either, however little of its own it reaches
+  // for. Section 4.8.20 resolves such an identifier "within the scope of the
+  // OpenAPI Description (OAD)", and Section 3.1 makes that scope the entry
+  // document "and any/all of its referenced documents", so what this one
+  // carries is no measure of it
+  if (this->internal_->standalone && !walk.referenced) {
     sourcemeta::core::openapi_check_operation_id_links(
         walk, this->internal_->locations);
   }
 
   // A tag the description declares elsewhere is one this cannot say is
-  // missing, for the same reason as the identifiers above
+  // missing, for the same reason as the identifiers above. A document read as
+  // part of a description another begins contributes the edge a parent makes
+  // but none of the names that answer it, as 3.2.1 Section 4.22.1 has the tag
+  // it names "MUST exist in the API description" and Appendix G.3 tables every
+  // connection a reader may resolve from the entry document instead without
+  // listing this one
   sourcemeta::core::openapi_check_tag_parents(walk, this->internal_->locations,
-                                              this->internal_->standalone);
+                                              this->internal_->standalone &&
+                                                  !walk.referenced);
 }
 
 OpenAPIFrame::~OpenAPIFrame() = default;

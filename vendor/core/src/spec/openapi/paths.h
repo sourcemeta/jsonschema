@@ -176,9 +176,11 @@ inline auto openapi_check_paths(const JSON &document, OpenAPIWalk &walk)
 
     openapi_check_path_item(entry.second, location, walk);
 
-    // Section 4.3.3: "only the entry document's Paths Object contributes URLs
-    // to the described API", and the document framed is that entry document,
-    // so every path it writes is an endpoint
+    // Every path of the document framed is written down here, including where
+    // that document is one a description reaches rather than the one it begins
+    // at. Section 4.3.3 has it that "only the entry document's Paths Object
+    // contributes URLs to the described API", so a caller reading a referenced
+    // document leaves these out of the API it describes
     walk.endpoints.push_back(
         {.kind = OpenAPIOperationKind::Path,
          .path = entry.first,
