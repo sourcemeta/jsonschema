@@ -265,14 +265,14 @@ auto bundle_target_schema(
     const sourcemeta::core::JSON &schema,
     const sourcemeta::core::SchemaResolver &schema_resolver,
     const sourcemeta::jsonschema::CustomResolver &custom_resolver,
-    const std::string &dialect, const sourcemeta::core::JSON::String &base)
-    -> sourcemeta::core::JSON {
+    const std::string &dialect, const sourcemeta::core::JSON::String &base,
+    const std::filesystem::path &fallback) -> sourcemeta::core::JSON {
   try {
     return sourcemeta::core::schema_bundle(
         schema, sourcemeta::core::schema_walker, schema_resolver, dialect, base,
         sourcemeta::jsonschema::bundle_references_options());
   } catch (const sourcemeta::core::SchemaContainerError &error) {
-    custom_resolver.report_schema_container(base, error);
+    custom_resolver.report_schema_container(base, fallback, error);
   }
 }
 
@@ -282,13 +282,14 @@ auto bundle_target_description(
     const sourcemeta::core::SchemaResolver &schema_resolver,
     const sourcemeta::core::OpenAPIResolver &openapi_resolver,
     const sourcemeta::jsonschema::CustomResolver &custom_resolver,
-    const std::string &default_base) -> void {
+    const std::string &default_base, const std::filesystem::path &fallback)
+    -> void {
   try {
     sourcemeta::core::openapi_bundle(document, sourcemeta::core::schema_walker,
                                      schema_resolver, openapi_resolver,
                                      {.default_base = default_base});
   } catch (const sourcemeta::core::SchemaContainerError &error) {
-    custom_resolver.report_schema_container(default_base, error);
+    custom_resolver.report_schema_container(default_base, fallback, error);
   }
 }
 
@@ -300,16 +301,17 @@ auto resolve_base(const sourcemeta::core::SchemaResolver &schema_resolver,
                   const sourcemeta::core::OpenAPIResolver &openapi_resolver,
                   sourcemeta::jsonschema::CustomResolver &custom_resolver,
                   const std::string &dialect,
-                  const sourcemeta::core::JSON::String &base)
-    -> TestTargets::Entry {
+                  const sourcemeta::core::JSON::String &base,
+                  const std::filesystem::path &fallback) -> TestTargets::Entry {
   // The two resolvers are strictly separated, so a description is never
   // reported as a schema and the other way around. Asking for a schema first
   // still sorts whatever a fetch turns up into the right one of the two, so a
   // description is read once however it got here
   const auto schema{schema_resolver(base)};
   if (schema.has_value()) {
-    auto document{std::make_unique<sourcemeta::core::JSON>(bundle_target_schema(
-        schema.value(), schema_resolver, custom_resolver, dialect, base))};
+    auto document{std::make_unique<sourcemeta::core::JSON>(
+        bundle_target_schema(schema.value(), schema_resolver, custom_resolver,
+                             dialect, base, fallback))};
 
     auto frame{std::make_unique<sourcemeta::core::SchemaFrame>(
         sourcemeta::core::SchemaFrame::Mode::References, *document,
@@ -340,7 +342,7 @@ auto resolve_base(const sourcemeta::core::SchemaResolver &schema_resolver,
   const auto &default_base{retrieval.has_value() ? retrieval.value() : base};
 
   bundle_target_description(*document, schema_resolver, openapi_resolver,
-                            custom_resolver, default_base);
+                            custom_resolver, default_base, fallback);
 
   auto frame{std::make_unique<sourcemeta::core::OpenAPIFrame>(
       *document, sourcemeta::core::schema_walker, schema_resolver,
@@ -356,7 +358,8 @@ auto resolve_test_target(
     const sourcemeta::core::OpenAPIResolver &openapi_resolver,
     sourcemeta::jsonschema::CustomResolver &custom_resolver,
     const std::string &dialect, const sourcemeta::core::JSON::String &target,
-    TestTargets &targets) -> sourcemeta::blaze::TestTarget {
+    const std::filesystem::path &fallback, TestTargets &targets)
+    -> sourcemeta::blaze::TestTarget {
   // RFC 3986 Section 3.5 makes a fragment address a place within a resource
   // rather than a resource of its own, so what the target names is looked up
   // under the base that precedes it
@@ -366,8 +369,9 @@ auto resolve_test_target(
   auto match{targets.bases.find(base)};
   if (match == targets.bases.cend()) {
     match = targets.bases
-                .emplace(base, resolve_base(schema_resolver, openapi_resolver,
-                                            custom_resolver, dialect, base))
+                .emplace(base,
+                         resolve_base(schema_resolver, openapi_resolver,
+                                      custom_resolver, dialect, base, fallback))
                 .first;
   }
 
@@ -403,9 +407,10 @@ auto parse_test_suite(const sourcemeta::jsonschema::InputJSON &entry,
         entry.from_stdin ? std::filesystem::current_path()
                          : entry.resolution_base.parent_path(),
         [&schema_resolver, &openapi_resolver, &custom_resolver, &dialect,
-         &targets](const sourcemeta::core::JSON::String &target) {
+         &entry, &targets](const sourcemeta::core::JSON::String &target) {
           return resolve_test_target(schema_resolver, openapi_resolver,
-                                     custom_resolver, dialect, target, targets);
+                                     custom_resolver, dialect, target,
+                                     entry.resolution_base, targets);
         },
         schema_resolver, sourcemeta::core::schema_walker,
         sourcemeta::blaze::default_schema_compiler, tweaks);
