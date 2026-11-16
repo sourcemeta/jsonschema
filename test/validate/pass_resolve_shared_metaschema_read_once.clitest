@@ -1,0 +1,77 @@
+MAKE DIRECTORY schemas
+
+WRITE schemas/meta.json UNTIL EOF
+{
+  "$schema": "https://json-schema.org/draft/2019-09/schema",
+  "$id": "https://example.com/meta",
+  "$vocabulary": {
+    "https://json-schema.org/draft/2019-09/vocab/core": true,
+    "https://json-schema.org/draft/2019-09/vocab/applicator": true,
+    "https://json-schema.org/draft/2019-09/vocab/validation": true
+  }
+}
+EOF
+
+WRITE schemas/s1.json UNTIL EOF
+{
+  "$schema": "https://example.com/meta",
+  "$id": "https://example.com/s1",
+  "type": "string"
+}
+EOF
+
+WRITE schemas/s2.json UNTIL EOF
+{
+  "$schema": "https://example.com/meta",
+  "$id": "https://example.com/s2",
+  "type": "string"
+}
+EOF
+
+WRITE schemas/s3.json UNTIL EOF
+{
+  "$schema": "https://example.com/meta",
+  "$id": "https://example.com/s3",
+  "type": "string"
+}
+EOF
+
+WRITE schema.json UNTIL EOF
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "allOf": [
+    { "$ref": "https://example.com/s1" },
+    { "$ref": "https://example.com/s2" },
+    { "$ref": "https://example.com/s3" }
+  ]
+}
+EOF
+
+WRITE instance.json UNTIL EOF
+"hello"
+EOF
+
+RUN validate schema.json instance.json --resolve schemas --debug STDIN /dev/null IN . INTO result_0.txt EXPECTING 0
+
+REPLACE $CWD_URI WITH '[CWD_URI]' IN result_0.txt
+REPLACE $CWD WITH '[CWD]' IN result_0.txt
+
+WRITE expected_0.txt UNTIL EOF
+2> debug: Detecting schema resources from file: [CWD]/schemas/meta.json
+2> debug: Importing schema into the resolution context: [CWD_URI]/schemas/meta.json
+2> debug: Importing schema into the resolution context: https://example.com/meta
+2> debug: Detecting schema resources from file: [CWD]/schemas/s1.json
+2> debug: Importing schema into the resolution context: [CWD_URI]/schemas/s1.json
+2> debug: Importing schema into the resolution context: https://example.com/s1
+2> debug: Detecting schema resources from file: [CWD]/schemas/s2.json
+2> debug: Importing schema into the resolution context: [CWD_URI]/schemas/s2.json
+2> debug: Importing schema into the resolution context: https://example.com/s2
+2> debug: Detecting schema resources from file: [CWD]/schemas/s3.json
+2> debug: Importing schema into the resolution context: [CWD_URI]/schemas/s3.json
+2> debug: Importing schema into the resolution context: https://example.com/s3
+2> ok: instance.json
+2>
+2> 1 validated, 1 passed, 0 failed
+EOF
+
+COMPARE result_0.txt AGAINST expected_0.txt
