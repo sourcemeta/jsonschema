@@ -96,17 +96,21 @@ auto URI::is_localhost() const -> bool {
   return equals_ignore_case(host.substr(host.size() - NAME.size()), NAME);
 }
 
+// RFC 3986 Section 3.2 writes `authority = [ userinfo "@" ] host [ ":" port
+// ]`, so a userinfo names an authority on its own and has to be asked about.
+// A port is only ever read inside an authority, whose host is always recorded
+// even when it is empty, so the host answers for the port as well
+
 auto URI::is_fragment_only() const -> bool {
-  return !this->scheme().has_value() && !this->host().has_value() &&
-         !this->port().has_value() && !this->path().has_value() &&
-         this->fragment().has_value() && !this->query().has_value();
+  return !this->scheme().has_value() && !this->userinfo().has_value() &&
+         !this->host().has_value() && !this->path().has_value() &&
+         !this->query().has_value() && this->fragment().has_value();
 }
 
 auto URI::empty() const -> bool {
   return !this->path_.has_value() && !this->userinfo_.has_value() &&
-         !this->host_.has_value() && !this->port_.has_value() &&
-         !this->scheme_.has_value() && !this->fragment_.has_value() &&
-         !this->query_.has_value();
+         !this->host_.has_value() && !this->scheme_.has_value() &&
+         !this->fragment_.has_value() && !this->query_.has_value();
 }
 
 auto URI::scheme() const -> std::optional<std::string_view> {

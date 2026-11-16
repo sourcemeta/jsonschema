@@ -20,9 +20,11 @@ namespace sourcemeta::core {
 
 /// @ingroup jsonschema
 ///
-/// A reference that a schema makes to a schema of another document. Every
-/// member of this points into something that analysis owns for no longer than
-/// the call that reports it, so a callback that keeps any of them past its own
+/// A reference that a schema makes to a schema of another document. Several
+/// of them may name one document, as what is reported is where a reference
+/// sits rather than what analysis had to fetch. Whatever a member of this
+/// carries points into something that analysis owns for no longer than the
+/// call that reports it, so a callback that keeps any of them past its own
 /// return has to copy them out
 struct SchemaDependency {
   /// The identifier that the document making the reference goes by, which for
@@ -34,8 +36,12 @@ struct SchemaDependency {
   const sourcemeta::core::WeakPointer &pointer;
   /// The identifier of the document that the reference leads to
   std::string_view destination;
-  /// The schema that the identifier was resolved to
-  const sourcemeta::core::JSON &document;
+  /// The schema that the identifier was resolved to, which is there only where
+  /// this is the reference that had analysis resolve it. Analysis lets go of
+  /// what it read as soon as it is done with it, so a reference that reaches a
+  /// document it already read, or that names what the caller says it holds, or
+  /// that nothing answers for yet, carries nothing here
+  const sourcemeta::core::JSON *document;
 };
 
 /// @ingroup jsonschema
@@ -53,6 +59,8 @@ struct SchemaDependenciesOptions {
   using AccountedPredicate = std::function<bool(std::string_view)>;
   /// A callback to report every URI that analysis comes to account for
   using AccountedCallback = std::function<void(std::string_view)>;
+  /// A callback to report every reference that nothing came to answer for
+  using UnresolvedCallback = std::function<void(const SchemaDependency &)>;
 
   /// The dialect to assume for a schema that declares none
   std::string_view default_dialect{};
@@ -87,12 +95,22 @@ struct SchemaDependenciesOptions {
   /// Whether the caller already accounts for a URI, which analysis asks
   /// before reading the document a reference names and again before deciding
   /// that a reference leads nowhere. Answering yes for one keeps the document
-  /// it names from being either reported or read, so a caller answers for
-  /// what it holds rather than for what it would rather not hear about. A
+  /// it names from being fetched or read, while the references naming it are
+  /// reported as any other, carrying nothing to fetch, so a caller answers for
+  /// what it holds rather than for what it would rather analysis left alone. A
   /// dialect that a document declares is asked of the resolver by the framing
   /// that reading takes, which happens before any of this, so answering yes
   /// for one does not keep it from being resolved
   AccountedPredicate accounted{};
+  /// Reports every reference that nothing came to answer for, each of them
+  /// where it sits, just before analysis ends over the first of them. The
+  /// error that ends analysis names one of those references and nothing of
+  /// the rest, and analysis lets go of all of them as it unwinds, so this is
+  /// the only place they can be read. A caller that walks several documents of
+  /// one span wants them, as it may still come to hold what they name.
+  /// Analysis that ends over anything else reports nothing here, as whatever
+  /// it reached for then is no reference of a document
+  UnresolvedCallback unresolved{};
   /// Reports every URI that analysis comes to account for, whether it is one
   /// a dependency was reported for or one a document it read answers to of
   /// its own. A caller that walks several documents of one span keeps what
@@ -104,11 +122,20 @@ struct SchemaDependenciesOptions {
 
 /// @ingroup jsonschema
 ///
-/// This function reports every other document that a JSON Schema reaches,
-/// transitively, each of them once. A document that another one already
-/// carries within itself is not one of them. Official schemas are reported
-/// when a reference names them and left out when a dialect declaration does,
-/// and neither is traversed into. For example:
+/// This function reports every reference that a JSON Schema makes to another
+/// document, transitively, so a document that several references name is
+/// reported once for each of them and a caller wanting one edge per document
+/// takes it from there. Only the reference that had analysis resolve a
+/// document carries it, which leaves a reference naming what another document
+/// carries within itself, one reaching a document already read, and one naming
+/// what the caller says it holds, reported with nothing to fetch. A reference
+/// that nothing answers for when it is read leads somewhere only once a
+/// document that arrived later settles it, so that one is reported after the
+/// references of every document read in between, and one that nothing ever
+/// answers for is no dependency at all, which the options above hand over
+/// separately. Official schemas are reported when a reference names them and
+/// left out when a dialect declaration does, and neither is traversed into.
+/// For example:
 ///
 /// ```cpp
 /// #include <sourcemeta/core/json.h>
@@ -153,7 +180,7 @@ struct SchemaDependenciesOptions {
 /// within the document making it ends analysis. Where the paths above confine
 /// analysis to part of a document, what the rest of that document holds is
 /// none of its business, so a reference into the part left out is neither
-/// followed nor complained about.
+/// followed, reported, nor complained about.
 SOURCEMETA_CORE_JSONSCHEMA_EXPORT
 auto schema_dependencies(const sourcemeta::core::JSON &schema,
                          const SchemaWalker &walker,

@@ -149,15 +149,21 @@ inline auto openapi_embedded_uri_fields(const OpenAPIObjectKind kind) noexcept
     case OpenAPIObjectKind::Responses:
     case OpenAPIObjectKind::Tag:
     case OpenAPIObjectKind::OAuthFlows:
+      // Clang keeps an arm for the value that never arrives and counts it as
+      // one that nothing took, so the last enumerator is written as the default
+      // there, while the compilers reading a case label are the ones holding
+      // this switch to naming them all
+#if defined(__clang__)
+    default:
+#else
     case OpenAPIObjectKind::SecurityRequirement:
-      return {};
-  }
-
-    // Clang settles that no other value arrives, so only GCC and MSVC need to
-    // be told that the end of this function is never reached
-#if !defined(__clang__)
-  std::unreachable();
 #endif
+      return {};
+#if !defined(__clang__)
+    default:
+      std::unreachable();
+#endif
+  }
 }
 
 /// What a Path Item Object declares that the endpoints reaching it need. Two
@@ -693,8 +699,8 @@ inline auto openapi_error_at(const OpenAPIFrame::Locations &locations,
                              const JSON::StringView field = {})
     -> OpenAPIError {
   const auto match{locations.find(location)};
-  auto pointer{match == locations.cend() ? EMPTY_POINTER
-                                         : match->second.pointer};
+  assert(match != locations.cend());
+  auto pointer{match->second.pointer};
   if (!field.empty()) {
     pointer = pointer.concat(JSON::String{field});
   }

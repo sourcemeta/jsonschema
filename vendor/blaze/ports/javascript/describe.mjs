@@ -24,7 +24,7 @@ import {
   ASSERTION_PROPERTY_TYPE, ASSERTION_PROPERTY_TYPE_EVALUATE,
   ASSERTION_PROPERTY_TYPE_STRICT, ASSERTION_PROPERTY_TYPE_STRICT_EVALUATE,
   ASSERTION_PROPERTY_TYPE_STRICT_ANY, ASSERTION_PROPERTY_TYPE_STRICT_ANY_EVALUATE,
-  ASSERTION_PROPERTY_EQUAL,
+  ASSERTION_PROPERTY_EQUAL, ASSERTION_PROPERTY_EQUALS_ANY_STRING_HASH,
   ASSERTION_ARRAY_PREFIX, ASSERTION_ARRAY_PREFIX_EVALUATE,
   ASSERTION_OBJECT_PROPERTIES_SIMPLE,
   ANNOTATION_EMIT, ANNOTATION_EMIT_WRAPPED, ANNOTATION_TO_PARENT, ANNOTATION_BASENAME_TO_PARENT,
@@ -797,7 +797,8 @@ export function describe(valid, instruction, evaluatePath,
                            formatList(sorted.map(stringifyValue), 'and') ]);
   }
 
-  if (opcode === ASSERTION_EQUALS_ANY_STRING_HASH) {
+  if (opcode === ASSERTION_EQUALS_ANY_STRING_HASH ||
+      opcode === ASSERTION_PROPERTY_EQUALS_ANY_STRING_HASH) {
     return renderMessage(instruction.message,
                          [ describeSubject(property, instanceLocation,
                                            target, true) ]);

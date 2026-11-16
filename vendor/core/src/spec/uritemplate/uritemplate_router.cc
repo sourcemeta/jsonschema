@@ -3,11 +3,12 @@
 
 #include "helpers.h"
 
-#include <algorithm> // std::ranges::lower_bound, std::ranges::find_if
-#include <cassert>   // assert
-#include <cstdint>   // std::uint8_t
-#include <limits>    // std::numeric_limits
-#include <tuple>     // std::get, std::make_tuple
+#include <algorithm> // std::ranges::lower_bound, std::ranges::find_if, std::ranges::count
+#include <cassert> // assert
+#include <cstdint> // std::uint8_t
+#include <limits>  // std::numeric_limits
+#include <tuple>   // std::get, std::make_tuple
+#include <utility> // std::cmp_greater
 
 namespace sourcemeta::core {
 
@@ -309,6 +310,17 @@ auto URITemplateRouter::add(const std::string_view uri_template,
                                                uri_template};
   }
 
+  // Every expression the template holds becomes a variable of its own, and the
+  // index a match reports can tell no more of them apart than the ceiling
+  // names. Counting them before anything is written is what keeps a refusal
+  // from leaving a prefix of the template standing in the trie, which nothing
+  // would answer to and which would still be described
+  if (std::cmp_greater(std::ranges::count(uri_template, '{'),
+                       URITEMPLATE_ROUTER_MAXIMUM_VARIABLES)) {
+    throw URITemplateRouterInvalidSegmentError{
+        "Too many variables in the template", uri_template};
+  }
+
   Node *current = nullptr;
   if (!this->base_path_.empty()) {
     const char *base_position = this->base_path_.data() + 1;
@@ -373,7 +385,9 @@ auto URITemplateRouter::add(const std::string_view uri_template,
   const char *position = uri_template.data();
   const char *const end = position + uri_template.size();
 
-  if (position < end && *position == '/') {
+  // An empty template is answered for above, so there is always a character
+  // here to look at
+  if (*position == '/') {
     ++position;
   }
 
@@ -412,23 +426,21 @@ auto URITemplateRouter::add(const std::string_view uri_template,
 
       NodeType type = NodeType::Variable;
       bool path_segment_operator = false;
-      if (*position == '+') {
-        type = NodeType::Expansion;
+      if (is_operator(*position)) {
+        if (*position == '+') {
+          type = NodeType::Expansion;
+        } else if (*position == '/') {
+          path_segment_operator = true;
+        } else {
+          throw URITemplateRouterInvalidSegmentError{
+              "Unsupported URI Template operator", expression};
+        }
+
         ++position;
         if (position >= end || *position == '}') {
           throw URITemplateRouterInvalidSegmentError{"Empty variable name",
                                                      expression};
         }
-      } else if (*position == '/') {
-        path_segment_operator = true;
-        ++position;
-        if (position >= end || *position == '}') {
-          throw URITemplateRouterInvalidSegmentError{"Empty variable name",
-                                                     expression};
-        }
-      } else if (is_operator(*position) && *position != '+') {
-        throw URITemplateRouterInvalidSegmentError{
-            "Unsupported URI Template operator", expression};
       } else if (is_reserved_operator(*position)) {
         throw URITemplateRouterInvalidSegmentError{
             "Reserved URI Template operator", expression};
@@ -578,7 +590,10 @@ auto URITemplateRouter::add(const std::string_view uri_template,
     ++position;
   }
 
-  if (!absorbed && current != nullptr) {
+  // Every way out of the walk above either absorbed the template into a node
+  // that already stood for it or settled on a node of its own
+  assert(absorbed || current != nullptr);
+  if (!absorbed) {
     const auto previous_identifier = current->identifier;
     if (previous_identifier == 0) {
       this->entries_.emplace_back(identifier, context, uri_template);
@@ -622,24 +637,27 @@ auto URITemplateRouter::describes(
     const std::string_view base_path) const noexcept -> bool {
   const Node *current = nullptr;
 
+  // Reaching the end of a fragment settles nothing on its own, so only the
+  // other two answers are read here and the walk carries on below
   if (!base_path.empty()) {
-    switch (walk_describe_fragment(current, this->root_, base_path)) {
-      case DescribeWalk::NoMatch:
-        return false;
-      case DescribeWalk::Captured:
-        return true;
-      case DescribeWalk::Reached:
-        break;
+    const auto base_walk{
+        walk_describe_fragment(current, this->root_, base_path)};
+    if (base_walk == DescribeWalk::NoMatch) {
+      return false;
+    }
+
+    if (base_walk == DescribeWalk::Captured) {
+      return true;
     }
   }
 
-  switch (walk_describe_fragment(current, this->root_, path)) {
-    case DescribeWalk::NoMatch:
-      return false;
-    case DescribeWalk::Captured:
-      return true;
-    case DescribeWalk::Reached:
-      break;
+  const auto walk{walk_describe_fragment(current, this->root_, path)};
+  if (walk == DescribeWalk::NoMatch) {
+    return false;
+  }
+
+  if (walk == DescribeWalk::Captured) {
+    return true;
   }
 
   if (current == nullptr) {

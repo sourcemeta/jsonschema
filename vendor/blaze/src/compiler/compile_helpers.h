@@ -5,14 +5,15 @@
 #include <sourcemeta/core/jsonschema.h>
 #include <sourcemeta/core/uri.h>
 
-#include <algorithm>  // std::ranges::find, std::ranges::all_of
-#include <cassert>    // assert
-#include <functional> // std::cref
-#include <iterator>   // std::distance
-#include <limits>     // std::numeric_limits
-#include <optional>   // std::optional
-#include <regex>      // std::regex, std::regex_match, std::smatch
-#include <utility>    // std::move
+#include <algorithm> // std::ranges::find, std::ranges::all_of, std::find_if, std::rotate
+#include <cassert>     // assert
+#include <functional>  // std::cref
+#include <iterator>    // std::distance, std::next
+#include <limits>      // std::numeric_limits
+#include <optional>    // std::optional
+#include <regex>       // std::regex, std::regex_match, std::smatch
+#include <string_view> // std::string_view
+#include <utility>     // std::move
 
 #include "upstream.h"
 
@@ -292,27 +293,57 @@ booleans_are_schemas(const sourcemeta::core::SchemaVocabularies &vocabularies)
          !is_openapi_3_0(vocabularies);
 }
 
-inline auto is_schema(const sourcemeta::core::JSON &value,
-                      const bool allow_boolean) -> bool {
-  return value.is_object() || (allow_boolean && value.is_boolean());
+// The same as `is_schema_array`, for the callers that have already settled how
+// many schemas the keyword may hold
+inline auto
+all_are_schemas(const sourcemeta::core::JSON &value,
+                const sourcemeta::core::SchemaVocabularies &vocabularies)
+    -> bool {
+  return std::ranges::all_of(
+      value.as_array(), [&vocabularies](const auto &entry) -> bool {
+        return sourcemeta::core::schema_is_schema(entry, vocabularies);
+      });
 }
 
-inline auto all_are_schemas(const sourcemeta::core::JSON &value,
-                            const bool allow_boolean) -> bool {
-  return std::ranges::all_of(value.as_array(),
-                             [allow_boolean](const auto &entry) -> bool {
-                               return is_schema(entry, allow_boolean);
-                             });
-}
-
-// The meta-schema describes these as a non-empty array of schemas. A keyword
-// that does not satisfy that is not a constraint at all, so we ignore it
-// rather than compile part of it or turn it into a failure
-inline auto is_schema_array(const sourcemeta::core::JSON &value,
-                            const bool allow_boolean,
-                            const bool allow_empty = false) -> bool {
+// The meta-schema describes these as a non-empty array of schemas, other than
+// the OpenAPI 3.0 Schema Object, which leaves an empty one well-formed. A
+// keyword that does not satisfy that is not a constraint at all, so we ignore
+// it rather than compile part of it or turn it into a failure
+inline auto
+is_schema_array(const sourcemeta::core::JSON &value,
+                const sourcemeta::core::SchemaVocabularies &vocabularies,
+                const bool allow_empty = false) -> bool {
   return value.is_array() && (allow_empty || !value.empty()) &&
-         all_are_schemas(value, allow_boolean);
+         all_are_schemas(value, vocabularies);
+}
+
+// Whether a boolean stands for a schema where this keyword holds its value, as
+// the dialects that have no boolean schemas still define `additionalProperties`
+// and `additionalItems` to accept one in place of a schema
+inline auto
+is_keyword_schema(const sourcemeta::core::JSON &value,
+                  const sourcemeta::core::SchemaVocabularies &vocabularies,
+                  const std::string_view keyword) -> bool {
+  if (value.is_boolean() &&
+      (keyword == "additionalProperties" || keyword == "additionalItems")) {
+    return true;
+  }
+
+  return sourcemeta::core::schema_is_schema(value, vocabularies);
+}
+
+// JSON Schema spells `required` and its relatives as an array of property
+// names. Which of them asks for those names to be unique is a question per
+// keyword and per dialect, so it is not part of this shape: `required` from
+// Draft 4, `dependentRequired` from 2019-09, and the array form of
+// `dependencies` from Draft 4 to Draft 7 all ask for unique entries, while the
+// array form of Draft 3 `dependencies` asks for none
+inline auto is_property_name_array(const sourcemeta::core::JSON &value)
+    -> bool {
+  return value.is_array() &&
+         std::ranges::all_of(value.as_array(), [](const auto &entry) -> bool {
+           return entry.is_string();
+         });
 }
 
 // Draft 3 to 7 let `$ref` replace every sibling keyword, so nothing those
@@ -375,17 +406,6 @@ unsigned_integer_property(const sourcemeta::core::JSON &document,
   return unsigned_integer_property(document, property).value_or(otherwise);
 }
 
-// Whether the frame addresses the document from its top under the given base,
-// which is what the base that the caller framed a wrapper document with does
-inline auto addresses_document_top(const sourcemeta::core::SchemaFrame &frame,
-                                   const sourcemeta::core::JSON::String &base)
-    -> bool {
-  return frame.any_subschema(
-      [&base](const sourcemeta::core::SchemaFrame::Location &location) -> bool {
-        return location.base == base && location.relative_pointer == 0;
-      });
-}
-
 // A schema context only knows where it sits within the schema resource that
 // encloses it, while an error must report where the problem is within the
 // document that the schema came from. Prepending the pointer of that resource
@@ -396,19 +416,8 @@ absolute_schema_location(const Context &context,
                          const sourcemeta::core::URI &base,
                          const sourcemeta::core::WeakPointer &relative_pointer)
     -> sourcemeta::core::Pointer {
-  const auto base_string{base.recompose()};
-  const auto resource{context.frame.location(
-      sourcemeta::core::SchemaReferenceType::Static, base_string)};
-  // A base with no location of its own is the one the caller framed a wrapper
-  // document with, under which every relative pointer starts at the top of
-  // that document. Missing the resource of any other base would silently
-  // report a pointer that means something else, so catch that drift here
-  if (!resource.has_value()) {
-    assert(addresses_document_top(context.frame, base_string));
-    return to_pointer(relative_pointer);
-  }
-
-  return to_pointer(resource.value().get().pointer.concat(relative_pointer));
+  return to_pointer(sourcemeta::core::schema_frame_absolute_pointer(
+      context.frame, base.recompose(), relative_pointer));
 }
 
 inline auto absolute_schema_location(const KeywordContext &context)
@@ -452,6 +461,9 @@ static constexpr auto EXPECTED_SCHEMA_OBJECT{
 static constexpr auto EXPECTED_PROPERTY_NAME_ARRAY{
     "This keyword was expected to be set to an array of unique property "
     "names"};
+static constexpr auto EXPECTED_PROPERTY_NAME_ARRAYS{
+    "Every value of this keyword was expected to be an array of unique "
+    "property names"};
 static constexpr auto EXPECTED_POSITIVE{
     "This keyword was expected to be set to a number greater than zero"};
 static constexpr auto EXPECTED_NON_NEGATIVE{
@@ -467,6 +479,9 @@ static constexpr auto EXPECTED_NON_EMPTY_VALUES{
 static constexpr auto EXPECTED_DEPENDENCIES{
     "Every value of this keyword was expected to be a valid schema or an "
     "array of unique property names"};
+static constexpr auto EXPECTED_DEPENDENCIES_DRAFT3{
+    "Every value of this keyword was expected to be a valid schema, a "
+    "property name, or an array of property names"};
 static constexpr auto UNSUPPORTED_VALUE_FOR_DIALECT{
     "The value this keyword is set to is not supported by this dialect"};
 static constexpr auto PROHIBITED_KEYWORD_FOR_DIALECT{
@@ -489,15 +504,8 @@ absolute_schema_pointer(const Context &context,
                         const sourcemeta::core::URI &base,
                         const sourcemeta::core::WeakPointer &relative_pointer)
     -> sourcemeta::core::WeakPointer {
-  const auto base_string{base.recompose()};
-  const auto resource{context.frame.location(
-      sourcemeta::core::SchemaReferenceType::Static, base_string)};
-  if (!resource.has_value()) {
-    assert(addresses_document_top(context.frame, base_string));
-    return relative_pointer;
-  }
-
-  return resource.value().get().pointer.concat(relative_pointer);
+  return sourcemeta::core::schema_frame_absolute_pointer(
+      context.frame, base.recompose(), relative_pointer);
 }
 
 inline auto absolute_schema_pointer(const KeywordContext &context)
@@ -512,11 +520,8 @@ inline auto absolute_schema_pointer(const KeywordContext &context)
 // the keyword value, so the frame entry we look up corresponds to the
 // keyword value and not to the parent subschema
 inline auto defines_nested_subschemas(const KeywordContext &context) -> bool {
-  return context.global.frame.any_subschema_under(
-      absolute_schema_pointer(context),
-      [](const sourcemeta::core::SchemaFrame::Location &) -> bool {
-        return true;
-      });
+  return sourcemeta::core::schema_frame_has_subschemas_under(
+      context.global.frame, absolute_schema_pointer(context));
 }
 
 // TODO: Get rid of this given the new Core regex optimisations
@@ -624,6 +629,54 @@ inline auto required_properties(const KeywordContext &context)
   }
 
   return result;
+}
+
+// A disjunction branch is usually ruled out by a single discriminating
+// property, as a tagged union does, yet the branch spends its first
+// instructions on the wider checks that the tag makes irrelevant. Running the
+// tag comparison first lets every branch but the matching one fail on one
+// property lookup. The comparison is only sound ahead of the check that proves
+// the property is there, so it becomes the variant that holds vacuously when
+// the property is missing, leaving that proof to the check it now precedes
+inline auto hoist_discriminator(Instructions &branch) -> void {
+  ValueStringSet guaranteed;
+  for (const auto &step : branch) {
+    if (!step.relative_instance_location.empty()) {
+      continue;
+    }
+
+    if (step.type == InstructionIndex::AssertionDefinesStrict) {
+      const auto &property{std::get<ValueProperty>(step.value)};
+      guaranteed.insert(property.first, property.second);
+    } else if (step.type == InstructionIndex::AssertionDefinesAllStrict) {
+      for (const auto &property : std::get<ValueStringSet>(step.value)) {
+        guaranteed.insert(property.first, property.second);
+      }
+    }
+  }
+
+  if (guaranteed.empty()) {
+    return;
+  }
+
+  const auto match{std::find_if(
+      branch.begin(), branch.end(), [&guaranteed](const auto &step) -> bool {
+        return (step.type == InstructionIndex::AssertionEqual ||
+                step.type == InstructionIndex::AssertionEqualsAnyStringHash) &&
+               step.relative_instance_location.size() == 1 &&
+               step.relative_instance_location.back().is_property() &&
+               guaranteed.contains(
+                   step.relative_instance_location.back().to_property());
+      })};
+
+  if (match == branch.cend() || match == branch.cbegin()) {
+    return;
+  }
+
+  match->type = match->type == InstructionIndex::AssertionEqual
+                    ? InstructionIndex::AssertionPropertyEqual
+                    : InstructionIndex::AssertionPropertyEqualsAnyStringHash;
+  std::rotate(branch.begin(), match, std::next(match));
 }
 
 } // namespace sourcemeta::blaze

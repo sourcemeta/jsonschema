@@ -131,14 +131,6 @@ auto pending(const sourcemeta::core::OpenAPIWalk &walk)
 // the same depth, which is what makes the first three tokens the whole test
 constexpr std::size_t COMPONENT_DEPTH{3};
 
-// Whether a pointer names a component of the document it belongs to, which is
-// what the Components Object holds at a fixed depth of its own
-auto is_component(const sourcemeta::core::Pointer &pointer) -> bool {
-  return pointer.size() == COMPONENT_DEPTH && pointer.at(0).is_property() &&
-         pointer.at(0).to_property() == "components" &&
-         pointer.at(1).is_property();
-}
-
 auto promote(const sourcemeta::core::Pointer &target)
     -> sourcemeta::core::Pointer {
   if (target.size() < COMPONENT_DEPTH ||
@@ -160,18 +152,17 @@ auto path_item_of(const sourcemeta::core::OpenAPIWalk &remote,
                   const sourcemeta::core::Pointer &operation)
     -> sourcemeta::core::Pointer {
   auto prefix{operation};
-  while (!prefix.empty()) {
+  while (true) {
+    assert(!prefix.empty());
     prefix = prefix.initial();
     const auto location{remote.locations.find(
         sourcemeta::core::openapi_location_uri(remote.base, prefix))};
-    if (location != remote.locations.cend() &&
-        location->second.type ==
-            sourcemeta::core::OpenAPIObjectKind::PathItem) {
+    if (location != remote.locations.cend()) {
+      assert(location->second.type ==
+             sourcemeta::core::OpenAPIObjectKind::PathItem);
       return prefix;
     }
   }
-
-  return operation.initial();
 }
 
 // Which Components Object member an embedded Object goes under. A component
@@ -182,7 +173,12 @@ auto path_item_of(const sourcemeta::core::OpenAPIWalk &remote,
 auto container_of(const sourcemeta::core::Pointer &origin,
                   const sourcemeta::core::OpenAPIObjectKind expected)
     -> sourcemeta::core::JSON::StringView {
-  if (is_component(origin)) {
+  // The Components Object holds every component at a depth of its own, and
+  // nothing else a reference reaches sits at that depth: an Operation Object
+  // is named by the Path Item Object that holds it, which is a step above
+  assert(origin.size() != COMPONENT_DEPTH ||
+         origin.starts_with(sourcemeta::core::EMPTY_POINTER, "components"));
+  if (origin.size() == COMPONENT_DEPTH) {
     return origin.at(1).to_property();
   }
 
@@ -269,28 +265,34 @@ auto absolutize_schemas(sourcemeta::core::JSON &value,
   // just as what it names by a reference is
   for (const auto &discriminator : sourcemeta::core::openapi_discriminators(
            remote_document, frame, remote.base, walker, resolver)) {
-    if (!discriminator.origin.starts_with(origin)) {
-      continue;
-    }
-
-    const auto held{(discriminator.origin).resolve_from(origin)};
-    const auto *written{sourcemeta::core::try_get(value, held)};
-    if (written == nullptr || !written->is_string()) {
-      continue;
-    }
+    assert(discriminator.origin.starts_with(origin));
 
     // Section 4.3.3 resolves a name against the Components Object of the entry
     // document wherever the Discriminator Object naming it sits, so moving the
     // schema leaves it naming exactly what it named. That holds whether or not
     // the name also happens to lead into what moves, so it is settled before
-    // any route is, or a name would be written out as the route it took
-    if (sourcemeta::core::openapi_is_component_key(written->to_string())) {
+    // any route is, or a name would be written out as the route it took.
+    // Which of the two readings the description wrote is the frame's to say,
+    // as the one that settled it
+    if (discriminator.by_name) {
       continue;
     }
 
+    const auto held{(discriminator.origin).resolve_from(origin)};
+    // Reading the Discriminator Object turns down a mapping that names a
+    // schema by anything other than a string, and what it read is the very
+    // subtree that moves, so there is a string at every place it reported
+    const auto *written{sourcemeta::core::try_get(value, held)};
+    assert(written != nullptr && written->is_string());
+
+    // The frame above spans the Schema Objects within what moves and nothing
+    // else, so a destination it can reach names a place within it, and one it
+    // reaches at all carries the pointer fragment that says where
     const auto target{frame.traverse(discriminator.destination)};
-    if (target.has_value() && target.value().get().pointer.starts_with(
-                                  sourcemeta::core::to_weak_pointer(origin))) {
+    assert(!target.has_value() ||
+           target.value().get().pointer.starts_with(
+               sourcemeta::core::to_weak_pointer(origin)));
+    if (target.has_value()) {
       // What names a place within what moves moves along with it, so long as
       // it names it by something that travels. A name does. RFC 6901 reads a
       // pointer from the root of a document, so one that leads into what moves
@@ -303,6 +305,10 @@ auto absolutize_schemas(sourcemeta::core::JSON &value,
       // reads its fragment hands back a view into it
       const sourcemeta::core::URI destination{discriminator.destination};
       const auto fragment{destination.fragment()};
+      // A Schema Object that declares an identity of its own is named by that
+      // identity rather than by a route into the document, and such an
+      // identity may be the one the document itself answers to, so there is
+      // not always a fragment to read a route out of
       if (!sourcemeta::core::openapi_within_document(discriminator.destination,
                                                      remote.base) ||
           !fragment.has_value() || !fragment.value().starts_with('/')) {
@@ -327,10 +333,9 @@ auto absolutize_schemas(sourcemeta::core::JSON &value,
       continue;
     }
 
-    if (written->to_string() != discriminator.destination) {
-      sourcemeta::core::set(value, held,
-                            sourcemeta::core::JSON{discriminator.destination});
-    }
+    assert(written->to_string() != discriminator.destination);
+    sourcemeta::core::set(value, held,
+                          sourcemeta::core::JSON{discriminator.destination});
   }
 
   const auto moved{sourcemeta::core::to_weak_pointer(origin)};
@@ -340,25 +345,21 @@ auto absolutize_schemas(sourcemeta::core::JSON &value,
   // `$id` as a Base URI". So a schema that names itself relatively names
   // something else once it sits in another document, and writing back what it
   // resolved to where it came from is what keeps its identity its own
-  frame.for_each_resource([&value, &origin,
-                           &moved](const auto &identifier,
-                                   const auto &location) -> void {
-    if (!location.pointer.starts_with(moved)) {
-      return;
-    }
-
+  frame.for_each_resource([&value, &origin](const auto &identifier,
+                                            const auto &location) -> void {
+    assert(location.pointer.starts_with(
+        sourcemeta::core::to_weak_pointer(origin)));
     auto &schema{sourcemeta::core::get(
         value,
         (sourcemeta::core::to_pointer(location.pointer)).resolve_from(origin))};
-    // Which keyword carries that identity is the dialect's to say rather than
-    // whichever one the latest of them happens to use, and a schema that
-    // declares none is left without one rather than given one it never had
-    if (schema.is_object() &&
-        schema.defines(sourcemeta::core::schema_identifier_keyword(
-            location.base_dialect))) {
-      sourcemeta::core::schema_reidentify(schema, identifier,
-                                          location.base_dialect);
-    }
+    // A resource is a schema that declares an identity of its own, which only
+    // an Object can do and which the dialect names the keyword for, so there
+    // is one to write back wherever the frame reported a resource
+    assert(schema.is_object() &&
+           schema.defines(sourcemeta::core::schema_identifier_keyword(
+               location.base_dialect)));
+    sourcemeta::core::schema_reidentify(schema, identifier,
+                                        location.base_dialect);
   });
 
   // Section 4.8.24 puts an External Documentation Object on a Schema Object,
@@ -370,11 +371,10 @@ auto absolutize_schemas(sourcemeta::core::JSON &value,
   // without it being a schema of its own, a keyword value such as the instance
   // an enumeration or a constant holds, and writing a URI into one of those
   // would be rewriting what a description says an instance must look like
-  frame.for_each_subschema([&value, &origin, &moved, &frame, &walker,
+  frame.for_each_subschema([&value, &origin, &frame, &walker,
                             &resolver](const auto &location) -> void {
-    if (!location.pointer.starts_with(moved)) {
-      return;
-    }
+    assert(location.pointer.starts_with(
+        sourcemeta::core::to_weak_pointer(origin)));
 
     // Section 4.8.24 lists `externalDocs` among the keywords that the dialect
     // this specification publishes is made of, and Section 4.8.24.5 has a
@@ -407,7 +407,7 @@ auto absolutize_schemas(sourcemeta::core::JSON &value,
 
   frame.for_each_reference_from(
       moved,
-      [&value, &origin, &moved, &landing, &frame, &remote](
+      [&value, &origin, &landing, &frame, &remote](
           const auto type, const auto &pointer, const auto &reference) -> void {
         // What a dynamic reference names is settled where the schema is
         // evaluated rather than where it sits, so a bare name is left exactly
@@ -430,8 +430,8 @@ auto absolutize_schemas(sourcemeta::core::JSON &value,
         // as static wherever no anchor is in scope for it, so writing out what
         // it resolved to is what would make it say something the keyword does
         // not admit, which reading the result back then turns down
-        if (!pointer.empty() && pointer.back().is_property() &&
-            pointer.back().to_property() == "$recursiveRef") {
+        assert(!pointer.empty() && pointer.back().is_property());
+        if (pointer.back().to_property() == "$recursiveRef") {
           return;
         }
 
@@ -452,17 +452,21 @@ auto absolutize_schemas(sourcemeta::core::JSON &value,
         // by a route that moving is exactly what changes. Such a reference is
         // written out as the route to wherever this is headed instead
         const auto target{frame.traverse(reference.destination)};
-        if (target.has_value() &&
-            target.value().get().pointer.starts_with(moved)) {
+        // The frame spans the Schema Objects within what moves and nothing
+        // else, so a destination it can reach names a place within it
+        assert(!target.has_value() ||
+               target.value().get().pointer.starts_with(
+                   sourcemeta::core::to_weak_pointer(origin)));
+        if (target.has_value()) {
           // Which root a pointer counts from is what the reference resolved
           // against rather than how it is spelled. One that resolved against
           // the document is the one moving takes somewhere else. One that
           // resolved against an identifier a schema declares for itself counts
           // from that schema, which moves along whole, and a name is not a
           // pointer at all
+          assert(reference.fragment.has_value());
           if (!sourcemeta::core::openapi_within_document(reference.destination,
                                                          remote.base) ||
-              !reference.fragment.has_value() ||
               !reference.fragment.value().starts_with('/')) {
             return;
           }
@@ -497,13 +501,18 @@ auto openapi_component_container_of(
     const sourcemeta::core::JSON::StringView container)
     -> const sourcemeta::core::JSON * {
   const auto *components{document.try_at("components")};
-  if (components == nullptr || !components->is_object()) {
+  if (components == nullptr) {
     return nullptr;
   }
 
+  // Framing a description is what holds the Components Object and each of its
+  // members to being an object, and nothing is bundled into one that was not
+  // framed first
+  assert(components->is_object());
   const auto *entries{
       components->try_at(sourcemeta::core::JSON::String{container})};
-  return entries == nullptr || !entries->is_object() ? nullptr : entries;
+  assert(entries == nullptr || entries->is_object());
+  return entries;
 }
 
 // Section 4.8.7 admits nothing but letters, digits, dots, hyphens and
@@ -597,7 +606,8 @@ auto vacant(const sourcemeta::core::JSON &entries,
     }
 
     upper = 1;
-    while (upper <= ceiling && used[static_cast<std::size_t>(upper)]) {
+    while (used[static_cast<std::size_t>(upper)]) {
+      assert(upper < ceiling);
       upper += 1;
     }
 
@@ -627,9 +637,10 @@ auto component_name(const sourcemeta::core::JSON &document,
                     const sourcemeta::core::OpenAPIBundleOptions::Namer &namer)
     -> sourcemeta::core::JSON::String {
   sourcemeta::core::JSON::String candidate{"Bundled"};
+  assert(!target.empty());
   if (namer) {
     candidate = namer(source, container);
-  } else if (!target.empty()) {
+  } else {
     // RFC 6901 Section 4 leaves which of an array and an object a
     // reference token addresses to what it is evaluated against, and one of
     // digits reads back as an array index, which spells out to a name the
@@ -637,7 +648,8 @@ auto component_name(const sourcemeta::core::JSON &document,
     const auto &token{target.back()};
     if (token.is_property()) {
       candidate = token.to_property();
-    } else if (token.is_index()) {
+    } else {
+      assert(token.is_index());
       candidate =
           sourcemeta::core::JSON::String{std::to_string(token.to_index())};
     }
@@ -789,11 +801,9 @@ auto repoint_schemas(
         // rest of this file reads one the same way
         const auto held{sourcemeta::core::fragment_to_pointer(
             sourcemeta::core::URI{reference.destination})};
-        if (!held.has_value() || held.value().size() < 3 ||
-            !held.value().starts_with(container) ||
-            !held.value().at(2).is_property()) {
-          return;
-        }
+        assert(held.has_value() && held.value().size() >= 3 &&
+               held.value().starts_with(container) &&
+               held.value().at(2).is_property());
 
         for (const auto &entry : renamed) {
           if (held.value().at(2).to_property() != entry.first) {
@@ -938,8 +948,8 @@ auto bundle_schemas(sourcemeta::core::JSON &document,
       return result;
     }
 
-    if (!result.has_value() || !result.value().is_object() ||
-        result.value().defines("$schema")) {
+    assert(!result.has_value() || result.value().is_object());
+    if (!result.has_value() || result.value().defines("$schema")) {
       return result;
     }
 
@@ -1049,9 +1059,9 @@ auto schema_pending(const sourcemeta::core::JSON &document,
     // A dynamic reference names an anchor to be settled where it is
     // evaluated, and a `$schema` names the dialect a schema is written
     // against rather than a part of the description
+    assert(!pointer.empty() && pointer.back().is_property());
     if (type != sourcemeta::core::SchemaReferenceType::Static ||
-        (!pointer.empty() && pointer.back().is_property() &&
-         pointer.back().to_property() == "$schema")) {
+        pointer.back().to_property() == "$schema") {
       return;
     }
 
@@ -1065,14 +1075,12 @@ auto schema_pending(const sourcemeta::core::JSON &document,
     // it, which is the nearest identifier an enclosing one declares rather
     // than anything the reference says about itself
     const auto enclosing{frame.traverse(pointer.initial())};
-    result.push_back(
-        {.origin = sourcemeta::core::to_pointer(pointer),
-         .destination = reference.destination,
-         .expected = sourcemeta::core::OpenAPIObjectKind::Schema,
-         .scope =
-             enclosing.has_value()
-                 ? sourcemeta::core::JSON::String{enclosing.value().get().base}
-                 : walk.base});
+    assert(enclosing.has_value());
+    result.push_back({.origin = sourcemeta::core::to_pointer(pointer),
+                      .destination = reference.destination,
+                      .expected = sourcemeta::core::OpenAPIObjectKind::Schema,
+                      .scope = sourcemeta::core::JSON::String{
+                          enclosing.value().get().base}});
   });
 
   // And so does what a Discriminator Object names by URI, which the frame
@@ -1127,8 +1135,10 @@ auto lands(const sourcemeta::core::OpenAPIWalk &remote,
                           sourcemeta::core::OpenAPIObjectKind::Reference;
     }
 
-    if (expected != sourcemeta::core::OpenAPIObjectKind::Schema ||
-        prefix.empty()) {
+    // Walking up from a place of a document reaches the document itself,
+    // which is a place the walk recorded, so there is always a kind to read
+    assert(!prefix.empty());
+    if (expected != sourcemeta::core::OpenAPIObjectKind::Schema) {
       return false;
     }
 
@@ -1182,15 +1192,15 @@ auto schema_of(const sourcemeta::core::OpenAPIWalk &remote,
   while (true) {
     const auto location{remote.locations.find(
         sourcemeta::core::openapi_location_uri(remote.base, prefix))};
-    if (location != remote.locations.cend() &&
-        location->second.type == sourcemeta::core::OpenAPIObjectKind::Schema) {
+    // A reference naming a Schema Object names one the walk of the document
+    // recorded, at that very place or at one holding it
+    if (location != remote.locations.cend()) {
+      assert(location->second.type ==
+             sourcemeta::core::OpenAPIObjectKind::Schema);
       return prefix;
     }
 
-    if (prefix.empty()) {
-      return target;
-    }
-
+    assert(!prefix.empty());
     prefix = prefix.initial();
   }
 }
@@ -1291,9 +1301,7 @@ auto declared_target(
   // sits rather than from the root of the document holding it
   const auto tail{sourcemeta::core::fragment_to_pointer(
       sourcemeta::core::URI{destination})};
-  if (!tail.has_value()) {
-    return std::nullopt;
-  }
+  assert(tail.has_value());
 
   return std::make_pair(resource->second.first,
                         resource->second.second.concat(tail.value()));
@@ -1352,10 +1360,11 @@ auto absolutize(JSON &value, const OpenAPIWalk &remote, const Pointer &origin,
       continue;
     }
 
+    // What a Security Requirement Object names is a key of the Components
+    // Object rather than a URI, so writing it against a base always reads
+    // differently from the name it was written as
     auto rewritten{rebase(entry.second.destination, base)};
-    if (rewritten == entry.second.original) {
-      continue;
-    }
+    assert(rewritten != entry.second.original);
 
     const auto held{entry.second.origin.initial()};
     const auto key{openapi_location_uri(remote.base, held)};
@@ -1369,8 +1378,8 @@ auto absolutize(JSON &value, const OpenAPIWalk &remote, const Pointer &origin,
     auto rebuilt{JSON::make_object()};
     for (const auto &member : requirement.as_object()) {
       const auto renamed{group.second.find(member.first)};
-      const auto &name{renamed == group.second.cend() ? member.first
-                                                      : renamed->second};
+      assert(renamed != group.second.cend());
+      const auto &name{renamed->second};
       // 3.2.1 Section 4.30 says nothing against two names of one Object leading
       // to one scheme, and reading such an Object is no trouble. Writing one
       // back out is what cannot keep both, as the single name they come to is a
@@ -1407,24 +1416,23 @@ auto absolutize(JSON &value, const OpenAPIWalk &remote, const Pointer &origin,
     if (entry.second.type == OpenAPIObjectKind::Server) {
       const auto held{relative.concat(JSON::String{"url"})};
       const auto *written{try_get(value, held)};
-      if (written != nullptr && written->is_string()) {
-        // 3.2.1 Section 4.5.2.1 works this very case through: a document
-        // retrieved from one place and naming itself another resolves what it
-        // says of the API against where it was found rather than against the
-        // name it gave itself
-        auto address{openapi_resolve_server_url(
-            written->to_string(), remote.retrieval,
-            try_get(value, relative.concat(JSON::String{"variables"})))};
-        if (!address.has_value()) {
-          throw OpenAPIError{
-              "A Server Object URL template that leaves what it is "
-              "relative to for its variables to decide cannot be read "
-              "from another document",
-              remote.base, entry.second.pointer.concat(JSON::String{"url"})};
-        }
-
-        set(value, held, JSON{std::move(address.value())});
+      assert(written != nullptr && written->is_string());
+      // 3.2.1 Section 4.5.2.1 works this very case through: a document
+      // retrieved from one place and naming itself another resolves what it
+      // says of the API against where it was found rather than against the
+      // name it gave itself
+      auto address{openapi_resolve_server_url(
+          written->to_string(), remote.retrieval,
+          try_get(value, relative.concat(JSON::String{"variables"})))};
+      if (!address.has_value()) {
+        throw OpenAPIError{
+            "A Server Object URL template that leaves what it is "
+            "relative to for its variables to decide cannot be read "
+            "from another document",
+            remote.base, entry.second.pointer.concat(JSON::String{"url"})};
       }
+
+      set(value, held, JSON{std::move(address.value())});
 
       continue;
     }
@@ -1432,7 +1440,8 @@ auto absolutize(JSON &value, const OpenAPIWalk &remote, const Pointer &origin,
     for (const auto &field : openapi_embedded_uri_fields(entry.second.type)) {
       const auto held{relative.concat(JSON::String{field})};
       const auto *written{try_get(value, held)};
-      if (written == nullptr || !written->is_string()) {
+      assert(written == nullptr || written->is_string());
+      if (written == nullptr) {
         continue;
       }
 
@@ -1461,7 +1470,8 @@ auto restate_entry_uris(sourcemeta::core::JSON &document,
       const auto held{
           (entry.second.pointer).concat(sourcemeta::core::JSON::String{field})};
       const auto *written{sourcemeta::core::try_get(document, held)};
-      if (written == nullptr || !written->is_string()) {
+      assert(written == nullptr || written->is_string());
+      if (written == nullptr) {
         continue;
       }
 
@@ -1603,9 +1613,7 @@ auto adopt_operations(JSON &document, const OpenAPIWalk &walk,
       }
 
       const auto operation{other.second.locations.find(named->second)};
-      if (operation == other.second.locations.cend()) {
-        continue;
-      }
+      assert(operation != other.second.locations.cend());
 
       // A Path Item Object is what holds an Operation Object, and the Object
       // the Components Object has a home for
@@ -1616,9 +1624,7 @@ auto adopt_operations(JSON &document, const OpenAPIWalk &walk,
       // 3.2.1 Section 4.1.1 has a reference name the former, so keying by the
       // latter would embed one Path Item twice over
       const auto key{openapi_location_uri(other.second.base, origin)};
-      if (bundled.contains(key)) {
-        break;
-      }
+      assert(!bundled.contains(key));
 
       bundled.emplace(
           key,
@@ -1642,14 +1648,14 @@ auto tag_of(const JSON &document, const OpenAPIWalk &walk,
       continue;
     }
 
+    // A Parameter Object is an object holding the name it goes by, which
+    // framing the document it sits in is what holds it to
     const auto *value{try_get(document, entry.second.pointer)};
-    if (value == nullptr || !value->is_object()) {
-      continue;
-    }
+    assert(value != nullptr && value->is_object());
 
     const auto *declared{value->try_at("name")};
-    if (declared != nullptr && declared->is_string() &&
-        declared->to_string() == name) {
+    assert(declared != nullptr && declared->is_string());
+    if (declared->to_string() == name) {
       return entry.second.pointer;
     }
   }
@@ -1762,13 +1768,12 @@ auto adopt_mappings(
         const auto reached{nested.has_value()
                                ? previous->second.concat(nested.value())
                                : previous->second};
-        JSON named{pending.scope == base ? to_uri(reached).recompose()
-                                         : openapi_location_uri(base, reached)};
-        const auto *written{try_get(document, pending.origin)};
-        if (written != nullptr && *written != named) {
-          set(document, pending.origin, std::move(named));
-          changed = true;
-        }
+        assert(pending.scope == base);
+        JSON named{to_uri(reached).recompose()};
+        [[maybe_unused]] const auto *written{try_get(document, pending.origin)};
+        assert(written != nullptr && *written != named);
+        set(document, pending.origin, std::move(named));
+        changed = true;
       }
 
       continue;
@@ -1839,8 +1844,8 @@ auto adopt_mappings(
 
     charge(remaining, root.value().location_count());
     const auto &declared{root.value().root()};
-    const JSON::String identity{declared.empty() ? identifier
-                                                 : JSON::String{declared}};
+    assert(!declared.empty());
+    const JSON::String identity{declared};
 
     // A schema answers to what it declares rather than to the URI it happened
     // to be fetched by, so two mappings reaching one resource by two spellings
@@ -2013,10 +2018,11 @@ auto bundle_internal(JSON &document, const SchemaWalker &walker,
       // identifier that collides with one. So this is asked where a fragment
       // names no place to begin with, and otherwise only once the document has
       // turned out not to be one
-      auto declared{names_a_schema && (!pointed.has_value() ||
-                                       unavailable.contains(holder))
-                        ? declared_target(identifiers, reference.destination)
-                        : std::nullopt};
+      std::optional<std::pair<JSON::String, Pointer>> declared;
+      if (names_a_schema &&
+          (!pointed.has_value() || unavailable.contains(holder))) {
+        declared = declared_target(identifiers, reference.destination);
+      }
 
       const auto initial{declared.has_value()
                              ? std::optional<Pointer>{declared.value().second}
@@ -2028,9 +2034,10 @@ auto bundle_internal(JSON &document, const SchemaWalker &walker,
       // reference of this shape goes on to have its document read rather than
       // being left here
       const URI destination{reference.destination};
+      assert(!destination.fragment().has_value() ||
+             !destination.fragment().value().empty());
       const auto names_an_anchor{names_a_schema && !initial.has_value() &&
-                                 destination.fragment().has_value() &&
-                                 !destination.fragment().value().empty()};
+                                 destination.fragment().has_value()};
 
       if (!initial.has_value() && !names_an_anchor) {
         if (names_a_schema) {
@@ -2073,10 +2080,8 @@ auto bundle_internal(JSON &document, const SchemaWalker &walker,
         // the result answering to it. Leaving it here would hand back a
         // description that does not hold what it names, so it goes on to be
         // pointed at where that schema landed instead
-        if (reference.mapping) {
-          deferred[reference.destination].push_back(reference);
-        }
-
+        assert(reference.mapping);
+        deferred[reference.destination].push_back(reference);
         continue;
       }
 
@@ -2132,10 +2137,7 @@ auto bundle_internal(JSON &document, const SchemaWalker &walker,
         if (!openapi_has_version_field(candidate)) {
           if (names_a_schema) {
             unavailable.insert(identifier);
-            if (reference.mapping) {
-              deferred[reference.destination].push_back(reference);
-            }
-
+            assert(!reference.mapping);
             continue;
           }
 
@@ -2207,10 +2209,8 @@ auto bundle_internal(JSON &document, const SchemaWalker &walker,
                             : target_of(reference.destination)};
       if (!target.has_value()) {
         if (names_a_schema) {
-          if (reference.mapping) {
-            deferred[reference.destination].push_back(reference);
-          }
-
+          assert(reference.mapping);
+          deferred[reference.destination].push_back(reference);
           continue;
         }
 
@@ -2352,13 +2352,12 @@ auto bundle_internal(JSON &document, const SchemaWalker &walker,
       // document does not. Only a schema that declares none leaves the
       // document itself as the sole way to name where it leads
       const auto *reached{try_get(document, landed)};
-      const auto *identity{reached == nullptr || !reached->is_object()
-                               ? nullptr
-                               : reached->try_at("$id")};
+      assert(reached != nullptr && reached->is_object());
+      const auto *identity{reached->try_at("$id")};
+      assert(identity == nullptr || identity->is_string());
       set(document, reference.origin,
-          identity != nullptr && identity->is_string()
-              ? JSON{identity->to_string()}
-              : JSON{openapi_location_uri(base, landed)});
+          identity != nullptr ? JSON{identity->to_string()}
+                              : JSON{openapi_location_uri(base, landed)});
       changed = true;
     }
 
@@ -2445,7 +2444,7 @@ auto bundle_internal(JSON &document, const SchemaWalker &walker,
                                   remaining};
         charge(remaining, schemas.location_count());
         const auto foreign{openapi_schema_of_another_dialect(
-            walk.version, schemas, paths, schema_resolver)};
+            walk.version, schemas, schema_resolver)};
         if (foreign.has_value()) {
           throw OpenAPIError{"A Schema Object of this revision must be written "
                              "against the OpenAPI 3.0 dialect",

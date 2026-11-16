@@ -23,6 +23,7 @@
 #include "tag.h"
 
 #include <array>       // std::array
+#include <cassert>     // assert
 #include <cstddef>     // std::size_t
 #include <cstdint>     // std::uint64_t
 #include <limits>      // std::numeric_limits
@@ -79,15 +80,21 @@ inline auto openapi_dialect(const OpenAPIVersion version) -> JSON::StringView {
       return OPENAPI_DIALECT_3_0;
     case OpenAPIVersion::OPENAPI_3_1:
       return OPENAPI_DIALECT_3_1;
+      // Clang keeps an arm for the value that never arrives and counts it as
+      // one that nothing took, so the last enumerator is written as the default
+      // there, while the compilers reading a case label are the ones holding
+      // this switch to naming them all
+#if defined(__clang__)
+    default:
+#else
     case OpenAPIVersion::OPENAPI_3_2:
-      return OPENAPI_DIALECT_3_2;
-  }
-
-    // Clang settles that no other value arrives, so only GCC and MSVC
-    // need to be told that the end of this function is never reached
-#if !defined(__clang__)
-  std::unreachable();
 #endif
+      return OPENAPI_DIALECT_3_2;
+#if !defined(__clang__)
+    default:
+      std::unreachable();
+#endif
+  }
 }
 
 constexpr auto OPENAPI_HASH_OPENAPI{JSON::Object::hash("openapi"sv)};
@@ -179,10 +186,18 @@ inline auto openapi_has_version_field(const JSON &document) -> bool {
 inline auto openapi_check_object(const OpenAPIObjectKind expected,
                                  const JSON &value, const Pointer &base,
                                  OpenAPIWalk &walk) -> void {
+  assert(expected == OpenAPIObjectKind::PathItem ||
+         expected == OpenAPIObjectKind::Parameter ||
+         expected == OpenAPIObjectKind::RequestBody ||
+         expected == OpenAPIObjectKind::Response ||
+         expected == OpenAPIObjectKind::Example ||
+         expected == OpenAPIObjectKind::Header ||
+         expected == OpenAPIObjectKind::Link ||
+         expected == OpenAPIObjectKind::Callbacks ||
+         expected == OpenAPIObjectKind::SecurityScheme ||
+         expected == OpenAPIObjectKind::MediaType ||
+         expected == OpenAPIObjectKind::Operation);
   switch (expected) {
-    case OpenAPIObjectKind::Document:
-      openapi_check_document(value, walk);
-      return;
     case OpenAPIObjectKind::PathItem:
       openapi_check_path_item(value, base, walk);
       return;
@@ -215,14 +230,25 @@ inline auto openapi_check_object(const OpenAPIObjectKind expected,
     case OpenAPIObjectKind::MediaType:
       openapi_check_media_type_or_reference(value, base, walk);
       return;
-    // Not what a `$ref` ever expects, but what a Link Object's
-    // `operationRef` always does
+      // Clang keeps an arm for the kinds that never arrive and counts it as
+      // one that nothing took, so a kind that does arrive is written as the
+      // default there, while the compilers reading a case label are the ones
+      // holding this switch to naming them all. No other kind is ever what a
+      // reference expects to find, which the assertion above says
+      //
+      // An Operation Object is not what a `$ref` ever expects, but it is what
+      // a Link Object's `operationRef` always does
+#if defined(__clang__)
+    default:
+#else
     case OpenAPIObjectKind::Operation:
+#endif
       openapi_check_operation(value, base, walk);
       return;
+#if !defined(__clang__)
     default:
-      // No other kind is ever what a reference expects to find
       std::unreachable();
+#endif
   }
 }
 
@@ -231,14 +257,12 @@ inline auto openapi_check_object(const OpenAPIObjectKind expected,
 // still has to land on something and what it lands on still has to be the
 // Object the reference position expects
 inline auto openapi_follow_internal_reference(const URI &target,
-                                              const bool names_a_fragment,
                                               const OpenAPIObjectKind expected,
                                               OpenAPIWalk &walk) -> void {
-  // A reference naming no fragment names the document itself, which is an
-  // OpenAPI Description and has already been read
-  if (!names_a_fragment || walk.document == nullptr) {
-    return;
-  }
+  // A reference naming no fragment names the document itself, which the
+  // caller turns down before reaching this, so what is left names a fragment.
+  // Framing reads a document it was handed rather than fetching one
+  assert(walk.document != nullptr);
 
   // OpenAPI Specification 3.1.1, Section 4.6: "If the representation of the
   // referenced document is JSON or YAML, then the fragment identifier SHOULD
@@ -299,14 +323,14 @@ inline auto openapi_follow_target(const URI &target, const Pointer &origin,
     return;
   }
 
-  if (!names_a_fragment && walk.document != nullptr &&
-      openapi_has_version_field(*walk.document)) {
+  assert(walk.document != nullptr && openapi_has_version_field(*walk.document));
+  if (!names_a_fragment) {
     throw OpenAPIError{"This reference must name a document that holds only "
                        "what the reference expects",
                        walk.base, origin};
   }
 
-  openapi_follow_internal_reference(target, names_a_fragment, expected, walk);
+  openapi_follow_internal_reference(target, expected, walk);
 }
 
 inline auto openapi_follow_reference(const JSON::StringView reference,
@@ -605,7 +629,12 @@ inline auto openapi_check_tag_parents(const OpenAPIWalk &walk,
   // come back round
   for (const auto &[location, edge] : walk.tag_parents) {
     auto name{edge.first};
-    for (std::size_t step = 0; step <= parents.size(); step += 1) {
+    // Every walk of a chain either reaches a tag with no parent of its own or
+    // comes back round, and the step that would run past the edges there are
+    // is the one that settles the latter, so neither leaves this loop to run
+    // out of steps
+    for (std::size_t step = 0;; step += 1) {
+      assert(step <= parents.size());
       const auto next{parents.find(name)};
       if (next == parents.cend()) {
         break;

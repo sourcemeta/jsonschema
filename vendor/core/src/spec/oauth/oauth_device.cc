@@ -63,15 +63,15 @@ auto oauth_build_device_authorization_request(
     const std::span<const OAuthParameter> resources, std::string &sink)
     -> void {
   if (!client_id.empty()) {
-    URI::append_query_parameter(sink, "client_id", client_id);
+    URI::append_form_parameter(sink, "client_id", client_id);
   }
 
   if (!scope.empty()) {
-    URI::append_query_parameter(sink, "scope", scope);
+    URI::append_form_parameter(sink, "scope", scope);
   }
 
   for (const auto &resource : resources) {
-    URI::append_query_parameter(sink, resource.name, resource.value);
+    URI::append_form_parameter(sink, resource.name, resource.value);
   }
 }
 
@@ -79,11 +79,11 @@ auto oauth_build_token_request_device(
     const std::string_view device_code,
     const std::span<const OAuthParameter> resources, SecureString &sink)
     -> void {
-  URI::append_query_parameter(sink, "grant_type",
-                              "urn:ietf:params:oauth:grant-type:device_code");
-  URI::append_query_parameter(sink, "device_code", device_code);
+  URI::append_form_parameter(sink, "grant_type",
+                             "urn:ietf:params:oauth:grant-type:device_code");
+  URI::append_form_parameter(sink, "device_code", device_code);
   for (const auto &resource : resources) {
-    URI::append_query_parameter(sink, resource.name, resource.value);
+    URI::append_form_parameter(sink, resource.name, resource.value);
   }
 }
 

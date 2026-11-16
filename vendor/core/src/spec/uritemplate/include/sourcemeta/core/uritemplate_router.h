@@ -11,6 +11,7 @@
 #include <cstdint> // std::uint16_t, std::uint32_t, std::uint8_t, std::int64_t
 #include <filesystem>    // std::filesystem::path
 #include <functional>    // std::function
+#include <limits>        // std::numeric_limits
 #include <memory>        // std::unique_ptr
 #include <span>          // std::span
 #include <string>        // std::string
@@ -296,6 +297,21 @@ private:
 #if defined(_MSC_VER)
 #pragma warning(pop)
 #endif
+
+/// @ingroup uritemplate
+/// The greatest number of variables a single route template may hold, as the
+/// index that a match reports cannot tell any more of them apart. For example:
+///
+/// ```cpp
+/// #include <sourcemeta/core/uritemplate.h>
+/// #include <cassert>
+///
+/// assert(sourcemeta::core::URITEMPLATE_ROUTER_MAXIMUM_VARIABLES == 256);
+/// ```
+inline constexpr std::size_t URITEMPLATE_ROUTER_MAXIMUM_VARIABLES{
+    static_cast<std::size_t>(
+        std::numeric_limits<URITemplateRouter::Index>::max()) +
+    1};
 
 } // namespace sourcemeta::core
 

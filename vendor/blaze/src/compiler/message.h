@@ -666,6 +666,7 @@ inline auto message_template(const Instruction &instruction,
                                "declared values",
                                values->size());
     }
+    case InstructionIndex::AssertionPropertyEqualsAnyStringHash:
     case InstructionIndex::AssertionEqualsAnyStringHash: {
       const auto *hashes{std::get_if<ValueStringHashes>(&instruction.value)};
       if (hashes == nullptr) {

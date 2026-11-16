@@ -37,7 +37,7 @@ namespace sourcemeta::blaze {
 /// Represents a compiled schema ready for execution
 struct Template {
   bool dynamic;
-  bool track;
+  bool frames;
   std::vector<Instructions> targets;
   std::vector<std::pair<std::size_t, std::size_t>> labels;
   std::vector<InstructionExtra> extra;
@@ -48,7 +48,7 @@ struct Template {
 };
 
 /// @ingroup evaluator
-constexpr std::size_t JSON_VERSION{15};
+constexpr std::size_t JSON_VERSION{17};
 
 /// @ingroup evaluator
 /// Parse a template from JSON
@@ -116,10 +116,10 @@ public:
     assert(this->instance_location.empty());
     assert(this->resources.empty());
 
-    if (schema.track && schema.dynamic) [[unlikely]] {
+    if (schema.frames && schema.dynamic) [[unlikely]] {
       this->evaluated.clear();
       return this->evaluate_impl<true, true, false>(schema, instance, nullptr);
-    } else if (schema.track) [[unlikely]] {
+    } else if (schema.frames) [[unlikely]] {
       this->evaluated.clear();
       return this->evaluate_impl<true, false, false>(schema, instance, nullptr);
     } else if (schema.dynamic) [[unlikely]] {
@@ -204,7 +204,7 @@ public:
   }
 
 #ifndef DOXYGEN
-  template <bool Track, bool Dynamic, bool HasCallback>
+  template <bool Frames, bool Dynamic, bool HasCallback>
   auto evaluate_impl(const Template &schema,
                      const sourcemeta::core::JSON &instance,
                      const Callback *callback) -> bool;
@@ -231,19 +231,14 @@ public:
   }
 
   auto evaluate(const sourcemeta::core::JSON *target) -> void {
-    Evaluation mark{.instance = target,
-                    .evaluate_path = this->evaluate_path,
-                    .skip = false};
-    this->evaluated.push_back(std::move(mark));
+    this->evaluated.push_back(target);
   }
 
-  [[nodiscard]] auto is_evaluated(const sourcemeta::core::JSON *target) const
-      -> bool {
-    // NOLINTNEXTLINE(modernize-loop-convert)
-    for (auto iterator = this->evaluated.rbegin();
-         iterator != this->evaluated.rend(); ++iterator) {
-      if (target == iterator->instance && !iterator->skip &&
-          iterator->evaluate_path.starts_with_initial(this->evaluate_path)) {
+  [[nodiscard]] auto is_evaluated(const sourcemeta::core::JSON *target,
+                                  const std::size_t frame) const -> bool {
+    assert(frame <= this->evaluated.size());
+    for (auto index = this->evaluated.size(); index > frame; index--) {
+      if (this->evaluated[index - 1] == target) {
         return true;
       }
     }
@@ -251,19 +246,12 @@ public:
     return false;
   }
 
-  auto unevaluate() -> void {
-    for (auto &entry : this->evaluated) {
-      if (!entry.skip && entry.evaluate_path.starts_with(this->evaluate_path)) {
-        entry.skip = true;
-      }
-    }
-  }
-
   // A subschema that ends up failing must not contribute any of the marks it
   // made along the way, so a disjunction records the length here before each
-  // branch and truncates back to it when the branch does not hold. Marks are
-  // only ever appended, never inserted earlier, so everything a branch adds
-  // sits past the recorded length and nothing from outside it can be lost
+  // branch and truncates back to it when the branch does not hold, as does a
+  // negation for its whole subtree. Marks are only ever appended, never
+  // inserted earlier, so everything a branch adds sits past the recorded
+  // length and nothing from outside it can be lost
   [[nodiscard]] auto checkpoint() const -> std::size_t {
     return this->evaluated.size();
   }
@@ -280,13 +268,7 @@ public:
   sourcemeta::core::WeakPointer instance_location;
   std::vector<std::size_t> resources;
 
-  struct Evaluation {
-    const sourcemeta::core::JSON *instance;
-    sourcemeta::core::WeakPointer evaluate_path;
-    bool skip;
-  };
-
-  std::vector<Evaluation> evaluated;
+  std::vector<const sourcemeta::core::JSON *> evaluated;
 #if defined(_MSC_VER)
 #pragma warning(default : 4251 4275)
 #endif
@@ -299,16 +281,17 @@ public:
 
 #include <sourcemeta/blaze/evaluator_dispatch.h>
 
-template <bool Track, bool Dynamic, bool HasCallback>
+template <bool Frames, bool Dynamic, bool HasCallback>
 auto sourcemeta::blaze::Evaluator::evaluate_impl(
     const Template &schema, const sourcemeta::core::JSON &instance,
     const Callback *callback) -> bool {
   assert(!schema.targets.empty());
-  dispatch::DispatchContext<Track, Dynamic, HasCallback> context{
+  dispatch::DispatchContext<Frames, Dynamic, HasCallback> context{
       .schema = &schema,
       .callback = callback,
       .evaluator = this,
-      .property_target = nullptr};
+      .property_target = nullptr,
+      .frame = 0};
   bool overall{true};
   for (const auto &instruction : schema.targets[0]) {
     if (!dispatch::evaluate_instruction(instruction, instance, 0, context))
@@ -318,10 +301,8 @@ auto sourcemeta::blaze::Evaluator::evaluate_impl(
     }
   }
 
-  if constexpr (Track || HasCallback) {
-    assert(this->evaluate_path.empty());
-  }
   if constexpr (HasCallback) {
+    assert(this->evaluate_path.empty());
     assert(this->instance_location.empty());
   }
   if constexpr (Dynamic) {

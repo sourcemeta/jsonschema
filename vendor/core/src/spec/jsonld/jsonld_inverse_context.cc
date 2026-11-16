@@ -32,7 +32,7 @@ auto create_inverse_context(const ActiveContext &active_context) -> JSON {
 
   // When a default base direction is set, the default language is the language
   // and direction joined by an underscore, even if there is no default
-  // language (Section 4.3.1).
+  // language (Section 4.3.2).
   JSON::String default_language{KEYWORD_NONE};
   if (active_context.default_direction.has_value()) {
     default_language = active_context.default_language.has_value()

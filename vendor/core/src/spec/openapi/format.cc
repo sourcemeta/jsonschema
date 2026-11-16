@@ -431,18 +431,24 @@ auto row_of(const OpenAPIObjectKind kind) -> KindRow {
     case OpenAPIObjectKind::Paths:
     case OpenAPIObjectKind::Responses:
     case OpenAPIObjectKind::Callbacks:
+      // Clang keeps an arm for the value that never arrives and counts it as
+      // one that nothing took, so a kind that does arrive is written as the
+      // default there, while the compilers reading a case label are the ones
+      // holding this switch to naming them all. What sits inside a Schema
+      // Object is ordered before this is ever asked, so that kind is named
+      // for their sake alone and the answer it would give is never read
+#if defined(__clang__)
+    default:
+#else
     case OpenAPIObjectKind::SecurityRequirement:
-      return {.fields = {}, .maps = {}, .sorts_own_keys = true};
-    // Handled before this is ever asked
     case OpenAPIObjectKind::Schema:
-      return {};
-  }
-
-    // Clang settles that no other value arrives, so only GCC and MSVC
-    // need to be told that the end of this function is never reached
-#if !defined(__clang__)
-  std::unreachable();
 #endif
+      return {.fields = {}, .maps = {}, .sorts_own_keys = true};
+#if !defined(__clang__)
+    default:
+      std::unreachable();
+#endif
+  }
 }
 
 // Byte order on the key, which is the whole of what a map whose keys the author
@@ -499,12 +505,9 @@ auto format_object(JSON &document, const OpenAPIFrame::Location &location)
   }
 
   auto &object{get(document, location.pointer)};
-  // A position the frame reports may hold something other than an object, as a
-  // Path Item Object holding nothing but a reference is read as the Object it
-  // stands in for
-  if (!object.is_object()) {
-    return;
-  }
+  // Every position the frame reports holds the Object it was recorded for,
+  // which reading the description is what holds it to
+  assert(object.is_object());
 
   const auto row{row_of(location.type)};
   if (row.sorts_own_keys) {
@@ -515,7 +518,8 @@ auto format_object(JSON &document, const OpenAPIFrame::Location &location)
   object.reorder(FieldComparison{.fields = row.fields});
   for (const auto &field : row.maps) {
     auto *map{object.try_at(field)};
-    if (map != nullptr && map->is_object()) {
+    assert(map == nullptr || map->is_object());
+    if (map != nullptr) {
       map->reorder(compare_keys);
     }
   }

@@ -28,7 +28,8 @@ inline auto parse_hex4(const char *&position) -> unsigned long {
   unsigned long value{0};
   for (std::size_t index = 0; index < 4; index++) {
     const auto digit{hex_digit_value(*position++)};
-    value = (value << 4) | static_cast<unsigned long>(digit < 0 ? 0 : digit);
+    assert(digit >= 0);
+    value = (value << 4) | static_cast<unsigned long>(digit);
   }
 
   return value;
@@ -150,8 +151,9 @@ inline auto construct_number(const char *data, const std::uint32_t length,
     return construct_decimal(value, line, column);
   }
 
+  assert(length > 0);
   auto digit_length = length;
-  if (digit_length > 0 && data[0] == '-') {
+  if (data[0] == '-') {
     digit_length--;
   }
 
@@ -199,7 +201,8 @@ inline auto post_column_for(const TapeEntry &entry) -> std::uint64_t {
   // A string carries the length of what stands between its quotation marks, so
   // the mark closing it stands one past that, while every other value carries
   // the length of the whole literal and so ends on its last character
-  if (entry.type == TapeType::String || entry.type == TapeType::Key) {
+  assert(entry.type != TapeType::Key);
+  if (entry.type == TapeType::String) {
     return entry.column + entry.length + 1;
   }
 
@@ -284,7 +287,10 @@ do_construct_array: {
     levels.push_back(Container::Array);
     frames.back().get().push_back(Result::make_array());
     frames.emplace_back(frames.back().get().back());
-  } else if (levels.back() == Container::Object) {
+  } else {
+    // The enumeration names one other container, which the test above has
+    // already settled
+    assert(levels.back() == Container::Object);
     levels.push_back(Container::Array);
     auto &inserted{frames.back().get().assign_assume_new(
         std::move(key), Result::make_array(), key_hash)};
@@ -366,7 +372,10 @@ do_construct_object: {
     levels.push_back(Container::Object);
     frames.back().get().push_back(Result::make_object());
     frames.emplace_back(frames.back().get().back());
-  } else if (levels.back() == Container::Object) {
+  } else {
+    // The enumeration names one other container, which the test above has
+    // already settled
+    assert(levels.back() == Container::Object);
     levels.push_back(Container::Object);
     auto &inserted{frames.back().get().assign_assume_new(
         std::move(key), Result::make_object(), key_hash)};

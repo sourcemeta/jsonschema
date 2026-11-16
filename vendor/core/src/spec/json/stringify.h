@@ -17,6 +17,7 @@
 #include <ostream>  // std::basic_ostream
 #include <sstream>  // std::ostringstream
 #include <string>   // std::basic_string, std::string
+#include <utility>  // std::unreachable
 #include <vector>   // std::vector
 
 namespace sourcemeta::core::internal {
@@ -377,9 +378,21 @@ auto stringify(const JSON &document,
     case JSON::Type::Object:
       stringify<Allocator>(document.as_object(), stream);
       break;
+      // Clang keeps an arm for the value that never arrives and counts it as
+      // one that nothing took, so the last of them is written as the default
+      // there, while the compilers reading a case label are the ones holding
+      // this switch to naming them all
+#if defined(__clang__)
+    default:
+#else
     case JSON::Type::Decimal:
+#endif
       stringify_decimal(document.to_decimal(), stream);
       break;
+#if !defined(__clang__)
+    default:
+      std::unreachable();
+#endif
   }
 }
 
@@ -414,9 +427,21 @@ auto prettify(const JSON &document,
     case JSON::Type::Object:
       prettify<Allocator>(document.as_object(), stream, indentation, indent_by);
       break;
+      // Clang keeps an arm for the value that never arrives and counts it as
+      // one that nothing took, so the last of them is written as the default
+      // there, while the compilers reading a case label are the ones holding
+      // this switch to naming them all
+#if defined(__clang__)
+    default:
+#else
     case JSON::Type::Decimal:
+#endif
       stringify_decimal(document.to_decimal(), stream);
       break;
+#if !defined(__clang__)
+    default:
+      std::unreachable();
+#endif
   }
 }
 

@@ -229,7 +229,7 @@ auto from_json(const sourcemeta::core::JSON &json) -> std::optional<Template> {
   }
 
   return Template{.dynamic = dynamic.to_boolean(),
-                  .track = track.to_boolean(),
+                  .frames = track.to_boolean(),
                   .targets = std::move(targets_result),
                   .labels = std::move(labels_result),
                   .extra = std::move(template_extra),

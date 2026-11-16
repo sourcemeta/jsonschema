@@ -55,7 +55,7 @@ auto exclusive_bounds_need_a_sibling(
 auto keyword_shape_error(
     const sourcemeta::core::JSON::String &keyword,
     const sourcemeta::core::SchemaKeywordType type, const bool known,
-    const sourcemeta::core::JSON &value, const bool allow_boolean,
+    const sourcemeta::core::JSON &value,
     const sourcemeta::core::SchemaVocabularies &vocabularies) -> const char * {
   using namespace sourcemeta::blaze;
 
@@ -168,11 +168,12 @@ auto keyword_shape_error(
         // no meta-schema before Draft 4 defines either of them
         !is_draft3(vocabularies)) {
       return (value.is_object() &&
-              std::ranges::all_of(value.as_object(),
-                                  [allow_boolean](const auto &entry) -> bool {
-                                    return is_schema(entry.second,
-                                                     allow_boolean);
-                                  }))
+              std::ranges::all_of(
+                  value.as_object(),
+                  [&vocabularies, &keyword](const auto &entry) -> bool {
+                    return is_keyword_schema(entry.second, vocabularies,
+                                             keyword);
+                  }))
                  ? nullptr
                  : EXPECTED_SCHEMA_OBJECT;
     }
@@ -195,11 +196,13 @@ auto keyword_shape_error(
     case sourcemeta::core::SchemaKeywordType::ApplicatorValueInPlaceMaybe:
     case sourcemeta::core::SchemaKeywordType::ApplicatorValueInPlaceOther:
     case sourcemeta::core::SchemaKeywordType::ApplicatorValueInPlaceNegate:
-      return is_schema(value, allow_boolean) ? nullptr : EXPECTED_SCHEMA;
+      return is_keyword_schema(value, vocabularies, keyword) ? nullptr
+                                                             : EXPECTED_SCHEMA;
     case sourcemeta::core::SchemaKeywordType::
         ApplicatorValueOrElementsTraverseAnyItemOrItem:
     case sourcemeta::core::SchemaKeywordType::ApplicatorValueOrElementsInPlace:
-      return (is_schema(value, allow_boolean) || value.is_array())
+      return (is_keyword_schema(value, vocabularies, keyword) ||
+              value.is_array())
                  ? nullptr
                  : EXPECTED_SCHEMA_OR_ARRAY;
     // Note that `ApplicatorElementsInPlaceSome` and its negated variant are
@@ -210,10 +213,11 @@ auto keyword_shape_error(
     case sourcemeta::core::SchemaKeywordType::ApplicatorElementsTraverseItem:
     case sourcemeta::core::SchemaKeywordType::ApplicatorElementsInPlace:
       return (value.is_array() &&
-              std::ranges::all_of(value.as_array(),
-                                  [allow_boolean](const auto &entry) -> bool {
-                                    return is_schema(entry, allow_boolean);
-                                  }))
+              std::ranges::all_of(
+                  value.as_array(),
+                  [&vocabularies, &keyword](const auto &entry) -> bool {
+                    return is_keyword_schema(entry, vocabularies, keyword);
+                  }))
                  ? nullptr
                  : EXPECTED_SCHEMA_ARRAY;
     case sourcemeta::core::SchemaKeywordType::
@@ -221,11 +225,12 @@ auto keyword_shape_error(
     case sourcemeta::core::SchemaKeywordType::
         ApplicatorMembersTraversePropertyRegex:
       return (value.is_object() &&
-              std::ranges::all_of(value.as_object(),
-                                  [allow_boolean](const auto &entry) -> bool {
-                                    return is_schema(entry.second,
-                                                     allow_boolean);
-                                  }))
+              std::ranges::all_of(
+                  value.as_object(),
+                  [&vocabularies, &keyword](const auto &entry) -> bool {
+                    return is_keyword_schema(entry.second, vocabularies,
+                                             keyword);
+                  }))
                  ? nullptr
                  : EXPECTED_SCHEMA_OBJECT;
     // The walker only reports this for a keyword the dialect in use actually
@@ -353,14 +358,9 @@ auto compile_subschema(const sourcemeta::blaze::KeywordContext &context)
         metadata.vocabulary.has_value() &&
         std::holds_alternative<sourcemeta::core::SchemaVocabularies::Known>(
             metadata.vocabulary.value())};
-    // Draft 3 has no boolean schemas, but its own definitions of these two
-    // keywords accept a boolean in place of one
-    const auto allow_boolean{booleans_are_schemas(context.vocabularies()) ||
-                             keyword == "additionalProperties" ||
-                             keyword == "additionalItems"};
-    const auto *shape_error{
-        keyword_shape_error(keyword, metadata.type, official, keyword_value,
-                            allow_boolean, context.vocabularies())};
+    const auto *shape_error{keyword_shape_error(keyword, metadata.type,
+                                                official, keyword_value,
+                                                context.vocabularies())};
     static const sourcemeta::core::JSON::String KEYWORD_REF{"$ref"};
     const auto overridden_by_ref{
         keyword != KEYWORD_REF && context.schema().defines(KEYWORD_REF) &&
@@ -428,6 +428,26 @@ auto compile_subschema(const sourcemeta::blaze::KeywordContext &context)
     }
   }
 
+  // An `unevaluated*` keyword reads the marks its own subschema made, and
+  // nothing else. Sibling subschemas get flattened into a single instruction
+  // list, so the boundary of that scope has to be carried by an instruction
+  // rather than recovered at evaluation time
+  if (std::ranges::any_of(steps, [](const auto &step) -> bool {
+        return step.type == InstructionIndex::LoopPropertiesUnevaluated ||
+               step.type == InstructionIndex::LoopPropertiesUnevaluatedExcept ||
+               step.type == InstructionIndex::LoopItemsUnevaluated;
+      })) {
+    const KeywordContext frame_context{
+        .global = context.global,
+        .local = context.local,
+        .target = {.keyword = EMPTY_KEYWORD,
+                   .base_schema_location = sourcemeta::core::EMPTY_WEAK_POINTER,
+                   .base_instance_location =
+                       sourcemeta::core::EMPTY_WEAK_POINTER}};
+    return {make(InstructionIndex::ControlFrame, frame_context, ValueNone{},
+                 std::move(steps))};
+  }
+
   return steps;
 }
 
@@ -448,24 +468,21 @@ auto defines_any_whitelisted_keyword(
                                  sourcemeta::core::JSON::Object::hash(keyword));
   }
 
-  return frame.any_subschema(
+  return sourcemeta::core::schema_frame_any_reachable_subschema(
+      frame, entrypoint_location, walker, resolver,
       [&](const sourcemeta::core::SchemaFrame::Location &location) -> bool {
         const auto &subschema{sourcemeta::core::get(schema, location.pointer)};
         if (!subschema.is_object()) {
           return false;
         }
 
-        bool defines_keyword{false};
         for (const auto &[keyword, keyword_hash] : hashed_keywords) {
           if (subschema.defines(keyword, keyword_hash)) {
-            defines_keyword = true;
-            break;
+            return true;
           }
         }
 
-        return defines_keyword &&
-               frame.is_reachable(entrypoint_location, location, walker,
-                                  resolver);
+        return false;
       });
 }
 
@@ -817,8 +834,7 @@ auto compile(const sourcemeta::core::JSON &schema,
     template_vocabularies.push_back(std::format("{}", vocabulary));
   }
 
-  const bool track{
-      context.mode != Mode::FastValidation ||
+  const bool frames{
       requires_evaluation(context, entrypoint_location.pointer) ||
       // TODO: This expression should go away if we start properly compiling
       // `unevaluatedItems` like we compile `unevaluatedProperties`
@@ -827,7 +843,7 @@ auto compile(const sourcemeta::core::JSON &schema,
             return dependency.first.ends_with("unevaluatedItems");
           })};
   return {.dynamic = uses_dynamic_scopes,
-          .track = track,
+          .frames = frames,
           .targets = std::move(compiled_targets),
           .labels = std::move(labels_map),
           .extra = std::move(instruction_extra).release(),

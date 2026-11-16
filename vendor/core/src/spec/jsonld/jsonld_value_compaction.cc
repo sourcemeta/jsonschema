@@ -35,14 +35,8 @@ auto compact_value(const ActiveContext &active_context,
     }
   }
 
-  const std::optional<JSON::String> language{
-      definition != nullptr && definition->has_language
-          ? definition->language
-          : active_context.default_language};
-  const std::optional<JSON::String> direction{
-      definition != nullptr && definition->has_direction
-          ? definition->direction
-          : active_context.default_direction};
+  const auto language{effective_language(definition, active_context)};
+  const auto direction{effective_direction(definition, active_context)};
   const bool index_ok{!value.defines(KEYWORD_INDEX, KEYWORD_INDEX_HASH) ||
                       container_includes(definition, KEYWORD_INDEX)};
 
@@ -50,9 +44,12 @@ auto compact_value(const ActiveContext &active_context,
     const auto extra{
         value.object_size() - 1 -
         (value.defines(KEYWORD_INDEX, KEYWORD_INDEX_HASH) ? 1U : 0U)};
+    // An identifier is a string in expanded form, which the entry point holds
+    // the input to
     const auto &identifier{value.at(KEYWORD_ID, KEYWORD_ID_HASH)};
+    assert(identifier.is_string());
     if (extra == 0 && index_ok && definition != nullptr &&
-        definition->type_mapping.has_value() && identifier.is_string()) {
+        definition->type_mapping.has_value()) {
       if (definition->type_mapping.value() == KEYWORD_ID) {
         return JSON{compact_iri(active_context, inverse_context,
                                 identifier.to_string(), nullptr, false, false)};
@@ -73,10 +70,12 @@ auto compact_value(const ActiveContext &active_context,
         definition->type_mapping.has_value() &&
         definition->type_mapping.value() ==
             value.at(KEYWORD_TYPE, KEYWORD_TYPE_HASH).to_string()};
-    const bool type_disabled{
-        (definition != nullptr && definition->type_mapping.has_value() &&
-         definition->type_mapping.value() == KEYWORD_NONE) ||
-        (has_type && !type_matches)};
+    // A term may refuse to carry any type at all, which is asked separately
+    // from whether the type stated is the one it carries
+    const bool type_refused{definition != nullptr &&
+                            definition->type_mapping.has_value() &&
+                            definition->type_mapping.value() == KEYWORD_NONE};
+    const bool type_disabled{type_refused || (has_type && !type_matches)};
 
     if (type_matches && index_ok) {
       return contents;
@@ -120,7 +119,9 @@ auto compact_value(const ActiveContext &active_context,
           key,
           JSON{compact_iri(active_context, inverse_context,
                            entry.second.to_string(), nullptr, true, false)});
-    } else if (entry.first == KEYWORD_ID && entry.second.is_string()) {
+      // As above, an identifier is a string
+    } else if (entry.first == KEYWORD_ID) {
+      assert(entry.second.is_string());
       result.assign_assume_new(
           key,
           JSON{compact_iri(active_context, inverse_context,

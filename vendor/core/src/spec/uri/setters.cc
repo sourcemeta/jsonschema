@@ -16,14 +16,14 @@ namespace {
 auto apply_leading_slash_transform(std::optional<std::string> parsed_path,
                                    const bool needs_leading_slash)
     -> std::optional<std::string> {
-  // Every caller wraps a concrete string into the optional
+  // Every caller wraps a concrete string into the optional, having turned
+  // down an empty one of its own accord
   assert(parsed_path.has_value());
   const auto &path_value = parsed_path.value();
+  assert(!path_value.empty());
 
-  if (needs_leading_slash) {
-    if (path_value.empty() || !path_value.starts_with("/")) {
-      return "/" + path_value;
-    }
+  if (needs_leading_slash && !path_value.starts_with("/")) {
+    return "/" + path_value;
   }
 
   return parsed_path;
@@ -233,9 +233,11 @@ auto URI::append_path(std::string_view path) -> URI & {
 
 namespace {
 
+// RFC 3986 Section 3.2 writes `authority = [ userinfo "@" ] host [ ":" port
+// ]`, and a port never stands without a host, so the host answers for it too
 auto validate_uri_reference_components(const URI &reference) -> void {
   if (reference.scheme().has_value() || reference.userinfo().has_value() ||
-      reference.host().has_value() || reference.port().has_value()) {
+      reference.host().has_value()) {
     throw URIError{
         "Cannot append a URI as a path that contains a scheme or authority"};
   }
@@ -281,7 +283,7 @@ auto URI::extension(std::string &&extension) -> URI & {
   }
 
   auto &path = this->path_.value();
-  if (path.empty() || path.ends_with('/')) {
+  if (path.ends_with('/')) {
     return *this;
   }
 
@@ -308,6 +310,11 @@ auto URI::extension(std::string &&extension) -> URI & {
       path += '.';
       path += extension;
     }
+  } else if (path.empty()) {
+    // A path that was nothing but an extension holds nothing once it goes, and
+    // RFC 3986 Section 3.3 reads a path that holds nothing as no path at all,
+    // which is the spelling every other operation here answers with
+    this->path_ = std::nullopt;
   }
 
   return *this;

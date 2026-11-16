@@ -1204,8 +1204,9 @@ public:
   static auto append_form_parameter(Output &sink, const std::string_view name,
                                     const std::string_view value) -> void {
     // WHATWG URL Section 5.2: "If output is not the empty string, then append
-    // U+0026 (&) to output"
-    if (!sink.empty()) {
+    // U+0026 (&) to output", which a caller that wrote the separator itself
+    // has already done
+    if (!sink.empty() && sink.back() != '&') {
       sink.push_back('&');
     }
 

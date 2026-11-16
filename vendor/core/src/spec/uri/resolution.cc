@@ -2,6 +2,7 @@
 
 #include "normalize.h"
 
+#include <cassert>  // assert
 #include <optional> // std::optional
 #include <string>   // std::string
 
@@ -16,6 +17,27 @@ auto remove_dot_segments(const std::string &path, const bool resolving = false)
   std::string result{path};
   sourcemeta::core::normalize_path(result, resolving);
   return result;
+}
+
+// RFC 3986 Section 3.3 holds that "the path component is always defined for a
+// URI, though the defined path may be empty", and this class spells a path
+// that holds nothing as no path at all, which is what parsing, setting and
+// canonicalizing each answer with
+auto store_path(std::optional<std::string> &target, std::string &&path)
+    -> void {
+  if (path.empty()) {
+    target = std::nullopt;
+  } else {
+    target = std::move(path);
+  }
+}
+
+// RFC 3986 Section 3.2 writes `authority = [ userinfo "@" ] host [ ":" port
+// ]`, so either of the two optional parts names one on its own, which is also
+// how recomposing decides whether to write one out. A port never stands
+// without a host, so the host answers for it as well
+auto names_an_authority(const sourcemeta::core::URI &uri) -> bool {
+  return uri.userinfo().has_value() || uri.host().has_value();
 }
 
 // Merge paths according to RFC 3986 Section 5.2.3
@@ -39,7 +61,10 @@ auto merge_paths(const std::string &base_path, const std::string &ref_path,
 // characters is termed a network-path reference", so a leading slash can only
 // be dropped from a path when another one does not immediately follow it
 auto can_drop_leading_slash(const std::string &path) -> bool {
-  return path.length() > 1 && path.starts_with('/') && path[1] != '/';
+  // Both callers only ask about a path they have already found a slash at the
+  // front of
+  assert(path.starts_with('/'));
+  return path.length() > 1 && path[1] != '/';
 }
 
 } // namespace
@@ -55,45 +80,22 @@ auto URI::resolve_from(const URI &base) -> URI & {
   // Reference has a scheme - use as-is (already absolute)
   if (this->scheme_.has_value()) {
     if (this->path_.has_value()) {
-      this->path_ = remove_dot_segments(this->path_.value(), true);
+      store_path(this->path_, remove_dot_segments(this->path_.value(), true));
     }
     return *this;
   }
 
-  // NON-STANDARD EXTENSION: Handle relative-to-relative resolution
-  // RFC 3986 requires base to be absolute, but we extend to support
-  // specific relative base cases
-  if (!base.is_absolute()) {
-    if (this->is_fragment_only()) {
-      // Fragment-only reference: add fragment to base
-      this->path_ = base.path_;
-      this->query_ = base.query_;
-      return *this;
-    }
-
-    // Simple relative-to-relative case: merge paths directly
-    // Example: "foo/bar/baz" + "qux" = "foo/bar/qux"
-    const auto base_path = base.path_.value_or("");
-    if (!base_path.starts_with('/') && this->path_.has_value()) {
-      const auto &ref_path = this->path_.value();
-      if (!ref_path.starts_with('/') && !ref_path.contains('/')) {
-        auto merged = merge_paths(base_path, ref_path, false);
-        this->path_ = remove_dot_segments(merged);
-        return *this;
-      }
-    }
-
-    // Otherwise, leave unchanged
-    return *this;
-  }
-
-  // From here on, reference has no scheme and base is absolute
+  // From here on, the reference has no scheme. RFC 3986 Section 5.1 holds that
+  // "relative resolution requires a base URI to be absolute", and a relative
+  // base is this module's own extension, but Section 5.2.2 reads nothing of
+  // the base but its authority, path and query, so the algorithm below applies
+  // to either
 
   // Reference has authority - use reference authority and path
-  if (this->host_.has_value()) {
+  if (names_an_authority(*this)) {
     this->scheme_ = base.scheme_;
     if (this->path_.has_value()) {
-      this->path_ = remove_dot_segments(this->path_.value(), true);
+      store_path(this->path_, remove_dot_segments(this->path_.value(), true));
     }
     return *this;
   }
@@ -108,10 +110,8 @@ auto URI::resolve_from(const URI &base) -> URI & {
   // brackets for that form
   this->ip_literal_ = base.ip_literal_;
 
-  // Reference has empty path. Resolution itself can store one, as a lone dot
-  // against a base whose path holds no slash merges to a dot and then removes
-  // it, so this is not the same question as the component being absent
-  if (!this->path_.has_value() || this->path_.value().empty()) {
+  // Reference has empty path
+  if (!this->path_.has_value()) {
     // Empty path with query or fragment means use base path
     this->path_ = base.path_;
     if (!this->query_.has_value()) {
@@ -122,16 +122,20 @@ auto URI::resolve_from(const URI &base) -> URI & {
 
   // Reference path starts with "/" - use reference path as-is
   if (this->path_.value().starts_with('/')) {
-    this->path_ = remove_dot_segments(this->path_.value(), true);
+    store_path(this->path_, remove_dot_segments(this->path_.value(), true));
     return *this;
   }
 
   // Reference path is relative - merge with base path
   const auto base_path = base.path_.value_or("");
-  const bool base_has_authority = base.host_.has_value();
+  const bool base_has_authority = names_an_authority(base);
   auto merged_path =
       merge_paths(base_path, this->path_.value(), base_has_authority);
-  this->path_ = remove_dot_segments(merged_path, true);
+  // RFC 3986 Section 5.2.4 is written for the rooted path an absolute base
+  // merges to, so it discards the leading block of a relative one. A path
+  // merged against a relative base is still relative and the block still names
+  // what lies above it, which is the extension this module keeps
+  store_path(this->path_, remove_dot_segments(merged_path, base.is_absolute()));
 
   return *this;
 }
@@ -217,7 +221,7 @@ auto URI::relative_to(const URI &base) -> URI & {
     // there. Without an authority, merging appends the reference to a base
     // path that has no segments at all, so dropping the slash would name a
     // rootless path instead. A path of just "/" names the root either way
-    if (base.host_.has_value() && can_drop_leading_slash(relative_path)) {
+    if (names_an_authority(base) && can_drop_leading_slash(relative_path)) {
       relative_path.erase(0, 1);
     }
 
@@ -225,9 +229,7 @@ auto URI::relative_to(const URI &base) -> URI & {
     this->userinfo_.reset();
     this->host_.reset();
     this->port_.reset();
-    this->path_ = relative_path.empty()
-                      ? std::nullopt
-                      : std::optional<std::string>{relative_path};
+    this->path_ = std::move(relative_path);
 
     return *this;
   }
@@ -299,9 +301,10 @@ auto URI::relative_to(const URI &base) -> URI & {
       this->userinfo_.reset();
       this->host_.reset();
       this->port_.reset();
-      this->path_ = relative_path.empty()
-                        ? std::nullopt
-                        : std::optional<std::string>{relative_path};
+      // A target that is the directory the base sits in has no remainder to
+      // name, but the case above answers for it before this walk begins
+      assert(!relative_path.empty());
+      this->path_ = std::move(relative_path);
 
       return *this;
     }
@@ -329,9 +332,7 @@ auto URI::relative_to(const URI &base) -> URI & {
     this->userinfo_.reset();
     this->host_.reset();
     this->port_.reset();
-    this->path_ = relative_path.empty()
-                      ? std::nullopt
-                      : std::optional<std::string>{relative_path};
+    this->path_ = std::move(relative_path);
 
     return *this;
   }
@@ -341,14 +342,6 @@ auto URI::relative_to(const URI &base) -> URI & {
 }
 
 namespace {
-
-// RFC 3986 Section 3.2 writes `authority = [ userinfo "@" ] host [ ":" port
-// ]`, so any one of the three names an authority, which is also how
-// recomposing decides whether to write one out
-auto names_an_authority(const sourcemeta::core::URI &uri) -> bool {
-  return uri.userinfo().has_value() || uri.host().has_value() ||
-         uri.port().has_value();
-}
 
 auto merge_new_base_path(std::optional<std::string> &target_path,
                          std::optional<std::string> &&new_base_path,

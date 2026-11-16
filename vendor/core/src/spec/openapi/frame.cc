@@ -37,7 +37,11 @@ auto parent_of(const sourcemeta::core::OpenAPIFrame::Locations &locations,
 
   const auto document{sourcemeta::core::openapi_document_uri(uri)};
   auto pointer{location.pointer};
-  while (!pointer.empty()) {
+  // Every place of a description sits within one the walk recorded, and the
+  // document itself is one of those, so walking upward reaches a place rather
+  // than running out of pointer
+  while (true) {
+    assert(!pointer.empty());
     pointer.pop_back();
     const auto candidate{locations.find(
         sourcemeta::core::openapi_location_uri(document, pointer))};
@@ -45,8 +49,6 @@ auto parent_of(const sourcemeta::core::OpenAPIFrame::Locations &locations,
       return candidate->first;
     }
   }
-
-  std::unreachable();
 }
 
 auto error_at(const sourcemeta::core::OpenAPIWalk &walk,
@@ -497,15 +499,21 @@ auto openapi_kind_name(const OpenAPIObjectKind kind) noexcept
       return "oauth-flows"sv;
     case OpenAPIObjectKind::OAuthFlow:
       return "oauth-flow"sv;
+      // Clang keeps an arm for the value that never arrives and counts it as
+      // one that nothing took, so the last enumerator is written as the default
+      // there, while the compilers reading a case label are the ones holding
+      // this switch to naming them all
+#if defined(__clang__)
+    default:
+#else
     case OpenAPIObjectKind::SecurityRequirement:
-      return "security-requirement"sv;
-  }
-
-    // Clang settles that no other value arrives, so only GCC and MSVC
-    // need to be told that the end of this function is never reached
-#if !defined(__clang__)
-  std::unreachable();
 #endif
+      return "security-requirement"sv;
+#if !defined(__clang__)
+    default:
+      std::unreachable();
+#endif
+  }
 }
 
 // What framing a document under a given retrieval URI would key every place of
@@ -547,15 +555,21 @@ auto openapi_operation_kind_name(const OpenAPIOperationKind kind) noexcept
       return "path"sv;
     case OpenAPIOperationKind::Webhook:
       return "webhook"sv;
+      // Clang keeps an arm for the value that never arrives and counts it as
+      // one that nothing took, so the last enumerator is written as the default
+      // there, while the compilers reading a case label are the ones holding
+      // this switch to naming them all
+#if defined(__clang__)
+    default:
+#else
     case OpenAPIOperationKind::Callback:
-      return "callback"sv;
-  }
-
-    // Clang settles that no other value arrives, so only GCC and MSVC
-    // need to be told that the end of this function is never reached
-#if !defined(__clang__)
-  std::unreachable();
 #endif
+      return "callback"sv;
+#if !defined(__clang__)
+    default:
+      std::unreachable();
+#endif
+  }
 }
 
 // Every operation the description exposes, which Section 4.3.3 confines to what
@@ -597,9 +611,7 @@ auto openapi_project(const OpenAPIWalk &walk) -> std::vector<OpenAPIOperation> {
     // what the reference leads to answers first, and what sits beside it
     // answers for whatever that leaves unsaid
     const auto chain{aliased_path_items(walk, endpoint)};
-    if (chain.empty()) {
-      continue;
-    }
+    assert(!chain.empty());
 
     // Whether what the chain ends at is settled by the document in hand. It is
     // settled when that place is a Path Item Object this holds, and equally
@@ -680,19 +692,16 @@ auto openapi_project(const OpenAPIWalk &walk) -> std::vector<OpenAPIOperation> {
         // binds a Parameter Object wherever it is written
         for (const auto &declared : record->operations) {
           const auto operation{walk.operation_records.find(declared.second)};
-          if (operation != walk.operation_records.cend()) {
-            check_path_parameters(walk, templates, operation->second.parameters,
-                                  message);
-          }
+          assert(operation != walk.operation_records.cend());
+          check_path_parameters(walk, templates, operation->second.parameters,
+                                message);
         }
       }
     }
 
     for (const auto &[method, origin] : methods) {
       const auto operation{walk.operation_records.find(origin)};
-      if (operation == walk.operation_records.cend()) {
-        continue;
-      }
+      assert(operation != walk.operation_records.cend());
 
       auto parameters{parameters_of(walk, operation->second.parameters,
                                     path_item_parameters)};
@@ -893,8 +902,7 @@ OpenAPIFrame::OpenAPIFrame(const JSON &document, const SchemaWalker &walker,
   // the schemas were read under is settled above rather than here, as working
   // it out is the business of whatever reads inside a Schema Object
   const auto foreign{openapi_schema_of_another_dialect(
-      this->internal_->version, *(this->internal_->schemas),
-      this->internal_->schema_paths, resolver)};
+      this->internal_->version, *(this->internal_->schemas), resolver)};
   if (foreign.has_value()) {
     throw OpenAPIError{"A Schema Object of this revision must be written "
                        "against the OpenAPI 3.0 dialect",
@@ -1131,6 +1139,7 @@ auto OpenAPIFrame::to_json(
 
       entry.assign_assume_new("destination", JSON{discriminator.destination});
       entry.assign_assume_new("scope", JSON{discriminator.scope});
+      entry.assign_assume_new("byName", JSON{discriminator.by_name});
       entry.assign_assume_new("dangling", JSON{discriminator.dangling});
       discriminators.push_back(std::move(entry));
     }

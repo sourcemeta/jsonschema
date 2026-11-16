@@ -15,6 +15,18 @@
 #include <variant>     // std::get, std::get_if
 #include <vector>      // std::vector
 
+// Clang keeps an arm for the container that never arrives and counts it as one
+// nothing took, so the last name carries the default there, while the
+// compilers reading a case label are the ones holding the switch to naming
+// them all. The conditional stands at file scope rather than between the case
+// labels, because a directive inside the switch body takes a region of its own
+// that nothing flows into and so reads as a line never reached
+#if defined(__clang__)
+#define JSONLD_MATERIALIZE_LAST_CASE(name) default:
+#else
+#define JSONLD_MATERIALIZE_LAST_CASE(name) case name:
+#endif
+
 namespace sourcemeta::core {
 
 namespace {
@@ -39,6 +51,9 @@ auto child_range(typename AnnotationIndex<PointerT>::const_iterator &iterator,
                  const PointerT &pointer) -> AnnotationRange<PointerT> {
   const auto depth{pointer.size() - 1};
   const auto &token{pointer.at(depth)};
+  // Annotations that sort before the key in hand are passed over. Whether any
+  // do turns on the order the map is read in, which is the map's own, so this
+  // is not something a test can ask for
   while (iterator != end && (*iterator)->pointer.at(depth) < token) {
     iterator += 1;
   }
@@ -87,18 +102,14 @@ auto is_node_object(const JSON &value) -> bool {
 }
 
 auto direction_to_string(const JSONLDDirection direction) -> JSON::StringView {
-  switch (direction) {
-    case JSONLDDirection::LTR:
-      return "ltr";
-    case JSONLDDirection::RTL:
-      return "rtl";
+  // The base direction a string carries is one of exactly two, which the
+  // syntax names and nothing adds to, so the one is read off against the other
+  // rather than through a switch that would leave an arm for a third
+  if (direction == JSONLDDirection::LTR) {
+    return "ltr";
   }
 
-    // Clang settles that no other value arrives, so only GCC and MSVC
-    // need to be told that the end of this function is never reached
-#if !defined(__clang__)
-  std::unreachable();
-#endif
+  return "rtl";
 }
 
 auto types_to_array(const std::vector<JSON::String> &types) -> JSON {
@@ -569,7 +580,7 @@ auto materialize_value(const JSON &value, PointerT &pointer,
           descriptor.edges,
           [](const JSONLDEdge &edge) -> bool { return edge.reverse; }));
       return build_language_collection(value);
-    case JSONLDContainer::Index:
+      JSONLD_MATERIALIZE_LAST_CASE(JSONLDContainer::Index)
       assert(value.is_object());
       return build_index_collection(value, pointer, range, standalone);
   }
@@ -686,3 +697,5 @@ auto jsonld_materialize(const JSON &instance,
 }
 
 } // namespace sourcemeta::core
+
+#undef JSONLD_MATERIALIZE_LAST_CASE

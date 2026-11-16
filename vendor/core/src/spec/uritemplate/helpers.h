@@ -343,88 +343,98 @@ parse_variable_list(const std::string_view input, std::size_t position,
   return position;
 }
 
+// RFC 6570 Section 2.1: a literal runs up to whatever opens the next
+// expression. This is read rather than tried, as it answers for everything
+// that does not open an expression and so always has something to take, which
+// is what makes it the last word on whatever is left
+template <bool CheckOnly>
+auto parse_literal(const std::string_view input)
+    -> std::conditional_t<CheckOnly, std::size_t,
+                          std::pair<URITemplateToken, std::size_t>> {
+  // Everything that opens an expression has either taken what stands here or
+  // refused the template outright before this is reached, and the walk that
+  // asks only ever hands over what it has left to read
+  assert(!input.empty() && input[0] != '{');
+
+  std::size_t position = 0;
+  while (position < input.size()) {
+    const char character = input[position];
+    if (character == '{') {
+      break;
+    }
+
+    // See https://www.rfc-editor.org/rfc/rfc6570#section-2.1
+    if (character == '%') {
+      if (!is_percent_triplet(input, position)) {
+        throw URITemplateParseError(position + 1);
+      }
+
+      position += 3;
+      continue;
+    }
+
+    // The production is defined over characters rather than over bytes, so
+    // what stands here is read as one before it is held to it
+    const auto codepoint{sourcemeta::core::utf8_decode(input, position)};
+    if (!codepoint.has_value() ||
+        !is_literal_codepoint(codepoint.value().first)) {
+      throw URITemplateParseError(position + 1);
+    }
+
+    position += codepoint.value().second;
+  }
+
+  if constexpr (CheckOnly) {
+    return position;
+  } else {
+    return std::make_pair(
+        URITemplateToken{URITemplateTokenLiteral{input.substr(0, position)}},
+        position);
+  }
+}
+
 template <typename T, bool CheckOnly>
 auto parse_expression(const std::string_view input)
     -> std::conditional_t<CheckOnly, std::optional<std::size_t>,
                           URITemplateParseResult> {
-  if constexpr (std::is_same_v<T, URITemplateTokenLiteral>) {
-    // A literal is read last of all, after everything that opens an expression
-    // has either taken what stands here or refused the template outright, and
-    // the walk that asks only ever hands over what it has left to read
-    assert(!input.empty() && input[0] != '{');
+  // The walk only asks about what it has left to read, which it stops doing
+  // once nothing is left
+  assert(!input.empty());
+  if (input[0] != '{') {
+    return std::nullopt;
+  }
 
-    std::size_t position = 0;
-    while (position < input.size()) {
-      const char character = input[position];
-      if (character == '{') {
-        break;
-      }
-
-      // See https://www.rfc-editor.org/rfc/rfc6570#section-2.1
-      if (character == '%') {
-        if (!is_percent_triplet(input, position)) {
-          throw URITemplateParseError(position + 1);
-        }
-
-        position += 3;
-        continue;
-      }
-
-      // The production is defined over characters rather than over bytes, so
-      // what stands here is read as one before it is held to it
-      const auto codepoint{sourcemeta::core::utf8_decode(input, position)};
-      if (!codepoint.has_value() ||
-          !is_literal_codepoint(codepoint.value().first)) {
-        throw URITemplateParseError(position + 1);
-      }
-
-      position += codepoint.value().second;
-    }
-
-    if constexpr (CheckOnly) {
-      return position;
-    } else {
-      return std::make_pair(
-          URITemplateToken{URITemplateTokenLiteral{input.substr(0, position)}},
-          position);
-    }
-  } else {
-    if (input.empty() || input[0] != '{') {
+  std::size_t var_start;
+  if constexpr (HasOp<T>::value) {
+    // The operator settles which expansion stands here, so once it is read,
+    // running out of input is the template failing to name a variable rather
+    // than this reading of it not applying
+    if (input.size() < 2 || input[1] != T::OPERATOR) {
       return std::nullopt;
     }
-
-    std::size_t var_start;
-    if constexpr (HasOp<T>::value) {
-      // The operator settles which expansion stands here, so once it is read,
-      // running out of input is the template failing to name a variable rather
-      // than this reading of it not applying
-      if (input.size() < 2 || input[1] != T::OPERATOR) {
-        return std::nullopt;
-      }
-      var_start = 2;
-    } else {
-      if (input.size() < 2) {
-        throw URITemplateParseError(1);
-      }
-
-      // RFC 6570 Section 2.2 has an operator name which expansion stands here,
-      // and every one of those is read before this is, so what reaches here
-      // never carries one
-      assert(!is_operator(input[1]));
-      var_start = 1;
+    var_start = 2;
+  } else {
+    if (input.size() < 2) {
+      throw URITemplateParseError(1);
     }
 
-    if constexpr (CheckOnly) {
-      const auto end_position =
-          parse_variable_list<true>(input, var_start, nullptr);
-      return end_position + 1;
-    } else {
-      std::vector<URITemplateVariableSpecification> variables;
-      const auto end_position =
-          parse_variable_list<false>(input, var_start, &variables);
-      return std::make_pair(URITemplateToken{T{std::move(variables)}},
-                            end_position + 1);
-    }
+    // RFC 6570 Section 2.2 has an operator name which expansion stands here,
+    // and every one of those is read before this is, so what reaches here
+    // never carries one
+    assert(!is_operator(input[1]));
+    var_start = 1;
+  }
+
+  if constexpr (CheckOnly) {
+    const auto end_position =
+        parse_variable_list<true>(input, var_start, nullptr);
+    return end_position + 1;
+  } else {
+    std::vector<URITemplateVariableSpecification> variables;
+    const auto end_position =
+        parse_variable_list<false>(input, var_start, &variables);
+    return std::make_pair(URITemplateToken{T{std::move(variables)}},
+                          end_position + 1);
   }
 }
 
@@ -447,8 +457,10 @@ auto expand_expression(
     while (true) {
       const auto &[value, object_key, has_more] = response.value();
 
-      if (variable.length > 0 &&
-          (has_more || object_key.has_value() || !first_value)) {
+      // A value that is one of several is only ever reached by the value
+      // before it saying that more follow, which is refused right here, so a
+      // composite is named by either of the two questions below alone
+      if (variable.length > 0 && (has_more || object_key.has_value())) {
         throw URITemplateExpansionError{
             "Prefix modifier cannot be applied to composite values"};
       }
@@ -459,7 +471,7 @@ auto expand_expression(
       }
 
       if (variable.explode) {
-        if (first_var && first_value) {
+        if (first_var) {
           if constexpr (HasPrefix<T>::value) {
             result += T::PREFIX;
           }
@@ -495,7 +507,9 @@ auto expand_expression(
         // An associative-array pair always contributes its key, so it is never
         // empty even when the pair value is the empty string
         const bool value_empty{!object_key.has_value() && actual_value.empty()};
-        if (first_var && first_value) {
+        // Nothing has been written for any variable yet, so this is the first
+        // value of this one as well
+        if (first_var) {
           if constexpr (HasPrefix<T>::value) {
             result += T::PREFIX;
           }

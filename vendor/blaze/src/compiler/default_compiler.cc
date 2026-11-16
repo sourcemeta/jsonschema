@@ -26,14 +26,17 @@ auto compiler_openapi_noop(const KeywordContext &, const Instructions &)
 namespace {
 
 // Whether any element of the array is a schema
-auto any_element_is_a_schema(const sourcemeta::core::JSON &value,
-                             const bool allow_boolean) -> bool {
+auto any_element_is_a_schema(
+    const sourcemeta::core::JSON &value,
+    const sourcemeta::core::SchemaVocabularies &vocabularies,
+    const sourcemeta::core::JSON::String &keyword) -> bool {
   using namespace sourcemeta::blaze;
   return value.is_array() &&
-         std::ranges::any_of(value.as_array(),
-                             [allow_boolean](const auto &element) -> bool {
-                               return is_schema(element, allow_boolean);
-                             });
+         std::ranges::any_of(
+             value.as_array(),
+             [&vocabularies, &keyword](const auto &element) -> bool {
+               return is_keyword_schema(element, vocabularies, keyword);
+             });
 }
 
 // Whether a schema sits where a keyword of this kind holds one, and so would
@@ -43,8 +46,9 @@ auto any_element_is_a_schema(const sourcemeta::core::JSON &value,
 // names among them, so asking that every member or element be a schema would
 // hand a schema to a compiler that cannot be given one
 auto holds_schema(const sourcemeta::core::SchemaKeywordType type,
-                  const sourcemeta::core::JSON &value, const bool allow_boolean)
-    -> bool {
+                  const sourcemeta::core::JSON &value,
+                  const sourcemeta::core::SchemaVocabularies &vocabularies,
+                  const sourcemeta::core::JSON::String &keyword) -> bool {
   using namespace sourcemeta::blaze;
   switch (type) {
     case sourcemeta::core::SchemaKeywordType::Unknown:
@@ -63,8 +67,10 @@ auto holds_schema(const sourcemeta::core::SchemaKeywordType type,
     case sourcemeta::core::SchemaKeywordType::ApplicatorMembersInPlaceSome:
       return value.is_object() &&
              std::ranges::any_of(
-                 value.as_object(), [allow_boolean](const auto &entry) -> bool {
-                   return is_schema(entry.second, allow_boolean);
+                 value.as_object(),
+                 [&vocabularies, &keyword](const auto &entry) -> bool {
+                   return is_keyword_schema(entry.second, vocabularies,
+                                            keyword);
                  });
     // The schemas are the elements, and the value itself is never one
     case sourcemeta::core::SchemaKeywordType::ApplicatorElementsTraverseItem:
@@ -72,16 +78,16 @@ auto holds_schema(const sourcemeta::core::SchemaKeywordType type,
     case sourcemeta::core::SchemaKeywordType::ApplicatorElementsInPlaceSome:
     case sourcemeta::core::SchemaKeywordType::
         ApplicatorElementsInPlaceSomeNegate:
-      return any_element_is_a_schema(value, allow_boolean);
+      return any_element_is_a_schema(value, vocabularies, keyword);
     // Either the value is the schema, or its elements are
     case sourcemeta::core::SchemaKeywordType::
         ApplicatorValueOrElementsTraverseAnyItemOrItem:
     case sourcemeta::core::SchemaKeywordType::ApplicatorValueOrElementsInPlace:
-      return is_schema(value, allow_boolean) ||
-             any_element_is_a_schema(value, allow_boolean);
+      return is_keyword_schema(value, vocabularies, keyword) ||
+             any_element_is_a_schema(value, vocabularies, keyword);
     // The value is the schema
     default:
-      return is_schema(value, allow_boolean);
+      return is_keyword_schema(value, vocabularies, keyword);
   }
 }
 
@@ -704,14 +710,9 @@ auto sourcemeta::blaze::default_schema_compiler(
       // schema is not one this compiler can be handed. The dialect that reads
       // a reference as an object of its own stops earlier still, as there the
       // sibling is not merely overridden but ignored.
-      //
-      // Draft 3 has no boolean schemas, but its own definitions of these two
-      // keywords accept a boolean in place of one
-      const auto allow_boolean{booleans_are_schemas(context.vocabularies()) ||
-                               context.keyword() == "additionalProperties" ||
-                               context.keyword() == "additionalItems"};
       if (!ref_object_ignores_siblings(context.vocabularies()) &&
-          !holds_schema(metadata.type, context.value(), allow_boolean)) {
+          !holds_schema(metadata.type, context.value(), context.vocabularies(),
+                        context.keyword())) {
         [[maybe_unused]] const auto discarded{
             dispatch_keyword(context, current)};
       }

@@ -17,6 +17,7 @@
 #include <utility>          // std::move, std::to_underlying
 
 #include "compile_helpers.h"
+#include "upstream.h"
 
 namespace sourcemeta::blaze {
 
@@ -105,23 +106,6 @@ compile_pruned_subschema(const KeywordContext &context,
   compile(context.relative(), suffix, suffix);
 }
 
-// Draft 3 and Draft 4 read "integer" as a number written without a fractional
-// part, so a bound like `2.0` is not one there. Draft 6 onwards widened it to
-// any number whose fractional part is zero. The OpenAPI 3.0 Schema Object
-// answers with Draft 4, as its meta-schema is a Draft 4 document.
-//
-// Note that OpenAPI 3.0.4 says the opposite in prose, that "both `1` and
-// `1.0` are equivalent, and are both considered to be integers", reversing
-// what 3.0.3 said. We keep the Draft 4 reading for every dated OpenAPI 3.0
-// dialect regardless, because the Schema Object extends the Draft 4 base
-// dialect and so is the base dialect's question to answer, not a patch
-// release's to redefine
-auto integral_reals_are_integers(
-    const sourcemeta::core::SchemaVocabularies &vocabularies) -> bool {
-  return !is_draft3(vocabularies) && !is_draft4(vocabularies) &&
-         !is_openapi_3_0(vocabularies);
-}
-
 // A number too large to hold as a 64-bit integer is kept as a decimal, where
 // whether it is an integer stays a question about how the literal was written
 // rather than about how it came to be stored
@@ -132,7 +116,8 @@ auto is_dialect_integer(
     return false;
   }
 
-  return integral_reals_are_integers(vocabularies) || value.is_integer() ||
+  return sourcemeta::core::schema_integral_reals_are_integers(vocabularies) ||
+         value.is_integer() ||
          (value.is_decimal() && value.to_decimal().is_integer());
 }
 
@@ -177,7 +162,7 @@ auto in_place_applicators_may_be_empty(
 // Draft 3 describes `type` and `disallow` as a type name or an array of unique
 // entries, each of which is a type name or a subschema
 auto is_draft3_type_union(const sourcemeta::core::JSON &value) -> bool {
-  return value.unique() &&
+  return value.is_array() && value.unique() &&
          std::ranges::all_of(value.as_array(), [](const auto &entry) -> bool {
            return entry.is_string() || entry.is_object();
          });
@@ -592,7 +577,8 @@ auto make_type_assertion(const KeywordContext &context,
   // A dialect that reads a number written with a fractional part as an integer
   // needs the check that accepts one
   if (name == "integer") {
-    return make(integral_reals_are_integers(context.vocabularies())
+    return make(sourcemeta::core::schema_integral_reals_are_integers(
+                    context.vocabularies())
                     ? InstructionIndex::AssertionType
                     : InstructionIndex::AssertionTypeStrict,
                 context, JSON::Type::Integer);
@@ -1222,7 +1208,8 @@ auto compiler_draft3_applicator_properties_with_options(
           substeps.front().type !=
               InstructionIndex::ControlGroupWhenDefinesDirect &&
           substeps.front().type != InstructionIndex::ControlGroupWhenType &&
-          substeps.front().type != InstructionIndex::ControlEvaluate};
+          substeps.front().type != InstructionIndex::ControlEvaluate &&
+          substeps.front().type != InstructionIndex::ControlFrame};
       if (fusion_possible && fusable_single) {
         const auto is_required{assume_object && required.contains(name)};
         auto prop{make_property(name)};
@@ -1636,7 +1623,7 @@ auto compiler_draft3_applicator_items_array(const KeywordContext &context,
   const auto allows_empty{is_draft3(context.vocabularies())};
   const auto &items{context.value()};
   if ((items.empty() && !allows_empty) ||
-      !all_are_schemas(items, booleans_are_schemas(context.vocabularies()))) {
+      !all_are_schemas(items, context.vocabularies())) {
     throw_keyword_error(context, allows_empty
                                      ? EXPECTED_SCHEMA_ARRAY
                                      : EXPECTED_SCHEMA_ARRAY_NON_EMPTY);
@@ -1806,8 +1793,7 @@ auto compiler_draft3_applicator_items_with_options(
     const auto allows_empty{is_draft3(context.vocabularies())};
     const auto &entries{context.value()};
     if ((entries.empty() && !allows_empty) ||
-        !all_are_schemas(entries,
-                         booleans_are_schemas(context.vocabularies()))) {
+        !all_are_schemas(entries, context.vocabularies())) {
       throw_keyword_error(context, allows_empty
                                        ? EXPECTED_SCHEMA_ARRAY
                                        : EXPECTED_SCHEMA_ARRAY_NON_EMPTY);
@@ -2558,8 +2544,7 @@ auto compiler_draft3_validation_disallow(const KeywordContext &context,
 
   // Draft 3 gives `disallow` the same shape it gives `type`: a type name, or
   // an array of names and subschemas
-  if (!value.is_string() &&
-      (!value.is_array() || !is_draft3_type_union(value))) {
+  if (!value.is_string() && !is_draft3_type_union(value)) {
     throw_keyword_error(context, EXPECTED_TYPE_NAMES);
   }
 
@@ -2640,8 +2625,7 @@ auto compiler_draft3_applicator_extends(const KeywordContext &context,
 
   // Unlike the keywords that share this shape, Draft 3 puts no lower bound on
   // how many schemas `extends` may combine
-  if (value.is_array() &&
-      !all_are_schemas(value, booleans_are_schemas(context.vocabularies()))) {
+  if (value.is_array() && !all_are_schemas(value, context.vocabularies())) {
     throw_keyword_error(context, EXPECTED_SCHEMA_ARRAY);
   }
 
@@ -2716,22 +2700,20 @@ auto compiler_draft3_applicator_dependencies(const KeywordContext &context,
   const auto draft3{is_draft3(context.vocabularies())};
 
   // Every member must be a schema or a list of property names, plus a single
-  // property name in Draft 3. A member that is none of those makes the keyword
-  // as a whole stop being a constraint
-  if (!std::ranges::all_of(
-          context.value().as_object(),
-          [draft3, allow_boolean = booleans_are_schemas(
-                       context.vocabularies())](const auto &entry) -> bool {
-            const auto names_only{
-                entry.second.is_array() &&
-                std::ranges::all_of(
-                    entry.second.as_array(),
-                    [](const auto &name) -> bool { return name.is_string(); })};
-            return is_schema(entry.second, allow_boolean) ||
-                   (names_only && (draft3 || entry.second.unique())) ||
-                   (draft3 && entry.second.is_string());
-          })) {
-    throw_keyword_error(context, EXPECTED_DEPENDENCIES);
+  // property name in Draft 3. Draft 4 onwards ask that such a list have no
+  // repeats, which Draft 3 does not ask for at all. A member that is none of
+  // those makes the keyword as a whole stop being a constraint
+  if (!std::ranges::all_of(context.value().as_object(),
+                           [draft3, &vocabularies = context.vocabularies()](
+                               const auto &entry) -> bool {
+                             return sourcemeta::core::schema_is_schema(
+                                        entry.second, vocabularies) ||
+                                    (is_property_name_array(entry.second) &&
+                                     (draft3 || entry.second.unique())) ||
+                                    (draft3 && entry.second.is_string());
+                           })) {
+    throw_keyword_error(context, draft3 ? EXPECTED_DEPENDENCIES_DRAFT3
+                                        : EXPECTED_DEPENDENCIES);
   }
 
   // Only once the shape is known to be good does it matter whether the keyword
@@ -2752,22 +2734,22 @@ auto compiler_draft3_applicator_dependencies(const KeywordContext &context,
                  compile(context.relative(), make_weak_pointer(entry.first))));
       }
     } else if (entry.second.is_array()) {
-      std::vector<sourcemeta::core::JSON::String> properties;
+      ValueStringSet properties;
       for (const auto &property : entry.second.as_array()) {
         if (!property.is_string()) {
           continue;
         }
 
-        properties.push_back(property.to_string());
+        properties.insert(property.to_string());
       }
 
       if (!properties.empty()) {
-        dependencies.emplace(entry.first, properties);
+        dependencies.emplace(entry.first, std::move(properties));
       }
     } else if (draft3 && entry.second.is_string()) {
-      dependencies.emplace(entry.first,
-                           std::vector<sourcemeta::core::JSON::String>{
-                               entry.second.to_string()});
+      ValueStringSet properties;
+      properties.insert(entry.second.to_string());
+      dependencies.emplace(entry.first, std::move(properties));
     }
   }
 

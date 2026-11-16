@@ -61,7 +61,7 @@ auto to_json(const Template &schema_template) -> sourcemeta::core::JSON {
   result.push_back(sourcemeta::core::JSON{
       static_cast<std::int64_t>(sourcemeta::blaze::JSON_VERSION)});
   result.push_back(sourcemeta::core::JSON{schema_template.dynamic});
-  result.push_back(sourcemeta::core::JSON{schema_template.track});
+  result.push_back(sourcemeta::core::JSON{schema_template.frames});
 
   auto targets{sourcemeta::core::JSON::make_array()};
   for (const auto &target : schema_template.targets) {

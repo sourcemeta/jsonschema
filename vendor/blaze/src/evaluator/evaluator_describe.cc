@@ -1081,7 +1081,9 @@ auto describe(const Template &schema_template, const bool valid,
   }
 
   if (step.type ==
-      sourcemeta::blaze::InstructionIndex::AssertionEqualsAnyStringHash) {
+          sourcemeta::blaze::InstructionIndex::AssertionEqualsAnyStringHash ||
+      step.type == sourcemeta::blaze::InstructionIndex::
+                       AssertionPropertyEqualsAnyStringHash) {
     assert(!instruction_value<ValueStringHashes>(step).first.empty());
     return render_message(message_format(schema_template, step),
                           {describe_subject(evaluate_path, instance_location,
@@ -1180,10 +1182,10 @@ auto describe(const Template &schema_template, const bool valid,
       std::set<std::string> all_dependencies;
       for (const auto &child : step.children) {
         assert(child.type == InstructionIndex::LogicalWhenDefines);
-        const auto &property{instruction_value<ValueProperty>(child).first};
-        all_dependencies.insert(property);
-        if (target.defines(property)) {
-          present.insert(property);
+        const auto &property{instruction_value<ValueProperty>(child)};
+        all_dependencies.insert(property.first);
+        if (target.defines(property.first, property.second)) {
+          present.insert(property.first);
         }
       }
 
@@ -1212,11 +1214,11 @@ auto describe(const Template &schema_template, const bool valid,
 
     for (const auto &entry : instruction_value<ValueStringMap>(step)) {
       all_dependencies.insert(entry.first);
-      if (target.defines(entry.first)) {
+      if (target.defines(entry.first, entry.hash)) {
         present.insert(entry.first);
         for (const auto &dependency : entry.second) {
-          if (valid || !target.defines(dependency)) {
-            required.insert(dependency);
+          if (valid || !target.defines(dependency.first, dependency.second)) {
+            required.insert(dependency.first);
           }
         }
       }

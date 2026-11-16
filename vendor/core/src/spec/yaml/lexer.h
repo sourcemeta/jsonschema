@@ -179,6 +179,7 @@ public:
       }
       this->advance(1);
       this->flow_level_++;
+      this->last_was_json_like_ = false;
       return Token{.type = TokenType::MappingStart,
                    .value = "{",
                    .line = current_line,
@@ -191,6 +192,7 @@ public:
       }
       this->advance(1);
       this->flow_level_++;
+      this->last_was_json_like_ = false;
       return Token{.type = TokenType::SequenceStart,
                    .value = "[",
                    .line = current_line,
@@ -201,8 +203,9 @@ public:
       if (current == '}') {
         this->advance(1);
         this->flow_level_--;
+        this->last_was_json_like_ = true;
         if (this->flow_level_ == 0) {
-          this->validate_trailing_content();
+          this->validate_flow_collection_end();
         }
         return Token{.type = TokenType::MappingEnd,
                      .value = "}",
@@ -212,8 +215,9 @@ public:
       if (current == ']') {
         this->advance(1);
         this->flow_level_--;
+        this->last_was_json_like_ = true;
         if (this->flow_level_ == 0) {
-          this->validate_trailing_content();
+          this->validate_flow_collection_end();
         }
         return Token{.type = TokenType::SequenceEnd,
                      .value = "]",
@@ -222,6 +226,7 @@ public:
       }
       if (current == ',') {
         this->advance(1);
+        this->last_was_json_like_ = false;
         const bool compact{this->roundtrip_ &&
                            this->position_ < this->input_.size() &&
                            this->peek() != ' ' && this->peek() != '\n' &&
@@ -252,6 +257,7 @@ public:
       }
       this->advance(1);
       this->after_block_indicator_ = true;
+      this->last_was_json_like_ = false;
       return Token{.type = TokenType::BlockMappingKey,
                    .value = "?",
                    .line = current_line,
@@ -267,7 +273,7 @@ public:
                              current_line, current_column};
       }
       this->advance(1);
-      this->last_was_quoted_scalar_ = false;
+      this->last_was_json_like_ = false;
       // Section 8.2.1 indents the compact content that shares a line with its
       // indicator by spaces, and a value indicator opens such a line just as a
       // sequence entry or an explicit key does, so a tab separating it from a
@@ -283,14 +289,17 @@ public:
     }
 
     if (current == '&') {
+      this->last_was_json_like_ = false;
       return this->scan_anchor_or_alias(TokenType::Anchor);
     }
 
     if (current == '*') {
+      this->last_was_json_like_ = false;
       return this->scan_anchor_or_alias(TokenType::Alias);
     }
 
     if (current == '!') {
+      this->last_was_json_like_ = false;
       return this->scan_tag();
     }
 
@@ -299,22 +308,22 @@ public:
     }
 
     if (current == '\'') {
-      this->last_was_quoted_scalar_ = true;
+      this->last_was_json_like_ = true;
       return this->scan_single_quoted_scalar();
     }
 
     if (current == '"') {
-      this->last_was_quoted_scalar_ = true;
+      this->last_was_json_like_ = true;
       return this->scan_double_quoted_scalar();
     }
 
     if (current == '|') {
-      this->last_was_quoted_scalar_ = false;
+      this->last_was_json_like_ = false;
       return this->scan_block_scalar(ScalarStyle::Literal);
     }
 
     if (current == '>') {
-      this->last_was_quoted_scalar_ = false;
+      this->last_was_json_like_ = false;
       return this->scan_block_scalar(ScalarStyle::Folded);
     }
 
@@ -323,7 +332,7 @@ public:
                            current_column};
     }
 
-    this->last_was_quoted_scalar_ = false;
+    this->last_was_json_like_ = false;
     return this->scan_plain_scalar();
   }
 
@@ -475,10 +484,9 @@ private:
   }
 
   auto advance(const std::size_t count) noexcept -> void {
+    // Every caller has read what it asks to move over, so the input holds it
+    assert(this->position_ + count <= this->input_.size());
     for (std::size_t index = 0; index < count; ++index) {
-      if (this->position_ >= this->input_.size()) {
-        break;
-      }
       // A lone carriage return is a line break of its own, while the one that
       // opens a carriage return and line feed pair leaves the counting to the
       // line feed. See https://yaml.org/spec/1.2.2/#54-line-break-characters
@@ -627,7 +635,10 @@ private:
 
   [[nodiscard]] auto is_value_indicator() const noexcept -> bool {
     if (this->flow_level_ > 0) {
-      if (this->last_was_quoted_scalar_) {
+      // YAML 1.2.2 Section 7.4.2 lets the value stand adjacent to the
+      // indicator wherever the key is JSON-like, which production 157 reads as
+      // a flow collection or a quoted scalar
+      if (this->last_was_json_like_) {
         return true;
       }
       if (this->position_ + 1 >= this->input_.size()) {
@@ -920,7 +931,24 @@ private:
     }
   }
 
-  auto validate_trailing_content() -> void {
+  // A flow collection that closes outside any other is read against the block
+  // structure around it, so what stands after it answers to that as well
+  auto validate_flow_collection_end() -> void {
+    // RFC 8259 Section 4: an object member name is a string, so a flow
+    // collection standing before a value indicator, which YAML 1.2.2
+    // production 193 reads as the implicit key of a block mapping entry,
+    // cannot be represented as JSON. PyYAML raises on the unhashable key and
+    // js-yaml rejects the complex key, so such a key is rejected rather than
+    // read as a document of its own
+    if (this->validate_trailing_content() == ':') [[unlikely]] {
+      throw YAMLParseError{"Mapping key cannot be a collection", this->line_,
+                           this->column_};
+    }
+  }
+
+  // What stands after the content just read, with the spaces and tabs between
+  // skipped over, or the null character where the line or the input ends
+  auto validate_trailing_content() -> char {
     auto lookahead{this->position_};
     bool seen_whitespace{false};
     while (lookahead < this->input_.size()) {
@@ -931,24 +959,26 @@ private:
         continue;
       }
       if (character == '\n' || character == '\r') {
-        return;
+        return '\0';
       }
       if (character == '#') {
         if (seen_whitespace) {
-          return;
+          return '\0';
         }
         throw YAMLParseError{"Invalid trailing content", this->line_,
                              this->column_};
       }
       if (character == ':') {
-        return;
+        return character;
       }
       if (this->flow_level_ > 0 && is_flow_indicator(character)) {
-        return;
+        return character;
       }
       throw YAMLParseError{"Invalid trailing content", this->line_,
                            this->column_};
     }
+
+    return '\0';
   }
 
   auto scan_double_quoted_scalar() -> Token {
@@ -1734,7 +1764,7 @@ private:
   std::uint64_t column_{1};
   std::size_t flow_level_{0};
   bool stream_started_{false};
-  bool last_was_quoted_scalar_{false};
+  bool last_was_json_like_{false};
   bool tab_at_line_start_{false};
   bool after_block_indicator_{false};
   bool separation_tab_after_indicator_{false};

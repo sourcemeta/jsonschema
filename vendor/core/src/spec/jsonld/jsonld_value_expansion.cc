@@ -6,7 +6,31 @@
 
 namespace sourcemeta::core {
 
-// Value Expansion (JSON-LD 1.1 API Section 5.3.3)
+namespace {} // namespace
+
+// The term supplies the language where it declares one of its own, and the
+// context default stands otherwise
+auto effective_language(const TermDefinition *const definition,
+                        const ActiveContext &active_context)
+    -> std::optional<JSON::String> {
+  if (definition != nullptr && definition->has_language) {
+    return definition->language;
+  }
+
+  return active_context.default_language;
+}
+
+auto effective_direction(const TermDefinition *const definition,
+                         const ActiveContext &active_context)
+    -> std::optional<JSON::String> {
+  if (definition != nullptr && definition->has_direction) {
+    return definition->direction;
+  }
+
+  return active_context.default_direction;
+}
+
+// Value Expansion (JSON-LD 1.1 API Section 5.3.2)
 auto expand_value(ExpansionState &state, ActiveContext &active_context,
                   const std::optional<JSON::String> &active_property,
                   const JSON &value) -> JSON {
@@ -55,16 +79,12 @@ auto expand_value(ExpansionState &state, ActiveContext &active_context,
                              JSON{definition->type_mapping.value()},
                              KEYWORD_TYPE_HASH);
   } else if (value.is_string()) {
-    const auto language{definition != nullptr && definition->has_language
-                            ? definition->language
-                            : active_context.default_language};
+    const auto language{effective_language(definition, active_context)};
     if (language.has_value()) {
       result.assign_assume_new(JSON::String{KEYWORD_LANGUAGE},
                                JSON{language.value()}, KEYWORD_LANGUAGE_HASH);
     }
-    const auto direction{definition != nullptr && definition->has_direction
-                             ? definition->direction
-                             : active_context.default_direction};
+    const auto direction{effective_direction(definition, active_context)};
     if (direction.has_value()) {
       result.assign_assume_new(JSON::String{KEYWORD_DIRECTION},
                                JSON{direction.value()}, KEYWORD_DIRECTION_HASH);

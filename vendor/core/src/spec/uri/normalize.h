@@ -24,11 +24,16 @@ namespace sourcemeta::core {
   std::string output;
   output.reserve(input.size());
   const bool is_absolute{!input.empty() && input.front() == '/'};
+  // The block names what lies above the path rather than anything within it,
+  // so it is counted rather than written out. Writing it out would leave step
+  // C stepping into it looking for a segment to drop, which would cancel a
+  // level the path needs against the very dot segment that asked for another
+  std::size_t above{0};
 
   while (!input.empty()) {
     if (input.starts_with("../")) {
       if (!resolving) {
-        output.append("../");
+        above += 1;
       }
       input.remove_prefix(3);
     } else if (input.starts_with("./") || input.starts_with("/./")) {
@@ -67,7 +72,7 @@ namespace sourcemeta::core {
     } else if (input == "..") {
       assert(!is_absolute);
       if (!resolving) {
-        output.append("../");
+        above += 1;
       }
       break;
     } else {
@@ -82,7 +87,19 @@ namespace sourcemeta::core {
     }
   }
 
-  return output;
+  if (above == 0) {
+    return output;
+  }
+
+  std::string result;
+  result.reserve((above * 3) + output.size());
+  while (above > 0) {
+    result.append("../");
+    above -= 1;
+  }
+
+  result.append(output);
+  return result;
 }
 
 // Remove "." and ".." segments from a URI path in place
