@@ -22,6 +22,7 @@
 #include <concepts>         // std::same_as, std::convertible_to
 #include <cstddef>          // std::size_t
 #include <cstdint>          // std::uint64_t
+#include <exception>        // std::exception_ptr, std::rethrow_exception
 #include <filesystem>       // std::filesystem
 #include <functional>       // std::function
 #include <initializer_list> // std::initializer_list
@@ -37,6 +38,27 @@
 #include "exit_code.h"
 
 namespace sourcemeta::jsonschema {
+
+// An error raised while reading a file other than the one a command is
+// working on, which is what resolution does whenever something names a schema
+// the user supplied separately. It derives from nothing the commands catch, so
+// the handlers that decorate a bare error with the file being worked on cannot
+// reach it, and what it carries goes on naming the file it came from. Unwrapped
+// by `try_catch`, where reporting happens
+class ForeignFileError : public sourcemeta::core::Error {
+public:
+  explicit ForeignFileError(const std::exception_ptr &error)
+      : sourcemeta::core::Error{sourcemeta::core::StaticString{
+            "An error occurred while reading another file"}},
+        error_{error} {}
+
+  [[nodiscard]] auto error() const noexcept -> const std::exception_ptr & {
+    return this->error_;
+  }
+
+private:
+  std::exception_ptr error_;
+};
 
 template <typename T> class PositionError : public T {
 public:
@@ -1606,8 +1628,9 @@ inline auto print_lint_autofix_guidance() -> void {
   std::cerr << "https://github.com/sourcemeta/jsonschema/issues\n";
 }
 
-inline auto try_catch(const sourcemeta::core::Options &options,
-                      const std::function<int()> &callback) noexcept -> int {
+inline auto report_exceptions(const sourcemeta::core::Options &options,
+                              const std::function<int()> &callback) noexcept
+    -> int {
   try {
     return callback();
   } catch (const Fail &error) {
@@ -2450,6 +2473,24 @@ inline auto try_catch(const sourcemeta::core::Options &options,
 
     return EXIT_UNEXPECTED_ERROR;
   }
+}
+
+// Reading a file that something names is what resolution does, so an error
+// raised there is about that file rather than the one a command happens to be
+// working on. Every command decorates a bare error with the file it is
+// working on, which is right for an error about that file and wrong for one
+// that already names another, so such an error travels past those handlers
+// wrapped in a ForeignFileError and is unwrapped here, where reporting
+// happens and nothing is left to re-attribute it
+inline auto try_catch(const sourcemeta::core::Options &options,
+                      const std::function<int()> &callback) noexcept -> int {
+  return report_exceptions(options, [&callback]() -> int {
+    try {
+      return callback();
+    } catch (const ForeignFileError &error) {
+      std::rethrow_exception(error.error());
+    }
+  });
 }
 
 } // namespace sourcemeta::jsonschema

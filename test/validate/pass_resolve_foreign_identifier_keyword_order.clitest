@@ -1,0 +1,36 @@
+WRITE aa-leaf.json UNTIL EOF
+{
+  "$schema": "https://example.com/draft4-meta",
+  "id": "https://example.com/leaf",
+  "$id": "https://example.com/decoy",
+  "type": "string"
+}
+EOF
+
+WRITE zz-meta.json UNTIL EOF
+{
+  "$schema": "http://json-schema.org/draft-04/schema#",
+  "id": "https://example.com/draft4-meta"
+}
+EOF
+
+WRITE schema.json UNTIL EOF
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$ref": "https://example.com/leaf"
+}
+EOF
+
+WRITE instance.json UNTIL EOF
+"hello"
+EOF
+
+WRITE expected_0.txt UNTIL EOF
+2> 1 validated, 1 passed, 0 failed
+EOF
+
+RUN validate schema.json instance.json --resolve aa-leaf.json --resolve zz-meta.json STDIN /dev/null IN . INTO result_0.txt EXPECTING 0
+
+REPLACE $CWD WITH '[CWD]' IN result_0.txt
+
+COMPARE result_0.txt AGAINST expected_0.txt

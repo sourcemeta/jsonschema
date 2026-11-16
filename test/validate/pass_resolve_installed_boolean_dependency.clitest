@@ -1,0 +1,35 @@
+MAKE DIRECTORY vendor
+
+WRITE vendor/dep.json UNTIL EOF
+true
+EOF
+
+WRITE jsonschema.json UNTIL EOF
+{
+  "defaultDialect": "https://json-schema.org/draft/2020-12/schema",
+  "dependencies": {
+    "https://example.com/boolean-dep": "./vendor/dep.json"
+  }
+}
+EOF
+
+WRITE schema.json UNTIL EOF
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$ref": "https://example.com/boolean-dep"
+}
+EOF
+
+WRITE instance.json UNTIL EOF
+"hello"
+EOF
+
+WRITE expected_0.txt UNTIL EOF
+2> 1 validated, 1 passed, 0 failed
+EOF
+
+RUN validate schema.json instance.json STDIN /dev/null IN . INTO result_0.txt EXPECTING 0
+
+REPLACE $CWD WITH '[CWD]' IN result_0.txt
+
+COMPARE result_0.txt AGAINST expected_0.txt

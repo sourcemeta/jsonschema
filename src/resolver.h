@@ -420,6 +420,116 @@ declares_identifier(const std::unordered_set<std::string> &identifiers,
   return canonical != identifier && identifiers.contains(canonical);
 }
 
+// What a file claims at its root without framing it, for a file whose dialect
+// cannot be resolved yet. Only one of `$id` and `id` identifies a resource and
+// which one depends on the dialect, so a file that cannot say which gets to
+// claim whichever of the two it spells. An identifier that a file merely
+// embeds stays out, as reaching it would mean walking into places whose
+// meaning depends on the very vocabularies that are not known here
+static inline auto
+unframed_root_identifiers(const sourcemeta::core::JSON &document,
+                          const std::string_view default_dialect,
+                          const std::string &default_id)
+    -> std::vector<std::string> {
+  if (!document.is_object()) {
+    return {default_id};
+  }
+
+  sourcemeta::core::URI base{default_id};
+  base.canonicalize();
+
+  const auto *dialect{document.try_at("$schema")};
+  const auto keyword{dialect != nullptr && dialect->is_string()
+                         ? identifier_keyword(dialect->to_string())
+                         : identifier_keyword(default_dialect)};
+
+  // Both spellings are taken where the dialect cannot say which of them
+  // identifies a resource, as all the index settles is which file to read, and
+  // reading it is what settles for good which of the two the file answers for
+  std::vector<std::string> result;
+  std::unordered_set<std::string> accumulator;
+  if (keyword != IdentifierKeyword::Legacy) {
+    const auto modern{resolve_identifier(document, "$id", base, accumulator)};
+    if (modern.has_value()) {
+      result.push_back(modern.value().recompose());
+    }
+  }
+
+  if (keyword != IdentifierKeyword::Modern) {
+    const auto legacy{resolve_identifier(document, "id", base, accumulator)};
+    if (legacy.has_value()) {
+      result.push_back(legacy.value().recompose());
+    }
+  }
+
+  if (result.empty()) {
+    result.push_back(default_id);
+  }
+
+  return result;
+}
+
+// The one identity a file answers for, which is what it declares at its root.
+// Framing settles it wherever the dialect in force can be resolved, and a file
+// whose dialect cannot be resolved yet still declares whatever it declares, so
+// what the root spells is read directly in that case. Nothing here vets the
+// file, as what a file is worth is settled when something names what it
+// declares
+static inline auto
+framed_root_identifier(const sourcemeta::core::JSON &document,
+                       const sourcemeta::core::SchemaResolver &resolver,
+                       const std::string_view default_dialect,
+                       const std::string &default_id)
+    -> std::optional<std::string> {
+  try {
+    const sourcemeta::core::SchemaFrame frame{
+        sourcemeta::core::SchemaFrame::Mode::Root,
+        document,
+        sourcemeta::core::schema_walker,
+        resolver,
+        default_dialect,
+        default_id,
+        sourcemeta::core::SchemaFrame::IdentifierMode::Fallback};
+    const auto &root{frame.root()};
+    if (root.empty()) {
+      return std::nullopt;
+    }
+
+    return std::string{root};
+  } catch (const sourcemeta::core::Error &) {
+    // Nothing here vets the file, so whatever keeps framing from settling the
+    // identity is not reported from here. A dialect that cannot be resolved
+    // yet says nothing about the identifier written beside it, so what the
+    // root spells is read without it, and whatever is genuinely wrong with the
+    // file is reported when something names what it declares and the file is
+    // read in full
+    return std::nullopt;
+  }
+}
+
+static inline auto
+root_identities(const sourcemeta::core::JSON &document,
+                const sourcemeta::core::SchemaResolver &resolver,
+                const std::string_view default_dialect,
+                const std::string &default_id) -> std::vector<std::string> {
+  const auto framed{
+      framed_root_identifier(document, resolver, default_dialect, default_id)};
+  if (framed.has_value()) {
+    return {framed.value()};
+  }
+
+  return unframed_root_identifiers(document, default_dialect, default_id);
+}
+
+static inline auto
+root_identity(const sourcemeta::core::JSON &document,
+              const sourcemeta::core::SchemaResolver &resolver,
+              const std::string_view default_dialect,
+              const std::string &default_id) -> std::string {
+  return root_identities(document, resolver, default_dialect, default_id)
+      .front();
+}
+
 // How resolution names what it reached is a URI, and a `file://` one names a
 // place on disk that whoever reads an error would rather see spelled as a path
 static inline auto identifier_path(const std::string &identifier)
@@ -453,6 +563,18 @@ static inline auto identifier_file(const std::string &identifier)
   return uri.value().to_path();
 }
 
+// The `--resolve` inputs, parsed once for the whole process. Every thread
+// builds an index of its own over these, as indexing is cheap and an index no
+// thread shares needs no locking, but reading the inputs is not repeatable:
+// standard input can only be consumed once, and parsing every file again for
+// each thread would be waste
+inline auto resolve_inputs(const sourcemeta::core::Options &options)
+    -> const std::vector<InputJSON> & {
+  static const std::vector<InputJSON> ENTRIES{
+      for_each_json(options.at("resolve"), options)};
+  return ENTRIES;
+}
+
 class CustomResolver {
 public:
   CustomResolver(
@@ -464,100 +586,25 @@ public:
             configuration.has_value()
                 ? canonical_resolve_map(configuration->resolve)
                 : std::unordered_map<std::string, std::string>{}},
-        remote_{remote} {
+        default_dialect_{default_dialect}, remote_{remote} {
     if (options.contains("resolve")) {
-      const auto entries{for_each_json(options.at("resolve"), options)};
-      std::vector<std::size_t> pending;
-      pending.reserve(entries.size());
-      for (std::size_t index = 0; index < entries.size(); index++) {
-        pending.push_back(index);
-      }
-
-      // Importing a schema requires resolving its meta-schema, which may well
-      // be another one of the schemas that the user is importing. Rather than
-      // forcing the user to declare their files in dependency order, keep
-      // retrying the ones that cannot resolve yet for as long as every pass
-      // either imports one more schema or stages one more root. Keep remote
-      // fetching disabled while the locally provided schemas can make
-      // progress, so that a schema imported before the local file that
-      // declares its meta-schema resolves against that local file instead of
-      // triggering a network fetch for it
+      // Reading a file end to end is what vets it, and resolution only ever
+      // needs the files that something names, so an input is recorded here by
+      // the one identity it answers for and read again on demand. Settling
+      // that identity never asks the network, so that a file indexed before
+      // the one declaring its dialect goes by what its own root spells rather
+      // than by what a fetch for that dialect would turn up. An index that is
+      // complete before any resolution runs is then what keeps the network
+      // from ever shadowing a schema the user supplied locally
       const auto allow_remote{this->remote_};
-
       this->remote_ = false;
-      this->importing_ = true;
-      while (!pending.empty()) {
-        std::vector<std::size_t> deferred;
-        std::exception_ptr failure;
-        bool progressed{false};
+      this->indexing_ = true;
 
-        for (const auto index : pending) {
-          try {
-            this->import_entry(entries[index], default_dialect,
-                               ImportMode::Complete);
-            progressed = true;
-          } catch (const sourcemeta::core::FileError<
-                   sourcemeta::core::SchemaResolutionError> &) {
-            if (!failure) {
-              failure = std::current_exception();
-            }
-
-            LOG_DEBUG(options)
-                << "Deferring import until the remaining schemas are "
-                   "imported: "
-                << entries[index].first << "\n";
-            deferred.push_back(index);
-
-            if (this->stage_entry_root(entries[index], default_dialect)) {
-              progressed = true;
-            }
-          }
-        }
-
-        // Nothing can make progress anymore, so report the first failure,
-        // which is exactly what the user would have seen if imports were
-        // never retried. Note that when several entries remain stuck, the
-        // one we report might be waiting on another stuck entry rather than
-        // on the schema that is genuinely missing
-        if (!progressed) {
-          // Before giving up, let the remaining entries try their remote
-          // fallback when the user enabled it
-          if (allow_remote && !this->remote_) {
-            // Remote fetching must still never shadow a schema that the user
-            // supplied locally, so remember what the entries that are still
-            // stuck declare before letting the network in. Entries that did
-            // get imported are found among the imported schemas before this
-            // ever comes into play
-            for (const auto index : deferred) {
-              this->collect_pending_identifiers(entries[index],
-                                                default_dialect);
-            }
-
-            this->remote_ = true;
-          } else {
-            // Giving up for real now, so an identifier that one of the
-            // inputs merely embeds is worth explaining rather than being
-            // reported as one nobody supplied
-            try {
-              std::rethrow_exception(failure);
-            } catch (const sourcemeta::core::FileError<
-                     sourcemeta::core::SchemaResolutionError> &error) {
-              const std::string identifier{error.identifier()};
-              const auto embedded{this->embedded_.find(identifier)};
-              if (embedded == this->embedded_.cend()) {
-                throw;
-              }
-
-              this->report_embedded(embedded->second, identifier);
-            }
-          }
-        }
-
-        pending = std::move(deferred);
+      for (const auto &entry : resolve_inputs(options)) {
+        this->index_entry(entry, default_dialect);
       }
 
-      this->pending_identifiers_.clear();
-      this->importing_ = false;
+      this->indexing_ = false;
       this->remote_ = allow_remote;
     }
 
@@ -573,18 +620,23 @@ public:
           continue;
         }
 
-        try {
-          this->add(ImportMode::Complete, schema, dependency_path,
-                    default_dialect);
-        } catch (...) {
-          continue;
-        }
-
-        if (this->schemas_.emplace(dependency_uri, schema).second) {
-          this->origins_.emplace(
-              dependency_uri,
-              std::make_pair(dependency_path, sourcemeta::core::Pointer{}));
-        }
+        // An installed dependency answers both to the identifier it declares
+        // and to the URI it was imported under, as whoever wrote the
+        // configuration may well name it either way
+        const auto declared{canonical_resolve_key(root_identity(
+            schema, std::ref(*this), default_dialect, dependency_uri))};
+        this->index_.emplace(declared,
+                             Leaf{.path = dependency_path,
+                                  .display_name = dependency_path.string(),
+                                  .kind = LeafKind::Schema,
+                                  .answers_to_location = false,
+                                  .answers_with_contents = true});
+        this->index_.emplace(canonical_resolve_key(dependency_uri),
+                             Leaf{.path = dependency_path,
+                                  .display_name = dependency_path.string(),
+                                  .kind = LeafKind::Schema,
+                                  .answers_to_location = false,
+                                  .answers_with_contents = true});
       }
     }
   }
@@ -597,6 +649,30 @@ public:
   CustomResolver(CustomResolver &&) = default;
   auto operator=(CustomResolver &&) -> CustomResolver & = delete;
   ~CustomResolver() = default;
+
+  // What a leaf of the resolution context holds, which decides which half of
+  // the resolver may ever answer with it
+  enum class LeafKind : std::uint8_t { Schema, OpenAPI };
+
+  // Where an indexed input is read back from when something finally names what
+  // it declares. An input that came from standard input has nowhere to be read
+  // back from, so what it held is kept instead
+  struct Leaf {
+    std::filesystem::path path;
+    std::string display_name;
+    LeafKind kind{LeafKind::Schema};
+    // Whether the file answers to where it sits as well as to what it
+    // declares, which every input the user named does. An installed dependency
+    // does not, as where it sits is a vendor directory this resolver put it in
+    // and the configuration already says which URI it stands for
+    bool answers_to_location{true};
+    // Whether the file answers to the identity it was indexed under with what
+    // it holds, for want of anything that reading it registers. An installed
+    // dependency does, which is how one holding a boolean schema, or any other
+    // that declares no resource of its own, is reachable at all
+    bool answers_with_contents{false};
+    std::shared_ptr<InputJSON> retained{nullptr};
+  };
 
   // How much of a file an import is allowed to read. Reading it end to end is
   // what vets it, so that is what every import aims for. Staging settles for
@@ -731,14 +807,59 @@ public:
       return match->second;
     }
 
-    if (this->remote_ &&
-        declares_identifier(this->pending_identifiers_, target)) {
-      return std::nullopt;
-    }
-
     // An OpenAPI description is not a schema, so what was sorted among them is
     // unavailable here
     if (this->descriptions_.contains(target)) {
+      return std::nullopt;
+    }
+
+    // An indexed input has not been read yet, so reading it is what makes it
+    // answerable, and only the one file that answers to this identifier gets
+    // read. Nothing is handed back where reading it settles on nothing at all,
+    // as an identifier the user supplied locally must never reach the network
+    // on the strength of this resolver not having read it yet
+    const auto leaf{this->index_.find(target)};
+    if (leaf != this->index_.cend()) {
+      if (leaf->second.kind != LeafKind::Schema) {
+        return std::nullopt;
+      }
+
+      // Reading this very file is already under way further up, which is what
+      // a chain of dialects reaching back to one of its own links looks like.
+      // Reading it again would never end, and what it holds is answer enough
+      // for settling the dialect that asked for it, so it is handed over as it
+      // was written rather than left unanswered
+      if (!this->materialising_.emplace(target).second) {
+        return this->stage(target, leaf->second);
+      }
+
+      const MaterialisingGuard guard{.pending = this->materialising_,
+                                     .identifier = target};
+      this->materialise(leaf->second);
+      const auto materialised{this->schemas_.find(target)};
+      if (materialised != this->schemas_.cend()) {
+        return materialised->second;
+      }
+
+      // A leaf answers to the identity it was indexed under even where reading
+      // the file settles on another, which is how an installed dependency
+      // answers both to what it declares and to the URI it was imported under
+      // Only where the configuration already says which URI the file stands
+      // for. An index entry that merely guessed at a spelling must not become
+      // answerable on the strength of that guess, as reading the file is what
+      // settles which identity it really answers for
+      if (leaf->second.answers_with_contents) {
+        auto aliased{this->alias_declared(target, leaf->second)};
+        if (aliased.has_value()) {
+          return aliased;
+        }
+
+        // Reading it registered nothing at all, which a boolean schema and any
+        // other declaring no resource of its own never will, so what it holds
+        // is what it answers with
+        return this->stage(target, leaf->second);
+      }
+
       return std::nullopt;
     }
 
@@ -749,16 +870,19 @@ public:
 
     auto fetched{this->fetch_or_explain(target)};
     if (!fetched.has_value()) {
-      // Nothing anywhere holds this. An imported file that merely embeds it
+      // Nothing anywhere holds this. An indexed file that merely embeds it
       // is the one case worth explaining, as the usual advice to import it
       // would have the user import what they already did
-      // Not while the imports are still settling, as remote resolution is
-      // deliberately held back there and an entry that cannot resolve yet is
-      // meant to be deferred rather than given up on
-      const auto embedded{this->importing_ ? this->embedded_.cend()
-                                           : this->embedded_.find(target)};
-      if (embedded != this->embedded_.cend()) {
-        this->report_embedded(embedded->second, target);
+      // Not while the inputs are still being indexed, as remote resolution is
+      // deliberately held back there and a file that cannot resolve yet is
+      // meant to go by what its own root spells rather than be given up on
+      if (!this->indexing_) {
+        const auto embedded{this->embedded_.find(target)};
+        if (embedded != this->embedded_.cend()) {
+          this->report_embedded(embedded->second, target);
+        }
+
+        this->report_indexed_embedded(target);
       }
 
       return fetched;
@@ -770,14 +894,25 @@ public:
       return std::nullopt;
     }
 
+    // Working out whether a schema declares an identifier means framing it,
+    // which resolves its metaschema through this very resolver. What was
+    // retrieved is therefore kept before it is examined, so that a chain of
+    // metaschemas that comes back to this document finds it here rather than
+    // retrieving and framing it again at every step. A dialect that describes
+    // itself resolves to itself that way, and one that loops through another
+    // document is left for the frame to turn down, as the chain it follows is
+    // the one place that knows how far it already went
+    auto &stored{
+        this->fetched_.emplace(target, std::move(document)).first->second};
+
     // Only a schema that declares no identifier of its own needs one
-    const auto base_dialect{anonymous_base_dialect(document, std::ref(*this))};
+    const auto base_dialect{anonymous_base_dialect(stored, std::ref(*this))};
     if (base_dialect.has_value()) {
-      sourcemeta::core::schema_reidentify(document, string_identifier,
+      sourcemeta::core::schema_reidentify(stored, string_identifier,
                                           base_dialect.value());
     }
 
-    return this->fetched_.emplace(target, std::move(document)).first->second;
+    return stored;
   }
 
   // The other half of the split. What the URI names is handed back whether or
@@ -817,6 +952,42 @@ public:
     const auto imported{this->schemas_.find(target)};
     if (imported != this->schemas_.cend()) {
       return imported->second;
+    }
+
+    // An indexed input has not been read yet, and what a URI names is handed
+    // back whether or not it holds a description, so either half of the index
+    // answers here once the file it points at has been read
+    const auto leaf{this->index_.find(target)};
+    if (leaf != this->index_.cend() &&
+        this->materialising_.emplace(target).second) {
+      const MaterialisingGuard guard{.pending = this->materialising_,
+                                     .identifier = target};
+      this->materialise(leaf->second);
+
+      const auto described{this->descriptions_.find(target)};
+      if (described != this->descriptions_.cend()) {
+        reject_unsupported_openapi(described->second, identifier_path(target));
+        return described->second;
+      }
+
+      const auto materialised{this->schemas_.find(target)};
+      if (materialised != this->schemas_.cend()) {
+        return materialised->second;
+      }
+
+      // A leaf answers to the identity it was indexed under even where reading
+      // the file settles on another, exactly as the schema half has it. An
+      // installed dependency is named by the URI the configuration imported it
+      // under rather than by what it declares, so this is what a reference
+      // landing on one of those reaches
+      if (leaf->second.answers_with_contents) {
+        auto aliased{this->alias_declared(target, leaf->second)};
+        if (aliased.has_value()) {
+          return aliased;
+        }
+
+        return this->stage(target, leaf->second);
+      }
     }
 
     const auto cached{this->fetched_.find(target)};
@@ -884,6 +1055,27 @@ public:
   // deliberately does not frame one, so this looks only once both halves have
   // already failed to answer, where knowing beats what it costs to find out
   auto report_description_resource(const std::string_view identifier) -> void {
+    // An indexed description that nothing named has not been read yet, and one
+    // of those is as likely to hold this identifier as one that has, so this
+    // is where they are all finally read. Already a failing path, so what it
+    // costs to find out is worth knowing, and whatever keeps one of them from
+    // being read is not what we came to report
+    for (const auto &entry : this->index_) {
+      if (entry.second.kind != LeafKind::OpenAPI ||
+          this->description_origins_.contains(entry.first) ||
+          !this->materialising_.emplace(entry.first).second) {
+        continue;
+      }
+
+      const MaterialisingGuard guard{.pending = this->materialising_,
+                                     .identifier = entry.first};
+      try {
+        this->materialise(entry.second);
+      } catch (const sourcemeta::core::Error &) {
+        continue;
+      }
+    }
+
     // The same description answers to every identity it was registered under,
     // so what it was read from is what tells one apart from the next
     std::vector<std::filesystem::path> seen;
@@ -988,46 +1180,6 @@ private:
     return mapped.has_value() ? mapped.value() : identifier;
   }
 
-  // Framing a schema is what reveals the identifiers it declares, but framing
-  // needs its meta-schema resolved first, which is precisely what an entry
-  // that cannot be imported is missing. Read the identifier it declares at
-  // its own root instead, as that is the only claim that can be read without
-  // knowing the dialect. An identifier that such an entry merely embeds stays
-  // out, as reaching it would mean walking into places whose meaning depends
-  // on the very vocabularies that are not known here, and mistaking the
-  // instance an annotation carries for a schema resource would keep a schema
-  // the user never supplied away from the network
-  auto collect_pending_identifiers(const InputJSON &entry,
-                                   const std::string_view default_dialect)
-      -> void {
-    sourcemeta::core::URI base{sourcemeta::jsonschema::default_id(entry)};
-    base.canonicalize();
-    this->pending_identifiers_.insert(base.recompose());
-
-    if (!entry.second.is_object()) {
-      return;
-    }
-
-    const auto *dialect{entry.second.try_at("$schema")};
-    const auto keyword{dialect != nullptr && dialect->is_string()
-                           ? identifier_keyword(dialect->to_string())
-                           : identifier_keyword(default_dialect)};
-
-    // Only one of `$id` and `id` identifies a resource, and which one depends
-    // on the dialect. An entry that cannot be imported is one whose dialect
-    // could not be resolved, so it gets to claim whichever of the two it
-    // spells
-    if (keyword != IdentifierKeyword::Legacy) {
-      [[maybe_unused]] const auto modern{resolve_identifier(
-          entry.second, "$id", base, this->pending_identifiers_)};
-    }
-
-    if (keyword != IdentifierKeyword::Modern) {
-      [[maybe_unused]] const auto legacy{resolve_identifier(
-          entry.second, "id", base, this->pending_identifiers_)};
-    }
-  }
-
   // A description answers to the `$self` it declares, and to where it came
   // from either way, mirroring how an installed dependency is registered both
   // by the identifier it declares and by the URI it was imported under
@@ -1067,27 +1219,240 @@ private:
     }
   }
 
-  // A file that cannot be read end to end yet may still declare a root
-  // resource whose own dialect chain terminates in something already known.
-  // Registering that root alone lets the files waiting on it be read in full
-  // on a later pass, which is what turns a finite chain of locally supplied
-  // schemas into a resolvable one no matter the order the arguments come in.
-  // Report whether this got anywhere, as a pass that stages nothing new is a
-  // pass that cannot be followed by a better one
-  auto stage_entry_root(const InputJSON &entry,
-                        const std::string_view default_dialect) -> bool {
-    const auto before{this->schemas_.size()};
-    LOG_DEBUG(this->options_)
-        << "Staging the root schema resource of file: " << entry.first << "\n";
+  // What is currently being read, so that a dialect chain coming back to a
+  // file already being read is left unanswered rather than read again forever
+  struct MaterialisingGuard {
+    std::unordered_set<std::string> &pending;
+    const std::string &identifier;
+    ~MaterialisingGuard() { this->pending.erase(this->identifier); }
+  };
 
-    try {
-      this->import_entry(entry, default_dialect, ImportMode::Root);
-    } catch (const sourcemeta::core::FileError<
-             sourcemeta::core::SchemaResolutionError> &) {
-      return false;
+  // The one identity an input answers for, settled without reading anything
+  // else. A description is never framed, as what it holds is the business of
+  // the OpenAPI half, and its identity is the one it declares along with where
+  // it was read from
+  auto index_entry(const InputJSON &entry,
+                   const std::string_view default_dialect) -> void {
+    if (is_openapi_document(entry.second)) {
+      reject_unsupported_openapi(entry.second, entry.resolution_base,
+                                 &entry.positions);
+      const auto retrieval{sourcemeta::jsonschema::default_id(entry)};
+      const auto self{openapi_self_identity(entry.second, retrieval)};
+      // A description answers to the `$self` it declares and to where it came
+      // from either way, and those are two identities of one document, so what
+      // is kept for either of them is what both answer from
+      const auto retained{retain(entry)};
+      if (self.has_value()) {
+        this->register_leaf(canonical_resolve_key(self.value()), entry,
+                            LeafKind::OpenAPI, retained);
+      }
+
+      this->register_leaf(canonical_resolve_key(retrieval), entry,
+                          LeafKind::OpenAPI, retained);
+      return;
     }
 
-    return this->schemas_.size() > before;
+    if (!entry.second.is_object() && !entry.second.is_boolean()) {
+      throw sourcemeta::core::FileError<sourcemeta::core::SchemaError>(
+          entry.resolution_base,
+          sourcemeta::core::StaticString{
+              "The file you provided does not represent a valid JSON Schema"});
+    }
+
+    const auto retained{retain(entry)};
+    for (const auto &identity :
+         root_identities(entry.second, std::ref(*this), default_dialect,
+                         sourcemeta::jsonschema::default_id(entry))) {
+      this->register_leaf(canonical_resolve_key(identity), entry,
+                          LeafKind::Schema, retained);
+    }
+  }
+
+  // Nothing can be read back for an input that came from standard input, and
+  // one document out of the several a single file holds cannot be read back by
+  // naming that file either, as reading it again hands over the first of them.
+  // What those inputs held is therefore the one copy of them there will ever
+  // be, and every identity each of them answers to is handed that same copy
+  [[nodiscard]] static auto retain(const InputJSON &entry)
+      -> std::shared_ptr<InputJSON> {
+    return entry.from_stdin || entry.multidocument
+               ? std::make_shared<InputJSON>(entry)
+               : nullptr;
+  }
+
+  // Two inputs that answer to one identifier leave which of them a reference
+  // reaches to the order they happened to be given in, so this is reported
+  // rather than settled by whichever arrived first. Two that hold the very
+  // same document are no such ambiguity, and settling that is what reading the
+  // one already indexed is worth
+
+  auto register_leaf(const std::string &identity, const InputJSON &entry,
+                     const LeafKind kind, std::shared_ptr<InputJSON> retained)
+      -> void {
+    const auto match{this->index_.find(identity)};
+    if (match != this->index_.cend()) {
+      if (match->second.path == entry.resolution_base ||
+          indexed_contents(match->second) == entry.second) {
+        return;
+      }
+
+      if (kind == LeafKind::OpenAPI) {
+        throw sourcemeta::core::FileError<OpenAPIIdentifierConflictError>(
+            entry.resolution_base, identity, match->second.path);
+      }
+
+      // A file answers for what it declares at its root, so the root is the
+      // one place a conflict between two of them can be pointed at
+      const sourcemeta::core::Pointer location;
+      const auto position{entry.positions.get(location)};
+      if (position.has_value()) {
+        throw PositionError<
+            sourcemeta::core::FileError<SchemaIdentifierConflictError>>(
+            std::get<0>(position.value()), std::get<1>(position.value()),
+            entry.resolution_base, identity, location, match->second.path,
+            sourcemeta::core::Pointer{});
+      }
+
+      throw sourcemeta::core::FileError<SchemaIdentifierConflictError>(
+          entry.resolution_base, identity, location, match->second.path,
+          sourcemeta::core::Pointer{});
+    }
+
+    this->index_.emplace(identity, Leaf{.path = entry.resolution_base,
+                                        .display_name = entry.first,
+                                        .kind = kind,
+                                        .retained = std::move(retained)});
+  }
+
+  // Where an identifier that nothing answers for actually sits, for the one
+  // case worth explaining: a resource that an indexed file merely embeds.
+  // Finding it means reading the files that were indexed and not read yet, so
+  // this only ever runs once resolution has already failed, where knowing
+  // beats what it costs to find out. Whatever keeps one of those files from
+  // being read is not what we came to report, and it has nothing to say about
+  // this identifier either
+  auto report_indexed_embedded(const std::string &identifier) -> void {
+    for (const auto &entry : this->index_) {
+      if (entry.second.kind != LeafKind::Schema ||
+          this->origins_.contains(entry.first)) {
+        continue;
+      }
+
+      if (this->materialising_.emplace(entry.first).second) {
+        const MaterialisingGuard guard{.pending = this->materialising_,
+                                       .identifier = entry.first};
+        try {
+          this->materialise(entry.second);
+        } catch (const sourcemeta::core::Error &) {
+          continue;
+        }
+      }
+
+      const auto embedded{this->embedded_.find(identifier)};
+      if (embedded != this->embedded_.cend()) {
+        this->report_embedded(embedded->second, identifier);
+      }
+    }
+  }
+
+  // What a file holds, handed over as it stands. For a file already being read
+  // further up, and for one that answers to its indexed identity with its own
+  // contents. Kept apart from what reading a file in full registers, as this
+  // has been through none of that and must never be mistaken for it
+  auto stage(const std::string &identity, const Leaf &leaf)
+      -> sourcemeta::core::SchemaResolverResult {
+    const auto staged{this->staged_.find(identity)};
+    if (staged != this->staged_.cend()) {
+      return staged->second;
+    }
+
+    auto contents{indexed_contents(leaf)};
+    if (!contents.is_object() && !contents.is_boolean()) {
+      return std::nullopt;
+    }
+
+    return this->staged_.emplace(identity, std::move(contents)).first->second;
+  }
+
+  // What reading a file registered it as, where that is not the identity it
+  // was indexed under. Only a resource the file declares at its root counts,
+  // as that is the one a file ever answers for
+  auto alias_declared(const std::string &identity, const Leaf &leaf)
+      -> sourcemeta::core::SchemaResolverResult {
+    std::string declared;
+    for (const auto &origin : this->origins_) {
+      if (origin.second.first == leaf.path && origin.second.second.empty()) {
+        declared = origin.first;
+        break;
+      }
+    }
+
+    if (declared.empty()) {
+      return std::nullopt;
+    }
+
+    const auto match{this->schemas_.find(declared)};
+    if (match == this->schemas_.cend()) {
+      return std::nullopt;
+    }
+
+    this->origins_.emplace(
+        identity, std::make_pair(leaf.path, sourcemeta::core::Pointer{}));
+    return this->schemas_.emplace(identity, match->second).first->second;
+  }
+
+  // What an indexed input holds, for the one question that cannot be answered
+  // without looking: whether two inputs claiming one identity hold the same
+  // document. Nothing at all where it cannot be read, as a file that cannot be
+  // read is not one that agrees with anything
+  [[nodiscard]] static auto indexed_contents(const Leaf &leaf)
+      -> sourcemeta::core::JSON {
+    if (leaf.retained != nullptr) {
+      return leaf.retained->second;
+    }
+
+    try {
+      return sourcemeta::core::read_yaml_or_json(leaf.path);
+    } catch (...) {
+      return sourcemeta::core::JSON{nullptr};
+    }
+  }
+
+  // Reading a file end to end is what vets it and what settles its dialect and
+  // identifier, and only a file that something names is worth either, so this
+  // is where an indexed input is finally read. What it declares is registered
+  // exactly as reading every input up front would have registered it
+  auto materialise(const Leaf &leaf) -> void {
+    // Everything below already names the file it is about. A command is
+    // working on another file and decorates a bare error with that one, so
+    // what comes out of here travels wrapped, out of reach of those handlers
+    try {
+      this->read_and_import(leaf);
+    } catch (const ForeignFileError &) {
+      // One file read on the way to another is still one file to name, so a
+      // chain of them keeps naming the file that the error is actually about
+      throw;
+    } catch (...) {
+      throw ForeignFileError{std::current_exception()};
+    }
+  }
+
+  auto read_and_import(const Leaf &leaf) -> void {
+    if (leaf.retained != nullptr) {
+      this->import_entry(*leaf.retained, this->default_dialect_,
+                         ImportMode::Complete, leaf.answers_to_location);
+      return;
+    }
+
+    InputJSON entry{.first = leaf.display_name,
+                    .resolution_base = leaf.path,
+                    .second = sourcemeta::core::JSON{nullptr},
+                    .positions = {},
+                    .property_storage = nullptr};
+    sourcemeta::core::read_yaml_or_json(leaf.path, entry.second,
+                                        std::ref(entry.positions));
+    this->import_entry(entry, this->default_dialect_, ImportMode::Complete,
+                       leaf.answers_to_location);
   }
 
   // What an imported file embeds rather than declares at its root. Never
@@ -1108,17 +1473,20 @@ private:
     try {
       return fetch_schema(this->options_, target, this->remote_);
     } catch (const sourcemeta::core::HTTPStatusError &error) {
-      if (this->importing_ ||
+      if (this->indexing_ ||
           error.status() != sourcemeta::core::HTTP_STATUS_NOT_FOUND) {
         throw;
       }
 
       const auto embedded{this->embedded_.find(target)};
-      if (embedded == this->embedded_.cend()) {
-        throw;
+      if (embedded != this->embedded_.cend()) {
+        this->report_embedded(embedded->second, target);
       }
 
-      this->report_embedded(embedded->second, target);
+      // An indexed input that nothing named has not been read yet, and one of
+      // those is as likely to embed this identifier as one that has
+      this->report_indexed_embedded(target);
+      throw;
     }
   }
 
@@ -1140,7 +1508,8 @@ private:
 
   auto import_entry(const InputJSON &entry,
                     const std::string_view default_dialect,
-                    const ImportMode mode) -> void {
+                    const ImportMode mode,
+                    const bool answers_to_location = true) -> void {
     // What a description holds is the business of the OpenAPI resolver, and
     // framing it as a schema would both fail and register nonsense. Only a
     // revision we can read is taken, as one we cannot is no more a description
@@ -1166,7 +1535,8 @@ private:
     try {
       const auto result = this->add(
           mode, entry.second, entry.resolution_base, default_dialect,
-          sourcemeta::jsonschema::default_id(entry),
+          answers_to_location ? sourcemeta::jsonschema::default_id(entry)
+                              : std::string{},
           [this](const auto &identifier) {
             LOG_DEBUG(this->options_)
                 << "Importing schema into the resolution context: "
@@ -1174,8 +1544,10 @@ private:
           },
           &entry.positions);
       // Staging a root is only ever half of an import, so a file that
-      // declares nothing is worth reporting once the complete read says so
-      if (!result && mode == ImportMode::Complete) {
+      // declares nothing is worth reporting once the complete read says so.
+      // Not for an installed dependency, as the configuration already says
+      // which URI it stands for and setting one inside it would change nothing
+      if (!result && mode == ImportMode::Complete && answers_to_location) {
         LOG_WARNING() << "No schema resources were imported from this file\n"
                       << "  at " << entry.first << "\n"
                       << "Are you sure this schema sets any identifiers?\n";
@@ -1272,14 +1644,24 @@ private:
   std::map<std::string,
            std::pair<std::filesystem::path, sourcemeta::core::Pointer>>
       origins_{};
+  // Where every input answers from, settled before any resolution runs so that
+  // an identifier the user supplied locally is never looked for anywhere else.
+  // What each one holds is read back from here on demand, as reading a file is
+  // only worth it once something names what it declares
+  std::map<std::string, Leaf> index_{};
+  // What a file holds, for one being read further up the chain that asked for
+  // it. Never what reading a file in full registers, which the schemas above
+  // are alone in holding
+  std::map<std::string, sourcemeta::core::JSON> staged_{};
   const sourcemeta::core::Options &options_;
   const std::optional<sourcemeta::blaze::Configuration> configuration_;
   const std::unordered_map<std::string, std::string> canonical_resolve_;
+  const std::string default_dialect_;
   bool remote_{false};
-  // Whether the `--resolve` inputs are still being imported, during which a
+  // Whether the `--resolve` inputs are still being indexed, during which a
   // miss means "not yet" rather than "nowhere"
-  bool importing_{false};
-  std::unordered_set<std::string> pending_identifiers_{};
+  bool indexing_{false};
+  std::unordered_set<std::string> materialising_{};
 };
 
 using ResolverCacheKey = std::pair<bool, std::string>;
@@ -1292,7 +1674,12 @@ inline auto resolver_instance(
     const std::string_view default_dialect,
     const std::optional<sourcemeta::blaze::Configuration> &configuration)
     -> CustomResolver & {
-  static std::map<ResolverCacheKey, CustomResolver> resolver_cache;
+  // One resolver per thread, as resolution reads files and registers what
+  // they declare as it goes, and a context several threads register into at
+  // once is one none of them can rely on. Indexing an input is cheap enough
+  // for each thread to do its own, and a thread only ever reads the files
+  // that the work it was given names
+  thread_local std::map<ResolverCacheKey, CustomResolver> resolver_cache;
   const ResolverCacheKey cache_key{remote, std::string{default_dialect}};
   const auto match{resolver_cache.find(cache_key)};
   if (match != resolver_cache.cend()) {
@@ -1313,7 +1700,7 @@ resolver(const sourcemeta::core::Options &options, const bool remote,
     -> const sourcemeta::core::SchemaResolver & {
   // What callers get is a handle that refers back to the cached resolver,
   // as the resolver itself must never be copied into the callee
-  static std::map<ResolverCacheKey, sourcemeta::core::SchemaResolver>
+  thread_local std::map<ResolverCacheKey, sourcemeta::core::SchemaResolver>
       handle_cache;
   const ResolverCacheKey cache_key{remote, std::string{default_dialect}};
 
@@ -1337,7 +1724,7 @@ inline auto openapi_resolver(
     const std::string_view default_dialect,
     const std::optional<sourcemeta::blaze::Configuration> &configuration)
     -> const sourcemeta::core::OpenAPIResolver & {
-  static std::map<ResolverCacheKey, sourcemeta::core::OpenAPIResolver>
+  thread_local std::map<ResolverCacheKey, sourcemeta::core::OpenAPIResolver>
       handle_cache;
   const ResolverCacheKey cache_key{remote, std::string{default_dialect}};
 

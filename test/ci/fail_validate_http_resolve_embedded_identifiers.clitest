@@ -9,10 +9,24 @@
 
 ENV SOURCEMETA_CORE_CURL_SO $CWD/does-not-exist.so
 
-WRITE schema.json UNTIL EOF
+WRITE entry-doc-a.json UNTIL EOF
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "type": "string"
+  "$ref": "https://example.com/doc-a"
+}
+EOF
+
+WRITE entry-relative-a.json UNTIL EOF
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$ref": "https://example.com/nested/relative-a"
+}
+EOF
+
+WRITE entry-leaf.json UNTIL EOF
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$ref": "https://example.com/leaf"
 }
 EOF
 
@@ -114,7 +128,7 @@ WRITE instance.json UNTIL EOF
 EOF
 
 // Not supported
-RUN validate schema.json instance.json --http --resolve doc-a.json --resolve doc-b.json STDIN /dev/null IN . INTO result_0.txt EXPECTING 3
+RUN validate entry-doc-a.json instance.json --http --resolve doc-a.json --resolve doc-b.json STDIN /dev/null IN . INTO result_0.txt EXPECTING 3
 
 REPLACE $CWD WITH '[CWD]' IN result_0.txt
 
@@ -128,7 +142,7 @@ EOF
 COMPARE result_0.txt AGAINST expected_0.txt
 
 // Not supported
-RUN validate schema.json instance.json --http --resolve doc-a.json --resolve doc-b.json --json STDIN /dev/null IN . INTO result_1.txt EXPECTING 3
+RUN validate entry-doc-a.json instance.json --http --resolve doc-a.json --resolve doc-b.json --json STDIN /dev/null IN . INTO result_1.txt EXPECTING 3
 
 REPLACE $CWD WITH '[CWD]' IN result_1.txt
 
@@ -143,7 +157,7 @@ EOF
 COMPARE result_1.txt AGAINST expected_1.txt
 
 // Not supported
-RUN validate schema.json instance.json --http --resolve relative-a.json --resolve relative-b.json STDIN /dev/null IN . INTO result_2.txt EXPECTING 3
+RUN validate entry-relative-a.json instance.json --http --resolve relative-a.json --resolve relative-b.json STDIN /dev/null IN . INTO result_2.txt EXPECTING 3
 
 REPLACE $CWD WITH '[CWD]' IN result_2.txt
 
@@ -157,7 +171,7 @@ EOF
 COMPARE result_2.txt AGAINST expected_2.txt
 
 // Not supported
-RUN validate schema.json instance.json --http --resolve relative-a.json --resolve relative-b.json --json STDIN /dev/null IN . INTO result_3.txt EXPECTING 3
+RUN validate entry-relative-a.json instance.json --http --resolve relative-a.json --resolve relative-b.json --json STDIN /dev/null IN . INTO result_3.txt EXPECTING 3
 
 REPLACE $CWD WITH '[CWD]' IN result_3.txt
 
@@ -172,7 +186,7 @@ EOF
 COMPARE result_3.txt AGAINST expected_3.txt
 
 // Not supported
-RUN validate schema.json instance.json --http --resolve leaf.json --resolve container.json STDIN /dev/null IN . INTO result_4.txt EXPECTING 3
+RUN validate entry-leaf.json instance.json --http --resolve leaf.json --resolve container.json STDIN /dev/null IN . INTO result_4.txt EXPECTING 3
 
 REPLACE $CWD WITH '[CWD]' IN result_4.txt
 
@@ -186,7 +200,7 @@ EOF
 COMPARE result_4.txt AGAINST expected_4.txt
 
 // Not supported
-RUN validate schema.json instance.json --http --resolve leaf.json --resolve container.json --json STDIN /dev/null IN . INTO result_5.txt EXPECTING 3
+RUN validate entry-leaf.json instance.json --http --resolve leaf.json --resolve container.json --json STDIN /dev/null IN . INTO result_5.txt EXPECTING 3
 
 REPLACE $CWD WITH '[CWD]' IN result_5.txt
 

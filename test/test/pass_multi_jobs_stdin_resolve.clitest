@@ -1,0 +1,65 @@
+MAKE DIRECTORY tests
+
+WRITE stdin.json UNTIL EOF
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.com/stdin-schema",
+  "type": "string"
+}
+EOF
+
+WRITE tests/1.json UNTIL EOF
+{
+  "target": "https://example.com/stdin-schema",
+  "tests": [
+    {
+      "description": "First",
+      "valid": true,
+      "data": "foo"
+    }
+  ]
+}
+EOF
+
+WRITE tests/2.json UNTIL EOF
+{
+  "target": "https://example.com/stdin-schema",
+  "tests": [
+    {
+      "description": "Second",
+      "valid": true,
+      "data": "bar"
+    }
+  ]
+}
+EOF
+
+WRITE tests/3.json UNTIL EOF
+{
+  "target": "https://example.com/stdin-schema",
+  "tests": [
+    {
+      "description": "Third",
+      "valid": true,
+      "data": "baz"
+    }
+  ]
+}
+EOF
+
+// Running in parallel, the order of the lines is not part of the contract
+RUN test tests --resolve - --jobs 3 STDIN stdin.json IN . INTO result_0.txt EXPECTING 0
+
+REPLACE $CWD WITH '[CWD]' IN result_0.txt
+
+SORT result_0.txt
+
+WRITE expected_0.txt UNTIL EOF
+1> [CWD]/tests/1.json: PASS 1/1
+1> [CWD]/tests/2.json: PASS 1/1
+1> [CWD]/tests/3.json: PASS 1/1
+EOF
+
+SORT expected_0.txt
+
+COMPARE result_0.txt AGAINST expected_0.txt

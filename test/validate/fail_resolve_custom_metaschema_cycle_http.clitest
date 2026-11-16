@@ -1,16 +1,15 @@
-// A cycle of locally supplied custom meta-schemas must fail the same way
-// whether or not remote resolution is enabled. Every identifier in the
-// cycle is declared by a pending local `--resolve` input, so enabling
-// `--http` must not turn the stuck import into a network request for an
-// identifier the user already supplied: the run terminates with the same
-// file-anchored resolution diagnostic and no network round trip.
+// A cycle of locally supplied custom meta-schemas fails the same way whether
+// or not remote resolution is enabled. Every identifier in the cycle is one a
+// `--resolve` input declares, so `--http` must not turn any of them into a
+// network request: the run terminates with the same file-anchored diagnostic
+// and no network round trip.
 
 ENV SOURCEMETA_CORE_CURL_SO $CWD/does-not-exist.so
 
 WRITE schema.json UNTIL EOF
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "type": "string"
+  "$ref": "https://example.com/meta-x"
 }
 EOF
 
@@ -46,17 +45,16 @@ EOF
 RUN validate schema.json instance.json --http --resolve meta-x.json --resolve meta-y.json STDIN /dev/null IN . INTO result_0.txt EXPECTING 4
 
 REPLACE $CWD WITH '[CWD]' IN result_0.txt
-REPLACE 'https://example.com/meta-x' WITH '[STUCK]' IN result_0.txt
-REPLACE 'https://example.com/meta-y' WITH '[STUCK]' IN result_0.txt
 REPLACE '[CWD]/meta-x.json' WITH '[INPUT]' IN result_0.txt
 REPLACE '[CWD]/meta-y.json' WITH '[INPUT]' IN result_0.txt
 
 WRITE expected_0.txt UNTIL EOF
-2> error: Could not resolve the metaschema of the schema
-2>   at identifier [STUCK]
+2> error: Could not determine the base dialect of the schema
 2>   at file path [INPUT]
 2>
-2> This is likely because you forgot to import such schema using `--resolve/-r`
+2> Are you sure the input is a valid JSON Schema and its base dialect is known?
+2> If the input does not declare the `$schema` keyword, you might want to
+2> explicitly declare a default dialect using `--default-dialect/-d`
 EOF
 
 COMPARE result_0.txt AGAINST expected_0.txt
@@ -65,15 +63,12 @@ COMPARE result_0.txt AGAINST expected_0.txt
 RUN validate schema.json instance.json --http --resolve meta-x.json --resolve meta-y.json --json STDIN /dev/null IN . INTO result_1.txt EXPECTING 4
 
 REPLACE $CWD WITH '[CWD]' IN result_1.txt
-REPLACE 'https://example.com/meta-x' WITH '[STUCK]' IN result_1.txt
-REPLACE 'https://example.com/meta-y' WITH '[STUCK]' IN result_1.txt
 REPLACE '[CWD]/meta-x.json' WITH '[INPUT]' IN result_1.txt
 REPLACE '[CWD]/meta-y.json' WITH '[INPUT]' IN result_1.txt
 
 WRITE expected_1.txt UNTIL EOF
 1> {
-1>   "error": "Could not resolve the metaschema of the schema",
-1>   "identifier": "[STUCK]",
+1>   "error": "Could not determine the base dialect of the schema",
 1>   "filePath": "[INPUT]"
 1> }
 EOF

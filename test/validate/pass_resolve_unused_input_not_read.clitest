@@ -1,0 +1,28 @@
+WRITE schema.json UNTIL EOF
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object"
+}
+EOF
+
+WRITE unused.json UNTIL EOF
+{
+  "$schema": "https://example.com/unknown-metaschema",
+  "$id": "https://example.com/unused",
+  "type": "string"
+}
+EOF
+
+WRITE instance.json UNTIL EOF
+{ "foo": "bar" }
+EOF
+
+WRITE expected_0.txt UNTIL EOF
+2> 1 validated, 1 passed, 0 failed
+EOF
+
+RUN validate schema.json instance.json --resolve unused.json STDIN /dev/null IN . INTO result_0.txt EXPECTING 0
+
+REPLACE $CWD WITH '[CWD]' IN result_0.txt
+
+COMPARE result_0.txt AGAINST expected_0.txt

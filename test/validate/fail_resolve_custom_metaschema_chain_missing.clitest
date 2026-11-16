@@ -1,16 +1,7 @@
-// A chain of custom meta-schemas whose ultimate meta-schema is genuinely
-// missing must terminate with a file-anchored resolution diagnostic instead
-// of retrying forever. No entry can ever import: the leaf waits on `meta-c`,
-// `meta-c` waits on `meta-b`, and `meta-b` waits on a meta-schema that is
-// never supplied. Which stuck entry gets blamed is deliberately not pinned,
-// since reporting the first deferred entry and tracing to the genuinely
-// absent meta-schema are both acceptable, so the identifier and file below
-// are normalized before comparing
-
 WRITE schema.json UNTIL EOF
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "type": "string"
+  "$ref": "https://example.com/leaf"
 }
 EOF
 
