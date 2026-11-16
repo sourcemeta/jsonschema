@@ -1,7 +1,8 @@
 WRITE schema.json UNTIL EOF
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "type": "object"
+  "type": "object",
+  "$ref": "resolve.json"
 }
 EOF
 

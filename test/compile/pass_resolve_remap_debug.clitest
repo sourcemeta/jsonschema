@@ -126,10 +126,10 @@ WRITE expected.txt UNTIL EOF
 2> Using extension: .json
 2> Using extension: .yaml
 2> Using extension: .yml
+2> debug: Resolving https://example.com/other as https://example.com/nested given the configuration file
 2> debug: Detecting schema resources from file: [CWD]/remote.json
 2> debug: Importing schema into the resolution context: [CWD_URI]/remote.json
 2> debug: Importing schema into the resolution context: https://example.com/nested
-2> debug: Resolving https://example.com/other as https://example.com/nested given the configuration file
 EOF
 
 COMPARE result.txt AGAINST expected.txt

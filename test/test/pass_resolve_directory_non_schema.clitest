@@ -18,27 +18,22 @@ WRITE schemas/test.json UNTIL EOF
   "target": "https://example.com#/definitions/foo",
   "tests": [
     {
-      "description": "Fail",
+      "description": "Pass",
       "valid": true,
-      "data": 5
+      "data": "hello"
     }
   ]
 }
 EOF
 
-// Schema input error
-RUN test schemas/test.json --verbose --jobs 1 --resolve $CWD STDIN /dev/null IN . INTO result_0.txt EXPECTING 4
+RUN test schemas/test.json --verbose --jobs 1 --resolve $CWD STDIN /dev/null IN . INTO result_0.txt EXPECTING 0
 
 REPLACE $CWD WITH '[CWD]' IN result_0.txt
 
 WRITE expected_0.txt UNTIL EOF
+1> [CWD]/schemas/test.json:
+1>   1/1 PASS Pass
 2> Using parallelism: 1
-2> error: Could not determine the base dialect of the schema
-2>   at file path [CWD]/schemas/test.json
-2>
-2> Are you sure the input is a valid JSON Schema and its base dialect is known?
-2> If the input does not declare the `$schema` keyword, you might want to
-2> explicitly declare a default dialect using `--default-dialect/-d`
 EOF
 
 COMPARE result_0.txt AGAINST expected_0.txt

@@ -57,15 +57,12 @@ REPLACE $CWD_URI WITH '[CWD_URI]' IN result_0.txt
 REPLACE $CWD WITH '[CWD]' IN result_0.txt
 
 WRITE expected_0.txt UNTIL EOF
-2> debug: Detecting schema resources from file: [CWD]/foo.json
-2> debug: Importing schema into the resolution context: [CWD_URI]/foo.json
-2> debug: Importing schema into the resolution context: https://example.com/foo
-2> debug: Detecting schema resources from file: [CWD]/schemas/baz.json
-2> debug: Importing schema into the resolution context: [CWD_URI]/schemas/baz.json
-2> debug: Importing schema into the resolution context: https://example.com/baz
 2> debug: Detecting schema resources from file: [CWD]/schemas/nested/bar.json
 2> debug: Importing schema into the resolution context: [CWD_URI]/schemas/nested/bar.json
 2> debug: Importing schema into the resolution context: https://example.com/bar
+2> debug: Detecting schema resources from file: [CWD]/foo.json
+2> debug: Importing schema into the resolution context: [CWD_URI]/foo.json
+2> debug: Importing schema into the resolution context: https://example.com/foo
 2> ok: instance.json
 2>
 2> 1 validated, 1 passed, 0 failed

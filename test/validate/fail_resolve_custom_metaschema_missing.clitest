@@ -1,13 +1,7 @@
-// A genuinely missing custom meta-schema must still terminate with the
-// original file-anchored diagnostic, even though another `--resolve` entry
-// imports fine. The importable entry is listed second, so the run defers the
-// stuck schema, makes progress on the other entry, and only then detects
-// that no further pass can make progress.
-
 WRITE schema.json UNTIL EOF
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "type": "string"
+  "$ref": "https://example.com/stuck-schema"
 }
 EOF
 
