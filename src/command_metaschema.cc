@@ -394,8 +394,7 @@ auto sourcemeta::jsonschema::metaschema(
                                                     error);
       }
 
-      resolver_origins.report_schema_container(subject_dialect,
-                                               entry.resolution_base, error);
+      resolver_origins.report_schema_container(subject_dialect, error);
     }
 
     if (summary.failed > failures_before && !continue_on_error) {

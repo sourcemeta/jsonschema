@@ -940,29 +940,36 @@ public:
   // document rather than where each part of it was written, so where to point
   // is read back from that file
   [[noreturn]] auto report_schema_container(
-      const std::string_view identifier, const std::filesystem::path &fallback,
+      const std::string_view identifier,
       const sourcemeta::core::SchemaContainerError &error) const -> void {
     // Resolution goes wherever a configuration remaps the identifier to, so
     // what names the document is that rather than what the caller asked by
     const auto target{this->resolution_target(std::string{identifier})};
     const auto origin{this->origins_.find(target)};
-    // A document that was fetched rather than imported is known by the URI it
-    // came from, which says where it is only when it names a place on disk.
-    // Nothing local holding it leaves the caller's own file as the only thing
-    // there is to name, as the error itself carries no URI to report instead
     const auto file{origin != this->origins_.cend()
                         ? std::make_optional(origin->second.first)
                         : identifier_file(target)};
-    const auto &path{file.has_value() ? file.value() : fallback};
-    const auto position{read_position(path, error.location())};
+
+    // A document that was fetched from somewhere that is not a place on disk
+    // is named by the URL it came from, as there is no file to read a position
+    // out of. Reading one out of whatever asked for the document would answer
+    // with a place that document never had, which is worse than saying
+    // nothing, as a line and a column read as the one thing worth opening
+    if (!file.has_value()) {
+      throw URLError<sourcemeta::core::SchemaContainerError>(target, error);
+    }
+
+    // Importing keeps the document rather than where each part of it was
+    // written, so where to point is read back from the file it came from
+    const auto position{read_position(file.value(), error.location())};
     if (position.has_value()) {
       throw PositionError<
           sourcemeta::core::FileError<sourcemeta::core::SchemaContainerError>>(
-          position.value().first, position.value().second, path, error);
+          position.value().first, position.value().second, file.value(), error);
     }
 
     throw sourcemeta::core::FileError<sourcemeta::core::SchemaContainerError>(
-        path, error);
+        file.value(), error);
   }
 
 private:
