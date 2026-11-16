@@ -68,3 +68,20 @@ WRITE expected_2.txt UNTIL EOF
 EOF
 
 COMPARE result_2.txt AGAINST expected_2.txt
+
+// Not supported
+RUN bundle entry.json --resolve shared.json --json STDIN /dev/null IN . INTO result_3.txt EXPECTING 3
+
+REPLACE $CWD WITH '[CWD]' IN result_3.txt
+
+WRITE expected_3.txt UNTIL EOF
+1> {
+1>   "error": "This OpenAPI Specification revision is not supported",
+1>   "value": "4.0.0",
+1>   "line": 2,
+1>   "column": 3,
+1>   "filePath": "[CWD]/shared.json"
+1> }
+EOF
+
+COMPARE result_3.txt AGAINST expected_3.txt

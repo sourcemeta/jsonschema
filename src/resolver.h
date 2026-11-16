@@ -921,6 +921,16 @@ public:
       if (materialised != this->schemas_.cend()) {
         return materialised->second;
       }
+
+      // A leaf answers to the identity it was indexed under even where reading
+      // the file settles on another, exactly as the schema half has it. An
+      // installed dependency is named by the URI the configuration imported it
+      // under rather than by what it declares, so this is what a reference
+      // landing on one of those reaches
+      auto aliased{this->alias_declared(target, leaf->second)};
+      if (aliased.has_value()) {
+        return aliased;
+      }
     }
 
     const auto cached{this->fetched_.find(target)};
@@ -1171,13 +1181,17 @@ private:
                                  &entry.positions);
       const auto retrieval{sourcemeta::jsonschema::default_id(entry)};
       const auto self{openapi_self_identity(entry.second, retrieval)};
+      // A description answers to the `$self` it declares and to where it came
+      // from either way, and those are two identities of one document, so what
+      // is kept for either of them is what both answer from
+      const auto retained{retain(entry)};
       if (self.has_value()) {
         this->register_leaf(canonical_resolve_key(self.value()), entry,
-                            LeafKind::OpenAPI);
+                            LeafKind::OpenAPI, retained);
       }
 
       this->register_leaf(canonical_resolve_key(retrieval), entry,
-                          LeafKind::OpenAPI);
+                          LeafKind::OpenAPI, retained);
       return;
     }
 
@@ -1191,7 +1205,7 @@ private:
     this->register_leaf(canonical_resolve_key(root_identity(
                             entry.second, std::ref(*this), default_dialect,
                             sourcemeta::jsonschema::default_id(entry))),
-                        entry, LeafKind::Schema);
+                        entry, LeafKind::Schema, retain(entry));
   }
 
   // Two inputs that answer to one identifier leave which of them a reference
@@ -1199,8 +1213,17 @@ private:
   // rather than settled by whichever arrived first. Two that hold the very
   // same document are no such ambiguity, and settling that is what reading the
   // one already indexed is worth
-  auto register_leaf(const std::string &identity, InputJSON &entry,
-                     const LeafKind kind) -> void {
+  // Nothing can be read back for an input that came from standard input, so
+  // what it held is the one copy of it there will ever be, and every identity
+  // it answers to is handed that same copy
+  [[nodiscard]] static auto retain(const InputJSON &entry)
+      -> std::shared_ptr<InputJSON> {
+    return entry.from_stdin ? std::make_shared<InputJSON>(entry) : nullptr;
+  }
+
+  auto register_leaf(const std::string &identity, const InputJSON &entry,
+                     const LeafKind kind, std::shared_ptr<InputJSON> retained)
+      -> void {
     const auto match{this->index_.find(identity)};
     if (match != this->index_.cend()) {
       if (match->second.path == entry.resolution_base ||
@@ -1230,16 +1253,10 @@ private:
           sourcemeta::core::Pointer{});
     }
 
-    // Nothing can be read back for an input that came from standard input, so
-    // what it held is the one copy of it there will ever be
-    this->index_.emplace(
-        identity,
-        Leaf{.path = entry.resolution_base,
-             .display_name = entry.first,
-             .kind = kind,
-             .retained = entry.from_stdin
-                             ? std::make_shared<InputJSON>(std::move(entry))
-                             : nullptr});
+    this->index_.emplace(identity, Leaf{.path = entry.resolution_base,
+                                        .display_name = entry.first,
+                                        .kind = kind,
+                                        .retained = std::move(retained)});
   }
 
   // Where an identifier that nothing answers for actually sits, for the one

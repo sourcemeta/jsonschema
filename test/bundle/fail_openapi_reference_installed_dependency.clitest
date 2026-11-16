@@ -1,0 +1,51 @@
+MAKE DIRECTORY vendor
+
+WRITE vendor/types.json UNTIL EOF
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.com/types",
+  "type": "string"
+}
+EOF
+
+WRITE jsonschema.json UNTIL EOF
+{
+  "dependencies": {
+    "https://example.com/vendored-types": "./vendor/types.json"
+  }
+}
+EOF
+
+WRITE openapi.json UNTIL EOF
+{
+  "openapi": "3.1.1",
+  "info": { "title": "Example", "version": "1.0.0" },
+  "paths": {
+    "/pets": {
+      "get": {
+        "responses": {
+          "200": { "$ref": "https://example.com/vendored-types" }
+        }
+      }
+    }
+  }
+}
+EOF
+
+// Schema input error
+RUN bundle openapi.json STDIN /dev/null IN . INTO result_0.txt EXPECTING 4
+
+REPLACE $CWD_URI WITH '[CWD_URI]' IN result_0.txt
+REPLACE $CWD WITH '[CWD]' IN result_0.txt
+
+WRITE expected_0.txt UNTIL EOF
+2> error: This reference must name a document that holds an OpenAPI Description
+2>   at identifier https://example.com/vendored-types
+2>   at line 8
+2>   at column 20
+2>   at file path [CWD]/openapi.json
+2>   at location "/paths/~1pets/get/responses/200/$ref"
+2>   at base uri [CWD_URI]/openapi.json
+EOF
+
+COMPARE result_0.txt AGAINST expected_0.txt

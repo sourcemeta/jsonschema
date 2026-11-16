@@ -8,10 +8,24 @@
 
 ENV SOURCEMETA_CORE_CURL_SO $CWD/does-not-exist.so
 
-WRITE schema.json UNTIL EOF
+WRITE entry-orphan-annotated.json UNTIL EOF
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "type": "string"
+  "$ref": "https://example.com/orphan-annotated"
+}
+EOF
+
+WRITE entry-orphan.json UNTIL EOF
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$ref": "https://example.com/orphan"
+}
+EOF
+
+WRITE entry-nested-annotation.json UNTIL EOF
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$ref": "https://example.com/nested-annotation"
 }
 EOF
 
@@ -61,7 +75,7 @@ WRITE instance.json UNTIL EOF
 EOF
 
 // Not supported
-RUN validate schema.json instance.json --http --resolve orphan-annotated.json STDIN /dev/null IN . INTO result_0.txt EXPECTING 3
+RUN validate entry-orphan-annotated.json instance.json --http --resolve orphan-annotated.json STDIN /dev/null IN . INTO result_0.txt EXPECTING 3
 
 REPLACE $CWD WITH '[CWD]' IN result_0.txt
 
@@ -75,7 +89,7 @@ EOF
 COMPARE result_0.txt AGAINST expected_0.txt
 
 // Not supported
-RUN validate schema.json instance.json --http --resolve orphan-annotated.json --json STDIN /dev/null IN . INTO result_1.txt EXPECTING 3
+RUN validate entry-orphan-annotated.json instance.json --http --resolve orphan-annotated.json --json STDIN /dev/null IN . INTO result_1.txt EXPECTING 3
 
 REPLACE $CWD WITH '[CWD]' IN result_1.txt
 
@@ -90,7 +104,7 @@ EOF
 COMPARE result_1.txt AGAINST expected_1.txt
 
 // Not supported
-RUN validate schema.json instance.json --http --resolve orphan.json --resolve annotations.json STDIN /dev/null IN . INTO result_2.txt EXPECTING 3
+RUN validate entry-orphan.json instance.json --http --resolve orphan.json --resolve annotations.json STDIN /dev/null IN . INTO result_2.txt EXPECTING 3
 
 REPLACE $CWD WITH '[CWD]' IN result_2.txt
 
@@ -104,7 +118,7 @@ EOF
 COMPARE result_2.txt AGAINST expected_2.txt
 
 // Not supported
-RUN validate schema.json instance.json --http --resolve orphan.json --resolve annotations.json --json STDIN /dev/null IN . INTO result_3.txt EXPECTING 3
+RUN validate entry-orphan.json instance.json --http --resolve orphan.json --resolve annotations.json --json STDIN /dev/null IN . INTO result_3.txt EXPECTING 3
 
 REPLACE $CWD WITH '[CWD]' IN result_3.txt
 
@@ -119,7 +133,7 @@ EOF
 COMPARE result_3.txt AGAINST expected_3.txt
 
 // Not supported
-RUN validate schema.json instance.json --http --resolve nested-annotation.json STDIN /dev/null IN . INTO result_4.txt EXPECTING 3
+RUN validate entry-nested-annotation.json instance.json --http --resolve nested-annotation.json STDIN /dev/null IN . INTO result_4.txt EXPECTING 3
 
 REPLACE $CWD WITH '[CWD]' IN result_4.txt
 
@@ -133,7 +147,7 @@ EOF
 COMPARE result_4.txt AGAINST expected_4.txt
 
 // Not supported
-RUN validate schema.json instance.json --http --resolve nested-annotation.json --json STDIN /dev/null IN . INTO result_5.txt EXPECTING 3
+RUN validate entry-nested-annotation.json instance.json --http --resolve nested-annotation.json --json STDIN /dev/null IN . INTO result_5.txt EXPECTING 3
 
 REPLACE $CWD WITH '[CWD]' IN result_5.txt
 
