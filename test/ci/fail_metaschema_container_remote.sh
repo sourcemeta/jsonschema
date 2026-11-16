@@ -4,7 +4,7 @@ set -o errexit
 set -o nounset
 
 TMP="$(mktemp -d)"
-PORT=5894
+PORT=5895
 mkdir "$TMP/server"
 npx --yes http-server --version
 npx --yes http-server "$TMP/server" --port "$PORT" &
