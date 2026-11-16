@@ -435,6 +435,24 @@ static inline auto identifier_path(const std::string &identifier)
                                : std::filesystem::path{identifier};
 }
 
+// The same question asked where a guess will not do: a URI that names no place
+// on disk is better left unanswered than spelled as a path that leads nowhere
+static inline auto identifier_file(const std::string &identifier)
+    -> std::optional<std::filesystem::path> {
+  std::optional<sourcemeta::core::URI> uri;
+  try {
+    uri.emplace(identifier);
+  } catch (const sourcemeta::core::URIParseError &) {
+    return std::nullopt;
+  }
+
+  if (!uri.value().is_file()) {
+    return std::nullopt;
+  }
+
+  return uri.value().to_path();
+}
+
 class CustomResolver {
 public:
   CustomResolver(
@@ -915,7 +933,61 @@ public:
     }
   }
 
+  // Bundling a document that resolution went and got reports a place within
+  // that document rather than within whatever asked for it, so naming the
+  // file the caller was reading would point at a place it does not hold.
+  // Where the document came from is known only here, and importing keeps the
+  // document rather than where each part of it was written, so where to point
+  // is read back from that file
+  [[noreturn]] auto report_schema_container(
+      const std::string_view identifier,
+      const sourcemeta::core::SchemaContainerError &error) const -> void {
+    // Resolution goes wherever a configuration remaps the identifier to, so
+    // what names the document is that rather than what the caller asked by
+    const auto target{this->resolution_target(std::string{identifier})};
+    const auto origin{this->origins_.find(target)};
+    const auto file{origin != this->origins_.cend()
+                        ? std::make_optional(origin->second.first)
+                        : identifier_file(target)};
+
+    // A document that was fetched from somewhere that is not a place on disk
+    // is named by the URL it came from, as there is no file to read a position
+    // out of. Reading one out of whatever asked for the document would answer
+    // with a place that document never had, which is worse than saying
+    // nothing, as a line and a column read as the one thing worth opening
+    if (!file.has_value()) {
+      throw URLError<sourcemeta::core::SchemaContainerError>(target, error);
+    }
+
+    // Importing keeps the document rather than where each part of it was
+    // written, so where to point is read back from the file it came from
+    const auto position{read_position(file.value(), error.location())};
+    if (position.has_value()) {
+      throw PositionError<
+          sourcemeta::core::FileError<sourcemeta::core::SchemaContainerError>>(
+          position.value().first, position.value().second, file.value(), error);
+    }
+
+    throw sourcemeta::core::FileError<sourcemeta::core::SchemaContainerError>(
+        file.value(), error);
+  }
+
 private:
+  // Where resolution goes looking for an identifier, which is whatever a
+  // configuration remaps it to or else the identifier as it stands. Asked the
+  // same way resolution asks it, so that what answered and what is reported
+  // as having answered cannot disagree
+  [[nodiscard]] auto resolution_target(const std::string &identifier) const
+      -> std::string {
+    const auto mapped{this->configuration_.and_then(
+        [this, &identifier](const sourcemeta::blaze::Configuration &config)
+            -> std::optional<std::string> {
+          return resolve_map_uri(this->canonical_resolve_, config.base_path,
+                                 identifier);
+        })};
+    return mapped.has_value() ? mapped.value() : identifier;
+  }
+
   // Framing a schema is what reveals the identifiers it declares, but framing
   // needs its meta-schema resolved first, which is precisely what an entry
   // that cannot be imported is missing. Read the identifier it declares at

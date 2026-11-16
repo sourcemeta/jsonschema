@@ -256,6 +256,42 @@ auto target_not_schema(const sourcemeta::core::JSON &document,
           description, false};
 }
 
+// Bundling what a target names reports a place within the document that
+// target reached, which is not the document the target was written in, so the
+// refusal is handed to the resolver to name the file it came from. Caught
+// here rather than where the suite is parsed, as a file-attributed refusal is
+// still the error it wraps and would be taken for an unattributed one again
+auto bundle_target_schema(
+    const sourcemeta::core::JSON &schema,
+    const sourcemeta::core::SchemaResolver &schema_resolver,
+    const sourcemeta::jsonschema::CustomResolver &custom_resolver,
+    const std::string &dialect, const sourcemeta::core::JSON::String &base)
+    -> sourcemeta::core::JSON {
+  try {
+    return sourcemeta::core::schema_bundle(
+        schema, sourcemeta::core::schema_walker, schema_resolver, dialect, base,
+        sourcemeta::jsonschema::bundle_references_options());
+  } catch (const sourcemeta::core::SchemaContainerError &error) {
+    custom_resolver.report_schema_container(base, error);
+  }
+}
+
+// The same for a description, which reaches what it spans the other way round
+auto bundle_target_description(
+    sourcemeta::core::JSON &document,
+    const sourcemeta::core::SchemaResolver &schema_resolver,
+    const sourcemeta::core::OpenAPIResolver &openapi_resolver,
+    const sourcemeta::jsonschema::CustomResolver &custom_resolver,
+    const std::string &default_base) -> void {
+  try {
+    sourcemeta::core::openapi_bundle(document, sourcemeta::core::schema_walker,
+                                     schema_resolver, openapi_resolver,
+                                     {.default_base = default_base});
+  } catch (const sourcemeta::core::SchemaContainerError &error) {
+    custom_resolver.report_schema_container(default_base, error);
+  }
+}
+
 // What a target names is reached the same way whatever holds it, by bundling
 // the document in and framing it under the base the target was resolved
 // against. Everything it spans has to be bundled in first, as compiling never
@@ -272,11 +308,8 @@ auto resolve_base(const sourcemeta::core::SchemaResolver &schema_resolver,
   // description is read once however it got here
   const auto schema{schema_resolver(base)};
   if (schema.has_value()) {
-    auto document{std::make_unique<sourcemeta::core::JSON>(
-        sourcemeta::core::schema_bundle(
-            schema.value(), sourcemeta::core::schema_walker, schema_resolver,
-            dialect, base,
-            sourcemeta::jsonschema::bundle_references_options()))};
+    auto document{std::make_unique<sourcemeta::core::JSON>(bundle_target_schema(
+        schema.value(), schema_resolver, custom_resolver, dialect, base))};
 
     auto frame{std::make_unique<sourcemeta::core::SchemaFrame>(
         sourcemeta::core::SchemaFrame::Mode::References, *document,
@@ -306,9 +339,8 @@ auto resolve_base(const sourcemeta::core::SchemaResolver &schema_resolver,
   const auto retrieval{custom_resolver.description_retrieval(base)};
   const auto &default_base{retrieval.has_value() ? retrieval.value() : base};
 
-  sourcemeta::core::openapi_bundle(*document, sourcemeta::core::schema_walker,
-                                   schema_resolver, openapi_resolver,
-                                   {.default_base = default_base});
+  bundle_target_description(*document, schema_resolver, openapi_resolver,
+                            custom_resolver, default_base);
 
   auto frame{std::make_unique<sourcemeta::core::OpenAPIFrame>(
       *document, sourcemeta::core::schema_walker, schema_resolver,

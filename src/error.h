@@ -75,6 +75,23 @@ private:
   std::size_t entry_;
 };
 
+// Where a document came from, for one that resolution fetched from somewhere
+// that is not a place on disk. A file path is what an error names when there
+// is a file to name, and spelling such a URL as one would hand the reader an
+// absolute path that nothing holds, so the URL is carried as itself instead
+template <typename T> class URLError : public T {
+public:
+  URLError(std::string url, T error)
+      : T{std::move(error)}, url_{std::move(url)} {}
+
+  [[nodiscard]] auto url() const noexcept -> std::string_view {
+    return this->url_;
+  }
+
+private:
+  std::string url_;
+};
+
 class SchemaIdentifierConflictError : public sourcemeta::core::Error {
 public:
   SchemaIdentifierConflictError(std::string identifier,
@@ -1995,6 +2012,21 @@ inline auto try_catch(const sourcemeta::core::Options &options,
     return EXIT_SCHEMA_INPUT_ERROR;
   } catch (
       const sourcemeta::core::FileError<sourcemeta::core::SchemaReferenceError>
+          &error) {
+    const auto is_json{options.contains("json")};
+    print_exception(is_json, error);
+    return EXIT_SCHEMA_INPUT_ERROR;
+  } catch (const URLError<sourcemeta::core::SchemaContainerError> &error) {
+    const auto is_json{options.contains("json")};
+    print_exception(is_json, error);
+    return EXIT_SCHEMA_INPUT_ERROR;
+  } catch (const PositionError<sourcemeta::core::FileError<
+               sourcemeta::core::SchemaContainerError>> &error) {
+    const auto is_json{options.contains("json")};
+    print_exception(is_json, error);
+    return EXIT_SCHEMA_INPUT_ERROR;
+  } catch (
+      const sourcemeta::core::FileError<sourcemeta::core::SchemaContainerError>
           &error) {
     const auto is_json{options.contains("json")};
     print_exception(is_json, error);

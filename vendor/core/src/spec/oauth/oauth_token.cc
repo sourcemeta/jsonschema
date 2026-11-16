@@ -49,7 +49,7 @@ auto oauth_append_resources(SecureString &sink,
                             const std::span<const OAuthParameter> resources)
     -> void {
   for (const auto &resource : resources) {
-    URI::append_query_parameter(sink, resource.name, resource.value);
+    URI::append_form_parameter(sink, resource.name, resource.value);
   }
 }
 
@@ -79,14 +79,14 @@ auto oauth_build_token_request_code(
     const std::string_view code_verifier,
     const std::span<const OAuthParameter> resources, SecureString &sink)
     -> void {
-  URI::append_query_parameter(sink, "grant_type", "authorization_code");
-  URI::append_query_parameter(sink, "code", code);
+  URI::append_form_parameter(sink, "grant_type", "authorization_code");
+  URI::append_form_parameter(sink, "code", code);
   if (!redirect_uri.empty()) {
-    URI::append_query_parameter(sink, "redirect_uri", redirect_uri);
+    URI::append_form_parameter(sink, "redirect_uri", redirect_uri);
   }
 
   if (!code_verifier.empty()) {
-    URI::append_query_parameter(sink, "code_verifier", code_verifier);
+    URI::append_form_parameter(sink, "code_verifier", code_verifier);
   }
 
   oauth_append_resources(sink, resources);
@@ -96,10 +96,10 @@ auto oauth_build_token_request_refresh(
     const std::string_view refresh_token, const std::string_view scope,
     const std::span<const OAuthParameter> resources, SecureString &sink)
     -> void {
-  URI::append_query_parameter(sink, "grant_type", "refresh_token");
-  URI::append_query_parameter(sink, "refresh_token", refresh_token);
+  URI::append_form_parameter(sink, "grant_type", "refresh_token");
+  URI::append_form_parameter(sink, "refresh_token", refresh_token);
   if (!scope.empty()) {
-    URI::append_query_parameter(sink, "scope", scope);
+    URI::append_form_parameter(sink, "scope", scope);
   }
 
   oauth_append_resources(sink, resources);
@@ -109,9 +109,9 @@ auto oauth_build_token_request_client_credentials(
     const std::string_view scope,
     const std::span<const OAuthParameter> resources, SecureString &sink)
     -> void {
-  URI::append_query_parameter(sink, "grant_type", "client_credentials");
+  URI::append_form_parameter(sink, "grant_type", "client_credentials");
   if (!scope.empty()) {
-    URI::append_query_parameter(sink, "scope", scope);
+    URI::append_form_parameter(sink, "scope", scope);
   }
 
   oauth_append_resources(sink, resources);

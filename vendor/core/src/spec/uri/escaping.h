@@ -12,13 +12,9 @@
 namespace sourcemeta::core {
 
 enum class URIEscapeMode : std::uint8_t {
-  // Escape every characted that is not in the URI "unreserved" ABNF category
+  // reg-name = *( unreserved / pct-encoded / sub-delims )
   // See https://www.rfc-editor.org/rfc/rfc3986#appendix-A
-  SkipUnreserved,
-  // Escape every characted that is not in either the URI "unreserved" nor
-  // "sub-delims" ABNF categories
-  // See https://www.rfc-editor.org/rfc/rfc3986#appendix-A
-  SkipSubDelims,
+  RegisteredName,
   // pchar = unreserved / pct-encoded / sub-delims / ":" / "@"
   // path  = *( pchar / "/" )
   // See https://www.rfc-editor.org/rfc/rfc3986#appendix-A
@@ -27,9 +23,6 @@ enum class URIEscapeMode : std::uint8_t {
   // fragment = *( pchar / "/" / "?" )
   // See https://www.rfc-editor.org/rfc/rfc3986#appendix-A
   Fragment,
-  // Like SkipSubDelims but also preserves ":" for Windows filesystem paths
-  // (drive letters like C:)
-  Filesystem,
   // userinfo = *( unreserved / pct-encoded / sub-delims / ":" )
   // See https://www.rfc-editor.org/rfc/rfc3986#appendix-A
   UserInfo
@@ -123,41 +116,6 @@ inline auto uri_normalize_percent_encoding_inplace(std::string &input) -> void {
       ++position;
     }
   }
-}
-
-template <typename Predicate>
-inline auto uri_unescape_if_inplace(std::string &input, Predicate should_decode)
-    -> void {
-  const auto first{input.find(URI_PERCENT)};
-  if (first == std::string::npos) {
-    return;
-  }
-
-  std::string::size_type write_position = first;
-
-  for (std::string::size_type read_position = first;
-       read_position < input.size();) {
-    if (uri_is_percent_encoded(input, read_position)) {
-      const auto value = static_cast<unsigned char>(
-          (hex_digit_value(input[read_position + 1]) << 4) |
-          hex_digit_value(input[read_position + 2]));
-      const auto decoded = static_cast<char>(value);
-
-      if (should_decode(decoded)) {
-        input[write_position++] = decoded;
-      } else {
-        input[write_position++] = input[read_position];
-        input[write_position++] = input[read_position + 1];
-        input[write_position++] = input[read_position + 2];
-      }
-
-      read_position += 3;
-    } else {
-      input[write_position++] = input[read_position++];
-    }
-  }
-
-  input.resize(write_position);
 }
 
 } // namespace sourcemeta::core

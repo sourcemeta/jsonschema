@@ -39,6 +39,14 @@ struct Fetched {
   JSON::String identifier;
 };
 
+// A reference that nothing answers for yet, which owns what reporting it takes
+// for as long as the walk may still come to settle it
+struct Deferred {
+  JSON::String origin;
+  Pointer pointer;
+  JSON::String destination;
+};
+
 // What the walk carries from one document to the next
 struct Walk {
   const SchemaWalker &walker;
@@ -51,7 +59,7 @@ struct Walk {
   URISet accounted;
   const SchemaDependenciesOptions::AccountedPredicate &accounted_predicate;
   const SchemaDependenciesOptions::AccountedCallback &accounted_callback;
-  std::vector<JSON::String> deferred;
+  std::vector<Deferred> deferred;
   std::deque<Fetched> pending;
 };
 
@@ -121,17 +129,22 @@ auto is_readable(const JSON &document, const SchemaResolver &resolver,
   }
 }
 
+// A document is examined against whatever it answers to that framing files as
+// a place within it rather than as a resource of it, which is the URI the
+// caller said the document came from and nothing at all for one the walk read,
+// as framing takes the whole of those
 auto examine(Walk &walk, const SchemaFrame &frame,
-             const std::string_view origin) -> void {
+             const std::string_view origin, const std::string_view base)
+    -> void {
   // Every URI that a document the walk holds answers to is one the caller
   // never has to fetch of its own, whether the document declares it at the top
   // or carries it within itself
   frame.for_each_resource_uri(
       [&walk](const auto &uri) -> void { account(walk, uri); });
 
-  frame.for_each_unresolved_reference([&walk, &frame,
-                                       origin](const auto &pointer,
-                                               const auto &reference) -> void {
+  frame.for_each_unresolved_reference([&walk, &frame, origin,
+                                       base](const auto &pointer,
+                                             const auto &reference) -> void {
     // We don't want to report official schemas, as we can expect
     // virtually all implementations to understand them out of the box
     if (is_skippable_metaschema_reference(pointer, reference.destination)) {
@@ -154,8 +167,20 @@ auto examine(Walk &walk, const SchemaFrame &frame,
 
     // Whatever the walk accounts for travels with the document it came from,
     // so a reference into it reaches nothing the caller has to fetch of its
-    // own. This is also what keeps a cycle from going round for ever
+    // own. Where the reference sits is reported all the same, as that is a
+    // dependency of this document on another however the far end got here.
+    // Reading no further is also what keeps a cycle from going round for ever
     if (is_accounted(walk, reference.base)) {
+      // A document that names itself by the URI it came from reaches no
+      // further than the part of it that analysis was pointed at, which is out
+      // of scope rather than a dependency on anything
+      if (reference.base != base) {
+        walk.callback({.origin = origin,
+                       .pointer = pointer,
+                       .destination = reference.base,
+                       .document = nullptr});
+      }
+
       return;
     }
 
@@ -164,8 +189,12 @@ auto examine(Walk &walk, const SchemaFrame &frame,
       // A document that the walk has not read yet may carry the resource
       // that this names, as a resource embedded in one document is reached
       // the same way as one linked from another. Whether this leads anywhere
-      // is settled once there is nothing left to read rather than here
-      walk.deferred.emplace_back(reference.base);
+      // is settled once there is nothing left to read rather than here, so
+      // what reporting it takes is kept until then
+      walk.deferred.emplace_back(
+          Deferred{.origin = JSON::String{origin},
+                   .pointer = to_pointer(pointer),
+                   .destination = JSON::String{reference.base}});
       return;
     }
 
@@ -186,7 +215,7 @@ auto examine(Walk &walk, const SchemaFrame &frame,
     walk.callback({.origin = origin,
                    .pointer = pointer,
                    .destination = reference.base,
-                   .document = remote.value()});
+                   .document = &remote.value()});
     account(walk, reference.base);
 
     // Official schemas can only reference other official schemas, so reading
@@ -252,12 +281,15 @@ auto schema_dependencies(const JSON &schema, const SchemaWalker &walker,
       // the document rather than as a resource of it. Framing above has
       // already made a URI of this one, so there is no second way for it to
       // fail here
-      if (!options.default_base.empty()) {
-        account(walk,
-                sourcemeta::core::URI::canonicalize(options.default_base));
+      const auto base{
+          options.default_base.empty()
+              ? JSON::String{}
+              : sourcemeta::core::URI::canonicalize(options.default_base)};
+      if (!base.empty()) {
+        account(walk, base);
       }
 
-      examine(walk, *frame, frame->root());
+      examine(walk, *frame, frame->root(), base);
     }
 
     // Reading a document can only ever add to what the walk accounts for, so
@@ -272,15 +304,49 @@ auto schema_dependencies(const JSON &schema, const SchemaWalker &walker,
       const auto frame{frame_within(walk, fetched.document.value(),
                                     fetched.identifier, WHOLE_DOCUMENT,
                                     fetched.identifier)};
-      examine(walk, *frame, fetched.identifier);
+      examine(walk, *frame, fetched.identifier, {});
     }
 
-    for (const auto &identifier : walk.deferred) {
-      if (!is_accounted(walk, identifier)) {
-        throw SchemaResolutionError(
-            "Could not resolve the reference to an external schema",
-            identifier);
+    // A reference that nothing answered for when it was read leads somewhere
+    // once something answers to the name, which is so of it whether or not
+    // another such reference goes on to end analysis below. Reporting it takes
+    // until here rather than where it sits, as nothing before this settles it
+    for (const auto &deferred : walk.deferred) {
+      if (is_accounted(walk, deferred.destination)) {
+        walk.callback({.origin = deferred.origin,
+                       .pointer = to_weak_pointer(deferred.pointer),
+                       .destination = deferred.destination,
+                       .document = nullptr});
       }
+    }
+
+    // A reference that nothing ever answered for is where analysis ends, and
+    // the error that ends it names one of them. The caller hears of every one
+    // of them first, as analysis lets go of the rest as it unwinds and a
+    // caller stitching several documents into one span may still come to hold
+    // what they name
+    const Deferred *unresolved{nullptr};
+    for (const auto &deferred : walk.deferred) {
+      if (is_accounted(walk, deferred.destination)) {
+        continue;
+      }
+
+      if (unresolved == nullptr) {
+        unresolved = &deferred;
+      }
+
+      if (options.unresolved) {
+        options.unresolved({.origin = deferred.origin,
+                            .pointer = to_weak_pointer(deferred.pointer),
+                            .destination = deferred.destination,
+                            .document = nullptr});
+      }
+    }
+
+    if (unresolved != nullptr) {
+      throw SchemaResolutionError(
+          "Could not resolve the reference to an external schema",
+          unresolved->destination);
     }
   } catch (const ForeignFrameLimitError &foreign) {
     throw foreign.error;

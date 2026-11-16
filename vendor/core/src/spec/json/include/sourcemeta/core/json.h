@@ -14,12 +14,13 @@
 
 #include <sourcemeta/core/preprocessor.h>
 
-#include <cstdint>    // std::uint64_t
+#include <cstdint>    // std::uint64_t, std::uint32_t
 #include <filesystem> // std::filesystem
 #include <format> // std::formatter, std::format_context, std::format_parse_context, std::format_to
 #include <fstream>          // std::basic_ifstream
 #include <initializer_list> // std::initializer_list
 #include <istream>          // std::basic_istream
+#include <limits>           // std::numeric_limits
 #include <optional>         // std::optional
 #include <ostream>          // std::basic_ostream
 #include <sstream>          // std::ostringstream
@@ -36,6 +37,15 @@
 /// ```
 
 namespace sourcemeta::core {
+
+/// @ingroup json
+/// The largest input, in bytes, that a JSON document may be read from. Tape
+/// entries address the input with 32-bit offsets and lengths, so a larger
+/// input cannot be represented without truncation. A caller reading input it
+/// does not trust may pass a tighter bound of its own, and the type is what
+/// keeps it from passing a wider one
+inline constexpr std::uint32_t JSON_MAXIMUM_INPUT_BYTES{
+    std::numeric_limits<std::uint32_t>::max()};
 
 /// @ingroup json
 ///
@@ -57,12 +67,18 @@ namespace sourcemeta::core {
 ///
 /// A string escape that denotes a lone surrogate, such as `"\uDEAD"`, is
 /// rejected. RFC 8259 Section 8.2 considers such input grammar-conforming, but
-/// a lone surrogate cannot be represented in valid UTF-8, and every string this
-/// parser produces is valid UTF-8. Rejecting it is a deliberate exercise of the
-/// RFC 8259 Section 9 allowance that an implementation may set limits on the
-/// character contents of strings.
+/// a lone surrogate cannot be represented in valid UTF-8, so reading one out
+/// of an escape would be manufacturing a byte sequence that is not. Rejecting
+/// it is a deliberate exercise of the RFC 8259 Section 9 allowance that an
+/// implementation may set limits on the character contents of strings.
+///
+/// The bytes of the input itself are a separate matter, and they travel as
+/// they were written. A string holding a sequence that stands in no valid
+/// UTF-8 encoding, such as an overlong form or a truncated one, is accepted
+/// and handed back unchanged, which Section 9 admits for the same reason.
 SOURCEMETA_CORE_JSON_EXPORT
-auto parse_json(std::basic_istream<JSON::Char, JSON::CharTraits> &stream)
+auto parse_json(std::basic_istream<JSON::Char, JSON::CharTraits> &stream,
+                std::uint32_t maximum_input_bytes = JSON_MAXIMUM_INPUT_BYTES)
     -> JSON;
 
 /// @ingroup json
@@ -83,13 +99,19 @@ auto parse_json(std::basic_istream<JSON::Char, JSON::CharTraits> &stream)
 ///
 /// A string escape that denotes a lone surrogate, such as `"\uDEAD"`, is
 /// rejected. RFC 8259 Section 8.2 considers such input grammar-conforming, but
-/// a lone surrogate cannot be represented in valid UTF-8, and every string this
-/// parser produces is valid UTF-8. Rejecting it is a deliberate exercise of the
-/// RFC 8259 Section 9 allowance that an implementation may set limits on the
-/// character contents of strings.
+/// a lone surrogate cannot be represented in valid UTF-8, so reading one out
+/// of an escape would be manufacturing a byte sequence that is not. Rejecting
+/// it is a deliberate exercise of the RFC 8259 Section 9 allowance that an
+/// implementation may set limits on the character contents of strings.
+///
+/// The bytes of the input itself are a separate matter, and they travel as
+/// they were written. A string holding a sequence that stands in no valid
+/// UTF-8 encoding, such as an overlong form or a truncated one, is accepted
+/// and handed back unchanged, which Section 9 admits for the same reason.
 SOURCEMETA_CORE_JSON_EXPORT
 auto parse_json(
-    const std::basic_string_view<JSON::Char, JSON::CharTraits> input) -> JSON;
+    const std::basic_string_view<JSON::Char, JSON::CharTraits> input,
+    std::uint32_t maximum_input_bytes = JSON_MAXIMUM_INPUT_BYTES) -> JSON;
 
 /// @ingroup json
 ///
@@ -107,7 +129,8 @@ auto parse_json(
 /// ```
 SOURCEMETA_CORE_JSON_EXPORT
 auto try_parse_json(
-    const std::basic_string_view<JSON::Char, JSON::CharTraits> input)
+    const std::basic_string_view<JSON::Char, JSON::CharTraits> input,
+    std::uint32_t maximum_input_bytes = JSON_MAXIMUM_INPUT_BYTES)
     -> std::optional<JSON>;
 
 /// @ingroup json

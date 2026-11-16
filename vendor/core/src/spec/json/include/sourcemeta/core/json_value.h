@@ -954,7 +954,7 @@ public:
   at(const Array::size_type index) const -> const JSON & {
     assert(this->is_array());
     assert(index < this->size());
-    return this->data_array.data_.at(index);
+    return this->data_array.data_[index];
   }
 
   /// This method retrieves a element by its index. If the input JSON instance
@@ -979,7 +979,7 @@ public:
       -> JSON & {
     assert(this->is_array());
     assert(index < this->size());
-    return this->data_array.data_.at(index);
+    return this->data_array.data_[index];
   }
 
   /// This method retrieves an object element.

@@ -6,6 +6,8 @@
 
 #include <sourcemeta/core/uri.h>
 
+#include "compile_helpers.h"
+
 #include <algorithm> // std::ranges::all_of, std::ranges::find, std::max, std::min
 #include <array>     // std::array
 #include <cstddef>   // std::size_t
@@ -55,6 +57,7 @@ inline auto is_noop_without_children(const InstructionIndex type) noexcept
     case InstructionIndex::ControlGroupWhenDefines:
     case InstructionIndex::ControlGroupWhenDefinesDirect:
     case InstructionIndex::ControlGroupWhenType:
+    case InstructionIndex::ControlFrame:
       return true;
     default:
       return false;
@@ -124,6 +127,7 @@ inline auto is_pass_through_instruction(const InstructionIndex type) noexcept
     case InstructionIndex::ControlGroupWhenDefinesDirect:
     case InstructionIndex::ControlGroupWhenType:
     case InstructionIndex::ControlEvaluate:
+    case InstructionIndex::ControlFrame:
       return true;
     default:
       return false;
@@ -176,7 +180,8 @@ inline auto collect_statistics(const Instructions &instructions,
     }
 
     if (instruction.type == InstructionIndex::ControlGroupWhenDefinesDirect ||
-        instruction.type == InstructionIndex::ControlGroupWhenType) {
+        instruction.type == InstructionIndex::ControlGroupWhenType ||
+        instruction.type == InstructionIndex::ControlFrame) {
       statistics.requires_empty_instance_location = true;
     }
 
@@ -546,6 +551,27 @@ inline auto transform_instruction(
   return false;
 }
 
+// Reference inlining replaces a branch that was a bare jump with the
+// instructions it stood for, so the discriminating property of a branch
+// written as a reference only becomes visible once inlining has settled. A
+// disjunction that must try every branch reports each of them, which makes the
+// order its instructions run in observable, and it carries that requirement as
+// its own value
+inline auto hoist_discriminators(Instructions &instructions) -> void {
+  for (auto &instruction : instructions) {
+    if (instruction.type == InstructionIndex::LogicalXor &&
+        !std::get<ValueBoolean>(instruction.value)) {
+      for (auto &branch : instruction.children) {
+        if (branch.type == InstructionIndex::ControlGroup) {
+          hoist_discriminator(branch.children);
+        }
+      }
+    }
+
+    hoist_discriminators(instruction.children);
+  }
+}
+
 inline auto postprocess(std::vector<Instructions> &targets,
                         InstructionExtras &extra, const Tweaks &tweaks,
                         const bool uses_dynamic_scopes) -> void {
@@ -567,6 +593,7 @@ inline auto postprocess(std::vector<Instructions> &targets,
          current_target_index < targets.size(); ++current_target_index) {
       auto &target{targets[current_target_index]};
       auto &current_stats{statistics[current_target_index]};
+      bool target_changed{false};
 
       std::vector<std::pair<Instructions *, Instruction *>> worklist;
       std::vector<std::tuple<Instructions *, std::size_t, Instruction *>> stack;
@@ -624,7 +651,7 @@ inline auto postprocess(std::vector<Instructions> &targets,
                             owner->type == InstructionIndex::LogicalXor))};
 
         if (!disjoint && fuse_numeric_bounds(*current, extra)) {
-          changed = true;
+          target_changed = true;
         }
 
         // A fused simple-properties instruction only enforces that a property
@@ -698,7 +725,7 @@ inline auto postprocess(std::vector<Instructions> &targets,
                   }
                 }
                 if (all_covered) {
-                  changed = true;
+                  target_changed = true;
                   continue;
                 }
                 break;
@@ -707,7 +734,7 @@ inline auto postprocess(std::vector<Instructions> &targets,
               case InstructionIndex::AssertionDefines: {
                 const auto &value{std::get<ValueProperty>(instruction.value)};
                 if (fusion->second.contains(value.first)) {
-                  changed = true;
+                  target_changed = true;
                   continue;
                 }
                 break;
@@ -716,7 +743,7 @@ inline auto postprocess(std::vector<Instructions> &targets,
               case InstructionIndex::AssertionType:
                 if (std::get<ValueType>(instruction.value) ==
                     sourcemeta::core::JSON::Type::Object) {
-                  changed = true;
+                  target_changed = true;
                   continue;
                 }
                 break;
@@ -728,7 +755,7 @@ inline auto postprocess(std::vector<Instructions> &targets,
           if (transform_instruction(instruction, result, extra, targets,
                                     statistics, current_stats, tweaks,
                                     uses_dynamic_scopes, positional)) {
-            changed = true;
+            target_changed = true;
           }
 
           if (positional) {
@@ -785,7 +812,23 @@ inline auto postprocess(std::vector<Instructions> &targets,
 
         *current = std::move(result);
       }
+
+      if (target_changed) {
+        // Later targets may inline this one, so their size and scope checks
+        // must describe the rewritten instructions rather than the original
+        // jumps. Otherwise a small shared graph can expand into a large tree
+        // while every target still appears to fit the inlining threshold.
+        current_stats = {.count = 0,
+                         .jump_targets = {},
+                         .requires_empty_instance_location = false};
+        collect_statistics(target, current_stats);
+        changed = true;
+      }
     }
+  }
+
+  for (auto &target : targets) {
+    hoist_discriminators(target);
   }
 }
 

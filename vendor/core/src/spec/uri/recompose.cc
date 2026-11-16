@@ -47,18 +47,13 @@ auto escape_component_to_string(std::string &output, std::string_view input,
       }
     }
 
-    if (uri_is_unreserved(character)) {
+    // Every component written out here admits the unreserved characters and
+    // the sub-delims, and the modes differ only in which of the delimiters
+    // they go on to admit
+    // See https://www.rfc-editor.org/rfc/rfc3986#appendix-A
+    if (uri_is_unreserved(character) || uri_is_sub_delim(character)) {
       output += character;
       continue;
-    }
-
-    if (mode == URIEscapeMode::SkipSubDelims || mode == URIEscapeMode::Path ||
-        mode == URIEscapeMode::Fragment || mode == URIEscapeMode::Filesystem ||
-        mode == URIEscapeMode::UserInfo) {
-      if (uri_is_sub_delim(character)) {
-        output += character;
-        continue;
-      }
     }
 
     if (mode == URIEscapeMode::Path) {
@@ -77,7 +72,7 @@ auto escape_component_to_string(std::string &output, std::string_view input,
       }
     }
 
-    if (mode == URIEscapeMode::Filesystem || mode == URIEscapeMode::UserInfo) {
+    if (mode == URIEscapeMode::UserInfo) {
       if (character == URI_COLON) {
         output += character;
         continue;
@@ -111,7 +106,7 @@ auto recompose_authority(std::string &output,
       output += ']';
     } else {
       escape_component_to_string(output, host.value(),
-                                 URIEscapeMode::SkipSubDelims, iri);
+                                 URIEscapeMode::RegisteredName, iri);
     }
   }
 
@@ -200,9 +195,12 @@ auto URI::recompose_relative() const -> std::string {
   return result;
 }
 
+// RFC 3986 Section 3.2 writes `authority = [ userinfo "@" ] host [ ":" port
+// ]`, so either of the two optional parts names one on its own. A port is only
+// ever read inside an authority, whose host is always recorded even when it is
+// empty, so the host answers for the port as well
 auto URI::authority() const -> std::optional<std::string> {
-  if (!this->userinfo().has_value() && !this->host().has_value() &&
-      !this->port().has_value()) {
+  if (!this->userinfo().has_value() && !this->host().has_value()) {
     return std::nullopt;
   }
 
@@ -225,8 +223,7 @@ auto URI::recompose_without_fragment() const -> std::optional<std::string> {
 
   // Authority
   const bool has_authority{this->userinfo().has_value() ||
-                           this->host().has_value() ||
-                           this->port().has_value()};
+                           this->host().has_value()};
   if (has_authority) {
     result += "//";
     recompose_authority(result, this->userinfo(), this->host(), this->port(),

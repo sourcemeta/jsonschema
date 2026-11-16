@@ -70,6 +70,7 @@ enum class InstructionIndex : std::uint8_t {
   AssertionPropertyTypeStrictAny,
   AssertionPropertyTypeStrictAnyEvaluate,
   AssertionPropertyEqual,
+  AssertionPropertyEqualsAnyStringHash,
   AssertionArrayPrefix,
   AssertionArrayPrefixEvaluate,
   AssertionObjectPropertiesSimple,
@@ -123,6 +124,7 @@ enum class InstructionIndex : std::uint8_t {
   ControlGroupWhenDefinesDirect,
   ControlGroupWhenType,
   ControlEvaluate,
+  ControlFrame,
   ControlDynamicAnchorJump,
   ControlJump
 };
@@ -180,6 +182,7 @@ constexpr std::string_view INSTRUCTION_NAMES[] = {
     "AssertionPropertyTypeStrictAny",
     "AssertionPropertyTypeStrictAnyEvaluate",
     "AssertionPropertyEqual",
+    "AssertionPropertyEqualsAnyStringHash",
     "AssertionArrayPrefix",
     "AssertionArrayPrefixEvaluate",
     "AssertionObjectPropertiesSimple",
@@ -233,6 +236,7 @@ constexpr std::string_view INSTRUCTION_NAMES[] = {
     "ControlGroupWhenDefinesDirect",
     "ControlGroupWhenType",
     "ControlEvaluate",
+    "ControlFrame",
     "ControlDynamicAnchorJump",
     "ControlJump"};
 

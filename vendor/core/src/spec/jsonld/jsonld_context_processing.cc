@@ -16,7 +16,7 @@ namespace {
 
 // The absolute IRI a reference names, which is the only form the resolver
 // accepts. A reference that is not a URI at all, and one that no base could
-// make absolute, both name nothing to load (JSON-LD 1.1 API Section 5.1 step
+// make absolute, both name nothing to load (JSON-LD 1.1 API Section 4.1.2 step
 // 5.2.1)
 auto absolute_reference(const std::optional<JSON::String> &base,
                         const JSON::String &reference)
@@ -53,7 +53,7 @@ auto resolve(const JSONLDResolver &resolver, const JSON::String &reference)
 
 // The base IRI a value sets, resolved against the current one when there is
 // one. A string the parser rejects, and a relative reference with no base to
-// resolve it against, both name no base (JSON-LD 1.1 API Section 5.1 steps
+// resolve it against, both name no base (JSON-LD 1.1 API Section 4.1.2 steps
 // 5.7.3 to 5.7.5)
 auto resolved_base(const std::optional<JSON::String> &base,
                    const JSON::String &value) -> std::optional<JSON::String> {
@@ -76,7 +76,7 @@ auto resolved_base(const std::optional<JSON::String> &base,
 
 // The version number, which the JSON library holds as a real or as an exact
 // decimal depending on how the input spells it, and which both representations
-// may name (JSON-LD 1.1 API Section 5.1 step 5.5.1). Trailing zeros come off
+// may name (JSON-LD 1.1 API Section 4.1.2 step 5.5.1). Trailing zeros come off
 // first, so that every spelling of the value lands on the same exponent, and
 // an exponent that does not match then settles the comparison without the
 // digits of either side having to be aligned
@@ -94,7 +94,7 @@ auto is_version_1_1(const JSON &version) -> bool {
   return reduced.same_quantum(VERSION_1_1) && reduced == VERSION_1_1;
 }
 
-// A context merged with an imported one (JSON-LD 1.1 API Section 5.1 step
+// A context merged with an imported one (JSON-LD 1.1 API Section 4.1.2 step
 // 5.6.8) holds entries from two documents, and only the ones the input spells
 // out have a position in it. An error on an entry that came from the imported
 // document alone is located at the reference that loaded it instead.
@@ -104,8 +104,11 @@ auto is_input_authored(const JSONLDError &error, const JSON &context,
   // Everything the merged context is held to account for is one of its
   // entries, so what reports against it reaches past the context itself
   assert(pointer.size() > location.size());
+  // The merged context is a map, so the step past its own position names an
+  // entry of it rather than an index
   const auto &token{pointer.at(location.size())};
-  return token.is_property() && context.defines(token.to_property());
+  assert(token.is_property());
+  return context.defines(token.to_property());
 }
 
 // The origin a context reached from the given location reports against. A
@@ -122,7 +125,7 @@ auto foreign_origin(const ExpansionState &state, const WeakPointer &location)
 
 } // namespace
 
-// Context Processing (JSON-LD 1.1 API Section 5.1)
+// Context Processing (JSON-LD 1.1 API Section 4.1.2)
 auto process_context(ExpansionState &state, ActiveContext &active_context,
                      const JSON &local_context, const WeakPointer &pointer,
                      const bool propagate) -> void {
@@ -138,7 +141,7 @@ auto process_context(ExpansionState &state, ActiveContext &active_context,
   }
 
   // The @propagate flag is read once from a top-level map context, before the
-  // contexts are processed (JSON-LD 1.1 API Section 5.1 steps 2 and 3). A
+  // contexts are processed (JSON-LD 1.1 API Section 4.1.2 steps 2 and 3). A
   // non-boolean value is reported per entry by the loop below.
   bool effective_propagate{propagate};
   if (local_context.is_object()) {
@@ -170,7 +173,7 @@ auto process_context(ExpansionState &state, ActiveContext &active_context,
       const bool relativise{active_context.compact_to_relative};
       // What a scope reverts to outlives the nullification inside it, or the
       // nodes below would never regain the context the scope was entered from
-      // (JSON-LD 1.1 API Section 5.1 step 5.1.2)
+      // (JSON-LD 1.1 API Section 4.1.2 step 5.1.2)
       auto saved_previous{effective_propagate ? nullptr
                                               : active_context.previous};
       active_context = ActiveContext{};
@@ -200,7 +203,7 @@ auto process_context(ExpansionState &state, ActiveContext &active_context,
 
       // A scoped context being validated stops at a reference that is already
       // loading rather than treating it as recursion (JSON-LD 1.1 API Section
-      // 5.1 step 5.2.2)
+      // 4.1.2 step 5.2.2)
       if (already_loaded && !state.validate_scoped_context) {
         continue;
       }
@@ -209,7 +212,7 @@ auto process_context(ExpansionState &state, ActiveContext &active_context,
         // A scoped context can be loaded again on purpose, so JSON-LD 1.1
         // withdrew the recursion error and treats meeting a context already
         // in the chain as reaching the limit on how many may be loaded
-        // (JSON-LD 1.1 API Section 5.1 step 5.2.3)
+        // (JSON-LD 1.1 API Section 4.1.2 step 5.2.3)
         if (state.processing_1_0) {
           throw JSONLDError("Recursive context inclusion", location);
         }
@@ -224,14 +227,17 @@ auto process_context(ExpansionState &state, ActiveContext &active_context,
       // processor MUST NOT do a further dereference, and context is set to the
       // previously established internal representation", with the note that
       // "Only the @context entry need be retained", which is why the cache
-      // holds that entry rather than the document (JSON-LD 1.1 API Section 5.1
-      // step 5.2.4)
+      // holds that entry rather than the document (JSON-LD 1.1 API
+      // Section 4.1.2 step 5.2.4)
       const auto dereferenced{state.remote_documents.find(reference)};
       const JSON *context_entry{nullptr};
       if (dereferenced != state.remote_documents.cend()) {
         context_entry = &dereferenced->second;
       } else {
-        if (state.resolver == nullptr || !*state.resolver) {
+        // Every entry point hands the state the address of a resolver, so
+        // what stands to be settled is whether that resolver holds anything
+        assert(state.resolver != nullptr);
+        if (!*state.resolver) {
           throw JSONLDError("Loading remote context failed", location);
         }
         const auto document{resolve(*state.resolver, reference)};
@@ -282,7 +288,7 @@ auto process_context(ExpansionState &state, ActiveContext &active_context,
     }
     // The entries 1.1 introduced are refused where the algorithm reaches them,
     // so each names itself and none stands in for an entry judged earlier
-    // (JSON-LD 1.1 API Section 5.1 step 5.6.1)
+    // (JSON-LD 1.1 API Section 4.1.2 step 5.6.1)
     if (state.processing_1_0) {
       if (context.defines(KEYWORD_IMPORT, KEYWORD_IMPORT_HASH)) {
         throw JSONLDError("Invalid context entry", location, {KEYWORD_IMPORT});
@@ -312,7 +318,7 @@ auto process_context(ExpansionState &state, ActiveContext &active_context,
         throw JSONLDError("Invalid @import value", location, {KEYWORD_IMPORT});
       }
       // What cannot be dereferenced is a loading failure (JSON-LD 1.1 API
-      // Section 5.1 step 5.6.5)
+      // Section 4.1.2 step 5.6.5)
       const auto resolved{absolute_reference(state.context_resolution_base(),
                                              import.to_string())};
       if (!resolved.has_value()) {
@@ -321,7 +327,8 @@ auto process_context(ExpansionState &state, ActiveContext &active_context,
       }
 
       const auto &reference{resolved.value()};
-      if (state.resolver == nullptr || !*state.resolver) {
+      assert(state.resolver != nullptr);
+      if (!*state.resolver) {
         throw JSONLDError("Loading remote context failed", location,
                           {KEYWORD_IMPORT});
       }
@@ -407,7 +414,7 @@ auto process_context(ExpansionState &state, ActiveContext &active_context,
         // Step 5.8.3: "If it is not an IRI, or a blank node identifier, an
         // invalid vocab mapping error has been detected". The expansion is
         // what has to pass, since a relative reference is admitted here and
-        // resolved against the base (JSON-LD 1.1 API Section 5.1 step 5.8.3)
+        // resolved against the base (JSON-LD 1.1 API Section 4.1.2 step 5.8.3)
         if (!mapping.has_value() || (!URI::is_iri(mapping.value()) &&
                                      !is_blank_node(mapping.value()))) {
           throw JSONLDError("Invalid vocab mapping", location, {KEYWORD_VOCAB});
@@ -429,7 +436,7 @@ auto process_context(ExpansionState &state, ActiveContext &active_context,
       }
     }
 
-    // (JSON-LD 1.1 API Section 5.1 step 5.10)
+    // (JSON-LD 1.1 API Section 4.1.2 step 5.10)
     if (const auto *direction_entry{
             context.try_at(KEYWORD_DIRECTION, KEYWORD_DIRECTION_HASH)}) {
       if (state.processing_1_0) {
@@ -455,7 +462,7 @@ auto process_context(ExpansionState &state, ActiveContext &active_context,
 
     // The flag itself is read before the entries are, so that a context that
     // does not propagate is remembered first, and only what it says is judged
-    // here (JSON-LD 1.1 API Section 5.1 step 5.11)
+    // here (JSON-LD 1.1 API Section 4.1.2 step 5.11)
     if (const auto *propagate_entry{
             context.try_at(KEYWORD_PROPAGATE, KEYWORD_PROPAGATE_HASH)}) {
       if (state.processing_1_0) {
@@ -470,6 +477,9 @@ auto process_context(ExpansionState &state, ActiveContext &active_context,
     }
 
     DefinedTerms defined;
+    // An import entry is consumed where the two documents are merged above, so
+    // none stands among the entries terms are made from
+    assert(!context.defines(KEYWORD_IMPORT, KEYWORD_IMPORT_HASH));
     for (const auto &entry : context.as_object()) {
       const auto &name{entry.first};
       if (entry.key_equals(KEYWORD_BASE, KEYWORD_BASE_HASH) ||
@@ -477,7 +487,6 @@ auto process_context(ExpansionState &state, ActiveContext &active_context,
           entry.key_equals(KEYWORD_LANGUAGE, KEYWORD_LANGUAGE_HASH) ||
           entry.key_equals(KEYWORD_VERSION, KEYWORD_VERSION_HASH) ||
           entry.key_equals(KEYWORD_DIRECTION, KEYWORD_DIRECTION_HASH) ||
-          entry.key_equals(KEYWORD_IMPORT, KEYWORD_IMPORT_HASH) ||
           entry.key_equals(KEYWORD_PROPAGATE, KEYWORD_PROPAGATE_HASH) ||
           entry.key_equals(KEYWORD_PROTECTED, KEYWORD_PROTECTED_HASH)) {
         continue;

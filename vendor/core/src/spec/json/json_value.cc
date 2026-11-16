@@ -357,10 +357,15 @@ auto cross_numeric_ordering(const JSON &left, const JSON &right)
         integer_real_ordering(right.to_integer(), left.to_real()));
   }
 
-  if (left.is_real() && right.is_decimal() &&
-      right.to_decimal().is_integral() && right.to_decimal().is_int64()) {
-    return reverse_ordering(
-        integer_real_ordering(right.to_decimal().to_int64(), left.to_real()));
+  // The two operands hold different types, so a real on the left leaves only
+  // a decimal on the right by this point
+  if (left.is_real()) {
+    assert(right.is_decimal());
+    const auto &right_decimal{right.to_decimal()};
+    if (right_decimal.is_integral() && right_decimal.is_int64()) {
+      return reverse_ordering(
+          integer_real_ordering(right_decimal.to_int64(), left.to_real()));
+    }
   }
 
   if (left.is_decimal() && right.is_real() && left.to_decimal().is_integral() &&
@@ -489,8 +494,16 @@ JSON::JSON(const JSON &other) {
       std::construct_at(&this->data_decimal, other.data_decimal);
       this->current_type_ = Type::Decimal;
       return;
+      // Clang settles that no other value arrives and keeps an arm for the
+      // one that never does, so the last of them carries the default there,
+      // while the compilers that read a case label are told every name
+#if defined(__clang__)
+    case Type::Array:
+    default:
+#else
     case Type::Array:
     case Type::Object:
+#endif
       break;
   }
 
@@ -554,7 +567,14 @@ JSON::JSON(const JSON &other) {
           }
           break;
         }
+        // Clang settles that no other value arrives and keeps an arm for the
+        // one that never does, so the last of them carries the default there,
+        // while the compilers that read a case label are told every name
+#if defined(__clang__)
+        default: {
+#else
         case Type::Object: {
+#endif
           std::construct_at(&destination.data_object, Object{});
           destination.current_type_ = Type::Object;
           const auto &source_data{source.data_object.data_};
@@ -668,8 +688,16 @@ auto JSON::operator=(const JSON &other) -> JSON & {
       this->current_type_ = Type::Decimal;
       return *this;
     }
+    // Clang settles that no other value arrives and keeps an arm for the
+    // one that never does, so the last of them carries the default there,
+    // while the compilers that read a case label are told every name
+#if defined(__clang__)
+    case Type::Array:
+    default:
+#else
     case Type::Array:
     case Type::Object:
+#endif
       break;
   }
 
@@ -814,10 +842,20 @@ auto JSON::operator<(const JSON &other) const -> bool {
       return this->to_string() < other.to_string();
     case Type::Array:
       return this->as_array() < other.as_array();
+      // Clang keeps an arm for the value that never arrives and counts it as
+      // one that nothing took, so the last of them is written as the default
+      // there, while the compilers reading a case label are the ones holding
+      // this switch to naming them all
+#if defined(__clang__)
+    default:
+#else
     case Type::Object:
+#endif
       return this->as_object() < other.as_object();
+#if !defined(__clang__)
     default:
       return false;
+#endif
   }
 }
 
@@ -890,12 +928,18 @@ auto JSON::operator+(const JSON &other) const -> JSON {
 
     return JSON{left + right};
   }
-  if (this->is_integer() && other.is_real()) {
+  // Neither operand is a decimal and they are not both integers by this
+  // point, so an integer on one side leaves a real on the other
+  if (this->is_integer()) {
+    assert(other.is_real());
     return JSON{this->as_real() + other.to_real()};
   }
-  if (this->is_real() && other.is_integer()) {
+
+  assert(this->is_real());
+  if (other.is_integer()) {
     return JSON{this->to_real() + other.as_real()};
   }
+
   return JSON{this->to_real() + other.to_real()};
 }
 
@@ -924,12 +968,18 @@ auto JSON::operator-(const JSON &other) const -> JSON {
 
     return JSON{left - right};
   }
-  if (this->is_integer() && other.is_real()) {
+  // Neither operand is a decimal and they are not both integers by this
+  // point, so an integer on one side leaves a real on the other
+  if (this->is_integer()) {
+    assert(other.is_real());
     return JSON{this->as_real() - other.to_real()};
   }
-  if (this->is_real() && other.is_integer()) {
+
+  assert(this->is_real());
+  if (other.is_integer()) {
     return JSON{this->to_real() - other.as_real()};
   }
+
   return JSON{this->to_real() - other.to_real()};
 }
 
@@ -1050,7 +1100,14 @@ auto JSON::operator-=(const JSON &substractive) -> JSON & {
             return accumulator + 1 + pair.first.size() +
                    pair.second.fast_hash();
           });
+      // Clang settles that no other value arrives and keeps an arm for the
+      // one that never does, so the last of them carries the default there,
+      // while the compilers that read a case label are told every name
+#if defined(__clang__)
+    default: {
+#else
     case Type::Decimal: {
+#endif
       const auto &decimal{this->to_decimal()};
       if (decimal.is_integral()) {
         const auto integral{decimal.to_integral()};

@@ -14,6 +14,8 @@ endif()
 target_link_libraries(sourcemeta_blaze_evaluator PUBLIC
   sourcemeta::core::json)
 target_link_libraries(sourcemeta_blaze_evaluator PUBLIC
+  sourcemeta::core::numeric)
+target_link_libraries(sourcemeta_blaze_evaluator PUBLIC
   sourcemeta::core::regex)
 target_link_libraries(sourcemeta_blaze_evaluator PUBLIC
   sourcemeta::core::jsonpointer)

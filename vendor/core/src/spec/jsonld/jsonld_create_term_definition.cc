@@ -4,6 +4,7 @@
 #include <sourcemeta/core/uri.h>
 
 #include <algorithm> // std::ranges::sort
+#include <cassert>   // assert
 #include <cstddef>   // std::size_t
 #include <optional>  // std::optional
 #include <utility>   // std::move
@@ -29,9 +30,15 @@ auto is_valid_container(const JSON::StringView value) -> bool {
          value == KEYWORD_ID || value == KEYWORD_TYPE || value == KEYWORD_GRAPH;
 }
 
-// Whether the given value ends with a URI generic delimiter (RFC 3986).
+// Whether the given value ends with a URI generic delimiter (RFC 3986). The
+// only caller weighs an IRI mapping, which was held to naming an IRI, a
+// keyword or a blank node, so nothing empty reaches here
 auto ends_with_gen_delim(const JSON::StringView value) -> bool {
-  return !value.empty() && URI::is_gen_delim(value.back());
+  // The only caller weighs an IRI mapping standing under a term that carries
+  // neither a colon nor a slash, which is the vocabulary joined to a term the
+  // step above refuses to be empty, so nothing empty arrives
+  assert(!value.empty());
+  return URI::is_gen_delim(value.back());
 }
 
 // Whether two definitions are equivalent ignoring their protected status, which
@@ -62,7 +69,7 @@ auto finalize_definition(ExpansionState &state, ActiveContext &active_context,
     }
     // Step 29.2: "Set definition to previous definition to retain the value of
     // protected", so a redefinition that says the same thing leaves what was
-    // already there, origin included (JSON-LD 1.1 API Section 5.1.1 step 29.2)
+    // already there, origin included (JSON-LD 1.1 API Section 4.2.2 step 29.2)
     active_context.terms[term] = previous.value();
     defined[term] = true;
     return;
@@ -73,15 +80,23 @@ auto finalize_definition(ExpansionState &state, ActiveContext &active_context,
 
 // The mapping a term settles on must name a keyword, an IRI or a blank node,
 // and may not stand in for the keyword that carries a context (JSON-LD 1.1 API
-// Section 5.1.1 step 16.2.3)
-auto check_iri_mapping(const ActiveContext &active_context,
+// Section 4.2.2 step 16.2.3). Both callers reach this past the step that
+// leaves a value shaped like a keyword alone, so the mapping always holds
+// something, and a vocabulary is itself an IRI and so puts a colon in whatever
+// it prefixes. Those two tests stand because the rule they spell out is the
+// one the algorithm names, not because either can settle the outcome
+auto check_iri_mapping([[maybe_unused]] const ActiveContext &active_context,
                        const std::optional<JSON::String> &mapping,
                        const WeakPointer &term_pointer,
                        const std::initializer_list<JSON::StringView> children)
     -> void {
+  // A vocabulary is itself an IRI, so whatever it prefixes carries its colon,
+  // and a mapping that carries none was therefore made without one
+  assert(!mapping.has_value() || is_keyword(mapping.value()) ||
+         mapping.value().contains(':') ||
+         !active_context.vocabulary.has_value());
   if (!mapping.has_value() ||
-      (!is_keyword(mapping.value()) && !mapping.value().contains(':') &&
-       !active_context.vocabulary.has_value())) {
+      (!is_keyword(mapping.value()) && !mapping.value().contains(':'))) {
     throw JSONLDError("Invalid IRI mapping", term_pointer, children);
   }
 
@@ -92,7 +107,7 @@ auto check_iri_mapping(const ActiveContext &active_context,
 
 } // namespace
 
-// Create Term Definition (JSON-LD 1.1 API Section 5.1.1)
+// Create Term Definition (JSON-LD 1.1 API Section 4.2.2)
 auto create_term_definition(ExpansionState &state,
                             ActiveContext &active_context,
                             const JSON &local_context, const JSON::String &term,
@@ -122,7 +137,7 @@ auto create_term_definition(ExpansionState &state,
       // as "the value of the @protected entry from context, if any", and step
       // 13 then sets the flag "to the value of this entry", so an entry of the
       // definition overrides the context default in either direction (JSON-LD
-      // 1.1 API Section 5.1.1 steps 12 and 13, Section 5.1 step 5.13)
+      // 1.1 API Section 4.2.2 steps 12 and 13, Section 4.1.2 step 5.13)
       type_definition.is_protected = state.context_protected;
       bool has_container{false};
       bool has_protected{false};
@@ -154,7 +169,7 @@ auto create_term_definition(ExpansionState &state,
       // value @set. An entry for @protected", so either one alone is enough
       // and only a map carrying neither is an error. The shape is settled here
       // because step 4 precedes step 8, which reads the previous definition,
-      // and step 29, which compares against it (JSON-LD 1.1 API Section 5.1.1
+      // and step 29, which compares against it (JSON-LD 1.1 API Section 4.2.2
       // step 4)
       if (invalid_entry || (!has_container && !has_protected)) {
         throw JSONLDError("Keyword redefinition", term_pointer);
@@ -199,7 +214,7 @@ auto create_term_definition(ExpansionState &state,
   // A term whose identifier is explicitly null keeps no IRI mapping, which is
   // what retires it from expansion while leaving it to be redefined, and the
   // rest of what it says is still held to account (JSON-LD 1.1 API Section
-  // 5.1.1 step 16.1)
+  // 4.2.2 step 16.1)
   const bool explicit_null_id{id_entry != nullptr && id_entry->is_null()};
 
   TermDefinition definition;
@@ -219,8 +234,14 @@ auto create_term_definition(ExpansionState &state,
       if (colon != JSON::String::npos) {
         const auto prefix{term.substr(0, colon)};
         const auto suffix{term.substr(colon + 1)};
+        // A term is only ever made while a map of them is being read, so the
+        // context holding this one is a map
+        assert(local_context.is_object());
+        // A prefix already recorded as being worked on would have been met as
+        // a cycle before reaching here, so the record only ever reads as
+        // settled
         if (prefix != "_" && !suffix.starts_with("//") &&
-            local_context.is_object() && local_context.defines(prefix)) {
+            local_context.defines(prefix)) {
           const auto iterator{defined.find(prefix)};
           if (iterator == defined.cend() || !iterator->second) {
             create_term_definition(state, active_context, local_context, prefix,
@@ -244,7 +265,13 @@ auto create_term_definition(ExpansionState &state,
       definition.iri =
           expand_iri(state, active_context, string_value, false, true,
                      &local_context, &defined, context_pointer);
-      // In 1.1, an IRI-like term must expand to its IRI mapping.
+      // Holding an IRI-like term to re-expanding onto its own IRI mapping
+      // arrived with 1.1 and is asked for whatever mode is in force (JSON-LD
+      // 1.1 API Section 4.2.2), while 1.0 knew no such step (JSON-LD 1.0 API
+      // Section 6.2). Standing in for a 1.0 processor therefore means
+      // withholding it, which is what the earlier mode does here and what two
+      // suite cases declaring that version rest on. The mapping always holds
+      // something by now, for the reason given where it is checked
       if (!state.processing_1_0 && definition.iri.has_value()) {
         const auto colon_position{term.find(':')};
         const bool iri_like_colon{colon_position != JSON::String::npos &&
@@ -255,14 +282,22 @@ auto create_term_definition(ExpansionState &state,
           const auto expanded_term{expand_iri(state, probe, term, false, true,
                                               nullptr, nullptr,
                                               EMPTY_WEAK_POINTER)};
-          if (expanded_term.has_value() && expanded_term != definition.iri) {
+          // A term is only weighed here for carrying a colon or a slash,
+          // neither of which a name of keyword form may hold, and that shape
+          // is the only one expanding to nothing
+          // A name of keyword form carries nothing but letters after its
+          // sign, so a term weighed here for its colon or its slash is of no
+          // such form, and that form is the only one expansion answers
+          // nothing for
+          assert(expanded_term.has_value());
+          if (expanded_term != definition.iri) {
             throw JSONLDError("Invalid IRI mapping", term_pointer);
           }
         }
       }
 
       // A string definition stands for a map carrying that value under @id
-      // (JSON-LD 1.1 API Section 5.1.1 step 10), so its mapping is held to the
+      // (JSON-LD 1.1 API Section 4.2.2 step 10), so its mapping is held to the
       // same account as the spelled-out form
       check_iri_mapping(active_context, definition.iri, term_pointer, {});
     }
@@ -272,7 +307,7 @@ auto create_term_definition(ExpansionState &state,
 
     // The protected flag and the type mapping are settled before the entry
     // that names the term is, so what either of them says wrong is reported
-    // whichever way the term is named (JSON-LD 1.1 API Section 5.1.1 steps 13
+    // whichever way the term is named (JSON-LD 1.1 API Section 4.2.2 steps 13
     // and 14)
     if (const auto *protected_entry{
             value.try_at(KEYWORD_PROTECTED, KEYWORD_PROTECTED_HASH)}) {
@@ -295,12 +330,22 @@ auto create_term_definition(ExpansionState &state,
       const auto type{expand_iri(state, active_context, type_value.to_string(),
                                  false, true, &local_context, &defined,
                                  context_pointer)};
-      if (!type.has_value() || type.value().starts_with("_:") ||
-          (type.value() != KEYWORD_ID && type.value() != KEYWORD_VOCAB &&
-           type.value() != KEYWORD_JSON && type.value() != KEYWORD_NONE &&
-           !type.value().contains(':')) ||
-          (state.processing_1_0 &&
-           (type.value() == KEYWORD_JSON || type.value() == KEYWORD_NONE))) {
+      // The step asks three separate things of a type mapping, and they are
+      // asked one at a time because the two keywords that arrived with 1.1
+      // answer to both the second and the third (JSON-LD 1.1 API Section
+      // 4.2.2 step 12)
+      if (!type.has_value() || type.value().starts_with("_:")) {
+        throw JSONLDError("Invalid type mapping", term_pointer, {KEYWORD_TYPE});
+      }
+
+      const bool keyword_of_1_1{type.value() == KEYWORD_JSON ||
+                                type.value() == KEYWORD_NONE};
+      if (type.value() != KEYWORD_ID && type.value() != KEYWORD_VOCAB &&
+          !keyword_of_1_1 && !type.value().contains(':')) {
+        throw JSONLDError("Invalid type mapping", term_pointer, {KEYWORD_TYPE});
+      }
+
+      if (state.processing_1_0 && keyword_of_1_1) {
         throw JSONLDError("Invalid type mapping", term_pointer, {KEYWORD_TYPE});
       }
       definition.type_mapping = type;
@@ -318,7 +363,7 @@ auto create_term_definition(ExpansionState &state,
                           {KEYWORD_REVERSE});
       }
       // A reverse value that looks like a keyword is left alone, the keywords
-      // themselves included (JSON-LD 1.1 API Section 5.1.1 step 15.3)
+      // themselves included (JSON-LD 1.1 API Section 4.2.2 step 15.3)
       if (has_keyword_form(reverse.to_string())) {
         defined[term] = true;
         return;
@@ -328,6 +373,10 @@ auto create_term_definition(ExpansionState &state,
       definition.iri =
           expand_iri(state, active_context, reverse.to_string(), false, true,
                      &local_context, &defined, context_pointer);
+      // A value shaped like a keyword is the only one expansion answers
+      // nothing for, and the step above has already left such a value alone,
+      // so what stands to be settled here is whether the expansion names an
+      // absolute IRI
       if (!definition.iri.has_value() ||
           !definition.iri.value().contains(':')) {
         throw JSONLDError("Invalid IRI mapping", term_pointer,
@@ -347,9 +396,14 @@ auto create_term_definition(ExpansionState &state,
                                   &local_context, &defined, context_pointer);
       const auto &mapping{definition.iri};
       check_iri_mapping(active_context, mapping, term_pointer, {KEYWORD_ID});
-      // In 1.1, a term that itself has the form of an IRI (a colon other than
-      // at the edges, or a slash) must expand to its IRI mapping.
-      if (!state.processing_1_0 && mapping.has_value()) {
+      // A term shaped like an IRI, carrying a colon other than at its edges
+      // or carrying a slash, must re-expand onto its own IRI mapping. The
+      // step arrived with 1.1 and the earlier mode withholds it, for the
+      // reason given where the same test stands above. The mapping always
+      // holds something by now, as the step above left a value shaped like a
+      // keyword alone
+      assert(mapping.has_value());
+      if (!state.processing_1_0) {
         const auto colon_position{term.find(':')};
         const bool iri_like_colon{colon_position != JSON::String::npos &&
                                   colon_position != 0 &&
@@ -359,7 +413,12 @@ auto create_term_definition(ExpansionState &state,
           const auto expanded_term{expand_iri(state, probe, term, false, true,
                                               nullptr, nullptr,
                                               EMPTY_WEAK_POINTER)};
-          if (expanded_term.has_value() && expanded_term != mapping) {
+          // As above, a name carrying a colon or a slash is of no keyword
+          // form, so it never expands to nothing
+          // As above, a name carrying a colon or a slash is of no keyword
+          // form
+          assert(expanded_term.has_value());
+          if (expanded_term != mapping) {
             throw JSONLDError("Invalid IRI mapping", term_pointer,
                               {KEYWORD_ID});
           }
@@ -372,8 +431,11 @@ auto create_term_definition(ExpansionState &state,
       const auto colon{term.find(':')};
       const auto prefix{term.substr(0, colon)};
       const auto suffix{term.substr(colon + 1)};
+      // As above, the context holding the term is a map, and a prefix
+      // recorded as being worked on would already have been met as a cycle
+      assert(local_context.is_object());
       if (prefix != "_" && !suffix.starts_with("//") &&
-          local_context.is_object() && local_context.defines(prefix)) {
+          local_context.defines(prefix)) {
         const auto iterator{defined.find(prefix)};
         if (iterator == defined.cend() || !iterator->second) {
           create_term_definition(state, active_context, local_context, prefix,
@@ -399,7 +461,7 @@ auto create_term_definition(ExpansionState &state,
       const auto &container{*container_entry};
       // A reverse property names one container, which must be @set or @index,
       // and an explicit null leaves no container mapping at all (JSON-LD 1.1
-      // Section 9.15.1, JSON-LD 1.1 API Section 5.1.1 step 15.5)
+      // Section 9.15.1, JSON-LD 1.1 API Section 4.2.2 step 15.5)
       if (definition.reverse) {
         if (!container.is_null()) {
           if (!container.is_string() ||
@@ -486,11 +548,15 @@ auto create_term_definition(ExpansionState &state,
           container_list = true;
         } else if (item == KEYWORD_SET) {
           container_set = true;
-        } else if (item == KEYWORD_TYPE) {
+          // Every name was held to being one of the container keywords
+          // before the set was read, and the others are named above, so what
+          // is left can only be this one
+        } else {
+          assert(item == KEYWORD_TYPE);
           container_type = true;
         }
       }
-      // Valid array combinations (JSON-LD 1.1 API Section 5.1.1 step 21.1): a
+      // Valid array combinations (JSON-LD 1.1 API Section 4.2.2 step 21.1): a
       // single keyword, or @graph with exactly one of @id or @index optionally
       // with @set, or @set combined with any one of @index, @graph, @id,
       // @type, or @language.
@@ -509,7 +575,7 @@ auto create_term_definition(ExpansionState &state,
       // @id", then step 21.4.2: "If type mapping in definition is neither @id
       // nor @vocab, an invalid type mapping error has been detected and
       // processing is aborted". The default is what coerces a non-map value of
-      // the term to an identifier (JSON-LD 1.1 API Section 5.1.1 steps 21.4.1
+      // the term to an identifier (JSON-LD 1.1 API Section 4.2.2 steps 21.4.1
       // and 21.4.2)
       if (container_type) {
         if (!definition.type_mapping.has_value()) {
@@ -563,7 +629,7 @@ auto create_term_definition(ExpansionState &state,
       // The scoped context is processed here so that it is validated even
       // when the term is never used, and however it fails, the term is the one
       // at fault. A reference that is already loading is skipped rather than
-      // followed (JSON-LD 1.1 API Section 5.1.1 step 21)
+      // followed (JSON-LD 1.1 API Section 4.2.2 step 21)
       const bool saved_override{state.protected_override};
       const bool saved_context_protected{state.context_protected};
       const bool saved_validate{state.validate_scoped_context};
@@ -590,7 +656,7 @@ auto create_term_definition(ExpansionState &state,
       // the term comes into use, so whatever it says wrong then belongs where
       // it was written. Only a context the input spells out has entries of its
       // own to point into, which a context merged from an import settles one
-      // term at a time (JSON-LD 1.1 API Section 5.1.1 step 21.7)
+      // term at a time (JSON-LD 1.1 API Section 4.2.2 step 21.7)
       definition.context_authored =
           !state.foreign_context_location.has_value() ||
           (state.input_context != nullptr &&
@@ -662,7 +728,7 @@ auto create_term_definition(ExpansionState &state,
                                       context_pointer)};
       // The expansion of the value has to name an IRI, which neither a
       // keyword nor a term that stayed relative does (JSON-LD 1.1 API Section
-      // 5.1.1 step 21.2)
+      // 4.2.2 step 21.2)
       if (!index_iri.has_value() || is_keyword(index_iri.value()) ||
           !URI::is_iri(index_iri.value())) {
         throw JSONLDError("Invalid term definition", term_pointer,

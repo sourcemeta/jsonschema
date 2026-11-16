@@ -46,7 +46,15 @@ inline auto to_roundtrip_chomping(const BlockChomping chomping)
       return YAMLRoundTrip::Chomping::Clip;
     case BlockChomping::Strip:
       return YAMLRoundTrip::Chomping::Strip;
+      // Clang keeps an arm for the value that never arrives and counts it as
+      // one that nothing took, so the last enumerator is written as the
+      // default there, while the compilers reading a case label are the ones
+      // holding this switch to naming them all
+#if defined(__clang__)
+    default:
+#else
     case BlockChomping::Keep:
+#endif
       return YAMLRoundTrip::Chomping::Keep;
   }
 
@@ -216,10 +224,10 @@ public:
   // Metadata collected for a round-trip describes the one document it was read
   // from, so a stream that carries more than that cannot be written back
   auto validate_single_document() -> void {
-    auto token{this->next_token()};
-    while (token.type == TokenType::DocumentEnd) {
-      token = this->next_token();
-    }
+    // Reading the document crosses every end marker the stream holds and hands
+    // back what follows the last of them, so none is left here
+    const auto token{this->next_token()};
+    assert(token.type != TokenType::DocumentEnd);
 
     if (token.type != TokenType::StreamEnd) [[unlikely]] {
       throw YAMLParseError{"Unexpected content after document", token.line,
@@ -660,6 +668,95 @@ private:
     return stream.str();
   }
 
+  // An alias stands for the node its anchor names, and announces itself by
+  // replaying what that node announced. A key is not announced as a node of
+  // its own, so the pair an alias to it replays is made here rather than taken
+  // from what reading the key announced
+  auto record_anchored_key(const std::string &key_anchor, JSON &&key_value,
+                           const Token &key_token) -> void {
+    std::vector<CallbackRecord> callbacks;
+    if ((this->callback_ != nullptr) && *this->callback_) {
+      const auto type{key_value.type()};
+      callbacks.push_back({.phase = JSON::ParsePhase::Pre,
+                           .type = type,
+                           .line = key_token.line,
+                           .column = key_token.column,
+                           .context = JSON::ParseContext::Root,
+                           .index = 0,
+                           .property = EMPTY_PROPERTY});
+      callbacks.push_back({.phase = JSON::ParsePhase::Post,
+                           .type = type,
+                           .line = key_token.line,
+                           .column = key_token.column,
+                           .context = JSON::ParseContext::Root,
+                           .index = 0,
+                           .property = EMPTY_PROPERTY});
+    }
+
+    const auto key_expanded_weight{this->count_expanded_weight(key_value)};
+    this->anchors_.insert_or_assign(
+        key_anchor, AnchoredValue{.value = std::move(key_value),
+                                  .callbacks = std::move(callbacks),
+                                  .expanded_weight = key_expanded_weight});
+  }
+
+  // YAML 1.2.2 Section 10.3.2 resolves a node that holds nothing to null,
+  // which a tag may make stand for something else
+  static auto empty_node(const std::optional<std::string> &tag) -> JSON {
+    if (tag.has_value() && tag.value() == "tag:yaml.org,2002:str") {
+      return JSON{std::string{}};
+    }
+
+    return JSON{nullptr};
+  }
+
+  // YAML 1.2.2 Section 7.1: an alias node in key position stands for the value
+  // of the anchor it names, which is already resolved and so must not be
+  // resolved a second time. Production 159 writes such a node on its own, as
+  // what it stands for carries its own properties, so an anchor standing
+  // before one names nothing
+  auto resolve_alias_key(const Token &token,
+                         const std::optional<std::string> &key_anchor)
+      -> std::string {
+    if (key_anchor.has_value()) [[unlikely]] {
+      throw YAMLParseError{"Cannot anchor an alias node", token.line,
+                           token.column};
+    }
+
+    const std::string alias_name{token.value};
+    const auto iterator{this->anchors_.find(alias_name)};
+    if (iterator == this->anchors_.end()) [[unlikely]] {
+      throw YAMLUnknownAnchorError{alias_name, token.line, token.column};
+    }
+
+    return this->json_to_key_string(iterator->second.value, token.line,
+                                    token.column);
+  }
+
+  // YAML 1.2.2 Section 7.1: an anchor on a key names that key for later
+  // aliases, exactly as it would on any other node
+  auto record_key_anchor(const std::optional<std::string> &key_anchor,
+                         const Token &key_token,
+                         const std::optional<std::string> &key_tag) -> void {
+    if (key_anchor.has_value()) {
+      this->record_anchored_key(key_anchor.value(),
+                                this->resolve_scalar_node(key_token, key_tag),
+                                key_token);
+    }
+  }
+
+  // YAML 1.2.2 production 106 writes the empty node wherever a node is called
+  // for, so an anchor on a key that holds nothing names that empty node, which
+  // a tag may make stand for something other than null
+  auto record_empty_key_anchor(const std::optional<std::string> &key_anchor,
+                               const std::optional<std::string> &key_tag,
+                               const Token &key_token) -> void {
+    if (key_anchor.has_value()) {
+      this->record_anchored_key(key_anchor.value(), empty_node(key_tag),
+                                key_token);
+    }
+  }
+
   // The node a scalar key denotes, which is what an anchor on that key has to
   // name so that aliasing it yields the very same key
   auto resolve_scalar_node(const Token &token,
@@ -715,13 +812,16 @@ private:
 
     while (current_token.type == TokenType::Anchor ||
            current_token.type == TokenType::Tag) {
+      // Only the flow readers leave the line of the key out, so outside a flow
+      // a property context always carries one
       if (this->lexer_->flow_level() == 0 &&
-          context == JSON::ParseContext::Property && key_line > 0 &&
+          context == JSON::ParseContext::Property &&
           current_token.line != key_line) {
         const auto value_indent{indentation_of(current_token)};
+        // A property context is only reached from a mapping, which settles the
+        // indentation it reads its values against before reading one
         const auto parent_indent{this->lexer_->block_indent()};
-        if (parent_indent != SIZE_MAX && value_indent <= parent_indent)
-            [[unlikely]] {
+        if (value_indent <= parent_indent) [[unlikely]] {
           throw YAMLParseError{"Node property at wrong indentation level",
                                current_token.line, current_token.column};
         }
@@ -744,22 +844,19 @@ private:
       } else if ((this->roundtrip_ != nullptr) &&
                  context == JSON::ParseContext::Root &&
                  this->document_start_line_ > 0 &&
-                 current_token.line == this->document_start_line_ &&
-                 !this->roundtrip_->document_start_comment.has_value()) {
+                 current_token.line == this->document_start_line_) {
         // A comment that trails the node properties of the root node still
-        // sits on the document start marker line, which is where it is written
+        // sits on the document start marker line, which is where it is
+        // written. Nothing can have written one already, as a comment on that
+        // line ends it and so leaves no room for the properties read here
+        assert(!this->roundtrip_->document_start_comment.has_value());
         this->roundtrip_->document_start_comment =
             this->lexer_->take_inline_comment();
       }
       if (next.type == TokenType::StreamEnd ||
           next.type == TokenType::DocumentEnd ||
           next.type == TokenType::DocumentStart) {
-        JSON empty_value{nullptr};
-        if (tag.has_value()) {
-          if (tag.value() == "tag:yaml.org,2002:str") {
-            empty_value = JSON{std::string{}};
-          }
-        }
+        auto empty_value{empty_node(tag)};
         this->pending_tokens_.push_back(next);
         // An empty node that carries an anchor is still a node, so it is
         // announced and filed the same way as one ending any other place
@@ -780,50 +877,55 @@ private:
       }
       current_token = next;
 
-      if (current_token.type == TokenType::Scalar &&
-          current_token.column <= key_column && key_column > 0) {
-        auto after{this->lexer_->next()};
-        if (after.type == TokenType::BlockMappingValue) {
-          this->pending_tokens_.push_back(current_token);
-          this->pending_tokens_.push_back(after);
-          JSON empty_value{nullptr};
-          if (tag.has_value() && tag.value() == "tag:yaml.org,2002:str") {
-            empty_value = JSON{std::string{}};
-          }
-          if (anchor_name.has_value()) {
-            this->register_anchored_empty(anchor_name.value(), empty_value,
-                                          token, context, index, property,
-                                          anchor_inline_comment);
-          }
-          this->record_tag(raw_tag, tag_before_anchor, empty_value);
-          if ((this->roundtrip_ != nullptr) &&
-              context != JSON::ParseContext::Root) {
-            this->pointer_stack_.pop_back();
-          }
-          return empty_value;
+      // YAML 1.2.2 production 197 reads the flow node that is the value of a
+      // mapping entry indented further than the mapping, and Section 8.2.2
+      // holds every entry of that mapping to the one indentation, so a scalar
+      // standing at that indentation or before it opens an entry rather than
+      // naming this value, and is handed back to be read as one. Reading it
+      // against the column of the key instead took the value of an explicit
+      // key, which does not stand at that indentation, for a key
+      if (this->lexer_->flow_level() == 0 &&
+          context == JSON::ParseContext::Property &&
+          current_token.type == TokenType::Scalar &&
+          indentation_of(current_token) <= this->lexer_->block_indent()) {
+        this->pending_tokens_.push_back(current_token);
+        auto empty_value{empty_node(tag)};
+        if (anchor_name.has_value()) {
+          this->register_anchored_empty(anchor_name.value(), empty_value, token,
+                                        context, index, property,
+                                        anchor_inline_comment);
         }
-        this->pending_tokens_.push_back(after);
+        this->record_tag(raw_tag, tag_before_anchor, empty_value);
+        if (this->roundtrip_ != nullptr) {
+          this->pointer_stack_.pop_back();
+        }
+        return empty_value;
       }
 
-      if ((anchor_name.has_value() || tag.has_value()) &&
-          context == JSON::ParseContext::Index &&
-          current_token.type == TokenType::BlockSequenceEntry) {
+      if (current_token.type == TokenType::BlockSequenceEntry &&
+          context != JSON::ParseContext::Root) {
+        // An index context is only reached from a sequence and a property
+        // context from a mapping, each of which settles the indentation it
+        // reads against before reading
         const auto block_indent{this->lexer_->block_indent()};
         const auto entry_indent{indentation_of(current_token)};
-        if (block_indent != SIZE_MAX && entry_indent <= block_indent) {
+        // YAML 1.2.2 production 201 reads the sequence that is the value of a
+        // mapping entry one indentation level further out than the mapping, so
+        // an entry standing there names that value, while one standing at the
+        // indentation of an enclosing sequence names an entry of that sequence
+        const bool belongs_to_an_enclosing_collection{
+            context == JSON::ParseContext::Index ? entry_indent <= block_indent
+                                                 : entry_indent < block_indent};
+        if (belongs_to_an_enclosing_collection) {
           this->pending_tokens_.push_back(current_token);
-          JSON empty_value{nullptr};
-          if (tag.has_value() && tag.value() == "tag:yaml.org,2002:str") {
-            empty_value = JSON{std::string{}};
-          }
+          auto empty_value{empty_node(tag)};
           if (anchor_name.has_value()) {
             this->register_anchored_empty(anchor_name.value(), empty_value,
                                           token, context, index, property,
                                           anchor_inline_comment);
           }
           this->record_tag(raw_tag, tag_before_anchor, empty_value);
-          if ((this->roundtrip_ != nullptr) &&
-              context != JSON::ParseContext::Root) {
+          if (this->roundtrip_ != nullptr) {
             this->pointer_stack_.pop_back();
           }
           return empty_value;
@@ -831,17 +933,24 @@ private:
       }
     }
 
-    if (tag.has_value() && (current_token.type == TokenType::FlowEntry ||
-                            current_token.type == TokenType::MappingEnd ||
-                            current_token.type == TokenType::SequenceEnd)) {
-      JSON empty_value{nullptr};
-      if (tag.value() == "tag:yaml.org,2002:str") {
-        empty_value = JSON{std::string{}};
-      }
+    // YAML 1.2.2 production 161 writes a flow node as node properties followed
+    // by either content or nothing at all, and production 106 writes an empty
+    // node wherever a node is called for, so an indicator closing the entry
+    // where a node was expected leaves an empty node behind
+    if (current_token.type == TokenType::FlowEntry ||
+        current_token.type == TokenType::MappingEnd ||
+        current_token.type == TokenType::SequenceEnd) {
+      auto empty_value{empty_node(tag)};
       this->pending_tokens_.push_back(current_token);
+      // An empty node that carries an anchor is still a node, so it is
+      // announced and filed the same way as one ending any other place is
+      if (anchor_name.has_value()) {
+        this->register_anchored_empty(anchor_name.value(), empty_value, token,
+                                      context, index, property,
+                                      anchor_inline_comment);
+      }
       this->record_tag(raw_tag, tag_before_anchor, empty_value);
-      if ((this->roundtrip_ != nullptr) &&
-          context != JSON::ParseContext::Root) {
+      if (this->roundtrip_ != nullptr) {
         this->pointer_stack_.pop_back();
       }
       return empty_value;
@@ -898,7 +1007,7 @@ private:
                                  next.line, next.column};
           }
           if (this->lexer_->flow_level() == 0 &&
-              context == JSON::ParseContext::Property && key_line > 0 &&
+              context == JSON::ParseContext::Property &&
               current_token.line == key_line) [[unlikely]] {
             throw YAMLParseError{"Implicit mapping key in block value on "
                                  "same line as parent key",
@@ -916,14 +1025,10 @@ private:
           if (anchor_name.has_value() && anchor_line == current_token.line) {
             // The anchor names the resolved key node, so that aliasing it
             // yields the very same member name rather than the raw text
-            JSON key_value{this->resolve_scalar_node(current_token, tag)};
             this->recording_anchor_ = false;
-            this->anchors_.insert_or_assign(
+            this->record_anchored_key(
                 std::string{anchor_name.value()},
-                AnchoredValue{
-                    .value = key_value,
-                    .callbacks = std::move(this->current_anchor_callbacks_),
-                    .expanded_weight = this->count_expanded_weight(key_value)});
+                this->resolve_scalar_node(current_token, tag), current_token);
             this->current_anchor_callbacks_.clear();
             anchor_name.reset();
           }
@@ -957,8 +1062,22 @@ private:
         break;
       case TokenType::BlockMappingKey:
       case TokenType::BlockMappingValue:
-        result = this->parse_block_mapping(current_token, context, index,
-                                           property, key_line, key_column);
+        // YAML 1.2.2 production 193 reads node properties standing before a
+        // value indicator as the implicit key of the entry, which production
+        // 106 leaves free to hold nothing, so an anchor there names that empty
+        // node rather than the mapping the entry opens
+        if (anchor_name.has_value() &&
+            current_token.type == TokenType::BlockMappingValue &&
+            anchor_line == current_token.line) {
+          this->recording_anchor_ = false;
+          this->record_anchored_key(std::string{anchor_name.value()},
+                                    empty_node(tag), token);
+          this->current_anchor_callbacks_.clear();
+          anchor_name.reset();
+        }
+        result =
+            this->parse_block_mapping(current_token, context, index, property,
+                                      key_line, key_column, node_start_column);
         break;
       case TokenType::Alias: {
         // Reading the token that follows the alias skips over any comment
@@ -1110,9 +1229,7 @@ private:
       return JSON{value};
     }
 
-    if (value.empty()) {
-      return JSON{nullptr};
-    }
+    assert(!value.empty());
 
     if (value == "null" || value == "Null" || value == "NULL" || value == "~") {
       return JSON{nullptr};
@@ -1315,13 +1432,28 @@ private:
         continue;
       }
 
+      // YAML 1.2.2 production 142 lets an entry carry an explicit key
+      // indicator, after which Section 7.4.2 leaves the rest of the entry free
+      // to be left out altogether
+      const bool explicit_key{token.type == TokenType::BlockMappingKey};
+      if (explicit_key) {
+        token = this->next_token();
+        if (token.type == TokenType::StreamEnd) [[unlikely]] {
+          throw YAMLParseError{"Unexpected end of input in flow mapping",
+                               this->lexer_->line(), this->lexer_->column()};
+        }
+      }
+
       auto key_token{token};
 
       std::optional<std::string> key_tag;
+      std::optional<std::string> key_anchor;
       while (key_token.type == TokenType::Anchor ||
              key_token.type == TokenType::Tag) {
         if (key_token.type == TokenType::Tag) {
           key_tag = this->resolve_tag(key_token.value);
+        } else {
+          key_anchor = std::string{key_token.value};
         }
         token = this->next_token();
         if (token.type == TokenType::StreamEnd) [[unlikely]] {
@@ -1332,14 +1464,26 @@ private:
       }
 
       std::string key;
-      if (key_token.type == TokenType::BlockMappingValue) {
-        if (key_tag.has_value() && key_tag.value() == "tag:yaml.org,2002:str") {
-          key = "";
-        }
-      } else if (key_token.type == TokenType::Scalar) {
+      if (key_token.type == TokenType::Scalar) {
         key = this->resolve_scalar_key(key_token, key_tag);
         this->record_key_scalar_style(key, key_token.scalar_style,
                                       key_token.quoted_original);
+
+        this->record_key_anchor(key_anchor, key_token, key_tag);
+      } else if (key_token.type == TokenType::Alias) {
+        key = this->resolve_alias_key(key_token, key_anchor);
+      } else if (key_token.type == TokenType::BlockMappingValue ||
+                 (explicit_key && (key_token.type == TokenType::FlowEntry ||
+                                   key_token.type == TokenType::MappingEnd))) {
+        this->record_empty_key_anchor(key_anchor, key_tag, key_token);
+      } else if (key_token.type == TokenType::SequenceStart ||
+                 key_token.type == TokenType::MappingStart) {
+        // RFC 8259 Section 4: an object member name is a string, so a mapping
+        // key that is itself a collection cannot be represented as JSON.
+        // PyYAML raises on the unhashable key and js-yaml rejects the complex
+        // key, so such a key is rejected rather than silently stringified
+        throw YAMLParseError{"Mapping key cannot be a collection",
+                             key_token.line, key_token.column};
       } else [[unlikely]] {
         throw YAMLParseError{"Expected scalar key in mapping", key_token.line,
                              key_token.column};
@@ -1349,6 +1493,15 @@ private:
         throw YAMLDuplicateKeyError{key, key_token.line, key_token.column};
       }
       seen_keys.insert(key);
+
+      // An entry an explicit indicator opens may hold nothing at all, so what
+      // closes the entry is handed back to be read as closing an empty one
+      if (key_token.type == TokenType::FlowEntry ||
+          key_token.type == TokenType::MappingEnd) {
+        result.assign(key, JSON{nullptr});
+        token = key_token;
+        continue;
+      }
 
       if (key_token.type != TokenType::BlockMappingValue) {
         token = this->next_token();
@@ -1472,10 +1625,39 @@ private:
                                this->lexer_->line(), this->lexer_->column()};
         }
 
+        // YAML 1.2.2 production 159 writes a key as node properties followed
+        // by content, so the properties are read before the key they decorate
+        std::optional<std::string> key_tag;
+        std::optional<std::string> key_anchor;
+        while (token.type == TokenType::Anchor ||
+               token.type == TokenType::Tag) {
+          if (token.type == TokenType::Tag) {
+            key_tag = this->resolve_tag(token.value);
+          } else {
+            key_anchor = std::string{token.value};
+          }
+          token = this->next_token();
+          if (token.type == TokenType::StreamEnd) [[unlikely]] {
+            throw YAMLParseError{"Unexpected end after explicit key in flow",
+                                 this->lexer_->line(), this->lexer_->column()};
+          }
+        }
+
+        // YAML 1.2.2 production 143 leaves the key of an entry an explicit
+        // indicator opens free to be the empty node of production 106, and a
+        // value indicator standing here says that it is one
         std::string key_string;
         if (token.type == TokenType::Scalar) {
-          key_string = this->resolve_scalar_key(token);
+          key_string = this->resolve_scalar_key(token, key_tag);
+          this->record_key_anchor(key_anchor, token, key_tag);
           token = this->next_token();
+        } else if (token.type == TokenType::Alias) {
+          key_string = this->resolve_alias_key(token, key_anchor);
+          token = this->next_token();
+        } else if (token.type == TokenType::BlockMappingValue ||
+                   token.type == TokenType::SequenceEnd ||
+                   token.type == TokenType::FlowEntry) {
+          this->record_empty_key_anchor(key_anchor, key_tag, token);
         } else {
           const auto explicit_key_line{token.line};
           const auto explicit_key_column{token.column};
@@ -1505,6 +1687,7 @@ private:
         continue;
       }
 
+      const auto entry_token{token};
       auto value{this->parse_value(token, JSON::ParseContext::Index,
                                    element_index, EMPTY_PROPERTY)};
       result.push_back(std::move(value));
@@ -1516,6 +1699,16 @@ private:
       }
       if (token.type != TokenType::FlowEntry &&
           token.type != TokenType::SequenceEnd) [[unlikely]] {
+        // YAML 1.2.2 production 150 reads a single pair of a flow sequence as
+        // a mapping, and production 155 leaves the key of such a pair free to
+        // be a flow collection, which RFC 8259 Section 4 cannot hold as an
+        // object member name
+        if (token.type == TokenType::BlockMappingValue &&
+            (entry_token.type == TokenType::SequenceStart ||
+             entry_token.type == TokenType::MappingStart)) {
+          throw YAMLParseError{"Mapping key cannot be a collection",
+                               entry_token.line, entry_token.column};
+        }
         throw YAMLParseError{"Missing comma in flow sequence", token.line,
                              token.column};
       }
@@ -1549,9 +1742,10 @@ private:
     const auto base_column{start_token.column};
     const auto sequence_indent{indentation_of(start_token)};
     this->detect_indent_width(key_column, base_column);
+    // A column is numbered from one, so one that is the column of the key says
+    // on its own that the key has one
     if ((this->roundtrip_ != nullptr) &&
-        context == JSON::ParseContext::Property && key_column > 0 &&
-        base_column == key_column) {
+        context == JSON::ParseContext::Property && base_column == key_column) {
       this->roundtrip_->styles[this->pointer_stack_].unindented_sequence = true;
     }
     this->lexer_->set_block_indent(sequence_indent);
@@ -1571,11 +1765,8 @@ private:
       result.push_back(std::move(value));
       element_index++;
       token = this->next_token();
-    } else if ((token.type == TokenType::BlockSequenceEntry &&
-                token.column == base_column) ||
-               token.type == TokenType::StreamEnd ||
-               token.type == TokenType::DocumentEnd ||
-               token.type == TokenType::DocumentStart) {
+    } else if (token.type != TokenType::BlockSequenceEntry ||
+               token.column == base_column) {
       // The single entry has no value on this line (a sibling entry follows or
       // the stream or document ends), so it is a null entry rather than dropped
       result.push_back(JSON{nullptr});
@@ -1641,7 +1832,8 @@ private:
                            const JSON::ParseContext context,
                            const std::size_t index, const std::string &property,
                            const std::uint64_t key_line = 0,
-                           const std::uint64_t key_column = 0) -> JSON {
+                           const std::uint64_t key_column = 0,
+                           const std::uint64_t node_start_column = 0) -> JSON {
     this->invoke_callback(
         JSON::ParsePhase::Pre, JSON::Type::Object,
         this->effective_line(start_token, context, key_line),
@@ -1652,12 +1844,30 @@ private:
     std::unordered_set<std::string> seen_keys;
 
     auto token{start_token};
-    const auto mapping_indent{indentation_of(start_token)};
+    // Node properties standing before the indicator that opens the first entry
+    // are part of that entry, so the mapping is read against where they start
+    // rather than against where the indicator does
+    const auto base_column{node_start_column > 0 ? node_start_column
+                                                 : start_token.column};
+    const auto mapping_indent{static_cast<std::size_t>(base_column - 1)};
+    bool first_entry{true};
 
     while (true) {
       this->lexer_->set_block_indent(mapping_indent);
 
-      if (token.type == TokenType::BlockMappingKey) {
+      // YAML 1.2.2 Section 8.2.2 holds every entry of a block mapping to the
+      // same indentation, so a key standing at another column opens an entry
+      // of whatever encloses this mapping rather than one of its own, and is
+      // left for that to read
+      if (!first_entry && token.column != base_column) {
+        this->pending_tokens_.push_back(token);
+        break;
+      }
+
+      first_entry = false;
+
+      const bool explicit_key{token.type == TokenType::BlockMappingKey};
+      if (explicit_key) {
         auto next{this->next_token()};
         token = next;
       }
@@ -1674,30 +1884,62 @@ private:
         token = next;
       }
 
+      std::string key;
+      bool key_present{false};
+      std::uint64_t current_key_line{0};
+      std::uint64_t current_key_column{0};
+
+      // YAML 1.2.2 production 190 reads the key of an explicit entry as a node
+      // indented further than the mapping, so a key standing at the
+      // indentation of the mapping itself opens the next entry instead, and
+      // the entry the indicator opened is left holding an empty key
+      if (explicit_key && token.column <= base_column &&
+          (token.type == TokenType::Scalar || token.type == TokenType::Alias)) {
+        note_implicit_key(seen_keys, key, token);
+        this->record_empty_key_anchor(key_anchor, key_tag, token);
+        result.assign(key, JSON{nullptr});
+        continue;
+      }
+
       if (token.type != TokenType::Scalar &&
           token.type != TokenType::BlockMappingValue &&
           token.type != TokenType::Alias) {
         // RFC 8259 Section 4: an object member name is a string, so an explicit
         // mapping key that is itself a collection cannot be represented as
         // JSON. PyYAML raises on the unhashable key and js-yaml rejects the
-        // complex key, so such a key is rejected rather than silently dropped
+        // complex key, so such a key is rejected rather than silently dropped.
+        // YAML 1.2.2 production 201 reads the block sequence that is the
+        // value of a mapping entry one indentation level further out than the
+        // mapping, so only an entry standing before that belongs to whatever
+        // encloses the mapping rather than naming a key of its own
         if (token.type == TokenType::SequenceStart ||
             token.type == TokenType::MappingStart ||
-            token.type == TokenType::BlockSequenceEntry) [[unlikely]] {
+            (token.type == TokenType::BlockSequenceEntry &&
+             indentation_of(token) >= mapping_indent)) [[unlikely]] {
           throw YAMLParseError{"Mapping key cannot be a collection", token.line,
                                token.column};
         }
+        // YAML 1.2.2 production 190 writes an explicit key as the indicator
+        // followed by a node, which production 185 leaves free to be the empty
+        // node of production 106, and production 189 leaves the value of such
+        // an entry free to be empty as well, so the indicator on its own still
+        // opens an entry, with an empty key and no value
+        if (explicit_key) {
+          note_implicit_key(seen_keys, key, token);
+          this->record_empty_key_anchor(key_anchor, key_tag, token);
+          result.assign(key, JSON{nullptr});
+          // Another indicator standing here opens the next entry
+          if (token.type == TokenType::BlockMappingKey) {
+            continue;
+          }
+        }
         if (token.type == TokenType::DocumentEnd ||
-            token.type == TokenType::DocumentStart) {
+            token.type == TokenType::DocumentStart ||
+            token.type == TokenType::BlockSequenceEntry) {
           this->pending_tokens_.push_back(token);
         }
         break;
       }
-
-      std::string key;
-      bool key_present{false};
-      std::uint64_t current_key_line{0};
-      std::uint64_t current_key_column{0};
 
       if (token.type == TokenType::Scalar) {
         key = this->resolve_scalar_key(token, key_tag);
@@ -1711,18 +1953,7 @@ private:
         this->record_key_scalar_style(key, token.scalar_style,
                                       token.quoted_original);
 
-        // YAML 1.2.2 Section 7.1: an anchor on an explicit key names that key
-        // for later aliases, exactly as it would on any other node
-        if (key_anchor.has_value()) {
-          JSON key_value{this->resolve_scalar_node(token, key_tag)};
-          const auto key_expanded_weight{
-              this->count_expanded_weight(key_value)};
-          this->anchors_.insert_or_assign(
-              key_anchor.value(),
-              AnchoredValue{.value = std::move(key_value),
-                            .callbacks = {},
-                            .expanded_weight = key_expanded_weight});
-        }
+        this->record_key_anchor(key_anchor, token, key_tag);
 
         if (seen_keys.contains(key)) [[unlikely]] {
           throw YAMLDuplicateKeyError{key, token.line, token.column};
@@ -1730,6 +1961,16 @@ private:
         seen_keys.insert(key);
 
         auto next{this->next_token()};
+        // YAML 1.2.2 production 191 writes the value of an explicit entry
+        // with the indicator standing at the indentation of the mapping, which
+        // follows a line break, so an indicator beside the key leaves that key
+        // reading as the compact mapping of production 195, which RFC 8259
+        // Section 4 cannot hold as an object member name
+        if (explicit_key && next.type == TokenType::BlockMappingValue &&
+            next.line == token.line) [[unlikely]] {
+          throw YAMLParseError{"Mapping key cannot be a collection", token.line,
+                               token.column};
+        }
         if (next.type != TokenType::BlockMappingValue) {
           result.assign(key, JSON{nullptr});
           token = next;
@@ -1739,17 +1980,8 @@ private:
       }
 
       // YAML 1.2.2 Section 7.1: an alias node in key position stands for the
-      // value of the anchor it names, which is already resolved and so must not
-      // be resolved a second time
       if (token.type == TokenType::Alias) {
-        const std::string alias_name{token.value};
-        const auto iterator{this->anchors_.find(alias_name)};
-        if (iterator == this->anchors_.end()) [[unlikely]] {
-          throw YAMLUnknownAnchorError{alias_name, token.line, token.column};
-        }
-
-        key = this->json_to_key_string(iterator->second.value, token.line,
-                                       token.column);
+        key = this->resolve_alias_key(token, key_anchor);
         key_present = true;
         current_key_line = token.line;
         current_key_column = token.column;
@@ -1769,6 +2001,10 @@ private:
       }
 
       if (token.type == TokenType::BlockMappingValue) {
+        if (!key_present) {
+          this->record_empty_key_anchor(key_anchor, key_tag, token);
+        }
+
         auto next{this->next_token()};
 
         if (next.type == TokenType::StreamEnd ||
@@ -1783,19 +2019,8 @@ private:
           continue;
         }
 
-        // In round-trip mode the key text is kept raw, so a null-like key such
-        // as ~ stays non-empty and the historical empty-string sentinel still
-        // marks the absence of a key. In conversion mode a null-like key
-        // resolves to an empty string, so a dedicated flag marks its presence
-        const bool key_absent{(this->roundtrip_ != nullptr) ? key.empty()
-                                                            : !key_present};
         if (next.type == TokenType::BlockMappingValue ||
             next.type == TokenType::BlockMappingKey) {
-          if (key_absent && next.type == TokenType::BlockMappingKey) {
-            token = next;
-            continue;
-          }
-
           if (!key_present) {
             note_implicit_key(seen_keys, key, token);
           }
@@ -1850,8 +2075,12 @@ private:
     bool is_last_post{false};
     std::size_t callback_index{0};
     for (const auto &record : anchored.callbacks) {
-      is_last_post = (callback_index == anchored.callbacks.size() - 1 &&
-                      record.phase == JSON::ParsePhase::Post);
+      // The records of a node open and close it in turn, so the first of them
+      // announces it and the last reports it read
+      assert(callback_index != anchored.callbacks.size() - 1 ||
+             record.phase == JSON::ParsePhase::Post);
+      assert(callback_index > 0 || record.phase == JSON::ParsePhase::Pre);
+      is_last_post = (callback_index == anchored.callbacks.size() - 1);
 
       std::uint64_t callback_line{record.line};
       std::uint64_t callback_column{record.column};
@@ -1859,7 +2088,7 @@ private:
       auto callback_idx{record.index};
       std::string callback_property{record.property};
 
-      if (is_first_pre && record.phase == JSON::ParsePhase::Pre) {
+      if (is_first_pre) {
         if (context == JSON::ParseContext::Property && key_line > 0) {
           callback_line = key_line;
           callback_column = key_column;
@@ -2077,9 +2306,15 @@ private:
             next.type == TokenType::BlockMappingValue ||
             next.type == TokenType::Anchor || next.type == TokenType::Tag ||
             next.type == TokenType::Alias)) {
+      // A mapping whose first key stands on the document start marker line
+      // holds every entry to the column after that marker, and anything on
+      // that line which would carry the mapping on is turned down before this
+      // is reached, so what stands here stands on a later line
+      assert(this->document_start_line_ == 0 ||
+             first_key_line != this->document_start_line_ ||
+             next.line != this->document_start_line_);
       if (this->document_start_line_ > 0 &&
-          first_key_line == this->document_start_line_ &&
-          next.line != this->document_start_line_) [[unlikely]] {
+          first_key_line == this->document_start_line_) [[unlikely]] {
         throw YAMLParseError{"Block mapping continuation after document "
                              "start line",
                              next.line, next.column};
@@ -2092,44 +2327,81 @@ private:
         }
         next = this->next_token();
 
-        // YAML 1.2.2 Section 7.1: an anchor on an explicit key names that key
-        // for later aliases, exactly as it would on any other node
+        // YAML 1.2.2 production 159 writes a key as node properties followed
+        // by content, so the properties are read before the key they decorate
         std::optional<std::string> explicit_key_anchor;
-        if (next.type == TokenType::Anchor) {
-          explicit_key_anchor = std::string{next.value};
+        std::optional<std::string> explicit_key_tag;
+        while (next.type == TokenType::Anchor || next.type == TokenType::Tag) {
+          if (next.type == TokenType::Tag) {
+            explicit_key_tag = this->resolve_tag(next.value);
+          } else {
+            explicit_key_anchor = std::string{next.value};
+          }
           next = this->next_token();
         }
 
+        // YAML 1.2.2 production 190 reads the key of an explicit entry as a
+        // node indented further than the mapping, so a key standing at the
+        // indentation of the mapping itself opens the next entry instead, and
+        // the entry the indicator opened is left holding an empty key
+        if (next.column <= base_column &&
+            (next.type == TokenType::Scalar || next.type == TokenType::Alias)) {
+          key.clear();
+          note_implicit_key(seen_keys, key, next);
+          this->record_empty_key_anchor(explicit_key_anchor, explicit_key_tag,
+                                        next);
+          result.assign(key, JSON{nullptr});
+          continue;
+        }
+
         if (next.type == TokenType::Alias) {
-          // YAML 1.2.2 Section 7.1: an alias node in key position stands for
-          // the value of the anchor it names, which is already resolved and so
-          // must not be resolved a second time
-          const std::string alias_name{next.value};
-          const auto iterator{this->anchors_.find(alias_name)};
-          if (iterator == this->anchors_.end()) [[unlikely]] {
-            throw YAMLUnknownAnchorError{alias_name, next.line, next.column};
+          key = this->resolve_alias_key(next, explicit_key_anchor);
+        } else if (next.type == TokenType::BlockMappingValue) {
+          // YAML 1.2.2 production 192 writes an entry as
+          // `( ns-s-block-map-implicit-key | e-node )
+          // c-l-block-map-implicit-value`, so an explicit key with nothing
+          // after its indicator is the empty node, and the value indicator
+          // standing here opens the value rather than naming the key
+          key.clear();
+          this->record_empty_key_anchor(explicit_key_anchor, explicit_key_tag,
+                                        next);
+          this->pending_tokens_.push_back(next);
+        } else if (next.type == TokenType::SequenceStart ||
+                   next.type == TokenType::MappingStart ||
+                   (next.type == TokenType::BlockSequenceEntry &&
+                    next.column >= base_column)) [[unlikely]] {
+          // RFC 8259 Section 4: an object member name is a string, so a key
+          // that is itself a collection cannot be represented as JSON, and is
+          // rejected rather than silently dropped. YAML 1.2.2 production 201
+          // reads the block sequence that is the value of a mapping entry one
+          // indentation level further out than the mapping, so only an entry
+          // standing before that belongs to whatever encloses the mapping
+          // rather than naming a key of its own
+          throw YAMLParseError{"Mapping key cannot be a collection", next.line,
+                               next.column};
+        } else if (next.type != TokenType::Scalar) {
+          // YAML 1.2.2 production 190 writes an explicit key as the indicator
+          // followed by a node, which production 185 leaves free to be the
+          // empty node of production 106, and production 189 leaves the value
+          // of such an entry free to be empty as well, so the indicator on its
+          // own still opens an entry, with an empty key and no value
+          key.clear();
+          note_implicit_key(seen_keys, key, next);
+          this->record_empty_key_anchor(explicit_key_anchor, explicit_key_tag,
+                                        next);
+          result.assign(key, JSON{nullptr});
+
+          // Another indicator standing here opens the next entry
+          if (next.type == TokenType::BlockMappingKey) {
+            continue;
           }
 
-          key = this->json_to_key_string(iterator->second.value, next.line,
-                                         next.column);
-        } else if (next.type != TokenType::Scalar) {
-          result.assign("", JSON{nullptr});
-          next = this->next_token();
-          continue;
+          break;
         } else {
-          key = this->resolve_scalar_key(next);
+          key = this->resolve_scalar_key(next, explicit_key_tag);
           this->record_key_scalar_style(key, next.scalar_style,
                                         next.quoted_original);
-          if (explicit_key_anchor.has_value()) {
-            JSON key_value{this->resolve_scalar_node(next)};
-            const auto key_expanded_weight{
-                this->count_expanded_weight(key_value)};
-            this->anchors_.insert_or_assign(
-                explicit_key_anchor.value(),
-                AnchoredValue{.value = std::move(key_value),
-                              .callbacks = {},
-                              .expanded_weight = key_expanded_weight});
-          }
+          this->record_key_anchor(explicit_key_anchor, next, explicit_key_tag);
         }
 
         key_line = next.line;
@@ -2141,6 +2413,17 @@ private:
         seen_keys.insert(key);
 
         auto colon{this->next_token()};
+        // YAML 1.2.2 production 191 writes the value of an explicit entry
+        // with the indicator standing at the indentation of the mapping, which
+        // follows a line break, so an indicator beside the key leaves that key
+        // reading as the compact mapping of production 195, which RFC 8259
+        // Section 4 cannot hold as an object member name
+        if (next.type != TokenType::BlockMappingValue &&
+            colon.type == TokenType::BlockMappingValue &&
+            colon.line == next.line) [[unlikely]] {
+          throw YAMLParseError{"Mapping key cannot be a collection", next.line,
+                               next.column};
+        }
         if (colon.type != TokenType::BlockMappingValue) {
           result.assign(key, JSON{nullptr});
           this->pending_tokens_.push_back(colon);
@@ -2173,44 +2456,41 @@ private:
 
       auto effective_column{next.column};
       std::optional<std::string> subsequent_key_tag;
+      std::optional<std::string> subsequent_key_anchor;
+      const bool key_carries_properties{next.type == TokenType::Anchor ||
+                                        next.type == TokenType::Tag};
 
       // A node property introduces the key it decorates, so a mapping that
       // does not reach that key must leave the property alone as well
-      if ((next.type == TokenType::Anchor || next.type == TokenType::Tag) &&
-          effective_column != base_column) {
+      if (key_carries_properties && effective_column != base_column) {
         break;
       }
 
-      if (next.type == TokenType::Anchor) {
+      // YAML 1.2.2 production 159 writes a key as node properties followed by
+      // content, so every property standing before the key is read first, and
+      // the entry still opens where the first of them stands
+      while (next.type == TokenType::Anchor || next.type == TokenType::Tag) {
         const auto property_token{next};
+        if (next.type == TokenType::Tag) {
+          subsequent_key_tag = this->resolve_tag(next.value);
+        } else {
+          subsequent_key_anchor = std::string{next.value};
+        }
         next = this->next_token();
         this->reject_misplaced_property(property_token, next);
-        if (next.type != TokenType::Scalar) {
-          continue;
-        }
       }
 
-      if (next.type == TokenType::Tag) {
-        const auto property_token{next};
-        subsequent_key_tag = this->resolve_tag(next.value);
-        next = this->next_token();
-        this->reject_misplaced_property(property_token, next);
-        if (next.type != TokenType::Scalar) {
-          continue;
-        }
+      if (key_carries_properties && next.type != TokenType::Scalar &&
+          next.type != TokenType::BlockMappingValue &&
+          next.type != TokenType::Alias) {
+        continue;
       }
 
       if (next.type == TokenType::Alias) {
         if (effective_column != base_column) {
           break;
         }
-        const std::string alias_name{next.value};
-        const auto iterator{this->anchors_.find(alias_name)};
-        if (iterator == this->anchors_.end()) [[unlikely]] {
-          throw YAMLUnknownAnchorError{alias_name, next.line, next.column};
-        }
-        key = this->json_to_key_string(iterator->second.value, next.line,
-                                       next.column);
+        key = this->resolve_alias_key(next, subsequent_key_anchor);
         key_line = next.line;
         key_column = next.column;
 
@@ -2262,12 +2542,14 @@ private:
       // makes it one: "while both the implicit key and the value following it
       // may be empty, the ':' indicator is mandatory"
       if (next.type == TokenType::BlockMappingValue) {
-        if (next.column != base_column) {
+        if (effective_column != base_column) {
           break;
         }
 
         this->record_inline_comment_for_key(key);
         key.clear();
+        this->record_empty_key_anchor(subsequent_key_anchor, subsequent_key_tag,
+                                      next);
         key_line = next.line;
         key_column = next.column;
 
@@ -2290,6 +2572,7 @@ private:
 
       this->record_inline_comment_for_key(key);
       key = this->resolve_scalar_key(next, subsequent_key_tag);
+      this->record_key_anchor(subsequent_key_anchor, next, subsequent_key_tag);
       key_line = next.line;
       key_column = next.column;
       this->record_key_scalar_style(key, next.scalar_style,
@@ -2471,7 +2754,11 @@ private:
     switch (token.scalar_style) {
       case ScalarStyle::Plain:
         node_style.scalar = YAMLRoundTrip::ScalarStyle::Plain;
-        if (token.multiline && !token.block_original.empty()) {
+        // A plain scalar spanning lines carries the text it was written with,
+        // which is recorded only in round-trip mode and this is only reached
+        // in round-trip mode
+        assert(!token.multiline || !token.block_original.empty());
+        if (token.multiline) {
           node_style.plain_content = std::string{token.block_original};
         } else {
           node_style.plain_content = std::string{token.value};
@@ -2495,7 +2782,15 @@ private:
       case ScalarStyle::Literal:
         node_style.scalar = YAMLRoundTrip::ScalarStyle::Literal;
         break;
+        // Clang keeps an arm for the value that never arrives and counts it as
+        // one that nothing took, so the last enumerator is written as the
+        // default there, while the compilers reading a case label are the ones
+        // holding this switch to naming them all
+#if defined(__clang__)
+      default:
+#else
       case ScalarStyle::Folded:
+#endif
         node_style.scalar = YAMLRoundTrip::ScalarStyle::Folded;
         break;
     }
@@ -2559,7 +2854,15 @@ private:
       // written with together, and writing it back without all three carries a
       // different key than the one that was read
       case ScalarStyle::Literal:
+        // Clang keeps an arm for the value that never arrives and counts it as
+        // one that nothing took, so the last enumerator is written as the
+        // default there, while the compilers reading a case label are the ones
+        // holding this switch to naming them all
+#if defined(__clang__)
+      default:
+#else
       case ScalarStyle::Folded:
+#endif
         break;
     }
     // A key is written back without the indicator that can open an explicit

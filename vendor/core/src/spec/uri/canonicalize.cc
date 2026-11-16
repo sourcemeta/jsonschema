@@ -122,7 +122,7 @@ auto URI::canonicalize() -> URI & {
   // the algorithm applies as written. Section 5.2.2 settles a reference that
   // declares a scheme the same way. Only a relative reference keeps the block,
   // which is what this module's extension is for
-  if (this->path_.has_value() && !this->path_.value().empty()) {
+  if (this->path_.has_value()) {
     auto &current_path{this->path_.value()};
     sourcemeta::core::normalize_path(current_path, this->scheme_.has_value());
     if (current_path.empty()) {
@@ -201,7 +201,7 @@ auto URI::canonicalize() -> URI & {
   if (this->host_.has_value() && !this->host_.value().empty() &&
       this->scheme_.has_value() &&
       (this->scheme_.value() == "http" || this->scheme_.value() == "https") &&
-      (!this->path_.has_value() || this->path_.value().empty())) {
+      !this->path_.has_value()) {
     this->path_ = "/";
   }
 

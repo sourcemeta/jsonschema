@@ -1267,11 +1267,23 @@ SchemaFrame::SchemaFrame(const Mode mode, const sourcemeta::core::JSON &root,
             // identifier, we ignore it as a traditional identifier and take
             // care of it as an anchor
             !is_pre_2019_09_location_independent_identifier) {
-          const auto bases{find_nearest_bases<sourcemeta::core::JSON::String>(
-              base_uris, common_pointer_weak,
-              entry.id ? std::optional<std::string_view>{*entry.id}
-                       : std::nullopt)};
-          for (const auto &base_string : bases.first) {
+          // RFC 3986 Section 5.1 resolves a reference against a base, and an
+          // identifier is what states the base that the rest of its resource
+          // reads against, so where nothing above states one the identifier
+          // has nothing to resolve against. Everything else within the
+          // resource does resolve against it, which is why this lookup is the
+          // one that declines to take it as a base of its own
+          const auto stated{
+              find_nearest_bases_ref<sourcemeta::core::JSON::String>(
+                  base_uris, common_pointer_weak)};
+          std::vector<sourcemeta::core::JSON::String> own_base;
+          if (!stated.has_value()) {
+            own_base.emplace_back(entry.id.value());
+          }
+
+          const auto &base_strings{stated.has_value() ? stated->first.get()
+                                                      : own_base};
+          for (const auto &base_string : base_strings) {
             // Otherwise we end up pushing the top-level resource twice. The
             // name the caller gave is compared as it was resolved rather than
             // as it was written, which is what the schema is known by
@@ -1295,7 +1307,7 @@ SchemaFrame::SchemaFrame(const Mode mode, const sourcemeta::core::JSON &root,
             // as no resource at all. The name the caller gave is not one of
             // those other bases, as the check above skips it in its own right
             if (base_string == this->cache_->default_base &&
-                std::ranges::any_of(bases.first,
+                std::ranges::any_of(base_strings,
                                     [this, &default_id_canonical](
                                         const auto &candidate) -> bool {
                                       return candidate !=
@@ -1347,6 +1359,12 @@ SchemaFrame::SchemaFrame(const Mode mode, const sourcemeta::core::JSON &root,
             if (common_pointer_weak.empty() && root_id.has_value() &&
                 base_string == root_id.value()) {
               new_id = root_id.value();
+            } else if (!stated.has_value()) {
+              // RFC 3986 Section 5.2.3 merges a relative reference into the
+              // directory of its base, so resolving the identifier against
+              // itself would name a place one level below the resource
+              maybe_relative.canonicalize();
+              new_id = maybe_relative.recompose();
             } else {
               maybe_relative.resolve_from(base).canonicalize();
               new_id = maybe_relative.recompose();

@@ -34,9 +34,9 @@ auto assign_lookup_scalar(const std::string_view value, SecureString &storage,
 auto oauth_build_revocation_request(const std::string_view token,
                                     const std::string_view token_type_hint,
                                     SecureString &sink) -> void {
-  URI::append_query_parameter(sink, "token", token);
+  URI::append_form_parameter(sink, "token", token);
   if (!token_type_hint.empty()) {
-    URI::append_query_parameter(sink, "token_type_hint", token_type_hint);
+    URI::append_form_parameter(sink, "token_type_hint", token_type_hint);
   }
 }
 

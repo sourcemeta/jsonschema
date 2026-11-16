@@ -278,6 +278,18 @@ auto sourcemeta::jsonschema::metaschema(
     const auto &custom_resolver{resolver(options, options.contains("http"),
                                          default_dialect_option,
                                          configuration)};
+    // The same resolver as the handle above, reached directly so that a
+    // refusal can ask it where a document it went and got came from
+    const auto &resolver_origins{
+        resolver_instance(options, options.contains("http"),
+                          default_dialect_option, configuration)};
+
+    // Declared out here rather than where it is read, as reporting where
+    // bundling a meta-schema went wrong has to name which meta-schema that
+    // was, and reading it is itself something that can go wrong. A
+    // description names one per schema it holds rather than one of its own,
+    // so it leaves this empty
+    std::string_view subject_dialect;
 
     try {
       // A description holds many schemas rather than being one, so each of
@@ -287,8 +299,9 @@ auto sourcemeta::jsonschema::metaschema(
                                   custom_resolver, options, summary, trace,
                                   json_output, continue_on_error);
       } else {
-        const auto dialect{
-            effective_dialect(entry.second, default_dialect_option)};
+        subject_dialect =
+            effective_dialect(entry.second, default_dialect_option);
+        const auto &dialect{subject_dialect};
         if (dialect.empty()) {
           throw sourcemeta::core::FileError<
               sourcemeta::core::SchemaUnknownBaseDialectError>(display_path);
@@ -370,6 +383,18 @@ auto sourcemeta::jsonschema::metaschema(
       throw sourcemeta::core::FileError<
           sourcemeta::core::SchemaDialectImpossibleError>(entry.resolution_base,
                                                           error);
+    } catch (const sourcemeta::core::SchemaContainerError &error) {
+      // What gets bundled here is the meta-schema the subject declares, so the
+      // place this names sits in whichever file that meta-schema came from. A
+      // description declares one per schema it holds, leaving no single
+      // meta-schema to go looking for
+      if (subject_dialect.empty()) {
+        throw sourcemeta::core::FileError<
+            sourcemeta::core::SchemaContainerError>(entry.resolution_base,
+                                                    error);
+      }
+
+      resolver_origins.report_schema_container(subject_dialect, error);
     }
 
     if (summary.failed > failures_before && !continue_on_error) {

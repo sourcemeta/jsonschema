@@ -112,9 +112,22 @@ auto compact(ExpansionState &state, const ActiveContext &active_context,
       result.push_back(compact(state, active_context, inverse_context,
                                active_property, item, compact_arrays));
     }
+    // The step naming what stays an array names the graph keyword alongside
+    // the set one, but a graph object carrying no name of its own lets its
+    // lone node stand on its own, which three suite entries require, so only
+    // the set keyword is weighed here and a named graph is given its array
+    // back where it is compacted (JSON-LD 1.1 API Section 6.1.2 step 3, suite
+    // entries #t0090, #t0092 and #t0094)
+    // The step names the graph keyword and the set one as active properties
+    // that keep an array. Every call made here hands down a compacted property
+    // name, the reverse keyword, the graph keyword or nothing, so the set
+    // keyword never arrives, and a graph object carrying no name of its own
+    // lets its lone node stand on its own, which three suite entries require
+    // (JSON-LD 1.1 API Section 6.1.2 step 3, suite entries #t0090, #t0092 and
+    // #t0094)
+    assert(!active_property.has_value() ||
+           active_property.value() != KEYWORD_SET);
     const bool force_array{!compact_arrays ||
-                           (active_property.has_value() &&
-                            active_property.value() == KEYWORD_SET) ||
                            container_includes(definition, KEYWORD_SET) ||
                            container_includes(definition, KEYWORD_LIST)};
     if (result.size() == 1 && !force_array) {
@@ -172,8 +185,11 @@ auto compact(ExpansionState &state, const ActiveContext &active_context,
   // A node reference compacts to a scalar when the term so dictates, otherwise
   // it is treated as a node below.
   if (element.defines(KEYWORD_ID, KEYWORD_ID_HASH)) {
+    // Value compaction answers with a compacted name, with what the value
+    // held, or with the map it was handed, never with an array
     auto compacted{compact_value(context, inverse, active_property, element)};
-    if (!compacted.is_object() && !compacted.is_array()) {
+    assert(!compacted.is_array());
+    if (!compacted.is_object()) {
       return compacted;
     }
   }
@@ -289,10 +305,15 @@ auto compact(ExpansionState &state, const ActiveContext &active_context,
       continue;
     }
 
-    if (entry.key_equals(KEYWORD_INDEX, KEYWORD_INDEX_HASH) ||
-        entry.key_equals(KEYWORD_VALUE, KEYWORD_VALUE_HASH) ||
-        entry.key_equals(KEYWORD_LANGUAGE, KEYWORD_LANGUAGE_HASH) ||
-        entry.key_equals(KEYWORD_DIRECTION, KEYWORD_DIRECTION_HASH)) {
+    // The algorithm names four keywords together here, of which only the
+    // index arrives: anything carrying a value was handed to value compaction
+    // further up, and a language or a direction belongs to a value object, so
+    // a node carrying one is not expanded form and the entry point holds the
+    // input to that (JSON-LD 1.1 API Section 6.1.2)
+    assert(!entry.key_equals(KEYWORD_VALUE, KEYWORD_VALUE_HASH) &&
+           !entry.key_equals(KEYWORD_LANGUAGE, KEYWORD_LANGUAGE_HASH) &&
+           !entry.key_equals(KEYWORD_DIRECTION, KEYWORD_DIRECTION_HASH));
+    if (entry.key_equals(KEYWORD_INDEX, KEYWORD_INDEX_HASH)) {
       const auto alias{compact_iri(node_context, node_inverse,
                                    expanded_property, nullptr, true, false)};
       result.assign_assume_new(alias, JSON{expanded_value});
@@ -308,7 +329,8 @@ auto compact(ExpansionState &state, const ActiveContext &active_context,
                              JSON::String{KEYWORD_GRAPH}, expanded_value,
                              compact_arrays)};
       // A named graph keeps its @graph as an array; a bare graph object may
-      // collapse to a single value.
+      // collapse to a single value, which the official suite requires
+      // (suite entries #t0090, #t0092 and #t0094)
       if (element.defines(KEYWORD_ID, KEYWORD_ID_HASH) &&
           !compacted.is_array()) {
         auto array{JSON::make_array()};
@@ -319,26 +341,33 @@ auto compact(ExpansionState &state, const ActiveContext &active_context,
       continue;
     }
 
-    if (expanded_value.is_array() && expanded_value.empty()) {
+    // As above, a property holds an array
+    assert(expanded_value.is_array());
+    if (expanded_value.empty()) {
       const auto item_property{compact_iri(node_context, node_inverse,
                                            expanded_property, &expanded_value,
                                            true, inside_reverse)};
-      // An empty array stays empty rather than being wrapped into one.
-      if (!result.defines(item_property)) {
-        result.assign_assume_new(item_property, JSON::make_array());
-      }
+      // An empty array stays empty rather than being wrapped into one. Two
+      // properties never settle on the same name: a name shaped like an IRI
+      // must expand onto the very IRI it maps, and a name taken from the
+      // vocabulary is only taken where it is no term already (JSON-LD 1.1 API
+      // Section 4.2.2 step 16, Section 6.2.2)
+      assert(!result.defines(item_property));
+      result.assign_assume_new(item_property, JSON::make_array());
       continue;
     }
 
     for (const auto &item : expanded_value.as_array()) {
+      // What a property holds in expanded form is maps, which the entry point
+      // holds the input to before any of this runs
+      assert(item.is_object());
       const auto item_property{compact_iri(node_context, node_inverse,
                                            expanded_property, &item, true,
                                            inside_reverse)};
       const auto *item_definition{definition_for(node_context, item_property)};
-      const bool is_list{item.is_object() &&
-                         item.defines(KEYWORD_LIST, KEYWORD_LIST_HASH)};
+      const bool is_list{item.defines(KEYWORD_LIST, KEYWORD_LIST_HASH)};
       const bool is_graph_object{
-          item.is_object() && item.defines(KEYWORD_GRAPH, KEYWORD_GRAPH_HASH)};
+          item.defines(KEYWORD_GRAPH, KEYWORD_GRAPH_HASH)};
       JSON &target{
           nest_target(result, item_definition, node_context, node_inverse)};
 
@@ -426,8 +455,9 @@ auto compact(ExpansionState &state, const ActiveContext &active_context,
         // JSON-LD 1.0 forbids a list of lists.
         if (state.processing_1_0 && list_value.is_array()) {
           for (const auto &member : list_value.as_array()) {
-            if (member.is_object() &&
-                member.defines(KEYWORD_LIST, KEYWORD_LIST_HASH)) {
+            // As above, a list holds maps
+            assert(member.is_object());
+            if (member.defines(KEYWORD_LIST, KEYWORD_LIST_HASH)) {
               throw JSONLDError("Compaction to list of lists",
                                 EMPTY_WEAK_POINTER);
             }
@@ -449,8 +479,7 @@ auto compact(ExpansionState &state, const ActiveContext &active_context,
                                             true, false)};
           auto list_object{JSON::make_object()};
           list_object.assign_assume_new(list_alias, std::move(compacted));
-          if (item.is_object() &&
-              item.defines(KEYWORD_INDEX, KEYWORD_INDEX_HASH)) {
+          if (item.defines(KEYWORD_INDEX, KEYWORD_INDEX_HASH)) {
             const auto index_alias{compact_iri(node_context, node_inverse,
                                                JSON::String{KEYWORD_INDEX},
                                                nullptr, true, false)};
@@ -473,7 +502,7 @@ auto compact(ExpansionState &state, const ActiveContext &active_context,
 
       // @language map container: index value objects by their language.
       if (container_includes(item_definition, KEYWORD_LANGUAGE) &&
-          item.is_object() && item.defines(KEYWORD_VALUE, KEYWORD_VALUE_HASH)) {
+          item.defines(KEYWORD_VALUE, KEYWORD_VALUE_HASH)) {
         if (!target.defines(item_property)) {
           target.assign_assume_new(item_property, JSON::make_object());
         }
@@ -493,8 +522,10 @@ auto compact(ExpansionState &state, const ActiveContext &active_context,
         if (!target.defines(item_property)) {
           target.assign_assume_new(item_property, JSON::make_object());
         }
-        const bool property_index{item_definition != nullptr &&
-                                  item_definition->index_iri.has_value()};
+        // The container test above answers false for a definition that is
+        // not there, so one stands here
+        assert(item_definition != nullptr);
+        const bool property_index{item_definition->index_iri.has_value()};
         auto compacted{compact(state, node_context, node_inverse, item_property,
                                item, compact_arrays)};
         std::optional<JSON::String> key;
@@ -525,8 +556,7 @@ auto compact(ExpansionState &state, const ActiveContext &active_context,
               compacted.erase(container_key);
             }
           }
-        } else if (item.is_object() &&
-                   item.defines(KEYWORD_INDEX, KEYWORD_INDEX_HASH)) {
+        } else if (item.defines(KEYWORD_INDEX, KEYWORD_INDEX_HASH)) {
           key = item.at(KEYWORD_INDEX, KEYWORD_INDEX_HASH).to_string();
           if (compacted.is_object()) {
             compacted.erase(compact_iri(node_context, node_inverse,
@@ -539,23 +569,29 @@ auto compact(ExpansionState &state, const ActiveContext &active_context,
         continue;
       }
 
-      // @id map container: index node objects by their @id.
+      // @id map container: the key is the identifier the member carries once
+      // compacted, which is where the step reads it from, so a member that
+      // compacted to anything other than a map carries no identifier to key
+      // by and stands under the none label (Section 6.1.2)
       if (container_includes(item_definition, KEYWORD_ID)) {
         if (!target.defines(item_property)) {
           target.assign_assume_new(item_property, JSON::make_object());
         }
-        const JSON::String key{
-            item.is_object() && item.defines(KEYWORD_ID, KEYWORD_ID_HASH)
-                ? compact_iri(node_context, node_inverse,
-                              item.at(KEYWORD_ID, KEYWORD_ID_HASH).to_string(),
-                              nullptr, false, false)
-                : none_key};
         auto compacted{compact(state, node_context, node_inverse, item_property,
                                item, compact_arrays)};
+        const auto id_alias{compact_iri(node_context, node_inverse,
+                                        JSON::String{KEYWORD_ID}, nullptr, true,
+                                        false)};
+        JSON::String key{none_key};
         if (compacted.is_object()) {
-          compacted.erase(compact_iri(node_context, node_inverse,
-                                      JSON::String{KEYWORD_ID}, nullptr, true,
-                                      false));
+          // An identifier compacts to a name, so the entry it stands under
+          // holds a string wherever the member carries one
+          const auto *identifier{compacted.try_at(id_alias)};
+          assert(identifier == nullptr || identifier->is_string());
+          if (identifier != nullptr) {
+            key = identifier->to_string();
+            compacted.erase(id_alias);
+          }
         }
         add_value(target.at(item_property), key, std::move(compacted),
                   as_array);
@@ -568,7 +604,7 @@ auto compact(ExpansionState &state, const ActiveContext &active_context,
           target.assign_assume_new(item_property, JSON::make_object());
         }
         JSON::String key{none_key};
-        if (item.is_object() && item.defines(KEYWORD_TYPE, KEYWORD_TYPE_HASH) &&
+        if (item.defines(KEYWORD_TYPE, KEYWORD_TYPE_HASH) &&
             !item.at(KEYWORD_TYPE, KEYWORD_TYPE_HASH).empty()) {
           key = compact_iri(
               node_context, node_inverse,
@@ -600,12 +636,20 @@ auto compact(ExpansionState &state, const ActiveContext &active_context,
           const auto id_alias{compact_iri(node_context, node_inverse,
                                           JSON::String{KEYWORD_ID}, nullptr,
                                           true, false)};
-          if (compacted.object_size() == 1 && compacted.defines(id_alias) &&
-              item.defines(KEYWORD_ID, KEYWORD_ID_HASH)) {
-            const bool vocab{item_definition != nullptr &&
-                             item_definition->type_mapping.has_value() &&
-                             item_definition->type_mapping.value() ==
-                                 KEYWORD_VOCAB};
+          // A node left with only an @id reduces to that identifier, compacted
+          // with vocab when the term coerces @vocab. The entry it was left
+          // with was compacted from the item's own, so the item carries one
+          // too, and the container test above answers false for a definition
+          // that is not there, which a type container also gives a type
+          // mapping (JSON-LD 1.1 API Section 4.2.2 step 21.4.1)
+          assert(
+              !(compacted.object_size() == 1 && compacted.defines(id_alias)) ||
+              item.defines(KEYWORD_ID, KEYWORD_ID_HASH));
+          if (compacted.object_size() == 1 && compacted.defines(id_alias)) {
+            assert(item_definition != nullptr &&
+                   item_definition->type_mapping.has_value());
+            const bool vocab{item_definition->type_mapping.value() ==
+                             KEYWORD_VOCAB};
             compacted = JSON{
                 compact_iri(node_context, node_inverse,
                             item.at(KEYWORD_ID, KEYWORD_ID_HASH).to_string(),

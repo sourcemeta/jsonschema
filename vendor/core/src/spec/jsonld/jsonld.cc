@@ -100,12 +100,15 @@ auto jsonld_expand(const JSON &input, const JSON &expand_context,
   ActiveContext active_context;
   initialise_expansion(resolver, &drop_callback, base_iri, version, state,
                        active_context);
-  const auto &context{
-      expand_context.is_object() &&
-              expand_context.defines(KEYWORD_CONTEXT, KEYWORD_CONTEXT_HASH)
-          ? expand_context.at(KEYWORD_CONTEXT, KEYWORD_CONTEXT_HASH)
-          : expand_context};
-  process_expansion_context(state, active_context, context);
+  // A context may arrive as the document that carries it, in which case the
+  // entry inside is what gets processed
+  const JSON *context{&expand_context};
+  if (expand_context.is_object() &&
+      expand_context.defines(KEYWORD_CONTEXT, KEYWORD_CONTEXT_HASH)) {
+    context = &expand_context.at(KEYWORD_CONTEXT, KEYWORD_CONTEXT_HASH);
+  }
+
+  process_expansion_context(state, active_context, *context);
   return run_expansion(state, active_context, input);
 }
 
@@ -123,12 +126,13 @@ auto jsonld_compact(const JSON &input, const JSON &context,
   initialise_expansion(resolver, nullptr, base_iri, version, state,
                        active_context);
   active_context.compact_to_relative = compact_to_relative;
-  const auto &local_context{
-      context.is_object() &&
-              context.defines(KEYWORD_CONTEXT, KEYWORD_CONTEXT_HASH)
-          ? context.at(KEYWORD_CONTEXT, KEYWORD_CONTEXT_HASH)
-          : context};
-  process_context(state, active_context, local_context, EMPTY_WEAK_POINTER);
+  const JSON *local_context{&context};
+  if (context.is_object() &&
+      context.defines(KEYWORD_CONTEXT, KEYWORD_CONTEXT_HASH)) {
+    local_context = &context.at(KEYWORD_CONTEXT, KEYWORD_CONTEXT_HASH);
+  }
+
+  process_context(state, active_context, *local_context, EMPTY_WEAK_POINTER);
 
   const auto inverse_context{create_inverse_context(active_context)};
   auto result{compact(state, active_context, inverse_context, std::nullopt,
@@ -150,10 +154,10 @@ auto jsonld_compact(const JSON &input, const JSON &context,
 
   // The compacted document carries the context it was compacted against, unless
   // that context is empty.
-  if ((local_context.is_object() && !local_context.empty()) ||
-      (local_context.is_array() && !local_context.empty()) ||
-      local_context.is_string()) {
-    result.assign_assume_new(keyword_context(), JSON{local_context});
+  if ((local_context->is_object() && !local_context->empty()) ||
+      (local_context->is_array() && !local_context->empty()) ||
+      local_context->is_string()) {
+    result.assign_assume_new(keyword_context(), JSON{*local_context});
   }
 
   return result;

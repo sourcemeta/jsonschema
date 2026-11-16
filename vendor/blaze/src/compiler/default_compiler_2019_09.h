@@ -20,9 +20,9 @@ auto compiler_2019_09_applicator_dependentschemas(const KeywordContext &context,
 
   if (!std::ranges::all_of(
           context.value().as_object(),
-          [allow_boolean = booleans_are_schemas(context.vocabularies())](
-              const auto &entry) -> bool {
-            return is_schema(entry.second, allow_boolean);
+          [&vocabularies = context.vocabularies()](const auto &entry) -> bool {
+            return sourcemeta::core::schema_is_schema(entry.second,
+                                                      vocabularies);
           })) {
     throw_keyword_error(context, EXPECTED_SCHEMA_OBJECT);
   }
@@ -71,12 +71,14 @@ auto compiler_2019_09_validation_dependentrequired(
     throw_keyword_error(context, EXPECTED_OBJECT);
   }
 
-  if (!std::ranges::all_of(
-          context.value().as_object(), [](const auto &entry) -> bool {
-            return sourcemeta::core::schema_is_property_name_array(
-                entry.second);
-          })) {
-    throw_keyword_error(context, EXPECTED_DEPENDENCIES);
+  // The validation vocabulary spells every value of this keyword through the
+  // same definition that `required` uses, which asks for unique entries
+  if (!std::ranges::all_of(context.value().as_object(),
+                           [](const auto &entry) -> bool {
+                             return is_property_name_array(entry.second) &&
+                                    entry.second.unique();
+                           })) {
+    throw_keyword_error(context, EXPECTED_PROPERTY_NAME_ARRAYS);
   }
 
   if (context.schema().defines("type") &&
@@ -88,17 +90,17 @@ auto compiler_2019_09_validation_dependentrequired(
   ValueStringMap dependencies;
   for (const auto &entry : context.value().as_object()) {
 
-    std::vector<sourcemeta::core::JSON::String> properties;
+    ValueStringSet properties;
     for (const auto &property : entry.second.as_array()) {
       if (!property.is_string()) {
         continue;
       }
 
-      properties.push_back(property.to_string());
+      properties.insert(property.to_string());
     }
 
     if (!properties.empty()) {
-      dependencies.emplace(entry.first, properties);
+      dependencies.emplace(entry.first, std::move(properties));
     }
   }
 

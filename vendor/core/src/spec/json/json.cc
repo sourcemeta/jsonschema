@@ -21,16 +21,17 @@
 namespace sourcemeta::core {
 
 template <bool ShouldThrow>
-static auto
-internal_parse_json(const char *&cursor, const char *end, std::uint64_t &line,
-                    std::uint64_t &column, const JSON::ParseCallback &callback,
-                    [[maybe_unused]] const bool track_positions, JSON &output)
+static auto internal_parse_json(
+    const char *&cursor, const char *end, std::uint64_t &line,
+    std::uint64_t &column, const JSON::ParseCallback &callback,
+    [[maybe_unused]] const bool track_positions, JSON &output,
+    const std::uint32_t maximum_input_bytes = JSON_MAXIMUM_INPUT_BYTES)
     -> std::conditional_t<ShouldThrow, void, bool> {
   const char *buffer_start{cursor};
-  // Tape entries address the input with 32-bit offsets and lengths, so a larger
-  // input cannot be represented without truncation
-  if (std::cmp_greater(end - cursor,
-                       std::numeric_limits<std::uint32_t>::max())) {
+  // Tape entries address the input with 32-bit offsets and lengths, so a
+  // larger input cannot be represented without truncation, and a caller may
+  // hold the input to a tighter bound of its own
+  if (std::cmp_greater(end - cursor, maximum_input_bytes)) {
     if constexpr (ShouldThrow) {
       throw JSONParseError(line, column);
     } else {
@@ -88,12 +89,14 @@ internal_parse_json(const char *&cursor, const char *end, std::uint64_t &line,
   }
 }
 
-static auto internal_parse_json(const char *&cursor, const char *end,
-                                std::uint64_t &line, std::uint64_t &column,
-                                const bool track_positions) -> JSON {
+static auto internal_parse_json(
+    const char *&cursor, const char *end, std::uint64_t &line,
+    std::uint64_t &column, const bool track_positions,
+    const std::uint32_t maximum_input_bytes = JSON_MAXIMUM_INPUT_BYTES)
+    -> JSON {
   JSON output{nullptr};
   internal_parse_json<true>(cursor, end, line, column, nullptr, track_positions,
-                            output);
+                            output, maximum_input_bytes);
   return output;
 }
 
@@ -158,28 +161,31 @@ auto parse_json(
 }
 
 // NOLINTNEXTLINE(cppcoreguidelines-avoid-non-const-global-variables)
-auto parse_json(std::basic_istream<JSON::Char, JSON::CharTraits> &stream)
-    -> JSON {
+auto parse_json(std::basic_istream<JSON::Char, JSON::CharTraits> &stream,
+                const std::uint32_t maximum_input_bytes) -> JSON {
   const auto start_position{stream.tellg()};
   const auto input{read_to_string(stream)};
   const char *cursor{input.data()};
   const char *end{input.data() + input.size()};
   std::uint64_t line{1};
   std::uint64_t column{0};
-  auto result{internal_parse_json(cursor, end, line, column, false)};
+  auto result{internal_parse_json(cursor, end, line, column, false,
+                                  maximum_input_bytes)};
   resume_stream(stream, start_position,
                 static_cast<std::streamsize>(cursor - input.data()));
   return result;
 }
 
 auto parse_json(
-    const std::basic_string_view<JSON::Char, JSON::CharTraits> input) -> JSON {
+    const std::basic_string_view<JSON::Char, JSON::CharTraits> input,
+    const std::uint32_t maximum_input_bytes) -> JSON {
   std::uint64_t line{1};
   std::uint64_t column{0};
   const char *begin{input.empty() ? "" : input.data()};
   const char *cursor{begin};
   const char *end{cursor + input.size()};
-  auto result{internal_parse_json(cursor, end, line, column, false)};
+  auto result{internal_parse_json(cursor, end, line, column, false,
+                                  maximum_input_bytes)};
   const char *trailing{skip_trailing_whitespace(cursor, end)};
   if (trailing != end) {
     position_of(begin, trailing, line, column);
@@ -190,15 +196,15 @@ auto parse_json(
 }
 
 auto try_parse_json(
-    const std::basic_string_view<JSON::Char, JSON::CharTraits> input)
-    -> std::optional<JSON> {
+    const std::basic_string_view<JSON::Char, JSON::CharTraits> input,
+    const std::uint32_t maximum_input_bytes) -> std::optional<JSON> {
   std::uint64_t line{1};
   std::uint64_t column{0};
   const char *cursor{input.empty() ? "" : input.data()};
   const char *end{cursor + input.size()};
   JSON output{nullptr};
   if (internal_parse_json<false>(cursor, end, line, column, nullptr, false,
-                                 output) &&
+                                 output, maximum_input_bytes) &&
       skip_trailing_whitespace(cursor, end) == end) {
     return output;
   }
@@ -324,15 +330,21 @@ auto operator<<(std::basic_ostream<JSON::Char, JSON::CharTraits> &stream,
       return stream << "string";
     case sourcemeta::core::JSON::Type::Array:
       return stream << "array";
+      // Clang keeps an arm for the value that never arrives and counts it as
+      // one that nothing took, so the last of them is written as the default
+      // there, while the compilers reading a case label are the ones holding
+      // this switch to naming them all
+#if defined(__clang__)
+    default:
+#else
     case sourcemeta::core::JSON::Type::Object:
-      return stream << "object";
-  }
-
-    // Clang settles that no other value arrives, so only GCC and MSVC
-    // need to be told that the end of this function is never reached
-#if !defined(__clang__)
-  std::unreachable();
 #endif
+      return stream << "object";
+#if !defined(__clang__)
+    default:
+      std::unreachable();
+#endif
+  }
 }
 
 } // namespace sourcemeta::core

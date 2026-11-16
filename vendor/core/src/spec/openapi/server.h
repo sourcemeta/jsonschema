@@ -226,12 +226,16 @@ inline auto openapi_server_authority_end(const JSON::StringView address)
   while (true) {
     const auto boundary{address.find_first_of("/?#", cursor)};
     const auto expression{openapi_next_brace_expression(address, cursor)};
-    // Where nothing was found, where no expression stands in the way, where
-    // one begins only after what was found, or where a run never closes and so
-    // is no expression at all, what was found stands in literal text
+    // Reading what every variable stands for by default is what reaches
+    // this, and a run of braces that never closes is what that turns down
+    // first, so every run standing here closes
+    assert(expression.opening == JSON::StringView::npos ||
+           expression.closing != JSON::StringView::npos);
+    // Where nothing was found, where no expression stands in the way, or
+    // where one begins only after what was found, what was found stands in
+    // literal text
     if (boundary == JSON::StringView::npos ||
         expression.opening == JSON::StringView::npos ||
-        expression.closing == JSON::StringView::npos ||
         boundary < expression.opening) {
       return boundary;
     }
@@ -300,9 +304,14 @@ openapi_is_absolute_server_url_template(const JSON::StringView address,
     assert(choices->is_array());
     for (const auto &choice : choices->as_array()) {
       assert(choice.is_string());
+      // Reading the template once against what every variable stands for by
+      // default is what reaches this, and it reads the same template against
+      // the same Objects, so whatever would turn this reading down turned
+      // that one down first
       const auto candidate{openapi_substitute_server_variables(
           address, variables, variable.first, choice.to_string())};
-      if (!candidate.has_value() || !URI::is_uri(candidate.value())) {
+      assert(candidate.has_value());
+      if (!URI::is_uri(candidate.value())) {
         return false;
       }
     }

@@ -744,27 +744,29 @@ auto URITemplateRouterView::describes(
 
   std::uint32_t current_node = 0;
 
+  // Reaching the end of a fragment settles nothing on its own, so only the
+  // other two answers are read here and the walk carries on below
   if (!base_path.empty()) {
-    switch (walk_describe_fragment(nodes, node_count, string_table,
-                                   string_table_size, current_node,
-                                   base_path)) {
-      case DescribeWalk::NoMatch:
-        return false;
-      case DescribeWalk::Captured:
-        return true;
-      case DescribeWalk::Reached:
-        break;
+    const auto base_walk{walk_describe_fragment(nodes, node_count, string_table,
+                                                string_table_size, current_node,
+                                                base_path)};
+    if (base_walk == DescribeWalk::NoMatch) {
+      return false;
+    }
+
+    if (base_walk == DescribeWalk::Captured) {
+      return true;
     }
   }
 
-  switch (walk_describe_fragment(nodes, node_count, string_table,
-                                 string_table_size, current_node, path)) {
-    case DescribeWalk::NoMatch:
-      return false;
-    case DescribeWalk::Captured:
-      return true;
-    case DescribeWalk::Reached:
-      break;
+  const auto walk{walk_describe_fragment(
+      nodes, node_count, string_table, string_table_size, current_node, path)};
+  if (walk == DescribeWalk::NoMatch) {
+    return false;
+  }
+
+  if (walk == DescribeWalk::Captured) {
+    return true;
   }
 
   if (current_node == 0) {

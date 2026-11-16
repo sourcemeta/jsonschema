@@ -16,7 +16,7 @@
 
 namespace sourcemeta::core {
 
-// A blank node identifier begins with "_:" (JSON-LD 1.1 Section 3.5). A
+// A blank node identifier begins with "_:" (JSON-LD 1.1 Section 1.4). A
 // label-less "_:" still counts, so that processing algorithms relabel every
 // blank-flavored identifier instead of leaking one as an IRI. Expanded form
 // validation additionally requires a label and keeps its own stricter check.
@@ -91,7 +91,7 @@ struct ExpansionState {
   // Bounds the remote context chain, which the resolver grows by one for every
   // reference it answers with, and is therefore attacker-controlled the same
   // way the nesting depth is. A processor is free to set this limit (JSON-LD
-  // 1.1 API Section 5.1 step 5.2.3)
+  // 1.1 API Section 4.1.2 step 5.2.3)
   static constexpr std::size_t MAXIMUM_REMOTE_CONTEXTS{32};
 
   // Used to load remote contexts. The chain detects recursive inclusion.
@@ -101,7 +101,7 @@ struct ExpansionState {
   // Whether a reference already in the chain is an error. A scoped context is
   // validated against the contexts that are loading it, where meeting one of
   // them again is the recursion the validation must not follow (JSON-LD 1.1
-  // API Section 5.1 step 5.2.2)
+  // API Section 4.1.2 step 5.2.2)
   bool validate_scoped_context{true};
   std::vector<JSON::String> remote_context_chain;
   // The `@context` entry of every remote context already dereferenced in this
@@ -111,7 +111,7 @@ struct ExpansionState {
   // representation: set context document to the previously dereferenced
   // document, and set loaded context to the value of the @context entry from
   // the document in context document", whose note adds that "Only the
-  // @context entry need be retained" (JSON-LD 1.1 API Section 5.1 step 5.2.4)
+  // @context entry need be retained" (JSON-LD 1.1 API Section 4.1.2 step 5.2.4)
   std::map<JSON::String, JSON, std::less<>> remote_documents;
   std::optional<JSON::String> document_base;
   // When a scoped context is processed after the fact, remote references in it
@@ -270,19 +270,19 @@ auto expand_iri(ExpansionState &state, ActiveContext &active_context,
                 DefinedTerms *const defined, const WeakPointer &context_pointer)
     -> std::optional<JSON::String>;
 
-// Create Term Definition (JSON-LD 1.1 API Section 5.1.1)
+// Create Term Definition (JSON-LD 1.1 API Section 4.2.2)
 auto create_term_definition(ExpansionState &state,
                             ActiveContext &active_context,
                             const JSON &local_context, const JSON::String &term,
                             DefinedTerms &defined,
                             const WeakPointer &context_pointer) -> void;
 
-// Context Processing (JSON-LD 1.1 API Section 5.1)
+// Context Processing (JSON-LD 1.1 API Section 4.1.2)
 auto process_context(ExpansionState &state, ActiveContext &active_context,
                      const JSON &local_context, const WeakPointer &pointer,
                      const bool propagate = true) -> void;
 
-// Value Expansion (JSON-LD 1.1 API Section 5.3.3)
+// Value Expansion (JSON-LD 1.1 API Section 5.3.2)
 auto expand_value(ExpansionState &state, ActiveContext &active_context,
                   const std::optional<JSON::String> &active_property,
                   const JSON &value) -> JSON;
@@ -295,7 +295,17 @@ auto expand(ExpansionState &state, ActiveContext &active_context,
             const JSON &element, const WeakPointer &pointer,
             const bool from_map = false) -> JSON;
 
-// Inverse Context Creation (JSON-LD 1.1 API Section 4.3.1). The inverse context
+// The language and the base direction a value answers to, which the term
+// supplies where it declares one of its own and the context default supplies
+// otherwise. Both expansion and compaction read the same rule
+auto effective_language(const TermDefinition *definition,
+                        const ActiveContext &active_context)
+    -> std::optional<JSON::String>;
+auto effective_direction(const TermDefinition *definition,
+                         const ActiveContext &active_context)
+    -> std::optional<JSON::String>;
+
+// Inverse Context Creation (JSON-LD 1.1 API Section 4.3.2). The inverse context
 // is represented as a JSON map of IRI to container to type/language to term.
 auto create_inverse_context(const ActiveContext &active_context) -> JSON;
 

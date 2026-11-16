@@ -74,15 +74,21 @@ auto openapi_version_name(const OpenAPIVersion version) noexcept
       return "3.0"sv;
     case OpenAPIVersion::OPENAPI_3_1:
       return "3.1"sv;
+      // Clang keeps an arm for the value that never arrives and counts it as
+      // one that nothing took, so the last enumerator is written as the default
+      // there, while the compilers reading a case label are the ones holding
+      // this switch to naming them all
+#if defined(__clang__)
+    default:
+#else
     case OpenAPIVersion::OPENAPI_3_2:
-      return "3.2"sv;
-  }
-
-    // Clang settles that no other value arrives, so only GCC and MSVC
-    // need to be told that the end of this function is never reached
-#if !defined(__clang__)
-  std::unreachable();
 #endif
+      return "3.2"sv;
+#if !defined(__clang__)
+    default:
+      std::unreachable();
+#endif
+  }
 }
 
 auto openapi_version_string(const JSON &document)

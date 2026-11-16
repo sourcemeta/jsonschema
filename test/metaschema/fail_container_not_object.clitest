@@ -1,0 +1,49 @@
+WRITE metaschema.json UNTIL EOF
+{
+  "$id": "https://example.com/custom-metaschema",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$vocabulary": { "https://json-schema.org/draft/2020-12/vocab/core": true },
+  "$dynamicAnchor": "meta",
+  "$defs": [ 1, 2 ],
+  "$ref": "https://json-schema.org/draft/2020-12/meta/core"
+}
+EOF
+
+WRITE schema.json UNTIL EOF
+{
+  "$schema": "https://example.com/custom-metaschema",
+  "type": "string"
+}
+EOF
+
+// Schema input error
+RUN metaschema schema.json --resolve metaschema.json STDIN /dev/null IN . INTO result.txt EXPECTING 4
+
+REPLACE $CWD WITH '[CWD]' IN result.txt
+
+WRITE expected.txt UNTIL EOF
+2> error: Could not bundle to a container that is not an object
+2>   at line 6
+2>   at column 3
+2>   at file path [CWD]/metaschema.json
+2>   at location "/$defs"
+EOF
+
+COMPARE result.txt AGAINST expected.txt
+
+// Schema input error
+RUN metaschema schema.json --resolve metaschema.json --json STDIN /dev/null IN . INTO result_json.txt EXPECTING 4
+
+REPLACE $CWD WITH '[CWD]' IN result_json.txt
+
+WRITE expected_json.txt UNTIL EOF
+1> {
+1>   "error": "Could not bundle to a container that is not an object",
+1>   "line": 6,
+1>   "column": 3,
+1>   "filePath": "[CWD]/metaschema.json",
+1>   "location": "/$defs"
+1> }
+EOF
+
+COMPARE result_json.txt AGAINST expected_json.txt

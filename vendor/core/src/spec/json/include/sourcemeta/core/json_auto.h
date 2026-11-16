@@ -678,15 +678,22 @@ auto from_json_variant_impl(const JSON &data, std::size_t index)
   if constexpr (Index >= std::variant_size_v<T>) {
     return std::nullopt;
   } else {
-    if (Index == index) {
-      auto result{from_json<std::variant_alternative_t<Index, T>>(data)};
-      if (result.has_value()) {
-        return T{std::in_place_index<Index>, std::move(result).value()};
+    // An index past the alternatives is refused before the walk starts, so
+    // the last alternative is settled by elimination and needs no comparison
+    if constexpr (Index + 1 < std::variant_size_v<T>) {
+      if (Index != index) {
+        return from_json_variant_impl<T, Index + 1>(data, index);
       }
-
-      return std::nullopt;
+    } else {
+      assert(Index == index);
     }
-    return from_json_variant_impl<T, Index + 1>(data, index);
+
+    auto result{from_json<std::variant_alternative_t<Index, T>>(data)};
+    if (result.has_value()) {
+      return T{std::in_place_index<Index>, std::move(result).value()};
+    }
+
+    return std::nullopt;
   }
 }
 #endif

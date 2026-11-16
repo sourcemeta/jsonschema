@@ -212,18 +212,18 @@ auto oauth_build_client_assertion(
 
 auto oauth_client_assertion(const std::string_view assertion,
                             SecureString &sink) -> void {
-  URI::append_query_parameter(sink, "client_assertion_type",
-                              OAUTH_CLIENT_ASSERTION_TYPE_JWT_BEARER);
-  URI::append_query_parameter(sink, "client_assertion", assertion);
+  URI::append_form_parameter(sink, "client_assertion_type",
+                             OAUTH_CLIENT_ASSERTION_TYPE_JWT_BEARER);
+  URI::append_form_parameter(sink, "client_assertion", assertion);
 }
 
 auto oauth_build_token_request_jwt_bearer(const std::string_view assertion,
                                           const std::string_view scope,
                                           SecureString &sink) -> void {
-  URI::append_query_parameter(sink, "grant_type", OAUTH_GRANT_TYPE_JWT_BEARER);
-  URI::append_query_parameter(sink, "assertion", assertion);
+  URI::append_form_parameter(sink, "grant_type", OAUTH_GRANT_TYPE_JWT_BEARER);
+  URI::append_form_parameter(sink, "assertion", assertion);
   if (!scope.empty()) {
-    URI::append_query_parameter(sink, "scope", scope);
+    URI::append_form_parameter(sink, "scope", scope);
   }
 }
 

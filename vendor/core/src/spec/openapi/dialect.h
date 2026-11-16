@@ -44,7 +44,6 @@ inline auto openapi_is_3_0_vocabulary(const SchemaVocabularies &vocabularies)
 // is reached twice over and reported the same way each time
 inline auto openapi_schema_of_another_dialect(const OpenAPIVersion version,
                                               const SchemaFrame &schemas,
-                                              const SchemaFrame::Paths &paths,
                                               const SchemaResolver &resolver)
     -> std::optional<Pointer> {
   if (version != OpenAPIVersion::OPENAPI_3_0) {
@@ -52,7 +51,7 @@ inline auto openapi_schema_of_another_dialect(const OpenAPIVersion version,
   }
 
   std::optional<Pointer> result;
-  schemas.for_each_location([&schemas, &paths, &resolver,
+  schemas.for_each_location([&schemas, &resolver,
                              &result](const auto, const auto &,
                                       const auto &location) -> void {
     if (result.has_value() ||
@@ -61,14 +60,9 @@ inline auto openapi_schema_of_another_dialect(const OpenAPIVersion version,
     }
 
     // A frame of a description is handed each Schema Object position to frame
-    // rather than the document as a whole, so what it holds besides those is
-    // of no concern here
-    for (const auto &path : paths) {
-      if (location.pointer.starts_with(path)) {
-        result = to_pointer(location.pointer);
-        return;
-      }
-    }
+    // rather than the document as a whole, so every place it holds is one of
+    // those or sits within one, and none of them is of no concern here
+    result = to_pointer(location.pointer);
   });
 
   return result;

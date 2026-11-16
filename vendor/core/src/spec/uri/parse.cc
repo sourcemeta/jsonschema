@@ -6,7 +6,6 @@
 #include "escaping.h"
 #include "grammar.h"
 
-#include <array>        // std::array
 #include <cassert>      // assert
 #include <cctype>       // std::isalpha, std::isdigit
 #include <charconv>     // std::from_chars
@@ -56,29 +55,33 @@ decode_utf8_codepoint(const std::string_view input,
           static_cast<std::uint8_t>(decoded.value().second)};
 }
 
+// Step past the character at the given position when RFC 3987 widens the
+// production being read to admit it, and refuse the input otherwise. The only
+// two outcomes are a position that moved and a refusal that leaves no caller
+// to answer, so nothing is reported back. Reading a URI rather than an IRI
+// widens nothing, so every character this is handed there is refused
 template <bool IRI, bool AllowIPrivate = false>
 auto accept_iri_extension(const std::string_view input,
-                          std::string_view::size_type &position) -> bool {
-  if constexpr (!IRI) {
-    return false;
-  } else {
-    if ((static_cast<unsigned char>(input[position]) & 0x80U) == 0U) {
-      return false;
-    }
-    const auto [codepoint, length] = decode_utf8_codepoint(input, position);
-    if (sourcemeta::core::is_ucschar(codepoint)) {
-      position += length;
-      return true;
-    }
-    if constexpr (AllowIPrivate) {
-      if (sourcemeta::core::is_iprivate(codepoint)) {
+                          std::string_view::size_type &position) -> void {
+  if constexpr (IRI) {
+    if ((static_cast<unsigned char>(input[position]) & 0x80U) != 0U) {
+      const auto [codepoint, length] = decode_utf8_codepoint(input, position);
+      if (sourcemeta::core::is_ucschar(codepoint)) {
         position += length;
-        return true;
+        return;
+      }
+
+      if constexpr (AllowIPrivate) {
+        if (sourcemeta::core::is_iprivate(codepoint)) {
+          position += length;
+          return;
+        }
       }
     }
-    throw sourcemeta::core::URIParseError{
-        static_cast<std::uint64_t>(position + 1)};
   }
+
+  throw sourcemeta::core::URIParseError{
+      static_cast<std::uint64_t>(position + 1)};
 }
 
 // Every reader below turns down what it was handed in the same two ways,
@@ -115,8 +118,10 @@ template <bool CheckOnly>
 auto parse_scheme(const std::string_view input,
                   std::string_view::size_type &position)
     -> std::conditional_t<CheckOnly, bool, std::optional<std::string>> {
-  if (position >= input.size() ||
-      !std::isalpha(static_cast<unsigned char>(input[position]))) {
+  // A scheme is read first and from the front, and an input with nothing in it
+  // is turned down before any of this runs
+  assert(position < input.size());
+  if (!std::isalpha(static_cast<unsigned char>(input[position]))) {
     return parse_refused<CheckOnly, std::string>();
   }
 
@@ -316,9 +321,8 @@ auto parse_host(const std::string_view input,
       position += skip;
     } else if (uri_is_unreserved(current) || uri_is_sub_delim(current)) {
       position += 1;
-    } else if (!accept_iri_extension<IRI>(input, position)) [[unlikely]] {
-      throw sourcemeta::core::URIParseError{
-          static_cast<std::uint64_t>(position + 1)};
+    } else {
+      accept_iri_extension<IRI>(input, position);
     }
   }
 
@@ -398,9 +402,8 @@ auto parse_path(const std::string_view input,
       position += skip;
     } else if (uri_is_pchar(current) || current == URI_SLASH) {
       position += 1;
-    } else if (!accept_iri_extension<IRI>(input, position)) [[unlikely]] {
-      throw sourcemeta::core::URIParseError{
-          static_cast<std::uint64_t>(position + 1)};
+    } else {
+      accept_iri_extension<IRI>(input, position);
     }
   }
 
@@ -434,9 +437,8 @@ auto parse_query(const std::string_view input,
     } else if (uri_is_pchar(current) || current == URI_SLASH ||
                current == URI_QUESTION) {
       position += 1;
-    } else if (!accept_iri_extension<IRI, true>(input, position)) [[unlikely]] {
-      throw sourcemeta::core::URIParseError{
-          static_cast<std::uint64_t>(position + 1)};
+    } else {
+      accept_iri_extension<IRI, true>(input, position);
     }
   }
 
@@ -451,10 +453,13 @@ template <bool CheckOnly, bool IRI>
 auto parse_fragment(const std::string_view input,
                     std::string_view::size_type &position)
     -> std::conditional_t<CheckOnly, bool, std::optional<std::string>> {
-  if (position >= input.size() || input[position] != URI_HASH) {
+  if (position >= input.size()) {
     return parse_refused<CheckOnly, std::string>();
   }
 
+  // Every reader ahead of this one either reads to the end of the input or
+  // stops at the number sign that opens the fragment
+  assert(input[position] == URI_HASH);
   position += 1;
   const auto start = position;
 
@@ -467,9 +472,8 @@ auto parse_fragment(const std::string_view input,
     } else if (uri_is_pchar(current) || current == URI_SLASH ||
                current == URI_QUESTION) {
       position += 1;
-    } else if (!accept_iri_extension<IRI>(input, position)) [[unlikely]] {
-      throw sourcemeta::core::URIParseError{
-          static_cast<std::uint64_t>(position + 1)};
+    } else {
+      accept_iri_extension<IRI>(input, position);
     }
   }
 
@@ -590,8 +594,11 @@ auto do_parse(const std::string_view input,
       // RFC 3986: relative-ref without authority uses path-noscheme,
       // where the first segment must not contain a colon
       if (!has_scheme && !has_authority) {
+        // A path is only taken once a character that belongs to one has been
+        // read, so what comes back is never empty
         const auto &path_value = parsed_path.value();
-        if (!path_value.empty() && path_value[0] != URI_SLASH) {
+        assert(!path_value.empty());
+        if (path_value[0] != URI_SLASH) {
           const auto first_slash = path_value.find(URI_SLASH);
           const auto colon_pos = path_value.find(URI_COLON);
           if (colon_pos != std::string::npos &&

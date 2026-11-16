@@ -140,7 +140,8 @@ enum class ValueStringType : std::uint8_t {
 /// @ingroup evaluator
 /// Represents an compiler step that maps strings to strings
 using ValueStringMap = sourcemeta::core::JSONObject<
-    ValueString, ValueStrings, sourcemeta::core::PropertyHashJSON<ValueString>>;
+    ValueString, ValueStringSet,
+    sourcemeta::core::PropertyHashJSON<ValueString>>;
 
 /// @ingroup evaluator
 /// Represents a compiler step value that consist of object property filters

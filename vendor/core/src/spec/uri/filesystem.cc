@@ -1,3 +1,4 @@
+#include <sourcemeta/core/text.h>
 #include <sourcemeta/core/uri.h>
 
 #include "escaping.h"
@@ -28,18 +29,15 @@ auto append_raw_segment(std::optional<std::string> &path,
     return;
   }
   auto &current = path.value();
-  const bool current_ends_with_slash = current.ends_with('/');
-  const bool segment_starts_with_slash = segment.starts_with('/');
   // Leading separators are stripped before any of this is walked, so the only
   // segment that spells out to a separator is the one written for a position
-  // the path holds nothing at, and two such positions never follow each other
-  assert(!(current_ends_with_slash && segment_starts_with_slash));
-  if (!current_ends_with_slash && !segment_starts_with_slash) {
+  // the path holds nothing at, and such a position is the last one there is
+  assert(!current.ends_with('/'));
+  if (!segment.starts_with('/')) {
     current += '/';
-    current.append(segment);
-  } else {
-    current.append(segment);
   }
+
+  current.append(segment);
 }
 
 } // namespace
@@ -60,7 +58,10 @@ auto URI::to_path() const -> std::filesystem::path {
   const auto is_unc = host_value.has_value() && !host_value->empty() &&
                       !is_localhost_host(host_value.value());
   if (is_unc) {
-    if (!path.empty() && path.front() == '/') {
+    if (!path.empty()) {
+      // RFC 3986 Section 3.3 requires the path of a URI that carries an
+      // authority to be empty or to begin with a slash
+      assert(path.front() == '/');
       path.erase(0, 1);
     }
     std::ranges::replace(path, '/', '\\');
@@ -74,9 +75,10 @@ auto URI::to_path() const -> std::filesystem::path {
     return unc;
   }
 
-  // Check for Windows absolute path (e.g., /C:/)
+  // RFC 8089 Appendix E.2 spells a drive out as a letter and a colon, which
+  // the path carries below the root the authority names
   const auto is_windows_absolute =
-      path.size() >= 3 && path[0] == '/' && path[2] == ':';
+      path.size() >= 3 && path[0] == '/' && is_alpha(path[1]) && path[2] == ':';
   if (is_windows_absolute) {
     // Remove leading slash
     path.erase(0, 1);
@@ -94,15 +96,21 @@ auto URI::from_path(const std::filesystem::path &path) -> URI {
   // form is detected on the path as it was given
   const auto is_unc = path.string().starts_with("\\\\");
   auto normalized = path.lexically_normal().string();
-  const auto is_windows_absolute =
-      normalized.size() >= 2 && normalized[1] == ':';
 
   // Convert backslashes to forward slashes
   std::ranges::replace(normalized, '\\', '/');
   const auto is_unix_absolute = normalized.starts_with("/");
 
+  // RFC 8089 Appendix E.2 spells a drive out as a letter and a colon, and only
+  // a separator after the colon makes what follows absolute, as a drive on its
+  // own names whichever directory is current on it. A UNC path reads as the
+  // first form once its separators are turned around above
+  const auto is_windows_absolute = normalized.size() >= 3 &&
+                                   is_alpha(normalized[0]) &&
+                                   normalized[1] == ':' && normalized[2] == '/';
+
   // Only absolute paths can be converted to file:// URIs
-  if (!is_unix_absolute && !is_windows_absolute && !is_unc) {
+  if (!is_unix_absolute && !is_windows_absolute) {
     throw URIError(
         "It is not valid to construct a file:// URI out of a relative path");
   }
