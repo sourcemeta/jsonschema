@@ -36,7 +36,9 @@ REPLACE $CWD WITH '[CWD]' IN result_0.txt
 WRITE expected_0.txt UNTIL EOF
 1> {
 1>   "error": "Could not bundle to a container that is not an object",
-1>   "filePath": "[CWD]/test.json",
+1>   "line": 4,
+1>   "column": 3,
+1>   "filePath": "[CWD]/schema.json",
 1>   "location": "/$defs"
 1> }
 EOF

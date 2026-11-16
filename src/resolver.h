@@ -915,6 +915,30 @@ public:
     }
   }
 
+  // Bundling a document that resolution went and got reports a place within
+  // that document rather than within whatever asked for it, so naming the
+  // file the caller was reading would point at a place it does not hold.
+  // Where the document came from is known only here, and importing keeps the
+  // document rather than where each part of it was written, so where to point
+  // is read back from that file
+  [[noreturn]] auto report_schema_container(
+      const std::string_view identifier,
+      const sourcemeta::core::SchemaContainerError &error) const -> void {
+    const auto origin{this->origins_.find(std::string{identifier})};
+    const auto path{origin == this->origins_.cend()
+                        ? identifier_path(std::string{identifier})
+                        : origin->second.first};
+    const auto position{read_position(path, error.location())};
+    if (position.has_value()) {
+      throw PositionError<
+          sourcemeta::core::FileError<sourcemeta::core::SchemaContainerError>>(
+          position.value().first, position.value().second, path, error);
+    }
+
+    throw sourcemeta::core::FileError<sourcemeta::core::SchemaContainerError>(
+        path, error);
+  }
+
 private:
   // Framing a schema is what reveals the identifiers it declares, but framing
   // needs its meta-schema resolved first, which is precisely what an entry

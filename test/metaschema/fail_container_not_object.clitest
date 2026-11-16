@@ -23,7 +23,9 @@ REPLACE $CWD WITH '[CWD]' IN result.txt
 
 WRITE expected.txt UNTIL EOF
 2> error: Could not bundle to a container that is not an object
-2>   at file path [CWD]/schema.json
+2>   at line 6
+2>   at column 3
+2>   at file path [CWD]/metaschema.json
 2>   at location "/$defs"
 EOF
 
@@ -37,7 +39,9 @@ REPLACE $CWD WITH '[CWD]' IN result_json.txt
 WRITE expected_json.txt UNTIL EOF
 1> {
 1>   "error": "Could not bundle to a container that is not an object",
-1>   "filePath": "[CWD]/schema.json",
+1>   "line": 6,
+1>   "column": 3,
+1>   "filePath": "[CWD]/metaschema.json",
 1>   "location": "/$defs"
 1> }
 EOF
