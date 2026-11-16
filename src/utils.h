@@ -387,6 +387,17 @@ auto with_openapi_diagnostics(
 
     throw sourcemeta::core::FileError<sourcemeta::core::SchemaReferenceError>(
         display_path, error);
+  } catch (const sourcemeta::core::SchemaContainerError &error) {
+    const auto position{positions.get(error.location())};
+    if (position.has_value()) {
+      throw PositionError<
+          sourcemeta::core::FileError<sourcemeta::core::SchemaContainerError>>(
+          std::get<0>(position.value()), std::get<1>(position.value()),
+          display_path, error);
+    }
+
+    throw sourcemeta::core::FileError<sourcemeta::core::SchemaContainerError>(
+        display_path, error);
   } catch (
       const sourcemeta::core::SchemaRelativeMetaschemaResolutionError &error) {
     throw sourcemeta::core::FileError<
@@ -625,6 +636,17 @@ bundle_for_evaluation(const sourcemeta::core::JSON &schema,
     }
 
     throw sourcemeta::core::FileError<sourcemeta::core::SchemaReferenceError>(
+        resolution_base, error);
+  } catch (const sourcemeta::core::SchemaContainerError &error) {
+    const auto position{positions.get(error.location())};
+    if (position.has_value()) {
+      throw PositionError<
+          sourcemeta::core::FileError<sourcemeta::core::SchemaContainerError>>(
+          std::get<0>(position.value()), std::get<1>(position.value()),
+          resolution_base, error);
+    }
+
+    throw sourcemeta::core::FileError<sourcemeta::core::SchemaContainerError>(
         resolution_base, error);
   } catch (
       const sourcemeta::core::SchemaRelativeMetaschemaResolutionError &error) {

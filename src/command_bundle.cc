@@ -211,6 +211,17 @@ auto sourcemeta::jsonschema::bundle(const sourcemeta::core::Options &options)
 
     throw sourcemeta::core::FileError<sourcemeta::core::SchemaReferenceError>(
         schema_display_path, error);
+  } catch (const sourcemeta::core::SchemaContainerError &error) {
+    const auto position{parsed_schema.positions.get(error.location())};
+    if (position.has_value()) {
+      throw PositionError<
+          sourcemeta::core::FileError<sourcemeta::core::SchemaContainerError>>(
+          std::get<0>(position.value()), std::get<1>(position.value()),
+          schema_display_path, error);
+    }
+
+    throw sourcemeta::core::FileError<sourcemeta::core::SchemaContainerError>(
+        schema_display_path, error);
   } catch (
       const sourcemeta::core::SchemaRelativeMetaschemaResolutionError &error) {
     throw sourcemeta::core::FileError<

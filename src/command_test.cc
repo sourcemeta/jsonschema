@@ -458,6 +458,11 @@ auto parse_test_suite(const sourcemeta::jsonschema::InputJSON &entry,
     // while the positions on hand describe the test document itself
     throw sourcemeta::core::FileError<sourcemeta::core::SchemaReferenceError>{
         entry.resolution_base, error};
+  } catch (const sourcemeta::core::SchemaContainerError &error) {
+    // No position, as what compiles here is the schema the document targets
+    // while the positions on hand describe the test document itself
+    throw sourcemeta::core::FileError<sourcemeta::core::SchemaContainerError>{
+        entry.resolution_base, error};
   } catch (const sourcemeta::core::SchemaReferenceObjectResourceError &error) {
     throw sourcemeta::core::FileError<
         sourcemeta::core::SchemaReferenceObjectResourceError>{

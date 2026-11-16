@@ -370,6 +370,11 @@ auto sourcemeta::jsonschema::metaschema(
       throw sourcemeta::core::FileError<
           sourcemeta::core::SchemaDialectImpossibleError>(entry.resolution_base,
                                                           error);
+    } catch (const sourcemeta::core::SchemaContainerError &error) {
+      // No position, as what gets bundled here is the meta-schema the subject
+      // declares while the positions on hand describe the subject itself
+      throw sourcemeta::core::FileError<sourcemeta::core::SchemaContainerError>(
+          entry.resolution_base, error);
     }
 
     if (summary.failed > failures_before && !continue_on_error) {
