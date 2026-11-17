@@ -455,12 +455,21 @@ inline auto read_stdin_documents(const std::string &input,
   return result;
 }
 
+// Standard input can only be consumed once, so what it held is kept for
+// whoever reads it next. A resolution context is built per thread and reads its
+// inputs again each time, and every one of those reads must see what the first
+// of them saw
+inline auto stdin_contents() -> const std::string & {
+  static const std::string CONTENTS{sourcemeta::core::read_stdin()};
+  return CONTENTS;
+}
+
 // Read the single document standard input is expected to hold
 inline auto
 read_from_stdin(std::string *raw_input = nullptr,
                 const InputFormatting formatting = InputFormatting::Discard)
     -> ParsedJSON {
-  const auto input{sourcemeta::core::read_stdin()};
+  const auto &input{stdin_contents()};
   if (raw_input != nullptr) {
     *raw_input = input;
   }
@@ -596,6 +605,50 @@ handle_input_file(const std::filesystem::path &canonical,
   }
 }
 
+// Which files an argument names, without reading any of them. Every way of
+// taking input settles this the same way, so that what gets taken in cannot
+// depend on how it is then read
+inline auto collect_json_paths(const std::filesystem::path &entry_path,
+                               const std::set<std::filesystem::path> &blacklist,
+                               const std::set<std::string> &extensions,
+                               std::vector<std::filesystem::path> &result)
+    -> void {
+  if (std::filesystem::is_directory(entry_path)) {
+    for (auto const &entry :
+         std::filesystem::recursive_directory_iterator{entry_path}) {
+      auto canonical{sourcemeta::core::weakly_canonical(entry.path())};
+      if (!std::filesystem::is_directory(entry) &&
+          std::any_of(extensions.cbegin(), extensions.cend(),
+                      [&canonical](const auto &extension) {
+                        return extension.empty()
+                                   ? !canonical.has_extension()
+                                   : canonical.string().ends_with(extension);
+                      }) &&
+          std::none_of(blacklist.cbegin(), blacklist.cend(),
+                       [&canonical](const auto &prefix) {
+                         return sourcemeta::core::is_under_path(canonical,
+                                                                prefix);
+                       })) {
+        if (std::filesystem::is_empty(canonical)) {
+          continue;
+        }
+
+        result.push_back(std::move(canonical));
+      }
+    }
+
+    return;
+  }
+
+  auto canonical{sourcemeta::core::weakly_canonical(entry_path)};
+  if (std::none_of(blacklist.cbegin(), blacklist.cend(),
+                   [&canonical](const auto &prefix) {
+                     return sourcemeta::core::is_under_path(canonical, prefix);
+                   })) {
+    result.push_back(std::move(canonical));
+  }
+}
+
 inline auto
 handle_json_entry(const std::filesystem::path &entry_path,
                   const std::set<std::filesystem::path> &blacklist,
@@ -605,8 +658,7 @@ handle_json_entry(const std::filesystem::path &entry_path,
                   const InputFormatting formatting, std::size_t &empty_datasets)
     -> void {
   if (entry_path == "-") {
-    auto documents{
-        read_stdin_documents(sourcemeta::core::read_stdin(), formatting)};
+    auto documents{read_stdin_documents(stdin_contents(), formatting)};
     assert(!documents.empty());
     const auto path{stdin_path()};
     const auto multidocument{documents.size() > 1};
@@ -637,39 +689,10 @@ handle_json_entry(const std::filesystem::path &entry_path,
     return;
   }
 
-  if (std::filesystem::is_directory(entry_path)) {
-    for (auto const &entry :
-         std::filesystem::recursive_directory_iterator{entry_path}) {
-      auto canonical{sourcemeta::core::weakly_canonical(entry.path())};
-      if (!std::filesystem::is_directory(entry) &&
-          std::any_of(extensions.cbegin(), extensions.cend(),
-                      [&canonical](const auto &extension) {
-                        return extension.empty()
-                                   ? !canonical.has_extension()
-                                   : canonical.string().ends_with(extension);
-                      }) &&
-          std::none_of(blacklist.cbegin(), blacklist.cend(),
-                       [&canonical](const auto &prefix) {
-                         return sourcemeta::core::is_under_path(canonical,
-                                                                prefix);
-                       })) {
-        if (std::filesystem::is_empty(canonical)) {
-          continue;
-        }
-
-        handle_input_file(canonical, result, options, formatting,
-                          empty_datasets);
-      }
-    }
-  } else {
-    const auto canonical{sourcemeta::core::weakly_canonical(entry_path)};
-    if (std::none_of(blacklist.cbegin(), blacklist.cend(),
-                     [&canonical](const auto &prefix) {
-                       return sourcemeta::core::is_under_path(canonical,
-                                                              prefix);
-                     })) {
-      handle_input_file(canonical, result, options, formatting, empty_datasets);
-    }
+  std::vector<std::filesystem::path> paths;
+  collect_json_paths(entry_path, blacklist, extensions, paths);
+  for (const auto &path : paths) {
+    handle_input_file(path, result, options, formatting, empty_datasets);
   }
 }
 
@@ -683,6 +706,55 @@ check_no_duplicate_stdin(const std::vector<std::string_view> &arguments)
   }
 }
 
+// The ignore rules every argument contributes, settled before any of them is
+// taken in, as what one argument's configuration ignores holds for all of them
+inline auto accumulate_ignore(const std::vector<std::string_view> &arguments,
+                              const sourcemeta::core::Options &options)
+    -> std::set<std::filesystem::path> {
+  auto blacklist{parse_ignore(options)};
+  std::unordered_set<std::string> seen_configurations;
+  for (const auto &argument : arguments) {
+    // Skip stdin when looking for configurations
+    if (argument == "-") {
+      continue;
+    }
+
+    const auto argument_path{
+        sourcemeta::core::weakly_canonical(std::filesystem::path{argument})};
+    const auto configuration_path{
+        find_configuration(options, std::filesystem::is_directory(argument_path)
+                                        ? argument_path
+                                        : argument_path.parent_path())};
+    if (configuration_path.has_value() &&
+        seen_configurations.insert(configuration_path.value().string())
+            .second) {
+      merge_configuration_ignore(configuration_path.value(), blacklist,
+                                 options);
+    }
+  }
+
+  return blacklist;
+}
+
+// The extensions in force for one argument, which its own configuration
+// settles
+inline auto argument_extensions(const std::string_view argument,
+                                const sourcemeta::core::Options &options)
+    -> const std::set<std::string> & {
+  std::optional<std::filesystem::path> configuration_path{std::nullopt};
+  if (argument != "-") {
+    const auto argument_path{
+        sourcemeta::core::weakly_canonical(std::filesystem::path{argument})};
+    configuration_path =
+        find_configuration(options, std::filesystem::is_directory(argument_path)
+                                        ? argument_path
+                                        : argument_path.parent_path());
+  }
+
+  return parse_extensions(options,
+                          load_configuration(options, configuration_path));
+}
+
 inline auto for_each_json(const std::vector<std::string_view> &arguments,
                           const sourcemeta::core::Options &options,
                           const InputRequirement requirement,
@@ -691,10 +763,10 @@ inline auto for_each_json(const std::vector<std::string_view> &arguments,
     -> std::vector<InputJSON> {
   check_no_duplicate_stdin(arguments);
 
-  auto blacklist{parse_ignore(options)};
   std::vector<InputJSON> result;
 
   if (arguments.empty()) {
+    auto blacklist{parse_ignore(options)};
     const auto current_path{std::filesystem::current_path()};
     const auto configuration_path{find_configuration(options, current_path)};
     const auto &configuration{read_configuration(options, configuration_path)};
@@ -732,41 +804,9 @@ inline auto for_each_json(const std::vector<std::string_view> &arguments,
     std::sort(result.begin(), result.end(),
               [](const auto &left, const auto &right) { return left < right; });
   } else {
-    std::unordered_set<std::string> seen_configurations;
+    const auto blacklist{accumulate_ignore(arguments, options)};
     for (const auto &entry : arguments) {
-      // Skip stdin when looking for configurations
-      if (entry == "-") {
-        continue;
-      }
-
-      const auto entry_path{
-          sourcemeta::core::weakly_canonical(std::filesystem::path{entry})};
-      const auto configuration_path{
-          find_configuration(options, std::filesystem::is_directory(entry_path)
-                                          ? entry_path
-                                          : entry_path.parent_path())};
-      if (configuration_path.has_value() &&
-          seen_configurations.insert(configuration_path.value().string())
-              .second) {
-        merge_configuration_ignore(configuration_path.value(), blacklist,
-                                   options);
-      }
-    }
-
-    for (const auto &entry : arguments) {
-      std::optional<std::filesystem::path> entry_configuration_path{
-          std::nullopt};
-      if (entry != "-") {
-        const auto entry_path{
-            sourcemeta::core::weakly_canonical(std::filesystem::path{entry})};
-        entry_configuration_path = find_configuration(
-            options, std::filesystem::is_directory(entry_path)
-                         ? entry_path
-                         : entry_path.parent_path());
-      }
-      const auto &entry_configuration{
-          load_configuration(options, entry_configuration_path)};
-      const auto &extensions{parse_extensions(options, entry_configuration)};
+      const auto &extensions{argument_extensions(entry, options)};
       const auto before{result.size()};
       handle_json_entry(entry, blacklist, extensions, result, options,
                         formatting, empty_datasets);
@@ -792,6 +832,58 @@ inline auto report_empty_datasets(const std::size_t empty_datasets) -> void {
   for (std::size_t index = 0; index < empty_datasets; index++) {
     LOG_WARNING() << "The JSONL file is empty\n";
   }
+}
+
+// Take in each input one at a time, so that what is held at once is one
+// document rather than every one of them. This is what lets a resolution
+// context be built over a large directory without holding all of it, as an
+// input that nothing goes on to name is read for what it declares and then let
+// go. Standard input is the exception, as there is no reading it back, so
+// whoever takes it is the one that keeps it
+template <typename Sink>
+inline auto
+for_each_json_streaming(const std::vector<std::string_view> &arguments,
+                        const sourcemeta::core::Options &options,
+                        const Sink &sink) -> void {
+  check_no_duplicate_stdin(arguments);
+  const auto blacklist{accumulate_ignore(arguments, options)};
+  std::size_t empty_datasets{0};
+
+  for (const auto &argument : arguments) {
+    const auto &extensions{argument_extensions(argument, options)};
+
+    if (argument == "-") {
+      std::vector<InputJSON> entries;
+      handle_json_entry(argument, blacklist, extensions, entries, options,
+                        InputFormatting::Discard, empty_datasets);
+      for (auto &entry : entries) {
+        sink(std::move(entry));
+      }
+
+      continue;
+    }
+
+    std::vector<std::filesystem::path> paths;
+    collect_json_paths(std::filesystem::path{argument}, blacklist, extensions,
+                       paths);
+    // The order the whole-vector form settles on, which it reaches by sorting
+    // what it has read rather than what it is about to read
+    std::sort(paths.begin(), paths.end(),
+              [](const auto &left, const auto &right) {
+                return left.generic_string() < right.generic_string();
+              });
+
+    for (const auto &path : paths) {
+      std::vector<InputJSON> entries;
+      handle_input_file(path, entries, options, InputFormatting::Discard,
+                        empty_datasets);
+      for (auto &entry : entries) {
+        sink(std::move(entry));
+      }
+    }
+  }
+
+  report_empty_datasets(empty_datasets);
 }
 
 inline auto for_each_json(const std::vector<std::string_view> &arguments,

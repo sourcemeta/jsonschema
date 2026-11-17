@@ -563,18 +563,6 @@ static inline auto identifier_file(const std::string &identifier)
   return uri.value().to_path();
 }
 
-// The `--resolve` inputs, parsed once for the whole process. Every thread
-// builds an index of its own over these, as indexing is cheap and an index no
-// thread shares needs no locking, but reading the inputs is not repeatable:
-// standard input can only be consumed once, and parsing every file again for
-// each thread would be waste
-inline auto resolve_inputs(const sourcemeta::core::Options &options)
-    -> const std::vector<InputJSON> & {
-  static const std::vector<InputJSON> ENTRIES{
-      for_each_json(options.at("resolve"), options)};
-  return ENTRIES;
-}
-
 class CustomResolver {
 public:
   CustomResolver(
@@ -600,9 +588,16 @@ public:
       this->remote_ = false;
       this->indexing_ = true;
 
-      for (const auto &entry : resolve_inputs(options)) {
-        this->index_entry(entry, default_dialect);
-      }
+      // One input is read, indexed and let go before the next is read, so
+      // that what is held at once is one document rather than every one of
+      // them. What an input declares is all the index keeps, and reading it
+      // again on demand is what answers for it. Standard input is the one that
+      // cannot be read again, and what it held is kept for every thread that
+      // builds a context of its own
+      for_each_json_streaming(options.at("resolve"), options,
+                              [this, default_dialect](InputJSON &&entry) {
+                                this->index_entry(entry, default_dialect);
+                              });
 
       this->indexing_ = false;
       this->remote_ = allow_remote;
