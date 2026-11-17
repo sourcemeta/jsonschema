@@ -7,6 +7,7 @@
 #include <string>       // std::string
 #include <string_view>  // std::string_view
 #include <system_error> // std::error_code
+#include <utility>      // std::move
 
 namespace {
 
@@ -56,6 +57,36 @@ auto Configuration::add_dependency(const sourcemeta::core::URI &uri,
   }
 
   this->dependencies.emplace(canonical_uri, path);
+}
+
+auto Configuration::add_resolve(
+    const sourcemeta::core::JSON::String &identifier,
+    const sourcemeta::core::JSON::String &target) -> void {
+  // Keys are canonicalized here, once, rather than on every lookup, which
+  // would make resolution linear in the size of the mapping for each reference
+  auto canonical_identifier{
+      sourcemeta::core::URI::try_canonicalize(identifier)};
+  if (!canonical_identifier.has_value()) [[unlikely]] {
+    throw ConfigurationParseError(
+        "The keys in the resolve object must represent valid URIs",
+        sourcemeta::core::Pointer({"resolve", identifier}));
+  }
+
+  auto canonical_target{sourcemeta::core::URI::try_canonicalize(target)};
+  if (!canonical_target.has_value()) [[unlikely]] {
+    throw ConfigurationParseError(
+        "The values in the resolve object must represent valid URIs",
+        sourcemeta::core::Pointer({"resolve", identifier}));
+  }
+
+  const auto inserted{
+      this->resolve.emplace(std::move(canonical_identifier).value(),
+                            std::move(canonical_target).value())};
+  if (!inserted.second) [[unlikely]] {
+    throw ConfigurationParseError(
+        "Two keys in the resolve object denote the same URI",
+        sourcemeta::core::Pointer({"resolve", identifier}));
+  }
 }
 
 auto Configuration::find(const std::filesystem::path &path)

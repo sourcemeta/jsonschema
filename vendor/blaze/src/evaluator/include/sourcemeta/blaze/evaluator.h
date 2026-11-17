@@ -53,7 +53,7 @@ struct Template {
 };
 
 /// @ingroup evaluator
-constexpr std::size_t JSON_VERSION{18};
+constexpr std::size_t JSON_VERSION{19};
 
 /// @ingroup evaluator
 /// Parse a template from JSON
@@ -121,12 +121,8 @@ public:
     assert(this->instance_location.empty());
     assert(this->binding_undo.empty());
 
-    if (schema.frames) [[unlikely]] {
-      this->evaluated.clear();
-      return this->evaluate_impl<true, false>(schema, instance, nullptr);
-    } else {
-      return this->evaluate_impl<false, false>(schema, instance, nullptr);
-    }
+    this->evaluated.clear();
+    return this->evaluate_impl<false>(schema, instance, nullptr);
   }
 
   /// This method evaluates a schema compiler template, executing the given
@@ -194,18 +190,12 @@ public:
     assert(this->evaluate_path.empty());
     assert(this->instance_location.empty());
     assert(this->binding_undo.empty());
-
-    if (schema.frames) [[unlikely]] {
-      this->evaluated.clear();
-      return this->evaluate_impl<true, true>(schema, instance, &callback);
-    } else {
-      assert(this->evaluated.empty());
-      return this->evaluate_impl<false, true>(schema, instance, &callback);
-    }
+    this->evaluated.clear();
+    return this->evaluate_impl<true>(schema, instance, &callback);
   }
 
 #ifndef DOXYGEN
-  template <bool Frames, bool HasCallback>
+  template <bool HasCallback>
   auto evaluate_impl(const Template &schema,
                      const sourcemeta::core::JSON &instance,
                      const Callback *callback) -> bool;
@@ -318,18 +308,17 @@ public:
 
 #include <sourcemeta/blaze/evaluator_dispatch.h>
 
-template <bool Frames, bool HasCallback>
+template <bool HasCallback>
 auto sourcemeta::blaze::Evaluator::evaluate_impl(
     const Template &schema, const sourcemeta::core::JSON &instance,
     const Callback *callback) -> bool {
   assert(!schema.targets.empty());
   assert(schema.target_bindings.size() == schema.targets.size());
-  dispatch::DispatchContext<Frames, HasCallback> context{.schema = &schema,
-                                                         .callback = callback,
-                                                         .evaluator = this,
-                                                         .property_target =
-                                                             nullptr,
-                                                         .frame = 0};
+  dispatch::DispatchContext<HasCallback> context{.schema = &schema,
+                                                 .callback = callback,
+                                                 .evaluator = this,
+                                                 .property_target = nullptr,
+                                                 .frame = 0};
 
   if (!schema.anchors.empty()) [[unlikely]] {
     this->enter_entrypoint_resource(schema);

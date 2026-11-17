@@ -227,6 +227,12 @@ struct Context {
   const bool collects_annotations;
   /// The list of unevaluated entries and their dependencies
   const SchemaUnevaluatedEntries unevaluated;
+  /// Whether the schema declares `unevaluatedItems` anywhere at all
+  // TODO: This should go away if we start properly compiling
+  // `unevaluatedItems` like we compile `unevaluatedProperties`, as the
+  // dependencies of the former are not traced, so any occurrence of it
+  // anywhere forces every enclosing instruction to keep track of evaluation
+  const bool defines_unevaluated_items;
   /// The set of tweaks for the compiler
   const Tweaks tweaks;
   /// All possible reference targets (key includes is_property_name context)

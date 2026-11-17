@@ -17,13 +17,13 @@ RUN compile $CWD/schema.json --verbose STDIN /dev/null IN . INTO result.txt EXPE
 
 WRITE expected.txt UNTIL EOF
 1> [
-1>   18,
+1>   19,
 1>   false,
 1>   false,
 1>   [
 1>     [
 1>       [
-1>         72,
+1>         75,
 1>         [ "additionalProperties" ],
 1>         [],
 1>         "https://example.com/#/additionalProperties",

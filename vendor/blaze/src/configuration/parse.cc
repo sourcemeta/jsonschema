@@ -152,27 +152,7 @@ auto Configuration::from_json(const sourcemeta::core::JSON &value,
                            "The values in the resolve object must be strings",
                            sourcemeta::core::Pointer({"resolve", pair.first}));
 
-      // Keys are canonicalized here, once, rather than on every lookup, which
-      // would make resolution linear in the size of the mapping for each
-      // reference
-      auto key{sourcemeta::core::URI::try_canonicalize(pair.first)};
-      CONFIGURATION_ENSURE(
-          key.has_value(),
-          "The keys in the resolve object must represent valid URIs",
-          sourcemeta::core::Pointer({"resolve", pair.first}));
-
-      auto target{
-          sourcemeta::core::URI::try_canonicalize(pair.second.to_string())};
-      CONFIGURATION_ENSURE(
-          target.has_value(),
-          "The values in the resolve object must represent valid URIs",
-          sourcemeta::core::Pointer({"resolve", pair.first}));
-
-      const auto inserted{result.resolve.emplace(std::move(key).value(),
-                                                 std::move(target).value())};
-      CONFIGURATION_ENSURE(inserted.second,
-                           "Two keys in the resolve object denote the same URI",
-                           sourcemeta::core::Pointer({"resolve", pair.first}));
+      result.add_resolve(pair.first, pair.second.to_string());
     }
   }
 

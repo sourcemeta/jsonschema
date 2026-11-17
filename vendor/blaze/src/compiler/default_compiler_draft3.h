@@ -2370,8 +2370,10 @@ auto compiler_draft3_validation_type(const KeywordContext &context,
                                      std::move(branch)));
         }
 
-        return {make(InstructionIndex::LogicalOr, context, ValueBoolean{false},
-                     std::move(disjunctors))};
+        return {make(tracks_evaluation(context)
+                         ? InstructionIndex::LogicalOrEvaluate
+                         : InstructionIndex::LogicalOr,
+                     context, ValueBoolean{false}, std::move(disjunctors))};
       }
     }
   }

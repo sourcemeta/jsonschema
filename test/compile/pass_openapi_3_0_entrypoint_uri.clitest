@@ -17,7 +17,7 @@ REPLACE $CWD_URI WITH '[CWD_URI]' IN result_0.txt
 
 WRITE expected_0.txt UNTIL EOF
 1> [
-1>   18,
+1>   19,
 1>   false,
 1>   false,
 1>   [

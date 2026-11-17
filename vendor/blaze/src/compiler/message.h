@@ -775,6 +775,7 @@ inline auto message_template(const Instruction &instruction,
       return "The {0} value was expected to not validate against the given "
              "subschema";
     case InstructionIndex::LogicalOr:
+    case InstructionIndex::LogicalOrEvaluate:
       return std::string{"The {0} value was expected to validate against "}
           .append(message_subschemas(instruction.children.size(),
                                      "at least one of "));
@@ -795,10 +796,12 @@ inline auto message_template(const Instruction &instruction,
                                  "against the given conditional"
                                : "";
     case InstructionIndex::LogicalXor:
+    case InstructionIndex::LogicalXorEvaluate:
       return std::string{"{0} was expected to validate against "}.append(
           message_subschemas(instruction.children.size(),
                              "one and only one of "));
     case InstructionIndex::LogicalCondition:
+    case InstructionIndex::LogicalConditionEvaluate:
       return "The {0} value was expected to validate against the given "
              "conditional";
     case InstructionIndex::LogicalWhenType:

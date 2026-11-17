@@ -602,6 +602,14 @@ inline auto requires_evaluation(const KeywordContext &context) -> bool {
   return requires_evaluation(context.global, absolute_schema_pointer(context));
 }
 
+// Whether an evaluation mark made underneath this keyword can be observed,
+// which is what decides between an instruction that keeps track of evaluation
+// and the cheaper one that does not
+inline auto tracks_evaluation(const KeywordContext &context) -> bool {
+  return requires_evaluation(context) ||
+         context.global.defines_unevaluated_items;
+}
+
 inline auto annotations_enabled(const KeywordContext &context,
                                 const std::string_view keyword) -> bool {
   if (context.global.tweaks.annotations.has_value()) {

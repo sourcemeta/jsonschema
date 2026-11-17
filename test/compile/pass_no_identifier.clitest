@@ -14,7 +14,7 @@ RUN compile foo/bar/baz/qux/very/long/path/foo/bar/baz/qux/schema.json STDIN /de
 REPLACE $CWD_URI WITH '[CWD_URI]' IN result.txt
 WRITE expected.txt UNTIL EOF
 1> [
-1>   18,
+1>   19,
 1>   false,
 1>   false,
 1>   [
@@ -42,7 +42,7 @@ WRITE expected.txt UNTIL EOF
 1>         [ 1, "Test" ]
 1>       ],
 1>       [
-1>         72,
+1>         75,
 1>         [ "additionalProperties" ],
 1>         [],
 1>         "[CWD_URI]/foo/bar/baz/qux/very/long/path/foo/bar/baz/qux/schema.json#/additionalProperties",

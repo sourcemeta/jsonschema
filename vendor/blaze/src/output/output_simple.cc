@@ -19,11 +19,14 @@ SimpleOutput::SimpleOutput(const Template &schema_template,
 auto SimpleOutput::mask_kind(const Instruction &step) noexcept -> MaskKind {
   switch (step.type) {
     case InstructionIndex::LogicalOr:
+    case InstructionIndex::LogicalOrEvaluate:
     case InstructionIndex::LogicalXor:
+    case InstructionIndex::LogicalXorEvaluate:
       return MaskKind::Disjunction;
     case InstructionIndex::LoopContains:
       return MaskKind::Element;
     case InstructionIndex::LogicalCondition:
+    case InstructionIndex::LogicalConditionEvaluate:
     case InstructionIndex::LogicalNot:
     case InstructionIndex::LogicalNotEvaluate:
       return MaskKind::Subschema;
@@ -228,7 +231,7 @@ auto SimpleOutput::operator()(
     }
   }
 
-  if (step.type == InstructionIndex::LogicalCondition) {
+  if (is_conditional(step.type)) {
     return;
   }
   auto *target{this->destination(evaluate_path)};

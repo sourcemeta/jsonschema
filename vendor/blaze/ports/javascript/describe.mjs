@@ -30,7 +30,8 @@ import {
   ANNOTATION_EMIT, ANNOTATION_EMIT_WRAPPED, ANNOTATION_TO_PARENT, ANNOTATION_BASENAME_TO_PARENT,
   EVALUATE,
   LOGICAL_NOT, LOGICAL_NOT_EVALUATE,
-  LOGICAL_OR, LOGICAL_AND, LOGICAL_XOR, LOGICAL_CONDITION,
+  LOGICAL_OR, LOGICAL_OR_EVALUATE, LOGICAL_AND, LOGICAL_XOR,
+  LOGICAL_XOR_EVALUATE, LOGICAL_CONDITION, LOGICAL_CONDITION_EVALUATE,
   LOGICAL_WHEN_TYPE, LOGICAL_WHEN_DEFINES, LOGICAL_WHEN_ARRAY_SIZE_GREATER,
   LOOP_PROPERTIES_UNEVALUATED, LOOP_PROPERTIES_UNEVALUATED_EXCEPT,
   LOOP_PROPERTIES_MATCH, LOOP_PROPERTIES_MATCH_CLOSED,
@@ -529,13 +530,14 @@ export function describe(valid, instruction, evaluatePath,
     return renderMessage(instruction.message, [ typeName(targetType) ]);
   }
 
-  if (opcode === LOGICAL_OR || opcode === LOGICAL_AND ||
-      opcode === LOGICAL_CONDITION || opcode === LOGICAL_NOT ||
+  if (opcode === LOGICAL_OR || opcode === LOGICAL_OR_EVALUATE ||
+      opcode === LOGICAL_AND || opcode === LOGICAL_CONDITION ||
+      opcode === LOGICAL_CONDITION_EVALUATE || opcode === LOGICAL_NOT ||
       opcode === LOGICAL_NOT_EVALUATE) {
     return renderMessage(instruction.message, [ typeName(targetType) ]);
   }
 
-  if (opcode === LOGICAL_XOR) {
+  if (opcode === LOGICAL_XOR || opcode === LOGICAL_XOR_EVALUATE) {
     return renderMessage(instruction.message,
                          [ describeSubject(property, instanceLocation,
                                            target, false) ]);
