@@ -564,8 +564,8 @@ static inline auto identifier_file(const std::string &identifier)
   return uri.value().to_path();
 }
 
-// What a resolver is cached under, and with it the index that resolver answers
-// from, as two resolvers that agree on both of these answer from one index
+// What a resolver is cached under, and with it the reading of the `--resolve`
+// inputs that two resolvers agreeing on both of these have in common
 using ResolverCacheKey = std::pair<bool, std::string>;
 
 class CustomResolver {
@@ -580,49 +580,59 @@ public:
                 ? canonical_resolve_map(configuration->resolve)
                 : std::unordered_map<std::string, std::string>{}},
         default_dialect_{default_dialect}, remote_{remote} {
-    // Settling the index means reading every input end to end, which is
-    // neither cheap nor repeatable: standard input can only be consumed once,
-    // and a file read again is a file read again. One index therefore serves
-    // the whole process, and a thread that wants one is handed what is already
-    // there rather than reading everything a second time. Nothing past
-    // construction changes an index, so handing it over is all there is to
-    // guard, while what resolution goes on to read and register stays private
-    // to the thread that read it
+    // Indexing the `--resolve` inputs means reading every one of them end to
+    // end, which is neither cheap nor repeatable: standard input can only be
+    // consumed once, and a file read again is a file read again. What those
+    // inputs answer for depends on nothing but the arguments and the default
+    // dialect, both of which this key already settles, so one reading of them
+    // serves the whole process and a thread that wants it is handed what is
+    // already there. Nothing past construction changes an index, so handing it
+    // over is all there is to guard, while what resolution goes on to read and
+    // register stays private to the thread that read it
     auto &shared{
         shared_index(ResolverCacheKey{remote, std::string{default_dialect}})};
-    const std::scoped_lock lock{shared.mutex};
-    if (shared.indexed) {
-      this->index_ = shared.index;
-      return;
+    {
+      const std::scoped_lock lock{shared.mutex};
+      if (shared.indexed) {
+        this->index_ = shared.index;
+      } else {
+        if (options.contains("resolve")) {
+          // Reading a file end to end is what vets it, and resolution only
+          // ever needs the files that something names, so an input is recorded
+          // here by the one identity it answers for and read again on demand.
+          // Settling that identity never asks the network, so that a file
+          // indexed before the one declaring its dialect goes by what its own
+          // root spells rather than by what a fetch for that dialect would
+          // turn up. An index that is complete before any resolution runs is
+          // then what keeps the network from ever shadowing a schema the user
+          // supplied locally
+          const auto allow_remote{this->remote_};
+          this->remote_ = false;
+          this->indexing_ = true;
+
+          // One input is read, indexed and let go before the next is read, so
+          // that what is held at once is one document rather than every one of
+          // them. What an input declares is all the index keeps, and reading
+          // it again on demand is what answers for it
+          for_each_json_streaming(options.at("resolve"), options,
+                                  [this, default_dialect](InputJSON &&entry) {
+                                    this->index_entry(std::move(entry),
+                                                      default_dialect);
+                                  });
+
+          this->indexing_ = false;
+          this->remote_ = allow_remote;
+        }
+
+        shared.index = this->index_;
+        shared.indexed = true;
+      }
     }
 
-    if (options.contains("resolve")) {
-      // Reading a file end to end is what vets it, and resolution only ever
-      // needs the files that something names, so an input is recorded here by
-      // the one identity it answers for and read again on demand. Settling
-      // that identity never asks the network, so that a file indexed before
-      // the one declaring its dialect goes by what its own root spells rather
-      // than by what a fetch for that dialect would turn up. An index that is
-      // complete before any resolution runs is then what keeps the network
-      // from ever shadowing a schema the user supplied locally
-      const auto allow_remote{this->remote_};
-      this->remote_ = false;
-      this->indexing_ = true;
-
-      // One input is read, indexed and let go before the next is read, so
-      // that what is held at once is one document rather than every one of
-      // them. What an input declares is all the index keeps, and reading it
-      // again on demand is what answers for it
-      for_each_json_streaming(options.at("resolve"), options,
-                              [this, default_dialect](InputJSON &&entry) {
-                                this->index_entry(std::move(entry),
-                                                  default_dialect);
-                              });
-
-      this->indexing_ = false;
-      this->remote_ = allow_remote;
-    }
-
+    // Which dependencies are installed is the business of one configuration
+    // rather than of the process, so these are indexed here however the
+    // reading above was settled. They go in after the inputs the user named,
+    // as an identity those already answer for is theirs
     if (this->configuration_.has_value()) {
       for (const auto &[dependency_uri, dependency_path] :
            this->configuration_.value().dependencies) {
@@ -654,9 +664,6 @@ public:
                                   .answers_with_contents = true});
       }
     }
-
-    shared.index = this->index_;
-    shared.indexed = true;
   }
 
   // Prevent accidental copies, as every schema this imported would come
@@ -1650,9 +1657,9 @@ private:
     }
   }
 
-  // One index, and what says whether anyone has settled it yet. Reading the
-  // inputs is what settles it, so whoever gets here first does that reading
-  // while the rest wait for the answer
+  // What the `--resolve` inputs answer for, and whether anyone has read them
+  // yet. Reading them is what settles this, so whoever gets here first does
+  // that reading while the rest wait for the answer
   struct SharedIndex {
     std::mutex mutex;
     std::map<std::string, Leaf> index;
@@ -1717,8 +1724,9 @@ inline auto resolver_instance(
   // One resolver per thread, as resolution reads files and registers what
   // they declare as it goes, and a context several threads register into at
   // once is one none of them can rely on. What the threads do share is the
-  // index, which reading the inputs settles once and nothing changes after, so
-  // a thread only ever reads the files that the work it was given names
+  // reading of the `--resolve` inputs, which happens once and settles nothing
+  // that a configuration can disagree with, so a thread only ever reads the
+  // files that the work it was given names
   thread_local std::map<ResolverCacheKey, CustomResolver> resolver_cache;
   const ResolverCacheKey cache_key{remote, std::string{default_dialect}};
   const auto match{resolver_cache.find(cache_key)};
