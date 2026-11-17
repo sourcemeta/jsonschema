@@ -1,0 +1,43 @@
+WRITE schema.json UNTIL EOF
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Test",
+  "description": "Test schema",
+  "examples": [ "John" ],
+  "type": "string"
+}
+EOF
+
+WRITE present.json UNTIL EOF
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "string"
+}
+EOF
+
+// The first key only differs from the second one by the extension that
+// identifier lookups try on their own
+WRITE jsonschema.json UNTIL EOF
+{
+  "resolve": {
+    "https://example.com/a/.": "./does-not-exist.json",
+    "https://example.com/a/..json": "./present.json"
+  }
+}
+EOF
+
+// Other input error
+RUN lint schema.json STDIN /dev/null IN . INTO result_0.txt EXPECTING 6
+
+REPLACE $CWD WITH '[CWD]' IN result_0.txt
+
+WRITE expected_0.txt UNTIL EOF
+2> error: The resolve target does not exist on the filesystem
+2>   at resolve path [CWD]/does-not-exist.json
+2>   at line 3
+2>   at column 5
+2>   at file path [CWD]/jsonschema.json
+2>   at location "/resolve/https:~1~1example.com~1a~1."
+EOF
+
+COMPARE result_0.txt AGAINST expected_0.txt

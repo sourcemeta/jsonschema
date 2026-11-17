@@ -52,6 +52,11 @@ inline auto find_configuration(const sourcemeta::core::Options &options,
   return sourcemeta::blaze::Configuration::find(path);
 }
 
+// Whether to confirm that every relative `resolve` target exists on the
+// filesystem. The `install` command reads configurations whose targets it is
+// itself about to create, so it cannot hold them to that
+enum class ResolveTargetCheck : std::uint8_t { Skip, Perform };
+
 // Reading a configuration file with its positions on hand, so that whatever
 // is wrong with it is pointed at rather than merely named. The tracker and the
 // storage behind it belong to the caller, as a caller that goes on to report
@@ -59,7 +64,8 @@ inline auto find_configuration(const sourcemeta::core::Options &options,
 inline auto read_configuration_file(
     const std::filesystem::path &configuration_path,
     sourcemeta::core::PointerPositionTracker &positions,
-    const std::shared_ptr<std::deque<std::string>> &property_storage)
+    const std::shared_ptr<std::deque<std::string>> &property_storage,
+    const ResolveTargetCheck resolve_target_check)
     -> sourcemeta::blaze::Configuration {
   try {
     const auto contents{
@@ -84,11 +90,18 @@ inline auto read_configuration_file(
     // Walking the document rather than the parsed mapping, as the latter keys
     // every entry on the canonical form of the key, and only the spelling the
     // author chose has a position to point at
-    if (config_json.defines("resolve")) {
+    if (resolve_target_check == ResolveTargetCheck::Perform &&
+        config_json.defines("resolve")) {
       for (const auto &entry : config_json.at("resolve").as_object()) {
-        const auto *resolve_value{configuration.find_resolve(entry.first)};
-        assert(resolve_value != nullptr);
-        const sourcemeta::core::URI value_uri{*resolve_value};
+        // Canonicalising the key the same way the parser did on insertion, as
+        // an identifier lookup also matches keys that merely differ by their
+        // extension, which is another entry with another target
+        const auto canonical_uri{
+            sourcemeta::core::URI::try_canonicalize(entry.first)};
+        assert(canonical_uri.has_value());
+        const auto match{configuration.resolve.find(canonical_uri.value())};
+        assert(match != configuration.resolve.cend());
+        const sourcemeta::core::URI value_uri{match->second};
         if (!value_uri.is_relative()) {
           continue;
         }
@@ -151,8 +164,9 @@ inline auto load_configuration(
     }
     sourcemeta::core::PointerPositionTracker positions;
     auto property_storage = std::make_shared<std::deque<std::string>>();
-    result = read_configuration_file(configuration_path.value(), positions,
-                                     property_storage);
+    result =
+        read_configuration_file(configuration_path.value(), positions,
+                                property_storage, ResolveTargetCheck::Perform);
 
     assert(result.has_value());
 
