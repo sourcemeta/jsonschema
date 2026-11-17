@@ -353,8 +353,9 @@ auto sourcemeta::jsonschema::install(const sourcemeta::core::Options &options)
       try {
         sourcemeta::core::PointerPositionTracker positions;
         auto property_storage = std::make_shared<std::deque<std::string>>();
-        add_configuration = read_configuration_file(
-            configuration_path.value(), positions, property_storage);
+        add_configuration =
+            read_configuration_file(configuration_path.value(), positions,
+                                    property_storage, ResolveTargetCheck::Skip);
       } catch (const sourcemeta::core::JSONParseError &error) {
         throw sourcemeta::core::JSONFileParseError(configuration_path.value(),
                                                    error);
@@ -424,8 +425,9 @@ auto sourcemeta::jsonschema::install(const sourcemeta::core::Options &options)
   try {
     sourcemeta::core::PointerPositionTracker positions;
     auto property_storage = std::make_shared<std::deque<std::string>>();
-    configuration = read_configuration_file(configuration_path.value(),
-                                            positions, property_storage);
+    configuration =
+        read_configuration_file(configuration_path.value(), positions,
+                                property_storage, ResolveTargetCheck::Skip);
   } catch (const sourcemeta::core::JSONParseError &error) {
     throw sourcemeta::core::JSONFileParseError(configuration_path.value(),
                                                error);
