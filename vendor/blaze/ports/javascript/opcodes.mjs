@@ -103,8 +103,10 @@ export const CONTROL_GROUP_WHEN_DEFINES_DIRECT = 101;
 export const CONTROL_GROUP_WHEN_TYPE = 102;
 export const CONTROL_EVALUATE = 103;
 export const CONTROL_FRAME = 104;
-export const CONTROL_DYNAMIC_ANCHOR_JUMP = 105;
-export const CONTROL_JUMP = 106;
+export const CONTROL_RESOURCE = 105;
+export const CONTROL_DYNAMIC_ANCHOR_JUMP = 106;
+export const CONTROL_JUMP = 107;
+export const CONTROL_RESOURCE_JUMP = 108;
 
 export const INSTRUCTION_NAMES = {
   "AssertionFail": ASSERTION_FAIL,
@@ -212,8 +214,10 @@ export const INSTRUCTION_NAMES = {
   "ControlGroupWhenType": CONTROL_GROUP_WHEN_TYPE,
   "ControlEvaluate": CONTROL_EVALUATE,
   "ControlFrame": CONTROL_FRAME,
+  "ControlResource": CONTROL_RESOURCE,
   "ControlDynamicAnchorJump": CONTROL_DYNAMIC_ANCHOR_JUMP,
   "ControlJump": CONTROL_JUMP,
+  "ControlResourceJump": CONTROL_RESOURCE_JUMP,
   "Annotation": -1
 };
 

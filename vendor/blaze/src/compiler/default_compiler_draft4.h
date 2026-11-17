@@ -44,9 +44,7 @@ auto compiler_draft4_applicator_allof(const KeywordContext &context,
 
   Instructions children;
 
-  if (context.mode() == Mode::FastValidation &&
-      // TODO: Make this work with `$dynamicRef`
-      !context.global.uses_dynamic_scopes) {
+  if (context.mode() == Mode::FastValidation) {
     for (std::uint64_t index = 0; index < context.value().size(); index++) {
       for (auto &&step : compile(
                context,

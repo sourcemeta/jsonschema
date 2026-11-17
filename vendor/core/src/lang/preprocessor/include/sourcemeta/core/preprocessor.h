@@ -9,4 +9,12 @@
 #define SOURCEMETA_FORCEINLINE
 #endif
 
+#if defined(__GNUC__) || defined(__clang__)
+#define SOURCEMETA_NOINLINE [[gnu::noinline]]
+#elif defined(_MSC_VER)
+#define SOURCEMETA_NOINLINE [[msvc::noinline]]
+#else
+#define SOURCEMETA_NOINLINE
+#endif
+
 #endif

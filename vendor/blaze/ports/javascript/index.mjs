@@ -3,11 +3,12 @@ import {
   isWrappedAnnotationOpcode,
   ASSERTION_EQUALS_ANY,
   CONTROL_GROUP as CONTROL_GROUP_START,
-  CONTROL_FRAME as CONTROL_PASS_THROUGH_END,
-  CONTROL_JUMP, CONTROL_DYNAMIC_ANCHOR_JUMP
+  CONTROL_RESOURCE as CONTROL_PASS_THROUGH_END,
+  CONTROL_JUMP, CONTROL_DYNAMIC_ANCHOR_JUMP, CONTROL_RESOURCE,
+  CONTROL_RESOURCE_JUMP
 } from './opcodes.mjs';
 
-const JSON_VERSION = 17;
+const JSON_VERSION = 18;
 const DEPTH_LIMIT = 300;
 const URI_REGEX = /^[a-zA-Z][a-zA-Z0-9+\-.]*:[^\s]*$/;
 
@@ -64,7 +65,7 @@ function resolveInstance(instance, relativeInstanceLocation) {
   return current;
 }
 
-function prepareInstruction(instruction, messages) {
+function prepareInstruction(instruction, messages, anchors) {
   // The compiled template carries this instruction's message template indices
   // at 6 and 7, where zero means it has none. Resolving them against the pool
   // here leaves the instruction in the shape the rest of this port indexes it
@@ -153,12 +154,19 @@ function prepareInstruction(instruction, messages) {
     instruction.push(undefined);
   }
 
+  // The name a dynamic reference carries is interned, and `describe` has no
+  // template to resolve it against, so it travels on the instruction as the
+  // message templates do
+  if (instruction[0] === CONTROL_DYNAMIC_ANCHOR_JUMP) {
+    instruction.anchor = anchors[instruction[6][0]];
+  }
+
   instruction.push(handlers[opcode] || null);
 
   const children = instruction[7];
   if (children) {
     for (let index = 0; index < children.length; index++) {
-      prepareInstruction(children[index], messages);
+      prepareInstruction(children[index], messages, anchors);
     }
   }
 }
@@ -171,6 +179,11 @@ function resolveJumpTargets(instructions, targets) {
       if (targetIndex < targets.length) {
         instruction[6] = targets[targetIndex];
       }
+    } else if (instruction[0] === CONTROL_RESOURCE_JUMP) {
+      const targetIndex = instruction[6][0];
+      if (targetIndex < targets.length) {
+        instruction[6] = [targets[targetIndex], instruction[6][1]];
+      }
     }
     const children = instruction[7];
     if (children) {
@@ -179,44 +192,14 @@ function resolveJumpTargets(instructions, targets) {
   }
 }
 
-const FNV_OFFSET = 14695981039346656037n;
-const FNV_PRIME = 1099511628211n;
-const MASK_53 = (1n << 53n) - 1n;
-
-function blazeHash(resource, fragment) {
-  let result = FNV_OFFSET & MASK_53;
-  for (let index = 0; index < fragment.length; index++) {
-    result ^= BigInt(fragment.charCodeAt(index));
-    result = (result * FNV_PRIME) & MASK_53;
-  }
-  return Number((BigInt(resource) + result) & MASK_53);
-}
-
-function collectAnchorNames(targets, result) {
-  for (let targetIndex = 0; targetIndex < targets.length; targetIndex++) {
-    collectAnchorNamesFromInstructions(targets[targetIndex], result);
-  }
-}
-
-function collectAnchorNamesFromInstructions(instructions, result) {
-  for (let index = 0; index < instructions.length; index++) {
-    const instruction = instructions[index];
-    if (instruction[0] === CONTROL_DYNAMIC_ANCHOR_JUMP && typeof instruction[6] === 'string') {
-      result.add(instruction[6]);
-    }
-    if (instruction[7]) {
-      collectAnchorNamesFromInstructions(instruction[7], result);
-    }
-  }
-}
-
 function compile(template) {
   const targets = template[3];
-  const messages = template[6];
+  const messages = template[8];
+  const anchors = template[6];
   for (let targetIndex = 0; targetIndex < targets.length; targetIndex++) {
     const target = targets[targetIndex];
     for (let index = 0; index < target.length; index++) {
-      prepareInstruction(target[index], messages);
+      prepareInstruction(target[index], messages, anchors);
     }
   }
 
@@ -224,31 +207,6 @@ function compile(template) {
     resolveJumpTargets(targets[targetIndex], targets);
   }
 
-  const labels = new Map();
-  const rawLabels = template[4];
-  for (let index = 0; index < rawLabels.length; index++) {
-    const pair = rawLabels[index];
-    labels.set(pair[0], pair[1]);
-  }
-
-  const anchors = new Map();
-  if (template[1]) {
-    const anchorNames = new Set();
-    collectAnchorNames(targets, anchorNames);
-    const resourceCount = targets.length;
-    for (const anchor of anchorNames) {
-      for (let resource = 0; resource <= resourceCount; resource++) {
-        const hash = blazeHash(resource, anchor);
-        const targetIndex = labels.get(hash);
-        if (targetIndex !== undefined) {
-          anchors.set(resource + ':' + anchor, targets[targetIndex]);
-        }
-      }
-    }
-  }
-
-  template[4] = labels;
-  template[7] = anchors;
   return template;
 }
 
@@ -359,7 +317,9 @@ function compileInstructionToCode(instruction, captures, visited, budget) {
     case 103: return 'return true;';
     case 104: return fb(104);
     case 105: return fb(105);
-    case 106: { if(!value)return 'return true;'; if(visited&&visited.has(instruction))return fb(106); if(!visited)visited=new Set(); visited.add(instruction); var r=R('t'); if(!r)return fb(106); var c=r; for(var j=0;j<value.length;j++){var r2=compileInstructionToCode(value[j],captures,visited,budget); if(r2===null){var ci=captures.length;captures.push(value[j]);c+='if(!_e(_c['+ci+'],t,d+1,_t,_v))return false;';}else{budget[0]-=r2.length;c+='if(!(function(i,d,_t,_v){'+r2+'})(t,d+1,_t,_v))return false;';}} return c+'return true;'; }
+    case 106: return fb(106);
+    case 107: { if(!value)return 'return true;'; if(visited&&visited.has(instruction))return fb(107); if(!visited)visited=new Set(); visited.add(instruction); var r=R('t'); if(!r)return fb(107); var c=r; for(var j=0;j<value.length;j++){var r2=compileInstructionToCode(value[j],captures,visited,budget); if(r2===null){var ci=captures.length;captures.push(value[j]);c+='if(!_e(_c['+ci+'],t,d+1,_t,_v))return false;';}else{budget[0]-=r2.length;c+='if(!(function(i,d,_t,_v){'+r2+'})(t,d+1,_t,_v))return false;';}} return c+'return true;'; }
+    case 108: return fb(108);
     default: return null;
   }
 }
@@ -435,13 +395,13 @@ class Blaze {
     this.template = template;
     this.callbackMode = false;
     this.framesMode = false;
-    this.dynamicMode = false;
     this.callback = null;
     this.evaluatePathLength = 0;
     this.evaluatePathTokens = null;
     this.instanceLocationLength = 0;
     this.instanceLocationTokens = null;
-    this.resources = null;
+    this.dynamicBindings = null;
+    this.bindingUndo = null;
     this.evaluated = null;
     this.frame = 0;
     this.propertyTarget = undefined;
@@ -466,9 +426,7 @@ class Blaze {
     if (targets.length === 0) return true;
 
     const track = template[2];
-    const dynamic = template[1];
     this.framesMode = track;
-    this.dynamicMode = dynamic;
     this.frame = 0;
     this.callbackMode = callback !== undefined;
     this.callback = callback;
@@ -478,24 +436,28 @@ class Blaze {
       this.evaluatePathTokens = [];
       this.instanceLocationLength = 0;
       this.instanceLocationTokens = [];
-      this.resources = [];
-      if (track || dynamic) {
+      if (track) {
         evaluateInstruction = evaluateInstructionTrackedCallback;
-        if (track) {
-          this.evaluated = [];
-        }
+        this.evaluated = [];
       } else {
         evaluateInstruction = evaluateInstructionFastCallback;
       }
     } else {
-      evaluateInstruction = dynamic
-        ? evaluateInstructionTracked
-        : evaluateInstructionFast;
+      evaluateInstruction = evaluateInstructionFast;
       if (track) {
         this.evaluated = [];
       }
-      if (dynamic) {
-        this.resources = [];
+    }
+
+    // Evaluation begins by entering the resource the entry point sits in, which
+    // no instruction stands for, so what it declares is bound here
+    const anchors = template[6];
+    if (anchors.length > 0) {
+      this.dynamicBindings = new Array(anchors.length).fill(0);
+      this.bindingUndo = [];
+      const bindings = template[4][template[5][0]];
+      for (let index = 0; index < bindings.length; index++) {
+        this.dynamicBindings[bindings[index][0]] = bindings[index][1];
       }
     }
 
@@ -508,7 +470,8 @@ class Blaze {
       }
     }
 
-    this.resources = null;
+    this.dynamicBindings = null;
+    this.bindingUndo = null;
     this.evaluated = null;
     this.evaluatePathTokens = null;
     this.instanceLocationTokens = null;
@@ -610,6 +573,34 @@ class Blaze {
     this.evaluated.push({ instance: target, parent: parent, key: key });
   }
 
+  // A schema resource claims each dynamic anchor it declares that no enclosing
+  // resource already holds, so a name resolves to its outermost declaration.
+  // What the slots held goes on a stack of its own, as only a resource that
+  // declares an anchor ever reaches here
+  enterResource(bindings) {
+    for (let index = 0; index < bindings.length; index++) {
+      const anchor = bindings[index][0];
+      const previous = this.dynamicBindings[anchor];
+      this.bindingUndo.push(previous);
+      if (previous === 0) {
+        this.dynamicBindings[anchor] = bindings[index][1];
+      }
+    }
+  }
+
+  leaveResource(bindings) {
+    for (let index = bindings.length - 1; index >= 0; index--) {
+      this.dynamicBindings[bindings[index][0]] = this.bindingUndo.pop();
+    }
+  }
+
+  // What a dynamic reference resolves to, given the name it carries and the
+  // static target it fell back on
+  dynamicTarget(anchor, fallback) {
+    const slot = this.dynamicBindings[anchor];
+    return slot === 0 ? fallback : slot;
+  }
+
   isEvaluated(target, parent, key) {
     const isPrimitive = target === null || typeof target !== 'object';
     const hasLocation = parent !== undefined;
@@ -643,27 +634,6 @@ function evaluateInstructionFast(instruction, instance, depth, template, evaluat
   return handler(instruction, instance, depth, template, evaluator);
 }
 
-function evaluateInstructionTracked(instruction, instance, depth, template, evaluator) {
-  if (depth > DEPTH_LIMIT) {
-    throw new Error('The evaluation path depth limit was reached likely due to infinite recursion');
-  }
-  const handler = fastHandlers[instruction[0]];
-  if (!handler) return true;
-
-  // Only a callback reads the evaluate path, so this dispatcher never builds
-  // one and is reached solely for the dynamic scope
-  const type = instruction[0];
-  if (evaluator.dynamicMode &&
-      (type < CONTROL_GROUP_START || type > CONTROL_PASS_THROUGH_END)) {
-    evaluator.resources.push(instruction[4]);
-    const result = handler(instruction, instance, depth, template, evaluator);
-    evaluator.resources.pop();
-    return result;
-  }
-
-  return handler(instruction, instance, depth, template, evaluator);
-}
-
 function evaluateInstructionFastCallback(instruction, instance, depth, template, evaluator) {
   if (depth > DEPTH_LIMIT) {
     throw new Error('The evaluation path depth limit was reached likely due to infinite recursion');
@@ -679,9 +649,7 @@ function evaluateInstructionFastCallback(instruction, instance, depth, template,
 function evaluateInstructionWithoutCallback(instruction, instance, depth, template, evaluator) {
   const previousDispatch = evaluateInstruction;
   const previousCallbackMode = evaluator.callbackMode;
-  evaluateInstruction = evaluator.dynamicMode
-    ? evaluateInstructionTracked
-    : evaluateInstructionFast;
+  evaluateInstruction = evaluateInstructionFast;
   evaluator.callbackMode = false;
   const result = evaluateInstruction(instruction, instance, depth, template, evaluator);
   evaluateInstruction = previousDispatch;
@@ -701,17 +669,11 @@ function evaluateInstructionTrackedCallback(instruction, instance, depth, templa
     if (evaluator.framesMode) {
       evaluator.pushPath(instruction[1]);
     }
-    if (evaluator.dynamicMode) {
-      evaluator.resources.push(instruction[4]);
-    }
 
     const result = handler(instruction, instance, depth, template, evaluator);
 
     if (evaluator.framesMode) {
       evaluator.popPath(instruction[1].length);
-    }
-    if (evaluator.dynamicMode) {
-      evaluator.resources.pop();
     }
     return result;
   }
@@ -2639,6 +2601,22 @@ function ControlFrame(instruction, instance, depth, template, evaluator) {
   return result;
 };
 
+function ControlResource(instruction, instance, depth, template, evaluator) {
+  const children = instruction[7];
+  if (!children) return true;
+  const bindings = template[4][instruction[6]];
+  evaluator.enterResource(bindings);
+  let result = true;
+  for (let index = 0; index < children.length; index++) {
+    if (!evaluateInstruction(children[index], instance, depth + 1, template, evaluator)) {
+      result = false;
+      break;
+    }
+  }
+  evaluator.leaveResource(bindings);
+  return result;
+};
+
 function ControlGroup(instruction, instance, depth, template, evaluator) {
   const children = instruction[7];
   if (children) {
@@ -2696,30 +2674,38 @@ function ControlEvaluate(instruction, instance, depth, template, evaluator) {
 function ControlDynamicAnchorJump(instruction, instance, depth, template, evaluator) {
   if (evaluator.callbackMode) evaluator.callbackPush(instruction);
   const resolved = resolveInstance(instance, instruction[2]);
-  const anchor = instruction[6];
-
-  if (!evaluator.resources) {
-    if (evaluator.callbackMode) evaluator.callbackPop(instruction, false);
-    return false;
-  }
-
-  const anchors = template[7];
-  for (let index = 0; index < evaluator.resources.length; index++) {
-    const jumpTarget = anchors.get(evaluator.resources[index] + ':' + anchor);
-    if (jumpTarget !== undefined) {
-      for (let childIndex = 0; childIndex < jumpTarget.length; childIndex++) {
-        if (!evaluateInstruction(jumpTarget[childIndex], resolved, depth + 1, template, evaluator)) {
-          if (evaluator.callbackMode) evaluator.callbackPop(instruction, false);
-          return false;
-        }
-      }
-      if (evaluator.callbackMode) evaluator.callbackPop(instruction, true);
-      return true;
+  const destination = evaluator.dynamicTarget(instruction[6][0], instruction[6][1]);
+  const jumpTarget = template[3][destination - 1];
+  const bindings = template[4][template[5][destination - 1]];
+  evaluator.enterResource(bindings);
+  let result = true;
+  for (let index = 0; index < jumpTarget.length; index++) {
+    if (!evaluateInstruction(jumpTarget[index], resolved, depth + 1, template, evaluator)) {
+      result = false;
+      break;
     }
   }
+  evaluator.leaveResource(bindings);
+  if (evaluator.callbackMode) evaluator.callbackPop(instruction, result);
+  return result;
+};
 
-  if (evaluator.callbackMode) evaluator.callbackPop(instruction, false);
-  return false;
+function ControlResourceJump(instruction, instance, depth, template, evaluator) {
+  if (evaluator.callbackMode) evaluator.callbackPush(instruction);
+  const jumpTarget = instruction[6][0];
+  const bindings = template[4][instruction[6][1]];
+  const resolved = resolveInstance(instance, instruction[2]);
+  evaluator.enterResource(bindings);
+  let result = true;
+  for (let index = 0; index < jumpTarget.length; index++) {
+    if (!evaluateInstruction(jumpTarget[index], resolved, depth + 1, template, evaluator)) {
+      result = false;
+      break;
+    }
+  }
+  evaluator.leaveResource(bindings);
+  if (evaluator.callbackMode) evaluator.callbackPop(instruction, result);
+  return result;
 };
 
 function ControlJump(instruction, instance, depth, template, evaluator) {
@@ -2846,8 +2832,10 @@ const handlers = [
   ControlGroupWhenType,                    // 102
   ControlEvaluate,                         // 103
   ControlFrame,                            // 104
-  ControlDynamicAnchorJump,                // 105
-  ControlJump                              // 106
+  ControlResource,                         // 105
+  ControlDynamicAnchorJump,                // 106
+  ControlJump,                             // 107
+  ControlResourceJump                      // 108
 ];
 
 function AssertionTypeArrayBounded_fast(instruction, instance, depth, template, evaluator) {
@@ -3994,19 +3982,19 @@ function LoopItemsPropertiesExactlyTypeStrictHash_fast(instruction, instance, de
 
 function ControlDynamicAnchorJump_fast(instruction, instance, depth, template, evaluator) {
   const resolved = resolveInstance(instance, instruction[2]);
-  const anchor = instruction[6];
-  if (!evaluator.resources) return false;
-  const anchors = template[7];
-  for (let index = 0; index < evaluator.resources.length; index++) {
-    const jumpTarget = anchors.get(evaluator.resources[index] + ':' + anchor);
-    if (jumpTarget !== undefined) {
-      for (let childIndex = 0; childIndex < jumpTarget.length; childIndex++) {
-        if (!evaluateInstruction(jumpTarget[childIndex], resolved, depth + 1, template, evaluator)) return false;
-      }
-      return true;
+  const destination = evaluator.dynamicTarget(instruction[6][0], instruction[6][1]);
+  const jumpTarget = template[3][destination - 1];
+  const bindings = template[4][template[5][destination - 1]];
+  evaluator.enterResource(bindings);
+  let result = true;
+  for (let index = 0; index < jumpTarget.length; index++) {
+    if (!evaluateInstruction(jumpTarget[index], resolved, depth + 1, template, evaluator)) {
+      result = false;
+      break;
     }
   }
-  return false;
+  evaluator.leaveResource(bindings);
+  return result;
 }
 
 function LoopItemsIntegerBounded_fast(instruction, instance, depth, template, evaluator) {
@@ -4104,7 +4092,7 @@ fastHandlers[4] = AssertionDefinesAllStrict_fast;
 fastHandlers[27] = AssertionEqual_fast;
 fastHandlers[70] = LoopPropertiesMatch_fast;
 fastHandlers[61] = LogicalOr_fast;
-fastHandlers[106] = ControlJump_fast;
+fastHandlers[107] = ControlJump_fast;
 fastHandlers[29] = AssertionEqualsAnyStringHash_fast;
 fastHandlers[63] = LogicalXor_fast;
 fastHandlers[2] = AssertionDefinesStrict_fast;
@@ -4195,7 +4183,7 @@ fastHandlers[93] = LoopItemsPropertiesExactlyTypeStrictHash_fast;
 fastHandlers[94] = LoopItemsPropertiesExactlyTypeStrictHash_fast;
 fastHandlers[95] = LoopItemsIntegerBounded_fast;
 fastHandlers[96] = LoopItemsIntegerBoundedSized_fast;
-fastHandlers[105] = ControlDynamicAnchorJump_fast;
+fastHandlers[106] = ControlDynamicAnchorJump_fast;
 
 import { describe } from './describe.mjs';
 

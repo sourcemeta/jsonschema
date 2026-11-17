@@ -58,6 +58,7 @@ inline auto is_noop_without_children(const InstructionIndex type) noexcept
     case InstructionIndex::ControlGroupWhenDefinesDirect:
     case InstructionIndex::ControlGroupWhenType:
     case InstructionIndex::ControlFrame:
+    case InstructionIndex::ControlResource:
       return true;
     default:
       return false;
@@ -128,6 +129,7 @@ inline auto is_pass_through_instruction(const InstructionIndex type) noexcept
     case InstructionIndex::ControlGroupWhenType:
     case InstructionIndex::ControlEvaluate:
     case InstructionIndex::ControlFrame:
+    case InstructionIndex::ControlResource:
       return true;
     default:
       return false;
@@ -177,11 +179,17 @@ inline auto collect_statistics(const Instructions &instructions,
     if (instruction.type == InstructionIndex::ControlJump) {
       statistics
           .jump_targets[std::get<ValueUnsignedInteger>(instruction.value)]++;
+    } else if (instruction.type == InstructionIndex::ControlResourceJump) {
+      // Counted even though this one never inlines, as what it reaches is what
+      // decides whether a target loops back on itself
+      statistics
+          .jump_targets[std::get<ValueIndexPair>(instruction.value).first]++;
     }
 
     if (instruction.type == InstructionIndex::ControlGroupWhenDefinesDirect ||
         instruction.type == InstructionIndex::ControlGroupWhenType ||
-        instruction.type == InstructionIndex::ControlFrame) {
+        instruction.type == InstructionIndex::ControlFrame ||
+        instruction.type == InstructionIndex::ControlResource) {
       statistics.requires_empty_instance_location = true;
     }
 
@@ -459,18 +467,26 @@ inline auto fuse_loop_type(Instruction &instruction, Instruction &child,
                                .extra_index = new_extra_index});
 }
 
-inline auto transform_instruction(
-    Instruction &instruction, Instructions &output, InstructionExtras &extra,
-    const std::vector<Instructions> &targets,
-    const std::vector<TargetStatistics> &statistics,
-    TargetStatistics &current_stats, const Tweaks &tweaks,
-    const bool uses_dynamic_scopes, const bool positional) -> bool {
+inline auto
+transform_instruction(Instruction &instruction, Instructions &output,
+                      InstructionExtras &extra,
+                      const std::vector<Instructions> &targets,
+                      const std::vector<TargetStatistics> &statistics,
+                      TargetStatistics &current_stats, const Tweaks &tweaks,
+                      const bool positional) -> bool {
   // A positional owner pairs each child with an entry of its own data by
   // index, and inlining a jump expands one child into many, which would
   // re-pair the rest
-  if (!positional && instruction.type == InstructionIndex::ControlJump) {
+  const auto jumps{!positional &&
+                   (instruction.type == InstructionIndex::ControlJump ||
+                    instruction.type == InstructionIndex::ControlResourceJump)};
+  if (jumps) {
+    // A jump that brings dynamic anchors into scope carries the target beside
+    // what it binds, rather than on its own
+    const auto binds{instruction.type == InstructionIndex::ControlResourceJump};
     const auto jump_target_index{
-        std::get<ValueUnsignedInteger>(instruction.value)};
+        binds ? std::get<ValueIndexPair>(instruction.value).first
+              : std::get<ValueUnsignedInteger>(instruction.value)};
     const auto &jump_target_stats{statistics[jump_target_index]};
 
     if (jump_target_stats.count == 0) {
@@ -483,7 +499,6 @@ inline auto transform_instruction(
     if (jump_target_stats.count < tweaks.target_inline_threshold &&
         (jump_target_self_loop == jump_target_stats.jump_targets.end() ||
          jump_target_self_loop->second == 0) &&
-        !uses_dynamic_scopes &&
         (!jump_target_stats.requires_empty_instance_location ||
          instruction.relative_instance_location.empty())) {
       current_stats.jump_targets[jump_target_index]--;
@@ -494,14 +509,36 @@ inline auto transform_instruction(
       current_stats.requires_empty_instance_location |=
           jump_target_stats.requires_empty_instance_location;
 
+      // What the jump bound on entry has to survive it going away, so the
+      // instructions that replace it are wrapped in the marker that binds the
+      // same names. That is a pass-through, which costs less than the jump did
+      Instructions inlined;
+      inlined.reserve(targets[jump_target_index].size());
       const auto schema_prefix{
           extra[instruction.extra_index].relative_schema_location};
       for (auto target_instruction : targets[jump_target_index]) {
         duplicate_metadata(target_instruction, extra);
         rebase(target_instruction, extra, schema_prefix,
                instruction.relative_instance_location);
-        output.push_back(std::move(target_instruction));
+        inlined.push_back(std::move(target_instruction));
       }
+
+      if (binds) {
+        current_stats.requires_empty_instance_location = true;
+        output.push_back(
+            {.type = InstructionIndex::ControlResource,
+             .relative_instance_location = {},
+             .value =
+                 ValueUnsignedInteger{
+                     std::get<ValueIndexPair>(instruction.value).second},
+             .children = std::move(inlined),
+             .extra_index = instruction.extra_index});
+      } else {
+        for (auto &target_instruction : inlined) {
+          output.push_back(std::move(target_instruction));
+        }
+      }
+
       return true;
     }
   }
@@ -573,8 +610,8 @@ inline auto hoist_discriminators(Instructions &instructions) -> void {
 }
 
 inline auto postprocess(std::vector<Instructions> &targets,
-                        InstructionExtras &extra, const Tweaks &tweaks,
-                        const bool uses_dynamic_scopes) -> void {
+                        InstructionExtras &extra, const Tweaks &tweaks)
+    -> void {
   std::vector<TargetStatistics> statistics;
   statistics.reserve(targets.size());
   for (const auto &target : targets) {
@@ -754,7 +791,7 @@ inline auto postprocess(std::vector<Instructions> &targets,
 
           if (transform_instruction(instruction, result, extra, targets,
                                     statistics, current_stats, tweaks,
-                                    uses_dynamic_scopes, positional)) {
+                                    positional)) {
             target_changed = true;
           }
 

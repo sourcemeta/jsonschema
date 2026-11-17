@@ -1,0 +1,55 @@
+// A key in the mapping that no URI can express is reported where it was
+// written, rather than sitting in the mapping and never matching anything
+
+WRITE schema.json UNTIL EOF
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.com",
+  "type": "string"
+}
+EOF
+
+WRITE instance.json UNTIL EOF
+"foo"
+EOF
+
+WRITE jsonschema.json UNTIL EOF
+{
+  "resolve": {
+    "https://example.com/other": "https://example.com/nested",
+    "http://[example.com/unrelated": "https://example.com/nested"
+  }
+}
+EOF
+
+// Other input error
+RUN validate schema.json instance.json STDIN /dev/null IN . INTO result_0.txt EXPECTING 6
+
+REPLACE $CWD WITH '[CWD]' IN result_0.txt
+
+WRITE expected_0.txt UNTIL EOF
+2> error: The keys in the resolve object must represent valid URIs
+2>   at line 4
+2>   at column 5
+2>   at file path [CWD]/jsonschema.json
+2>   at location "/resolve/http:~1~1[example.com~1unrelated"
+EOF
+
+COMPARE result_0.txt AGAINST expected_0.txt
+
+// Other input error
+RUN validate --json schema.json instance.json STDIN /dev/null IN . INTO result_1.txt EXPECTING 6
+
+REPLACE $CWD WITH '[CWD]' IN result_1.txt
+
+WRITE expected_1.txt UNTIL EOF
+1> {
+1>   "error": "The keys in the resolve object must represent valid URIs",
+1>   "line": 4,
+1>   "column": 5,
+1>   "filePath": "[CWD]/jsonschema.json",
+1>   "location": "/resolve/http:~1~1[example.com~1unrelated"
+1> }
+EOF
+
+COMPARE result_1.txt AGAINST expected_1.txt

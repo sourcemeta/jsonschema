@@ -94,7 +94,7 @@ inline auto declaration_counts(const sourcemeta::core::JSON &subschema,
     return true;
   }
 
-  return sourcemeta::core::dialect_defines(
+  return sourcemeta::core::schema_defines_keyword(
       walker, sourcemeta::core::vocabularies(resolve, base.value(), declared),
       "$schema"sv);
 }

@@ -1,7 +1,7 @@
 sourcemeta_library(NAMESPACE sourcemeta PROJECT blaze NAME evaluator
   FOLDER "Blaze/Evaluator"
   PRIVATE_HEADERS error.h value.h instruction.h dispatch.h
-  SOURCES evaluator_json.cc evaluator_describe.cc)
+  SOURCES evaluator.cc evaluator_json.cc evaluator_describe.cc)
 
 if(BLAZE_INSTALL)
   sourcemeta_library_install(NAMESPACE sourcemeta PROJECT blaze NAME evaluator)

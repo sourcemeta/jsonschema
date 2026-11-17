@@ -454,8 +454,29 @@ auto compiler_draft3_core_ref(const KeywordContext &context,
                                  std::string_view{reference->get().destination},
                                  context.local.is_property_name)};
   assert(context.global.targets.contains(key));
+  const auto target{context.global.targets.at(key).first};
+
+  // Jumping into a schema resource is how evaluation enters it, so a jump that
+  // leaves the resource it is in for one that declares a dynamic anchor needs
+  // the variant that brings those names into scope. A jump that stays put
+  // needs nothing, as whatever brought evaluation here already bound them
+  if (context.global.uses_dynamic_scopes) {
+    const auto destination{context.global.frame.traverse(
+        std::string_view{reference->get().destination})};
+    if (destination.has_value() &&
+        destination.value().get().base !=
+            context.base().recompose_without_fragment()) {
+      const auto bindings{
+          resource_bindings_of(context, destination.value().get().base)};
+      if (bindings != 0) {
+        return {make(InstructionIndex::ControlResourceJump, context,
+                     ValueIndexPair{target, bindings})};
+      }
+    }
+  }
+
   return {make(InstructionIndex::ControlJump, context,
-               ValueUnsignedInteger{context.global.targets.at(key).first})};
+               ValueUnsignedInteger{target})};
 }
 
 // There are two ways to compile `properties` depending on whether
@@ -1199,17 +1220,8 @@ auto compiler_draft3_applicator_properties_with_options(
       // jump into a separate target, or a check that navigates into or gates
       // on a nested location such as the one a `properties` conditional
       // produces, therefore falls back to unfused emission
-      const bool fusable_single{
-          substeps.size() == 1 &&
-          substeps.front().type != InstructionIndex::ControlJump &&
-          substeps.front().type != InstructionIndex::ControlDynamicAnchorJump &&
-          substeps.front().type != InstructionIndex::ControlGroup &&
-          substeps.front().type != InstructionIndex::ControlGroupWhenDefines &&
-          substeps.front().type !=
-              InstructionIndex::ControlGroupWhenDefinesDirect &&
-          substeps.front().type != InstructionIndex::ControlGroupWhenType &&
-          substeps.front().type != InstructionIndex::ControlEvaluate &&
-          substeps.front().type != InstructionIndex::ControlFrame};
+      const bool fusable_single{substeps.size() == 1 &&
+                                !is_control(substeps.front().type)};
       if (fusion_possible && fusable_single) {
         const auto is_required{assume_object && required.contains(name)};
         auto prop{make_property(name)};
@@ -2630,9 +2642,7 @@ auto compiler_draft3_applicator_extends(const KeywordContext &context,
   }
 
   if (value.is_object()) {
-    // TODO: Make this work with `$dynamicRef`
-    if (context.mode() == Mode::FastValidation &&
-        !context.global.uses_dynamic_scopes) {
+    if (context.mode() == Mode::FastValidation) {
       return compile(context, sourcemeta::core::EMPTY_WEAK_POINTER,
                      sourcemeta::core::EMPTY_WEAK_POINTER);
     }
@@ -2657,9 +2667,7 @@ auto compiler_draft3_applicator_extends(const KeywordContext &context,
 
   Instructions children;
 
-  // TODO: Make this work with `$dynamicRef`
-  if (context.mode() == Mode::FastValidation &&
-      !context.global.uses_dynamic_scopes) {
+  if (context.mode() == Mode::FastValidation) {
     for (std::uint64_t index = 0; index < value.size(); index++) {
       for (auto &&step : compile(
                context,

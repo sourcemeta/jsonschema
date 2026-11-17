@@ -874,6 +874,23 @@ public:
   /// ```
   static auto canonicalize(std::string_view input) -> std::string;
 
+  /// A convenient method to canonicalize and recompose a URI from a string
+  /// that may not be a URI at all, answering with nothing instead of refusing
+  /// the input outright. For example:
+  ///
+  /// ```cpp
+  /// #include <sourcemeta/core/uri.h>
+  /// #include <cassert>
+  ///
+  /// const auto result{
+  ///   sourcemeta::core::URI::try_canonicalize("hTtP://exAmpLe.com:80/TEST")};
+  /// assert(result.has_value());
+  /// assert(result.value() == "http://example.com/TEST");
+  /// assert(!sourcemeta::core::URI::try_canonicalize("not a uri").has_value());
+  /// ```
+  static auto try_canonicalize(std::string_view input)
+      -> std::optional<std::string>;
+
   /// Percent-encode a string per RFC 3986, escaping every octet outside the
   /// unreserved set. The input can optionally be treated as possibly already
   /// encoded, preserving valid escapes and decoding needlessly encoded

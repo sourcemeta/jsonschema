@@ -5,7 +5,33 @@
 #include <algorithm>    // std::ranges::any_of
 #include <cassert>      // assert
 #include <string>       // std::string
+#include <string_view>  // std::string_view
 #include <system_error> // std::error_code
+
+namespace {
+
+// The `.json` extension is not a URI concern, so this single alternative is
+// tried by hand, and always after the identifier itself, so that a mapping
+// that holds both spellings is unambiguous. Only a path can carry the
+// extension, so a query or a fragment stays where it is
+auto resolve_alternative(const std::string_view identifier)
+    -> sourcemeta::core::JSON::String {
+  constexpr std::string_view JSON_EXTENSION{".json"};
+  const auto suffix{identifier.find_first_of("?#")};
+  const auto path_size{suffix == std::string_view::npos ? identifier.size()
+                                                        : suffix};
+
+  sourcemeta::core::JSON::String result{identifier};
+  if (identifier.substr(0, path_size).ends_with(JSON_EXTENSION)) {
+    result.erase(path_size - JSON_EXTENSION.size(), JSON_EXTENSION.size());
+  } else {
+    result.insert(path_size, JSON_EXTENSION);
+  }
+
+  return result;
+}
+
+} // namespace
 
 namespace sourcemeta::blaze {
 
@@ -80,6 +106,44 @@ auto Configuration::applies_to(const std::filesystem::path &path) const
 
                                return filename.ends_with(suffix);
                              });
+}
+
+auto Configuration::find_resolve(
+    const sourcemeta::core::JSON::String &identifier) const
+    -> const sourcemeta::core::JSON::String * {
+  // Most configurations declare no mapping at all, and every reference of
+  // every schema comes through here, so that case does no work
+  if (this->resolve.empty()) {
+    return nullptr;
+  }
+
+  // Keys are stored canonicalized, so an identifier spelled the way its key is
+  // matches without parsing a URI at all
+  auto match{this->resolve.find(identifier)};
+  if (match != this->resolve.cend()) {
+    return &match->second;
+  }
+
+  match = this->resolve.find(resolve_alternative(identifier));
+  if (match != this->resolve.cend()) {
+    return &match->second;
+  }
+
+  // Comparing canonical URIs is what lets a key match however the identifier
+  // was spelled. An identifier that no URI can express falls through as
+  // unmapped rather than refusing the lookup outright
+  const auto canonical{sourcemeta::core::URI::try_canonicalize(identifier)};
+  if (!canonical.has_value() || canonical.value() == identifier) {
+    return nullptr;
+  }
+
+  match = this->resolve.find(canonical.value());
+  if (match != this->resolve.cend()) {
+    return &match->second;
+  }
+
+  match = this->resolve.find(resolve_alternative(canonical.value()));
+  return match == this->resolve.cend() ? nullptr : &match->second;
 }
 
 } // namespace sourcemeta::blaze

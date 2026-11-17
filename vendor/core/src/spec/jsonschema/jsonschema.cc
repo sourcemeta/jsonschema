@@ -240,6 +240,12 @@ auto sourcemeta::core::schema_identifier_keyword(
   return sourcemeta::core::id_keyword(base_dialect).name;
 }
 
+auto sourcemeta::core::schema_defines_keyword(
+    const SchemaWalker &walker, const SchemaVocabularies &vocabularies,
+    const std::string_view keyword) -> bool {
+  return walker(keyword, vocabularies).type != SchemaKeywordType::Unknown;
+}
+
 auto sourcemeta::core::schema_reidentify(sourcemeta::core::JSON &schema,
                                          std::string_view new_identifier,
                                          const SchemaBaseDialect base_dialect)
@@ -264,7 +270,26 @@ auto sourcemeta::core::dialect(const sourcemeta::core::JSON &schema,
     -> std::string_view {
   assert((schema.is_object() || schema.is_boolean()));
 
-  if (allow_dialect_override && schema.is_object()) {
+  if (schema.is_boolean()) {
+    return default_dialect;
+  }
+
+  // A declaration that is not even a string names no dialect at all, as
+  // JSON Schema 2020-12 Section 8.1.1 has the value of this keyword "MUST be a
+  // URI", so the document carrying one reads against nothing. That holds
+  // however else a dialect could be found for the document, an override
+  // standing beside the declaration included, as a document cannot be both
+  // undeterminable and settled
+  const auto *dialect_value{
+      schema.try_at("$schema"sv, sourcemeta::core::JSONSCHEMA_HASH_SCHEMA)};
+  if ((dialect_value != nullptr) && !dialect_value->is_string()) {
+    std::ostringstream value;
+    sourcemeta::core::stringify(*dialect_value, value);
+    throw sourcemeta::core::SchemaKeywordError("The dialect value is invalid",
+                                               "$schema", value.str());
+  }
+
+  if (allow_dialect_override) {
     const auto *override_value{
         schema.try_at(sourcemeta::core::DIALECT_OVERRIDE_KEYWORD,
                       sourcemeta::core::JSONSCHEMA_HASH_DIALECT_OVERRIDE)};
@@ -274,21 +299,8 @@ auto sourcemeta::core::dialect(const sourcemeta::core::JSON &schema,
     }
   }
 
-  if (schema.is_boolean()) {
-    return default_dialect;
-  }
-
-  const auto *dialect_value{
-      schema.try_at("$schema"sv, sourcemeta::core::JSONSCHEMA_HASH_SCHEMA)};
   if (dialect_value == nullptr) {
     return default_dialect;
-  }
-
-  if (!dialect_value->is_string()) {
-    std::ostringstream value;
-    sourcemeta::core::stringify(*dialect_value, value);
-    throw sourcemeta::core::SchemaKeywordError("The dialect value is invalid",
-                                               "$schema", value.str());
   }
 
   return dialect_value->to_string();
@@ -298,17 +310,31 @@ auto sourcemeta::core::dialect(const sourcemeta::core::JSON &schema,
 // meta-schema, so a dialect the library knows is still one it knows however
 // the document happens to spell it. Settling a URI also drops an empty
 // fragment, which the identifiers of the drafts before 2019-09 carry, so what
-// the document spells is held up against both forms
-static auto base_dialect_of_settled(const std::string_view dialect)
+// the document spells is held up against the exact identifiers, against the
+// settled form, and against the settled form with that fragment put back.
+// Per JSON Schema 2020-12 Section 4.3.5, a URI naming a resource with an empty
+// fragment is "considered to be non-canonical", and Section 8.2.1 warns that
+// "this equivalence is not part of the RFC 3986 normalization process", so the
+// fragment is put back here rather than taken on trust from a URI library.
+// A spelling that settles to itself was already held up against the exact
+// identifiers above, so only the form with the fragment put back is left for it
+static auto base_dialect_of_spelling(const std::string_view dialect)
     -> std::optional<sourcemeta::core::SchemaBaseDialect> {
-  const auto settled{sourcemeta::core::maybe_canonicalize(dialect)};
-  if (!settled.has_value() || settled.value() == dialect) {
+  const auto exact{sourcemeta::core::to_base_dialect(dialect)};
+  if (exact.has_value()) {
+    return exact;
+  }
+
+  const auto settled{sourcemeta::core::URI::try_canonicalize(dialect)};
+  if (!settled.has_value()) {
     return std::nullopt;
   }
 
-  const auto result{sourcemeta::core::to_base_dialect(settled.value())};
-  if (result.has_value()) {
-    return result;
+  if (settled.value() != dialect) {
+    const auto result{sourcemeta::core::to_base_dialect(settled.value())};
+    if (result.has_value()) {
+      return result;
+    }
   }
 
   return sourcemeta::core::to_base_dialect(settled.value() + "#");
@@ -337,6 +363,21 @@ auto sourcemeta::core::metaschema_try_embedded(
     return nullptr;
   }
 
+  // A name that is itself an official base dialect settles the chain where it
+  // stands, whichever spelling names it, so the copy a document carries of
+  // that schema is the meta-schema for the name rather than a link to walk
+  // through, and however that copy chains onwards is beside the point
+  const auto starting_terminal{base_dialect_of_spelling(identifier)};
+  if (starting_terminal.has_value()) {
+    if (!sourcemeta::core::embedded_metaschema_link_valid(
+            *(candidate.first), identifier, candidate.second,
+            starting_terminal.value())) {
+      return nullptr;
+    }
+
+    return candidate.first;
+  }
+
   std::unordered_set<std::string_view> visited;
   std::vector<sourcemeta::core::EmbeddedMetaschemaLink> links{
       {.schema = candidate.first,
@@ -353,8 +394,11 @@ auto sourcemeta::core::metaschema_try_embedded(
   while (true) {
     // The meta-schema is present, but its chain can never terminate at an
     // official base dialect, just like a self-descriptive or cyclic
-    // meta-schema that the resolver knows about
-    if (!visited.emplace(current_identifier).second) {
+    // meta-schema that the resolver knows about. A chain that goes deeper than
+    // any document means is refused here too, as the resolver can answer every
+    // link with a fresh one and so keep this walk going for ever
+    if (visited.size() >= BASE_DIALECT_CHAIN_LIMIT ||
+        !visited.emplace(current_identifier).second) {
       throw sourcemeta::core::SchemaUnknownBaseDialectError();
     }
 
@@ -369,11 +413,7 @@ auto sourcemeta::core::metaschema_try_embedded(
     }
 
     const auto &dialect_uri{metaschema_dialect->to_string()};
-    auto known{sourcemeta::core::to_base_dialect(dialect_uri)};
-    if (!known.has_value()) {
-      known = base_dialect_of_settled(dialect_uri);
-    }
-
+    const auto known{base_dialect_of_spelling(dialect_uri)};
     if (known.has_value()) {
       terminal = known;
       break;
@@ -419,7 +459,7 @@ auto sourcemeta::core::metaschema_try_embedded(
 static auto resolve_settled(const sourcemeta::core::SchemaResolver &resolver,
                             const std::string_view identifier)
     -> sourcemeta::core::SchemaResolverResult {
-  const auto settled{sourcemeta::core::maybe_canonicalize(identifier)};
+  const auto settled{sourcemeta::core::URI::try_canonicalize(identifier)};
   if (!settled.has_value() || settled.value() == identifier) {
     return std::nullopt;
   }
@@ -445,15 +485,10 @@ base_dialect_with_visited(const sourcemeta::core::JSON &schema,
     return std::nullopt;
   }
 
-  // Check for known base dialects
-  const auto result{sourcemeta::core::to_base_dialect(effective_dialect)};
+  // Check for known base dialects, under whichever spelling names one
+  const auto result{base_dialect_of_spelling(effective_dialect)};
   if (result.has_value()) {
     return result;
-  }
-
-  const auto settled_result{base_dialect_of_settled(effective_dialect)};
-  if (settled_result.has_value()) {
-    return settled_result;
   }
 
   // Detect cycles in the metaschema chain, and refuse one that goes deeper

@@ -8,6 +8,7 @@
 #include <cassert>       // assert
 #include <cstddef>       // std::size_t
 #include <cstdint>       // std::uint64_t
+#include <exception>     // std::rethrow_exception
 #include <functional>    // std::cref
 #include <iterator>      // std::make_move_iterator
 #include <map>           // std::map
@@ -158,7 +159,7 @@ auto restate_external_documentation(JSON &subschema, const SchemaFrame &frame,
                             &dialect_documents](const auto &location) -> void {
     if (location.dialect != current_dialect) {
       current_dialect = location.dialect;
-      dialect_documents = dialect_defines(
+      dialect_documents = schema_defines_keyword(
           walker, frame.vocabularies(location, resolver), "externalDocs");
     }
 
@@ -244,7 +245,8 @@ auto boolean_can_be_restated(const SchemaWalker &walker,
                              const SchemaVocabularies &vocabularies,
                              const JSON &schema) -> bool {
   assert(schema.is_boolean());
-  return schema.to_boolean() || dialect_defines(walker, vocabularies, "not"sv);
+  return schema.to_boolean() ||
+         schema_defines_keyword(walker, vocabularies, "not"sv);
 }
 
 // A schema that cannot name itself answers to nothing once it is embedded, so
@@ -322,11 +324,12 @@ auto mark_dialect_of_every_subschema(JSON &schema, const SchemaWalker &walker,
 // The key this assigns is the only record of where the schema landed, which a
 // reference that names a place rather than an identifier has to be told
 auto canonical_uri(const std::string_view uri) -> JSON::String {
-  try {
-    return URI::canonicalize(uri);
-  } catch (const URIParseError &) {
-    return JSON::String{uri};
+  auto settled{URI::try_canonicalize(uri)};
+  if (settled.has_value()) {
+    return std::move(settled.value());
   }
+
+  return JSON::String{uri};
 }
 
 // Every meta-schema that anything within this schema pins. A schema that
@@ -1517,7 +1520,7 @@ auto expand_references(
       // frame happens to reach it first cannot do
       if (remote.is_object() &&
           remote.defines("$schema"sv, JSONSCHEMA_HASH_SCHEMA) &&
-          !dialect_defines(walker, remote_vocabularies, "$schema"sv)) {
+          !schema_defines_keyword(walker, remote_vocabularies, "$schema"sv)) {
         throw SchemaReferenceError("The referenced schema declares a dialect "
                                    "that does not define the keyword that "
                                    "declares it",
@@ -2012,14 +2015,7 @@ auto guard_callback(const SchemaBundleOptions::Callback &callback)
     return callback;
   }
 
-  return [&callback](const std::string_view identifier,
-                     const sourcemeta::core::WeakPointer &location) -> void {
-    try {
-      callback(identifier, location);
-    } catch (const SchemaFrameLimitError &error) {
-      throw ForeignFrameLimitError{error};
-    }
-  };
+  return guard_foreign(callback);
 }
 
 } // namespace
@@ -2030,13 +2026,19 @@ auto schema_bundle(JSON &schema, const SchemaWalker &walker,
                    std::string_view default_id,
                    const SchemaBundleOptions &options) -> std::uint64_t {
   auto remaining{options.max_locations};
+  // Framing and the dialect lookups it takes reach for the resolver and the
+  // walker of their own accord, inside handlers that translate failures of the
+  // library's own making, so whatever the caller's own components throw is
+  // marked on the way out and rethrown untouched at the boundary below
+  const SchemaResolver foreign{guard_foreign(resolver)};
+  const SchemaWalker guarded{guard_foreign(walker)};
   try {
-    bundle_internal(
-        schema, walker, resolver_within_allowance(resolver), options.mode,
-        default_dialect, default_id, options.default_container, options.paths,
-        options.default_base, remaining, guard_callback(options.callback));
-  } catch (const ForeignFrameLimitError &foreign) {
-    throw foreign.error;
+    bundle_internal(schema, guarded, foreign, options.mode, default_dialect,
+                    default_id, options.default_container, options.paths,
+                    options.default_base, remaining,
+                    guard_callback(options.callback));
+  } catch (const ForeignError &caller) {
+    std::rethrow_exception(caller.error);
   } catch (const SchemaFrameLimitError &) {
     // Every frame spends from what is left rather than from the whole, so the
     // one that ran out reports what it was handed. The caller set the limit

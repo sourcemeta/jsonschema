@@ -133,6 +133,36 @@ inline auto vocabulary_id(
                            relative_pointer.back().to_property(), active);
 }
 
+// What a dynamic reference resolves to when the name it carries is not in
+// scope, paired with the position of that name
+inline auto dynamic_anchor_value(const KeywordContext &context,
+                                 const std::string_view uri,
+                                 const std::string_view name)
+    -> ValueIndexPair {
+  const auto anchor{std::ranges::find(context.global.anchors, name)};
+  assert(anchor != context.global.anchors.cend());
+  const auto key{std::make_tuple(sourcemeta::core::SchemaReferenceType::Dynamic,
+                                 uri, false)};
+  assert(context.global.targets.contains(key));
+  return {static_cast<std::size_t>(
+              std::distance(context.global.anchors.cbegin(), anchor)),
+          context.global.targets.at(key).first + 1};
+}
+
+// What a jump into the given schema resource must bind on entry, as an index
+// into Template::bindings where zero means it binds nothing
+inline auto resource_bindings_of(const KeywordContext &context,
+                                 const std::string_view resource)
+    -> std::size_t {
+  if (!context.global.uses_dynamic_scopes) {
+    return 0;
+  }
+
+  const auto identifier{schema_resource_id(context.global.resources, resource)};
+  assert(identifier < context.global.resource_bindings.size());
+  return context.global.resource_bindings[identifier];
+}
+
 // Instantiate a value-oriented step with a custom resource
 inline auto make_with_resource(const InstructionIndex type,
                                const KeywordContext &context,

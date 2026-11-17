@@ -7,12 +7,14 @@
 
 #include <array>         // std::array
 #include <deque>         // std::deque
+#include <exception>     // std::exception_ptr, std::current_exception
 #include <functional>    // std::equal_to, std::hash
 #include <optional>      // std::optional
 #include <string_view>   // std::string_view
 #include <unordered_map> // std::unordered_map
 #include <unordered_set> // std::unordered_set
-#include <utility>       // std::pair, std::move, std::unreachable
+#include <utility>       // std::pair, std::move, std::forward,
+                         // std::unreachable
 #include <vector>        // std::vector
 
 namespace sourcemeta::core {
@@ -111,15 +113,6 @@ inline auto id_keyword(const SchemaBaseDialect base_dialect) -> SchemaKeyword {
 #endif
 }
 
-// Whether the dialect in force gives a keyword any meaning at all, which is
-// what the vocabularies it draws on say rather than what its base dialect
-// happens to name
-inline auto dialect_defines(const SchemaWalker &walker,
-                            const SchemaVocabularies &vocabularies,
-                            const std::string_view keyword) -> bool {
-  return walker(keyword, vocabularies).type != SchemaKeywordType::Unknown;
-}
-
 // A base dialect names the keyword that introduces an identifier, but a
 // dialect built on top of it may leave that keyword out of its own
 // vocabularies, in which case nothing the schema writes can introduce one.
@@ -129,7 +122,8 @@ inline auto dialect_defines_identifier(const SchemaWalker &walker,
                                        const SchemaVocabularies &vocabularies,
                                        const SchemaBaseDialect base_dialect)
     -> bool {
-  return dialect_defines(walker, vocabularies, id_keyword(base_dialect).name);
+  return schema_defines_keyword(walker, vocabularies,
+                                id_keyword(base_dialect).name);
 }
 
 // Asking whether a URI is already known happens from whatever view the caller
@@ -273,17 +267,6 @@ ref_overrides_adjacent_keywords(const SchemaBaseDialect base_dialect) -> bool {
   }
 }
 
-// An identifier that reads as no URI has no canonical form to be compared
-// against, which is as good as not matching whatever it is held up to
-inline auto maybe_canonicalize(const std::string_view identifier)
-    -> std::optional<sourcemeta::core::JSON::String> {
-  try {
-    return sourcemeta::core::URI::canonicalize(identifier);
-  } catch (const sourcemeta::core::URIParseError &) {
-    return std::nullopt;
-  }
-}
-
 inline auto embedded_metaschema_identifier_matches(
     const sourcemeta::core::JSON &candidate, const SchemaKeyword keyword,
     const std::string_view identifier,
@@ -298,15 +281,14 @@ inline auto embedded_metaschema_identifier_matches(
     return true;
   }
 
-  if (canonical.has_value()) {
-    try {
-      return sourcemeta::core::URI::canonicalize(current) == canonical.value();
-    } catch (const sourcemeta::core::URIParseError &) {
-      return false;
-    }
+  // An identifier that reads as no URI has no canonical form to be compared
+  // against, which is as good as not matching whatever it is held up to
+  if (!canonical.has_value()) {
+    return false;
   }
 
-  return false;
+  const auto settled{sourcemeta::core::URI::try_canonicalize(current)};
+  return settled.has_value() && settled.value() == canonical.value();
 }
 
 inline auto embedded_metaschema_matches(
@@ -337,7 +319,7 @@ embedded_metaschema_candidate(const sourcemeta::core::JSON &document,
     return {nullptr, ""};
   }
 
-  const auto canonical{maybe_canonicalize(identifier)};
+  const auto canonical{sourcemeta::core::URI::try_canonicalize(identifier)};
 
   constexpr std::array<SchemaKeyword, 2> CONTAINERS{
       {{.name = "$defs"sv, .hash = JSONSCHEMA_HASH_DEFS},
@@ -379,7 +361,7 @@ inline auto embedded_metaschema_link_valid(const sourcemeta::core::JSON &link,
     return false;
   }
 
-  const auto canonical{maybe_canonicalize(identifier)};
+  const auto canonical{sourcemeta::core::URI::try_canonicalize(identifier)};
 
   return embedded_metaschema_identifier_matches(link, id_keyword(base_dialect),
                                                 identifier, canonical);
@@ -391,26 +373,30 @@ struct EmbeddedMetaschemaLink {
   std::string_view container;
 };
 
-// A limit error that the caller's own resolver or callback raised carries an
-// allowance of theirs rather than the one set for this operation, so marking
-// it on the way out is what keeps it from being restated as this one. Framing
-// reaches for the resolver of its own accord, so an operation that bounds its
-// framing cannot tell the two apart without this
-struct ForeignFrameLimitError {
-  SchemaFrameLimitError error;
+// A caller-supplied resolver, walker, or callback may throw anything of its
+// own, including a type that spells the same as one an operation raises and
+// handles itself, while framing and the dialect lookups it takes reach for
+// those components of their own accord. Marking whatever the caller throws on
+// the way out is what holds an operation's handlers to failures of the
+// library's own making, and the boundary that unwraps this rethrows the very
+// exception that was thrown, dynamic type and all. This carries no error of
+// its own, so it deliberately derives from nothing: a handler that means to
+// catch what the caller threw unwraps this rather than naming a base of it
+struct ForeignError {
+  std::exception_ptr error;
 };
 
-// The result borrows the resolver, so it must not outlive it
-inline auto resolver_within_allowance(const SchemaResolver &resolver)
-    -> SchemaResolver {
-  return
-      [&resolver](const std::string_view identifier) -> SchemaResolverResult {
-        try {
-          return resolver(identifier);
-        } catch (const SchemaFrameLimitError &error) {
-          throw ForeignFrameLimitError{error};
-        }
-      };
+// The result borrows the function, so it must not outlive it
+template <typename Function>
+inline auto guard_foreign(const Function &function) {
+  return [&function]<typename... Arguments>(
+             Arguments &&...arguments) -> decltype(auto) {
+    try {
+      return function(std::forward<Arguments>(arguments)...);
+    } catch (...) {
+      throw ForeignError{std::current_exception()};
+    }
+  };
 }
 
 } // namespace sourcemeta::core
