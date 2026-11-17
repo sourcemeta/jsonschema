@@ -12,12 +12,7 @@ namespace sourcemeta::blaze {
 auto compiler_2020_12_applicator_prefixitems(const KeywordContext &context,
                                              const Instructions &)
     -> Instructions {
-  // TODO: Be smarter about how we treat `unevaluatedItems` like how we do for
-  // `unevaluatedProperties`
-  const bool track{std::ranges::any_of(
-      context.global.unevaluated, [](const auto &dependency) -> auto {
-        return dependency.first.ends_with("unevaluatedItems");
-      })};
+  const auto track{context.global.defines_unevaluated_items};
 
   return compiler_draft3_applicator_items_array(
       context, context.global.collects_annotations, track);
@@ -30,12 +25,7 @@ auto compiler_2020_12_applicator_items(const KeywordContext &context,
                         ? context.schema().at("prefixItems").size()
                         : 0};
 
-  // TODO: Be smarter about how we treat `unevaluatedItems` like how we do for
-  // `unevaluatedProperties`
-  const bool track{std::ranges::any_of(
-      context.global.unevaluated, [](const auto &dependency) -> auto {
-        return dependency.first.ends_with("unevaluatedItems");
-      })};
+  const auto track{context.global.defines_unevaluated_items};
 
   return compiler_draft3_applicator_additionalitems_from_cursor(
       context, cursor, context.global.collects_annotations,
@@ -45,12 +35,7 @@ auto compiler_2020_12_applicator_items(const KeywordContext &context,
 auto compiler_2020_12_applicator_contains(const KeywordContext &context,
                                           const Instructions &current)
     -> Instructions {
-  // TODO: Be smarter about how we treat `unevaluatedItems` like how we do for
-  // `unevaluatedProperties`
-  const bool track{std::ranges::any_of(
-      context.global.unevaluated, [](const auto &dependency) -> auto {
-        return dependency.first.ends_with("unevaluatedItems");
-      })};
+  const auto track{context.global.defines_unevaluated_items};
 
   return compiler_2019_09_applicator_contains_with_options(
       context, current, context.global.collects_annotations, track);

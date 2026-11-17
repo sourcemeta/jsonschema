@@ -82,9 +82,12 @@ enum class InstructionIndex : std::uint8_t {
   LogicalNot,
   LogicalNotEvaluate,
   LogicalOr,
+  LogicalOrEvaluate,
   LogicalAnd,
   LogicalXor,
+  LogicalXorEvaluate,
   LogicalCondition,
+  LogicalConditionEvaluate,
   LogicalWhenType,
   LogicalWhenDefines,
   LogicalWhenArraySizeGreater,
@@ -196,9 +199,12 @@ constexpr std::string_view INSTRUCTION_NAMES[] = {
     "LogicalNot",
     "LogicalNotEvaluate",
     "LogicalOr",
+    "LogicalOrEvaluate",
     "LogicalAnd",
     "LogicalXor",
+    "LogicalXorEvaluate",
     "LogicalCondition",
+    "LogicalConditionEvaluate",
     "LogicalWhenType",
     "LogicalWhenDefines",
     "LogicalWhenArraySizeGreater",
@@ -256,6 +262,34 @@ inline auto is_annotation(const InstructionIndex type) noexcept -> bool {
     case InstructionIndex::AnnotationEmit:
       return true;
     case InstructionIndex::AnnotationEmitWrapped:
+      return true;
+    default:
+      return false;
+  }
+}
+
+/// @ingroup evaluator
+/// Check if a given instruction type holds alternative branches, where a
+/// branch that does not hold contributes nothing to the overall result
+inline auto is_disjunction(const InstructionIndex type) noexcept -> bool {
+  switch (type) {
+    case InstructionIndex::LogicalOr:
+    case InstructionIndex::LogicalOrEvaluate:
+    case InstructionIndex::LogicalXor:
+    case InstructionIndex::LogicalXorEvaluate:
+      return true;
+    default:
+      return false;
+  }
+}
+
+/// @ingroup evaluator
+/// Check if a given instruction type holds a condition followed by its
+/// mutually exclusive consequence and alternative
+inline auto is_conditional(const InstructionIndex type) noexcept -> bool {
+  switch (type) {
+    case InstructionIndex::LogicalCondition:
+    case InstructionIndex::LogicalConditionEvaluate:
       return true;
     default:
       return false;

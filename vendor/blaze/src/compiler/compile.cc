@@ -751,6 +751,14 @@ auto compile(const sourcemeta::core::JSON &schema,
   auto unevaluated{
       sourcemeta::blaze::unevaluated(schema, frame, walker, resolver)};
 
+  // Whether the schema declares `unevaluatedItems` does not depend on where
+  // compilation currently is, so every instruction that asks reads it from
+  // here rather than scanning the dependencies again
+  const auto defines_unevaluated_items{
+      std::ranges::any_of(unevaluated, [](const auto &dependency) -> bool {
+        return dependency.first.ends_with("unevaluatedItems");
+      })};
+
   std::uint64_t compilation_depth{0};
   InstructionExtras instruction_extra{effective_tweaks.max_instructions};
   std::vector<sourcemeta::core::SchemaVocabularies::URI>
@@ -767,6 +775,7 @@ auto compile(const sourcemeta::core::JSON &schema,
                         .resource_bindings = std::move(resource_bindings),
                         .collects_annotations = collects_annotations,
                         .unevaluated = std::move(unevaluated),
+                        .defines_unevaluated_items = defines_unevaluated_items,
                         .tweaks = effective_tweaks,
                         .targets = std::move(targets_map),
                         .depth = compilation_depth,
@@ -867,14 +876,8 @@ auto compile(const sourcemeta::core::JSON &schema,
     template_vocabularies.push_back(std::format("{}", vocabulary));
   }
 
-  const bool frames{
-      requires_evaluation(context, entrypoint_location.pointer) ||
-      // TODO: This expression should go away if we start properly compiling
-      // `unevaluatedItems` like we compile `unevaluatedProperties`
-      std::ranges::any_of(
-          context.unevaluated, [](const auto &dependency) -> auto {
-            return dependency.first.ends_with("unevaluatedItems");
-          })};
+  const bool frames{requires_evaluation(context, entrypoint_location.pointer) ||
+                    context.defines_unevaluated_items};
   return {.dynamic = uses_dynamic_scopes,
           .frames = frames,
           .targets = std::move(compiled_targets),

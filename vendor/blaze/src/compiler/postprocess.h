@@ -37,6 +37,7 @@ inline auto is_noop_without_children(const InstructionIndex type) noexcept
   switch (type) {
     case InstructionIndex::LogicalAnd:
     case InstructionIndex::LogicalCondition:
+    case InstructionIndex::LogicalConditionEvaluate:
     case InstructionIndex::LogicalWhenType:
     case InstructionIndex::LogicalWhenDefines:
     case InstructionIndex::LogicalWhenArraySizeGreater:
@@ -150,7 +151,7 @@ inline auto rebase_anchored(Instruction &instruction, InstructionExtras &extra,
       schema_prefix.concat(
           extra[instruction.extra_index].relative_schema_location);
 
-  if (instruction.type == InstructionIndex::LogicalCondition) {
+  if (is_conditional(instruction.type)) {
     const auto &value{std::get<ValueIndexPair>(instruction.value)};
     for (std::size_t index = value.first; index < instruction.children.size();
          ++index) {
@@ -596,7 +597,8 @@ transform_instruction(Instruction &instruction, Instructions &output,
 // its own value
 inline auto hoist_discriminators(Instructions &instructions) -> void {
   for (auto &instruction : instructions) {
-    if (instruction.type == InstructionIndex::LogicalXor &&
+    if ((instruction.type == InstructionIndex::LogicalXor ||
+         instruction.type == InstructionIndex::LogicalXorEvaluate) &&
         !std::get<ValueBoolean>(instruction.value)) {
       for (auto &branch : instruction.children) {
         if (branch.type == InstructionIndex::ControlGroup) {
@@ -660,8 +662,7 @@ inline auto postprocess(std::vector<Instructions> &targets,
         // A conditional stores the indices where its branches begin, so when
         // this pass drops or expands any child, those indices must be remapped
         // onto the rewritten list
-        const bool remap{owner != nullptr &&
-                         owner->type == InstructionIndex::LogicalCondition};
+        const bool remap{owner != nullptr && is_conditional(owner->type)};
         std::vector<std::size_t> boundaries;
         if (remap) {
           boundaries.reserve(current->size() + 1);
@@ -682,10 +683,8 @@ inline auto postprocess(std::vector<Instructions> &targets,
             owner->type == InstructionIndex::AssertionObjectPropertiesSimple};
 
         const bool disjoint{
-            positional || (owner != nullptr &&
-                           (owner->type == InstructionIndex::LogicalCondition ||
-                            owner->type == InstructionIndex::LogicalOr ||
-                            owner->type == InstructionIndex::LogicalXor))};
+            positional || (owner != nullptr && (is_conditional(owner->type) ||
+                                                is_disjunction(owner->type)))};
 
         if (!disjoint && fuse_numeric_bounds(*current, extra)) {
           target_changed = true;

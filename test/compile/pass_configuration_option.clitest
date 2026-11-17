@@ -21,13 +21,13 @@ REPLACE $CWD WITH '[CWD]' IN result.txt
 
 WRITE expected.txt UNTIL EOF
 1> [
-1>   18,
+1>   19,
 1>   false,
 1>   false,
 1>   [
 1>     [
 1>       [
-1>         72,
+1>         75,
 1>         [ "additionalProperties" ],
 1>         [],
 1>         "https://example.com/#/additionalProperties",

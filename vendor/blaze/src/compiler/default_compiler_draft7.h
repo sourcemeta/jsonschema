@@ -86,8 +86,10 @@ auto compiler_draft7_applicator_if(const KeywordContext &context,
     }
   }
 
-  return {make(InstructionIndex::LogicalCondition, context,
-               ValueIndexPair{then_cursor, else_cursor}, std::move(children))};
+  return {make(
+      tracks_evaluation(context) ? InstructionIndex::LogicalConditionEvaluate
+                                 : InstructionIndex::LogicalCondition,
+      context, ValueIndexPair{then_cursor, else_cursor}, std::move(children))};
 }
 
 // We handle `then` as part of `if`

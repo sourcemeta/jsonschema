@@ -143,8 +143,10 @@ auto compiler_draft4_applicator_anyof(const KeywordContext &context,
                                  context.global.collects_annotations ||
                                  requires_evaluation(context)};
 
-  return {make(InstructionIndex::LogicalOr, context,
-               ValueBoolean{requires_exhaustive}, std::move(disjunctors))};
+  return {make(tracks_evaluation(context) ? InstructionIndex::LogicalOrEvaluate
+                                          : InstructionIndex::LogicalOr,
+               context, ValueBoolean{requires_exhaustive},
+               std::move(disjunctors))};
 }
 
 auto compiler_draft4_applicator_oneof(const KeywordContext &context,
@@ -177,8 +179,10 @@ auto compiler_draft4_applicator_oneof(const KeywordContext &context,
                                  context.global.collects_annotations ||
                                  requires_evaluation(context)};
 
-  return {make(InstructionIndex::LogicalXor, context,
-               ValueBoolean{requires_exhaustive}, std::move(disjunctors))};
+  return {make(tracks_evaluation(context) ? InstructionIndex::LogicalXorEvaluate
+                                          : InstructionIndex::LogicalXor,
+               context, ValueBoolean{requires_exhaustive},
+               std::move(disjunctors))};
 }
 
 auto compiler_draft4_applicator_not(const KeywordContext &context,
@@ -189,18 +193,11 @@ auto compiler_draft4_applicator_not(const KeywordContext &context,
                                 sourcemeta::core::EMPTY_WEAK_POINTER,
                                 sourcemeta::core::EMPTY_WEAK_POINTER)};
 
-  // TODO: Be smarter about how we treat `unevaluatedItems` like how we do for
-  // `unevaluatedProperties`
-  const bool track_items{std::ranges::any_of(
-      context.global.unevaluated, [](const auto &dependency) -> auto {
-        return dependency.first.ends_with("unevaluatedItems");
-      })};
-
   // Only emit a `not` instruction that keeps track of
   // evaluation if we really need it. If the "not" subschema
   // does not define applicators, then that's an easy case
   // we can skip
-  if (subschemas && (requires_evaluation(context) || track_items)) {
+  if (subschemas && tracks_evaluation(context)) {
     return {make(InstructionIndex::LogicalNotEvaluate, context, ValueNone{},
                  std::move(children))};
   }
