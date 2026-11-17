@@ -430,7 +430,14 @@ auto compiler_2019_09_core_recursiveref(const KeywordContext &context,
     return compiler_draft3_core_ref(context, current);
   }
 
-  return {make(InstructionIndex::ControlDynamicAnchorJump, context, "")};
+  // A recursive anchor carries no name of its own, so it is kept under an
+  // empty one, and the resource the reference sits in is where it lands when
+  // no enclosing resource declares one
+  return {
+      make(InstructionIndex::ControlDynamicAnchorJump, context,
+           dynamic_anchor_value(
+               context,
+               context.base().recompose_without_fragment().value_or(""), ""))};
 }
 
 auto compiler_2019_09_applicator_properties(const KeywordContext &context,

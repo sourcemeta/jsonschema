@@ -28,39 +28,6 @@ auto compiler_draft7_applicator_if(const KeywordContext &context,
                          destination)
                .has_value());
 
-    // If `if` compiled to nothing, the `then` children will be hoisted to the
-    // current level without the `LogicalCondition` wrapper. When the schema
-    // uses dynamic scoping, we still need a wrapper instruction that keeps the
-    // current schema resource on the evaluation path for dynamic anchor
-    // resolution, as the omitted `LogicalCondition` instruction would have
-    // otherwise done it
-    if (then_cursor == 0 && context.global.uses_dynamic_scopes) {
-      Instructions substeps{
-          compile(context.relative(), sourcemeta::core::EMPTY_WEAK_POINTER,
-                  sourcemeta::core::EMPTY_WEAK_POINTER, destination)};
-      if (substeps.empty()) {
-        return children;
-      }
-
-      const auto then_pointer{context.local.relative_pointer.initial().concat(
-          make_weak_pointer(KEYWORD_THEN))};
-      const SchemaContext then_schema_context{
-          .relative_pointer = then_pointer,
-          .schema = context.schema(),
-          .vocabularies = context.vocabularies(),
-          .base = context.base(),
-          .is_property_name = context.local.is_property_name};
-      const KeywordContext then_context{
-          .global = context.global,
-          .local = then_schema_context,
-          .target = {
-              .keyword = KEYWORD_THEN,
-              .base_schema_location = context.target.base_schema_location,
-              .base_instance_location = context.target.base_instance_location}};
-      return {make(InstructionIndex::LogicalAnd, then_context, ValueNone{},
-                   std::move(substeps))};
-    }
-
     // When hoisting, the `then` children must carry the instance navigation
     // that the omitted `LogicalCondition` wrapper would have performed
     const KeywordContext then_context{

@@ -21,7 +21,7 @@ REPLACE $CWD_URI WITH '[CWD_URI]' IN result.txt
 
 WRITE expected.txt UNTIL EOF
 1> [
-1>   17,
+1>   18,
 1>   false,
 1>   false,
 1>   [
@@ -50,6 +50,10 @@ WRITE expected.txt UNTIL EOF
 1>       ]
 1>     ]
 1>   ],
+1>   [
+1>     []
+1>   ],
+1>   [ 0 ],
 1>   [],
 1>   [ "https://json-schema.org/draft/2020-12/vocab/validation" ],
 1>   [

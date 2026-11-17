@@ -139,7 +139,7 @@ auto instructions_from_json(
 namespace sourcemeta::blaze {
 
 auto from_json(const sourcemeta::core::JSON &json) -> std::optional<Template> {
-  if (!json.is_array() || json.array_size() != 7) {
+  if (!json.is_array() || json.array_size() != 9) {
     return std::nullopt;
   }
 
@@ -172,24 +172,84 @@ auto from_json(const sourcemeta::core::JSON &json) -> std::optional<Template> {
     targets_result.push_back(std::move(target_result).value());
   }
 
-  const auto &labels{json.at(4)};
-  if (!labels.is_array()) {
+  const auto &bindings{json.at(4)};
+  if (!bindings.is_array() || bindings.empty()) {
     return std::nullopt;
   }
 
-  std::vector<std::pair<std::size_t, std::size_t>> labels_result;
-  labels_result.reserve(labels.size());
-  for (const auto &label : labels.as_array()) {
-    if (!label.is_array() || label.array_size() != 2 ||
-        !label.at(0).is_integer() || !label.at(1).is_integer()) {
+  std::vector<std::vector<std::pair<std::size_t, std::size_t>>> bindings_result;
+  bindings_result.reserve(bindings.size());
+  for (const auto &list : bindings.as_array()) {
+    if (!list.is_array()) {
       return std::nullopt;
     }
-    labels_result.emplace_back(
-        static_cast<std::size_t>(label.at(0).to_integer()),
-        static_cast<std::size_t>(label.at(1).to_integer()));
+
+    std::vector<std::pair<std::size_t, std::size_t>> entries;
+    entries.reserve(list.size());
+    for (const auto &entry : list.as_array()) {
+      if (!entry.is_array() || entry.array_size() != 2 ||
+          !entry.at(0).is_integer() || !entry.at(1).is_integer() ||
+          entry.at(0).to_integer() < 0 || entry.at(1).to_integer() <= 0) {
+        return std::nullopt;
+      }
+
+      entries.emplace_back(static_cast<std::size_t>(entry.at(0).to_integer()),
+                           static_cast<std::size_t>(entry.at(1).to_integer()));
+    }
+
+    bindings_result.push_back(std::move(entries));
   }
 
-  const auto &vocabularies{json.at(5)};
+  // The first list is what a resource that binds nothing points at
+  if (!bindings_result.front().empty()) {
+    return std::nullopt;
+  }
+
+  const auto &target_bindings{json.at(5)};
+  if (!target_bindings.is_array() ||
+      target_bindings.size() != targets_result.size()) {
+    return std::nullopt;
+  }
+
+  std::vector<std::size_t> target_bindings_result;
+  target_bindings_result.reserve(target_bindings.size());
+  for (const auto &index : target_bindings.as_array()) {
+    if (!index.is_integer() || index.to_integer() < 0 ||
+        static_cast<std::size_t>(index.to_integer()) >=
+            bindings_result.size()) {
+      return std::nullopt;
+    }
+
+    target_bindings_result.push_back(
+        static_cast<std::size_t>(index.to_integer()));
+  }
+
+  const auto &anchors{json.at(6)};
+  if (!anchors.is_array()) {
+    return std::nullopt;
+  }
+
+  std::vector<std::string> anchors_result;
+  anchors_result.reserve(anchors.size());
+  for (const auto &anchor : anchors.as_array()) {
+    if (!anchor.is_string()) {
+      return std::nullopt;
+    }
+
+    anchors_result.push_back(anchor.to_string());
+  }
+
+  // Every binding names an anchor and a target that exist
+  for (const auto &list : bindings_result) {
+    for (const auto &entry : list) {
+      if (entry.first >= anchors_result.size() ||
+          entry.second > targets_result.size()) {
+        return std::nullopt;
+      }
+    }
+  }
+
+  const auto &vocabularies{json.at(7)};
   if (!vocabularies.is_array()) {
     return std::nullopt;
   }
@@ -203,7 +263,7 @@ auto from_json(const sourcemeta::core::JSON &json) -> std::optional<Template> {
     vocabularies_result.push_back(vocabulary.to_string());
   }
 
-  const auto &messages{json.at(6)};
+  const auto &messages{json.at(8)};
   if (!messages.is_array()) {
     return std::nullopt;
   }
@@ -231,8 +291,10 @@ auto from_json(const sourcemeta::core::JSON &json) -> std::optional<Template> {
   return Template{.dynamic = dynamic.to_boolean(),
                   .frames = track.to_boolean(),
                   .targets = std::move(targets_result),
-                  .labels = std::move(labels_result),
+                  .bindings = std::move(bindings_result),
+                  .target_bindings = std::move(target_bindings_result),
                   .extra = std::move(template_extra),
+                  .anchors = std::move(anchors_result),
                   .vocabularies = std::move(vocabularies_result),
                   .messages = std::move(messages_result)};
 }

@@ -13,13 +13,13 @@ RUN compile schema STDIN /dev/null IN . INTO result.txt EXPECTING 0
 
 WRITE expected.txt UNTIL EOF
 1> [
-1>   17,
+1>   18,
 1>   false,
 1>   false,
 1>   [
 1>     [
 1>       [
-1>         106,
+1>         107,
 1>         [ "$ref" ],
 1>         [],
 1>         "https://example.com/#/$ref",
@@ -44,6 +44,10 @@ WRITE expected.txt UNTIL EOF
 1>       ]
 1>     ]
 1>   ],
+1>   [
+1>     []
+1>   ],
+1>   [ 0, 0 ],
 1>   [],
 1>   [
 1>     "https://json-schema.org/draft/2020-12/vocab/core",

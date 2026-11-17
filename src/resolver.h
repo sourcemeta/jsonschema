@@ -31,7 +31,6 @@
 #include <string>        // std::string
 #include <string_view>   // std::string_view
 #include <thread>        // std::this_thread::sleep_for
-#include <unordered_map> // std::unordered_map
 #include <unordered_set> // std::unordered_set
 #include <utility> // std::pair, std::piecewise_construct, std::forward_as_tuple, std::move
 #include <vector> // std::vector
@@ -40,110 +39,23 @@ namespace sourcemeta::jsonschema {
 
 static constexpr std::uint8_t HTTP_MAXIMUM_RETRIES{3};
 
-// A key that is not a valid URI cannot denote a schema identifier, but it must
-// not render the rest of the map unusable either, so it stays as the user
-// wrote it
-static inline auto canonical_resolve_key(const std::string_view key)
+// An identity that no URI can express cannot be canonicalized, but it names
+// whatever declared it all the same, so it stays as it was spelled
+static inline auto canonical_identity(const std::string_view identifier)
     -> std::string {
-  try {
-    return sourcemeta::core::URI::canonicalize(key);
-  } catch (const sourcemeta::core::URIParseError &) {
-    return std::string{key};
-  }
-}
-
-// The `.json` extension is not a URI concern, so this single alternative is
-// tried by hand, and always after the identifier itself, so that a map holding
-// both spellings is unambiguous
-static inline auto resolve_alternative(const std::string &identifier)
-    -> std::string {
-  return identifier.ends_with(".json")
-             ? identifier.substr(0, identifier.size() - 5)
-             : identifier + ".json";
-}
-
-// Keys are canonicalized once, up front, rather than on every lookup, which
-// would make resolution linear in the size of the map for each reference. When
-// several keys canonicalize to the same URI, the one the user already wrote in
-// canonical form wins, and otherwise the first in lexicographic order, so that
-// the winner never depends on hash iteration order
-// TODO: Move this to Blaze's configuration parser, alongside where the values
-// of the `resolve` object are already canonicalized. Doing it there would let
-// a key that is not a valid URI, and a set of keys that collapse into the same
-// canonical URI, be reported as a `ConfigurationParseError` pointing at the
-// offending property rather than quietly tolerated, and would spare every
-// consumer of a configuration from repeating the work
-static inline auto canonical_resolve_map(
-    const std::unordered_map<std::string, std::string> &resolve_map)
-    -> std::unordered_map<std::string, std::string> {
-  const std::map<std::string_view, std::string_view> sorted{
-      resolve_map.cbegin(), resolve_map.cend()};
-
-  std::unordered_map<std::string, std::string> result;
-  result.reserve(sorted.size());
-  for (const auto &entry : sorted) {
-    auto canonical{canonical_resolve_key(entry.first)};
-    const auto is_canonical{canonical == entry.first};
-    const auto match{result.find(canonical)};
-    if (match == result.cend()) {
-      result.emplace(std::move(canonical), entry.second);
-    } else if (is_canonical) {
-      match->second = entry.second;
-    }
-  }
-
-  return result;
-}
-
-static inline auto find_resolve_match(
-    const std::unordered_map<std::string, std::string> &resolve_map,
-    const std::string &identifier)
-    -> std::unordered_map<std::string, std::string>::const_iterator {
-  if (resolve_map.empty()) {
-    return resolve_map.cend();
-  }
-
-  // Keys are stored canonicalized, so an identifier spelled the way its key is
-  // matches without parsing a URI at all
-  auto match{resolve_map.find(identifier)};
-  if (match != resolve_map.cend()) {
-    return match;
-  }
-
-  match = resolve_map.find(resolve_alternative(identifier));
-  if (match != resolve_map.cend()) {
-    return match;
-  }
-
-  // Comparing canonical URIs is what lets a key match however the user spelled
-  // it. Canonicalization lowercases the scheme and the host, drops an empty
-  // fragment and a default port, resolves dot segments, and normalises
-  // percent-encoding, all per RFC 3986. An identifier that no URI can express
-  // canonicalizes to itself here, and so falls through as unresolved rather
-  // than aborting the command
-  const auto canonical{canonical_resolve_key(identifier)};
-  if (canonical == identifier) {
-    return resolve_map.cend();
-  }
-
-  match = resolve_map.find(canonical);
-  if (match != resolve_map.cend()) {
-    return match;
-  }
-
-  return resolve_map.find(resolve_alternative(canonical));
+  return sourcemeta::core::URI::try_canonicalize(identifier)
+      .value_or(std::string{identifier});
 }
 
 static inline auto
-resolve_map_uri(const std::unordered_map<std::string, std::string> &resolve_map,
-                const std::filesystem::path &base_path,
+resolve_map_uri(const sourcemeta::blaze::Configuration &configuration,
                 const std::string &identifier) -> std::optional<std::string> {
-  const auto match{find_resolve_match(resolve_map, identifier)};
-  if (match == resolve_map.cend()) {
+  const auto *match{configuration.find_resolve(identifier)};
+  if (match == nullptr) {
     return std::nullopt;
   }
 
-  return resolve_relative_uri(match->second, base_path);
+  return resolve_relative_uri(*match, configuration.base_path);
 }
 
 static constexpr std::string_view HTTP_HEADER_EXAMPLE{
@@ -354,16 +266,6 @@ anonymous_base_dialect(const sourcemeta::core::JSON &schema,
 
 enum class IdentifierKeyword : std::uint8_t { Unknown, Modern, Legacy };
 
-// Whether the dialect in force gives a keyword any meaning at all, which is
-// what the vocabularies it draws on say rather than what its base dialect
-// happens to name
-static inline auto
-dialect_defines(const sourcemeta::core::SchemaVocabularies &vocabularies,
-                const std::string_view keyword) -> bool {
-  return sourcemeta::core::schema_walker(keyword, vocabularies).type !=
-         sourcemeta::core::SchemaKeywordType::Unknown;
-}
-
 // Every official meta-schema identifies itself using the keyword that its own
 // dialect relies on, which reveals that keyword without framing anything
 static inline auto identifier_keyword(const std::string_view dialect)
@@ -409,7 +311,7 @@ resolve_identifier(const sourcemeta::core::JSON &document,
 // Identifiers are stored canonicalized, as whoever asks for one may well have
 // resolved it against a base URI first and so spell it differently than the
 // document that declares it. Trying the identifier as given before parsing it
-// as a URI keeps the common case free, exactly as `find_resolve_match` does
+// as a URI keeps the common case free, exactly as a configuration lookup does
 static inline auto
 declares_identifier(const std::unordered_set<std::string> &identifiers,
                     const std::string &identifier) -> bool {
@@ -417,7 +319,7 @@ declares_identifier(const std::unordered_set<std::string> &identifiers,
     return true;
   }
 
-  const auto canonical{canonical_resolve_key(identifier)};
+  const auto canonical{canonical_identity(identifier)};
   return canonical != identifier && identifiers.contains(canonical);
 }
 
@@ -575,10 +477,6 @@ public:
       const std::optional<sourcemeta::blaze::Configuration> &configuration,
       const bool remote, const std::string_view default_dialect)
       : options_{options}, configuration_{configuration},
-        canonical_resolve_{
-            configuration.has_value()
-                ? canonical_resolve_map(configuration->resolve)
-                : std::unordered_map<std::string, std::string>{}},
         default_dialect_{default_dialect}, remote_{remote} {
     // Indexing the `--resolve` inputs means reading every one of them end to
     // end, which is neither cheap nor repeatable: standard input can only be
@@ -648,7 +546,7 @@ public:
         // An installed dependency answers both to the identifier it declares
         // and to the URI it was imported under, as whoever wrote the
         // configuration may well name it either way
-        const auto declared{canonical_resolve_key(root_identity(
+        const auto declared{canonical_identity(root_identity(
             schema, std::ref(*this), default_dialect, dependency_uri))};
         this->index_.emplace(declared,
                              Leaf{.path = dependency_path,
@@ -656,7 +554,7 @@ public:
                                   .kind = LeafKind::Schema,
                                   .answers_to_location = false,
                                   .answers_with_contents = true});
-        this->index_.emplace(canonical_resolve_key(dependency_uri),
+        this->index_.emplace(canonical_identity(dependency_uri),
                              Leaf{.path = dependency_path,
                                   .display_name = dependency_path.string(),
                                   .kind = LeafKind::Schema,
@@ -770,14 +668,17 @@ public:
           // Such a schema is registered as it stands, and whoever reads it
           // names its dialect from the outside
           if (subschema.is_object()) {
-            if (dialect_defines(subschema_vocabularies, "$schema")) {
+            if (sourcemeta::core::schema_defines_keyword(
+                    sourcemeta::core::schema_walker, subschema_vocabularies,
+                    "$schema")) {
               subschema.assign("$schema",
                                sourcemeta::core::JSON{entry.dialect});
             }
 
-            if (dialect_defines(subschema_vocabularies,
-                                sourcemeta::core::schema_identifier_keyword(
-                                    entry.base_dialect))) {
+            if (sourcemeta::core::schema_defines_keyword(
+                    sourcemeta::core::schema_walker, subschema_vocabularies,
+                    sourcemeta::core::schema_identifier_keyword(
+                        entry.base_dialect))) {
               sourcemeta::core::schema_reidentify(subschema, uri,
                                                   entry.base_dialect);
             }
@@ -814,11 +715,9 @@ public:
       -> sourcemeta::core::SchemaResolverResult {
     const std::string string_identifier{identifier};
     const auto mapped_result = this->configuration_.and_then(
-        [this,
-         &string_identifier](const sourcemeta::blaze::Configuration &config)
+        [&string_identifier](const sourcemeta::blaze::Configuration &config)
             -> std::optional<std::string> {
-          return resolve_map_uri(this->canonical_resolve_, config.base_path,
-                                 string_identifier);
+          return resolve_map_uri(config, string_identifier);
         });
     const std::string &target{mapped_result.has_value() ? mapped_result.value()
                                                         : string_identifier};
@@ -951,11 +850,9 @@ public:
     // as it does for a schema, so this is settled before anything is looked up
     const std::string string_identifier{identifier};
     const auto mapped_result = this->configuration_.and_then(
-        [this,
-         &string_identifier](const sourcemeta::blaze::Configuration &config)
+        [&string_identifier](const sourcemeta::blaze::Configuration &config)
             -> std::optional<std::string> {
-          return resolve_map_uri(this->canonical_resolve_, config.base_path,
-                                 string_identifier);
+          return resolve_map_uri(config, string_identifier);
         });
     if (mapped_result.has_value()) {
       LOG_DEBUG(this->options_)
@@ -963,7 +860,7 @@ public:
           << " given the configuration file\n";
     }
 
-    const std::string target{canonical_resolve_key(
+    const std::string target{canonical_identity(
         mapped_result.has_value() ? mapped_result.value() : string_identifier)};
 
     const auto match{this->descriptions_.find(target)};
@@ -1066,7 +963,7 @@ public:
   description_retrieval(const std::string_view identifier) const
       -> std::optional<std::string> {
     const auto match{
-        this->description_retrievals_.find(canonical_resolve_key(identifier))};
+        this->description_retrievals_.find(canonical_identity(identifier))};
     if (match == this->description_retrievals_.cend()) {
       return std::nullopt;
     }
@@ -1197,10 +1094,9 @@ private:
   [[nodiscard]] auto resolution_target(const std::string &identifier) const
       -> std::string {
     const auto mapped{this->configuration_.and_then(
-        [this, &identifier](const sourcemeta::blaze::Configuration &config)
+        [&identifier](const sourcemeta::blaze::Configuration &config)
             -> std::optional<std::string> {
-          return resolve_map_uri(this->canonical_resolve_, config.base_path,
-                                 identifier);
+          return resolve_map_uri(config, identifier);
         })};
     return mapped.has_value() ? mapped.value() : identifier;
   }
@@ -1216,12 +1112,12 @@ private:
 
     const auto self{openapi_self_identity(entry.second, retrieval)};
     if (self.has_value()) {
-      const auto identity{canonical_resolve_key(self.value())};
+      const auto identity{canonical_identity(self.value())};
       this->register_description(identity, entry);
       this->description_retrievals_.emplace(identity, retrieval);
     }
 
-    const auto identity{canonical_resolve_key(retrieval)};
+    const auto identity{canonical_identity(retrieval)};
     this->register_description(identity, entry);
     this->description_retrievals_.emplace(identity, retrieval);
   }
@@ -1285,11 +1181,11 @@ private:
       const auto retrieval{sourcemeta::jsonschema::default_id(indexed)};
       const auto self{openapi_self_identity(indexed.second, retrieval)};
       if (self.has_value()) {
-        this->register_leaf(canonical_resolve_key(self.value()), indexed,
+        this->register_leaf(canonical_identity(self.value()), indexed,
                             LeafKind::OpenAPI, retained);
       }
 
-      this->register_leaf(canonical_resolve_key(retrieval), indexed,
+      this->register_leaf(canonical_identity(retrieval), indexed,
                           LeafKind::OpenAPI, retained);
       return;
     }
@@ -1304,7 +1200,7 @@ private:
     for (const auto &identity :
          root_identities(indexed.second, std::ref(*this), default_dialect,
                          sourcemeta::jsonschema::default_id(indexed))) {
-      this->register_leaf(canonical_resolve_key(identity), indexed,
+      this->register_leaf(canonical_identity(identity), indexed,
                           LeafKind::Schema, retained);
     }
   }
@@ -1704,7 +1600,6 @@ private:
   std::map<std::string, sourcemeta::core::JSON> staged_{};
   const sourcemeta::core::Options &options_;
   const std::optional<sourcemeta::blaze::Configuration> configuration_;
-  const std::unordered_map<std::string, std::string> canonical_resolve_;
   const std::string default_dialect_;
   bool remote_{false};
   // Whether the `--resolve` inputs are still being indexed, during which a

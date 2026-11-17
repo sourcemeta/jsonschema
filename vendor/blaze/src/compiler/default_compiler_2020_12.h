@@ -75,29 +75,12 @@ auto compiler_2020_12_core_dynamicref(const KeywordContext &context,
   // We handle the non-anchor variant by not treating it as a dynamic reference
   assert(reference.fragment().has_value());
 
-  // TODO: Here we can potentially optimize `$dynamicRef` as a static reference
-  // if we determine (by traversing the frame) that the given dynamic anchor
-  // is only defined once. That means there is only one schema resource, and
-  // the jump and be always statically determined
-
-  // Note we don't need to even care about the static part of the dynamic
-  // reference (if any), as even if we jump first there, we will still
-  // look for the oldest dynamic anchor in the schema resource chain.
-
-  if (reference.is_fragment_only()) {
-    return {make(InstructionIndex::ControlDynamicAnchorJump, context,
-                 std::string{reference.fragment().value()})};
-  }
-  const auto base_resource{reference.recompose_without_fragment()};
-  assert(base_resource.has_value());
-
-  // If the dynamic reference has a static component, we need to make sure we
-  // append such static part as a resource before we begin the lookup
-  return {make_with_resource(
-      InstructionIndex::ControlDynamicAnchorJump, context,
-      // TODO: The amount of possible anchors is known at compile time.
-      // We could convert it into integers like we do for resources
-      std::string{reference.fragment().value()}, base_resource.value())};
+  // Where the reference resolves to statically is what stands in when the name
+  // turns out not to be in scope at all, which is what the specification asks
+  // for. Any enclosing resource that declares the name wins over it
+  return {make(InstructionIndex::ControlDynamicAnchorJump, context,
+               dynamic_anchor_value(context, reference.recompose(),
+                                    reference.fragment().value()))};
 }
 
 } // namespace sourcemeta::blaze

@@ -6,6 +6,7 @@
 #include <cassert>       // assert
 #include <cstdint>       // std::uint64_t
 #include <deque>         // std::deque
+#include <exception>     // std::rethrow_exception
 #include <functional>    // std::equal_to
 #include <memory>        // std::unique_ptr, std::make_unique
 #include <string>        // std::string
@@ -45,13 +46,16 @@ struct Deferred {
   JSON::String origin;
   Pointer pointer;
   JSON::String destination;
+  // The fragment of the URI the reference resolves to, as whether it names a
+  // place within what the caller holds is a question the document part alone
+  // cannot answer
+  std::optional<JSON::String> fragment;
 };
 
 // What the walk carries from one document to the next
 struct Walk {
   const SchemaWalker &walker;
   const SchemaResolver &resolver;
-  SchemaResolverCache &cache;
   const SchemaDependencyCallback &callback;
   std::string_view default_dialect;
   std::uint64_t limit;
@@ -65,10 +69,25 @@ struct Walk {
 
 // Whatever the caller holds counts here too, and whatever this comes to
 // account for is handed back, which is how several walks of one span agree on
-// what has been read and what a reference still needs
-auto is_accounted(const Walk &walk, const JSON::StringView identifier) -> bool {
+// what has been read and what a reference still needs. Whatever the walk read
+// answers for itself, as what it holds is a schema document whole, so only the
+// caller is told the fragment, it being the one that may hold something a
+// reference can name a place within and not the whole of
+auto is_accounted(const Walk &walk, const JSON::StringView identifier,
+                  const std::optional<JSON::StringView> fragment) -> bool {
   return walk.accounted.contains(identifier) ||
-         (walk.accounted_predicate && walk.accounted_predicate(identifier));
+         (walk.accounted_predicate &&
+          walk.accounted_predicate(identifier, fragment));
+}
+
+// What a deferral owns is a string of its own, which every reader of it takes
+// a view of
+auto fragment_of(const Deferred &deferred) -> std::optional<JSON::StringView> {
+  if (!deferred.fragment.has_value()) {
+    return std::nullopt;
+  }
+
+  return JSON::StringView{deferred.fragment.value()};
 }
 
 auto account(Walk &walk, const JSON::StringView identifier) -> void {
@@ -108,7 +127,9 @@ auto frame_within(Walk &walk, const JSON &schema,
 
 // Reading a document takes knowing which dialect it is written against, so one
 // that answers with nothing, or whose answer names a meta-schema that nothing
-// can produce, is not one the walk can go on from
+// can produce, is not one the walk can go on from. Only failures the lookup
+// itself produces land in these handlers, as whatever the caller's own
+// resolver throws travels marked as foreign and passes them by, unchanged
 //
 // A meta-schema that a document carries within itself counts here, as reading
 // consults the document before the resolver. One that another document carries
@@ -125,6 +146,11 @@ auto is_readable(const JSON &document, const SchemaResolver &resolver,
   } catch (const SchemaUnknownBaseDialectError &) {
     return false;
   } catch (const SchemaResolutionError &) {
+    return false;
+  } catch (const SchemaKeywordError &) {
+    // A dialect declaration that is not a string, or one that is no URI at
+    // all, leaves the document carrying it with nothing to be read against,
+    // wherever along the chain the lookup met it
     return false;
   }
 }
@@ -170,7 +196,7 @@ auto examine(Walk &walk, const SchemaFrame &frame,
     // own. Where the reference sits is reported all the same, as that is a
     // dependency of this document on another however the far end got here.
     // Reading no further is also what keeps a cycle from going round for ever
-    if (is_accounted(walk, reference.base)) {
+    if (is_accounted(walk, reference.base, reference.fragment)) {
       // A document that names itself by the URI it came from reaches no
       // further than the part of it that analysis was pointed at, which is out
       // of scope rather than a dependency on anything
@@ -178,6 +204,7 @@ auto examine(Walk &walk, const SchemaFrame &frame,
         walk.callback({.origin = origin,
                        .pointer = pointer,
                        .destination = reference.base,
+                       .fragment = reference.fragment,
                        .document = nullptr});
       }
 
@@ -194,7 +221,11 @@ auto examine(Walk &walk, const SchemaFrame &frame,
       walk.deferred.emplace_back(
           Deferred{.origin = JSON::String{origin},
                    .pointer = to_pointer(pointer),
-                   .destination = JSON::String{reference.base}});
+                   .destination = JSON::String{reference.base},
+                   .fragment = reference.fragment.has_value()
+                                   ? std::optional<JSON::String>{JSON::String{
+                                         reference.fragment.value()}}
+                                   : std::nullopt});
       return;
     }
 
@@ -215,6 +246,7 @@ auto examine(Walk &walk, const SchemaFrame &frame,
     walk.callback({.origin = origin,
                    .pointer = pointer,
                    .destination = reference.base,
+                   .fragment = reference.fragment,
                    .document = &remote.value()});
     account(walk, reference.base);
 
@@ -224,13 +256,10 @@ auto examine(Walk &walk, const SchemaFrame &frame,
       return;
     }
 
-    // What the walk takes over it also releases once it is done with, so the
-    // cache hands the document over rather than keeping a copy of the closure
-    // alive behind it. Nothing asks for this one again, as it is accounted for
-    auto taken{walk.cache.extract(JSON::String{reference.base})};
-    walk.pending.emplace_back(taken.empty() ? std::move(remote)
-                                            : std::move(taken.mapped()),
-                              JSON::String{reference.base});
+    // The cache keeps the answer, as framing may yet name this document as the
+    // dialect of one the walk has not read, and the queue borrows it from
+    // there rather than taking it out and leaving the resolver to answer twice
+    walk.pending.emplace_back(std::move(remote), JSON::String{reference.base});
   });
 }
 
@@ -242,12 +271,14 @@ auto schema_dependencies(const JSON &schema, const SchemaWalker &walker,
                          const SchemaDependenciesOptions &options)
     -> std::uint64_t {
   assert(callback);
-  // Framing reaches for the resolver of its own accord, so a limit error the
-  // caller's own resolver raises has to be told apart from one this
-  // operation's allowance ran into
+  // Framing and the dialect lookups it takes reach for the resolver and the
+  // walker of their own accord, inside handlers that translate failures of the
+  // library's own making, so whatever the caller's own components throw is
+  // marked on the way out and rethrown untouched at the boundary below
   SchemaResolverCache cache;
-  const SchemaResolver bounded{resolver_within_allowance(resolver)};
-  const SchemaResolver cached{resolver_with_cache(bounded, cache)};
+  const SchemaResolver foreign{guard_foreign(resolver)};
+  const SchemaResolver cached{resolver_with_cache(foreign, cache)};
+  const SchemaWalker guarded{guard_foreign(walker)};
   // Framing states these as preconditions rather than checking them, and a
   // path that names nothing otherwise fails deep inside the document rather
   // than at the call that got it wrong
@@ -258,9 +289,8 @@ auto schema_dependencies(const JSON &schema, const SchemaWalker &walker,
                (target->is_object() || target->is_boolean());
       }));
 
-  Walk walk{.walker = walker,
+  Walk walk{.walker = guarded,
             .resolver = cached,
-            .cache = cache,
             .callback = callback,
             .default_dialect = options.default_dialect,
             .limit = options.max_locations,
@@ -312,10 +342,11 @@ auto schema_dependencies(const JSON &schema, const SchemaWalker &walker,
     // another such reference goes on to end analysis below. Reporting it takes
     // until here rather than where it sits, as nothing before this settles it
     for (const auto &deferred : walk.deferred) {
-      if (is_accounted(walk, deferred.destination)) {
+      if (is_accounted(walk, deferred.destination, fragment_of(deferred))) {
         walk.callback({.origin = deferred.origin,
                        .pointer = to_weak_pointer(deferred.pointer),
                        .destination = deferred.destination,
+                       .fragment = fragment_of(deferred),
                        .document = nullptr});
       }
     }
@@ -327,7 +358,7 @@ auto schema_dependencies(const JSON &schema, const SchemaWalker &walker,
     // what they name
     const Deferred *unresolved{nullptr};
     for (const auto &deferred : walk.deferred) {
-      if (is_accounted(walk, deferred.destination)) {
+      if (is_accounted(walk, deferred.destination, fragment_of(deferred))) {
         continue;
       }
 
@@ -339,6 +370,7 @@ auto schema_dependencies(const JSON &schema, const SchemaWalker &walker,
         options.unresolved({.origin = deferred.origin,
                             .pointer = to_weak_pointer(deferred.pointer),
                             .destination = deferred.destination,
+                            .fragment = fragment_of(deferred),
                             .document = nullptr});
       }
     }
@@ -348,8 +380,8 @@ auto schema_dependencies(const JSON &schema, const SchemaWalker &walker,
           "Could not resolve the reference to an external schema",
           unresolved->destination);
     }
-  } catch (const ForeignFrameLimitError &foreign) {
-    throw foreign.error;
+  } catch (const ForeignError &caller) {
+    std::rethrow_exception(caller.error);
   }
 
   return options.max_locations - walk.remaining;

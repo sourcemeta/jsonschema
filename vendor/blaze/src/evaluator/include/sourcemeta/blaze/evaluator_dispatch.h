@@ -37,10 +37,6 @@
     context.evaluator->instance_location.push_back(                            \
         instruction.relative_instance_location);                               \
   }                                                                            \
-  if constexpr (Dynamic) {                                                     \
-    context.evaluator->resources.push_back(                                    \
-        context.schema->extra[instruction.extra_index].schema_resource);       \
-  }                                                                            \
   if constexpr (HasCallback) {                                                 \
     (*context.callback)(EvaluationType::Pre, true, instruction,                \
                         context.schema->extra[instruction.extra_index],        \
@@ -65,9 +61,6 @@
   if constexpr (HasCallback) {                                                 \
     context.evaluator->instance_location.pop_back(                             \
         instruction.relative_instance_location.size());                        \
-  }                                                                            \
-  if constexpr (Dynamic) {                                                     \
-    context.evaluator->resources.pop_back();                                   \
   }
 
 #define EVALUATE_BEGIN(instruction_type, precondition)                         \
@@ -415,7 +408,7 @@ inline auto assume_value_copy(const Value &variant) noexcept -> T {
   return *pointer;
 }
 
-template <bool Frames, bool Dynamic, bool HasCallback> struct DispatchContext {
+template <bool Frames, bool HasCallback> struct DispatchContext {
   const sourcemeta::blaze::Template *schema;
   const sourcemeta::blaze::Callback *callback;
   sourcemeta::blaze::Evaluator *evaluator;
@@ -425,29 +418,27 @@ template <bool Frames, bool Dynamic, bool HasCallback> struct DispatchContext {
   std::size_t frame;
 };
 
-template <bool Frames, bool Dynamic, bool HasCallback>
+template <bool Frames, bool HasCallback>
 inline auto
 evaluate_instruction(const sourcemeta::blaze::Instruction &instruction,
                      const sourcemeta::core::JSON &instance,
                      const std::uint64_t depth,
-                     DispatchContext<Frames, Dynamic, HasCallback> &context)
-    -> bool;
+                     DispatchContext<Frames, HasCallback> &context) -> bool;
 
-template <bool Frames, bool Dynamic, bool HasCallback>
+template <bool Frames, bool HasCallback>
 inline auto evaluate_instruction_with_property(
     const sourcemeta::blaze::Instruction &instruction,
     const sourcemeta::core::JSON &instance, const std::uint64_t depth,
-    DispatchContext<Frames, Dynamic, HasCallback> &context,
+    DispatchContext<Frames, HasCallback> &context,
     const sourcemeta::core::JSON::String &name) -> bool;
 
 #define INSTRUCTION_HANDLER(name)                                              \
-  template <bool Frames, bool Dynamic, bool HasCallback>                       \
+  template <bool Frames, bool HasCallback>                                     \
   static inline auto name(                                                     \
       [[maybe_unused]] const sourcemeta::blaze::Instruction &instruction,      \
       [[maybe_unused]] const sourcemeta::core::JSON &instance,                 \
       [[maybe_unused]] const std::uint64_t depth,                              \
-      [[maybe_unused]] DispatchContext<Frames, Dynamic, HasCallback> &context) \
-      -> bool
+      [[maybe_unused]] DispatchContext<Frames, HasCallback> &context) -> bool
 
 #define INSTRUCTION_DIRECT(name, value_type)                                   \
   SOURCEMETA_FORCEINLINE inline auto DIRECT_##name(                            \
@@ -1397,12 +1388,11 @@ INSTRUCTION_HANDLER(AssertionArrayPrefixEvaluate) {
 // nothing of its own, so running it here is indistinguishable from dispatching
 // it, yet the tag does report, which is why it only steps aside when there is
 // no callback to report to
-template <bool Frames, bool Dynamic, bool HasCallback>
+template <bool Frames, bool HasCallback>
 SOURCEMETA_FORCEINLINE inline auto
 evaluate_branch(const sourcemeta::blaze::Instruction &branch,
                 const sourcemeta::core::JSON &target, const std::uint64_t depth,
-                DispatchContext<Frames, Dynamic, HasCallback> &context)
-    -> bool {
+                DispatchContext<Frames, HasCallback> &context) -> bool {
   if (branch.type != InstructionIndex::ControlGroup) [[unlikely]] {
     return evaluate_instruction(branch, target, depth, context);
   }
@@ -1782,31 +1772,47 @@ INSTRUCTION_HANDLER(ControlFrame) {
   EVALUATE_END_PASS_THROUGH(ControlFrame);
 }
 
-INSTRUCTION_HANDLER(ControlDynamicAnchorJump) {
-  EVALUATE_BEGIN_NO_PRECONDITION(ControlDynamicAnchorJump);
-  result = false;
-  const auto &target{
-      resolve_instance(instance, instruction.relative_instance_location)};
-  const auto &value{assume_value<ValueString>(instruction.value)};
-  for (const auto &resource : context.evaluator->resources) {
-    const auto label{Evaluator::hash(resource, value)};
-    const auto match{std::ranges::find_if(
-        context.schema->labels,
-        [&label](const auto &entry) -> bool { return entry.first == label; })};
-    if (match != context.schema->labels.cend()) [[likely]] {
-      result = true;
-      assert(match->second < context.schema->targets.size());
-      for (const auto &child : context.schema->targets[match->second]) {
-        if (!EVALUATE_RECURSE(child, target)) [[unlikely]] {
-          result = false;
-          EVALUATE_END(ControlDynamicAnchorJump);
-        }
-      }
-
+INSTRUCTION_HANDLER(ControlResource) {
+  EVALUATE_BEGIN_PASS_THROUGH(ControlResource);
+  assert(!instruction.children.empty());
+  const auto index{assume_value_copy<ValueUnsignedInteger>(instruction.value)};
+  assert(index != 0);
+  assert(index < context.schema->bindings.size());
+  const auto &bindings{context.schema->bindings[index]};
+  context.evaluator->enter_resource(bindings);
+  for (const auto &child : instruction.children) {
+    if (!EVALUATE_RECURSE(child, instance)) [[unlikely]] {
+      result = false;
       break;
     }
   }
 
+  context.evaluator->leave_resource(bindings);
+  EVALUATE_END_PASS_THROUGH(ControlResource);
+}
+
+INSTRUCTION_HANDLER(ControlDynamicAnchorJump) {
+  EVALUATE_BEGIN_NO_PRECONDITION(ControlDynamicAnchorJump);
+  result = true;
+  const auto &target{
+      resolve_instance(instance, instruction.relative_instance_location)};
+  const auto &value{assume_value<ValueIndexPair>(instruction.value)};
+  const auto destination{
+      context.evaluator->dynamic_target(value.first, value.second)};
+  assert(destination != 0);
+  assert(destination - 1 < context.schema->targets.size());
+  const auto &bindings{
+      context.schema
+          ->bindings[context.schema->target_bindings[destination - 1]]};
+  context.evaluator->enter_resource(bindings);
+  for (const auto &child : context.schema->targets[destination - 1]) {
+    if (!EVALUATE_RECURSE(child, target)) [[unlikely]] {
+      result = false;
+      break;
+    }
+  }
+
+  context.evaluator->leave_resource(bindings);
   EVALUATE_END(ControlDynamicAnchorJump);
 }
 
@@ -1826,6 +1832,29 @@ INSTRUCTION_HANDLER(ControlJump) {
   }
 
   EVALUATE_END(ControlJump);
+}
+
+INSTRUCTION_HANDLER(ControlResourceJump) {
+  EVALUATE_BEGIN_NO_PRECONDITION(ControlResourceJump);
+  result = true;
+  const auto &value{assume_value<ValueIndexPair>(instruction.value)};
+  assert(context.schema->targets.size() > value.first);
+  assert(value.second != 0);
+  assert(value.second < context.schema->bindings.size());
+  const auto &target{resolve_target(
+      context.property_target,
+      resolve_instance(instance, instruction.relative_instance_location))};
+  const auto &bindings{context.schema->bindings[value.second]};
+  context.evaluator->enter_resource(bindings);
+  for (const auto &child : context.schema->targets[value.first]) {
+    if (!EVALUATE_RECURSE(child, target)) [[unlikely]] {
+      result = false;
+      break;
+    }
+  }
+
+  context.evaluator->leave_resource(bindings);
+  EVALUATE_END(ControlResourceJump);
 }
 
 INSTRUCTION_HANDLER(AnnotationEmit) {
@@ -2007,12 +2036,10 @@ INSTRUCTION_HANDLER(LoopPropertiesMatch) {
   // that value is decided here, rather than dispatched to and left to find the
   // property in the object a second time. The evaluation-marking variants of
   // those assertions are deliberately absent, as skipping them would skip the
-  // marker. Dynamic pushes and pops a resource per instruction that the direct
-  // path would skip, and children are evaluated at `depth + 1`, which the
-  // direct path does not route through the depth check. Every condition holds
-  // for every child, so decide once rather than per property
-  const auto direct_children{!Frames && !HasCallback && !Dynamic &&
-                             depth < DEPTH_LIMIT};
+  // marker. Children are evaluated at `depth + 1`, which the direct path does
+  // not route through the depth check. Every condition holds for every child,
+  // so decide once rather than per property
+  const auto direct_children{!Frames && !HasCallback && depth < DEPTH_LIMIT};
   for (const auto &entry : target.as_object()) {
     const auto *index{named_index(value, entry.first, entry.hash)};
     if (!index) {
@@ -2069,12 +2096,10 @@ INSTRUCTION_HANDLER(LoopPropertiesMatchClosed) {
   // that value is decided here, rather than dispatched to and left to find the
   // property in the object a second time. The evaluation-marking variants of
   // those assertions are deliberately absent, as skipping them would skip the
-  // marker. Dynamic pushes and pops a resource per instruction that the direct
-  // path would skip, and children are evaluated at `depth + 1`, which the
-  // direct path does not route through the depth check. Every condition holds
-  // for every child, so decide once rather than per property
-  const auto direct_children{!Frames && !HasCallback && !Dynamic &&
-                             depth < DEPTH_LIMIT};
+  // marker. Children are evaluated at `depth + 1`, which the direct path does
+  // not route through the depth check. Every condition holds for every child,
+  // so decide once rather than per property
+  const auto direct_children{!Frames && !HasCallback && depth < DEPTH_LIMIT};
   for (const auto &entry : target.as_object()) {
     const auto *index{named_index(value, entry.first, entry.hash)};
     if (!index) [[unlikely]] {
@@ -2569,11 +2594,10 @@ INSTRUCTION_HANDLER(LoopItems) {
 
   // To avoid index lookups and unnecessary conditionals
   if constexpr (!Frames && !HasCallback) {
-    // Dynamic pushes and pops a resource per instruction that the direct path
-    // would skip, and children are evaluated at `depth + 1`, which the direct
-    // path does not route through the depth check. Both conditions hold for
-    // every child, so decide once rather than per element
-    const auto direct_children{!Dynamic && depth < DEPTH_LIMIT};
+    // Children are evaluated at `depth + 1`, which the direct path does not
+    // route through the depth check, and that holds for every child, so decide
+    // once rather than per element
+    const auto direct_children{depth < DEPTH_LIMIT};
     for (const auto &new_instance : target.as_array()) {
       for (const auto &child : instruction.children) {
         bool child_ok;
@@ -3070,15 +3094,15 @@ INSTRUCTION_HANDLER(LoopContains) {
 
 #undef INSTRUCTION_HANDLER
 
-template <bool Frames, bool Dynamic, bool HasCallback>
-using DispatchHandler = bool (*)(
-    const sourcemeta::blaze::Instruction &, const sourcemeta::core::JSON &,
-    std::uint64_t, DispatchContext<Frames, Dynamic, HasCallback> &);
+template <bool Frames, bool HasCallback>
+using DispatchHandler = bool (*)(const sourcemeta::blaze::Instruction &,
+                                 const sourcemeta::core::JSON &, std::uint64_t,
+                                 DispatchContext<Frames, HasCallback> &);
 
-template <bool Frames, bool Dynamic, bool HasCallback>
+template <bool Frames, bool HasCallback>
 // Must have same order as InstructionIndex
 // NOLINTNEXTLINE(modernize-avoid-c-arrays)
-static constexpr DispatchHandler<Frames, Dynamic, HasCallback> HANDLERS[107] = {
+static constexpr DispatchHandler<Frames, HasCallback> HANDLERS[109] = {
     AssertionFail,
     AssertionDefines,
     AssertionDefinesStrict,
@@ -3184,47 +3208,48 @@ static constexpr DispatchHandler<Frames, Dynamic, HasCallback> HANDLERS[107] = {
     ControlGroupWhenType,
     ControlEvaluate,
     ControlFrame,
+    ControlResource,
     ControlDynamicAnchorJump,
-    ControlJump};
+    ControlJump,
+    ControlResourceJump};
 
-template <bool Frames, bool Dynamic, bool HasCallback>
+template <bool Frames, bool HasCallback>
 inline auto
 evaluate_instruction(const sourcemeta::blaze::Instruction &instruction,
                      const sourcemeta::core::JSON &instance,
                      const std::uint64_t depth,
-                     DispatchContext<Frames, Dynamic, HasCallback> &context)
-    -> bool {
+                     DispatchContext<Frames, HasCallback> &context) -> bool {
   if (depth > DEPTH_LIMIT) [[unlikely]] {
     throw EvaluationError("The evaluation path depth limit was reached "
                           "likely due to infinite recursion");
   }
 
-  return HANDLERS<Frames, Dynamic, HasCallback>[std::to_underlying(
-      instruction.type)](instruction, instance, depth, context);
+  return HANDLERS<Frames, HasCallback>[std::to_underlying(instruction.type)](
+      instruction, instance, depth, context);
 }
 
-template <bool Frames, bool Dynamic, bool HasCallback>
+template <bool Frames, bool HasCallback>
 inline auto evaluate_instruction_without_callback(
     const sourcemeta::blaze::Instruction &instruction,
     const sourcemeta::core::JSON &instance, const std::uint64_t depth,
-    DispatchContext<Frames, Dynamic, HasCallback> &context) -> bool {
+    DispatchContext<Frames, HasCallback> &context) -> bool {
   if (depth > DEPTH_LIMIT) [[unlikely]] {
     throw EvaluationError("The evaluation path depth limit was reached "
                           "likely due to infinite recursion");
   }
 
-  DispatchContext<false, Dynamic, false> plain_context{
+  DispatchContext<false, false> plain_context{
       context.schema, context.callback, context.evaluator,
       context.property_target, context.frame};
-  return HANDLERS<false, Dynamic, false>[std::to_underlying(instruction.type)](
+  return HANDLERS<false, false>[std::to_underlying(instruction.type)](
       instruction, instance, depth, plain_context);
 }
 
-template <bool Frames, bool Dynamic, bool HasCallback>
+template <bool Frames, bool HasCallback>
 inline auto evaluate_instruction_with_property(
     const sourcemeta::blaze::Instruction &instruction,
     const sourcemeta::core::JSON &instance, const std::uint64_t depth,
-    DispatchContext<Frames, Dynamic, HasCallback> &context,
+    DispatchContext<Frames, HasCallback> &context,
     const sourcemeta::core::JSON::String &name) -> bool {
   const auto *previous = context.property_target;
   context.property_target = &name;

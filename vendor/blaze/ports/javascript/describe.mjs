@@ -48,7 +48,7 @@ import {
   LOOP_ITEMS_INTEGER_BOUNDED, LOOP_ITEMS_INTEGER_BOUNDED_SIZED,
   LOOP_ITEMS_ARRAY_BOUNDED_TYPE_STRICT_ANY,
   LOOP_CONTAINS,
-  CONTROL_DYNAMIC_ANCHOR_JUMP, CONTROL_JUMP
+  CONTROL_DYNAMIC_ANCHOR_JUMP, CONTROL_JUMP, CONTROL_RESOURCE_JUMP
 } from './opcodes.mjs';
 
 const TYPE_INTEGER = 2;
@@ -541,7 +541,7 @@ export function describe(valid, instruction, evaluatePath,
                                            target, false) ]);
   }
 
-  if (opcode === CONTROL_JUMP) {
+  if (opcode === CONTROL_JUMP || opcode === CONTROL_RESOURCE_JUMP) {
     // Inside `propertyNames` the subject is the property name, which is a
     // string rather than the instance the location points at
     return renderMessage(instruction.message,
@@ -550,7 +550,8 @@ export function describe(valid, instruction, evaluatePath,
 
   if (opcode === CONTROL_DYNAMIC_ANCHOR_JUMP) {
     return renderMessage(instruction.message,
-                         [ typeName(targetType), escapeString(value) ]);
+                         [ typeName(targetType),
+                           escapeString(instruction.anchor) ]);
   }
 
   if (opcode === ANNOTATION_EMIT || opcode === ANNOTATION_EMIT_WRAPPED ||

@@ -689,7 +689,63 @@ auto compile(const sourcemeta::core::JSON &schema,
       });
 
   ///////////////////////////////////////////////////////////////////
-  // (4) Build the global compilation context
+  // (4) Plan what every schema resource binds on entry
+  ///////////////////////////////////////////////////////////////////
+
+  // A dynamic anchor is declared by the schema resource that contains it, so
+  // entering that resource is what brings the name into scope. Interning the
+  // names turns resolution into an array read, and grouping the declarations
+  // by resource means only a resource that declares one carries anything
+  std::vector<std::string> anchor_names;
+  std::vector<std::vector<std::pair<std::size_t, std::size_t>>> binding_lists{
+      {}};
+  std::vector<std::size_t> resource_bindings;
+  if (uses_dynamic_scopes) {
+    resource_bindings.assign(resources.size() + 1, 0);
+    std::map<std::size_t, std::size_t> bindings_by_resource;
+    frame.for_each_anchor(
+        sourcemeta::core::SchemaReferenceType::Dynamic,
+        [&](const std::string_view uri,
+            const sourcemeta::core::SchemaFrame::Location &entry) -> void {
+          if (!frame.is_reachable(entrypoint_location, entry, walker,
+                                  resolver)) {
+            return;
+          }
+
+          const sourcemeta::core::URI anchor_uri{uri};
+          const auto resource{schema_resource_id(
+              resources, anchor_uri.recompose_without_fragment().value_or(""))};
+          std::string name{anchor_uri.fragment().value_or("")};
+          const auto match{std::ranges::find(anchor_names, name)};
+          auto anchor{static_cast<std::size_t>(
+              std::distance(anchor_names.begin(), match))};
+          if (match == anchor_names.end()) {
+            anchor = anchor_names.size();
+            anchor_names.push_back(std::move(name));
+          }
+
+          const auto key{
+              std::make_tuple(sourcemeta::core::SchemaReferenceType::Dynamic,
+                              std::string_view{uri}, false)};
+          assert(targets_map.contains(key));
+          const auto target{targets_map.at(key).first};
+
+          auto list{bindings_by_resource.find(resource)};
+          if (list == bindings_by_resource.cend()) {
+            binding_lists.emplace_back();
+            list =
+                bindings_by_resource.emplace(resource, binding_lists.size() - 1)
+                    .first;
+            assert(resource < resource_bindings.size());
+            resource_bindings[resource] = list->second;
+          }
+
+          binding_lists[list->second].emplace_back(anchor, target + 1);
+        });
+  }
+
+  ///////////////////////////////////////////////////////////////////
+  // (5) Build the global compilation context
   ///////////////////////////////////////////////////////////////////
 
   auto unevaluated{
@@ -707,6 +763,8 @@ auto compile(const sourcemeta::core::JSON &schema,
                         .compiler = compiler,
                         .mode = mode,
                         .uses_dynamic_scopes = uses_dynamic_scopes,
+                        .anchors = anchor_names,
+                        .resource_bindings = std::move(resource_bindings),
                         .collects_annotations = collects_annotations,
                         .unevaluated = std::move(unevaluated),
                         .tweaks = effective_tweaks,
@@ -716,47 +774,13 @@ auto compile(const sourcemeta::core::JSON &schema,
                         .vocabularies = instruction_vocabularies};
 
   ///////////////////////////////////////////////////////////////////
-  // (5) Build labels map for dynamic anchors
-  ///////////////////////////////////////////////////////////////////
-
-  std::vector<std::pair<std::size_t, std::size_t>> labels_map;
-  if (uses_dynamic_scopes) {
-    context.frame.for_each_anchor(
-        sourcemeta::core::SchemaReferenceType::Dynamic,
-        [&](const std::string_view uri,
-            const sourcemeta::core::SchemaFrame::Location &entry) -> void {
-          // Skip unreachable dynamic anchors
-          if (!context.frame.is_reachable(entrypoint_location, entry,
-                                          context.walker, context.resolver)) {
-            return;
-          }
-
-          // Compute the hash for this dynamic anchor
-          const sourcemeta::core::URI anchor_uri{uri};
-          const auto label{Evaluator::hash(
-              schema_resource_id(
-                  context.resources,
-                  anchor_uri.recompose_without_fragment().value_or("")),
-              anchor_uri.fragment().value_or(""))};
-
-          // Find the index in targets for this dynamic anchor
-          const auto key{
-              std::make_tuple(sourcemeta::core::SchemaReferenceType::Dynamic,
-                              std::string_view{uri}, false)};
-          assert(context.targets.contains(key));
-          const auto index{context.targets.at(key).first};
-          assert(index < context.targets.size());
-
-          labels_map.emplace_back(label, index);
-        });
-  }
-
-  ///////////////////////////////////////////////////////////////////
   // (6) Compile targets for static references
   ///////////////////////////////////////////////////////////////////
 
   std::vector<Instructions> compiled_targets;
   compiled_targets.resize(context.targets.size());
+  std::vector<std::size_t> target_bindings;
+  target_bindings.assign(context.targets.size(), 0);
   for (const auto &[destination, target_info] : context.targets) {
     const auto &[reference_type, destination_uri, is_property_name] =
         destination;
@@ -807,6 +831,16 @@ auto compile(const sourcemeta::core::JSON &schema,
     compiled_targets[index] =
         compile(target_context, sourcemeta::core::EMPTY_WEAK_POINTER,
                 sourcemeta::core::EMPTY_WEAK_POINTER, destination_uri);
+
+    // Jumping to a target is how evaluation enters the resource it sits in, so
+    // whoever jumps there needs to know what that resource declares
+    if (uses_dynamic_scopes) {
+      const auto resource{schema_resource_id(
+          context.resources,
+          nested_base.recompose_without_fragment().value_or(""))};
+      assert(resource < context.resource_bindings.size());
+      target_bindings[index] = context.resource_bindings[resource];
+    }
   }
 
   ///////////////////////////////////////////////////////////////////
@@ -814,8 +848,7 @@ auto compile(const sourcemeta::core::JSON &schema,
   ///////////////////////////////////////////////////////////////////
 
   if (mode == Mode::FastValidation) {
-    postprocess(compiled_targets, instruction_extra, effective_tweaks,
-                uses_dynamic_scopes);
+    postprocess(compiled_targets, instruction_extra, effective_tweaks);
   }
 
   ///////////////////////////////////////////////////////////////////
@@ -845,8 +878,10 @@ auto compile(const sourcemeta::core::JSON &schema,
   return {.dynamic = uses_dynamic_scopes,
           .frames = frames,
           .targets = std::move(compiled_targets),
-          .labels = std::move(labels_map),
+          .bindings = std::move(binding_lists),
+          .target_bindings = std::move(target_bindings),
           .extra = std::move(instruction_extra).release(),
+          .anchors = std::move(anchor_names),
           .vocabularies = std::move(template_vocabularies),
           .messages = std::move(template_messages)};
 }
@@ -986,14 +1021,34 @@ auto compile(const sourcemeta::blaze::KeywordContext &context,
   // The keyword travels on so that the instructions the subschema makes stay
   // addressed from it, but the schema it names is no longer the one at hand,
   // so the value it is set to does not travel with it
-  return compile_subschema(
-      {.global = context.global,
-       .local = new_schema_context,
-       .target = {
-           .keyword = context.keyword(),
-           .base_schema_location = destination_pointer,
-           .base_instance_location =
-               context.target.base_instance_location.concat(instance_suffix)}});
+  const KeywordContext nested_context{
+      .global = context.global,
+      .local = new_schema_context,
+      .target = {
+          .keyword = context.keyword(),
+          .base_schema_location = destination_pointer,
+          .base_instance_location =
+              context.target.base_instance_location.concat(instance_suffix)}};
+  auto result{compile_subschema(nested_context)};
+
+  // Descending into a schema resource is entering it just as much as jumping
+  // there is, and no instruction stands for that, so one is put here to bring
+  // what it declares into scope. Only a resource that declares a dynamic
+  // anchor needs it, which makes this rare, and recomposing a URI to find out
+  // costs an allocation that every other schema would pay for nothing
+  if (context.global.uses_dynamic_scopes && !result.empty()) {
+    const auto nested_resource{new_base.recompose()};
+    if (nested_resource != context.base().recompose_without_fragment()) {
+      const auto bindings{
+          resource_bindings_of(nested_context, nested_resource)};
+      if (bindings != 0) {
+        return {make(InstructionIndex::ControlResource, nested_context,
+                     ValueUnsignedInteger{bindings}, std::move(result))};
+      }
+    }
+  }
+
+  return result;
 }
 
 } // namespace sourcemeta::blaze

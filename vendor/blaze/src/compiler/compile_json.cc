@@ -73,14 +73,31 @@ auto to_json(const Template &schema_template) -> sourcemeta::core::JSON {
 
   result.push_back(std::move(targets));
 
-  auto labels{sourcemeta::core::JSON::make_array()};
-  for (const auto &[key, value] : schema_template.labels) {
-    auto pair{sourcemeta::core::JSON::make_array()};
-    pair.push_back(sourcemeta::core::JSON{static_cast<std::int64_t>(key)});
-    pair.push_back(sourcemeta::core::JSON{static_cast<std::int64_t>(value)});
-    labels.push_back(std::move(pair));
+  auto bindings{sourcemeta::core::JSON::make_array()};
+  for (const auto &list : schema_template.bindings) {
+    auto entries{sourcemeta::core::JSON::make_array()};
+    for (const auto &[anchor, target] : list) {
+      auto pair{sourcemeta::core::JSON::make_array()};
+      pair.push_back(sourcemeta::core::JSON{static_cast<std::int64_t>(anchor)});
+      pair.push_back(sourcemeta::core::JSON{static_cast<std::int64_t>(target)});
+      entries.push_back(std::move(pair));
+    }
+    bindings.push_back(std::move(entries));
   }
-  result.push_back(std::move(labels));
+  result.push_back(std::move(bindings));
+
+  auto target_bindings{sourcemeta::core::JSON::make_array()};
+  for (const auto &index : schema_template.target_bindings) {
+    target_bindings.push_back(
+        sourcemeta::core::JSON{static_cast<std::int64_t>(index)});
+  }
+  result.push_back(std::move(target_bindings));
+
+  auto anchors{sourcemeta::core::JSON::make_array()};
+  for (const auto &anchor : schema_template.anchors) {
+    anchors.push_back(sourcemeta::core::JSON{anchor});
+  }
+  result.push_back(std::move(anchors));
 
   auto vocabularies{sourcemeta::core::JSON::make_array()};
   for (const auto &vocabulary : schema_template.vocabularies) {

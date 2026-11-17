@@ -914,6 +914,7 @@ inline auto message_template(const Instruction &instruction,
                    "subschema in scope that declared a recursive anchor"
                  : "";
     case InstructionIndex::ControlJump:
+    case InstructionIndex::ControlResourceJump:
       return "The {0} value was expected to validate against the referenced "
              "schema";
     default:

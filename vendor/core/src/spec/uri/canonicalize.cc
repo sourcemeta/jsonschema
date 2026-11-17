@@ -212,4 +212,16 @@ auto URI::canonicalize(const std::string_view input) -> std::string {
   return URI{input}.canonicalize().recompose();
 }
 
+auto URI::try_canonicalize(const std::string_view input)
+    -> std::optional<std::string> {
+  // Whether an input is a URI at all is only settled by reading it apart, and
+  // the reader turns down what it cannot read by throwing, so this is where
+  // that refusal becomes an answer rather than something the caller handles
+  try {
+    return URI{input}.canonicalize().recompose();
+  } catch (const URIParseError &) {
+    return std::nullopt;
+  }
+}
+
 } // namespace sourcemeta::core

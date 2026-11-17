@@ -70,6 +70,29 @@ auto schema_walker(const std::string_view keyword,
 
 /// @ingroup jsonschema
 ///
+/// Whether the given vocabularies give a keyword any meaning at all, which is
+/// what the vocabularies say rather than what a base dialect happens to name.
+/// For example:
+///
+/// ```cpp
+/// #include <sourcemeta/core/jsonschema.h>
+/// #include <cassert>
+///
+/// const sourcemeta::core::SchemaVocabularies vocabularies{
+///     {"https://json-schema.org/draft/2020-12/vocab/core", true}};
+///
+/// assert(sourcemeta::core::schema_defines_keyword(
+///     sourcemeta::core::schema_walker, vocabularies, "$id"));
+/// assert(!sourcemeta::core::schema_defines_keyword(
+///     sourcemeta::core::schema_walker, vocabularies, "maxLength"));
+/// ```
+SOURCEMETA_CORE_JSONSCHEMA_EXPORT
+auto schema_defines_keyword(const SchemaWalker &walker,
+                            const SchemaVocabularies &vocabularies,
+                            const std::string_view keyword) -> bool;
+
+/// @ingroup jsonschema
+///
 /// This function sets the identifier of a schema, replacing the existing one,
 /// if any. For example:
 ///

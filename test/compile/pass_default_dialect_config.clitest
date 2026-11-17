@@ -17,7 +17,7 @@ RUN compile $CWD/schema.json --verbose STDIN /dev/null IN . INTO result.txt EXPE
 
 WRITE expected.txt UNTIL EOF
 1> [
-1>   17,
+1>   18,
 1>   false,
 1>   false,
 1>   [
@@ -59,6 +59,10 @@ WRITE expected.txt UNTIL EOF
 1>       ]
 1>     ]
 1>   ],
+1>   [
+1>     []
+1>   ],
+1>   [ 0 ],
 1>   [],
 1>   [
 1>     "https://json-schema.org/draft/2020-12/vocab/validation",
