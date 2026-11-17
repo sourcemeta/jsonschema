@@ -1,0 +1,73 @@
+// However many workers the run is split across, what the `--resolve` inputs
+// have to say for themselves is said once, as they are taken in once for the
+// whole run rather than once per worker
+
+MAKE DIRECTORY tests
+
+WRITE schema.json UNTIL EOF
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.com/schema",
+  "type": "string"
+}
+EOF
+
+WRITE empty.jsonl UNTIL EOF
+EOF
+
+WRITE tests/1.json UNTIL EOF
+{
+  "target": "https://example.com/schema",
+  "tests": [
+    {
+      "description": "First",
+      "valid": true,
+      "data": "foo"
+    }
+  ]
+}
+EOF
+
+WRITE tests/2.json UNTIL EOF
+{
+  "target": "https://example.com/schema",
+  "tests": [
+    {
+      "description": "Second",
+      "valid": true,
+      "data": "bar"
+    }
+  ]
+}
+EOF
+
+WRITE tests/3.json UNTIL EOF
+{
+  "target": "https://example.com/schema",
+  "tests": [
+    {
+      "description": "Third",
+      "valid": true,
+      "data": "baz"
+    }
+  ]
+}
+EOF
+
+// Running in parallel, the order of the lines is not part of the contract
+RUN test tests --resolve schema.json --resolve empty.jsonl --jobs 3 STDIN /dev/null IN . INTO result_0.txt EXPECTING 0
+
+REPLACE $CWD WITH '[CWD]' IN result_0.txt
+
+SORT result_0.txt
+
+WRITE expected_0.txt UNTIL EOF
+1> [CWD]/tests/1.json: PASS 1/1
+1> [CWD]/tests/2.json: PASS 1/1
+1> [CWD]/tests/3.json: PASS 1/1
+2> warning: The JSONL file is empty
+EOF
+
+SORT expected_0.txt
+
+COMPARE result_0.txt AGAINST expected_0.txt

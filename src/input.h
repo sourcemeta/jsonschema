@@ -456,9 +456,8 @@ inline auto read_stdin_documents(const std::string &input,
 }
 
 // Standard input can only be consumed once, so what it held is kept for
-// whoever reads it next. A resolution context is built per thread and reads its
-// inputs again each time, and every one of those reads must see what the first
-// of them saw
+// whoever reads it next, as every reader of it has to see what the first of
+// them saw
 inline auto stdin_contents() -> const std::string & {
   static const std::string CONTENTS{sourcemeta::core::read_stdin()};
   return CONTENTS;

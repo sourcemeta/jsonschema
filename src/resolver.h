@@ -26,6 +26,7 @@
 #include <functional>    // std::function, std::ref
 #include <iostream>      // std::cerr
 #include <map>           // std::map
+#include <mutex>         // std::mutex, std::scoped_lock
 #include <optional>      // std::optional
 #include <string>        // std::string
 #include <string_view>   // std::string_view
@@ -563,6 +564,10 @@ static inline auto identifier_file(const std::string &identifier)
   return uri.value().to_path();
 }
 
+// What a resolver is cached under, and with it the index that resolver answers
+// from, as two resolvers that agree on both of these answer from one index
+using ResolverCacheKey = std::pair<bool, std::string>;
+
 class CustomResolver {
 public:
   CustomResolver(
@@ -575,6 +580,22 @@ public:
                 ? canonical_resolve_map(configuration->resolve)
                 : std::unordered_map<std::string, std::string>{}},
         default_dialect_{default_dialect}, remote_{remote} {
+    // Settling the index means reading every input end to end, which is
+    // neither cheap nor repeatable: standard input can only be consumed once,
+    // and a file read again is a file read again. One index therefore serves
+    // the whole process, and a thread that wants one is handed what is already
+    // there rather than reading everything a second time. Nothing past
+    // construction changes an index, so handing it over is all there is to
+    // guard, while what resolution goes on to read and register stays private
+    // to the thread that read it
+    auto &shared{
+        shared_index(ResolverCacheKey{remote, std::string{default_dialect}})};
+    const std::scoped_lock lock{shared.mutex};
+    if (shared.indexed) {
+      this->index_ = shared.index;
+      return;
+    }
+
     if (options.contains("resolve")) {
       // Reading a file end to end is what vets it, and resolution only ever
       // needs the files that something names, so an input is recorded here by
@@ -591,12 +612,11 @@ public:
       // One input is read, indexed and let go before the next is read, so
       // that what is held at once is one document rather than every one of
       // them. What an input declares is all the index keeps, and reading it
-      // again on demand is what answers for it. Standard input is the one that
-      // cannot be read again, and what it held is kept for every thread that
-      // builds a context of its own
+      // again on demand is what answers for it
       for_each_json_streaming(options.at("resolve"), options,
                               [this, default_dialect](InputJSON &&entry) {
-                                this->index_entry(entry, default_dialect);
+                                this->index_entry(std::move(entry),
+                                                  default_dialect);
                               });
 
       this->indexing_ = false;
@@ -634,6 +654,9 @@ public:
                                   .answers_with_contents = true});
       }
     }
+
+    shared.index = this->index_;
+    shared.indexed = true;
   }
 
   // Prevent accidental copies, as every schema this imported would come
@@ -1222,57 +1245,61 @@ private:
     ~MaterialisingGuard() { this->pending.erase(this->identifier); }
   };
 
+  // Nothing can be read back for an input that came from standard input, and
+  // one document out of the several a single file holds cannot be read back by
+  // naming that file either, as reading it again hands over the first of them.
+  // What such an input held is therefore taken over rather than copied, so
+  // that a file holding many documents costs one of them rather than two, and
+  // every identity it answers to is handed that same one copy. Anything else
+  // is left where it is, as reading it again is what answers for it
+  auto index_entry(InputJSON &&entry, const std::string_view default_dialect)
+      -> void {
+    if (entry.from_stdin || entry.multidocument) {
+      const auto retained{std::make_shared<InputJSON>(std::move(entry))};
+      this->index_contents(*retained, retained, default_dialect);
+      return;
+    }
+
+    this->index_contents(entry, nullptr, default_dialect);
+  }
+
   // The one identity an input answers for, settled without reading anything
   // else. A description is never framed, as what it holds is the business of
   // the OpenAPI half, and its identity is the one it declares along with where
-  // it was read from
-  auto index_entry(const InputJSON &entry,
-                   const std::string_view default_dialect) -> void {
-    if (is_openapi_document(entry.second)) {
-      reject_unsupported_openapi(entry.second, entry.resolution_base,
-                                 &entry.positions);
-      const auto retrieval{sourcemeta::jsonschema::default_id(entry)};
-      const auto self{openapi_self_identity(entry.second, retrieval)};
-      // A description answers to the `$self` it declares and to where it came
-      // from either way, and those are two identities of one document, so what
-      // is kept for either of them is what both answer from
-      const auto retained{retain(entry)};
+  // it was read from. It answers to the `$self` it declares and to where it
+  // came from either way, and those are two identities of one document, so
+  // what is kept for either of them is what both answer from
+  auto index_contents(const InputJSON &indexed,
+                      const std::shared_ptr<InputJSON> &retained,
+                      const std::string_view default_dialect) -> void {
+    if (is_openapi_document(indexed.second)) {
+      reject_unsupported_openapi(indexed.second, indexed.resolution_base,
+                                 &indexed.positions);
+      const auto retrieval{sourcemeta::jsonschema::default_id(indexed)};
+      const auto self{openapi_self_identity(indexed.second, retrieval)};
       if (self.has_value()) {
-        this->register_leaf(canonical_resolve_key(self.value()), entry,
+        this->register_leaf(canonical_resolve_key(self.value()), indexed,
                             LeafKind::OpenAPI, retained);
       }
 
-      this->register_leaf(canonical_resolve_key(retrieval), entry,
+      this->register_leaf(canonical_resolve_key(retrieval), indexed,
                           LeafKind::OpenAPI, retained);
       return;
     }
 
-    if (!entry.second.is_object() && !entry.second.is_boolean()) {
+    if (!indexed.second.is_object() && !indexed.second.is_boolean()) {
       throw sourcemeta::core::FileError<sourcemeta::core::SchemaError>(
-          entry.resolution_base,
+          indexed.resolution_base,
           sourcemeta::core::StaticString{
               "The file you provided does not represent a valid JSON Schema"});
     }
 
-    const auto retained{retain(entry)};
     for (const auto &identity :
-         root_identities(entry.second, std::ref(*this), default_dialect,
-                         sourcemeta::jsonschema::default_id(entry))) {
-      this->register_leaf(canonical_resolve_key(identity), entry,
+         root_identities(indexed.second, std::ref(*this), default_dialect,
+                         sourcemeta::jsonschema::default_id(indexed))) {
+      this->register_leaf(canonical_resolve_key(identity), indexed,
                           LeafKind::Schema, retained);
     }
-  }
-
-  // Nothing can be read back for an input that came from standard input, and
-  // one document out of the several a single file holds cannot be read back by
-  // naming that file either, as reading it again hands over the first of them.
-  // What those inputs held is therefore the one copy of them there will ever
-  // be, and every identity each of them answers to is handed that same copy
-  [[nodiscard]] static auto retain(const InputJSON &entry)
-      -> std::shared_ptr<InputJSON> {
-    return entry.from_stdin || entry.multidocument
-               ? std::make_shared<InputJSON>(entry)
-               : nullptr;
   }
 
   // Two inputs that answer to one identifier leave which of them a reference
@@ -1623,6 +1650,26 @@ private:
     }
   }
 
+  // One index, and what says whether anyone has settled it yet. Reading the
+  // inputs is what settles it, so whoever gets here first does that reading
+  // while the rest wait for the answer
+  struct SharedIndex {
+    std::mutex mutex;
+    std::map<std::string, Leaf> index;
+    bool indexed{false};
+  };
+
+  // The index that every resolver answering to one key shares. A map keeps its
+  // values where they are, so what this hands back stays valid however many
+  // keys turn up afterwards
+  [[nodiscard]] static auto shared_index(const ResolverCacheKey &key)
+      -> SharedIndex & {
+    static std::mutex registry_mutex;
+    static std::map<ResolverCacheKey, SharedIndex> registry;
+    const std::scoped_lock lock{registry_mutex};
+    return registry.try_emplace(key).first->second;
+  }
+
   std::map<std::string, EmbeddedResource> embedded_{};
   std::map<std::string, sourcemeta::core::JSON> schemas_{};
   // Kept wholly apart from the schemas above, so that neither resolver can
@@ -1659,8 +1706,6 @@ private:
   std::unordered_set<std::string> materialising_{};
 };
 
-using ResolverCacheKey = std::pair<bool, std::string>;
-
 // Both halves of the split answer from one of these, so that what the schemas
 // and what the descriptions were sorted into stays one set rather than two
 // that disagree
@@ -1671,9 +1716,9 @@ inline auto resolver_instance(
     -> CustomResolver & {
   // One resolver per thread, as resolution reads files and registers what
   // they declare as it goes, and a context several threads register into at
-  // once is one none of them can rely on. Indexing an input is cheap enough
-  // for each thread to do its own, and a thread only ever reads the files
-  // that the work it was given names
+  // once is one none of them can rely on. What the threads do share is the
+  // index, which reading the inputs settles once and nothing changes after, so
+  // a thread only ever reads the files that the work it was given names
   thread_local std::map<ResolverCacheKey, CustomResolver> resolver_cache;
   const ResolverCacheKey cache_key{remote, std::string{default_dialect}};
   const auto match{resolver_cache.find(cache_key)};
