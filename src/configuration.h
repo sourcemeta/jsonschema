@@ -78,8 +78,36 @@ inline auto read_configuration_file(
           positions(phase, type, line, column, context, index,
                     property_storage->back());
         });
-    return sourcemeta::blaze::Configuration::from_json(
-        config_json, configuration_path.parent_path());
+    auto configuration{sourcemeta::blaze::Configuration::from_json(
+        config_json, configuration_path.parent_path())};
+
+    // Walking the document rather than the parsed mapping, as the latter keys
+    // every entry on the canonical form of the key, and only the spelling the
+    // author chose has a position to point at
+    if (config_json.defines("resolve")) {
+      for (const auto &entry : config_json.at("resolve").as_object()) {
+        const auto *resolve_value{configuration.find_resolve(entry.first)};
+        assert(resolve_value != nullptr);
+        const sourcemeta::core::URI value_uri{*resolve_value};
+        if (!value_uri.is_relative()) {
+          continue;
+        }
+
+        const auto resolved_path{std::filesystem::weakly_canonical(
+            configuration.base_path / value_uri.to_path())};
+        if (!std::filesystem::exists(resolved_path)) {
+          const sourcemeta::core::Pointer resolve_pointer{"resolve",
+                                                          entry.first};
+          const auto position{positions.get(resolve_pointer)};
+          assert(position.has_value());
+          throw ConfigurationResolveFileNotFoundError(
+              configuration_path, resolve_pointer, resolved_path,
+              std::get<0>(position.value()), std::get<1>(position.value()));
+        }
+      }
+    }
+
+    return configuration;
   } catch (const sourcemeta::blaze::ConfigurationParseError &error) {
     const auto position{positions.get(error.location())};
     if (position.has_value()) {
@@ -127,22 +155,6 @@ inline auto load_configuration(
                                      property_storage);
 
     assert(result.has_value());
-    for (const auto &[resolve_uri, resolve_value] : result.value().resolve) {
-      const sourcemeta::core::URI value_uri{resolve_value};
-      if (value_uri.is_relative()) {
-        const auto resolved_path{std::filesystem::weakly_canonical(
-            result.value().base_path / value_uri.to_path())};
-        if (!std::filesystem::exists(resolved_path)) {
-          const sourcemeta::core::Pointer resolve_pointer{"resolve",
-                                                          resolve_uri};
-          const auto position{positions.get(resolve_pointer)};
-          assert(position.has_value());
-          throw ConfigurationResolveFileNotFoundError(
-              configuration_path.value(), resolve_pointer, resolved_path,
-              std::get<0>(position.value()), std::get<1>(position.value()));
-        }
-      }
-    }
 
     if (result.value().default_dialect.has_value()) {
       try {
