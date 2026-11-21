@@ -1,0 +1,26 @@
+WRITE jsonschema.json UNTIL EOF
+{
+  "baseUri": "https://example.com",
+  "title": "My project"
+}
+EOF
+
+RUN fmt STDIN /dev/null IN . INTO result.txt EXPECTING 0
+
+REPLACE $CWD WITH '[CWD]' IN result.txt
+
+WRITE expected.txt UNTIL EOF
+2> warning: Recursively processing every file in [CWD] as the configuration file does not set an explicit path
+2> Interpreting as a configuration file: [CWD]/jsonschema.json
+EOF
+
+COMPARE result.txt AGAINST expected.txt
+
+WRITE expected_file_0.txt UNTIL EOF
+{
+  "title": "My project",
+  "baseUri": "https://example.com"
+}
+EOF
+
+COMPARE jsonschema.json AGAINST expected_file_0.txt

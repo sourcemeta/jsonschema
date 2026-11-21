@@ -1,0 +1,34 @@
+WRITE jsonschema.json UNTIL EOF
+{ "lint":{"exclude":["zebra","apple"],"rules":["./rule.json"]},
+      "extension":[".yml",".json"],"title":"My project",
+  "baseUri":   "https://example.com",
+        "dependencies": {"https://example.com/b":"./b.json","https://example.com/a":"./a.json"} }
+EOF
+
+RUN fmt jsonschema.json STDIN /dev/null IN . INTO result.txt EXPECTING 0
+
+REPLACE $CWD WITH '[CWD]' IN result.txt
+
+WRITE expected.txt UNTIL EOF
+2> Interpreting as a configuration file: [CWD]/jsonschema.json
+EOF
+
+COMPARE result.txt AGAINST expected.txt
+
+WRITE expected_file_0.txt UNTIL EOF
+{
+  "title": "My project",
+  "baseUri": "https://example.com",
+  "extension": [ ".json", ".yml" ],
+  "dependencies": {
+    "https://example.com/a": "./a.json",
+    "https://example.com/b": "./b.json"
+  },
+  "lint": {
+    "rules": [ "./rule.json" ],
+    "exclude": [ "apple", "zebra" ]
+  }
+}
+EOF
+
+COMPARE jsonschema.json AGAINST expected_file_0.txt

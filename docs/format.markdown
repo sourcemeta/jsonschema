@@ -114,3 +114,9 @@ jsonschema fmt path/to/my/schema.json --check
 ```sh
 jsonschema fmt path/to/my/openapi.json
 ```
+
+### Format the configuration file in-place
+
+```sh
+jsonschema fmt jsonschema.json
+```
