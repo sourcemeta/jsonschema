@@ -11,7 +11,7 @@
 #include <limits>      // std::numeric_limits
 #include <string>      // std::string, std::to_string
 #include <string_view> // std::string_view
-#include <utility>     // std::pair, std::move
+#include <utility>     // std::cmp_less, std::pair, std::move
 
 #include <sourcemeta/core/numeric_error.h>
 #include <sourcemeta/core/numeric_uint128.h>
@@ -160,26 +160,26 @@ public:
   }
 
   auto operator=(BigCoefficient &&other) noexcept -> BigCoefficient & {
-    if (this != &other) {
-      if (!this->is_inline()) {
-        delete[] this->words;
-      }
-
-      this->length = other.length;
-      this->capacity = other.capacity;
-      if (other.is_inline()) {
-        this->inline_words_ = other.inline_words_;
-        this->words = this->inline_words_.data();
-      } else {
-        this->words = other.words;
-        other.words = other.inline_words_.data();
-      }
-
-      other.inline_words_.fill(0);
-      other.length = 0;
-      other.capacity = INLINE_CAPACITY;
+    // Every assignment here takes a coefficient built on the spot, and a
+    // compiler that is given one to assign over itself says so
+    assert(this != &other);
+    if (!this->is_inline()) {
+      delete[] this->words;
     }
 
+    this->length = other.length;
+    this->capacity = other.capacity;
+    if (other.is_inline()) {
+      this->inline_words_ = other.inline_words_;
+      this->words = this->inline_words_.data();
+    } else {
+      this->words = other.words;
+      other.words = other.inline_words_.data();
+    }
+
+    other.inline_words_.fill(0);
+    other.length = 0;
+    other.capacity = INLINE_CAPACITY;
     return *this;
   }
 
@@ -199,8 +199,22 @@ public:
     }
   }
 
+  // Every coefficient is built with a limb to its name, so a zero is the
+  // single limb that holds nothing
   [[nodiscard]] auto is_zero() const -> bool {
-    return this->length == 0 || (this->length == 1 && this->words[0] == 0);
+    return this->length == 1 && this->words[0] == 0;
+  }
+
+  [[nodiscard]] auto is_one() const -> bool {
+    return this->length == 1 && this->words[0] == 1;
+  }
+
+  // Every limb above the lowest holds a whole number of bases, and a factor of
+  // the base divides the base, so what the lowest limb leaves behind is what
+  // the whole coefficient leaves behind
+  [[nodiscard]] auto
+  is_divisible_by_base_factor(const std::uint64_t divisor) const -> bool {
+    return this->words[0] % divisor == 0;
   }
 
   [[nodiscard]] auto digit_count() const -> std::uint64_t {
@@ -218,11 +232,10 @@ public:
            (static_cast<std::uint64_t>(this->length - 1) * BASE_DIGITS);
   }
 
+  // Only a coefficient held on the heap is spelled out this way, and one
+  // reaches the heap at three limbs, so there is always a top limb to read
   [[nodiscard]] auto to_string() const -> std::string {
-    if (this->is_zero()) {
-      return "0";
-    }
-
+    assert(!this->is_zero());
     std::string result;
     auto top = this->words[this->length - 1];
     result += std::to_string(top);
@@ -242,21 +255,25 @@ public:
   auto strip_trailing_zeros(
       const std::int32_t maximum = std::numeric_limits<std::int32_t>::max())
       -> std::int32_t {
-    if (this->is_zero() || maximum <= 0) {
+    assert(!this->is_zero());
+    if (maximum <= 0) {
       return 0;
     }
 
     std::int32_t total_stripped = 0;
 
+    // A coefficient that is not zero holds something somewhere, so the walk up
+    // the empty limbs is stopped by the top limb if nothing below stops it
+    // first, which leaves that limb for the value to stand in
     std::uint32_t zero_words = 0;
-    while (zero_words < this->length && this->words[zero_words] == 0) {
+    while (zero_words + 1 < this->length && this->words[zero_words] == 0) {
       zero_words++;
     }
 
     zero_words =
         std::min(zero_words, static_cast<std::uint32_t>(maximum / BASE_DIGITS));
 
-    if (zero_words > 0 && zero_words < this->length) {
+    if (zero_words > 0) {
       std::copy(this->words + zero_words, this->words + this->length,
                 this->words);
       this->length -= zero_words;
@@ -461,16 +478,16 @@ public:
       return {std::move(quotient), std::move(remainder)};
     }
 
-    // A zero divisor defines no quotient, and the divisions below would either
-    // divide by that zero word or read past the divisor
-    if (divisor.is_zero()) {
-      BigCoefficient quotient{1};
-      quotient.words[0] = 0;
-      quotient.length = 1;
-      return {std::move(quotient), this->clone()};
-    }
+    // A division by nothing has an answer of its own that this one cannot
+    // give, and every caller settles it before reaching here
+    assert(!divisor.is_zero());
 
-    if (divisor.length == 1) {
+    // Taking a divisor of one limb apart here, rather than only the single
+    // limb it is, is what leaves the long division below with the two limbs it
+    // reads. Saying it this way keeps that fact where the range propagation of
+    // a warnings-as-errors build can see it, which an assertion would not,
+    // since the builds that need it are the ones that drop assertions
+    if (divisor.length <= 1) {
       BigCoefficient quotient{this->length};
       quotient.length = this->length;
       sourcemeta::core::uint128_t remainder = 0;
@@ -716,12 +733,11 @@ public:
     // ten. The scale comes off here, while the coefficient is still held to its
     // full width, because a coefficient wide enough to need the scale is also
     // wide enough to wrap as it narrows
-    if (exponent < 0 && !this->is_zero()) {
+    if (exponent < 0) {
+      // The value is whole, which is what puts the zeros the scale removes
+      // inside the coefficient, so the coefficient outspells the scale
       const auto scale_digits{-static_cast<std::int64_t>(exponent)};
-      // A scale that reaches past every digit leaves nothing of the value
-      if (static_cast<std::uint64_t>(scale_digits) >= this->digit_count()) {
-        return 0;
-      }
+      assert(std::cmp_less(scale_digits, this->digit_count()));
 
       // Whole words come off by being skipped rather than divided away, so no
       // divisor is built and a scale as wide as the coefficient stays within
@@ -744,12 +760,9 @@ public:
       value = (value * BASE) + this->words[index - 1];
     }
 
-    // Zero admits arbitrarily extreme exponents, which would otherwise make
-    // the scaling loop below spin for billions of iterations
-    if (value == 0) {
-      return value;
-    }
-
+    // The value is one the caller has already found a narrow type for, so the
+    // exponent it stands at is small enough for the loop to walk
+    assert(value != 0);
     while (exponent > 0) {
       value *= 10;
       exponent--;
@@ -815,12 +828,17 @@ auto digit_count(std::uint64_t value) -> std::uint32_t {
 #if defined(_MSC_VER)
   unsigned long bit_index;
   _BitScanReverse64(&bit_index, value);
-  auto const bits = static_cast<std::uint32_t>(bit_index);
+  auto const bits = static_cast<std::uint32_t>(bit_index) & 63U;
 #else
-  auto const bits = static_cast<std::uint32_t>(63 - __builtin_clzll(value));
+  // The leading bit stands no higher than the sixty fourth, which is what
+  // holds the approximation inside the table it reads. Masking says so where
+  // the range propagation of a warnings-as-errors build can see it, which an
+  // assertion would not, since the builds that need it drop assertions
+  auto const bits =
+      63U - (static_cast<std::uint32_t>(__builtin_clzll(value)) & 63U);
 #endif
   auto approximation = 1 + ((bits * 77) >> 8);
-  if (approximation <= 19 && value >= POWERS_OF_10[approximation]) {
+  if (value >= POWERS_OF_10[approximation]) {
     approximation++;
   }
 
@@ -899,10 +917,15 @@ constexpr std::int32_t WORKING_PRECISION = 16;
 // How many positions the working precision drops from a coefficient of the
 // given width, which is what rounding to it adds to the exponent
 auto precision_excess(const std::uint64_t digits) -> std::int32_t {
-  return digits > static_cast<std::uint64_t>(WORKING_PRECISION)
-             ? static_cast<std::int32_t>(
-                   digits - static_cast<std::uint64_t>(WORKING_PRECISION))
-             : 0;
+  // A quotient handed back its trailing zeros stands narrower than the guard
+  // positions alone would leave it, and narrower than the precision at that,
+  // in which case the precision drops nothing from it
+  if (digits <= static_cast<std::uint64_t>(WORKING_PRECISION)) {
+    return 0;
+  }
+
+  return static_cast<std::int32_t>(
+      digits - static_cast<std::uint64_t>(WORKING_PRECISION));
 }
 
 // An operation that cannot represent its result exactly reports that it left
@@ -911,7 +934,10 @@ auto precision_excess(const std::uint64_t digits) -> std::int32_t {
 auto rounds_up_half_even(const std::string_view kept,
                          const std::string_view dropped,
                          const bool residue = false) -> bool {
-  if (dropped.empty() || dropped.front() < '5') {
+  // Both callers reach here having given up at least one position, since
+  // neither weighs a coefficient it is keeping whole
+  assert(!dropped.empty());
+  if (dropped.front() < '5') {
     return false;
   }
 
@@ -939,18 +965,17 @@ auto round_to_precision(std::int64_t &coefficient,
                         std::uint64_t &coefficient_high, std::int64_t &exponent,
                         std::uint8_t &flags, const bool residue = false)
     -> void {
-  if ((flags & (FLAG_NAN | FLAG_SNAN | FLAG_INFINITE)) != 0) {
-    return;
-  }
+  // A quotient is all that is rounded, and a division answers for an operand
+  // that is not a number, or without bound, long before the long division
+  assert((flags & (FLAG_NAN | FLAG_SNAN | FLAG_INFINITE)) == 0);
 
   if ((flags & FLAG_BIG) != 0) {
     auto digit_string =
         coefficient_to_digit_string(coefficient, coefficient_high, flags);
     auto total_digits = static_cast<std::int32_t>(digit_string.size());
-    if (total_digits <= WORKING_PRECISION) {
-      return;
-    }
-
+    // A coefficient reaches the wide form by filling a second limb, which puts
+    // it past the precision on its own
+    assert(total_digits > WORKING_PRECISION);
     auto excess = total_digits - WORKING_PRECISION;
 
     auto kept =
@@ -988,6 +1013,8 @@ auto round_to_precision(std::int64_t &coefficient,
     return;
   }
 
+  // A quotient handed back its trailing zeros can stand narrower than the
+  // precision, and there is nothing to drop from one that does
   auto digits = digit_count(static_cast<std::uint64_t>(coefficient));
   if (static_cast<std::int32_t>(digits) <= WORKING_PRECISION) {
     return;
@@ -1033,10 +1060,13 @@ auto coefficient_as_big(std::int64_t coefficient,
   }
 
   if ((flags & FLAG_BIG) != 0) {
+    // A coefficient of a single limb is carried in the compact form, so one
+    // carried in the wide form has an upper limb with something in it
+    assert(coefficient_high > 0);
     BigCoefficient result{2};
     result.words[0] = static_cast<std::uint64_t>(coefficient);
     result.words[1] = coefficient_high;
-    result.length = coefficient_high > 0 ? 2 : 1;
+    result.length = 2;
     return result;
   }
 
@@ -1056,7 +1086,7 @@ auto store_big_result(std::int64_t &coefficient,
     flags = result_negative ? FLAG_SIGN : 0;
   } else if (result_big.length <= 2) {
     coefficient = static_cast<std::int64_t>(result_big.words[0]);
-    coefficient_high = result_big.length > 1 ? result_big.words[1] : 0;
+    coefficient_high = result_big.words[1];
     flags =
         static_cast<std::uint8_t>(FLAG_BIG | (result_negative ? FLAG_SIGN : 0));
   } else {

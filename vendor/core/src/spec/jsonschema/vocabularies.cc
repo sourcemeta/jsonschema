@@ -4,11 +4,15 @@
 
 #include <sourcemeta/core/jsonschema_error.h>
 
-#include <cassert>  // assert
-#include <optional> // std::optional
-#include <string>   // std::string
-#include <utility>  // std::pair, std::to_underlying, std::unreachable
-#include <vector>   // std::vector
+#include <algorithm>   // std::ranges::none_of
+#include <array>       // std::array
+#include <cassert>     // assert
+#include <cstddef>     // std::size_t
+#include <optional>    // std::optional
+#include <string>      // std::string
+#include <string_view> // std::string_view
+#include <utility>     // std::pair, std::to_underlying
+#include <vector>      // std::vector
 
 // X-macro defining all known vocabulary mappings (enum, URI)
 // Ordered from most recent/common to oldest for faster short-circuiting
@@ -247,7 +251,10 @@ auto sourcemeta::core::SchemaVocabularies::empty() const noexcept -> bool {
 
 auto sourcemeta::core::SchemaVocabularies::has_unknown() const noexcept
     -> bool {
-  return this->unknown_.has_value() && !this->unknown_->empty();
+  // The map comes about only to take an entry, and nothing takes one back
+  // out, so it never stands empty once it is there
+  assert(!this->unknown_.has_value() || !this->unknown_->empty());
+  return this->unknown_.has_value();
 }
 
 auto sourcemeta::core::operator<<(std::ostream &stream,
@@ -256,24 +263,49 @@ auto sourcemeta::core::operator<<(std::ostream &stream,
   return stream << vocabulary_uri(vocabulary);
 }
 
+// The URI of each vocabulary, at the position its enumerator names, so that
+// naming one costs an index rather than a jump through as many arms as there
+// are vocabularies. The list fills the array by position, which leaves the
+// order the enumerators are declared in free to differ from the order the
+// list takes them in
+// NOLINTNEXTLINE(bugprone-macro-parentheses)
+#define X_URI_AT_POSITION(enumerator, uri_string)                              \
+  result[static_cast<std::size_t>(                                             \
+      sourcemeta::core::SchemaVocabularies::Known::enumerator)] =              \
+      (uri_string);
+
+namespace {
+// Nothing calls this at run time, and saying so is what keeps the one call it
+// takes at compile time from reading as a body that never ran
+consteval auto make_vocabulary_uris() -> std::array<
+    std::string_view,
+    sourcemeta::core::SchemaVocabularies::KNOWN_VOCABULARY_COUNT> {
+  std::array<std::string_view,
+             sourcemeta::core::SchemaVocabularies::KNOWN_VOCABULARY_COUNT>
+      result{};
+  SOURCEMETA_VOCABULARIES_X(X_URI_AT_POSITION)
+  return result;
+}
+
+constexpr auto VOCABULARY_URIS{make_vocabulary_uris()};
+
+// The switch this replaced carried no default case, which held the list to
+// naming every enumerator. An array leaves whatever the list forgets standing
+// empty instead, so that is what fails the build now
+static_assert(std::ranges::none_of(VOCABULARY_URIS,
+                                   [](const std::string_view uri) -> bool {
+                                     return uri.empty();
+                                   }),
+              "Every known vocabulary must name a URI");
+} // namespace
+
+#undef X_URI_AT_POSITION
+
 auto sourcemeta::core::vocabulary_uri(SchemaVocabularies::Known vocabulary)
     -> std::string_view {
-  switch (vocabulary) {
-// NOLINTNEXTLINE(bugprone-macro-parentheses)
-#define X_ENUM_TO_URI(enumerator, uri_string)                                  \
-  case SchemaVocabularies::Known::enumerator:                                  \
-    return (uri_string);
-
-    SOURCEMETA_VOCABULARIES_X(X_ENUM_TO_URI)
-
-#undef X_ENUM_TO_URI
-  }
-
-  // Clang settles that no other value arrives, so only GCC and MSVC
-  // need to be told that the end of this function is never reached
-#if !defined(__clang__)
-  std::unreachable();
-#endif
+  const auto position{static_cast<std::size_t>(std::to_underlying(vocabulary))};
+  assert(position < VOCABULARY_URIS.size());
+  return VOCABULARY_URIS[position];
 }
 
 auto sourcemeta::core::vocabulary_uri(const SchemaVocabularies::URI &vocabulary)

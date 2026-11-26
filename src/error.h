@@ -1085,6 +1085,11 @@ inline auto relative_path_string(const std::filesystem::path &canonical)
 }
 
 template <typename Exception>
+// A dispatch over every error the CLI can print, written as compile-time
+// branches of which exactly one stands per instantiation, so what it costs to
+// read tracks how many error types there are rather than how much there is to
+// follow
+// NOLINTNEXTLINE(readability-function-cognitive-complexity)
 inline auto print_exception(const bool is_json, const Exception &exception)
     -> void {
   auto error_json{sourcemeta::core::JSON::make_object()};
@@ -1122,6 +1127,21 @@ inline auto print_exception(const bool is_json, const Exception &exception)
                         sourcemeta::core::JSON{exception.identifier()});
     } else {
       std::cerr << "  at identifier " << exception.identifier() << "\n";
+    }
+  }
+
+  // An identifier names a document whole, so a reference that wanted a place
+  // within one only says which place through the fragment that the identifier
+  // does not spell
+  if constexpr (requires(const Exception &current) { current.fragment(); }) {
+    if (exception.fragment().has_value()) {
+      if (is_json) {
+        error_json.assign("fragment",
+                          sourcemeta::core::JSON{exception.fragment().value()});
+      } else {
+        std::cerr << "  at fragment \"" << exception.fragment().value()
+                  << "\"\n";
+      }
     }
   }
 
@@ -1317,13 +1337,21 @@ inline auto print_exception(const bool is_json, const Exception &exception)
   }
 
   if constexpr (requires(const Exception &current) { current.location(); }) {
-    if (is_json) {
-      error_json.assign("location",
-                        sourcemeta::core::JSON{
+    // A resolution failure that a reference led to names where that reference
+    // sits, while one that a declared dialect led to names no place at all,
+    // and an empty location is how it tells us so
+    constexpr auto LOCATION_MAY_BE_ABSENT{
+        std::is_base_of_v<sourcemeta::core::SchemaResolutionError, Exception>};
+    if (!LOCATION_MAY_BE_ABSENT || !exception.location().empty()) {
+      if (is_json) {
+        error_json.assign(
+            "location", sourcemeta::core::JSON{
                             sourcemeta::core::to_string(exception.location())});
-    } else {
-      std::cerr << "  at location \""
-                << sourcemeta::core::to_string(exception.location()) << "\"\n";
+      } else {
+        std::cerr << "  at location \""
+                  << sourcemeta::core::to_string(exception.location())
+                  << "\"\n";
+      }
     }
   }
 
@@ -1628,6 +1656,11 @@ inline auto print_lint_autofix_guidance() -> void {
   std::cerr << "https://github.com/sourcemeta/jsonschema/issues\n";
 }
 
+// Every error the CLI reports maps to its message and its exit code in one
+// ordered ladder, where a handler stands only when no earlier one matches, so
+// taking it apart would have to rethrow to reach the rest and would lose the
+// order that keeps each error on its own handler
+// NOLINTNEXTLINE(readability-function-cognitive-complexity)
 inline auto report_exceptions(const sourcemeta::core::Options &options,
                               const std::function<int()> &callback) noexcept
     -> int {
@@ -2137,21 +2170,6 @@ inline auto report_exceptions(const sourcemeta::core::Options &options,
     if (!is_json) {
       std::cerr << "\nAre you sure the input is a valid JSON Schema and its "
                    "base dialect is known?\n";
-      std::cerr
-          << "If the input does not declare the `$schema` keyword, you might "
-             "want to\n";
-      std::cerr << "explicitly declare a default dialect using "
-                   "`--default-dialect/-d`\n";
-    }
-
-    return EXIT_SCHEMA_INPUT_ERROR;
-  } catch (const sourcemeta::core::FileError<
-           sourcemeta::core::SchemaUnknownDialectError> &error) {
-    const auto is_json{options.contains("json")};
-    print_exception(is_json, error);
-    if (!is_json) {
-      std::cerr << "\nAre you sure the input is a valid JSON Schema and its "
-                   "dialect is known?\n";
       std::cerr
           << "If the input does not declare the `$schema` keyword, you might "
              "want to\n";

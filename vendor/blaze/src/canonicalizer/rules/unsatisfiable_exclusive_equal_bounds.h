@@ -1,6 +1,6 @@
 class UnsatisfiableExclusiveEqualBounds final : public SchemaTransformRule {
 public:
-  using reframe_after_transform = std::false_type;
+  using reframe_after_transform = std::true_type;
   UnsatisfiableExclusiveEqualBounds()
       : SchemaTransformRule{"unsatisfiable_exclusive_equal_bounds"} {};
 

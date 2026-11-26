@@ -17,7 +17,6 @@
 #include <optional>    // std::optional, std::nullopt
 #include <string>      // std::string
 #include <string_view> // std::string_view
-#include <utility>     // std::in_range
 
 namespace sourcemeta::core {
 
@@ -38,10 +37,10 @@ auto decompress(const MetapackView &parsed,
     return std::nullopt;
   }
 
-  if (!std::in_range<std::size_t>(parsed.header->content_bytes)) {
-    return std::nullopt;
-  }
-
+  // The size the header records is a 64-bit count, and this project targets
+  // platforms whose object size covers it, so the conversion below keeps every
+  // value rather than needing a bound that no such platform can fail
+  static_assert(sizeof(std::size_t) >= sizeof(parsed.header->content_bytes));
   const auto content_bytes{
       static_cast<std::size_t>(parsed.header->content_bytes)};
 

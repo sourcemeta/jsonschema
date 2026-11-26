@@ -11,13 +11,14 @@
 
 #include <algorithm>     // std::sort
 #include <array>         // std::array
+#include <cassert>       // assert
 #include <cstddef>       // std::size_t
 #include <cstdint>       // std::uint32_t
 #include <cstring>       // std::memchr
-#include <functional>    // std::less
 #include <string>        // std::string
 #include <string_view>   // std::string_view
 #include <unordered_map> // std::unordered_map
+#include <utility>       // std::unreachable
 #include <vector>        // std::vector
 
 namespace sourcemeta::core::markdown {
@@ -36,7 +37,10 @@ inline auto next_skipping_descendants(const Document &document,
                                       std::uint32_t index,
                                       const std::uint32_t root) noexcept
     -> std::uint32_t {
-  while (index != root && index != NO_NODE) {
+  // What this is asked about is part of what the root holds, so the walk
+  // upward reaches it rather than leaving the document
+  while (index != root) {
+    assert(index != NO_NODE);
     const auto &current{document.nodes[index]};
     if (current.next != NO_NODE) {
       return current.next;
@@ -256,6 +260,7 @@ private:
       this->buffer_.push_back(']');
       const auto text{this->document_.create(NodeType::Text)};
       nodes[text].literal = this->document_.strings.store(this->buffer_);
+      set_flag(nodes[text], FLAG_STORED, true);
       this->document_.insert_after(index, text);
       this->document_.unlink(index);
       return;
@@ -274,15 +279,6 @@ private:
         sourcemeta::core::digits_view(nodes[definition].extra, digits));
   }
 
-  [[nodiscard]] auto is_in_content(const std::string_view value) const noexcept
-      -> bool {
-    const std::less<const char *> before{};
-    const auto *const begin{this->document_.content.data()};
-    const auto *const end{begin + this->document_.content.size()};
-    return !before(value.data(), begin) &&
-           !before(end, value.data() + value.size());
-  }
-
   auto merge_following_text(const std::uint32_t index) -> void {
     auto &nodes{this->document_.nodes};
     auto next{nodes[index].next};
@@ -296,11 +292,13 @@ private:
       const auto piece{nodes[next].literal};
       if (buffered) {
         this->buffer_.append(piece);
-      } else if (literal.empty()) {
-        literal = piece;
-      } else if (!piece.empty()) {
-        if (literal.data() + literal.size() == piece.data() &&
-            this->is_in_content(literal) && this->is_in_content(piece)) {
+      } else {
+        // The content of the document holds what two of its own text nodes
+        // carry one after the other, so one view over both reads the same
+        // bytes without copying either
+        if (!has_flag(nodes[index], FLAG_STORED) &&
+            !has_flag(nodes[next], FLAG_STORED) &&
+            literal.data() + literal.size() == piece.data()) {
           literal =
               std::string_view{literal.data(), literal.size() + piece.size()};
         } else {
@@ -315,8 +313,12 @@ private:
       next = following;
     }
 
-    nodes[index].literal =
-        buffered ? this->document_.strings.store(this->buffer_) : literal;
+    if (buffered) {
+      nodes[index].literal = this->document_.strings.store(this->buffer_);
+      set_flag(nodes[index], FLAG_STORED, true);
+    } else {
+      nodes[index].literal = literal;
+    }
   }
 
   // Whether a node is still part of the document, remembering the answer for
@@ -343,57 +345,74 @@ private:
     return attached;
   }
 
+// Whatever sits before a text node other than the markup the walk below reads
+// ends with a character that no autolink may come after, and no block does, as
+// the walk only reads the inlines of one. Clang keeps an arm for the values
+// that never arrive and counts them as ones nothing took, so they are written
+// as the default there, while the compilers reading a case label are the ones
+// holding the switch to naming them all. The directives stay out of the
+// function because one inside it reads as a line that never ran
+#if defined(__clang__)
+#define SOURCEMETA_CORE_MARKDOWN_NO_AUTOLINK_AFTER                             \
+  default:                                                                     \
+    return false;
+#else
+#define SOURCEMETA_CORE_MARKDOWN_NO_AUTOLINK_AFTER                             \
+  case NodeType::Code:                                                         \
+  case NodeType::HTMLInline:                                                   \
+  case NodeType::Link:                                                         \
+  case NodeType::Image:                                                        \
+  case NodeType::FootnoteReference:                                            \
+  case NodeType::Text:                                                         \
+  case NodeType::Document:                                                     \
+  case NodeType::BlockQuote:                                                   \
+  case NodeType::List:                                                         \
+  case NodeType::Item:                                                         \
+  case NodeType::CodeBlock:                                                    \
+  case NodeType::HTMLBlock:                                                    \
+  case NodeType::Paragraph:                                                    \
+  case NodeType::Heading:                                                      \
+  case NodeType::ThematicBreak:                                                \
+  case NodeType::FootnoteDefinition:                                           \
+  case NodeType::Table:                                                        \
+  case NodeType::TableRow:                                                     \
+  case NodeType::TableCell:                                                    \
+    return false;
+#endif
+
   // Whether an extended autolink may start at the beginning of a text node,
   // where GFM section 6.9 says that such autolinks "can only come at the
   // beginning of a line, after whitespace, or any of the delimiting characters
   // *, _, ~, and (", which are also the characters around emphasis, strong
   // emphasis, and strikethrough
-  [[nodiscard]] auto may_start_autolink_at(std::uint32_t text) const noexcept
-      -> bool {
+  [[nodiscard]] auto
+  may_start_autolink_at(const std::uint32_t text) const noexcept -> bool {
     const auto &nodes{this->document_.nodes};
-    while (true) {
-      const auto previous{nodes[text].previous};
-      if (previous == NO_NODE) {
-        return nodes[nodes[text].parent].type != NodeType::Image;
-      }
-
-      const auto &node{nodes[previous]};
-      switch (node.type) {
-        case NodeType::Text:
-          if (!node.literal.empty()) {
-            return may_precede_extended_autolink(node.literal.back());
-          }
-
-          text = previous;
-          break;
-        case NodeType::SoftBreak:
-        case NodeType::LineBreak:
-        case NodeType::Emphasis:
-        case NodeType::Strong:
-        case NodeType::Strikethrough:
-          return true;
-        case NodeType::Document:
-        case NodeType::BlockQuote:
-        case NodeType::List:
-        case NodeType::Item:
-        case NodeType::CodeBlock:
-        case NodeType::HTMLBlock:
-        case NodeType::Paragraph:
-        case NodeType::Heading:
-        case NodeType::ThematicBreak:
-        case NodeType::FootnoteDefinition:
-        case NodeType::Table:
-        case NodeType::TableRow:
-        case NodeType::TableCell:
-        case NodeType::Code:
-        case NodeType::HTMLInline:
-        case NodeType::Link:
-        case NodeType::Image:
-        case NodeType::FootnoteReference:
-          return false;
-      }
+    const auto previous{nodes[text].previous};
+    if (previous == NO_NODE) {
+      return nodes[nodes[text].parent].type != NodeType::Image;
     }
+
+    // The text of a block was merged before this is asked, so what sits before
+    // one text node is never another
+    assert(nodes[previous].type != NodeType::Text);
+    switch (nodes[previous].type) {
+      SOURCEMETA_CORE_MARKDOWN_NO_AUTOLINK_AFTER
+      case NodeType::SoftBreak:
+      case NodeType::LineBreak:
+      case NodeType::Emphasis:
+      case NodeType::Strong:
+      case NodeType::Strikethrough:
+        return true;
+    }
+
+      // Clang settles that no other value arrives, so only GCC and MSVC
+      // need to be told that the end of this function is never reached
+#if !defined(__clang__)
+    std::unreachable();
+#endif
   }
+#undef SOURCEMETA_CORE_MARKDOWN_NO_AUTOLINK_AFTER
 
   // Turn the email addresses of GFM section 6.9 in a text node into links,
   // along with the mailto and xmpp protocols that may come before them
@@ -501,12 +520,17 @@ private:
         nodes[link].literal = this->document_.strings.store(this->buffer_);
       }
 
+      // What the address and the text after it are read from is where the
+      // text node this takes apart held its own literal
+      const auto stored{has_flag(nodes[text], FLAG_STORED)};
       const auto link_text{this->document_.create(NodeType::Text)};
       nodes[link_text].literal = address;
+      set_flag(nodes[link_text], FLAG_STORED, stored);
       this->document_.append_child(link, link_text);
       this->document_.insert_after(text, link);
       const auto after{this->document_.create(NodeType::Text)};
       nodes[after].literal = data.substr(end);
+      set_flag(nodes[after], FLAG_STORED, stored);
       this->document_.insert_after(link, after);
       nodes[text].literal = data.substr(consumed, link_start - consumed);
       text = after;

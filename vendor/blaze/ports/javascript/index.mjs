@@ -8,9 +8,8 @@ import {
   CONTROL_RESOURCE_JUMP
 } from './opcodes.mjs';
 
-const JSON_VERSION = 19;
+const JSON_VERSION = 20;
 const DEPTH_LIMIT = 300;
-const URI_REGEX = /^[a-zA-Z][a-zA-Z0-9+\-.]*:[^\s]*$/;
 
 function buildJsonPointer(tokens, length) {
   if (length === 0) return '';
@@ -103,6 +102,20 @@ function prepareInstruction(instruction, messages, anchors) {
             object[entries[index][2]] = entries[index][1];
           }
           instruction[6] = object;
+          break;
+        }
+        case 27: {
+          // As above, with each entry also recording whether a matching object
+          // has to define the name, paired with how many of those a walk has
+          // to match for the loop to hold
+          const indexes = Object.create(null);
+          const required = Object.create(null);
+          const entries = payload[0][0];
+          for (let index = 0; index < entries.length; index++) {
+            indexes[entries[index][2]] = entries[index][1];
+            if (entries[index][3]) required[entries[index][2]] = true;
+          }
+          instruction[6] = [indexes, required, payload[1]];
           break;
         }
         case 15: {
@@ -294,32 +307,33 @@ function compileInstructionToCode(instruction, captures, visited, budget) {
     case 71: return fb(71); case 72: return fb(72);
     case 73: { var r=R('t'); if(!r)return null; if(!children||children.length===0)return r+'return true;'; var mi=captures.length; captures.push(value); var gf=''; for(var gi=0;gi<children.length;gi++){var gc=children[gi][7]; if(gc&&gc.length>0){gf+='function(i,d,_t,_v){'+lb(gc,'i')+'return true;},';}else{gf+='null,';}} return r+TO+'return true;var __cg=['+gf+'];for(var k in t){var __mi=_c['+mi+'][k];if(__mi!==void 0){var __cf=__cg[__mi];if(__cf&&!__cf(t,d,_t,_v))return false;}}return true;'; }
     case 74: { var r=R('t'); if(!r)return null; if(!children||children.length===0)return r+'return true;'; var mi=captures.length; captures.push(value); var gf=''; for(var gi=0;gi<children.length;gi++){var gc=children[gi][7]; if(gc&&gc.length>0){gf+='function(i,d,_t,_v){'+lb(gc,'i')+'return true;},';}else{gf+='null,';}} return r+TO+'return true;var __cg=['+gf+'];for(var k in t){var __mi=_c['+mi+'][k];if(__mi===void 0)return false;var __cf=__cg[__mi];if(__cf&&!__cf(t,d,_t,_v))return false;}return true;'; }
-    case 75: { var r=R('t'); if(!r)return null; if(!children||children.length===0)return r+'return true;'; return r+TO+'return true;for(var k in t){'+lb(children,'t[k]')+'}return true;'; }
-    case 76: return fb(76); case 77: return fb(77); case 78: return fb(78); case 79: return fb(79); case 80: return fb(80);
-    case 81: return fb(81); case 82: return fb(82); case 83: return fb(83);
-    case 84: return fb(84);
-    case 85: { var r=R('t'); return r?r+TO+'return true;for(var k in t){if(_es(t[k])!=='+value+')return false;}return true;':null; }
-    case 86: return fb(86); case 87: return fb(87); case 88: return fb(88);
-    case 89: return fb(89);
-    case 90: { var r=R('t'); if(!r)return null; if(!children||children.length===0)return r+'return true;'; return r+'if(!Array.isArray(t))return true;for(var j=0;j<t.length;j++){'+lb(children,'t[j]')+'}return true;'; }
-    case 91: { var r=R('t'); if(!r)return null; if(!children||children.length===0)return r+'return true;'; return r+'if(!Array.isArray(t)||'+value+'>=t.length)return true;for(var j='+value+';j<t.length;j++){'+lb(children,'t[j]')+'}return true;'; }
-    case 92: return fb(92);
-    case 93: { var r=R('t'); return r?r+'if(!Array.isArray(t))return true;for(var j=0;j<t.length;j++){var a=_jt(t[j]);if(a!=='+value+'&&!('+value+'===2&&_ii(t[j])))return false;}return true;':null; }
-    case 94: { var r=R('t'); return r?r+'if(!Array.isArray(t))return true;for(var j=0;j<t.length;j++){if(_es(t[j])!=='+value+')return false;}return true;':null; }
-    case 95: { var r=R('t'); return r?r+'if(!Array.isArray(t))return true;for(var j=0;j<t.length;j++){if(('+value+'&(1<<_es(t[j])))===0)return false;}return true;':null; }
-    case 96: return fb(96); case 97: return fb(97); case 98: return fb(98); case 99: return fb(99);
-    case 100: return fb(100);
+    case 75: return fb(75);
+    case 76: { var r=R('t'); if(!r)return null; if(!children||children.length===0)return r+'return true;'; return r+TO+'return true;for(var k in t){'+lb(children,'t[k]')+'}return true;'; }
+    case 77: return fb(77); case 78: return fb(78); case 79: return fb(79); case 80: return fb(80); case 81: return fb(81);
+    case 82: return fb(82); case 83: return fb(83); case 84: return fb(84);
+    case 85: return fb(85);
+    case 86: { var r=R('t'); return r?r+TO+'return true;for(var k in t){if(_es(t[k])!=='+value+')return false;}return true;':null; }
+    case 87: return fb(87); case 88: return fb(88); case 89: return fb(89);
+    case 90: return fb(90);
+    case 91: { var r=R('t'); if(!r)return null; if(!children||children.length===0)return r+'return true;'; return r+'if(!Array.isArray(t))return true;for(var j=0;j<t.length;j++){'+lb(children,'t[j]')+'}return true;'; }
+    case 92: { var r=R('t'); if(!r)return null; if(!children||children.length===0)return r+'return true;'; return r+'if(!Array.isArray(t)||'+value+'>=t.length)return true;for(var j='+value+';j<t.length;j++){'+lb(children,'t[j]')+'}return true;'; }
+    case 93: return fb(93);
+    case 94: { var r=R('t'); return r?r+'if(!Array.isArray(t))return true;for(var j=0;j<t.length;j++){var a=_jt(t[j]);if(a!=='+value+'&&!('+value+'===2&&_ii(t[j])))return false;}return true;':null; }
+    case 95: { var r=R('t'); return r?r+'if(!Array.isArray(t))return true;for(var j=0;j<t.length;j++){if(_es(t[j])!=='+value+')return false;}return true;':null; }
+    case 96: { var r=R('t'); return r?r+'if(!Array.isArray(t))return true;for(var j=0;j<t.length;j++){if(('+value+'&(1<<_es(t[j])))===0)return false;}return true;':null; }
+    case 97: return fb(97); case 98: return fb(98); case 99: return fb(99); case 100: return fb(100);
     case 101: return fb(101);
-    case 102: { if(!children||children.length===0)return 'return true;'; var c=''; for(var j=0;j<children.length;j++){var r2=compileInstructionToCode(children[j],captures,visited,budget); if(r2===null){var ci=captures.length;captures.push(children[j]);c+='if(!_e(_c['+ci+'],i,d+1,_t,_v))return false;';}else{budget[0]-=r2.length;c+='if(!(function(i,d,_t,_v){'+r2+'})(i,d+1,_t,_v))return false;';}} return c+'return true;'; }
-    case 103: { var r=R('t'); if(!r)return null; var c=r+TO+'return true;if(!Object.hasOwn(t,'+JSON.stringify(value)+'))return true;'; if(children&&children.length>0)c+=seq(children,'i'); return c+'return true;'; }
-    case 104: { var c=IO+'if(!Object.hasOwn(i,'+JSON.stringify(value)+'))return true;'; if(children&&children.length>0)c+=seq(children,'i'); return c+'return true;'; }
-    case 105: { var c='if(_jt(i)!=='+value+')return true;'; if(children&&children.length>0)c+=seq(children,'i'); return c+'return true;'; }
-    case 106: return 'return true;';
-    case 107: return fb(107);
+    case 102: return fb(102);
+    case 103: { if(!children||children.length===0)return 'return true;'; var c=''; for(var j=0;j<children.length;j++){var r2=compileInstructionToCode(children[j],captures,visited,budget); if(r2===null){var ci=captures.length;captures.push(children[j]);c+='if(!_e(_c['+ci+'],i,d+1,_t,_v))return false;';}else{budget[0]-=r2.length;c+='if(!(function(i,d,_t,_v){'+r2+'})(i,d+1,_t,_v))return false;';}} return c+'return true;'; }
+    case 104: { var r=R('t'); if(!r)return null; var c=r+TO+'return true;if(!Object.hasOwn(t,'+JSON.stringify(value)+'))return true;'; if(children&&children.length>0)c+=seq(children,'i'); return c+'return true;'; }
+    case 105: { var c=IO+'if(!Object.hasOwn(i,'+JSON.stringify(value)+'))return true;'; if(children&&children.length>0)c+=seq(children,'i'); return c+'return true;'; }
+    case 106: { var c='if(_jt(i)!=='+value+')return true;'; if(children&&children.length>0)c+=seq(children,'i'); return c+'return true;'; }
+    case 107: return 'return true;';
     case 108: return fb(108);
     case 109: return fb(109);
-    case 110: { if(!value)return 'return true;'; if(visited&&visited.has(instruction))return fb(110); if(!visited)visited=new Set(); visited.add(instruction); var r=R('t'); if(!r)return fb(110); var c=r; for(var j=0;j<value.length;j++){var r2=compileInstructionToCode(value[j],captures,visited,budget); if(r2===null){var ci=captures.length;captures.push(value[j]);c+='if(!_e(_c['+ci+'],t,d+1,_t,_v))return false;';}else{budget[0]-=r2.length;c+='if(!(function(i,d,_t,_v){'+r2+'})(t,d+1,_t,_v))return false;';}} return c+'return true;'; }
-    case 111: return fb(111);
+    case 110: return fb(110);
+    case 111: { if(!value)return 'return true;'; if(visited&&visited.has(instruction))return fb(111); if(!visited)visited=new Set(); visited.add(instruction); var r=R('t'); if(!r)return fb(111); var c=r; for(var j=0;j<value.length;j++){var r2=compileInstructionToCode(value[j],captures,visited,budget); if(r2===null){var ci=captures.length;captures.push(value[j]);c+='if(!_e(_c['+ci+'],t,d+1,_t,_v))return false;';}else{budget[0]-=r2.length;c+='if(!(function(i,d,_t,_v){'+r2+'})(t,d+1,_t,_v))return false;';}} return c+'return true;'; }
+    case 112: return fb(112);
     default: return null;
   }
 }
@@ -1373,14 +1387,33 @@ function AssertionTypeIntegerLowerBoundStrict(instruction, instance, depth, temp
   return __result;
 };
 
+// This port carries no string format validators yet.
+//
+// Refusing is deliberate. This instruction used to ignore the format it was
+// handed and ask whether the string was a URI, which answered every other
+// format wrongly. A refusal is visible where a wrong verdict is not
+//
+// TODO: implement the formats and dispatch on the one the instruction names
+const STRING_FORMAT_NAMES = [
+  'URI', 'URIReference', 'URITemplate', 'IRI', 'IRIReference', 'Email',
+  'IDNEmail', 'IPv4', 'IPv6', 'Hostname', 'IDNHostname', 'DateTime', 'Date',
+  'Time', 'PartialTime', 'Duration', 'JSONPointer', 'RelativeJSONPointer',
+  'UUID', 'Regex', 'Color', 'Base64'
+];
+
+function refuseStringType(type) {
+  const name = STRING_FORMAT_NAMES[type];
+  throw new Error('This port has no validator for the ' +
+    (name === undefined ? `string format of index ${type}` : `${name} format`));
+}
+
 function AssertionStringType(instruction, instance, depth, template, evaluator) {
   const target = evaluator.propertyTarget !== undefined
     ? evaluator.propertyTarget : resolveInstance(instance, instruction[2]);
   if (typeof target !== 'string') return true;
-  if (evaluator.callbackMode) evaluator.callbackPush(instruction);
-  const __result = URI_REGEX.test(target);
-  if (evaluator.callbackMode) evaluator.callbackPop(instruction, __result);
-  return __result;
+  // Refusing before the callback is pushed is what keeps the throw from
+  // leaving an unmatched trace event, and the state behind it, on the evaluator
+  return refuseStringType(instruction[6]);
 };
 
 function AssertionPropertyType(instruction, instance, depth, template, evaluator) {
@@ -2022,6 +2055,41 @@ function LoopPropertiesMatch(instruction, instance, depth, template, evaluator) 
   }
   if (evaluator.callbackMode) evaluator.callbackPop(instruction, true);
   return true;
+};
+
+function LoopPropertiesMatchRequired(instruction, instance, depth, template, evaluator) {
+  const target = resolveInstance(instance, instruction[2]);
+  if (evaluator.callbackMode) evaluator.callbackPush(instruction);
+  if (!isObject(target)) {
+    if (evaluator.callbackMode) evaluator.callbackPop(instruction, false);
+    return false;
+  }
+  const value = instruction[6];
+  const indexes = value[0];
+  const required = value[1];
+  const children = instruction[7];
+  let matched = 0;
+  for (const key in target) {
+    const index = indexes[key];
+    if (index === undefined) continue;
+    // A presence assertion asks for the object's own property, and walking
+    // the keys here reaches inherited ones too, so an inherited name must not
+    // count towards what the loop has to match
+    if (required[key] !== undefined && Object.hasOwn(target, key)) matched++;
+    const subinstruction = children[index];
+    const subchildren = subinstruction[7];
+    if (subchildren) {
+      for (let childIndex = 0; childIndex < subchildren.length; childIndex++) {
+        if (!evaluateInstruction(subchildren[childIndex], target, depth + 1, template, evaluator)) {
+          if (evaluator.callbackMode) evaluator.callbackPop(instruction, false);
+          return false;
+        }
+      }
+    }
+  }
+  const result = matched === value[2];
+  if (evaluator.callbackMode) evaluator.callbackPop(instruction, result);
+  return result;
 };
 
 function LoopPropertiesMatchClosed(instruction, instance, depth, template, evaluator) {
@@ -2900,43 +2968,44 @@ const handlers = [
   LoopPropertiesUnevaluatedExcept,       // 72
   LoopPropertiesMatch,                   // 73
   LoopPropertiesMatchClosed,             // 74
-  LoopProperties,                        // 75
-  LoopPropertiesEvaluate,                // 76
-  LoopPropertiesRegex,                   // 77
-  LoopPropertiesRegexClosed,             // 78
-  LoopPropertiesStartsWith,              // 79
-  LoopPropertiesExcept,                  // 80
-  LoopPropertiesType,                    // 81
-  LoopPropertiesTypeEvaluate,            // 82
-  LoopPropertiesExactlyTypeStrict,       // 83
-  LoopPropertiesExactlyTypeStrictHash,   // 84
-  LoopPropertiesTypeStrict,              // 85
-  LoopPropertiesTypeStrictEvaluate,      // 86
-  LoopPropertiesTypeStrictAny,           // 87
-  LoopPropertiesTypeStrictAnyEvaluate,   // 88
-  LoopKeys,                              // 89
-  LoopItems,                             // 90
-  LoopItemsFrom,                         // 91
-  LoopItemsUnevaluated,                  // 92
-  LoopItemsType,                         // 93
-  LoopItemsTypeStrict,                   // 94
-  LoopItemsTypeStrictAny,                // 95
-  LoopItemsPropertiesExactlyTypeStrictHash,// 96
+  LoopPropertiesMatchRequired,           // 75
+  LoopProperties,                        // 76
+  LoopPropertiesEvaluate,                // 77
+  LoopPropertiesRegex,                   // 78
+  LoopPropertiesRegexClosed,             // 79
+  LoopPropertiesStartsWith,              // 80
+  LoopPropertiesExcept,                  // 81
+  LoopPropertiesType,                    // 82
+  LoopPropertiesTypeEvaluate,            // 83
+  LoopPropertiesExactlyTypeStrict,       // 84
+  LoopPropertiesExactlyTypeStrictHash,   // 85
+  LoopPropertiesTypeStrict,              // 86
+  LoopPropertiesTypeStrictEvaluate,      // 87
+  LoopPropertiesTypeStrictAny,           // 88
+  LoopPropertiesTypeStrictAnyEvaluate,   // 89
+  LoopKeys,                              // 90
+  LoopItems,                             // 91
+  LoopItemsFrom,                         // 92
+  LoopItemsUnevaluated,                  // 93
+  LoopItemsType,                         // 94
+  LoopItemsTypeStrict,                   // 95
+  LoopItemsTypeStrictAny,                // 96
   LoopItemsPropertiesExactlyTypeStrictHash,// 97
-  LoopItemsIntegerBounded,               // 98
-  LoopItemsIntegerBoundedSized,          // 99
-  LoopItemsArrayBoundedTypeStrictAny,    // 100
-  LoopContains,                          // 101
-  ControlGroup,                          // 102
-  ControlGroupWhenDefines,               // 103
-  ControlGroupWhenDefinesDirect,         // 104
-  ControlGroupWhenType,                  // 105
-  ControlEvaluate,                       // 106
-  ControlFrame,                          // 107
-  ControlResource,                       // 108
-  ControlDynamicAnchorJump,              // 109
-  ControlJump,                           // 110
-  ControlResourceJump                    // 111
+  LoopItemsPropertiesExactlyTypeStrictHash,// 98
+  LoopItemsIntegerBounded,               // 99
+  LoopItemsIntegerBoundedSized,          // 100
+  LoopItemsArrayBoundedTypeStrictAny,    // 101
+  LoopContains,                          // 102
+  ControlGroup,                          // 103
+  ControlGroupWhenDefines,               // 104
+  ControlGroupWhenDefinesDirect,         // 105
+  ControlGroupWhenType,                  // 106
+  ControlEvaluate,                       // 107
+  ControlFrame,                          // 108
+  ControlResource,                       // 109
+  ControlDynamicAnchorJump,              // 110
+  ControlJump,                           // 111
+  ControlResourceJump                    // 112
 ];
 
 function AssertionTypeArrayBounded_fast(instruction, instance, depth, template, evaluator) {
@@ -3008,6 +3077,33 @@ function LoopPropertiesMatch_fast(instruction, instance, depth, template, evalua
     }
   }
   return true;
+}
+
+function LoopPropertiesMatchRequired_fast(instruction, instance, depth, template, evaluator) {
+  const relInstance = instruction[2];
+  const target = relInstance.length === 0 ? instance : resolveInstance(instance, relInstance);
+  if (!isObject(target)) return false;
+  const value = instruction[6];
+  const indexes = value[0];
+  const required = value[1];
+  const children = instruction[7];
+  let matched = 0;
+  for (const key in target) {
+    const index = indexes[key];
+    if (index === undefined) continue;
+    // A presence assertion asks for the object's own property, and walking
+    // the keys here reaches inherited ones too, so an inherited name must not
+    // count towards what the loop has to match
+    if (required[key] !== undefined && Object.hasOwn(target, key)) matched++;
+    const subinstruction = children[index];
+    const subchildren = subinstruction[7];
+    if (subchildren) {
+      for (let childIndex = 0; childIndex < subchildren.length; childIndex++) {
+        if (!evaluateInstruction(subchildren[childIndex], target, depth + 1, template, evaluator)) return false;
+      }
+    }
+  }
+  return matched === value[2];
 }
 
 function LogicalOr_fast(instruction, instance, depth, template, evaluator) {
@@ -3667,7 +3763,7 @@ function AssertionStringType_fast(instruction, instance, depth, template, evalua
   const target = evaluator.propertyTarget !== undefined
     ? evaluator.propertyTarget : resolveInstance(instance, instruction[2]);
   if (typeof target !== 'string') return true;
-  return URI_REGEX.test(target);
+  return refuseStringType(instruction[6]);
 }
 
 function AssertionPropertyType_fast(instruction, instance, depth, template, evaluator) {
@@ -4260,7 +4356,7 @@ function AssertionTypeIntegerLowerBoundStrict_fast(instruction, instance, depth,
 
 const fastHandlers = handlers.slice();
 fastHandlers[16] = AssertionTypeArrayBounded_fast;
-fastHandlers[95] = LoopItemsTypeStrictAny_fast;
+fastHandlers[96] = LoopItemsTypeStrictAny_fast;
 fastHandlers[45] = AssertionPropertyTypeStrict_fast;
 fastHandlers[11] = AssertionTypeStrict_fast;
 fastHandlers[4] = AssertionDefinesAllStrict_fast;
@@ -4268,31 +4364,32 @@ fastHandlers[27] = AssertionEqual_fast;
 fastHandlers[73] = LoopPropertiesMatch_fast;
 fastHandlers[61] = LogicalOr_fast;
 fastHandlers[62] = LogicalOrEvaluate_fast;
-fastHandlers[110] = ControlJump_fast;
+fastHandlers[111] = ControlJump_fast;
 fastHandlers[29] = AssertionEqualsAnyStringHash_fast;
 fastHandlers[64] = LogicalXor_fast;
 fastHandlers[65] = LogicalXorEvaluate_fast;
 fastHandlers[2] = AssertionDefinesStrict_fast;
-fastHandlers[90] = LoopItems_fast;
+fastHandlers[91] = LoopItems_fast;
 fastHandlers[74] = LoopPropertiesMatchClosed_fast;
+fastHandlers[75] = LoopPropertiesMatchRequired_fast;
 fastHandlers[14] = AssertionTypeStringBounded_fast;
 fastHandlers[63] = LogicalAnd_fast;
 fastHandlers[8] = AssertionPropertyDependencies_fast;
 fastHandlers[10] = AssertionTypeAny_fast;
 fastHandlers[66] = LogicalCondition_fast;
 fastHandlers[67] = LogicalConditionEvaluate_fast;
-fastHandlers[80] = LoopPropertiesExcept_fast;
+fastHandlers[81] = LoopPropertiesExcept_fast;
 fastHandlers[20] = AssertionRegex_fast;
-fastHandlers[75] = LoopProperties_fast;
+fastHandlers[76] = LoopProperties_fast;
 fastHandlers[1] = AssertionDefines_fast;
 fastHandlers[68] = LogicalWhenType_fast;
 fastHandlers[69] = LogicalWhenDefines_fast;
 fastHandlers[0] = AssertionFail_fast;
-fastHandlers[100] = LoopItemsArrayBoundedTypeStrictAny_fast;
-fastHandlers[101] = LoopContains_fast;
+fastHandlers[101] = LoopItemsArrayBoundedTypeStrictAny_fast;
+fastHandlers[102] = LoopContains_fast;
 fastHandlers[59] = LogicalNot_fast;
-fastHandlers[93] = LoopItemsType_fast;
-fastHandlers[94] = LoopItemsTypeStrict_fast;
+fastHandlers[94] = LoopItemsType_fast;
+fastHandlers[95] = LoopItemsTypeStrict_fast;
 fastHandlers[28] = AssertionEqualsAny_fast;
 fastHandlers[3] = AssertionDefinesAll_fast;
 fastHandlers[5] = AssertionDefinesExactly_fast;
@@ -4342,26 +4439,26 @@ fastHandlers[60] = LogicalNotEvaluate_fast;
 fastHandlers[70] = LogicalWhenArraySizeGreater_fast;
 fastHandlers[71] = LoopPropertiesUnevaluated_fast;
 fastHandlers[72] = LoopPropertiesUnevaluatedExcept_fast;
-fastHandlers[76] = LoopPropertiesEvaluate_fast;
-fastHandlers[77] = LoopPropertiesRegex_fast;
-fastHandlers[78] = LoopPropertiesRegexClosed_fast;
-fastHandlers[79] = LoopPropertiesStartsWith_fast;
-fastHandlers[81] = LoopPropertiesType_fast;
-fastHandlers[82] = LoopPropertiesTypeEvaluate_fast;
-fastHandlers[83] = LoopPropertiesExactlyTypeStrict_fast;
-fastHandlers[84] = LoopPropertiesExactlyTypeStrictHash_fast;
-fastHandlers[85] = LoopPropertiesTypeStrict_fast;
-fastHandlers[86] = LoopPropertiesTypeStrictEvaluate_fast;
-fastHandlers[87] = LoopPropertiesTypeStrictAny_fast;
-fastHandlers[88] = LoopPropertiesTypeStrictAnyEvaluate_fast;
-fastHandlers[89] = LoopKeys_fast;
-fastHandlers[91] = LoopItemsFrom_fast;
-fastHandlers[92] = LoopItemsUnevaluated_fast;
-fastHandlers[96] = LoopItemsPropertiesExactlyTypeStrictHash_fast;
+fastHandlers[77] = LoopPropertiesEvaluate_fast;
+fastHandlers[78] = LoopPropertiesRegex_fast;
+fastHandlers[79] = LoopPropertiesRegexClosed_fast;
+fastHandlers[80] = LoopPropertiesStartsWith_fast;
+fastHandlers[82] = LoopPropertiesType_fast;
+fastHandlers[83] = LoopPropertiesTypeEvaluate_fast;
+fastHandlers[84] = LoopPropertiesExactlyTypeStrict_fast;
+fastHandlers[85] = LoopPropertiesExactlyTypeStrictHash_fast;
+fastHandlers[86] = LoopPropertiesTypeStrict_fast;
+fastHandlers[87] = LoopPropertiesTypeStrictEvaluate_fast;
+fastHandlers[88] = LoopPropertiesTypeStrictAny_fast;
+fastHandlers[89] = LoopPropertiesTypeStrictAnyEvaluate_fast;
+fastHandlers[90] = LoopKeys_fast;
+fastHandlers[92] = LoopItemsFrom_fast;
+fastHandlers[93] = LoopItemsUnevaluated_fast;
 fastHandlers[97] = LoopItemsPropertiesExactlyTypeStrictHash_fast;
-fastHandlers[98] = LoopItemsIntegerBounded_fast;
-fastHandlers[99] = LoopItemsIntegerBoundedSized_fast;
-fastHandlers[109] = ControlDynamicAnchorJump_fast;
+fastHandlers[98] = LoopItemsPropertiesExactlyTypeStrictHash_fast;
+fastHandlers[99] = LoopItemsIntegerBounded_fast;
+fastHandlers[100] = LoopItemsIntegerBoundedSized_fast;
+fastHandlers[110] = ControlDynamicAnchorJump_fast;
 
 import { describe } from './describe.mjs';
 

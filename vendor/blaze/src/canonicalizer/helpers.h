@@ -13,6 +13,32 @@ inline auto is_in_place_applicator(const SchemaKeywordType type) -> bool {
          type == SchemaKeywordType::ApplicatorValueInPlaceNegate;
 }
 
+// TODO: Move upstream, so that this reads the base dialect through
+// `ref_overrides_adjacent_keywords` rather than naming every vocabulary that
+// answers to it here
+// Up to Draft 7, a reference takes the place of every keyword that sits beside
+// it, down to the dialect the document names where the two sit together at the
+// top of a document. A hyper-schema of one of those drafts says the same of a
+// reference as the draft it extends, and says it in a vocabulary of its own,
+// so each one answers here for itself. Draft 2 and earlier say it only there,
+// as the reference keyword was theirs alone before Draft 3 brought it into the
+// schema vocabulary
+inline auto reference_overrides_siblings(const SchemaVocabularies &vocabularies)
+    -> bool {
+  return vocabularies.contains_any(
+      {SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_7,
+       SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_7_HYPER,
+       SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_6,
+       SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_6_HYPER,
+       SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_4,
+       SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_4_HYPER,
+       SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_3,
+       SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_3_HYPER,
+       SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_2_HYPER,
+       SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_1_HYPER,
+       SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_0_HYPER});
+}
+
 // TODO: Move upstream, so that the compiler can share this predicate rather
 // than repeating the same check
 // Draft 3 and Draft 4 read "integer" as a number written without a fractional
@@ -162,6 +188,14 @@ inline auto is_known_type_form(const sourcemeta::core::JSON &type,
   });
 }
 
+// Whether a subschema says that no instance can satisfy it, however the
+// dialect in force spells that. A dialect whose booleans are schemas can say
+// it with one, and every dialect says it the way the canonical form does once
+// a rule has settled it
+inline auto says_nothing_satisfies(const sourcemeta::core::JSON &schema,
+                                   const SchemaVocabularies &vocabularies)
+    -> bool;
+
 // The schema that no instance can ever satisfy. Draft 3 and Draft 4 have no
 // boolean schemas, so each of them has to spell it out with the negation
 // keyword it offers, applied to the schema that every instance satisfies
@@ -215,6 +249,33 @@ inline auto unsatisfiable_schema(const SchemaVocabularies &vocabularies)
   }
 
   return sourcemeta::core::JSON{false};
+}
+
+inline auto says_nothing_satisfies(const sourcemeta::core::JSON &schema,
+                                   const SchemaVocabularies &vocabularies)
+    -> bool {
+  if (schema.is_boolean()) {
+    return !schema.to_boolean();
+  }
+
+  const auto unsatisfiable{unsatisfiable_schema(vocabularies)};
+  if (!schema.is_object() || !unsatisfiable.is_object()) {
+    return schema == unsatisfiable;
+  }
+
+  // A schema a rule has already collapsed keeps the dialect it declared, and
+  // naming a dialect says nothing of which instances a schema accepts. Any
+  // other keyword beside the negation does, so it is not this schema
+  const std::size_t dialect{schema.defines("$schema") ? 1U : 0U};
+  if (schema.size() - dialect != unsatisfiable.size()) {
+    return false;
+  }
+
+  return std::ranges::all_of(
+      unsatisfiable.as_object(), [&schema](const auto &entry) -> bool {
+        const auto *value{schema.try_at(entry.first)};
+        return value != nullptr && *value == entry.second;
+      });
 }
 
 // Collapsing a schema to the unsatisfiable one throws away every keyword it
@@ -399,6 +460,26 @@ auto walk_up_in_place_applicators_across_references(
   }
 
   return false;
+}
+
+// `x-format-assertion` only ever speaks about a `format` written in the same
+// schema object, so whatever receives `format` has to receive this with it.
+// Parting the two turns an assertion back into an annotation, and the schema
+// that comes out accepts what the one going in refuses. The marker moves
+// rather than being copied, so it is still annotated once
+inline auto move_format_assertion(const sourcemeta::core::JSON &from,
+                                  sourcemeta::core::JSON &into) -> bool {
+  if (!from.is_object() || !into.is_object() || !into.defines("format")) {
+    return false;
+  }
+
+  const auto *assertion{from.try_at("x-format-assertion")};
+  if (assertion == nullptr) {
+    return false;
+  }
+
+  into.assign("x-format-assertion", *assertion);
+  return true;
 }
 
 #define ONLY_CONTINUE_IF(condition)                                            \

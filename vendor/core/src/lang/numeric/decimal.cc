@@ -20,7 +20,7 @@
 #include <stdexcept>   // std::out_of_range
 #include <string>      // std::string, std::stof, std::stod
 #include <string_view> // std::string_view
-#include <utility>     // std::cmp_greater
+#include <utility>     // std::cmp_greater, std::cmp_less_equal
 #include <vector>      // std::vector
 
 namespace {
@@ -102,8 +102,10 @@ auto exact_magnitude_to_decimal_string(const double magnitude) -> std::string {
                                53};
 
   // Dropping trailing zero bits keeps the following multiplications short and
-  // avoids emitting spurious trailing decimal zeros
-  while (mantissa != 0 && (mantissa & 1U) == 0) {
+  // avoids emitting spurious trailing decimal zeros. A zero is answered by the
+  // one caller before it reaches here, so a bit is always left standing
+  assert(mantissa != 0);
+  while ((mantissa & 1U) == 0) {
     mantissa >>= 1U;
     binary_exponent += 1;
   }
@@ -323,8 +325,10 @@ auto parse_decimal_string(const char *input, std::size_t length)
   }
 
   std::int64_t exponent_suffix_64 = 0;
-  bool has_exponent_marker =
-      cursor > input && (*(cursor - 1) == 'e' || *(cursor - 1) == 'E');
+  // A digit was read above, so the cursor stands past whatever it read and
+  // there is a character behind it to look at
+  assert(cursor > input);
+  bool has_exponent_marker = *(cursor - 1) == 'e' || *(cursor - 1) == 'E';
   if (decimal_offset < 0 && !has_exponent_marker) {
     result.flags |= FLAG_INTEGER_LITERAL;
   }
@@ -556,9 +560,17 @@ auto is_representable_compact(std::uint64_t coefficient,
   coefficient >>= scale;
 
   if (exponent >= 0) {
-    return scale_by_positive_power<FloatingPointType>(coefficient, exponent,
-                                                      scale) &&
-           fits_binary_format<FloatingPointType>(coefficient, scale);
+    if (!scale_by_positive_power<FloatingPointType>(coefficient, exponent,
+                                                    scale)) {
+      return false;
+    }
+
+    // A coefficient of a single limb parts with no more than fifty nine powers
+    // of two, and the power of five it is handed is held down by the
+    // significand it has to fit, so a significand the scaling accepts stands
+    // well inside the exponent range the format reaches
+    assert(fits_binary_format<FloatingPointType>(coefficient, scale));
+    return true;
   }
 
   // A negative exponent puts a power of five underneath the value, so only a
@@ -645,10 +657,6 @@ auto is_representable_as_floating_point(const std::int64_t coefficient,
 
   if ((flags & FLAG_BIG) != 0) {
     auto big{coefficient_as_big(coefficient, coefficient_high, flags)};
-    if (big.is_zero()) {
-      return true;
-    }
-
     return is_representable_big<FloatingPointType>(big, exponent);
   }
 
@@ -723,6 +731,38 @@ auto settle_rounded_result(std::int64_t &coefficient,
                      staged_exponent, staged.flags, residue);
   if (staged_exponent > std::numeric_limits<std::int32_t>::max() ||
       staged_exponent < std::numeric_limits<std::int32_t>::min()) {
+    throw sourcemeta::core::NumericOverflowError{};
+  }
+
+  free_big_coefficient(coefficient, flags);
+  coefficient = staged.coefficient;
+  coefficient_high = staged.coefficient_high;
+  exponent = static_cast<std::int32_t>(staged_exponent);
+  flags = staged.flags;
+  staged.release();
+}
+
+// The General Decimal Arithmetic Specification has the coefficient of a
+// product be "computed by multiplying together the coefficients of the
+// operands" and its exponent be "the sum of the exponents of the two
+// operands", a pair a finite decimal always holds, since a product "may be as
+// long as the sum of the lengths of the two operands". What the specification
+// then rounds a result to is the precision of an arithmetic context, and this
+// type carries none, which is the same reason a sum and a difference keep every
+// digit they reach. A product is therefore settled as it stands, unlike a
+// quotient, whose expansion need not terminate at all
+auto settle_exact_result(std::int64_t &coefficient,
+                         std::uint64_t &coefficient_high,
+                         std::int32_t &exponent, std::uint8_t &flags,
+                         StagedResult &staged, std::int64_t staged_exponent)
+    -> void {
+  // A product has its exponent weighed before any coefficient is multiplied
+  // out, and an exact quotient is only written out where the positions it
+  // takes have room beneath the ideal exponent, so neither of the two reaches
+  // the bottom of the range here. The top stays open to a quotient, whose
+  // exponent is the distance between two of them and so twice as wide as one
+  assert(staged_exponent >= std::numeric_limits<std::int32_t>::min());
+  if (staged_exponent > std::numeric_limits<std::int32_t>::max()) {
     throw sourcemeta::core::NumericOverflowError{};
   }
 
@@ -1265,10 +1305,8 @@ auto Decimal::is_zero() const -> bool {
       return load_big_pointer(this->coefficient_)->is_zero();
     }
 
-    if ((this->flags_ & FLAG_BIG) != 0) {
-      return this->coefficient_ == 0 && this->coefficient_high_ == 0;
-    }
-
+    // A wide coefficient off the heap fills its upper limb, and a value that
+    // is not a number, or that stands without bound, is no zero either
     return false;
   }
 
@@ -1300,7 +1338,10 @@ auto Decimal::is_integral() const -> bool {
 
   auto coefficient = this->coefficient_;
   auto exponent = this->exponent_;
-  while (exponent < 0 && coefficient != 0 && coefficient % 10 == 0) {
+  // A zero answered above, and giving up a trailing zero leaves at least one
+  // digit standing, so the coefficient never runs out underneath the loop
+  assert(coefficient != 0);
+  while (exponent < 0 && coefficient % 10 == 0) {
     coefficient /= 10;
     exponent++;
   }
@@ -1811,43 +1852,40 @@ auto Decimal::compare_total(const Decimal &other) const -> Decimal {
         magnitude_compare = left_adjusted < right_adjusted ? -1 : 1;
       } else {
         auto exponent_difference = this->exponent_ - other.exponent_;
+        // Two coefficients of a single limb standing at the same adjusted
+        // exponent are as far apart in exponent as they are in digit count,
+        // and a single limb spells no more than eighteen digits
         if (exponent_difference > 0) {
-          if (exponent_difference <= 18) {
-            auto multiplier =
-                POWERS_OF_10[static_cast<std::uint32_t>(exponent_difference)];
-            auto product =
-                static_cast<sourcemeta::core::uint128_t>(this->coefficient_) *
-                multiplier;
-            auto right_128 =
-                static_cast<sourcemeta::core::uint128_t>(other.coefficient_);
-            if (product < right_128) {
-              magnitude_compare = -1;
-            } else if (product > right_128) {
-              magnitude_compare = 1;
-            } else {
-              magnitude_compare = 0;
-            }
-          } else {
+          assert(exponent_difference <= 18);
+          auto multiplier =
+              POWERS_OF_10[static_cast<std::uint32_t>(exponent_difference)];
+          auto product =
+              static_cast<sourcemeta::core::uint128_t>(this->coefficient_) *
+              multiplier;
+          auto right_128 =
+              static_cast<sourcemeta::core::uint128_t>(other.coefficient_);
+          if (product < right_128) {
+            magnitude_compare = -1;
+          } else if (product > right_128) {
             magnitude_compare = 1;
+          } else {
+            magnitude_compare = 0;
           }
         } else {
           auto difference = static_cast<std::uint32_t>(-exponent_difference);
-          if (difference <= 18) {
-            auto multiplier = POWERS_OF_10[difference];
-            auto product =
-                static_cast<sourcemeta::core::uint128_t>(other.coefficient_) *
-                multiplier;
-            auto left_128 =
-                static_cast<sourcemeta::core::uint128_t>(this->coefficient_);
-            if (left_128 < product) {
-              magnitude_compare = -1;
-            } else if (left_128 > product) {
-              magnitude_compare = 1;
-            } else {
-              magnitude_compare = 0;
-            }
-          } else {
+          assert(difference <= 18);
+          auto multiplier = POWERS_OF_10[difference];
+          auto product =
+              static_cast<sourcemeta::core::uint128_t>(other.coefficient_) *
+              multiplier;
+          auto left_128 =
+              static_cast<sourcemeta::core::uint128_t>(this->coefficient_);
+          if (left_128 < product) {
             magnitude_compare = -1;
+          } else if (left_128 > product) {
+            magnitude_compare = 1;
+          } else {
+            magnitude_compare = 0;
           }
         }
       }
@@ -1952,10 +1990,9 @@ auto Decimal::divide_integer(const Decimal &other) const -> Decimal {
   Decimal result;
   store_big_result(result.coefficient_, result.coefficient_high_, result.flags_,
                    std::move(quotient), result_negative);
-  if (result.is_zero()) {
-    result.flags_ = result_negative ? FLAG_SIGN : 0;
-  }
-
+  // The dividend reaches the divisor, which the comparison above settled, so
+  // the divisor goes into it at least the once
+  assert(!result.is_zero());
   result.exponent_ = 0;
   return result;
 }
@@ -2114,46 +2151,41 @@ auto Decimal::operator<(const Decimal &other) const -> bool {
         magnitude_compare = left_adjusted < right_adjusted ? -1 : 1;
       } else {
         auto exponent_difference = this->exponent_ - other.exponent_;
+        // Two coefficients of a single limb standing at the same adjusted
+        // exponent are as far apart in exponent as they are in digit count,
+        // and a single limb spells no more than eighteen digits
         if (exponent_difference > 0) {
-          if (exponent_difference <= 18) {
-            auto multiplier =
-                POWERS_OF_10[static_cast<std::uint32_t>(exponent_difference)];
-            auto product =
-                static_cast<sourcemeta::core::uint128_t>(this->coefficient_) *
-                multiplier;
-            auto right_128 =
-                static_cast<sourcemeta::core::uint128_t>(other.coefficient_);
-            if (product < right_128) {
-              magnitude_compare = -1;
-            } else if (product > right_128) {
-              magnitude_compare = 1;
-            } else {
-              magnitude_compare = 0;
-            }
-
-          } else {
+          assert(exponent_difference <= 18);
+          auto multiplier =
+              POWERS_OF_10[static_cast<std::uint32_t>(exponent_difference)];
+          auto product =
+              static_cast<sourcemeta::core::uint128_t>(this->coefficient_) *
+              multiplier;
+          auto right_128 =
+              static_cast<sourcemeta::core::uint128_t>(other.coefficient_);
+          if (product < right_128) {
+            magnitude_compare = -1;
+          } else if (product > right_128) {
             magnitude_compare = 1;
+          } else {
+            magnitude_compare = 0;
           }
 
         } else {
           auto difference = static_cast<std::uint32_t>(-exponent_difference);
-          if (difference <= 18) {
-            auto multiplier = POWERS_OF_10[difference];
-            auto product =
-                static_cast<sourcemeta::core::uint128_t>(other.coefficient_) *
-                multiplier;
-            auto left_128 =
-                static_cast<sourcemeta::core::uint128_t>(this->coefficient_);
-            if (left_128 < product) {
-              magnitude_compare = -1;
-            } else if (left_128 > product) {
-              magnitude_compare = 1;
-            } else {
-              magnitude_compare = 0;
-            }
-
-          } else {
+          assert(difference <= 18);
+          auto multiplier = POWERS_OF_10[difference];
+          auto product =
+              static_cast<sourcemeta::core::uint128_t>(other.coefficient_) *
+              multiplier;
+          auto left_128 =
+              static_cast<sourcemeta::core::uint128_t>(this->coefficient_);
+          if (left_128 < product) {
             magnitude_compare = -1;
+          } else if (left_128 > product) {
+            magnitude_compare = 1;
+          } else {
+            magnitude_compare = 0;
           }
         }
       }
@@ -2386,19 +2418,18 @@ auto Decimal::operator*=(const Decimal &other) -> Decimal & {
       return *this;
     }
 
-    if (other.is_infinite()) {
-      if (this->is_zero()) {
-        *this = Decimal::nan();
-        return *this;
-      }
-
-      auto sign = ((this->flags_ ^ other.flags_) & FLAG_SIGN);
-      *this = other;
-      this->flags_ =
-          static_cast<std::uint8_t>((this->flags_ & ~FLAG_SIGN) | sign);
+    // Neither operand is a NaN and this one stands within bounds, so the one
+    // without them is the other
+    assert(other.is_infinite());
+    if (this->is_zero()) {
+      *this = Decimal::nan();
       return *this;
     }
 
+    auto sign = ((this->flags_ ^ other.flags_) & FLAG_SIGN);
+    *this = other;
+    this->flags_ =
+        static_cast<std::uint8_t>((this->flags_ & ~FLAG_SIGN) | sign);
     return *this;
   }
 
@@ -2416,14 +2447,13 @@ auto Decimal::operator*=(const Decimal &other) -> Decimal & {
     auto right_big = coefficient_as_big(other.coefficient_,
                                         other.coefficient_high_, other.flags_);
     auto product = left_big.multiply(right_big);
-    check_rounded_exponent(result_exponent_64, product.digit_count());
 
     StagedResult staged;
     store_big_result(staged.coefficient, staged.coefficient_high, staged.flags,
                      std::move(product), result_negative);
-    settle_rounded_result(this->coefficient_, this->coefficient_high_,
-                          this->exponent_, this->flags_, staged,
-                          result_exponent_64);
+    settle_exact_result(this->coefficient_, this->coefficient_high_,
+                        this->exponent_, this->flags_, staged,
+                        result_exponent_64);
     return *this;
   }
 
@@ -2432,9 +2462,6 @@ auto Decimal::operator*=(const Decimal &other) -> Decimal & {
 
   StagedResult staged;
   if (product <= static_cast<sourcemeta::core::uint128_t>(COMPACT_MAX)) {
-    check_rounded_exponent(result_exponent_64,
-                           digit_count(static_cast<std::uint64_t>(product)));
-
     staged.coefficient = static_cast<std::int64_t>(product);
     // The General Decimal Arithmetic Specification states that "the sign of
     // the result of a multiplication or division will be 1 only if the
@@ -2446,16 +2473,68 @@ auto Decimal::operator*=(const Decimal &other) -> Decimal & {
     auto right_big = coefficient_as_big(other.coefficient_,
                                         other.coefficient_high_, other.flags_);
     auto result = left_big.multiply(right_big);
-    check_rounded_exponent(result_exponent_64, result.digit_count());
-
     store_big_result(staged.coefficient, staged.coefficient_high, staged.flags,
                      std::move(result), result_negative);
   }
 
-  settle_rounded_result(this->coefficient_, this->coefficient_high_,
-                        this->exponent_, this->flags_, staged,
-                        result_exponent_64);
+  settle_exact_result(this->coefficient_, this->coefficient_high_,
+                      this->exponent_, this->flags_, staged,
+                      result_exponent_64);
   return *this;
+}
+
+// A quotient is written out in full exactly when its expansion terminates,
+// which it does when the divisor, once the factors it shares with the base are
+// taken out of it, divides the dividend. Each of those factors is paid out of
+// the dividend wherever the dividend carries it, and the positions the
+// expansion then takes are the longer of the two runs left unpaid, since a
+// dividend widened by that many reaches a remainder of nothing. What is left
+// over otherwise divides the base nowhere, so no number of positions ever
+// clears it and the expansion runs on without end
+auto terminating_fraction_digits(const BigCoefficient &dividend,
+                                 const BigCoefficient &divisor)
+    -> std::optional<std::uint32_t> {
+  auto remaining = divisor.clone();
+
+  std::uint32_t twos = 0;
+  while (remaining.is_divisible_by_base_factor(2)) {
+    remaining.divide_by_base_factor(2);
+    twos++;
+  }
+
+  std::uint32_t fives = 0;
+  while (remaining.is_divisible_by_base_factor(5)) {
+    remaining.divide_by_base_factor(5);
+    fives++;
+  }
+
+  // Taking the factors out of a copy of the dividend is what tells a paid
+  // factor from an unpaid one, and the count of them bounds each walk, so a
+  // dividend of nothing cannot keep one going
+  if (twos > 0 || fives > 0) {
+    auto reduced = dividend.clone();
+    while (twos > 0 && reduced.is_divisible_by_base_factor(2)) {
+      reduced.divide_by_base_factor(2);
+      twos--;
+    }
+
+    while (fives > 0 && reduced.is_divisible_by_base_factor(5)) {
+      reduced.divide_by_base_factor(5);
+      fives--;
+    }
+  }
+
+  const auto digits = twos > fives ? twos : fives;
+  if (remaining.is_one()) {
+    return digits;
+  }
+
+  const auto [whole, residue] = dividend.divide_modulo(remaining);
+  if (residue.is_zero()) {
+    return digits;
+  }
+
+  return std::nullopt;
 }
 
 auto Decimal::operator/=(const Decimal &other) -> Decimal & {
@@ -2500,18 +2579,37 @@ auto Decimal::operator/=(const Decimal &other) -> Decimal & {
   auto divisor_big = coefficient_as_big(other.coefficient_,
                                         other.coefficient_high_, other.flags_);
 
+  // An expansion that terminates is written out in full, so it is widened by
+  // exactly the positions it takes and nothing of it is ever let go. Those
+  // positions sit below the ideal exponent, and the lowest exponent the
+  // storage spells is what limits how many of them there is room for, so an
+  // expansion with no room to be written out is held to the working precision
+  // like one that never terminates
+  const auto terminating{
+      terminating_fraction_digits(dividend_big, divisor_big)};
+  const auto exponent_room{static_cast<std::int64_t>(this->exponent_) -
+                           other.exponent_ -
+                           std::numeric_limits<std::int32_t>::min()};
+  const auto exact{terminating.has_value() &&
+                   std::cmp_less_equal(terminating.value(), exponent_room)};
+
   // The specification lines the two coefficients up before the long division,
   // "while the coefficient of the dividend is less than the coefficient of the
   // divisor it is multiplied by 10", so a divisor spelled out in more digits
   // than the dividend needs that many more positions before the quotient
   // reaches the working precision at all. One position beyond it carries the
-  // rounding decision
+  // rounding decision. Only an expansion that runs on without end is held to
+  // that precision, as it is the one case nothing else can bound
   auto guard_digits = static_cast<std::uint32_t>(WORKING_PRECISION) + 1;
-  const auto dividend_digits = dividend_big.digit_count();
-  const auto divisor_digits = divisor_big.digit_count();
-  if (divisor_digits > dividend_digits) {
-    guard_digits +=
-        static_cast<std::uint32_t>(divisor_digits - dividend_digits);
+  if (exact) {
+    guard_digits = terminating.value();
+  } else {
+    const auto dividend_digits = dividend_big.digit_count();
+    const auto divisor_digits = divisor_big.digit_count();
+    if (divisor_digits > dividend_digits) {
+      guard_digits +=
+          static_cast<std::uint32_t>(divisor_digits - dividend_digits);
+    }
   }
 
   // A zero dividend yields a zero quotient whatever the divisor, so it is not
@@ -2545,7 +2643,7 @@ auto Decimal::operator/=(const Decimal &other) -> Decimal & {
     }
   }
 
-  check_rounded_exponent(result_exponent, quotient.digit_count());
+  const auto quotient_digits = quotient.digit_count();
 
   StagedResult staged;
   // The specification states that "the sign of the result of a multiplication
@@ -2554,9 +2652,21 @@ auto Decimal::operator/=(const Decimal &other) -> Decimal & {
   store_big_result(staged.coefficient, staged.coefficient_high, staged.flags,
                    std::move(quotient), result_negative);
 
+  // The expansion terminates and there was room to write it out, so the
+  // quotient is the correct value the specification asks be returned and every
+  // digit of it is kept. A terminating expansion with no room reaches here as
+  // well, and rounding it is what brings it back inside the exponent range
+  if (exact) {
+    assert(!residue);
+    settle_exact_result(this->coefficient_, this->coefficient_high_,
+                        this->exponent_, this->flags_, staged, result_exponent);
+    return *this;
+  }
+
   // The specification rounds the quotient "taking into account the remainder
   // from the division", so what the long division left behind decides a tie
   // among the positions the working precision drops
+  check_rounded_exponent(result_exponent, quotient_digits);
   settle_rounded_result(this->coefficient_, this->coefficient_high_,
                         this->exponent_, this->flags_, staged, result_exponent,
                         residue);

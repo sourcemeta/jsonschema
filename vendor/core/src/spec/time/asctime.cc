@@ -1,38 +1,36 @@
+#include <sourcemeta/core/text.h>
 #include <sourcemeta/core/time.h>
 
 #include "helpers.h"
 
-#include <cctype>      // std::isdigit
 #include <chrono>      // std::chrono::system_clock
-#include <ctime>       // std::tm
-#include <iomanip>     // std::put_time, std::get_time
-#include <locale>      // std::locale
+#include <cstddef>     // std::size_t
+#include <cstdint>     // std::uint8_t
 #include <optional>    // std::optional, std::nullopt
-#include <sstream>     // std::ostringstream, std::istringstream
 #include <string>      // std::string
 #include <string_view> // std::string_view
-
-namespace {
-// The day and the year are rendered separately so each keeps the fixed width
-// that RFC 9110 §5.6.7 requires, which "%e" and "%Y" do not guarantee on every
-// runtime
-constexpr auto FORMAT_ASCTIME_OUTPUT_BEFORE_DAY{"%a %b "};
-constexpr auto FORMAT_ASCTIME_OUTPUT_AFTER_DAY{" %H:%M:%S "};
-constexpr auto FORMAT_ASCTIME_NORMALISED_INPUT{"%a %b %d %H:%M:%S %Y"};
-} // namespace
 
 namespace sourcemeta::core {
 
 auto to_asctime(const std::chrono::system_clock::time_point time)
     -> std::string {
   const auto parts{time_point_to_broken_down(time)};
-  std::ostringstream stream;
-  stream.imbue(std::locale::classic());
-  stream << std::put_time(&parts, FORMAT_ASCTIME_OUTPUT_BEFORE_DAY)
-         << format_space_padded_day(parts.tm_mday)
-         << std::put_time(&parts, FORMAT_ASCTIME_OUTPUT_AFTER_DAY)
-         << format_four_digit_year(parts.tm_year + 1900);
-  return stream.str();
+  std::string result;
+  result.reserve(24);
+  result.append(DAY_NAMES[static_cast<std::size_t>(parts.weekday)]);
+  result.push_back(' ');
+  result.append(MONTH_NAMES[static_cast<std::size_t>(parts.month - 1)]);
+  result.push_back(' ');
+  append_space_padded_day(result, parts.day);
+  result.push_back(' ');
+  append_two_digits(result, parts.hour);
+  result.push_back(':');
+  append_two_digits(result, parts.minute);
+  result.push_back(':');
+  append_two_digits(result, parts.second);
+  result.push_back(' ');
+  append_four_digit_year(result, parts.year);
+  return result;
 }
 
 auto from_asctime(const std::string_view value)
@@ -44,40 +42,36 @@ auto from_asctime(const std::string_view value)
       value[13] != ':' || value[16] != ':' || value[19] != ' ') {
     return std::nullopt;
   }
-  if ((value[8] != ' ' &&
-       (std::isdigit(static_cast<unsigned char>(value[8])) == 0)) ||
-      (std::isdigit(static_cast<unsigned char>(value[9])) == 0) ||
-      (std::isdigit(static_cast<unsigned char>(value[11])) == 0) ||
-      (std::isdigit(static_cast<unsigned char>(value[12])) == 0) ||
-      (std::isdigit(static_cast<unsigned char>(value[14])) == 0) ||
-      (std::isdigit(static_cast<unsigned char>(value[15])) == 0) ||
-      (std::isdigit(static_cast<unsigned char>(value[17])) == 0) ||
-      (std::isdigit(static_cast<unsigned char>(value[18])) == 0) ||
-      (std::isdigit(static_cast<unsigned char>(value[20])) == 0) ||
-      (std::isdigit(static_cast<unsigned char>(value[21])) == 0) ||
-      (std::isdigit(static_cast<unsigned char>(value[22])) == 0) ||
-      (std::isdigit(static_cast<unsigned char>(value[23])) == 0)) {
+  if ((value[8] != ' ' && !is_digit(value[8])) || !is_digit(value[9]) ||
+      !is_digit(value.substr(11, 2)) || !is_digit(value.substr(14, 2)) ||
+      !is_digit(value.substr(17, 2)) || !is_digit(value.substr(20, 4))) {
     return std::nullopt;
   }
-  std::string normalised{value};
-  if (normalised[8] == ' ') {
-    normalised[8] = '0';
-  }
-  std::istringstream stream{normalised};
-  stream.imbue(std::locale::classic());
-  std::tm parts = {};
-  stream >> std::get_time(&parts, FORMAT_ASCTIME_NORMALISED_INPUT);
-  if (stream.fail()) {
+  if (!is_day_name(value.substr(0, 3))) {
     return std::nullopt;
   }
+  const auto month{month_from_name(value.substr(4, 3))};
+  if (!month.has_value()) {
+    return std::nullopt;
+  }
+
+  BrokenDownTime parts{};
+  parts.month = month.value();
+  // RFC 9110 §5.6.7: date3 = month SP ( 2DIGIT / ( SP 1DIGIT ) ), so a day
+  // below the tenth is written against a space rather than a zero
+  if (value[8] == ' ') {
+    parts.day = static_cast<std::uint8_t>(value[9] - '0');
+  } else {
+    parts.day = read_two_digits(value, 8);
+  }
+  parts.hour = read_two_digits(value, 11);
+  parts.minute = read_two_digits(value, 14);
+  parts.second = read_two_digits(value, 17);
+  parts.year = read_four_digits(value, 20);
   if (!is_valid_broken_down_time(parts)) {
     return std::nullopt;
   }
-  // RFC 9110 §5.6.7: HTTP-date is case sensitive
-  if (!is_case_sensitive_day_abbreviation(value.substr(0, 3), parts.tm_wday) ||
-      !is_case_sensitive_month_abbreviation(value.substr(4, 3), parts.tm_mon)) {
-    return std::nullopt;
-  }
+
   return broken_down_time_to_time_point(parts);
 }
 

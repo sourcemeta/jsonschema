@@ -1155,6 +1155,570 @@ auto collect(const sourcemeta::blaze::SimpleOutput::AnnotationEntry &entry,
 // shadowing through x-jsonld-override when the candidates genuinely conflict.
 // The last pass derives each kind from the value shape and validates the
 // facts against it
+// Part of what one annotation contributes to the collected
+// facts, or the error that stops the walk
+auto collect_identity(Accumulator &accumulator, DirtyLocations &dirty,
+                      const sourcemeta::core::WeakPointer::Token &keyword,
+                      const sourcemeta::core::WeakPointer &instance_location,
+                      const sourcemeta::core::JSON &value,
+                      const std::string *const origin)
+    -> std::optional<sourcemeta::blaze::JSONLDResolutionError> {
+  if (keyword.property_equals("x-jsonld-override", HASH_OVERRIDE)) {
+    if (!value.is_boolean()) {
+      return facet_error(
+          instance_location, sourcemeta::blaze::JSONLDFacet::Override,
+          "The value of x-jsonld-override must be a boolean", *origin);
+    }
+
+    // A mark only matters when it shadows a diverging value or licenses a
+    // null or a false, and each of those demotes the location on its own,
+    // so the slow path recollects the mark whenever it can act. The one
+    // exception is retargeting consent, where a mark reshapes an agreeing
+    // resolution, which the final pass resolves by scanning the collected
+    // annotations only when a value predicate actually needs consent
+  } else if (keyword.property_equals("x-jsonld-id", HASH_ID) ||
+             keyword.property_equals("x-jsonld-reverse", HASH_REVERSE)) {
+    const bool reverse{
+        keyword.property_equals("x-jsonld-reverse", HASH_REVERSE)};
+    if (!value.is_null() && !is_iri_value(value)) {
+      return facet_error(
+          instance_location, sourcemeta::blaze::JSONLDFacet::Predicate,
+          reverse ? "The value of x-jsonld-reverse must be an absolute IRI"
+                  : "The value of x-jsonld-id must be an absolute IRI",
+          *origin);
+    }
+
+    if (value.is_null()) {
+      demote(accumulator, dirty, instance_location);
+    } else if (!dirty.contains(instance_location)) {
+      auto &facts{accumulator[instance_location]};
+      if (add_edge(facts.edges, value.to_string(), reverse)) {
+        facts.edges_origin = origin;
+        if (reverse) {
+          facts.reverse_origin = origin;
+        }
+      }
+    }
+  } else if (keyword.property_equals("x-jsonld-type", HASH_TYPE)) {
+    if (value.is_array()) {
+      for (const auto &element : value.as_array()) {
+        if (!is_iri_value(element)) {
+          return type_iri_error(instance_location, *origin);
+        }
+      }
+    } else if (!value.is_null() && !is_iri_value(value)) {
+      return type_iri_error(instance_location, *origin);
+    }
+
+    if (value.is_null()) {
+      demote(accumulator, dirty, instance_location);
+    } else if (!dirty.contains(instance_location)) {
+      auto &facts{accumulator[instance_location]};
+      if (value.is_array()) {
+        bool contributed{false};
+        for (const auto &element : value.as_array()) {
+          contributed =
+              add_type(facts.types, element.to_string()) || contributed;
+        }
+
+        if (contributed) {
+          facts.types_origin = origin;
+        }
+      } else if (add_type(facts.types, value.to_string())) {
+        facts.types_origin = origin;
+      }
+    }
+  } else if (keyword.property_equals("x-jsonld-datatype", HASH_DATATYPE)) {
+    if (!value.is_null() && !is_iri_value(value)) {
+      return facet_error(
+          instance_location, sourcemeta::blaze::JSONLDFacet::Datatype,
+          "The value of x-jsonld-datatype must be an absolute IRI", *origin);
+    }
+
+    if (value.is_null()) {
+      demote(accumulator, dirty, instance_location);
+    } else if (!dirty.contains(instance_location)) {
+      auto &facts{accumulator[instance_location]};
+      const auto &text{value.to_string()};
+      if (facts.datatype.has_value() && facts.datatype.value() != text) {
+        demote(accumulator, dirty, instance_location);
+      } else if (!facts.datatype.has_value()) {
+        facts.datatype = text;
+        facts.datatype_origin = origin;
+      }
+    }
+  } else if (keyword.property_equals("x-jsonld-language", HASH_LANGUAGE)) {
+    if (!value.is_null() &&
+        (!value.is_string() ||
+         !sourcemeta::core::is_canonical_langtag(value.to_string()))) {
+      return facet_error(instance_location,
+                         sourcemeta::blaze::JSONLDFacet::Language,
+                         "The value of x-jsonld-language must be a "
+                         "canonical BCP 47 language tag",
+                         *origin);
+    }
+
+    if (value.is_null()) {
+      demote(accumulator, dirty, instance_location);
+    } else if (!dirty.contains(instance_location)) {
+      auto &facts{accumulator[instance_location]};
+      const auto &text{value.to_string()};
+      if (facts.language.has_value() && facts.language.value() != text) {
+        demote(accumulator, dirty, instance_location);
+      } else if (!facts.language.has_value()) {
+        facts.language = text;
+        facts.language_origin = origin;
+      }
+    }
+  } else if (keyword.property_equals("x-jsonld-direction", HASH_DIRECTION)) {
+    const auto direction{parse_direction(value)};
+    if (!value.is_null() && !direction.has_value()) {
+      return facet_error(
+          instance_location, sourcemeta::blaze::JSONLDFacet::Direction,
+          R"(The value of x-jsonld-direction must be "ltr" or "rtl")", *origin);
+    }
+
+    if (value.is_null()) {
+      demote(accumulator, dirty, instance_location);
+    } else if (!dirty.contains(instance_location)) {
+      auto &facts{accumulator[instance_location]};
+      if (facts.direction.has_value() && facts.direction != direction) {
+        demote(accumulator, dirty, instance_location);
+      } else if (!facts.direction.has_value()) {
+        facts.direction = direction;
+        facts.direction_origin = origin;
+      }
+    }
+  }
+
+  return std::nullopt;
+}
+
+// Part of what one annotation contributes to the collected
+// facts, or the error that stops the walk
+auto collect_value(Accumulator &accumulator, DirtyLocations &dirty,
+                   const sourcemeta::core::WeakPointer::Token &keyword,
+                   const sourcemeta::core::WeakPointer &instance_location,
+                   const sourcemeta::core::JSON &value,
+                   const std::string *const origin)
+    -> std::optional<sourcemeta::blaze::JSONLDResolutionError> {
+  if (keyword.property_equals("x-jsonld-json", HASH_JSON) ||
+      keyword.property_equals("x-jsonld-graph", HASH_GRAPH)) {
+    const bool graph{keyword.property_equals("x-jsonld-graph", HASH_GRAPH)};
+    if (!value.is_null() && !value.is_boolean()) {
+      return facet_error(instance_location,
+                         graph ? sourcemeta::blaze::JSONLDFacet::Graph
+                               : sourcemeta::blaze::JSONLDFacet::JSON,
+                         graph ? "The value of x-jsonld-graph must be a boolean"
+                               : "The value of x-jsonld-json must be a boolean",
+                         *origin);
+    }
+
+    // A false declares nothing anywhere, as the absent state it restates
+    // already is false, so removal only ever spells null
+    if (value.is_null()) {
+      demote(accumulator, dirty, instance_location);
+    } else if (value.to_boolean() && !dirty.contains(instance_location)) {
+      auto &facts{accumulator[instance_location]};
+      if (graph) {
+        if (!facts.graph) {
+          facts.graph = true;
+          facts.graph_origin = origin;
+        }
+      } else if (!facts.json) {
+        facts.json = true;
+        facts.json_origin = origin;
+      }
+    }
+  } else if (keyword.property_equals("x-jsonld-container", HASH_CONTAINER)) {
+    const auto container{parse_container(value)};
+    if (!value.is_null() && !container.has_value()) {
+      return facet_error(
+          instance_location, sourcemeta::blaze::JSONLDFacet::Container,
+          R"(The value of x-jsonld-container must be "@list", "@set", "@language", or "@index")",
+          *origin);
+    }
+
+    if (value.is_null()) {
+      demote(accumulator, dirty, instance_location);
+    } else if (!dirty.contains(instance_location)) {
+      auto &facts{accumulator[instance_location]};
+      if (facts.container.has_value() && facts.container != container) {
+        demote(accumulator, dirty, instance_location);
+      } else if (!facts.container.has_value()) {
+        facts.container = container;
+        facts.container_origin = origin;
+      }
+    }
+  } else if (keyword.property_equals("x-jsonld-self", HASH_SELF)) {
+    if (!value.is_null() &&
+        (!value.is_string() ||
+         !sourcemeta::core::URITemplate::is_uritemplate(value.to_string()))) {
+      return facet_error(
+          instance_location, sourcemeta::blaze::JSONLDFacet::Self,
+          "The value of x-jsonld-self must be a URI Template", *origin);
+    }
+
+    if (value.is_null()) {
+      demote(accumulator, dirty, instance_location);
+    } else if (!dirty.contains(instance_location)) {
+      auto &facts{accumulator[instance_location]};
+      const auto &text{value.to_string()};
+      if (facts.self.has_value() && facts.self.value() != text) {
+        demote(accumulator, dirty, instance_location);
+      } else if (!facts.self.has_value()) {
+        facts.self = text;
+        facts.self_origin = origin;
+      }
+    }
+  } else if (keyword.property_equals("x-jsonld-value", HASH_VALUE)) {
+    if (!value.is_null() && !is_iri_value(value)) {
+      return facet_error(
+          instance_location, sourcemeta::blaze::JSONLDFacet::ValuePredicate,
+          "The value of x-jsonld-value must be an absolute IRI", *origin);
+    }
+
+    if (value.is_null()) {
+      demote(accumulator, dirty, instance_location);
+    } else if (!dirty.contains(instance_location)) {
+      auto &facts{accumulator[instance_location]};
+      const auto &text{value.to_string()};
+      auto &promotion{promotion_facts(facts)};
+      if (promotion.value.has_value() && promotion.value.value() != text) {
+        demote(accumulator, dirty, instance_location);
+      } else if (!promotion.value.has_value()) {
+        promotion.value = text;
+        promotion.value_origin = origin;
+      }
+    }
+  } else if (keyword.property_equals("x-jsonld-constants", HASH_CONSTANTS)) {
+    if (value.is_null()) {
+      demote(accumulator, dirty, instance_location);
+    } else {
+      auto canonical{canonicalize_constants(value, instance_location, *origin)};
+      if (std::holds_alternative<sourcemeta::blaze::JSONLDResolutionError>(
+              canonical)) {
+        return std::get<sourcemeta::blaze::JSONLDResolutionError>(
+            std::move(canonical));
+      }
+
+      const auto &fragment{std::get<sourcemeta::core::JSON>(canonical)};
+
+      // Whether a null entry is a licensed tombstone depends on override
+      // marks that only the slow path can consult, and an empty fragment
+      // asserts nothing, so it must not materialize the promotion facts
+      if (fragment_has_null_entry(fragment)) {
+        demote(accumulator, dirty, instance_location);
+      } else if (!fragment.empty() && !dirty.contains(instance_location)) {
+        auto &promotion{promotion_facts(accumulator[instance_location])};
+        if (merge_constants_fragment(promotion.constants, fragment)) {
+          promotion.constants_origin = origin;
+        }
+      }
+    }
+  }
+
+  return std::nullopt;
+}
+
+// What one collected location places, or the error that stops the
+// walk. Nothing to place is not an error, so it answers with nothing
+auto place_location(sourcemeta::core::JSONLDWeakAnnotationList &annotations,
+                    const sourcemeta::core::WeakPointer &pointer, Facts &facts,
+                    const sourcemeta::core::JSON &instance,
+                    const Accumulator &accumulator,
+                    std::optional<ConsentIndex> &consent_index,
+                    const sourcemeta::blaze::SimpleOutput &output)
+    -> std::optional<sourcemeta::blaze::JSONLDResolutionError> {
+  const auto &value{sourcemeta::core::get(instance, pointer)};
+
+  // A null value is treated as if its entry were absent, and an absent
+  // entry has no node and no annotations, so every fact at the location
+  // drops before any placement check, except a JSON literal, where the
+  // null is the data itself
+  if (value.is_null() && !facts.json) {
+    return std::nullopt;
+  }
+
+  std::ranges::sort(facts.edges,
+                    [](const sourcemeta::core::JSONLDEdge &left,
+                       const sourcemeta::core::JSONLDEdge &right) -> bool {
+                      return std::tie(left.predicate, left.reverse) <
+                             std::tie(right.predicate, right.reverse);
+                    });
+  std::ranges::sort(facts.types);
+
+  // A container sets the collection shape and stands alone, excluding every
+  // other fact and choosing the value shape it ranges over
+  if (facts.container.has_value()) {
+    if (!facts.types.empty() || facts.graph || facts.datatype.has_value() ||
+        facts.language.has_value() || facts.direction.has_value() ||
+        facts.json || facts.self.has_value() || promoted(facts) ||
+        with_constants(facts)) {
+      return facet_error(
+          pointer, sourcemeta::blaze::JSONLDFacet::Container,
+          "A JSON-LD container can only be combined with "
+          "predicate annotations",
+          *facts.container_origin,
+          first_origin({facts.types_origin, facts.graph_origin,
+                        facts.datatype_origin, facts.language_origin,
+                        facts.direction_origin, facts.json_origin,
+                        facts.self_origin, promotion_value_origin(facts),
+                        promotion_constants_origin(facts)}));
+    }
+
+    if (const auto error{container_placement_error(
+            pointer, facts.container.value(), value, *facts.container_origin)};
+        error.has_value()) {
+      return error;
+    }
+  }
+
+  // A JSON literal preserves any value verbatim, so it stands alone and
+  // excludes every other fact
+  if (facts.json &&
+      (!facts.types.empty() || facts.graph || facts.datatype.has_value() ||
+       facts.language.has_value() || facts.direction.has_value() ||
+       facts.self.has_value() || promoted(facts) || with_constants(facts))) {
+    return facet_error(
+        pointer, sourcemeta::blaze::JSONLDFacet::JSON,
+        "A JSON-LD JSON literal can only be combined with "
+        "predicate annotations",
+        *facts.json_origin,
+        first_origin({facts.types_origin, facts.graph_origin,
+                      facts.datatype_origin, facts.language_origin,
+                      facts.direction_origin, facts.self_origin,
+                      promotion_value_origin(facts),
+                      promotion_constants_origin(facts)}));
+  }
+
+  // A value predicate promotes its scalar into a node that carries the
+  // scalar under that predicate, so it needs a scalar to carry, its graph
+  // pairing is reserved, and reshaping another facet of the location
+  // requires the consent of shared authorship or an overriding enclosure
+  if (promoted(facts)) {
+    const auto &promotion{*facts.promotion};
+    if (facts.graph) {
+      return facet_error(pointer,
+                         sourcemeta::blaze::JSONLDFacet::ValuePredicate,
+                         "A JSON-LD value predicate cannot be combined with "
+                         "a graph flag",
+                         *promotion.value_origin, *facts.graph_origin);
+    }
+
+    if (value.is_object() || value.is_array()) {
+      return facet_error(pointer,
+                         sourcemeta::blaze::JSONLDFacet::ValuePredicate,
+                         "A JSON-LD value predicate can only be assigned to "
+                         "a scalar value",
+                         *promotion.value_origin);
+    }
+
+    if (facts.self.has_value() || facts.datatype.has_value() ||
+        facts.language.has_value() || facts.direction.has_value()) {
+      if (!consent_index.has_value()) {
+        consent_index = build_consent_index(output);
+      }
+
+      const auto location_annotations{consent_index->find(pointer)};
+      assert(location_annotations != consent_index->cend());
+      const auto &nearby{location_annotations->second};
+      const auto consent{consent_paths_at(nearby, promotion.value.value())};
+
+      if (facts.self.has_value() &&
+          !facet_retargeting_consented(
+              nearby, consent, ConsentKind::Self,
+              sourcemeta::core::JSON{facts.self.value()})) {
+        return facet_error(pointer,
+                           sourcemeta::blaze::JSONLDFacet::ValuePredicate,
+                           "A JSON-LD value predicate cannot fuse with a "
+                           "self identity from an unrelated schema object",
+                           *promotion.value_origin, *facts.self_origin);
+      }
+
+      if (facts.datatype.has_value() &&
+          !facet_retargeting_consented(
+              nearby, consent, ConsentKind::Datatype,
+              sourcemeta::core::JSON{facts.datatype.value()})) {
+        return facet_error(pointer,
+                           sourcemeta::blaze::JSONLDFacet::ValuePredicate,
+                           "A JSON-LD value predicate cannot adopt a "
+                           "datatype from an unrelated schema object",
+                           *promotion.value_origin, *facts.datatype_origin);
+      }
+
+      if (facts.language.has_value() &&
+          !facet_retargeting_consented(
+              nearby, consent, ConsentKind::Language,
+              sourcemeta::core::JSON{facts.language.value()})) {
+        return facet_error(pointer,
+                           sourcemeta::blaze::JSONLDFacet::ValuePredicate,
+                           "A JSON-LD value predicate cannot adopt a "
+                           "language from an unrelated schema object",
+                           *promotion.value_origin, *facts.language_origin);
+      }
+
+      if (facts.direction.has_value() &&
+          !facet_retargeting_consented(nearby, consent, ConsentKind::Direction,
+                                       sourcemeta::core::JSON{direction_text(
+                                           facts.direction.value())})) {
+        return facet_error(pointer,
+                           sourcemeta::blaze::JSONLDFacet::ValuePredicate,
+                           "A JSON-LD value predicate cannot adopt a "
+                           "direction from an unrelated schema object",
+                           *promotion.value_origin, *facts.direction_origin);
+      }
+    }
+  }
+
+  // A constants fragment merges into a node, so its location must
+  // materialize as one
+  if (with_constants(facts) && !value.is_object() && !promoted(facts) &&
+      !facts.self.has_value()) {
+    return facet_error(pointer, sourcemeta::blaze::JSONLDFacet::Constants,
+                       "A JSON-LD constants fragment requires an object "
+                       "value, a value predicate, or a self identity",
+                       *facts.promotion->constants_origin);
+  }
+
+  // A self identity mints an @id, promoting a scalar to a reference and
+  // giving an object its identifier. It describes a node, so it excludes the
+  // literal facets and cannot apply to an array collection
+  if (facts.self.has_value()) {
+    if (!promoted(facts) &&
+        (facts.datatype.has_value() || facts.language.has_value() ||
+         facts.direction.has_value())) {
+      return facet_error(
+          pointer, sourcemeta::blaze::JSONLDFacet::Self,
+          "A JSON-LD self identity cannot carry a datatype, "
+          "language, or direction",
+          *facts.self_origin,
+          first_origin({facts.datatype_origin, facts.language_origin,
+                        facts.direction_origin}));
+    }
+
+    if (value.is_array()) {
+      return facet_error(pointer, sourcemeta::blaze::JSONLDFacet::Self,
+                         "A JSON-LD self identity can only be assigned to an "
+                         "object or scalar value",
+                         *facts.self_origin);
+    }
+  }
+
+  if (const auto error{placement_error(pointer, facts, value)};
+      error.has_value()) {
+    return error;
+  }
+
+  if (const auto error{literal_error(pointer, facts, value)};
+      error.has_value()) {
+    return error;
+  }
+
+  // A predicate attaches to the parent node of an object property. The
+  // document root has no parent and an array element inherits the enclosing
+  // edge, so neither can carry one
+  if (!facts.edges.empty() &&
+      (pointer.empty() || !pointer.back().is_property())) {
+    return facet_error(
+        pointer, sourcemeta::blaze::JSONLDFacet::Predicate,
+        pointer.empty()
+            ? "A JSON-LD predicate cannot be assigned to the document root"
+            : "A JSON-LD predicate cannot be assigned to an array element",
+        *facts.edges_origin);
+  }
+
+  // A container member belongs to a collection, not a node, so it has no
+  // parent to attach a predicate to
+  if (!facts.edges.empty() && !pointer.empty()) {
+    auto parent{pointer};
+    parent.pop_back();
+    const auto parent_facts{accumulator.find(parent)};
+    if (parent_facts != accumulator.cend() &&
+        parent_facts->second.container.has_value()) {
+      return facet_error(
+          pointer, sourcemeta::blaze::JSONLDFacet::Predicate,
+          "A JSON-LD predicate cannot be assigned to a container member",
+          *facts.edges_origin, *parent_facts->second.container_origin);
+    }
+  }
+
+  // A reverse predicate makes its value the subject, so the value must be a
+  // node or an array of nodes. A literal cannot be a subject
+  if (std::ranges::any_of(facts.edges,
+                          [](const sourcemeta::core::JSONLDEdge &edge) -> bool {
+                            return edge.reverse;
+                          })) {
+    const bool points_to_node{
+        !facts.json && !facts.container.has_value() &&
+        (value.is_object() || facts.self.has_value() || promoted(facts) ||
+         (value.is_array() && array_of_nodes(accumulator, pointer, value)))};
+    if (!points_to_node) {
+      return facet_error(pointer, sourcemeta::blaze::JSONLDFacet::Predicate,
+                         "A JSON-LD reverse predicate can only point to a "
+                         "node or an array of nodes",
+                         *facts.reverse_origin);
+    }
+  }
+
+  std::optional<sourcemeta::core::JSON::String> identifier;
+  if (facts.self.has_value()) {
+    auto expanded{
+        expand_self(pointer, facts.self.value(), value, *facts.self_origin)};
+    if (std::holds_alternative<sourcemeta::blaze::JSONLDResolutionError>(
+            expanded)) {
+      return std::get<sourcemeta::blaze::JSONLDResolutionError>(
+          std::move(expanded));
+    }
+
+    identifier = std::get<sourcemeta::core::JSON::String>(std::move(expanded));
+  }
+
+  sourcemeta::core::JSONLDDescriptor descriptor;
+  descriptor.edges = std::move(facts.edges);
+  if (facts.json) {
+    descriptor.value = sourcemeta::core::JSONLDLiteral{.json = true};
+  } else if (facts.container.has_value()) {
+    descriptor.value = sourcemeta::core::JSONLDCollection{
+        .container = facts.container.value()};
+  } else if (promoted(facts)) {
+    descriptor.value = sourcemeta::core::JSONLDPromotion{
+        .id = std::move(identifier),
+        .types = std::move(facts.types),
+        .value = std::move(facts.promotion->value).value(),
+        .literal =
+            sourcemeta::core::JSONLDLiteral{
+                .datatype = std::move(facts.datatype),
+                .language = std::move(facts.language),
+                .direction = facts.direction,
+                .json = false},
+        .constants = take_constants(facts)};
+  } else if (value.is_object()) {
+    descriptor.value =
+        sourcemeta::core::JSONLDNode{.id = std::move(identifier),
+                                     .types = std::move(facts.types),
+                                     .graph = facts.graph,
+                                     .constants = take_constants(facts)};
+  } else if (value.is_array()) {
+    descriptor.value = sourcemeta::core::JSONLDCollection{};
+  } else if (identifier.has_value()) {
+    descriptor.value =
+        sourcemeta::core::JSONLDReference{.id = std::move(identifier.value()),
+                                          .types = std::move(facts.types),
+                                          .constants = take_constants(facts)};
+  } else {
+    descriptor.value =
+        sourcemeta::core::JSONLDLiteral{.datatype = std::move(facts.datatype),
+                                        .language = std::move(facts.language),
+                                        .direction = facts.direction};
+  }
+
+  annotations.push_back(
+      {.pointer = pointer, .descriptor = std::move(descriptor)});
+
+  return std::nullopt;
+}
+
 auto resolve(const sourcemeta::core::JSON &instance,
              const sourcemeta::blaze::SimpleOutput &output)
     -> std::variant<sourcemeta::core::JSONLDWeakAnnotationList,
@@ -1172,249 +1736,16 @@ auto resolve(const sourcemeta::core::JSON &instance,
     const auto &value{entry.value};
     const auto *const origin{&entry.schema_location.get()};
 
-    if (keyword.property_equals("x-jsonld-override", HASH_OVERRIDE)) {
-      if (!value.is_boolean()) {
-        return facet_error(
-            instance_location, sourcemeta::blaze::JSONLDFacet::Override,
-            "The value of x-jsonld-override must be a boolean", *origin);
-      }
+    if (auto error{collect_identity(accumulator, dirty, keyword,
+                                    instance_location, value, origin)};
+        error.has_value()) {
+      return std::move(error).value();
+    }
 
-      // A mark only matters when it shadows a diverging value or licenses a
-      // null or a false, and each of those demotes the location on its own,
-      // so the slow path recollects the mark whenever it can act. The one
-      // exception is retargeting consent, where a mark reshapes an agreeing
-      // resolution, which the final pass resolves by scanning the collected
-      // annotations only when a value predicate actually needs consent
-    } else if (keyword.property_equals("x-jsonld-id", HASH_ID) ||
-               keyword.property_equals("x-jsonld-reverse", HASH_REVERSE)) {
-      const bool reverse{
-          keyword.property_equals("x-jsonld-reverse", HASH_REVERSE)};
-      if (!value.is_null() && !is_iri_value(value)) {
-        return facet_error(
-            instance_location, sourcemeta::blaze::JSONLDFacet::Predicate,
-            reverse ? "The value of x-jsonld-reverse must be an absolute IRI"
-                    : "The value of x-jsonld-id must be an absolute IRI",
-            *origin);
-      }
-
-      if (value.is_null()) {
-        demote(accumulator, dirty, instance_location);
-      } else if (!dirty.contains(instance_location)) {
-        auto &facts{accumulator[instance_location]};
-        if (add_edge(facts.edges, value.to_string(), reverse)) {
-          facts.edges_origin = origin;
-          if (reverse) {
-            facts.reverse_origin = origin;
-          }
-        }
-      }
-    } else if (keyword.property_equals("x-jsonld-type", HASH_TYPE)) {
-      if (value.is_array()) {
-        for (const auto &element : value.as_array()) {
-          if (!is_iri_value(element)) {
-            return type_iri_error(instance_location, *origin);
-          }
-        }
-      } else if (!value.is_null() && !is_iri_value(value)) {
-        return type_iri_error(instance_location, *origin);
-      }
-
-      if (value.is_null()) {
-        demote(accumulator, dirty, instance_location);
-      } else if (!dirty.contains(instance_location)) {
-        auto &facts{accumulator[instance_location]};
-        if (value.is_array()) {
-          bool contributed{false};
-          for (const auto &element : value.as_array()) {
-            contributed =
-                add_type(facts.types, element.to_string()) || contributed;
-          }
-
-          if (contributed) {
-            facts.types_origin = origin;
-          }
-        } else if (add_type(facts.types, value.to_string())) {
-          facts.types_origin = origin;
-        }
-      }
-    } else if (keyword.property_equals("x-jsonld-datatype", HASH_DATATYPE)) {
-      if (!value.is_null() && !is_iri_value(value)) {
-        return facet_error(
-            instance_location, sourcemeta::blaze::JSONLDFacet::Datatype,
-            "The value of x-jsonld-datatype must be an absolute IRI", *origin);
-      }
-
-      if (value.is_null()) {
-        demote(accumulator, dirty, instance_location);
-      } else if (!dirty.contains(instance_location)) {
-        auto &facts{accumulator[instance_location]};
-        const auto &text{value.to_string()};
-        if (facts.datatype.has_value() && facts.datatype.value() != text) {
-          demote(accumulator, dirty, instance_location);
-        } else if (!facts.datatype.has_value()) {
-          facts.datatype = text;
-          facts.datatype_origin = origin;
-        }
-      }
-    } else if (keyword.property_equals("x-jsonld-language", HASH_LANGUAGE)) {
-      if (!value.is_null() &&
-          (!value.is_string() ||
-           !sourcemeta::core::is_canonical_langtag(value.to_string()))) {
-        return facet_error(instance_location,
-                           sourcemeta::blaze::JSONLDFacet::Language,
-                           "The value of x-jsonld-language must be a "
-                           "canonical BCP 47 language tag",
-                           *origin);
-      }
-
-      if (value.is_null()) {
-        demote(accumulator, dirty, instance_location);
-      } else if (!dirty.contains(instance_location)) {
-        auto &facts{accumulator[instance_location]};
-        const auto &text{value.to_string()};
-        if (facts.language.has_value() && facts.language.value() != text) {
-          demote(accumulator, dirty, instance_location);
-        } else if (!facts.language.has_value()) {
-          facts.language = text;
-          facts.language_origin = origin;
-        }
-      }
-    } else if (keyword.property_equals("x-jsonld-direction", HASH_DIRECTION)) {
-      const auto direction{parse_direction(value)};
-      if (!value.is_null() && !direction.has_value()) {
-        return facet_error(
-            instance_location, sourcemeta::blaze::JSONLDFacet::Direction,
-            R"(The value of x-jsonld-direction must be "ltr" or "rtl")",
-            *origin);
-      }
-
-      if (value.is_null()) {
-        demote(accumulator, dirty, instance_location);
-      } else if (!dirty.contains(instance_location)) {
-        auto &facts{accumulator[instance_location]};
-        if (facts.direction.has_value() && facts.direction != direction) {
-          demote(accumulator, dirty, instance_location);
-        } else if (!facts.direction.has_value()) {
-          facts.direction = direction;
-          facts.direction_origin = origin;
-        }
-      }
-    } else if (keyword.property_equals("x-jsonld-json", HASH_JSON) ||
-               keyword.property_equals("x-jsonld-graph", HASH_GRAPH)) {
-      const bool graph{keyword.property_equals("x-jsonld-graph", HASH_GRAPH)};
-      if (!value.is_null() && !value.is_boolean()) {
-        return facet_error(instance_location,
-                           graph ? sourcemeta::blaze::JSONLDFacet::Graph
-                                 : sourcemeta::blaze::JSONLDFacet::JSON,
-                           graph
-                               ? "The value of x-jsonld-graph must be a boolean"
-                               : "The value of x-jsonld-json must be a boolean",
-                           *origin);
-      }
-
-      // A false declares nothing anywhere, as the absent state it restates
-      // already is false, so removal only ever spells null
-      if (value.is_null()) {
-        demote(accumulator, dirty, instance_location);
-      } else if (value.to_boolean() && !dirty.contains(instance_location)) {
-        auto &facts{accumulator[instance_location]};
-        if (graph) {
-          if (!facts.graph) {
-            facts.graph = true;
-            facts.graph_origin = origin;
-          }
-        } else if (!facts.json) {
-          facts.json = true;
-          facts.json_origin = origin;
-        }
-      }
-    } else if (keyword.property_equals("x-jsonld-container", HASH_CONTAINER)) {
-      const auto container{parse_container(value)};
-      if (!value.is_null() && !container.has_value()) {
-        return facet_error(
-            instance_location, sourcemeta::blaze::JSONLDFacet::Container,
-            R"(The value of x-jsonld-container must be "@list", "@set", "@language", or "@index")",
-            *origin);
-      }
-
-      if (value.is_null()) {
-        demote(accumulator, dirty, instance_location);
-      } else if (!dirty.contains(instance_location)) {
-        auto &facts{accumulator[instance_location]};
-        if (facts.container.has_value() && facts.container != container) {
-          demote(accumulator, dirty, instance_location);
-        } else if (!facts.container.has_value()) {
-          facts.container = container;
-          facts.container_origin = origin;
-        }
-      }
-    } else if (keyword.property_equals("x-jsonld-self", HASH_SELF)) {
-      if (!value.is_null() &&
-          (!value.is_string() ||
-           !sourcemeta::core::URITemplate::is_uritemplate(value.to_string()))) {
-        return facet_error(
-            instance_location, sourcemeta::blaze::JSONLDFacet::Self,
-            "The value of x-jsonld-self must be a URI Template", *origin);
-      }
-
-      if (value.is_null()) {
-        demote(accumulator, dirty, instance_location);
-      } else if (!dirty.contains(instance_location)) {
-        auto &facts{accumulator[instance_location]};
-        const auto &text{value.to_string()};
-        if (facts.self.has_value() && facts.self.value() != text) {
-          demote(accumulator, dirty, instance_location);
-        } else if (!facts.self.has_value()) {
-          facts.self = text;
-          facts.self_origin = origin;
-        }
-      }
-    } else if (keyword.property_equals("x-jsonld-value", HASH_VALUE)) {
-      if (!value.is_null() && !is_iri_value(value)) {
-        return facet_error(
-            instance_location, sourcemeta::blaze::JSONLDFacet::ValuePredicate,
-            "The value of x-jsonld-value must be an absolute IRI", *origin);
-      }
-
-      if (value.is_null()) {
-        demote(accumulator, dirty, instance_location);
-      } else if (!dirty.contains(instance_location)) {
-        auto &facts{accumulator[instance_location]};
-        const auto &text{value.to_string()};
-        auto &promotion{promotion_facts(facts)};
-        if (promotion.value.has_value() && promotion.value.value() != text) {
-          demote(accumulator, dirty, instance_location);
-        } else if (!promotion.value.has_value()) {
-          promotion.value = text;
-          promotion.value_origin = origin;
-        }
-      }
-    } else if (keyword.property_equals("x-jsonld-constants", HASH_CONSTANTS)) {
-      if (value.is_null()) {
-        demote(accumulator, dirty, instance_location);
-      } else {
-        auto canonical{
-            canonicalize_constants(value, instance_location, *origin)};
-        if (std::holds_alternative<sourcemeta::blaze::JSONLDResolutionError>(
-                canonical)) {
-          return std::get<sourcemeta::blaze::JSONLDResolutionError>(
-              std::move(canonical));
-        }
-
-        const auto &fragment{std::get<sourcemeta::core::JSON>(canonical)};
-
-        // Whether a null entry is a licensed tombstone depends on override
-        // marks that only the slow path can consult, and an empty fragment
-        // asserts nothing, so it must not materialize the promotion facts
-        if (fragment_has_null_entry(fragment)) {
-          demote(accumulator, dirty, instance_location);
-        } else if (!fragment.empty() && !dirty.contains(instance_location)) {
-          auto &promotion{promotion_facts(accumulator[instance_location])};
-          if (merge_constants_fragment(promotion.constants, fragment)) {
-            promotion.constants_origin = origin;
-          }
-        }
-      }
+    if (auto error{collect_value(accumulator, dirty, keyword, instance_location,
+                                 value, origin)};
+        error.has_value()) {
+      return std::move(error).value();
     }
   }
 
@@ -1609,294 +1940,11 @@ auto resolve(const sourcemeta::core::JSON &instance,
   sourcemeta::core::JSONLDWeakAnnotationList annotations;
   annotations.reserve(accumulator.size());
   for (auto &[pointer, facts] : accumulator) {
-    const auto &value{sourcemeta::core::get(instance, pointer)};
-
-    // A null value is treated as if its entry were absent, and an absent
-    // entry has no node and no annotations, so every fact at the location
-    // drops before any placement check, except a JSON literal, where the
-    // null is the data itself
-    if (value.is_null() && !facts.json) {
-      continue;
-    }
-
-    std::ranges::sort(facts.edges,
-                      [](const sourcemeta::core::JSONLDEdge &left,
-                         const sourcemeta::core::JSONLDEdge &right) -> bool {
-                        return std::tie(left.predicate, left.reverse) <
-                               std::tie(right.predicate, right.reverse);
-                      });
-    std::ranges::sort(facts.types);
-
-    // A container sets the collection shape and stands alone, excluding every
-    // other fact and choosing the value shape it ranges over
-    if (facts.container.has_value()) {
-      if (!facts.types.empty() || facts.graph || facts.datatype.has_value() ||
-          facts.language.has_value() || facts.direction.has_value() ||
-          facts.json || facts.self.has_value() || promoted(facts) ||
-          with_constants(facts)) {
-        return facet_error(
-            pointer, sourcemeta::blaze::JSONLDFacet::Container,
-            "A JSON-LD container can only be combined with "
-            "predicate annotations",
-            *facts.container_origin,
-            first_origin({facts.types_origin, facts.graph_origin,
-                          facts.datatype_origin, facts.language_origin,
-                          facts.direction_origin, facts.json_origin,
-                          facts.self_origin, promotion_value_origin(facts),
-                          promotion_constants_origin(facts)}));
-      }
-
-      if (const auto error{
-              container_placement_error(pointer, facts.container.value(), value,
-                                        *facts.container_origin)};
-          error.has_value()) {
-        return error.value();
-      }
-    }
-
-    // A JSON literal preserves any value verbatim, so it stands alone and
-    // excludes every other fact
-    if (facts.json &&
-        (!facts.types.empty() || facts.graph || facts.datatype.has_value() ||
-         facts.language.has_value() || facts.direction.has_value() ||
-         facts.self.has_value() || promoted(facts) || with_constants(facts))) {
-      return facet_error(
-          pointer, sourcemeta::blaze::JSONLDFacet::JSON,
-          "A JSON-LD JSON literal can only be combined with "
-          "predicate annotations",
-          *facts.json_origin,
-          first_origin({facts.types_origin, facts.graph_origin,
-                        facts.datatype_origin, facts.language_origin,
-                        facts.direction_origin, facts.self_origin,
-                        promotion_value_origin(facts),
-                        promotion_constants_origin(facts)}));
-    }
-
-    // A value predicate promotes its scalar into a node that carries the
-    // scalar under that predicate, so it needs a scalar to carry, its graph
-    // pairing is reserved, and reshaping another facet of the location
-    // requires the consent of shared authorship or an overriding enclosure
-    if (promoted(facts)) {
-      const auto &promotion{*facts.promotion};
-      if (facts.graph) {
-        return facet_error(pointer,
-                           sourcemeta::blaze::JSONLDFacet::ValuePredicate,
-                           "A JSON-LD value predicate cannot be combined with "
-                           "a graph flag",
-                           *promotion.value_origin, *facts.graph_origin);
-      }
-
-      if (value.is_object() || value.is_array()) {
-        return facet_error(pointer,
-                           sourcemeta::blaze::JSONLDFacet::ValuePredicate,
-                           "A JSON-LD value predicate can only be assigned to "
-                           "a scalar value",
-                           *promotion.value_origin);
-      }
-
-      if (facts.self.has_value() || facts.datatype.has_value() ||
-          facts.language.has_value() || facts.direction.has_value()) {
-        if (!consent_index.has_value()) {
-          consent_index = build_consent_index(output);
-        }
-
-        const auto location_annotations{consent_index->find(pointer)};
-        assert(location_annotations != consent_index->cend());
-        const auto &nearby{location_annotations->second};
-        const auto consent{consent_paths_at(nearby, promotion.value.value())};
-
-        if (facts.self.has_value() &&
-            !facet_retargeting_consented(
-                nearby, consent, ConsentKind::Self,
-                sourcemeta::core::JSON{facts.self.value()})) {
-          return facet_error(pointer,
-                             sourcemeta::blaze::JSONLDFacet::ValuePredicate,
-                             "A JSON-LD value predicate cannot fuse with a "
-                             "self identity from an unrelated schema object",
-                             *promotion.value_origin, *facts.self_origin);
-        }
-
-        if (facts.datatype.has_value() &&
-            !facet_retargeting_consented(
-                nearby, consent, ConsentKind::Datatype,
-                sourcemeta::core::JSON{facts.datatype.value()})) {
-          return facet_error(pointer,
-                             sourcemeta::blaze::JSONLDFacet::ValuePredicate,
-                             "A JSON-LD value predicate cannot adopt a "
-                             "datatype from an unrelated schema object",
-                             *promotion.value_origin, *facts.datatype_origin);
-        }
-
-        if (facts.language.has_value() &&
-            !facet_retargeting_consented(
-                nearby, consent, ConsentKind::Language,
-                sourcemeta::core::JSON{facts.language.value()})) {
-          return facet_error(pointer,
-                             sourcemeta::blaze::JSONLDFacet::ValuePredicate,
-                             "A JSON-LD value predicate cannot adopt a "
-                             "language from an unrelated schema object",
-                             *promotion.value_origin, *facts.language_origin);
-        }
-
-        if (facts.direction.has_value() &&
-            !facet_retargeting_consented(nearby, consent,
-                                         ConsentKind::Direction,
-                                         sourcemeta::core::JSON{direction_text(
-                                             facts.direction.value())})) {
-          return facet_error(pointer,
-                             sourcemeta::blaze::JSONLDFacet::ValuePredicate,
-                             "A JSON-LD value predicate cannot adopt a "
-                             "direction from an unrelated schema object",
-                             *promotion.value_origin, *facts.direction_origin);
-        }
-      }
-    }
-
-    // A constants fragment merges into a node, so its location must
-    // materialize as one
-    if (with_constants(facts) && !value.is_object() && !promoted(facts) &&
-        !facts.self.has_value()) {
-      return facet_error(pointer, sourcemeta::blaze::JSONLDFacet::Constants,
-                         "A JSON-LD constants fragment requires an object "
-                         "value, a value predicate, or a self identity",
-                         *facts.promotion->constants_origin);
-    }
-
-    // A self identity mints an @id, promoting a scalar to a reference and
-    // giving an object its identifier. It describes a node, so it excludes the
-    // literal facets and cannot apply to an array collection
-    if (facts.self.has_value()) {
-      if (!promoted(facts) &&
-          (facts.datatype.has_value() || facts.language.has_value() ||
-           facts.direction.has_value())) {
-        return facet_error(
-            pointer, sourcemeta::blaze::JSONLDFacet::Self,
-            "A JSON-LD self identity cannot carry a datatype, "
-            "language, or direction",
-            *facts.self_origin,
-            first_origin({facts.datatype_origin, facts.language_origin,
-                          facts.direction_origin}));
-      }
-
-      if (value.is_array()) {
-        return facet_error(pointer, sourcemeta::blaze::JSONLDFacet::Self,
-                           "A JSON-LD self identity can only be assigned to an "
-                           "object or scalar value",
-                           *facts.self_origin);
-      }
-    }
-
-    if (const auto error{placement_error(pointer, facts, value)};
+    if (auto error{place_location(annotations, pointer, facts, instance,
+                                  accumulator, consent_index, output)};
         error.has_value()) {
-      return error.value();
+      return std::move(error).value();
     }
-
-    if (const auto error{literal_error(pointer, facts, value)};
-        error.has_value()) {
-      return error.value();
-    }
-
-    // A predicate attaches to the parent node of an object property. The
-    // document root has no parent and an array element inherits the enclosing
-    // edge, so neither can carry one
-    if (!facts.edges.empty() &&
-        (pointer.empty() || !pointer.back().is_property())) {
-      return facet_error(
-          pointer, sourcemeta::blaze::JSONLDFacet::Predicate,
-          pointer.empty()
-              ? "A JSON-LD predicate cannot be assigned to the document root"
-              : "A JSON-LD predicate cannot be assigned to an array element",
-          *facts.edges_origin);
-    }
-
-    // A container member belongs to a collection, not a node, so it has no
-    // parent to attach a predicate to
-    if (!facts.edges.empty() && !pointer.empty()) {
-      auto parent{pointer};
-      parent.pop_back();
-      const auto parent_facts{accumulator.find(parent)};
-      if (parent_facts != accumulator.cend() &&
-          parent_facts->second.container.has_value()) {
-        return facet_error(
-            pointer, sourcemeta::blaze::JSONLDFacet::Predicate,
-            "A JSON-LD predicate cannot be assigned to a container member",
-            *facts.edges_origin, *parent_facts->second.container_origin);
-      }
-    }
-
-    // A reverse predicate makes its value the subject, so the value must be a
-    // node or an array of nodes. A literal cannot be a subject
-    if (std::ranges::any_of(
-            facts.edges, [](const sourcemeta::core::JSONLDEdge &edge) -> bool {
-              return edge.reverse;
-            })) {
-      const bool points_to_node{
-          !facts.json && !facts.container.has_value() &&
-          (value.is_object() || facts.self.has_value() || promoted(facts) ||
-           (value.is_array() && array_of_nodes(accumulator, pointer, value)))};
-      if (!points_to_node) {
-        return facet_error(pointer, sourcemeta::blaze::JSONLDFacet::Predicate,
-                           "A JSON-LD reverse predicate can only point to a "
-                           "node or an array of nodes",
-                           *facts.reverse_origin);
-      }
-    }
-
-    std::optional<sourcemeta::core::JSON::String> identifier;
-    if (facts.self.has_value()) {
-      auto expanded{
-          expand_self(pointer, facts.self.value(), value, *facts.self_origin)};
-      if (std::holds_alternative<sourcemeta::blaze::JSONLDResolutionError>(
-              expanded)) {
-        return std::get<sourcemeta::blaze::JSONLDResolutionError>(
-            std::move(expanded));
-      }
-
-      identifier =
-          std::get<sourcemeta::core::JSON::String>(std::move(expanded));
-    }
-
-    sourcemeta::core::JSONLDDescriptor descriptor;
-    descriptor.edges = std::move(facts.edges);
-    if (facts.json) {
-      descriptor.value = sourcemeta::core::JSONLDLiteral{.json = true};
-    } else if (facts.container.has_value()) {
-      descriptor.value = sourcemeta::core::JSONLDCollection{
-          .container = facts.container.value()};
-    } else if (promoted(facts)) {
-      descriptor.value = sourcemeta::core::JSONLDPromotion{
-          .id = std::move(identifier),
-          .types = std::move(facts.types),
-          .value = std::move(facts.promotion->value).value(),
-          .literal =
-              sourcemeta::core::JSONLDLiteral{
-                  .datatype = std::move(facts.datatype),
-                  .language = std::move(facts.language),
-                  .direction = facts.direction,
-                  .json = false},
-          .constants = take_constants(facts)};
-    } else if (value.is_object()) {
-      descriptor.value =
-          sourcemeta::core::JSONLDNode{.id = std::move(identifier),
-                                       .types = std::move(facts.types),
-                                       .graph = facts.graph,
-                                       .constants = take_constants(facts)};
-    } else if (value.is_array()) {
-      descriptor.value = sourcemeta::core::JSONLDCollection{};
-    } else if (identifier.has_value()) {
-      descriptor.value =
-          sourcemeta::core::JSONLDReference{.id = std::move(identifier.value()),
-                                            .types = std::move(facts.types),
-                                            .constants = take_constants(facts)};
-    } else {
-      descriptor.value =
-          sourcemeta::core::JSONLDLiteral{.datatype = std::move(facts.datatype),
-                                          .language = std::move(facts.language),
-                                          .direction = facts.direction};
-    }
-
-    annotations.push_back(
-        {.pointer = pointer, .descriptor = std::move(descriptor)});
   }
 
   return annotations;

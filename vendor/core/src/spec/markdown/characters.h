@@ -14,7 +14,9 @@
 namespace sourcemeta::core::markdown {
 
 // The ASCII whitespace that the parser trims is only the tab, the line feed,
-// the carriage return, and the space
+// the carriage return, and the space. No line carries a carriage return, as
+// the walk that reads the input takes one as an ending, while what a character
+// reference decodes to carries whatever it names
 inline auto is_space(const char character) noexcept -> bool {
   return character == ' ' || character == '\t' || character == '\n' ||
          character == '\r';
@@ -22,7 +24,8 @@ inline auto is_space(const char character) noexcept -> bool {
 
 // GFM section 2.1: "A whitespace character is a space (U+0020), tab (U+0009),
 // newline (U+000A), line tabulation (U+000B), form feed (U+000C), or carriage
-// return (U+000D)"
+// return (U+000D)", where a carriage return only ever reaches this out of a
+// character reference, as no line carries one
 inline auto is_whitespace_character(const char character) noexcept -> bool {
   return character == ' ' || character == '\t' || character == '\n' ||
          character == '\v' || character == '\f' || character == '\r';
@@ -39,15 +42,20 @@ inline auto is_space_or_tab(const char character) noexcept -> bool {
   return character == ' ' || character == '\t';
 }
 
+// A line a block is built from ends with a line feed, which is the only
+// ending there is to find in one
 inline auto is_line_end(const char character) noexcept -> bool {
-  return character == '\n' || character == '\r';
+  return character == '\n';
 }
 
-// The Unicode whitespace of GFM section 2.1
+// The Unicode whitespace of GFM section 2.1, which leaves out the line
+// tabulation that its whitespace characters hold. What asks this reads the
+// lines of the document rather than what a reference decodes to, and no line
+// carries a carriage return
 inline auto is_unicode_whitespace(const char32_t codepoint) noexcept -> bool {
   if (codepoint < 0x80) {
     return codepoint == U'\t' || codepoint == U'\n' || codepoint == U'\f' ||
-           codepoint == U'\r' || codepoint == U' ';
+           codepoint == U' ';
   }
 
   return sourcemeta::core::general_category(codepoint) ==

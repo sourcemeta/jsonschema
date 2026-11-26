@@ -356,9 +356,6 @@ auto sourcemeta::jsonschema::metaschema(
       throw sourcemeta::core::FileError<
           sourcemeta::core::SchemaUnknownBaseDialectError>(
           entry.resolution_base);
-    } catch (const sourcemeta::core::SchemaUnknownDialectError &) {
-      throw sourcemeta::core::FileError<
-          sourcemeta::core::SchemaUnknownDialectError>(entry.resolution_base);
     } catch (const sourcemeta::core::SchemaAnchorCollisionError &error) {
       const auto position{entry.positions.get(error.location())};
       if (position.has_value()) {

@@ -178,6 +178,147 @@ inline auto finalize_match(const Node &otherwise,
   return {identifier, context};
 }
 
+// A variable expression of a template, which becomes a node that captures
+// rather than one that matches literal text. Answers whether the scan
+// carries on (RFC 6570 Section 2.2)
+auto add_variable_expression(
+    sourcemeta::core::URITemplateRouter::Node &root,
+    sourcemeta::core::URITemplateRouter::Node *&current, const char *&position,
+    const char *const end, bool &absorbed) -> bool {
+  const char *expression_start = position;
+  const char *expression_end = find_expression_end(position, end);
+  std::string_view expression{
+      expression_start,
+      static_cast<std::size_t>(expression_end - expression_start)};
+
+  ++position;
+
+  if (position >= end) {
+    throw URITemplateRouterInvalidSegmentError{"Unclosed brace", expression};
+  }
+
+  NodeType type = NodeType::Variable;
+  bool path_segment_operator = false;
+  if (is_operator(*position)) {
+    if (*position == '+') {
+      type = NodeType::Expansion;
+    } else if (*position == '/') {
+      path_segment_operator = true;
+    } else {
+      throw URITemplateRouterInvalidSegmentError{
+          "Unsupported URI Template operator", expression};
+    }
+
+    ++position;
+    if (position >= end || *position == '}') {
+      throw URITemplateRouterInvalidSegmentError{"Empty variable name",
+                                                 expression};
+    }
+  } else if (is_reserved_operator(*position)) {
+    throw URITemplateRouterInvalidSegmentError{"Reserved URI Template operator",
+                                               expression};
+  } else if (*position == '{') {
+    throw URITemplateRouterInvalidSegmentError{
+        "Nested opening brace", extract_segment(expression_start, end)};
+  } else if (*position == ' ') {
+    throw URITemplateRouterInvalidSegmentError{"Space before variable name",
+                                               expression};
+  } else if (*position == '}') {
+    throw URITemplateRouterInvalidSegmentError{"Empty variable name",
+                                               expression};
+  }
+
+  const char *varname_start = position;
+  while (position < end && *position != '}' && *position != ' ' &&
+         !is_modifier(*position) && *position != ',') {
+    if (!is_varname_char(*position)) {
+      throw URITemplateRouterInvalidSegmentError{
+          "Invalid character in variable name", expression};
+    }
+    ++position;
+  }
+
+  if (position >= end) {
+    throw URITemplateRouterInvalidSegmentError{"Unclosed brace", expression};
+  }
+
+  const char *const varname_end = position;
+
+  if (*position == ' ') {
+    throw URITemplateRouterInvalidSegmentError{"Space in variable expression",
+                                               expression};
+  }
+
+  if (*position == ':') {
+    throw URITemplateRouterInvalidSegmentError{"Prefix modifier not supported",
+                                               expression};
+  }
+
+  if (*position == '*') {
+    if (!path_segment_operator) {
+      throw URITemplateRouterInvalidSegmentError{
+          "Explode modifier not supported", expression};
+    }
+    if (varname_end == varname_start) {
+      throw URITemplateRouterInvalidSegmentError{"Empty variable name",
+                                                 expression};
+    }
+    type = NodeType::OptionalExpansion;
+    ++position;
+    if (position >= end || *position != '}') {
+      throw URITemplateRouterInvalidSegmentError{
+          "Unexpected characters after explode modifier", expression};
+    }
+  } else if (path_segment_operator) {
+    throw URITemplateRouterInvalidSegmentError{
+        "Path-segment expansion without the explode modifier is not "
+        "supported",
+        expression};
+  }
+
+  if (*position == ',') {
+    throw URITemplateRouterInvalidSegmentError{
+        "Multiple variables not supported", expression};
+  }
+
+  const std::string_view varname{
+      varname_start, static_cast<std::size_t>(varname_end - varname_start)};
+
+  ++position;
+
+  const bool followed_by_path_operator = position < end && *position == '{' &&
+                                         position + 1 < end &&
+                                         *(position + 1) == '/';
+
+  if (position < end && *position != '/' && !followed_by_path_operator) {
+    throw URITemplateRouterInvalidSegmentError{
+        "Path segment cannot mix literals and variables",
+        extract_segment(expression_start, end)};
+  }
+
+  if (is_expansion_type(type) && position < end) {
+    throw URITemplateRouterInvalidSegmentError{
+        "Expansion operator must be the last segment", expression};
+  }
+
+  auto &variable = (current != nullptr) ? current->variable : root.variable;
+  auto *result =
+      find_or_create_variable_child(variable, varname, type, expression);
+  if (result == nullptr) {
+    absorbed = true;
+  } else {
+    current = result;
+  }
+
+  if (absorbed || position >= end) {
+    return false;
+  }
+  if (followed_by_path_operator) {
+    return true;
+  }
+  ++position;
+  return true;
+}
 } // namespace
 
 URITemplateRouter::URITemplateRouter(const std::string_view base_path,
@@ -411,141 +552,11 @@ auto URITemplateRouter::add(const std::string_view uri_template,
     }
 
     if (*position == '{') {
-      const char *expression_start = position;
-      const char *expression_end = find_expression_end(position, end);
-      std::string_view expression{
-          expression_start,
-          static_cast<std::size_t>(expression_end - expression_start)};
-
-      ++position;
-
-      if (position >= end) {
-        throw URITemplateRouterInvalidSegmentError{"Unclosed brace",
-                                                   expression};
-      }
-
-      NodeType type = NodeType::Variable;
-      bool path_segment_operator = false;
-      if (is_operator(*position)) {
-        if (*position == '+') {
-          type = NodeType::Expansion;
-        } else if (*position == '/') {
-          path_segment_operator = true;
-        } else {
-          throw URITemplateRouterInvalidSegmentError{
-              "Unsupported URI Template operator", expression};
-        }
-
-        ++position;
-        if (position >= end || *position == '}') {
-          throw URITemplateRouterInvalidSegmentError{"Empty variable name",
-                                                     expression};
-        }
-      } else if (is_reserved_operator(*position)) {
-        throw URITemplateRouterInvalidSegmentError{
-            "Reserved URI Template operator", expression};
-      } else if (*position == '{') {
-        throw URITemplateRouterInvalidSegmentError{
-            "Nested opening brace", extract_segment(expression_start, end)};
-      } else if (*position == ' ') {
-        throw URITemplateRouterInvalidSegmentError{"Space before variable name",
-                                                   expression};
-      } else if (*position == '}') {
-        throw URITemplateRouterInvalidSegmentError{"Empty variable name",
-                                                   expression};
-      }
-
-      const char *varname_start = position;
-      while (position < end && *position != '}' && *position != ' ' &&
-             !is_modifier(*position) && *position != ',') {
-        if (!is_varname_char(*position)) {
-          throw URITemplateRouterInvalidSegmentError{
-              "Invalid character in variable name", expression};
-        }
-        ++position;
-      }
-
-      if (position >= end) {
-        throw URITemplateRouterInvalidSegmentError{"Unclosed brace",
-                                                   expression};
-      }
-
-      const char *const varname_end = position;
-
-      if (*position == ' ') {
-        throw URITemplateRouterInvalidSegmentError{
-            "Space in variable expression", expression};
-      }
-
-      if (*position == ':') {
-        throw URITemplateRouterInvalidSegmentError{
-            "Prefix modifier not supported", expression};
-      }
-
-      if (*position == '*') {
-        if (!path_segment_operator) {
-          throw URITemplateRouterInvalidSegmentError{
-              "Explode modifier not supported", expression};
-        }
-        if (varname_end == varname_start) {
-          throw URITemplateRouterInvalidSegmentError{"Empty variable name",
-                                                     expression};
-        }
-        type = NodeType::OptionalExpansion;
-        ++position;
-        if (position >= end || *position != '}') {
-          throw URITemplateRouterInvalidSegmentError{
-              "Unexpected characters after explode modifier", expression};
-        }
-      } else if (path_segment_operator) {
-        throw URITemplateRouterInvalidSegmentError{
-            "Path-segment expansion without the explode modifier is not "
-            "supported",
-            expression};
-      }
-
-      if (*position == ',') {
-        throw URITemplateRouterInvalidSegmentError{
-            "Multiple variables not supported", expression};
-      }
-
-      const std::string_view varname{
-          varname_start, static_cast<std::size_t>(varname_end - varname_start)};
-
-      ++position;
-
-      const bool followed_by_path_operator =
-          position < end && *position == '{' && position + 1 < end &&
-          *(position + 1) == '/';
-
-      if (position < end && *position != '/' && !followed_by_path_operator) {
-        throw URITemplateRouterInvalidSegmentError{
-            "Path segment cannot mix literals and variables",
-            extract_segment(expression_start, end)};
-      }
-
-      if (is_expansion_type(type) && position < end) {
-        throw URITemplateRouterInvalidSegmentError{
-            "Expansion operator must be the last segment", expression};
-      }
-
-      auto &variable =
-          (current != nullptr) ? current->variable : this->root_.variable;
-      auto *result =
-          find_or_create_variable_child(variable, varname, type, expression);
-      if (result == nullptr) {
-        absorbed = true;
-      } else {
-        current = result;
-      }
-
-      if (absorbed || position >= end) {
+      if (!add_variable_expression(this->root_, current, position, end,
+                                   absorbed)) {
         break;
       }
-      if (followed_by_path_operator) {
-        continue;
-      }
-      ++position;
+
       continue;
     }
 

@@ -74,11 +74,12 @@ inline auto ipv4_classify_octets(const std::array<std::uint8_t, 4> &octets)
   }
 
   // RFC 6890, RFC 5737, and RFC 2544: special-purpose ranges that are not
-  // globally reachable
-  if ((first == 192 && second == 0 && third == 0) ||
-      (first == 192 && second == 0 && third == 2) ||
-      (first == 198 && (second == 18 || second == 19)) ||
-      (first == 198 && second == 51 && third == 100) ||
+  // globally reachable. The ranges that share a prefix are asked for under it
+  // once, as asking for the same prefix again leaves the second ask with no
+  // outcome of its own
+  if ((first == 192 && second == 0 && (third == 0 || third == 2)) ||
+      (first == 198 &&
+       (second == 18 || second == 19 || (second == 51 && third == 100))) ||
       (first == 203 && second == 0 && third == 113)) {
     return IPAddressClass::Reserved;
   }

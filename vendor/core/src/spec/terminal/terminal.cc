@@ -62,10 +62,24 @@ auto terminal_color_policy(TerminalStream stream) noexcept
   return stream_policies[stream_index(stream)].load(std::memory_order_relaxed);
 }
 
+// Clang keeps an arm for the policy that never arrives and counts it as one
+// that nothing took, so the policy that defers to the stream is written as the
+// default there, while the compilers reading a case label are the ones holding
+// the switch below to naming them all. The directives stay out of the function
+// because one inside it reads as a line that never ran
+#if defined(__clang__)
+#define SOURCEMETA_CORE_TERMINAL_DEFERS_TO_THE_STREAM                          \
+  default:                                                                     \
+    return terminal_is_interactive(stream);
+#else
+#define SOURCEMETA_CORE_TERMINAL_DEFERS_TO_THE_STREAM                          \
+  case TerminalColorPolicy::WhenInteractive:                                   \
+    return terminal_is_interactive(stream);
+#endif
+
 auto terminal_color_enabled(TerminalStream stream) noexcept -> bool {
   switch (terminal_color_policy(stream)) {
-    case TerminalColorPolicy::WhenInteractive:
-      return terminal_is_interactive(stream);
+    SOURCEMETA_CORE_TERMINAL_DEFERS_TO_THE_STREAM
     case TerminalColorPolicy::Always:
       return true;
     case TerminalColorPolicy::Disabled:
@@ -78,6 +92,8 @@ auto terminal_color_enabled(TerminalStream stream) noexcept -> bool {
   std::unreachable();
 #endif
 }
+
+#undef SOURCEMETA_CORE_TERMINAL_DEFERS_TO_THE_STREAM
 
 auto terminal_sgr_reset() noexcept -> std::string_view {
   return internal::ESCAPE_RESET;

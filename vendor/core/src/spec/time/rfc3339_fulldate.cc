@@ -1,4 +1,4 @@
-#include <sourcemeta/core/numeric.h>
+#include <sourcemeta/core/text.h>
 #include <sourcemeta/core/time.h>
 
 #include <cstdint> // std::uint8_t, std::uint16_t

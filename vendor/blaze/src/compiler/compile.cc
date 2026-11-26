@@ -52,6 +52,134 @@ auto exclusive_bounds_need_a_sibling(
 // omits the lower bound that would keep `allOf`, `anyOf` and `oneOf` from
 // standing empty. Catching those belongs to a linter, which is free to be
 // stricter than the document the dialect publishes
+// What the official vocabularies ask of the keywords they define, or
+// nothing at all for a keyword none of them names
+auto known_keyword_shape_error(
+    const sourcemeta::core::JSON::String &keyword,
+    const sourcemeta::core::JSON &value,
+    const sourcemeta::core::SchemaVocabularies &vocabularies)
+    -> std::optional<const char *> {
+  using namespace sourcemeta::blaze;
+
+  if (keyword == "title" || keyword == "description" || keyword == "$comment" ||
+      keyword == "format" || keyword == "contentEncoding" ||
+      keyword == "contentMediaType") {
+    return std::optional<const char *>{value.is_string() ? nullptr
+                                                         : EXPECTED_STRING};
+  }
+  if (keyword == "uniqueItems" || keyword == "deprecated" ||
+      keyword == "readOnly" || keyword == "writeOnly" ||
+      keyword == "nullable") {
+    return std::optional<const char *>{value.is_boolean() ? nullptr
+                                                          : EXPECTED_BOOLEAN};
+  }
+  if (keyword == "examples") {
+    return std::optional<const char *>{value.is_array() ? nullptr
+                                                        : EXPECTED_ARRAY};
+  }
+  // The OpenAPI dialects define these three as objects of their own. What
+  // follows is what their meta-schemas state, other than the `format`
+  // annotations two of their members carry, which assert nothing by default
+  if (keyword == "discriminator" || keyword == "xml" ||
+      keyword == "externalDocs") {
+    if (!value.is_object()) {
+      return EXPECTED_OBJECT;
+    }
+
+    // Each OpenAPI version defines these objects for itself, and the later
+    // ones carry members this does not know about, so only the dialect this
+    // was written against is held to the shape below
+    if (!vocabularies.contains(
+            sourcemeta::core::SchemaVocabularies::Known::OPENAPI_3_0_BASE)) {
+      return nullptr;
+    }
+
+    if (keyword == "discriminator") {
+      const auto *property_name{value.try_at("propertyName")};
+      if (property_name == nullptr || !property_name->is_string()) {
+        return EXPECTED_DIALECT_OBJECT;
+      }
+
+      const auto *mapping{value.try_at("mapping")};
+      if (mapping != nullptr &&
+          (!mapping->is_object() ||
+           std::ranges::any_of(mapping->as_object(),
+                               [](const auto &entry) -> bool {
+                                 return !entry.second.is_string();
+                               }))) {
+        return EXPECTED_DIALECT_OBJECT;
+      }
+
+      // Unlike the other two, this one its meta-schema leaves open
+      return nullptr;
+    }
+
+    if (keyword == "externalDocs") {
+      const auto *url{value.try_at("url")};
+      if (url == nullptr || !url->is_string()) {
+        return EXPECTED_DIALECT_OBJECT;
+      }
+    }
+
+    for (const auto &entry : value.as_object()) {
+      if (entry.first.starts_with("x-")) {
+        continue;
+      }
+
+      const auto expected_string{
+          keyword == "externalDocs"
+              ? (entry.first == "description" || entry.first == "url")
+              : (entry.first == "name" || entry.first == "namespace" ||
+                 entry.first == "prefix")};
+      const auto expected_boolean{
+          keyword == "xml" &&
+          (entry.first == "attribute" || entry.first == "wrapped")};
+      if (expected_string) {
+        if (!entry.second.is_string()) {
+          return EXPECTED_DIALECT_OBJECT;
+        }
+      } else if (expected_boolean) {
+        if (!entry.second.is_boolean()) {
+          return EXPECTED_DIALECT_OBJECT;
+        }
+      } else {
+        // Both of their meta-schemas close them to the members they name
+        return EXPECTED_DIALECT_OBJECT;
+      }
+    }
+
+    return nullptr;
+  }
+  if (keyword == "maxContains" || keyword == "minContains") {
+    // These only exist from 2019-09 onwards, where a number whose fractional
+    // part is zero counts as an integer
+    return (value.is_integral() && value.is_positive())
+               ? nullptr
+               : EXPECTED_NON_NEGATIVE_INTEGER;
+  }
+  if (keyword == "exclusiveMaximum" || keyword == "exclusiveMinimum") {
+    return ((is_draft3(vocabularies) || is_draft4(vocabularies) ||
+             is_openapi_3_0(vocabularies))
+                ? (value.is_boolean() ? nullptr : EXPECTED_BOOLEAN)
+                : (value.is_number() ? nullptr : EXPECTED_NUMBER));
+  }
+  if ((keyword == "$defs" || keyword == "definitions") &&
+      // The walker treats these as containers in every dialect, but
+      // no meta-schema before Draft 4 defines either of them
+      !is_draft3(vocabularies)) {
+    return (value.is_object() &&
+            std::ranges::all_of(
+                value.as_object(),
+                [&vocabularies, &keyword](const auto &entry) -> bool {
+                  return is_keyword_schema(entry.second, vocabularies, keyword);
+                }))
+               ? nullptr
+               : EXPECTED_SCHEMA_OBJECT;
+  }
+
+  return std::nullopt;
+}
+
 auto keyword_shape_error(
     const sourcemeta::core::JSON::String &keyword,
     const sourcemeta::core::SchemaKeywordType type, const bool known,
@@ -64,118 +192,10 @@ auto keyword_shape_error(
   // that a custom vocabulary defines carries its URI rather than a known
   // value, so neither is held to these
   if (known) {
-    if (keyword == "title" || keyword == "description" ||
-        keyword == "$comment" || keyword == "format" ||
-        keyword == "contentEncoding" || keyword == "contentMediaType") {
-      return value.is_string() ? nullptr : EXPECTED_STRING;
-    }
-    if (keyword == "uniqueItems" || keyword == "deprecated" ||
-        keyword == "readOnly" || keyword == "writeOnly" ||
-        keyword == "nullable") {
-      return value.is_boolean() ? nullptr : EXPECTED_BOOLEAN;
-    }
-    if (keyword == "examples") {
-      return value.is_array() ? nullptr : EXPECTED_ARRAY;
-    }
-    // The OpenAPI dialects define these three as objects of their own. What
-    // follows is what their meta-schemas state, other than the `format`
-    // annotations two of their members carry, which assert nothing by default
-    if (keyword == "discriminator" || keyword == "xml" ||
-        keyword == "externalDocs") {
-      if (!value.is_object()) {
-        return EXPECTED_OBJECT;
-      }
-
-      // Each OpenAPI version defines these objects for itself, and the later
-      // ones carry members this does not know about, so only the dialect this
-      // was written against is held to the shape below
-      if (!vocabularies.contains(
-              sourcemeta::core::SchemaVocabularies::Known::OPENAPI_3_0_BASE)) {
-        return nullptr;
-      }
-
-      if (keyword == "discriminator") {
-        const auto *property_name{value.try_at("propertyName")};
-        if (property_name == nullptr || !property_name->is_string()) {
-          return EXPECTED_DIALECT_OBJECT;
-        }
-
-        const auto *mapping{value.try_at("mapping")};
-        if (mapping != nullptr &&
-            (!mapping->is_object() ||
-             std::ranges::any_of(mapping->as_object(),
-                                 [](const auto &entry) -> bool {
-                                   return !entry.second.is_string();
-                                 }))) {
-          return EXPECTED_DIALECT_OBJECT;
-        }
-
-        // Unlike the other two, this one its meta-schema leaves open
-        return nullptr;
-      }
-
-      if (keyword == "externalDocs") {
-        const auto *url{value.try_at("url")};
-        if (url == nullptr || !url->is_string()) {
-          return EXPECTED_DIALECT_OBJECT;
-        }
-      }
-
-      for (const auto &entry : value.as_object()) {
-        if (entry.first.starts_with("x-")) {
-          continue;
-        }
-
-        const auto expected_string{
-            keyword == "externalDocs"
-                ? (entry.first == "description" || entry.first == "url")
-                : (entry.first == "name" || entry.first == "namespace" ||
-                   entry.first == "prefix")};
-        const auto expected_boolean{
-            keyword == "xml" &&
-            (entry.first == "attribute" || entry.first == "wrapped")};
-        if (expected_string) {
-          if (!entry.second.is_string()) {
-            return EXPECTED_DIALECT_OBJECT;
-          }
-        } else if (expected_boolean) {
-          if (!entry.second.is_boolean()) {
-            return EXPECTED_DIALECT_OBJECT;
-          }
-        } else {
-          // Both of their meta-schemas close them to the members they name
-          return EXPECTED_DIALECT_OBJECT;
-        }
-      }
-
-      return nullptr;
-    }
-    if (keyword == "maxContains" || keyword == "minContains") {
-      // These only exist from 2019-09 onwards, where a number whose fractional
-      // part is zero counts as an integer
-      return (value.is_integral() && value.is_positive())
-                 ? nullptr
-                 : EXPECTED_NON_NEGATIVE_INTEGER;
-    }
-    if (keyword == "exclusiveMaximum" || keyword == "exclusiveMinimum") {
-      return ((is_draft3(vocabularies) || is_draft4(vocabularies) ||
-               is_openapi_3_0(vocabularies))
-                  ? (value.is_boolean() ? nullptr : EXPECTED_BOOLEAN)
-                  : (value.is_number() ? nullptr : EXPECTED_NUMBER));
-    }
-    if ((keyword == "$defs" || keyword == "definitions") &&
-        // The walker treats these as containers in every dialect, but
-        // no meta-schema before Draft 4 defines either of them
-        !is_draft3(vocabularies)) {
-      return (value.is_object() &&
-              std::ranges::all_of(
-                  value.as_object(),
-                  [&vocabularies, &keyword](const auto &entry) -> bool {
-                    return is_keyword_schema(entry.second, vocabularies,
-                                             keyword);
-                  }))
-                 ? nullptr
-                 : EXPECTED_SCHEMA_OBJECT;
+    if (const auto verdict{
+            known_keyword_shape_error(keyword, value, vocabularies)};
+        verdict.has_value()) {
+      return verdict.value();
     }
   }
 

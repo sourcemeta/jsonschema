@@ -173,6 +173,24 @@ using ValueNamedIndexes =
     std::pair<std::vector<ValueNamedIndex>, std::vector<ValueIndexPair>>;
 
 /// @ingroup evaluator
+/// Represents a named index that also records whether a matching object has to
+/// define the name
+using ValueNamedIndexRequired =
+    std::tuple<sourcemeta::core::JSON::Object::hash_type, ValueUnsignedInteger,
+               ValueString, ValueBoolean>;
+
+/// @ingroup evaluator
+/// Represents a compiler step string to index map that records which of its
+/// names a matching object has to define, paired with how many of those there
+/// are. Names are unique and an object holds each of them once, so counting
+/// the required entries a walk matched and comparing against that total proves
+/// presence without resolving any of the names on its own
+using ValueNamedIndexesRequired =
+    std::pair<std::pair<std::vector<ValueNamedIndexRequired>,
+                        std::vector<ValueIndexPair>>,
+              ValueUnsignedInteger>;
+
+/// @ingroup evaluator
 /// Represents a compiler step types properties value
 using ValueTypedProperties = std::pair<ValueType, ValueStringSet>;
 
@@ -208,15 +226,14 @@ using ValueObjectProperties = std::vector<
 enum class ValueNumberType : std::uint8_t { Float, Double };
 
 /// @ingroup evaluator
-using Value =
-    std::variant<ValueNone, ValueJSON, ValueSet, ValueString, ValueProperty,
-                 ValueStrings, ValueStringSet, ValueTypes, ValueType,
-                 ValueRegex, ValueUnsignedInteger, ValueRange, ValueBoolean,
-                 ValueNamedIndexes, ValueStringType, ValueStringMap,
-                 ValuePropertyFilter, ValueIndexPair, ValuePointer,
-                 ValueTypedProperties, ValueStringHashes, ValueTypedHashes,
-                 ValueIntegerBounds, ValueIntegerBoundsWithSize,
-                 ValueObjectProperties, ValueNumberType, ValueTypesWithSize>;
+using Value = std::variant<
+    ValueNone, ValueJSON, ValueSet, ValueString, ValueProperty, ValueStrings,
+    ValueStringSet, ValueTypes, ValueType, ValueRegex, ValueUnsignedInteger,
+    ValueRange, ValueBoolean, ValueNamedIndexes, ValueStringType,
+    ValueStringMap, ValuePropertyFilter, ValueIndexPair, ValuePointer,
+    ValueTypedProperties, ValueStringHashes, ValueTypedHashes,
+    ValueIntegerBounds, ValueIntegerBoundsWithSize, ValueObjectProperties,
+    ValueNumberType, ValueTypesWithSize, ValueNamedIndexesRequired>;
 
 } // namespace sourcemeta::blaze
 

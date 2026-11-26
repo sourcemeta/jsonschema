@@ -9,6 +9,7 @@
 #include <sourcemeta/core/uri.h>
 
 #include <algorithm> // std::find
+#include <cassert>   // assert
 #include <cmath>     // std::isfinite
 #include <optional>  // std::optional, std::nullopt
 #include <span>      // std::span
@@ -209,8 +210,12 @@ namespace {
 // https://modelcontextprotocol.io/specification/2026-07-28/basic/index#responses
 auto attach_server_info(sourcemeta::core::JSON &result,
                         sourcemeta::core::JSON &&info) -> void {
-  if (auto *meta{result.try_at("_meta", MCP_HASH_META)};
-      meta != nullptr && meta->is_object()) {
+  // Every caller either builds the result itself or has already turned down
+  // metadata that is not an object, so the question here is only whether the
+  // result carries any
+  auto *meta{result.try_at("_meta", MCP_HASH_META)};
+  assert((meta == nullptr) || meta->is_object());
+  if (meta != nullptr) {
     // Caller-supplied metadata may already identify the server
     meta->assign("io.modelcontextprotocol/serverInfo", std::move(info));
   } else {
@@ -225,7 +230,10 @@ auto attach_server_info(const MCPProtocolVersion version,
                         sourcemeta::core::JSON &result,
                         const std::optional<MCPImplementation> &server_info)
     -> void {
-  if (!server_info.has_value() || !mcp_requires_result_type(version)) {
+  // Both callers serve the one revision that asks a result to name its type,
+  // so what is left to ask is whether the caller named a server at all
+  assert(mcp_requires_result_type(version));
+  if (!server_info.has_value()) {
     return;
   }
   attach_server_info(result,
@@ -298,11 +306,12 @@ auto decorate_cacheable_result(const MCPProtocolVersion version,
   }
   internal::require(mcp_is_cacheable_method(method),
                     "Operation is not cacheable");
+  // The decoration above names the result complete where it named no type at
+  // all, and turns down one that named another, so only a complete result
+  // reaches here
   decorate_result(version, result, std::nullopt);
-  const auto *result_type{result.try_at("resultType", MCP_HASH_RESULT_TYPE)};
-  internal::require((result_type != nullptr) && result_type->is_string() &&
-                        result_type->to_string() == "complete",
-                    "Only complete results are cacheable");
+  assert(result.at("resultType", MCP_HASH_RESULT_TYPE) ==
+         sourcemeta::core::JSON{"complete"});
   internal::require(cache_policy.ttl_ms >= 0,
                     "A cache time to live cannot be negative");
   // An already decorated result carries both hints, which this policy replaces

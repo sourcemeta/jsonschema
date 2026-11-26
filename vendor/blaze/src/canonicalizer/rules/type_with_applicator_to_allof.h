@@ -217,31 +217,7 @@ public:
     this->typed_keywords_.clear();
 
     if (this->strategy_ == Strategy::MergeIntoAllOf) {
-      for (const auto &applicator : APPLICATORS_WITHOUT_ALLOF) {
-        if (!schema.defines(applicator)) {
-          continue;
-        }
-        auto branch{sourcemeta::core::JSON::make_object()};
-        branch.assign(applicator, schema.at(applicator));
-        if (std::string_view{applicator} == "if" && this->has_if_then_else_) {
-          if (schema.defines("then")) {
-            branch.assign("then", schema.at("then"));
-          }
-          if (schema.defines("else")) {
-            branch.assign("else", schema.at("else"));
-          }
-        }
-        schema.at("allOf").push_back(std::move(branch));
-        schema.erase(applicator);
-      }
-      if (this->has_if_then_else_) {
-        if (schema.defines("then")) {
-          schema.erase("then");
-        }
-        if (schema.defines("else")) {
-          schema.erase("else");
-        }
-      }
+      this->merge_applicators_into_allof(schema);
       return;
     }
 
@@ -274,64 +250,7 @@ public:
     }
 
     if (this->strategy_ == Strategy::SafeExtract) {
-      if (schema.defines("allOf") && schema.at("allOf").is_array()) {
-        this->typed_branch_index_ = schema.at("allOf").size();
-        schema.at("allOf").push_back(std::move(typed_branch));
-      } else {
-        this->typed_branch_index_ = 0;
-        auto new_allof{sourcemeta::core::JSON::make_array()};
-        new_allof.push_back(std::move(typed_branch));
-        schema.assign("allOf", std::move(new_allof));
-      }
-
-      if (this->has_modern_ref_ && schema.defines("$ref")) {
-        auto branch{sourcemeta::core::JSON::make_object()};
-        branch.assign("$ref", schema.at("$ref"));
-        schema.at("allOf").push_back(std::move(branch));
-        schema.erase("$ref");
-      }
-      if (this->has_dynamic_ref_ && schema.defines("$dynamicRef")) {
-        auto branch{sourcemeta::core::JSON::make_object()};
-        branch.assign("$dynamicRef", schema.at("$dynamicRef"));
-        schema.at("allOf").push_back(std::move(branch));
-        schema.erase("$dynamicRef");
-      }
-      if (this->has_recursive_ref_ && schema.defines("$recursiveRef")) {
-        auto branch{sourcemeta::core::JSON::make_object()};
-        branch.assign("$recursiveRef", schema.at("$recursiveRef"));
-        schema.at("allOf").push_back(std::move(branch));
-        schema.erase("$recursiveRef");
-      }
-
-      for (const auto &applicator : APPLICATORS_WITHOUT_ALLOF) {
-        if (!schema.defines(applicator)) {
-          continue;
-        }
-        if ((this->applicators_with_refs_ & applicator_bit(applicator)) != 0) {
-          continue;
-        }
-        auto branch{sourcemeta::core::JSON::make_object()};
-        branch.assign(applicator, schema.at(applicator));
-        if (std::string_view{applicator} == "if" && this->has_if_then_else_) {
-          if (schema.defines("then")) {
-            branch.assign("then", schema.at("then"));
-          }
-          if (schema.defines("else")) {
-            branch.assign("else", schema.at("else"));
-          }
-        }
-        schema.at("allOf").push_back(std::move(branch));
-        schema.erase(applicator);
-        if (std::string_view{applicator} == "if" && this->has_if_then_else_) {
-          if (schema.defines("then")) {
-            schema.erase("then");
-          }
-          if (schema.defines("else")) {
-            schema.erase("else");
-          }
-        }
-      }
-
+      this->extract_typed_branch(schema, typed_branch);
       return;
     }
 
@@ -504,6 +423,103 @@ public:
   }
 
 private:
+  // The typed keywords move into a branch of their own, which leaves every
+  // applicator beside it judging the value without a type narrowing what
+  // they see
+  auto extract_typed_branch(sourcemeta::core::JSON &schema,
+                            sourcemeta::core::JSON &typed_branch) const
+      -> void {
+    if (schema.defines("allOf") && schema.at("allOf").is_array()) {
+      this->typed_branch_index_ = schema.at("allOf").size();
+      schema.at("allOf").push_back(std::move(typed_branch));
+    } else {
+      this->typed_branch_index_ = 0;
+      auto new_allof{sourcemeta::core::JSON::make_array()};
+      new_allof.push_back(std::move(typed_branch));
+      schema.assign("allOf", std::move(new_allof));
+    }
+
+    if (this->has_modern_ref_ && schema.defines("$ref")) {
+      auto branch{sourcemeta::core::JSON::make_object()};
+      branch.assign("$ref", schema.at("$ref"));
+      schema.at("allOf").push_back(std::move(branch));
+      schema.erase("$ref");
+    }
+    if (this->has_dynamic_ref_ && schema.defines("$dynamicRef")) {
+      auto branch{sourcemeta::core::JSON::make_object()};
+      branch.assign("$dynamicRef", schema.at("$dynamicRef"));
+      schema.at("allOf").push_back(std::move(branch));
+      schema.erase("$dynamicRef");
+    }
+    if (this->has_recursive_ref_ && schema.defines("$recursiveRef")) {
+      auto branch{sourcemeta::core::JSON::make_object()};
+      branch.assign("$recursiveRef", schema.at("$recursiveRef"));
+      schema.at("allOf").push_back(std::move(branch));
+      schema.erase("$recursiveRef");
+    }
+
+    for (const auto &applicator : APPLICATORS_WITHOUT_ALLOF) {
+      if (!schema.defines(applicator)) {
+        continue;
+      }
+      if ((this->applicators_with_refs_ & applicator_bit(applicator)) != 0) {
+        continue;
+      }
+      auto branch{sourcemeta::core::JSON::make_object()};
+      branch.assign(applicator, schema.at(applicator));
+      if (std::string_view{applicator} == "if" && this->has_if_then_else_) {
+        if (schema.defines("then")) {
+          branch.assign("then", schema.at("then"));
+        }
+        if (schema.defines("else")) {
+          branch.assign("else", schema.at("else"));
+        }
+      }
+      schema.at("allOf").push_back(std::move(branch));
+      schema.erase(applicator);
+      if (std::string_view{applicator} == "if" && this->has_if_then_else_) {
+        if (schema.defines("then")) {
+          schema.erase("then");
+        }
+        if (schema.defines("else")) {
+          schema.erase("else");
+        }
+      }
+    }
+  }
+
+  // Every applicator beside `allOf` becomes a branch of it, so that what
+  // follows only has one shape to think about. An `if` carries its own
+  // `then` and `else` across with it
+  auto merge_applicators_into_allof(sourcemeta::core::JSON &schema) const
+      -> void {
+    for (const auto &applicator : APPLICATORS_WITHOUT_ALLOF) {
+      if (!schema.defines(applicator)) {
+        continue;
+      }
+      auto branch{sourcemeta::core::JSON::make_object()};
+      branch.assign(applicator, schema.at(applicator));
+      if (std::string_view{applicator} == "if" && this->has_if_then_else_) {
+        if (schema.defines("then")) {
+          branch.assign("then", schema.at("then"));
+        }
+        if (schema.defines("else")) {
+          branch.assign("else", schema.at("else"));
+        }
+      }
+      schema.at("allOf").push_back(std::move(branch));
+      schema.erase(applicator);
+    }
+    if (this->has_if_then_else_) {
+      if (schema.defines("then")) {
+        schema.erase("then");
+      }
+      if (schema.defines("else")) {
+        schema.erase("else");
+      }
+    }
+  }
+
   static constexpr std::array<const char *, 5> APPLICATORS{
       {"not", "anyOf", "allOf", "oneOf", "if"}};
   static constexpr std::array<const char *, 4> APPLICATORS_WITHOUT_ALLOF{

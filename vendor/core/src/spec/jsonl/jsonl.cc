@@ -30,10 +30,12 @@ JSONL::~JSONL() = default;
 auto JSONL::begin() -> JSONL::const_iterator {
   return {this->stream_, this->framing_};
 }
-auto JSONL::end() -> JSONL::const_iterator { return {nullptr}; }
+auto JSONL::end() -> JSONL::const_iterator { return {nullptr, this->framing_}; }
 auto JSONL::cbegin() -> JSONL::const_iterator {
   return {this->stream_, this->framing_};
 }
-auto JSONL::cend() -> JSONL::const_iterator { return {nullptr}; }
+auto JSONL::cend() -> JSONL::const_iterator {
+  return {nullptr, this->framing_};
+}
 
 } // namespace sourcemeta::core

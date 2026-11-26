@@ -1,36 +1,36 @@
+#include <sourcemeta/core/text.h>
 #include <sourcemeta/core/time.h>
 
 #include "helpers.h"
 
-#include <cctype>      // std::isdigit
 #include <chrono>      // std::chrono::system_clock
-#include <ctime>       // std::tm
-#include <iomanip>     // std::put_time, std::get_time
-#include <locale>      // std::locale
+#include <cstddef>     // std::size_t
 #include <optional>    // std::optional, std::nullopt
-#include <sstream>     // std::ostringstream, std::istringstream
 #include <string>      // std::string
 #include <string_view> // std::string_view
-
-namespace {
-constexpr auto FORMAT_IMF_FIXDATE{"%a, %d %b %Y %H:%M:%S GMT"};
-// The year is rendered separately so it is always four digits (RFC 9110
-// §5.6.7: "year = 4DIGIT"), which "%Y" does not guarantee for a year below 1000
-constexpr auto FORMAT_IMF_FIXDATE_BEFORE_YEAR{"%a, %d %b "};
-constexpr auto FORMAT_IMF_FIXDATE_AFTER_YEAR{" %H:%M:%S GMT"};
-} // namespace
 
 namespace sourcemeta::core {
 
 auto to_imf_fixdate(const std::chrono::system_clock::time_point time)
     -> std::string {
   const auto parts{time_point_to_broken_down(time)};
-  std::ostringstream stream;
-  stream.imbue(std::locale::classic());
-  stream << std::put_time(&parts, FORMAT_IMF_FIXDATE_BEFORE_YEAR)
-         << format_four_digit_year(parts.tm_year + 1900)
-         << std::put_time(&parts, FORMAT_IMF_FIXDATE_AFTER_YEAR);
-  return stream.str();
+  std::string result;
+  result.reserve(29);
+  result.append(DAY_NAMES[static_cast<std::size_t>(parts.weekday)]);
+  result.append(", ");
+  append_two_digits(result, parts.day);
+  result.push_back(' ');
+  result.append(MONTH_NAMES[static_cast<std::size_t>(parts.month - 1)]);
+  result.push_back(' ');
+  append_four_digit_year(result, parts.year);
+  result.push_back(' ');
+  append_two_digits(result, parts.hour);
+  result.push_back(':');
+  append_two_digits(result, parts.minute);
+  result.push_back(':');
+  append_two_digits(result, parts.second);
+  result.append(" GMT");
+  return result;
 }
 
 auto from_imf_fixdate(const std::string_view value)
@@ -43,35 +43,30 @@ auto from_imf_fixdate(const std::string_view value)
       value[22] != ':' || value[25] != ' ' || value.substr(26) != "GMT") {
     return std::nullopt;
   }
-  if ((std::isdigit(static_cast<unsigned char>(value[5])) == 0) ||
-      (std::isdigit(static_cast<unsigned char>(value[6])) == 0) ||
-      (std::isdigit(static_cast<unsigned char>(value[12])) == 0) ||
-      (std::isdigit(static_cast<unsigned char>(value[13])) == 0) ||
-      (std::isdigit(static_cast<unsigned char>(value[14])) == 0) ||
-      (std::isdigit(static_cast<unsigned char>(value[15])) == 0) ||
-      (std::isdigit(static_cast<unsigned char>(value[17])) == 0) ||
-      (std::isdigit(static_cast<unsigned char>(value[18])) == 0) ||
-      (std::isdigit(static_cast<unsigned char>(value[20])) == 0) ||
-      (std::isdigit(static_cast<unsigned char>(value[21])) == 0) ||
-      (std::isdigit(static_cast<unsigned char>(value[23])) == 0) ||
-      (std::isdigit(static_cast<unsigned char>(value[24])) == 0)) {
+  if (!is_digit(value.substr(5, 2)) || !is_digit(value.substr(12, 4)) ||
+      !is_digit(value.substr(17, 2)) || !is_digit(value.substr(20, 2)) ||
+      !is_digit(value.substr(23, 2))) {
     return std::nullopt;
   }
-  std::istringstream stream{std::string{value}};
-  stream.imbue(std::locale::classic());
-  std::tm parts = {};
-  stream >> std::get_time(&parts, FORMAT_IMF_FIXDATE);
-  if (stream.fail()) {
+  if (!is_day_name(value.substr(0, 3))) {
     return std::nullopt;
   }
+  const auto month{month_from_name(value.substr(8, 3))};
+  if (!month.has_value()) {
+    return std::nullopt;
+  }
+
+  BrokenDownTime parts{};
+  parts.month = month.value();
+  parts.day = read_two_digits(value, 5);
+  parts.year = read_four_digits(value, 12);
+  parts.hour = read_two_digits(value, 17);
+  parts.minute = read_two_digits(value, 20);
+  parts.second = read_two_digits(value, 23);
   if (!is_valid_broken_down_time(parts)) {
     return std::nullopt;
   }
-  // RFC 9110 §5.6.7: HTTP-date is case sensitive
-  if (!is_case_sensitive_day_abbreviation(value.substr(0, 3), parts.tm_wday) ||
-      !is_case_sensitive_month_abbreviation(value.substr(8, 3), parts.tm_mon)) {
-    return std::nullopt;
-  }
+
   return broken_down_time_to_time_point(parts);
 }
 

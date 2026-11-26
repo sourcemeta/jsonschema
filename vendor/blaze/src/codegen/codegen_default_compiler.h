@@ -30,6 +30,61 @@
 
 namespace sourcemeta::blaze {
 
+// The graph form moves every subschema out of the document and leaves an edge
+// in its place, so a subschema that nothing can satisfy says so from the entry
+// the edge names, and says it with the negation keyword where the dialect has
+// no boolean to say it with. What a keyword needs here is the verdict, not
+// where it ended up being written
+auto boolean_verdict(const sourcemeta::core::JSON &schema,
+                     const sourcemeta::core::SchemaFrame &frame,
+                     const sourcemeta::core::JSON &subschema,
+                     const sourcemeta::core::Pointer &pointer,
+                     const std::size_t depth = 0) -> std::optional<bool> {
+  // An edge leads to an entry, and an entry may negate another edge, so a
+  // handful of steps is every shape the form can put between the two
+  if (depth > 4 || !subschema.is_object()) {
+    return subschema.is_boolean() ? std::optional<bool>{subschema.to_boolean()}
+                                  : std::nullopt;
+  }
+
+  if (subschema.size() != 1) {
+    return std::nullopt;
+  }
+
+  if (subschema.defines("not")) {
+    auto negated_pointer{pointer};
+    negated_pointer.push_back("not");
+    const auto negated{boolean_verdict(schema, frame, subschema.at("not"),
+                                       negated_pointer, depth + 1)};
+    return negated.has_value() ? std::optional<bool>{!negated.value()}
+                               : std::nullopt;
+  }
+
+  if (!subschema.defines("$ref")) {
+    return std::nullopt;
+  }
+
+  auto reference_pointer{pointer};
+  reference_pointer.push_back("$ref");
+  const auto reference{
+      frame.reference(sourcemeta::core::SchemaReferenceType::Static,
+                      sourcemeta::core::to_weak_pointer(reference_pointer))};
+  if (!reference.has_value()) {
+    return std::nullopt;
+  }
+
+  const auto target{frame.traverse(reference.value().get().destination)};
+  if (!target.has_value()) {
+    return std::nullopt;
+  }
+
+  const auto target_pointer{
+      sourcemeta::core::to_pointer(target.value().get().pointer)};
+  return boolean_verdict(schema, frame,
+                         sourcemeta::core::get(schema, target_pointer),
+                         target_pointer, depth + 1);
+}
+
 auto handle_impossible(const sourcemeta::core::JSON &,
                        const sourcemeta::core::SchemaFrame &frame,
                        const sourcemeta::core::SchemaFrame::Location &location,
@@ -164,11 +219,16 @@ auto handle_object(const sourcemeta::core::JSON &schema,
   std::variant<bool, CodegenIRType> additional{true};
   if (subschema.defines("additionalProperties")) {
     const auto &additional_schema{subschema.at("additionalProperties")};
-    if (additional_schema.is_boolean()) {
-      additional = additional_schema.to_boolean();
+    auto verdict_pointer{sourcemeta::core::to_pointer(location.pointer)};
+    verdict_pointer.push_back("additionalProperties");
+    const auto verdict{
+        boolean_verdict(schema, frame, additional_schema, verdict_pointer)};
+    if (verdict.has_value()) {
+      // Whether the object is closed is what the keyword says here, and the
+      // form can say it from behind an edge
+      additional = verdict.value();
     } else {
-      auto additional_pointer{sourcemeta::core::to_pointer(location.pointer)};
-      additional_pointer.push_back("additionalProperties");
+      auto additional_pointer{std::move(verdict_pointer)};
 
       const auto additional_location{frame.traverse(
           sourcemeta::core::to_weak_pointer(additional_pointer))};
@@ -447,9 +507,6 @@ auto handle_anyof(const sourcemeta::core::JSON &schema,
         schema, location.pointer, "anyOf", "Expected a non-empty array value");
   }
 
-  // Canonicalisation merges a single branch into its parent
-  assert(any_of.size() >= 2);
-
   std::vector<CodegenIRType> branches;
   for (std::size_t index = 0; index < any_of.size(); ++index) {
     auto branch_pointer{sourcemeta::core::to_pointer(location.pointer)};
@@ -463,6 +520,17 @@ auto handle_anyof(const sourcemeta::core::JSON &schema,
     branches.push_back(
         {.pointer = std::move(branch_pointer),
          .symbol = symbol(frame, branch_location.value().get())});
+  }
+
+  // Where every entry of a graph that says the same thing becomes one entry, a
+  // keyword that offered a choice can come out offering one branch, and the
+  // entry holding it stays where it has something of its own to say beside it.
+  // A choice of one is what that branch leads to
+  if (branches.size() == 1) {
+    return CodegenIRReference{
+        {.pointer = sourcemeta::core::to_pointer(location.pointer),
+         .symbol = symbol(frame, location)},
+        std::move(branches.front())};
   }
 
   return CodegenIRUnion{
@@ -841,6 +909,16 @@ auto default_compiler(const sourcemeta::core::JSON &schema,
                                subschema);
   }
   if (subschema.defines("not")) {
+    // Negating the schema every instance satisfies is how a dialect whose
+    // booleans are not entries of the graph says that nothing satisfies this
+    const auto verdict{
+        boolean_verdict(schema, frame, subschema,
+                        sourcemeta::core::to_pointer(location.pointer))};
+    if (verdict.has_value() && !verdict.value()) {
+      return handle_impossible(schema, frame, location, vocabularies, resolver,
+                               subschema);
+    }
+
     throw CodegenUnsupportedKeywordError(schema, location.pointer, "not",
                                          "Unsupported keyword in subschema");
   }

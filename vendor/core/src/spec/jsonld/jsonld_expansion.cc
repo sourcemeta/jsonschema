@@ -564,6 +564,713 @@ auto expand_object(ExpansionState &state, ActiveContext active_context,
   return result;
 }
 
+// Step 13.4.4 of the Expansion algorithm, the @type entry of a map
+// (JSON-LD 1.1 API Section 5.1.2 step 13.4.4)
+auto expand_type_entry(
+    ExpansionState &state, const ActiveContext &type_context, JSON &result,
+    KeywordOrigins &origins,
+    const std::pair<const JSON::String &, const JSON &> &entry,
+    const WeakPointer &entry_pointer) -> void {
+  if (entry.second.is_array()) {
+    std::size_t type_index{0};
+    for (const auto &item : entry.second.as_array()) {
+      if (!item.is_string()) {
+        throw JSONLDError("Invalid type value",
+                          entry_pointer.concat(type_index));
+      }
+      type_index += 1;
+    }
+  } else if (!entry.second.is_string()) {
+    throw JSONLDError("Invalid type value", entry_pointer);
+  }
+  // Expand each value, preserving whether the input was a string or an
+  // array. The node-object post-processing later turns a lone string into
+  // an array, but a value object keeps its @type as a string.
+  JSON expanded_type{nullptr};
+  if (entry.second.is_array()) {
+    expanded_type = JSON::make_array();
+    std::size_t expanded_type_index{0};
+    for (const auto &item : entry.second.as_array()) {
+      // A value that does not expand to an IRI is omitted, so @type stays
+      // an array of strings.
+      auto type{expand_type(state, type_context, item)};
+      if (type.is_null()) {
+        report_drop(state, JSONLDExpandDropReason::UndefinedType,
+                    entry_pointer.concat(expanded_type_index), item);
+      } else {
+        expanded_type.push_back(std::move(type));
+      }
+      expanded_type_index += 1;
+    }
+  } else {
+    expanded_type = expand_type(state, type_context, entry.second);
+  }
+  // A lone @type value that does not expand to an IRI carries nothing,
+  // which includes carrying no blame for what the element ends up with
+  if (expanded_type.is_null()) {
+    report_drop(state, JSONLDExpandDropReason::UndefinedType, entry_pointer,
+                entry.second);
+    return;
+  }
+  origins.type = entry_pointer;
+  if (result.defines(KEYWORD_TYPE, KEYWORD_TYPE_HASH)) {
+    auto merged{
+        into_array(std::move(result.at(KEYWORD_TYPE, KEYWORD_TYPE_HASH)))};
+    auto expanded_type_array{into_array(std::move(expanded_type))};
+    for (auto &item : expanded_type_array.as_array()) {
+      merged.push_back(item);
+    }
+    result.assign(KEYWORD_TYPE, std::move(merged));
+  } else {
+    result.assign_assume_new(JSON::String{KEYWORD_TYPE},
+                             std::move(expanded_type), KEYWORD_TYPE_HASH);
+  }
+}
+
+// Steps 13.4.11 and 13.4.12 of the Expansion algorithm, the @list and
+// @set entries of a map (JSON-LD 1.1 API Section 5.1.2 steps 13.4.11,
+// 13.4.12)
+auto expand_collection_entry(
+    ExpansionState &state, ActiveContext &active_context, JSON &result,
+    KeywordOrigins &origins, const std::optional<JSON::String> &active_property,
+    const WeakPointer &source_pointer,
+    const std::pair<const JSON::String &, const JSON &> &entry,
+    const WeakPointer &entry_pointer, const JSON::String &name) -> void {
+  // A free-floating list is removed before its items are expanded
+  // (JSON-LD 1.1 API Section 5.1.2 step 13.4.11.1)
+  if (name == KEYWORD_LIST && (!active_property.has_value() ||
+                               active_property.value() == KEYWORD_GRAPH)) {
+    report_drop(state, JSONLDExpandDropReason::FreeFloatingValue, entry_pointer,
+                entry.second);
+    return;
+  }
+
+  // A set object expands its value as it stands rather than as an array,
+  // so a null value expands to null and the collapse below leaves nothing
+  // for the enclosing property to carry (JSON-LD 1.1 API Section 5.1.2
+  // steps 13.4.12 and 18.2)
+  if (name == KEYWORD_SET && entry.second.is_null()) {
+    report_drop(state, JSONLDExpandDropReason::NullValue, entry_pointer,
+                entry.second);
+    origins.collection = source_pointer;
+    result.assign(name, JSON{nullptr});
+    return;
+  }
+
+  origins.collection = source_pointer;
+  auto elements{JSON::make_array()};
+  const auto values{into_array(JSON{entry.second})};
+  std::size_t value_index{0};
+  for (const auto &item : values.as_array()) {
+    const WeakPointer item_pointer{entry.second.is_array()
+                                       ? entry_pointer.concat(value_index)
+                                       : entry_pointer};
+    auto expanded_item{
+        expand(state, active_context, active_property, item, item_pointer)};
+    if (expanded_item.is_array()) {
+      for (auto &nested : expanded_item.as_array()) {
+        elements.push_back(nested);
+      }
+    } else if (!expanded_item.is_null()) {
+      elements.push_back(std::move(expanded_item));
+    }
+    value_index += 1;
+  }
+  // JSON-LD 1.0 refuses a list among the items of a list, whichever
+  // keyword hands those items over (JSON-LD 1.0 API Expansion Algorithm
+  // step 3.2)
+  if (state.processing_1_0 &&
+      collects_into_a_list(active_context, active_property, name)) {
+    for (const auto &item : elements.as_array()) {
+      if (is_list_object(item)) {
+        throw JSONLDError("List of lists",
+                          forbidden_member_pointer(
+                              state, active_context, active_property,
+                              entry.second, entry_pointer, is_list_object));
+      }
+    }
+  }
+  result.assign(name, std::move(elements));
+}
+
+// Step 13.4.6 of the Expansion algorithm, the @included entry of a map
+// (JSON-LD 1.1 API Section 5.1.2 step 13.4.6)
+auto expand_included_entry(
+    ExpansionState &state, ActiveContext &active_context, JSON &result,
+    const std::pair<const JSON::String &, const JSON &> &entry,
+    const WeakPointer &entry_pointer) -> void {
+  if (state.processing_1_0) {
+    return;
+  }
+  // Step 13.4.7.2 expands the value with a null active property, which
+  // would drop the free-floating values step 13.4.7.3 has to reject, so
+  // the official suite requires a value that is a scalar, a value object,
+  // or a list object to be an error rather than nothing (suite entries
+  // #tin07 to #tin09). The keyword stands in as the active property so
+  // that nothing is dropped before being judged, which also keeps the
+  // identifier-only node references that the step admits. Each member is
+  // expanded on its own, so what goes wrong names the input position it
+  // came from (JSON-LD 1.1 API Section 5.1.2 steps 13.4.7.2 and 13.4.7.3)
+  auto included{JSON::make_array()};
+  const bool from_array{entry.second.is_array()};
+  const auto members{into_array(JSON{entry.second})};
+  std::size_t member_index{0};
+  for (const auto &member : members.as_array()) {
+    const WeakPointer member_pointer{
+        from_array ? entry_pointer.concat(member_index) : entry_pointer};
+    auto expanded_member{expand(state, active_context,
+                                JSON::String{KEYWORD_INCLUDED}, member,
+                                member_pointer)};
+    // A null member of an array carries nothing over, the way step 5.2.3
+    // drops one from any array, whereas a lone null value is no included
+    // block at all and is held to the same account as any other member
+    // (JSON-LD 1.1 Section 9.13, JSON-LD 1.1 API Section 5.1.2 step 5.2.3)
+    auto member_items{
+        included_member_items(from_array, std::move(expanded_member))};
+    for (auto &item : member_items.as_array()) {
+      if (is_not_node_object(item)) {
+        throw JSONLDError(
+            "Invalid @included value",
+            forbidden_member_pointer(state, active_context,
+                                     JSON::String{KEYWORD_INCLUDED}, member,
+                                     member_pointer, is_not_node_object));
+      }
+      included.push_back(std::move(item));
+    }
+    member_index += 1;
+  }
+  merge(result, KEYWORD_INCLUDED, std::move(included));
+}
+
+// Step 13.4.13 of the Expansion algorithm, the @reverse entry of a map
+// (JSON-LD 1.1 API Section 5.1.2 step 13.4.13)
+auto expand_reverse_entry(
+    ExpansionState &state, ActiveContext &active_context, JSON &result,
+    const std::pair<const JSON::String &, const JSON &> &entry,
+    const WeakPointer &entry_pointer) -> void {
+  if (!entry.second.is_object()) {
+    throw JSONLDError("Invalid @reverse value", entry_pointer);
+  }
+  auto reversed{expand(state, active_context, JSON::String{KEYWORD_REVERSE},
+                       entry.second, entry_pointer)};
+  if (reversed.is_object()) {
+    // A keyword whose entry the node already carries is refused as a
+    // collision further up this very loop, so the map is always made here
+    // rather than added to. Two terms carrying a reverse mapping reach the
+    // same map through the merge below instead
+    assert(result.try_at(KEYWORD_REVERSE, KEYWORD_REVERSE_HASH) == nullptr);
+    auto reverse_map{JSON::make_object()};
+    for (const auto &reverse_entry : reversed.as_object()) {
+      const auto &reverse_property{reverse_entry.first};
+      if (reverse_entry.key_equals(KEYWORD_REVERSE, KEYWORD_REVERSE_HASH)) {
+        for (const auto &forward : reverse_entry.second.as_object()) {
+          merge(result, JSON::StringView{forward.first},
+                into_array(JSON{forward.second}));
+        }
+      } else {
+        const auto reverse_values{into_array(JSON{reverse_entry.second})};
+        for (const auto &item : reverse_values.as_array()) {
+          if (is_value_or_list_object(item)) {
+            const SuspendedDropReportingScope silent{state};
+            // The map carries its own context into how its keys expand, so
+            // what it says wrong is located against that same context,
+            // which is only worth putting together to report it. Reading
+            // it again outside the expansion that already took it may not
+            // go through, and a location is not worth an error of its own
+            ActiveContext reverse_context{active_context};
+            if (entry.second.defines(KEYWORD_CONTEXT, KEYWORD_CONTEXT_HASH)) {
+              try {
+                process_context(
+                    state, reverse_context,
+                    entry.second.at(KEYWORD_CONTEXT, KEYWORD_CONTEXT_HASH),
+                    entry_pointer.concat(keyword_context()));
+              } catch (const JSONLDError &) {
+                reverse_context = active_context;
+              }
+            }
+
+            // Several keys of the map may reach the same reverse
+            // property, and what they carry is merged before it is
+            // inspected, so each is expanded again to find the one that
+            // holds the offending member
+            for (const auto &[input_key, input_value] :
+                 sorted_entries(entry.second)) {
+              const auto input_property{
+                  expand_iri(state, reverse_context, *input_key, false, true,
+                             nullptr, nullptr, EMPTY_WEAK_POINTER)};
+              if (!input_property.has_value() ||
+                  input_property.value() != reverse_property) {
+                continue;
+              }
+              const WeakPointer input_pointer{entry_pointer.concat(*input_key)};
+              if (holds_forbidden_member(expand(state, reverse_context,
+                                                *input_key, *input_value,
+                                                input_pointer),
+                                         is_value_or_list_object)) {
+                throw JSONLDError(
+                    "Invalid reverse property value",
+                    forbidden_member_pointer(state, reverse_context, *input_key,
+                                             *input_value, input_pointer,
+                                             is_value_or_list_object));
+              }
+            }
+
+            throw JSONLDError("Invalid reverse property value", entry_pointer);
+          }
+        }
+        merge(reverse_map, reverse_property,
+              into_array(JSON{reverse_entry.second}));
+      }
+    }
+    result.assign(KEYWORD_REVERSE, std::move(reverse_map));
+  }
+}
+// Step 13.4 of the Expansion algorithm: the branch per keyword that an
+// expanded property can name. Every branch below names a keyword, so the
+// caller is the one that decides whether the entry is one at all (JSON-LD
+// 1.1 API Section 5.1.2 step 13.4)
+auto expand_keyword_entry(
+    ExpansionState &state, ActiveContext &active_context,
+    const ActiveContext &type_context, JSON &result, KeywordOrigins &origins,
+    const std::optional<JSON::String> &active_property,
+    const WeakPointer &source_pointer,
+    const std::pair<const JSON::String &, const JSON &> &entry,
+    const WeakPointer &entry_pointer, const JSON::String &name) -> void {
+  if (name == KEYWORD_ID) {
+    if (!entry.second.is_string()) {
+      throw JSONLDError("Invalid @id value", entry_pointer);
+    }
+    const auto identifier{expand_iri(state, active_context,
+                                     entry.second.to_string(), true, false,
+                                     nullptr, nullptr, EMPTY_WEAK_POINTER)};
+    if (identifier.has_value()) {
+      result.assign_assume_new(JSON::String{KEYWORD_ID},
+                               JSON{identifier.value()}, KEYWORD_ID_HASH);
+    } else {
+      result.assign_assume_new(JSON::String{KEYWORD_ID}, JSON{nullptr},
+                               KEYWORD_ID_HASH);
+    }
+    return;
+  }
+
+  if (name == KEYWORD_TYPE) {
+    expand_type_entry(state, type_context, result, origins, entry,
+                      entry_pointer);
+    return;
+  }
+
+  if (name == KEYWORD_VALUE) {
+    origins.value = entry_pointer;
+    result.assign_assume_new(JSON::String{KEYWORD_VALUE}, JSON{entry.second},
+                             KEYWORD_VALUE_HASH);
+    return;
+  }
+
+  if (name == KEYWORD_LANGUAGE) {
+    if (!entry.second.is_string()) {
+      throw JSONLDError("Invalid language-tagged string", entry_pointer);
+    }
+    result.assign_assume_new(JSON::String{KEYWORD_LANGUAGE}, JSON{entry.second},
+                             KEYWORD_LANGUAGE_HASH);
+    return;
+  }
+
+  if (name == KEYWORD_DIRECTION) {
+    if (state.processing_1_0) {
+      return;
+    }
+    if (!entry.second.is_string() || (entry.second.to_string() != "ltr" &&
+                                      entry.second.to_string() != "rtl")) {
+      throw JSONLDError("Invalid base direction", entry_pointer);
+    }
+    result.assign_assume_new(JSON::String{KEYWORD_DIRECTION},
+                             JSON{entry.second}, KEYWORD_DIRECTION_HASH);
+    return;
+  }
+
+  if (name == KEYWORD_LIST || name == KEYWORD_SET) {
+    expand_collection_entry(state, active_context, result, origins,
+                            active_property, source_pointer, entry,
+                            entry_pointer, name);
+    return;
+  }
+
+  if (name == KEYWORD_GRAPH) {
+    // @graph expands to an array of node objects, so a value that expands to
+    // null contributes no element rather than a null one.
+    auto graph{expand(state, active_context, JSON::String{KEYWORD_GRAPH},
+                      entry.second, entry_pointer)};
+    merge(result, KEYWORD_GRAPH,
+          graph.is_null() ? JSON::make_array() : into_array(std::move(graph)));
+    return;
+  }
+
+  if (name == KEYWORD_INCLUDED) {
+    expand_included_entry(state, active_context, result, entry, entry_pointer);
+    return;
+  }
+
+  if (name == KEYWORD_INDEX) {
+    if (!entry.second.is_string()) {
+      throw JSONLDError("Invalid @index value", entry_pointer);
+    }
+    result.assign_assume_new(JSON::String{KEYWORD_INDEX}, JSON{entry.second},
+                             KEYWORD_INDEX_HASH);
+    return;
+  }
+
+  if (name == KEYWORD_REVERSE) {
+    expand_reverse_entry(state, active_context, result, entry, entry_pointer);
+    return;
+  }
+
+  // Keywords with no property-level handler (such as @vocab or @none
+  // reached through an alias) carry no expanded value, so the Expansion
+  // algorithm adds nothing to the result for them.
+  report_drop(state, JSONLDExpandDropReason::UnhandledKeyword, entry_pointer,
+              entry.second);
+}
+
+// Part of step 13.8 of the Expansion algorithm: a value that a @graph
+// container indexes by @id or by @index (JSON-LD 1.1 API Section 5.1.2
+// step 13.8)
+auto expand_graph_map_entry(
+    ExpansionState &state, ActiveContext &active_context,
+    const TermDefinition *definition, const JSON::String &property,
+    const std::pair<const JSON::String &, const JSON &> &entry,
+    const WeakPointer &entry_pointer, JSON &expanded_value) -> void {
+  const bool by_id{container_includes(definition, KEYWORD_ID)};
+  // An index mapping is held to naming an IRI that is no keyword when the
+  // term is made, so a term naming one names a property to index by
+  // (JSON-LD 1.1 API Section 4.2.2 step 21.2)
+  const bool property_valued{definition->index.has_value()};
+  std::optional<JSON::String> index_property;
+  if (property_valued) {
+    index_property =
+        expand_iri(state, active_context, definition->index.value(), false,
+                   true, nullptr, nullptr, EMPTY_WEAK_POINTER);
+  }
+  expanded_value = JSON::make_array();
+  for (const auto &[graph_key, graph_value] : sorted_entries(entry.second)) {
+    const JSON::String &index{*graph_key};
+    const auto expanded_key{index == KEYWORD_NONE
+                                ? std::optional<JSON::String>{KEYWORD_NONE}
+                                : expand_iri(state, active_context, index, true,
+                                             false, nullptr, nullptr,
+                                             EMPTY_WEAK_POINTER)};
+    const bool none_key{expanded_key.has_value() &&
+                        expanded_key.value() == KEYWORD_NONE};
+    auto graph_items{
+        into_array(expand(state, active_context, property, *graph_value,
+                          entry_pointer.concat(index), true))};
+    for (auto &item : graph_items.as_array()) {
+      // Nothing is carried over for a null, as in an array (JSON-LD 1.1
+      // API Section 5.1.2 step 5.2.3)
+      if (item.is_null()) {
+        continue;
+      }
+
+      // Wrap the item in a graph object, unless it is already one. What
+      // the container gathered is a map, anything null having been passed
+      // over just above
+      JSON graph{nullptr};
+      assert(item.is_object());
+      if (item.defines(KEYWORD_GRAPH, KEYWORD_GRAPH_HASH)) {
+        graph = std::move(item);
+      } else {
+        graph = JSON::make_object();
+        graph.assign_assume_new(JSON::String{KEYWORD_GRAPH},
+                                into_array(std::move(item)),
+                                KEYWORD_GRAPH_HASH);
+      }
+      if (!none_key) {
+        if (by_id) {
+          // The name comes out of expanding the key, and a key shaped like
+          // a keyword expands to nothing, leaving the algorithm with
+          // nothing to add rather than a name of its own invention. An
+          // index container keys by the key as written instead, which is
+          // why only this one goes through expansion (JSON-LD 1.1 API
+          // Section 5.1.2)
+          if (!graph.defines(KEYWORD_ID, KEYWORD_ID_HASH) &&
+              expanded_key.has_value()) {
+            graph.assign_assume_new(JSON::String{KEYWORD_ID},
+                                    JSON{expanded_key.value()},
+                                    KEYWORD_ID_HASH);
+          }
+        } else if (property_valued) {
+          // A term that no longer names anything carries no metadata
+          // (JSON-LD 1.1 API Section 5.1.2 step 13.8.3.7.2)
+          if (index_property.has_value()) {
+            auto combined{into_array(expand_value(
+                state, active_context, definition->index, JSON{index}))};
+            if (graph.defines(index_property.value())) {
+              for (auto &existing :
+                   graph.at(index_property.value()).as_array()) {
+                combined.push_back(existing);
+              }
+            }
+            graph.assign(index_property.value(), std::move(combined));
+          }
+        } else if (!graph.defines(KEYWORD_INDEX, KEYWORD_INDEX_HASH)) {
+          graph.assign_assume_new(JSON::String{KEYWORD_INDEX}, JSON{index},
+                                  KEYWORD_INDEX_HASH);
+        }
+      }
+      expanded_value.push_back(std::move(graph));
+    }
+  }
+}
+
+// Part of the Expansion algorithm: a value that an @language container
+// indexes, where each member is a language tag (JSON-LD 1.1 API Section
+// 5.1.2)
+auto expand_language_map_entry(
+    ExpansionState &state, ActiveContext &active_context,
+    const TermDefinition *definition,
+    const std::pair<const JSON::String &, const JSON &> &entry,
+    const WeakPointer &entry_pointer, JSON &expanded_value) -> void {
+  expanded_value = JSON::make_array();
+  for (const auto &[language_key, language_value] :
+       sorted_entries(entry.second)) {
+    const JSON::String &language{*language_key};
+    const auto expanded_language{expand_iri(state, active_context, language,
+                                            false, true, nullptr, nullptr,
+                                            EMPTY_WEAK_POINTER)};
+    const bool is_none{language == KEYWORD_NONE ||
+                       (expanded_language.has_value() &&
+                        expanded_language.value() == KEYWORD_NONE)};
+    const WeakPointer language_pointer{entry_pointer.concat(language)};
+    const bool language_array{language_value->is_array()};
+    auto language_items{into_array(JSON{*language_value})};
+    std::size_t language_index{0};
+    for (auto &item : language_items.as_array()) {
+      const WeakPointer item_pointer{
+          language_array ? language_pointer.concat(language_index)
+                         : language_pointer};
+      language_index += 1;
+      if (item.is_null()) {
+        report_drop(state, JSONLDExpandDropReason::NullValue, item_pointer,
+                    item);
+        continue;
+      }
+      if (!item.is_string()) {
+        throw JSONLDError("Invalid language map value", item_pointer);
+      }
+      auto value{JSON::make_object()};
+      value.assign_assume_new(JSON::String{KEYWORD_VALUE}, JSON{item},
+                              KEYWORD_VALUE_HASH);
+      if (!is_none) {
+        value.assign_assume_new(JSON::String{KEYWORD_LANGUAGE}, JSON{language},
+                                KEYWORD_LANGUAGE_HASH);
+      }
+      const auto direction{definition->has_direction
+                               ? definition->direction
+                               : active_context.default_direction};
+      if (direction.has_value()) {
+        value.assign_assume_new(JSON::String{KEYWORD_DIRECTION},
+                                JSON{direction.value()},
+                                KEYWORD_DIRECTION_HASH);
+      }
+      expanded_value.push_back(std::move(value));
+    }
+  }
+}
+
+// Part of step 13.8 of the Expansion algorithm: a value that an @index
+// container indexes (JSON-LD 1.1 API Section 5.1.2 step 13.8)
+auto expand_index_map_entry(
+    ExpansionState &state, ActiveContext &active_context,
+    const TermDefinition *definition, const JSON::String &property,
+    const std::pair<const JSON::String &, const JSON &> &entry,
+    const WeakPointer &entry_pointer, JSON &expanded_value) -> void {
+  // An index mapping is held to naming an IRI that is no keyword when the
+  // term is made, so a term naming one names a property to index by
+  // (JSON-LD 1.1 API Section 4.2.2 step 21.2)
+  const bool property_valued{definition->index.has_value()};
+  std::optional<JSON::String> index_property;
+  if (property_valued) {
+    index_property =
+        expand_iri(state, active_context, definition->index.value(), false,
+                   true, nullptr, nullptr, EMPTY_WEAK_POINTER);
+  }
+  expanded_value = JSON::make_array();
+  for (const auto &[index_key, index_value] : sorted_entries(entry.second)) {
+    const JSON::String &index{*index_key};
+    // Step 13.8.3.4 initialises "expanded index to the result of IRI
+    // expanding index", and every step that goes on to add index metadata
+    // requires that "expanded index is not @none", so an alias of the
+    // keyword suppresses the metadata exactly as the keyword does
+    // (JSON-LD 1.1 API Section 5.1.2 steps 13.8.3.4 and 13.8.3.7.2 to
+    // 13.8.3.7.5)
+    const auto expanded_index{expand_iri(state, active_context, index, false,
+                                         true, nullptr, nullptr,
+                                         EMPTY_WEAK_POINTER)};
+    const bool index_is_none{expanded_index.has_value() &&
+                             expanded_index.value() == KEYWORD_NONE};
+    auto index_items{
+        into_array(expand(state, active_context, property, *index_value,
+                          entry_pointer.concat(index), true))};
+    for (auto &item : index_items.as_array()) {
+      // An entry of a map expands the way it would as a member of an
+      // array, where nothing is carried over for a null (JSON-LD 1.1 API
+      // Section 5.1.2 step 5.2.3), so the steps below only ever see a value
+      if (item.is_null()) {
+        continue;
+      }
+
+      if (!index_is_none) {
+        if (property_valued) {
+          // A term that no longer names anything carries no metadata, and
+          // the value object check that follows the addition does not
+          // apply when nothing was added (JSON-LD 1.1 API Section 5.1.2
+          // step 13.8.3.7.2)
+          if (index_property.has_value()) {
+            if (is_value_object(item)) {
+              throw JSONLDError("Invalid value object",
+                                forbidden_member_pointer(
+                                    state, active_context, property,
+                                    *index_value, entry_pointer.concat(index),
+                                    is_value_object));
+            }
+            // The index value is prepended to any existing values.
+            auto combined{into_array(expand_value(
+                state, active_context, definition->index, JSON{index}))};
+            if (item.defines(index_property.value())) {
+              for (auto &existing :
+                   item.at(index_property.value()).as_array()) {
+                combined.push_back(existing);
+              }
+            }
+            item.assign(index_property.value(), std::move(combined));
+          }
+        } else if (!item.defines(KEYWORD_INDEX, KEYWORD_INDEX_HASH)) {
+          item.assign_assume_new(JSON::String{KEYWORD_INDEX}, JSON{index},
+                                 KEYWORD_INDEX_HASH);
+        }
+      }
+      expanded_value.push_back(item);
+    }
+  }
+}
+
+// Part of step 13.8 of the Expansion algorithm: a value that an @id or an
+// @type container indexes (JSON-LD 1.1 API Section 5.1.2 step 13.8)
+auto expand_id_type_map_entry(
+    ExpansionState &state, ActiveContext &active_context,
+    const TermDefinition *definition, const JSON::String &property,
+    const std::pair<const JSON::String &, const JSON &> &entry,
+    const WeakPointer &entry_pointer, JSON &expanded_value) -> void {
+  const bool by_id{container_includes(definition, KEYWORD_ID)};
+  expanded_value = JSON::make_array();
+  for (const auto &[map_key, map_value] : sorted_entries(entry.second)) {
+    const JSON::String &index{*map_key};
+    std::optional<JSON::String> expanded_index;
+    if (index != KEYWORD_NONE) {
+      expanded_index = expand_iri(state, active_context, index, by_id, !by_id,
+                                  nullptr, nullptr, EMPTY_WEAK_POINTER);
+    }
+    // The key may be an alias of @none, which carries no identifier.
+    if (expanded_index.has_value() && expanded_index.value() == KEYWORD_NONE) {
+      expanded_index = std::nullopt;
+    }
+    // A type map key may carry a type-scoped context for its values.
+    // Type-scoped contexts do not propagate, so the values are resolved
+    // against the context that preceded the containing type-scoped
+    // context, with only this key's context layered on top.
+    const ActiveContext *base_context{&active_context};
+    if (active_context.previous && !by_id) {
+      base_context = active_context.previous.get();
+    }
+    ActiveContext entry_context{*base_context};
+    if (!by_id) {
+      // Resolve the type term against the context the copy was made from,
+      // which outlives the copy being mutated below.
+      const auto type_definition{base_context->terms.find(index)};
+      if (type_definition != base_context->terms.cend() &&
+          type_definition->second.context.has_value()) {
+        process_deferred_scoped_context(state, entry_context,
+                                        type_definition->second, true);
+        entry_context.previous = nullptr;
+      }
+    }
+    // String values in a type map are node references. The recursion the
+    // other values take would expand them under the property's own
+    // context, so the shortcut carries it too (JSON-LD 1.1 API Section
+    // 5.1.2 steps 13.8.3.6 and 4.2)
+    ActiveContext reference_scope;
+    ActiveContext *reference_context{&entry_context};
+    if (!by_id && definition->context.has_value()) {
+      reference_scope = entry_context;
+      reference_scope.previous = nullptr;
+      apply_scoped_context(state, reference_scope, *definition);
+      reference_context = &reference_scope;
+    }
+
+    auto entries{JSON::make_array()};
+    const bool value_array{map_value->is_array()};
+    auto raw_values{into_array(JSON{*map_value})};
+    std::size_t raw_index{0};
+    for (auto &raw : raw_values.as_array()) {
+      // An entry holding an array is located by the element the value came
+      // from, as an array of properties is
+      const WeakPointer entry_value_pointer{entry_pointer.concat(index)};
+      const WeakPointer raw_pointer{value_array
+                                        ? entry_value_pointer.concat(raw_index)
+                                        : entry_value_pointer};
+      raw_index += 1;
+      if (raw.is_string() && !by_id) {
+        auto reference{JSON::make_object()};
+        // A container that gathers by type is given a type mapping when
+        // the term is made, defaulting to the identifier (JSON-LD 1.1 API
+        // Section 4.2.2 step 21.4.1)
+        assert(definition->type_mapping.has_value());
+        const bool reference_vocab{definition->type_mapping.value() ==
+                                   KEYWORD_VOCAB};
+        const auto &raw_string{raw.to_string()};
+        const auto referenced{expand_iri(state, *reference_context, raw_string,
+                                         true, reference_vocab, nullptr,
+                                         nullptr, EMPTY_WEAK_POINTER)};
+        reference.assign_assume_new(JSON::String{KEYWORD_ID},
+                                    JSON{referenced.value_or(raw_string)},
+                                    KEYWORD_ID_HASH);
+        entries.push_back(std::move(reference));
+      } else {
+        auto expanded_items{into_array(
+            expand(state, entry_context, property, raw, raw_pointer, true))};
+        for (auto &expanded : expanded_items.as_array()) {
+          // Nothing is carried over for a null, as in an array
+          // (JSON-LD 1.1 API Section 5.1.2 step 5.2.3)
+          if (!expanded.is_null()) {
+            entries.push_back(expanded);
+          }
+        }
+      }
+    }
+    for (auto &item : entries.as_array()) {
+      if (expanded_index.has_value()) {
+        if (by_id) {
+          if (!item.defines(KEYWORD_ID, KEYWORD_ID_HASH)) {
+            item.assign_assume_new(JSON::String{KEYWORD_ID},
+                                   JSON{expanded_index.value()},
+                                   KEYWORD_ID_HASH);
+          }
+        } else {
+          auto types{JSON::make_array()};
+          types.push_back(JSON{expanded_index.value()});
+          if (item.defines(KEYWORD_TYPE, KEYWORD_TYPE_HASH)) {
+            auto existing_types{into_array(
+                std::move(item.at(KEYWORD_TYPE, KEYWORD_TYPE_HASH)))};
+            for (auto &existing : existing_types.as_array()) {
+              types.push_back(existing);
+            }
+          }
+          item.assign(KEYWORD_TYPE, std::move(types));
+        }
+      }
+      expanded_value.push_back(item);
+    }
+  }
+}
 auto expand_entries(ExpansionState &state, ActiveContext &active_context,
                     const ActiveContext &type_context, JSON &result,
                     KeywordOrigins &origins,
@@ -644,323 +1351,10 @@ auto expand_entries(ExpansionState &state, ActiveContext &active_context,
       throw JSONLDError("Colliding keywords", entry_pointer);
     }
 
-    if (name == KEYWORD_ID) {
-      if (!entry.second.is_string()) {
-        throw JSONLDError("Invalid @id value", entry_pointer);
-      }
-      const auto identifier{expand_iri(state, active_context,
-                                       entry.second.to_string(), true, false,
-                                       nullptr, nullptr, EMPTY_WEAK_POINTER)};
-      if (identifier.has_value()) {
-        result.assign_assume_new(JSON::String{KEYWORD_ID},
-                                 JSON{identifier.value()}, KEYWORD_ID_HASH);
-      } else {
-        result.assign_assume_new(JSON::String{KEYWORD_ID}, JSON{nullptr},
-                                 KEYWORD_ID_HASH);
-      }
-      continue;
-    }
-
-    if (name == KEYWORD_TYPE) {
-      if (entry.second.is_array()) {
-        std::size_t type_index{0};
-        for (const auto &item : entry.second.as_array()) {
-          if (!item.is_string()) {
-            throw JSONLDError("Invalid type value",
-                              entry_pointer.concat(type_index));
-          }
-          type_index += 1;
-        }
-      } else if (!entry.second.is_string()) {
-        throw JSONLDError("Invalid type value", entry_pointer);
-      }
-      // Expand each value, preserving whether the input was a string or an
-      // array. The node-object post-processing later turns a lone string into
-      // an array, but a value object keeps its @type as a string.
-      JSON expanded_type{nullptr};
-      if (entry.second.is_array()) {
-        expanded_type = JSON::make_array();
-        std::size_t expanded_type_index{0};
-        for (const auto &item : entry.second.as_array()) {
-          // A value that does not expand to an IRI is omitted, so @type stays
-          // an array of strings.
-          auto type{expand_type(state, type_context, item)};
-          if (type.is_null()) {
-            report_drop(state, JSONLDExpandDropReason::UndefinedType,
-                        entry_pointer.concat(expanded_type_index), item);
-          } else {
-            expanded_type.push_back(std::move(type));
-          }
-          expanded_type_index += 1;
-        }
-      } else {
-        expanded_type = expand_type(state, type_context, entry.second);
-      }
-      // A lone @type value that does not expand to an IRI carries nothing,
-      // which includes carrying no blame for what the element ends up with
-      if (expanded_type.is_null()) {
-        report_drop(state, JSONLDExpandDropReason::UndefinedType, entry_pointer,
-                    entry.second);
-        continue;
-      }
-      origins.type = entry_pointer;
-      if (result.defines(KEYWORD_TYPE, KEYWORD_TYPE_HASH)) {
-        auto merged{
-            into_array(std::move(result.at(KEYWORD_TYPE, KEYWORD_TYPE_HASH)))};
-        auto expanded_type_array{into_array(std::move(expanded_type))};
-        for (auto &item : expanded_type_array.as_array()) {
-          merged.push_back(item);
-        }
-        result.assign(KEYWORD_TYPE, std::move(merged));
-      } else {
-        result.assign_assume_new(JSON::String{KEYWORD_TYPE},
-                                 std::move(expanded_type), KEYWORD_TYPE_HASH);
-      }
-      continue;
-    }
-
-    if (name == KEYWORD_VALUE) {
-      origins.value = entry_pointer;
-      result.assign_assume_new(JSON::String{KEYWORD_VALUE}, JSON{entry.second},
-                               KEYWORD_VALUE_HASH);
-      continue;
-    }
-
-    if (name == KEYWORD_LANGUAGE) {
-      if (!entry.second.is_string()) {
-        throw JSONLDError("Invalid language-tagged string", entry_pointer);
-      }
-      result.assign_assume_new(JSON::String{KEYWORD_LANGUAGE},
-                               JSON{entry.second}, KEYWORD_LANGUAGE_HASH);
-      continue;
-    }
-
-    if (name == KEYWORD_DIRECTION) {
-      if (state.processing_1_0) {
-        continue;
-      }
-      if (!entry.second.is_string() || (entry.second.to_string() != "ltr" &&
-                                        entry.second.to_string() != "rtl")) {
-        throw JSONLDError("Invalid base direction", entry_pointer);
-      }
-      result.assign_assume_new(JSON::String{KEYWORD_DIRECTION},
-                               JSON{entry.second}, KEYWORD_DIRECTION_HASH);
-      continue;
-    }
-
-    if (name == KEYWORD_LIST || name == KEYWORD_SET) {
-      // A free-floating list is removed before its items are expanded
-      // (JSON-LD 1.1 API Section 5.1.2 step 13.4.11.1)
-      if (name == KEYWORD_LIST && (!active_property.has_value() ||
-                                   active_property.value() == KEYWORD_GRAPH)) {
-        report_drop(state, JSONLDExpandDropReason::FreeFloatingValue,
-                    entry_pointer, entry.second);
-        continue;
-      }
-
-      // A set object expands its value as it stands rather than as an array,
-      // so a null value expands to null and the collapse below leaves nothing
-      // for the enclosing property to carry (JSON-LD 1.1 API Section 5.1.2
-      // steps 13.4.12 and 18.2)
-      if (name == KEYWORD_SET && entry.second.is_null()) {
-        report_drop(state, JSONLDExpandDropReason::NullValue, entry_pointer,
-                    entry.second);
-        origins.collection = source_pointer;
-        result.assign(name, JSON{nullptr});
-        continue;
-      }
-
-      origins.collection = source_pointer;
-      auto elements{JSON::make_array()};
-      const auto values{into_array(JSON{entry.second})};
-      std::size_t value_index{0};
-      for (const auto &item : values.as_array()) {
-        const WeakPointer item_pointer{entry.second.is_array()
-                                           ? entry_pointer.concat(value_index)
-                                           : entry_pointer};
-        auto expanded_item{
-            expand(state, active_context, active_property, item, item_pointer)};
-        if (expanded_item.is_array()) {
-          for (auto &nested : expanded_item.as_array()) {
-            elements.push_back(nested);
-          }
-        } else if (!expanded_item.is_null()) {
-          elements.push_back(std::move(expanded_item));
-        }
-        value_index += 1;
-      }
-      // JSON-LD 1.0 refuses a list among the items of a list, whichever
-      // keyword hands those items over (JSON-LD 1.0 API Expansion Algorithm
-      // step 3.2)
-      if (state.processing_1_0 &&
-          collects_into_a_list(active_context, active_property, name)) {
-        for (const auto &item : elements.as_array()) {
-          if (is_list_object(item)) {
-            throw JSONLDError("List of lists",
-                              forbidden_member_pointer(
-                                  state, active_context, active_property,
-                                  entry.second, entry_pointer, is_list_object));
-          }
-        }
-      }
-      result.assign(name, std::move(elements));
-      continue;
-    }
-
-    if (name == KEYWORD_GRAPH) {
-      // @graph expands to an array of node objects, so a value that expands to
-      // null contributes no element rather than a null one.
-      auto graph{expand(state, active_context, JSON::String{KEYWORD_GRAPH},
-                        entry.second, entry_pointer)};
-      merge(result, KEYWORD_GRAPH,
-            graph.is_null() ? JSON::make_array()
-                            : into_array(std::move(graph)));
-      continue;
-    }
-
-    if (name == KEYWORD_INCLUDED) {
-      if (state.processing_1_0) {
-        continue;
-      }
-      // Step 13.4.7.2 expands the value with a null active property, which
-      // would drop the free-floating values step 13.4.7.3 has to reject, so
-      // the official suite requires a value that is a scalar, a value object,
-      // or a list object to be an error rather than nothing (suite entries
-      // #tin07 to #tin09). The keyword stands in as the active property so
-      // that nothing is dropped before being judged, which also keeps the
-      // identifier-only node references that the step admits. Each member is
-      // expanded on its own, so what goes wrong names the input position it
-      // came from (JSON-LD 1.1 API Section 5.1.2 steps 13.4.7.2 and 13.4.7.3)
-      auto included{JSON::make_array()};
-      const bool from_array{entry.second.is_array()};
-      const auto members{into_array(JSON{entry.second})};
-      std::size_t member_index{0};
-      for (const auto &member : members.as_array()) {
-        const WeakPointer member_pointer{
-            from_array ? entry_pointer.concat(member_index) : entry_pointer};
-        auto expanded_member{expand(state, active_context,
-                                    JSON::String{KEYWORD_INCLUDED}, member,
-                                    member_pointer)};
-        // A null member of an array carries nothing over, the way step 5.2.3
-        // drops one from any array, whereas a lone null value is no included
-        // block at all and is held to the same account as any other member
-        // (JSON-LD 1.1 Section 9.13, JSON-LD 1.1 API Section 5.1.2 step 5.2.3)
-        auto member_items{
-            included_member_items(from_array, std::move(expanded_member))};
-        for (auto &item : member_items.as_array()) {
-          if (is_not_node_object(item)) {
-            throw JSONLDError(
-                "Invalid @included value",
-                forbidden_member_pointer(state, active_context,
-                                         JSON::String{KEYWORD_INCLUDED}, member,
-                                         member_pointer, is_not_node_object));
-          }
-          included.push_back(std::move(item));
-        }
-        member_index += 1;
-      }
-      merge(result, KEYWORD_INCLUDED, std::move(included));
-      continue;
-    }
-
-    if (name == KEYWORD_INDEX) {
-      if (!entry.second.is_string()) {
-        throw JSONLDError("Invalid @index value", entry_pointer);
-      }
-      result.assign_assume_new(JSON::String{KEYWORD_INDEX}, JSON{entry.second},
-                               KEYWORD_INDEX_HASH);
-      continue;
-    }
-
-    if (name == KEYWORD_REVERSE) {
-      if (!entry.second.is_object()) {
-        throw JSONLDError("Invalid @reverse value", entry_pointer);
-      }
-      auto reversed{expand(state, active_context, JSON::String{KEYWORD_REVERSE},
-                           entry.second, entry_pointer)};
-      if (reversed.is_object()) {
-        // A keyword whose entry the node already carries is refused as a
-        // collision further up this very loop, so the map is always made here
-        // rather than added to. Two terms carrying a reverse mapping reach the
-        // same map through the merge below instead
-        assert(result.try_at(KEYWORD_REVERSE, KEYWORD_REVERSE_HASH) == nullptr);
-        auto reverse_map{JSON::make_object()};
-        for (const auto &reverse_entry : reversed.as_object()) {
-          const auto &reverse_property{reverse_entry.first};
-          if (reverse_entry.key_equals(KEYWORD_REVERSE, KEYWORD_REVERSE_HASH)) {
-            for (const auto &forward : reverse_entry.second.as_object()) {
-              merge(result, JSON::StringView{forward.first},
-                    into_array(JSON{forward.second}));
-            }
-          } else {
-            const auto reverse_values{into_array(JSON{reverse_entry.second})};
-            for (const auto &item : reverse_values.as_array()) {
-              if (is_value_or_list_object(item)) {
-                const SuspendedDropReportingScope silent{state};
-                // The map carries its own context into how its keys expand, so
-                // what it says wrong is located against that same context,
-                // which is only worth putting together to report it. Reading
-                // it again outside the expansion that already took it may not
-                // go through, and a location is not worth an error of its own
-                ActiveContext reverse_context{active_context};
-                if (entry.second.defines(KEYWORD_CONTEXT,
-                                         KEYWORD_CONTEXT_HASH)) {
-                  try {
-                    process_context(
-                        state, reverse_context,
-                        entry.second.at(KEYWORD_CONTEXT, KEYWORD_CONTEXT_HASH),
-                        entry_pointer.concat(keyword_context()));
-                  } catch (const JSONLDError &) {
-                    reverse_context = active_context;
-                  }
-                }
-
-                // Several keys of the map may reach the same reverse
-                // property, and what they carry is merged before it is
-                // inspected, so each is expanded again to find the one that
-                // holds the offending member
-                for (const auto &[input_key, input_value] :
-                     sorted_entries(entry.second)) {
-                  const auto input_property{
-                      expand_iri(state, reverse_context, *input_key, false,
-                                 true, nullptr, nullptr, EMPTY_WEAK_POINTER)};
-                  if (!input_property.has_value() ||
-                      input_property.value() != reverse_property) {
-                    continue;
-                  }
-                  const WeakPointer input_pointer{
-                      entry_pointer.concat(*input_key)};
-                  if (holds_forbidden_member(expand(state, reverse_context,
-                                                    *input_key, *input_value,
-                                                    input_pointer),
-                                             is_value_or_list_object)) {
-                    throw JSONLDError("Invalid reverse property value",
-                                      forbidden_member_pointer(
-                                          state, reverse_context, *input_key,
-                                          *input_value, input_pointer,
-                                          is_value_or_list_object));
-                  }
-                }
-
-                throw JSONLDError("Invalid reverse property value",
-                                  entry_pointer);
-              }
-            }
-            merge(reverse_map, reverse_property,
-                  into_array(JSON{reverse_entry.second}));
-          }
-        }
-        result.assign(KEYWORD_REVERSE, std::move(reverse_map));
-      }
-      continue;
-    }
-
     if (is_keyword(name)) {
-      // Keywords with no property-level handler (such as @vocab or @none
-      // reached through an alias) carry no expanded value, so the Expansion
-      // algorithm adds nothing to the result for them.
-      report_drop(state, JSONLDExpandDropReason::UnhandledKeyword,
-                  entry_pointer, entry.second);
+      expand_keyword_entry(state, active_context, type_context, result, origins,
+                           active_property, source_pointer, entry,
+                           entry_pointer, name);
       continue;
     }
 
@@ -984,320 +1378,21 @@ auto expand_entries(ExpansionState &state, ActiveContext &active_context,
                container_includes(definition, KEYWORD_GRAPH) &&
                (container_includes(definition, KEYWORD_ID) ||
                 container_includes(definition, KEYWORD_INDEX))) {
-      const bool by_id{container_includes(definition, KEYWORD_ID)};
-      // An index mapping is held to naming an IRI that is no keyword when the
-      // term is made, so a term naming one names a property to index by
-      // (JSON-LD 1.1 API Section 4.2.2 step 21.2)
-      const bool property_valued{definition->index.has_value()};
-      std::optional<JSON::String> index_property;
-      if (property_valued) {
-        index_property =
-            expand_iri(state, active_context, definition->index.value(), false,
-                       true, nullptr, nullptr, EMPTY_WEAK_POINTER);
-      }
-      expanded_value = JSON::make_array();
-      for (const auto &[graph_key, graph_value] :
-           sorted_entries(entry.second)) {
-        const JSON::String &index{*graph_key};
-        const auto expanded_key{index == KEYWORD_NONE
-                                    ? std::optional<JSON::String>{KEYWORD_NONE}
-                                    : expand_iri(state, active_context, index,
-                                                 true, false, nullptr, nullptr,
-                                                 EMPTY_WEAK_POINTER)};
-        const bool none_key{expanded_key.has_value() &&
-                            expanded_key.value() == KEYWORD_NONE};
-        auto graph_items{
-            into_array(expand(state, active_context, property, *graph_value,
-                              entry_pointer.concat(index), true))};
-        for (auto &item : graph_items.as_array()) {
-          // Nothing is carried over for a null, as in an array (JSON-LD 1.1
-          // API Section 5.1.2 step 5.2.3)
-          if (item.is_null()) {
-            continue;
-          }
-
-          // Wrap the item in a graph object, unless it is already one. What
-          // the container gathered is a map, anything null having been passed
-          // over just above
-          JSON graph{nullptr};
-          assert(item.is_object());
-          if (item.defines(KEYWORD_GRAPH, KEYWORD_GRAPH_HASH)) {
-            graph = std::move(item);
-          } else {
-            graph = JSON::make_object();
-            graph.assign_assume_new(JSON::String{KEYWORD_GRAPH},
-                                    into_array(std::move(item)),
-                                    KEYWORD_GRAPH_HASH);
-          }
-          if (!none_key) {
-            if (by_id) {
-              // The name comes out of expanding the key, and a key shaped like
-              // a keyword expands to nothing, leaving the algorithm with
-              // nothing to add rather than a name of its own invention. An
-              // index container keys by the key as written instead, which is
-              // why only this one goes through expansion (JSON-LD 1.1 API
-              // Section 5.1.2)
-              if (!graph.defines(KEYWORD_ID, KEYWORD_ID_HASH) &&
-                  expanded_key.has_value()) {
-                graph.assign_assume_new(JSON::String{KEYWORD_ID},
-                                        JSON{expanded_key.value()},
-                                        KEYWORD_ID_HASH);
-              }
-            } else if (property_valued) {
-              // A term that no longer names anything carries no metadata
-              // (JSON-LD 1.1 API Section 5.1.2 step 13.8.3.7.2)
-              if (index_property.has_value()) {
-                auto combined{into_array(expand_value(
-                    state, active_context, definition->index, JSON{index}))};
-                if (graph.defines(index_property.value())) {
-                  for (auto &existing :
-                       graph.at(index_property.value()).as_array()) {
-                    combined.push_back(existing);
-                  }
-                }
-                graph.assign(index_property.value(), std::move(combined));
-              }
-            } else if (!graph.defines(KEYWORD_INDEX, KEYWORD_INDEX_HASH)) {
-              graph.assign_assume_new(JSON::String{KEYWORD_INDEX}, JSON{index},
-                                      KEYWORD_INDEX_HASH);
-            }
-          }
-          expanded_value.push_back(std::move(graph));
-        }
-      }
+      expand_graph_map_entry(state, active_context, definition, property, entry,
+                             entry_pointer, expanded_value);
     } else if (entry.second.is_object() &&
                container_includes(definition, KEYWORD_LANGUAGE)) {
-      expanded_value = JSON::make_array();
-      for (const auto &[language_key, language_value] :
-           sorted_entries(entry.second)) {
-        const JSON::String &language{*language_key};
-        const auto expanded_language{expand_iri(state, active_context, language,
-                                                false, true, nullptr, nullptr,
-                                                EMPTY_WEAK_POINTER)};
-        const bool is_none{language == KEYWORD_NONE ||
-                           (expanded_language.has_value() &&
-                            expanded_language.value() == KEYWORD_NONE)};
-        const WeakPointer language_pointer{entry_pointer.concat(language)};
-        const bool language_array{language_value->is_array()};
-        auto language_items{into_array(JSON{*language_value})};
-        std::size_t language_index{0};
-        for (auto &item : language_items.as_array()) {
-          const WeakPointer item_pointer{
-              language_array ? language_pointer.concat(language_index)
-                             : language_pointer};
-          language_index += 1;
-          if (item.is_null()) {
-            report_drop(state, JSONLDExpandDropReason::NullValue, item_pointer,
-                        item);
-            continue;
-          }
-          if (!item.is_string()) {
-            throw JSONLDError("Invalid language map value", item_pointer);
-          }
-          auto value{JSON::make_object()};
-          value.assign_assume_new(JSON::String{KEYWORD_VALUE}, JSON{item},
-                                  KEYWORD_VALUE_HASH);
-          if (!is_none) {
-            value.assign_assume_new(JSON::String{KEYWORD_LANGUAGE},
-                                    JSON{language}, KEYWORD_LANGUAGE_HASH);
-          }
-          const auto direction{definition->has_direction
-                                   ? definition->direction
-                                   : active_context.default_direction};
-          if (direction.has_value()) {
-            value.assign_assume_new(JSON::String{KEYWORD_DIRECTION},
-                                    JSON{direction.value()},
-                                    KEYWORD_DIRECTION_HASH);
-          }
-          expanded_value.push_back(std::move(value));
-        }
-      }
+      expand_language_map_entry(state, active_context, definition, entry,
+                                entry_pointer, expanded_value);
     } else if (entry.second.is_object() &&
                container_includes(definition, KEYWORD_INDEX)) {
-      // An index mapping is held to naming an IRI that is no keyword when the
-      // term is made, so a term naming one names a property to index by
-      // (JSON-LD 1.1 API Section 4.2.2 step 21.2)
-      const bool property_valued{definition->index.has_value()};
-      std::optional<JSON::String> index_property;
-      if (property_valued) {
-        index_property =
-            expand_iri(state, active_context, definition->index.value(), false,
-                       true, nullptr, nullptr, EMPTY_WEAK_POINTER);
-      }
-      expanded_value = JSON::make_array();
-      for (const auto &[index_key, index_value] :
-           sorted_entries(entry.second)) {
-        const JSON::String &index{*index_key};
-        // Step 13.8.3.4 initialises "expanded index to the result of IRI
-        // expanding index", and every step that goes on to add index metadata
-        // requires that "expanded index is not @none", so an alias of the
-        // keyword suppresses the metadata exactly as the keyword does
-        // (JSON-LD 1.1 API Section 5.1.2 steps 13.8.3.4 and 13.8.3.7.2 to
-        // 13.8.3.7.5)
-        const auto expanded_index{expand_iri(state, active_context, index,
-                                             false, true, nullptr, nullptr,
-                                             EMPTY_WEAK_POINTER)};
-        const bool index_is_none{expanded_index.has_value() &&
-                                 expanded_index.value() == KEYWORD_NONE};
-        auto index_items{
-            into_array(expand(state, active_context, property, *index_value,
-                              entry_pointer.concat(index), true))};
-        for (auto &item : index_items.as_array()) {
-          // An entry of a map expands the way it would as a member of an
-          // array, where nothing is carried over for a null (JSON-LD 1.1 API
-          // Section 5.1.2 step 5.2.3), so the steps below only ever see a value
-          if (item.is_null()) {
-            continue;
-          }
-
-          if (!index_is_none) {
-            if (property_valued) {
-              // A term that no longer names anything carries no metadata, and
-              // the value object check that follows the addition does not
-              // apply when nothing was added (JSON-LD 1.1 API Section 5.1.2
-              // step 13.8.3.7.2)
-              if (index_property.has_value()) {
-                if (is_value_object(item)) {
-                  throw JSONLDError(
-                      "Invalid value object",
-                      forbidden_member_pointer(
-                          state, active_context, property, *index_value,
-                          entry_pointer.concat(index), is_value_object));
-                }
-                // The index value is prepended to any existing values.
-                auto combined{into_array(expand_value(
-                    state, active_context, definition->index, JSON{index}))};
-                if (item.defines(index_property.value())) {
-                  for (auto &existing :
-                       item.at(index_property.value()).as_array()) {
-                    combined.push_back(existing);
-                  }
-                }
-                item.assign(index_property.value(), std::move(combined));
-              }
-            } else if (!item.defines(KEYWORD_INDEX, KEYWORD_INDEX_HASH)) {
-              item.assign_assume_new(JSON::String{KEYWORD_INDEX}, JSON{index},
-                                     KEYWORD_INDEX_HASH);
-            }
-          }
-          expanded_value.push_back(item);
-        }
-      }
+      expand_index_map_entry(state, active_context, definition, property, entry,
+                             entry_pointer, expanded_value);
     } else if (entry.second.is_object() &&
                (container_includes(definition, KEYWORD_ID) ||
                 container_includes(definition, KEYWORD_TYPE))) {
-      const bool by_id{container_includes(definition, KEYWORD_ID)};
-      expanded_value = JSON::make_array();
-      for (const auto &[map_key, map_value] : sorted_entries(entry.second)) {
-        const JSON::String &index{*map_key};
-        std::optional<JSON::String> expanded_index;
-        if (index != KEYWORD_NONE) {
-          expanded_index =
-              expand_iri(state, active_context, index, by_id, !by_id, nullptr,
-                         nullptr, EMPTY_WEAK_POINTER);
-        }
-        // The key may be an alias of @none, which carries no identifier.
-        if (expanded_index.has_value() &&
-            expanded_index.value() == KEYWORD_NONE) {
-          expanded_index = std::nullopt;
-        }
-        // A type map key may carry a type-scoped context for its values.
-        // Type-scoped contexts do not propagate, so the values are resolved
-        // against the context that preceded the containing type-scoped
-        // context, with only this key's context layered on top.
-        const ActiveContext *base_context{&active_context};
-        if (active_context.previous && !by_id) {
-          base_context = active_context.previous.get();
-        }
-        ActiveContext entry_context{*base_context};
-        if (!by_id) {
-          // Resolve the type term against the context the copy was made from,
-          // which outlives the copy being mutated below.
-          const auto type_definition{base_context->terms.find(index)};
-          if (type_definition != base_context->terms.cend() &&
-              type_definition->second.context.has_value()) {
-            process_deferred_scoped_context(state, entry_context,
-                                            type_definition->second, true);
-            entry_context.previous = nullptr;
-          }
-        }
-        // String values in a type map are node references. The recursion the
-        // other values take would expand them under the property's own
-        // context, so the shortcut carries it too (JSON-LD 1.1 API Section
-        // 5.1.2 steps 13.8.3.6 and 4.2)
-        ActiveContext reference_scope;
-        ActiveContext *reference_context{&entry_context};
-        if (!by_id && definition->context.has_value()) {
-          reference_scope = entry_context;
-          reference_scope.previous = nullptr;
-          apply_scoped_context(state, reference_scope, *definition);
-          reference_context = &reference_scope;
-        }
-
-        auto entries{JSON::make_array()};
-        const bool value_array{map_value->is_array()};
-        auto raw_values{into_array(JSON{*map_value})};
-        std::size_t raw_index{0};
-        for (auto &raw : raw_values.as_array()) {
-          // An entry holding an array is located by the element the value came
-          // from, as an array of properties is
-          const WeakPointer entry_value_pointer{entry_pointer.concat(index)};
-          const WeakPointer raw_pointer{
-              value_array ? entry_value_pointer.concat(raw_index)
-                          : entry_value_pointer};
-          raw_index += 1;
-          if (raw.is_string() && !by_id) {
-            auto reference{JSON::make_object()};
-            // A container that gathers by type is given a type mapping when
-            // the term is made, defaulting to the identifier (JSON-LD 1.1 API
-            // Section 4.2.2 step 21.4.1)
-            assert(definition->type_mapping.has_value());
-            const bool reference_vocab{definition->type_mapping.value() ==
-                                       KEYWORD_VOCAB};
-            const auto &raw_string{raw.to_string()};
-            const auto referenced{expand_iri(
-                state, *reference_context, raw_string, true, reference_vocab,
-                nullptr, nullptr, EMPTY_WEAK_POINTER)};
-            reference.assign_assume_new(JSON::String{KEYWORD_ID},
-                                        JSON{referenced.value_or(raw_string)},
-                                        KEYWORD_ID_HASH);
-            entries.push_back(std::move(reference));
-          } else {
-            auto expanded_items{into_array(expand(
-                state, entry_context, property, raw, raw_pointer, true))};
-            for (auto &expanded : expanded_items.as_array()) {
-              // Nothing is carried over for a null, as in an array
-              // (JSON-LD 1.1 API Section 5.1.2 step 5.2.3)
-              if (!expanded.is_null()) {
-                entries.push_back(expanded);
-              }
-            }
-          }
-        }
-        for (auto &item : entries.as_array()) {
-          if (expanded_index.has_value()) {
-            if (by_id) {
-              if (!item.defines(KEYWORD_ID, KEYWORD_ID_HASH)) {
-                item.assign_assume_new(JSON::String{KEYWORD_ID},
-                                       JSON{expanded_index.value()},
-                                       KEYWORD_ID_HASH);
-              }
-            } else {
-              auto types{JSON::make_array()};
-              types.push_back(JSON{expanded_index.value()});
-              if (item.defines(KEYWORD_TYPE, KEYWORD_TYPE_HASH)) {
-                auto existing_types{into_array(
-                    std::move(item.at(KEYWORD_TYPE, KEYWORD_TYPE_HASH)))};
-                for (auto &existing : existing_types.as_array()) {
-                  types.push_back(existing);
-                }
-              }
-              item.assign(KEYWORD_TYPE, std::move(types));
-            }
-          }
-          expanded_value.push_back(item);
-        }
-      }
+      expand_id_type_map_entry(state, active_context, definition, property,
+                               entry, entry_pointer, expanded_value);
     } else if (container_includes(definition, KEYWORD_GRAPH)) {
       auto graph_value{
           expand(state, active_context, property, entry.second, entry_pointer)};

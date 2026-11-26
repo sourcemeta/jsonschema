@@ -9,8 +9,10 @@
 #include <sourcemeta/core/jsonpointer.h>
 
 #include <cstdint>     // std::uint64_t
+#include <optional>    // std::optional, std::nullopt
 #include <string>      // std::string
 #include <string_view> // std::string_view
+#include <utility>     // std::move
 
 namespace sourcemeta::core {
 
@@ -35,13 +37,49 @@ public:
                         const std::string_view identifier)
       : Error{message}, identifier_{identifier} {}
 
+  /// Create a schema resolution error that a reference of a document led to,
+  /// naming where that reference sits and the part of it that the identifier
+  /// does not spell
+  SchemaResolutionError(const StaticString message,
+                        const std::string_view identifier,
+                        sourcemeta::core::Pointer schema_location,
+                        const std::optional<std::string_view> fragment)
+      : Error{message}, identifier_{identifier},
+        schema_location_{std::move(schema_location)},
+        fragment_{fragment.has_value()
+                      ? std::optional<std::string>{fragment.value()}
+                      : std::nullopt} {}
+
   /// The identifier that could not be resolved
   [[nodiscard]] auto identifier() const noexcept -> std::string_view {
     return this->identifier_;
   }
 
+  /// Where the problem is, as a pointer from the root of the document that
+  /// the schema came from. A reference is spelled by a member of a schema, so
+  /// one that led here always names a place, while a dialect that a document
+  /// declares names none. Whether this is empty is what tells those two apart
+  [[nodiscard]] auto location() const noexcept
+      -> const sourcemeta::core::Pointer & {
+    return this->schema_location_;
+  }
+
+  /// The part of what did not resolve that the identifier does not spell, as
+  /// an identifier names a document whole while a reference may name a place
+  /// within one
+  [[nodiscard]] auto fragment() const noexcept
+      -> std::optional<std::string_view> {
+    if (!this->fragment_.has_value()) {
+      return std::nullopt;
+    }
+
+    return std::string_view{this->fragment_.value()};
+  }
+
 private:
   std::string identifier_;
+  sourcemeta::core::Pointer schema_location_;
+  std::optional<std::string> fragment_;
 };
 
 /// @ingroup jsonschema
@@ -101,15 +139,6 @@ public:
 private:
   std::string identifier_;
   sourcemeta::core::Pointer schema_location_;
-};
-
-/// @ingroup jsonschema
-/// An error that represents that the dialect of the schema could not determined
-class SOURCEMETA_CORE_JSONSCHEMA_EXPORT SchemaUnknownDialectError
-    : public Error {
-public:
-  SchemaUnknownDialectError() noexcept
-      : Error{"Could not determine the dialect of the schema"} {}
 };
 
 /// @ingroup jsonschema

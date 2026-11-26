@@ -23,7 +23,7 @@ REPLACE MATCHING 'file:[^"]*~1nested\.json' WITH '[CWD_URI_POINTER]~1nested.json
 
 WRITE expected.txt UNTIL EOF
 1> [
-1>   19,
+1>   20,
 1>   false,
 1>   false,
 1>   [
@@ -40,7 +40,7 @@ WRITE expected.txt UNTIL EOF
 1>         [ 0 ],
 1>         [
 1>           [
-1>             110,
+1>             111,
 1>             [ 0, "$ref" ],
 1>             [],
 1>             "[CWD_URI]/schema.json#/allOf/0/$ref",

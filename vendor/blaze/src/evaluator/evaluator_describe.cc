@@ -6,6 +6,7 @@
 #include <cstddef>   // std::size_t
 #include <format>    // std::format, std::make_format_args, std::vformat
 #include <initializer_list> // std::initializer_list
+#include <optional>         // std::optional, std::nullopt
 #include <set>              // std::set
 #include <sstream>          // std::ostringstream
 #include <string>           // std::string, std::to_string
@@ -550,27 +551,16 @@ auto describe_object_size(const Template &schema_template,
                         {std::to_string(target.size()), carried.str()});
 }
 
-} // namespace
-
-namespace sourcemeta::blaze {
-
-// TODO: What will unlock even better error messages is being able to
-// get the subschema being evaluated along with the keyword
-// NOLINTNEXTLINE(google-readability-function-size,hicpp-function-size,readability-function-size)
-auto describe(const Template &schema_template, const bool valid,
-              const Instruction &step,
-              const sourcemeta::core::WeakPointer &evaluate_path,
-              const sourcemeta::core::WeakPointer &instance_location,
-              const sourcemeta::core::JSON &instance,
-              const sourcemeta::core::JSON &annotation) -> std::string {
-  const std::string keyword{evaluate_path.empty() ||
-                                    // The last token can be an index for
-                                    // boolean schemas inside array applicators
-                                    !evaluate_path.back().is_property()
-                                ? ""
-                                : evaluate_path.back().to_property()};
-  const sourcemeta::core::JSON &target{get(instance, instance_location)};
-
+// One part of the table `describe` answers from, split out so
+// that no single function carries the whole of it
+auto describe_evaluation(const Template &schema_template, const bool valid,
+                         const Instruction &step,
+                         const sourcemeta::core::WeakPointer &evaluate_path,
+                         const sourcemeta::core::WeakPointer &instance_location,
+                         const sourcemeta::core::JSON &annotation,
+                         const std::string &keyword,
+                         const sourcemeta::core::JSON &target)
+    -> std::optional<std::string> {
   // The compiler resolved every word of these, as what they say does not
   // depend on how the instance turned out
   if (step.type == sourcemeta::blaze::InstructionIndex::Evaluate ||
@@ -853,6 +843,17 @@ auto describe(const Template &schema_template, const bool valid,
                           {listed.str(), named.str()});
   }
 
+  return std::nullopt;
+}
+
+// One part of the table `describe` answers from, split out so
+// that no single function carries the whole of it
+auto describe_assertion(const Template &schema_template, const bool valid,
+                        const Instruction &step,
+                        const sourcemeta::core::WeakPointer &evaluate_path,
+                        const sourcemeta::core::WeakPointer &instance_location,
+                        const sourcemeta::core::JSON &target)
+    -> std::optional<std::string> {
   if (step.type ==
       sourcemeta::blaze::InstructionIndex::AssertionDefinesAllStrict) {
     const auto &value{instruction_value<ValueStringSet>(step)};
@@ -1113,6 +1114,44 @@ auto describe(const Template &schema_template, const bool valid,
     return render_message(format, {escape_string(target.to_string())});
   }
 
+  return std::nullopt;
+}
+
+} // namespace
+
+namespace sourcemeta::blaze {
+
+// TODO: What will unlock even better error messages is being able to
+// get the subschema being evaluated along with the keyword
+// NOLINTNEXTLINE(google-readability-function-size,hicpp-function-size,readability-function-size)
+auto describe(const Template &schema_template, const bool valid,
+              const Instruction &step,
+              const sourcemeta::core::WeakPointer &evaluate_path,
+              const sourcemeta::core::WeakPointer &instance_location,
+              const sourcemeta::core::JSON &instance,
+              const sourcemeta::core::JSON &annotation) -> std::string {
+  const std::string keyword{evaluate_path.empty() ||
+                                    // The last token can be an index for
+                                    // boolean schemas inside array applicators
+                                    !evaluate_path.back().is_property()
+                                ? ""
+                                : evaluate_path.back().to_property()};
+  const sourcemeta::core::JSON &target{get(instance, instance_location)};
+
+  if (const auto described{describe_evaluation(schema_template, valid, step,
+                                               evaluate_path, instance_location,
+                                               annotation, keyword, target)};
+      described.has_value()) {
+    return described.value();
+  }
+
+  if (const auto described{describe_assertion(schema_template, valid, step,
+                                              evaluate_path, instance_location,
+                                              target)};
+      described.has_value()) {
+    return described.value();
+  }
+
   if (step.type == sourcemeta::blaze::InstructionIndex::AssertionPropertyType ||
       step.type ==
           sourcemeta::blaze::InstructionIndex::AssertionPropertyTypeEvaluate ||
@@ -1134,6 +1173,20 @@ auto describe(const Template &schema_template, const bool valid,
     assert(target.is_array());
     return render_message(message_format(schema_template, step),
                           {std::to_string(step.children.size() - 1)});
+  }
+
+  if (step.type ==
+      sourcemeta::blaze::InstructionIndex::LoopPropertiesMatchRequired) {
+    assert(!step.children.empty());
+    // This one stands for a presence assertion too, so unlike the loops that
+    // only apply subschemas it is reached on a non-object, and that is the one
+    // thing it has to report on its own
+    if (!target.is_object()) {
+      return render_message(message_detail_format(schema_template, step), {});
+    }
+
+    return render_message(message_format(schema_template, step),
+                          {std::to_string(step.children.size())});
   }
 
   if (step.type == sourcemeta::blaze::InstructionIndex::LoopPropertiesMatch ||

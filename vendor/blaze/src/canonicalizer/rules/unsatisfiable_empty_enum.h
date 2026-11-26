@@ -1,6 +1,6 @@
 class UnsatisfiableEmptyEnum final : public SchemaTransformRule {
 public:
-  using reframe_after_transform = std::false_type;
+  using reframe_after_transform = std::true_type;
   UnsatisfiableEmptyEnum() : SchemaTransformRule{"unsatisfiable_empty_enum"} {};
 
   [[nodiscard]] auto

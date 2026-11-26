@@ -295,51 +295,6 @@ static auto to_string_hashes(
   return result;
 }
 
-static auto to_named_indexes(
-    std::vector<std::pair<ValueString, ValueUnsignedInteger>> &names)
-    -> ValueNamedIndexes {
-  assert(!names.empty());
-  std::ranges::sort(names, [](const auto &left, const auto &right) -> auto {
-    return left.first.size() < right.first.size();
-  });
-
-  // The table of contents costs a load of its own before a lookup can compare
-  // anything, which only pays off once there are enough names that scanning
-  // them all is worse. Below that, the entries are left without one and the
-  // evaluator scans them, as it did before the table of contents existed
-  constexpr std::size_t MINIMUM_NAMES_FOR_TABLE_OF_CONTENTS{12};
-
-  ValueNamedIndexes result;
-  // The table of contents works as in `to_string_hashes`: each index marks the
-  // starting and end positions of the names whose size is equal to the index
-  if (names.size() > MINIMUM_NAMES_FOR_TABLE_OF_CONTENTS) {
-    result.second.resize(names.back().first.size() + 1, std::make_pair(0, 0));
-  }
-
-  result.first.reserve(names.size());
-  // TODO(C++23): Use std::views::enumerate when available in libc++
-  for (std::size_t index = 0; index < names.size(); index++) {
-    const auto &name{names[index].first};
-    result.first.emplace_back(sourcemeta::core::JSON::Object::hash(name),
-                              names[index].second, name);
-    if (result.second.empty()) {
-      continue;
-    }
-
-    // We leave position 0 to represent the absence of a size
-    const auto position{index + 1};
-    assert(name.size() < result.second.size());
-    auto &bounds{result.second[name.size()]};
-    bounds.first =
-        (bounds.first == 0) ? position : std::min(bounds.first, position);
-    bounds.second =
-        (bounds.second == 0) ? position : std::max(bounds.second, position);
-    assert(bounds.first <= bounds.second);
-  }
-
-  return result;
-}
-
 auto compile_required_assertions(const KeywordContext &context,
                                  const Instructions &current,
                                  ValueStringSet properties_set)
@@ -543,22 +498,17 @@ auto properties_as_loop(const KeywordContext &context,
     return true;
   }
 
-  return
-      // This strategy only makes sense if most of the properties are "optional"
-      required.size() <= (size / 4) &&
-      // If `properties` only defines a relatively small amount of properties,
-      // then its probably still faster to unroll
-      size > 5 &&
-      // Always unroll inside `oneOf` or `anyOf`, to have a
-      // better chance at quickly short-circuiting
-      (!inside_disjunctor ||
-       std::ranges::none_of(
-           properties.as_object(), [&](const auto &pair) -> auto {
-             return pair.second.is_object() &&
-                    ((imports_validation_vocabulary &&
-                      pair.second.defines("enum")) ||
-                     (imports_const && pair.second.defines("const")));
-           }));
+  return favours_property_loop(size, required.size()) &&
+         // Always unroll inside `oneOf` or `anyOf`, to have a
+         // better chance at quickly short-circuiting
+         (!inside_disjunctor ||
+          std::ranges::none_of(
+              properties.as_object(), [&](const auto &pair) -> auto {
+                return pair.second.is_object() &&
+                       ((imports_validation_vocabulary &&
+                         pair.second.defines("enum")) ||
+                        (imports_const && pair.second.defines("const")));
+              }));
 }
 
 auto draft3_any_type_instructions(const KeywordContext &context)
@@ -837,6 +787,301 @@ auto integer_lower_bound_extra_index(const Instructions &children)
   return 0;
 }
 
+// `properties` compiled as one pass over the object, which is what the
+// balance asks for when most of the names are optional and there are
+// enough of them to make a walk cheaper than resolving each one
+auto compile_properties_as_loop(const KeywordContext &context,
+                                const Instructions &current,
+                                const bool emit_annotation,
+                                const bool track_evaluation) -> Instructions {
+  std::vector<std::pair<ValueString, ValueUnsignedInteger>> names;
+  Instructions children;
+  std::size_t cursor = 0;
+
+  for (auto &&[name, substeps] :
+       compile_properties(context.relative(), current)) {
+    names.emplace_back(name, cursor);
+
+    if (track_evaluation) {
+      substeps.push_back(make(InstructionIndex::ControlEvaluate,
+                              context.relative(), ValuePointer{name}));
+    }
+
+    if (emit_annotation) {
+      substeps.push_back(make(InstructionIndex::AnnotationEmitWrapped,
+                              context.relative(),
+                              sourcemeta::core::JSON{name}));
+    }
+
+    // Note that the evaluator completely ignores this wrapper anyway
+    children.push_back(make(InstructionIndex::ControlGroup, context.relative(),
+                            ValueNone{}, std::move(substeps)));
+    cursor += 1;
+  }
+
+  if (context.mode() == Mode::FastValidation && !track_evaluation &&
+      !context.schema().defines("patternProperties") &&
+      context.schema().defines("additionalProperties") &&
+      context.schema().at("additionalProperties").is_boolean() &&
+      !context.schema().at("additionalProperties").to_boolean()) {
+    return {make(InstructionIndex::LoopPropertiesMatchClosed, context,
+                 to_named_indexes(names), std::move(children))};
+  }
+
+  return {make(InstructionIndex::LoopPropertiesMatch, context,
+               to_named_indexes(names), std::move(children))};
+}
+
+// A property's own instructions are fused the way a conjunction's are,
+// before the property is wrapped, as a bounded integer or a sized array
+// says in one instruction what a type check beside a bound says in two
+auto fuse_property_substeps(const KeywordContext &context,
+                            const KeywordContext &effective_context,
+                            Instructions &substeps) -> void {
+  if (is_integer_type_bounded_pattern(substeps)) {
+    auto bounds = extract_integer_bounds(substeps);
+    const auto index = has_strict_integer_type(substeps)
+                           ? InstructionIndex::AssertionTypeIntegerBoundedStrict
+                           : InstructionIndex::AssertionTypeIntegerBounded;
+    auto instance_location = substeps.front().relative_instance_location;
+    const auto minimum_extra_index{integer_lower_bound_extra_index(substeps)};
+    substeps.clear();
+    auto fused = make(index, context.relative(), bounds);
+    fused.relative_instance_location = std::move(instance_location);
+    fused.extra_index = minimum_extra_index;
+    substeps.push_back(std::move(fused));
+  } else if (is_integer_type_lower_bound_pattern(substeps)) {
+    const auto minimum = extract_integer_lower_bound(substeps);
+    const auto index =
+        has_strict_integer_type(substeps)
+            ? InstructionIndex::AssertionTypeIntegerLowerBoundStrict
+            : InstructionIndex::AssertionTypeIntegerLowerBound;
+    auto instance_location = substeps.front().relative_instance_location;
+    const auto minimum_extra_index{integer_lower_bound_extra_index(substeps)};
+    substeps.clear();
+    auto fused =
+        make(index, context.relative(), ValueIntegerBounds{minimum, 0});
+    fused.relative_instance_location = std::move(instance_location);
+    fused.extra_index = minimum_extra_index;
+    substeps.push_back(std::move(fused));
+  } else if (substeps.size() == 2) {
+    bool has_items_bounded{false};
+    bool has_array_type{false};
+    std::size_t items_index{0};
+    std::size_t array_index{0};
+    for (std::size_t step_index = 0; step_index < 2; step_index++) {
+      if (substeps[step_index].type ==
+          InstructionIndex::LoopItemsIntegerBounded) {
+        has_items_bounded = true;
+        items_index = step_index;
+      } else if (substeps[step_index].type ==
+                 InstructionIndex::AssertionTypeArrayBounded) {
+        has_array_type = true;
+        array_index = step_index;
+      }
+    }
+
+    if (has_items_bounded && has_array_type) {
+      auto integer_bounds{
+          std::get<ValueIntegerBounds>(substeps[items_index].value)};
+      auto range{std::get<ValueRange>(substeps[array_index].value)};
+      auto instance_location = substeps[items_index].relative_instance_location;
+      Value fused_value{
+          ValueIntegerBoundsWithSize{integer_bounds, std::move(range)}};
+      substeps.clear();
+      auto fused = make(InstructionIndex::LoopItemsIntegerBoundedSized,
+                        effective_context, fused_value);
+      fused.relative_instance_location = std::move(instance_location);
+      substeps.push_back(std::move(fused));
+    }
+  }
+}
+
+// What one named property of an unrolled `properties` compiles to: a
+// direct assertion where the subschema allows one, a presence guard where
+// it does not, and an entry of the fused instruction for as long as every
+// property so far has allowed one
+auto compile_unrolled_property(
+    const KeywordContext &context, const KeywordContext &effective_context,
+    const sourcemeta::core::JSON::String &name, Instructions &&substeps,
+    Instructions &children, ValueObjectProperties &fusion_entries,
+    Instructions &fusion_children, bool &fusion_possible,
+    const ValueStringSet &required, const bool emit_annotation,
+    const bool track_evaluation, const bool assume_object) -> void {
+  if (emit_annotation) {
+    substeps.push_back(make(InstructionIndex::AnnotationEmitWrapped,
+                            effective_context, sourcemeta::core::JSON{name}));
+  }
+
+  // Optimize `properties` where its subschemas just include a type check
+
+  if (context.mode() == Mode::FastValidation && track_evaluation &&
+      substeps.size() == 1 &&
+      substeps.front().type == InstructionIndex::AssertionTypeStrict) {
+    children.push_back(
+        rephrase(context, InstructionIndex::AssertionPropertyTypeStrictEvaluate,
+                 substeps.front()));
+  } else if (context.mode() == Mode::FastValidation && track_evaluation &&
+             substeps.size() == 1 &&
+             substeps.front().type == InstructionIndex::AssertionType) {
+    children.push_back(rephrase(context,
+                                InstructionIndex::AssertionPropertyTypeEvaluate,
+                                substeps.front()));
+  } else if (context.mode() == Mode::FastValidation && track_evaluation &&
+             substeps.size() == 1 &&
+             substeps.front().type ==
+                 InstructionIndex::AssertionTypeStrictAny) {
+    children.push_back(rephrase(
+        context, InstructionIndex::AssertionPropertyTypeStrictAnyEvaluate,
+        substeps.front()));
+
+    // NOLINTBEGIN(bugprone-branch-clone)
+  } else if (!fusion_possible && context.mode() == Mode::FastValidation &&
+             substeps.size() == 1 &&
+             substeps.front().type ==
+                 InstructionIndex::AssertionPropertyTypeStrict) {
+    children.push_back(unroll(context, substeps.front(),
+                              effective_context.target.base_instance_location));
+  } else if (!fusion_possible && context.mode() == Mode::FastValidation &&
+             substeps.size() == 1 &&
+             substeps.front().type == InstructionIndex::AssertionPropertyType) {
+    children.push_back(unroll(context, substeps.front(),
+                              effective_context.target.base_instance_location));
+  } else if (!fusion_possible && context.mode() == Mode::FastValidation &&
+             substeps.size() == 1 &&
+             substeps.front().type ==
+                 InstructionIndex::AssertionPropertyTypeStrictAny) {
+    children.push_back(unroll(context, substeps.front(),
+                              effective_context.target.base_instance_location));
+    // NOLINTEND(bugprone-branch-clone)
+
+  } else {
+    if (track_evaluation) {
+      auto new_base_instance_location{
+          effective_context.target.base_instance_location};
+      new_base_instance_location.push_back({name});
+      const KeywordContext evaluate_context{
+          .global = effective_context.global,
+          .local = effective_context.local,
+          .target = {.keyword = effective_context.keyword(),
+                     .base_schema_location =
+                         effective_context.target.base_schema_location,
+                     .base_instance_location = new_base_instance_location}};
+      substeps.push_back(
+          make(InstructionIndex::Evaluate, evaluate_context, ValueNone{}));
+    }
+
+    if (context.mode() == Mode::FastValidation && !substeps.empty()) {
+      fuse_property_substeps(context, effective_context, substeps);
+    }
+
+    // A fused check rejects a non-object and enforces the presence of the
+    // properties it marks as required, but only those, and only at its own
+    // instance location. This list is flattened and may also hold checks
+    // merged in from elsewhere, as every `allOf` branch contributes to it,
+    // so we may only drop what the fusion provably covers
+    std::vector<
+        std::pair<sourcemeta::core::Pointer, std::unordered_set<std::string>>>
+        fusions;
+    if (fusion_possible && substeps.size() >= 2) {
+      for (const auto &step : substeps) {
+        if (step.type != InstructionIndex::AssertionObjectPropertiesSimple) {
+          continue;
+        }
+
+        auto match{
+            std::ranges::find_if(fusions, [&step](const auto &entry) -> bool {
+              return entry.first == step.relative_instance_location;
+            })};
+        if (match == fusions.end()) {
+          fusions.emplace_back(step.relative_instance_location,
+                               std::unordered_set<std::string>{});
+          match = std::prev(fusions.end());
+        }
+
+        for (const auto &entry : std::get<ValueObjectProperties>(step.value)) {
+          if (std::get<2>(entry)) {
+            match->second.insert(std::get<0>(entry));
+          }
+        }
+      }
+    }
+
+    if (!fusions.empty()) {
+      std::erase_if(substeps, [&fusions](const auto &step) -> auto {
+        const auto fusion{
+            std::ranges::find_if(fusions, [&step](const auto &entry) -> bool {
+              return entry.first == step.relative_instance_location;
+            })};
+        if (fusion == fusions.cend()) {
+          return false;
+        }
+
+        if (step.type == InstructionIndex::AssertionDefinesAllStrict ||
+            step.type == InstructionIndex::AssertionDefinesAll) {
+          const auto &value{std::get<ValueStringSet>(step.value)};
+          return std::ranges::all_of(
+              value, [&fusion](const auto &property) -> auto {
+                return fusion->second.contains(property.first);
+              });
+        }
+
+        if ((step.type == InstructionIndex::AssertionTypeStrict ||
+             step.type == InstructionIndex::AssertionType) &&
+            std::get<ValueType>(step.value) ==
+                sourcemeta::core::JSON::Type::Object) {
+          return true;
+        }
+
+        return false;
+      });
+    }
+
+    // Fusion re-applies the single check to every property of the enclosing
+    // loop with its instance location cleared, so a check whose meaning
+    // depends on its own instance location cannot be relocated this way. A
+    // jump into a separate target, or a check that navigates into or gates
+    // on a nested location such as the one a `properties` conditional
+    // produces, therefore falls back to unfused emission
+    const bool fusable_single{substeps.size() == 1 &&
+                              !is_control(substeps.front().type)};
+    if (fusion_possible && fusable_single) {
+      const auto is_required{assume_object && required.contains(name)};
+      auto prop{make_property(name)};
+      auto fusion_child{substeps.front()};
+      fusion_child.relative_instance_location = {};
+      auto fusion_extra{context.global.extra[fusion_child.extra_index]};
+      fusion_extra.relative_schema_location = {};
+      fusion_child.extra_index = context.global.extra.size();
+      context.global.extra.push_back(std::move(fusion_extra));
+
+      fusion_entries.emplace_back(prop.first, prop.second, is_required);
+      fusion_children.push_back(std::move(fusion_child));
+    } else {
+      fusion_possible = false;
+    }
+
+    if (!substeps.empty()) {
+      // As a performance shortcut
+      if (effective_context.target.base_instance_location.empty()) {
+        if (assume_object && required.contains(name)) {
+          for (auto &&step : substeps) {
+            children.push_back(std::move(step));
+          }
+        } else {
+          children.push_back(make(
+              InstructionIndex::ControlGroupWhenDefinesDirect,
+              effective_context, make_property(name), std::move(substeps)));
+        }
+      } else {
+        children.push_back(make(InstructionIndex::ControlGroupWhenDefines,
+                                effective_context, make_property(name),
+                                std::move(substeps)));
+      }
+    }
+  }
+}
+
 auto compiler_draft3_applicator_properties_with_options(
     const KeywordContext &context, const Instructions &current,
     const bool annotate, const bool track_evaluation) -> Instructions {
@@ -863,43 +1108,8 @@ auto compiler_draft3_applicator_properties_with_options(
   const bool emit_annotation{annotate && annotations_enabled(context)};
 
   if (properties_as_loop(context, context.value())) {
-    std::vector<std::pair<ValueString, ValueUnsignedInteger>> names;
-    Instructions children;
-    std::size_t cursor = 0;
-
-    for (auto &&[name, substeps] :
-         compile_properties(context.relative(), current)) {
-      names.emplace_back(name, cursor);
-
-      if (track_evaluation) {
-        substeps.push_back(make(InstructionIndex::ControlEvaluate,
-                                context.relative(), ValuePointer{name}));
-      }
-
-      if (emit_annotation) {
-        substeps.push_back(make(InstructionIndex::AnnotationEmitWrapped,
-                                context.relative(),
-                                sourcemeta::core::JSON{name}));
-      }
-
-      // Note that the evaluator completely ignores this wrapper anyway
-      children.push_back(make(InstructionIndex::ControlGroup,
-                              context.relative(), ValueNone{},
-                              std::move(substeps)));
-      cursor += 1;
-    }
-
-    if (context.mode() == Mode::FastValidation && !track_evaluation &&
-        !context.schema().defines("patternProperties") &&
-        context.schema().defines("additionalProperties") &&
-        context.schema().at("additionalProperties").is_boolean() &&
-        !context.schema().at("additionalProperties").to_boolean()) {
-      return {make(InstructionIndex::LoopPropertiesMatchClosed, context,
-                   to_named_indexes(names), std::move(children))};
-    }
-
-    return {make(InstructionIndex::LoopPropertiesMatch, context,
-                 to_named_indexes(names), std::move(children))};
+    return compile_properties_as_loop(context, current, emit_annotation,
+                                      track_evaluation);
   }
 
   Instructions children;
@@ -1020,243 +1230,10 @@ auto compiler_draft3_applicator_properties_with_options(
   bool fusion_possible{attempt_object_fusion};
 
   for (auto &&[name, substeps] : properties) {
-    if (emit_annotation) {
-      substeps.push_back(make(InstructionIndex::AnnotationEmitWrapped,
-                              effective_context, sourcemeta::core::JSON{name}));
-    }
-
-    // Optimize `properties` where its subschemas just include a type check
-
-    if (context.mode() == Mode::FastValidation && track_evaluation &&
-        substeps.size() == 1 &&
-        substeps.front().type == InstructionIndex::AssertionTypeStrict) {
-      children.push_back(rephrase(
-          context, InstructionIndex::AssertionPropertyTypeStrictEvaluate,
-          substeps.front()));
-    } else if (context.mode() == Mode::FastValidation && track_evaluation &&
-               substeps.size() == 1 &&
-               substeps.front().type == InstructionIndex::AssertionType) {
-      children.push_back(
-          rephrase(context, InstructionIndex::AssertionPropertyTypeEvaluate,
-                   substeps.front()));
-    } else if (context.mode() == Mode::FastValidation && track_evaluation &&
-               substeps.size() == 1 &&
-               substeps.front().type ==
-                   InstructionIndex::AssertionTypeStrictAny) {
-      children.push_back(rephrase(
-          context, InstructionIndex::AssertionPropertyTypeStrictAnyEvaluate,
-          substeps.front()));
-
-      // NOLINTBEGIN(bugprone-branch-clone)
-    } else if (!fusion_possible && context.mode() == Mode::FastValidation &&
-               substeps.size() == 1 &&
-               substeps.front().type ==
-                   InstructionIndex::AssertionPropertyTypeStrict) {
-      children.push_back(
-          unroll(context, substeps.front(),
-                 effective_context.target.base_instance_location));
-    } else if (!fusion_possible && context.mode() == Mode::FastValidation &&
-               substeps.size() == 1 &&
-               substeps.front().type ==
-                   InstructionIndex::AssertionPropertyType) {
-      children.push_back(
-          unroll(context, substeps.front(),
-                 effective_context.target.base_instance_location));
-    } else if (!fusion_possible && context.mode() == Mode::FastValidation &&
-               substeps.size() == 1 &&
-               substeps.front().type ==
-                   InstructionIndex::AssertionPropertyTypeStrictAny) {
-      children.push_back(
-          unroll(context, substeps.front(),
-                 effective_context.target.base_instance_location));
-      // NOLINTEND(bugprone-branch-clone)
-
-    } else {
-      if (track_evaluation) {
-        auto new_base_instance_location{
-            effective_context.target.base_instance_location};
-        new_base_instance_location.push_back({name});
-        const KeywordContext evaluate_context{
-            .global = effective_context.global,
-            .local = effective_context.local,
-            .target = {.keyword = effective_context.keyword(),
-                       .base_schema_location =
-                           effective_context.target.base_schema_location,
-                       .base_instance_location = new_base_instance_location}};
-        substeps.push_back(
-            make(InstructionIndex::Evaluate, evaluate_context, ValueNone{}));
-      }
-
-      if (context.mode() == Mode::FastValidation && !substeps.empty()) {
-        if (is_integer_type_bounded_pattern(substeps)) {
-          auto bounds = extract_integer_bounds(substeps);
-          const auto index =
-              has_strict_integer_type(substeps)
-                  ? InstructionIndex::AssertionTypeIntegerBoundedStrict
-                  : InstructionIndex::AssertionTypeIntegerBounded;
-          auto instance_location = substeps.front().relative_instance_location;
-          const auto minimum_extra_index{
-              integer_lower_bound_extra_index(substeps)};
-          substeps.clear();
-          auto fused = make(index, context.relative(), bounds);
-          fused.relative_instance_location = std::move(instance_location);
-          fused.extra_index = minimum_extra_index;
-          substeps.push_back(std::move(fused));
-        } else if (is_integer_type_lower_bound_pattern(substeps)) {
-          const auto minimum = extract_integer_lower_bound(substeps);
-          const auto index =
-              has_strict_integer_type(substeps)
-                  ? InstructionIndex::AssertionTypeIntegerLowerBoundStrict
-                  : InstructionIndex::AssertionTypeIntegerLowerBound;
-          auto instance_location = substeps.front().relative_instance_location;
-          const auto minimum_extra_index{
-              integer_lower_bound_extra_index(substeps)};
-          substeps.clear();
-          auto fused =
-              make(index, context.relative(), ValueIntegerBounds{minimum, 0});
-          fused.relative_instance_location = std::move(instance_location);
-          fused.extra_index = minimum_extra_index;
-          substeps.push_back(std::move(fused));
-        } else if (substeps.size() == 2) {
-          bool has_items_bounded{false};
-          bool has_array_type{false};
-          std::size_t items_index{0};
-          std::size_t array_index{0};
-          for (std::size_t step_index = 0; step_index < 2; step_index++) {
-            if (substeps[step_index].type ==
-                InstructionIndex::LoopItemsIntegerBounded) {
-              has_items_bounded = true;
-              items_index = step_index;
-            } else if (substeps[step_index].type ==
-                       InstructionIndex::AssertionTypeArrayBounded) {
-              has_array_type = true;
-              array_index = step_index;
-            }
-          }
-
-          if (has_items_bounded && has_array_type) {
-            auto integer_bounds{
-                std::get<ValueIntegerBounds>(substeps[items_index].value)};
-            auto range{std::get<ValueRange>(substeps[array_index].value)};
-            auto instance_location =
-                substeps[items_index].relative_instance_location;
-            Value fused_value{
-                ValueIntegerBoundsWithSize{integer_bounds, std::move(range)}};
-            substeps.clear();
-            auto fused = make(InstructionIndex::LoopItemsIntegerBoundedSized,
-                              effective_context, fused_value);
-            fused.relative_instance_location = std::move(instance_location);
-            substeps.push_back(std::move(fused));
-          }
-        }
-      }
-
-      // A fused check rejects a non-object and enforces the presence of the
-      // properties it marks as required, but only those, and only at its own
-      // instance location. This list is flattened and may also hold checks
-      // merged in from elsewhere, as every `allOf` branch contributes to it,
-      // so we may only drop what the fusion provably covers
-      std::vector<
-          std::pair<sourcemeta::core::Pointer, std::unordered_set<std::string>>>
-          fusions;
-      if (fusion_possible && substeps.size() >= 2) {
-        for (const auto &step : substeps) {
-          if (step.type != InstructionIndex::AssertionObjectPropertiesSimple) {
-            continue;
-          }
-
-          auto match{
-              std::ranges::find_if(fusions, [&step](const auto &entry) -> bool {
-                return entry.first == step.relative_instance_location;
-              })};
-          if (match == fusions.end()) {
-            fusions.emplace_back(step.relative_instance_location,
-                                 std::unordered_set<std::string>{});
-            match = std::prev(fusions.end());
-          }
-
-          for (const auto &entry :
-               std::get<ValueObjectProperties>(step.value)) {
-            if (std::get<2>(entry)) {
-              match->second.insert(std::get<0>(entry));
-            }
-          }
-        }
-      }
-
-      if (!fusions.empty()) {
-        std::erase_if(substeps, [&fusions](const auto &step) -> auto {
-          const auto fusion{
-              std::ranges::find_if(fusions, [&step](const auto &entry) -> bool {
-                return entry.first == step.relative_instance_location;
-              })};
-          if (fusion == fusions.cend()) {
-            return false;
-          }
-
-          if (step.type == InstructionIndex::AssertionDefinesAllStrict ||
-              step.type == InstructionIndex::AssertionDefinesAll) {
-            const auto &value{std::get<ValueStringSet>(step.value)};
-            return std::ranges::all_of(
-                value, [&fusion](const auto &property) -> auto {
-                  return fusion->second.contains(property.first);
-                });
-          }
-
-          if ((step.type == InstructionIndex::AssertionTypeStrict ||
-               step.type == InstructionIndex::AssertionType) &&
-              std::get<ValueType>(step.value) ==
-                  sourcemeta::core::JSON::Type::Object) {
-            return true;
-          }
-
-          return false;
-        });
-      }
-
-      // Fusion re-applies the single check to every property of the enclosing
-      // loop with its instance location cleared, so a check whose meaning
-      // depends on its own instance location cannot be relocated this way. A
-      // jump into a separate target, or a check that navigates into or gates
-      // on a nested location such as the one a `properties` conditional
-      // produces, therefore falls back to unfused emission
-      const bool fusable_single{substeps.size() == 1 &&
-                                !is_control(substeps.front().type)};
-      if (fusion_possible && fusable_single) {
-        const auto is_required{assume_object && required.contains(name)};
-        auto prop{make_property(name)};
-        auto fusion_child{substeps.front()};
-        fusion_child.relative_instance_location = {};
-        auto fusion_extra{context.global.extra[fusion_child.extra_index]};
-        fusion_extra.relative_schema_location = {};
-        fusion_child.extra_index = context.global.extra.size();
-        context.global.extra.push_back(std::move(fusion_extra));
-
-        fusion_entries.emplace_back(prop.first, prop.second, is_required);
-        fusion_children.push_back(std::move(fusion_child));
-      } else {
-        fusion_possible = false;
-      }
-
-      if (!substeps.empty()) {
-        // As a performance shortcut
-        if (effective_context.target.base_instance_location.empty()) {
-          if (assume_object && required.contains(name)) {
-            for (auto &&step : substeps) {
-              children.push_back(std::move(step));
-            }
-          } else {
-            children.push_back(make(
-                InstructionIndex::ControlGroupWhenDefinesDirect,
-                effective_context, make_property(name), std::move(substeps)));
-          }
-        } else {
-          children.push_back(make(InstructionIndex::ControlGroupWhenDefines,
-                                  effective_context, make_property(name),
-                                  std::move(substeps)));
-        }
-      }
-    }
+    compile_unrolled_property(context, effective_context, name,
+                              std::move(substeps), children, fusion_entries,
+                              fusion_children, fusion_possible, required,
+                              emit_annotation, track_evaluation, assume_object);
   }
 
   if (context.mode() == Mode::FastValidation) {
@@ -2289,6 +2266,128 @@ auto compiler_draft3_validation_minimum(const KeywordContext &context,
                sourcemeta::core::JSON{context.value()})};
 }
 
+// What a single `type` name compiles to, which is one assertion unless a
+// sibling `enum` or `const` already admits only values of that type, or
+// unless the name itself narrows to a tighter assertion
+auto draft3_type_assertion_for_name(const KeywordContext &context,
+                                    const sourcemeta::core::JSON::String &type,
+                                    const bool draft3) -> Instructions {
+  if (type == "null") {
+    if (type_covered_by_enum(context, "null")) {
+      return {};
+    }
+
+    return {make(InstructionIndex::AssertionTypeStrict, context,
+                 sourcemeta::core::JSON::Type::Null)};
+  }
+  if (type == "boolean") {
+    if (type_covered_by_enum(context, "boolean")) {
+      return {};
+    }
+
+    return {make(InstructionIndex::AssertionTypeStrict, context,
+                 sourcemeta::core::JSON::Type::Boolean)};
+  }
+  if (type == "object") {
+    if (!draft3) {
+      const auto minimum{
+          unsigned_integer_property(context.schema(), "minProperties", 0)};
+      const auto maximum{
+          unsigned_integer_property(context.schema(), "maxProperties")};
+
+      const auto fused{fuse_type_size_bound(
+          context, minimum, maximum, InstructionIndex::AssertionTypeObjectUpper,
+          InstructionIndex::AssertionTypeObjectBounded)};
+      if (fused.has_value()) {
+        return fused.value();
+      }
+    }
+
+    if (type_covered_by_enum(context, "object")) {
+      return {};
+    }
+
+    // A non-empty `required` rejects a non-object on its own, so the type
+    // assertion is redundant. An empty `required` asserts nothing, so the
+    // type check must stay
+    if (!draft3 && context.mode() == Mode::FastValidation &&
+        context.schema().defines("required") &&
+        context.schema().at("required").is_array() &&
+        !context.schema().at("required").empty()) {
+      return {};
+    }
+
+    return {make(InstructionIndex::AssertionTypeStrict, context,
+                 sourcemeta::core::JSON::Type::Object)};
+  }
+  if (type == "array") {
+    const auto minimum{
+        unsigned_integer_property(context.schema(), "minItems", 0)};
+    const auto maximum{unsigned_integer_property(context.schema(), "maxItems")};
+
+    const auto fused{fuse_type_size_bound(
+        context, minimum, maximum, InstructionIndex::AssertionTypeArrayUpper,
+        InstructionIndex::AssertionTypeArrayBounded)};
+    if (fused.has_value()) {
+      return fused.value();
+    }
+
+    if (type_covered_by_enum(context, "array")) {
+      return {};
+    }
+
+    return {make(InstructionIndex::AssertionTypeStrict, context,
+                 sourcemeta::core::JSON::Type::Array)};
+  }
+  if (type == "number") {
+    if (type_covered_by_enum(context, "number")) {
+      return {};
+    }
+
+    ValueTypes types{};
+    types.set(std::to_underlying(sourcemeta::core::JSON::Type::Real));
+    types.set(std::to_underlying(sourcemeta::core::JSON::Type::Integer));
+    types.set(std::to_underlying(sourcemeta::core::JSON::Type::Decimal));
+    return {make(InstructionIndex::AssertionTypeStrictAny, context, types)};
+  }
+  if (type == "integer") {
+    // Draft 4 and earlier have no shortcut for an all-integer `enum` here,
+    // and neither does the OpenAPI 3.0 Schema Object, unlike every other
+    // type name. Equality reads a number by its value rather than by how it
+    // is written, so the options admit an instance carrying a fractional
+    // part, which none of these dialects counts as an integer, and so this
+    // assertion always has work left to do
+    return {make(InstructionIndex::AssertionTypeStrict, context,
+                 sourcemeta::core::JSON::Type::Integer)};
+  }
+  if (type == "string") {
+    const auto minimum{
+        unsigned_integer_property(context.schema(), "minLength", 0)};
+    const auto maximum{
+        unsigned_integer_property(context.schema(), "maxLength")};
+
+    const auto fused{fuse_type_size_bound(
+        context, minimum, maximum, InstructionIndex::AssertionTypeStringUpper,
+        InstructionIndex::AssertionTypeStringBounded)};
+    if (fused.has_value()) {
+      return fused.value();
+    }
+
+    if (type_covered_by_enum(context, "string")) {
+      return {};
+    }
+
+    return {make(InstructionIndex::AssertionTypeStrict, context,
+                 sourcemeta::core::JSON::Type::String)};
+  }
+  if (draft3) {
+    // Draft 3 puts no enumeration on `type`, so any name at all satisfies
+    // the meta-schema, and one we do not know constrains nothing
+    return {};
+  }
+  throw_keyword_error(context, EXPECTED_TYPE_NAMES);
+}
+
 auto compiler_draft3_validation_type(const KeywordContext &context,
                                      const Instructions &) -> Instructions {
   const auto &value{context.value()};
@@ -2379,124 +2478,9 @@ auto compiler_draft3_validation_type(const KeywordContext &context,
   }
 
   if (value.is_string()) {
-    const auto &type{value.to_string()};
-    if (type == "null") {
-      if (type_covered_by_enum(context, "null")) {
-        return {};
-      }
-
-      return {make(InstructionIndex::AssertionTypeStrict, context,
-                   sourcemeta::core::JSON::Type::Null)};
-    }
-    if (type == "boolean") {
-      if (type_covered_by_enum(context, "boolean")) {
-        return {};
-      }
-
-      return {make(InstructionIndex::AssertionTypeStrict, context,
-                   sourcemeta::core::JSON::Type::Boolean)};
-    }
-    if (type == "object") {
-      if (!draft3) {
-        const auto minimum{
-            unsigned_integer_property(context.schema(), "minProperties", 0)};
-        const auto maximum{
-            unsigned_integer_property(context.schema(), "maxProperties")};
-
-        const auto fused{
-            fuse_type_size_bound(context, minimum, maximum,
-                                 InstructionIndex::AssertionTypeObjectUpper,
-                                 InstructionIndex::AssertionTypeObjectBounded)};
-        if (fused.has_value()) {
-          return fused.value();
-        }
-      }
-
-      if (type_covered_by_enum(context, "object")) {
-        return {};
-      }
-
-      // A non-empty `required` rejects a non-object on its own, so the type
-      // assertion is redundant. An empty `required` asserts nothing, so the
-      // type check must stay
-      if (!draft3 && context.mode() == Mode::FastValidation &&
-          context.schema().defines("required") &&
-          context.schema().at("required").is_array() &&
-          !context.schema().at("required").empty()) {
-        return {};
-      }
-
-      return {make(InstructionIndex::AssertionTypeStrict, context,
-                   sourcemeta::core::JSON::Type::Object)};
-    }
-    if (type == "array") {
-      const auto minimum{
-          unsigned_integer_property(context.schema(), "minItems", 0)};
-      const auto maximum{
-          unsigned_integer_property(context.schema(), "maxItems")};
-
-      const auto fused{fuse_type_size_bound(
-          context, minimum, maximum, InstructionIndex::AssertionTypeArrayUpper,
-          InstructionIndex::AssertionTypeArrayBounded)};
-      if (fused.has_value()) {
-        return fused.value();
-      }
-
-      if (type_covered_by_enum(context, "array")) {
-        return {};
-      }
-
-      return {make(InstructionIndex::AssertionTypeStrict, context,
-                   sourcemeta::core::JSON::Type::Array)};
-    }
-    if (type == "number") {
-      if (type_covered_by_enum(context, "number")) {
-        return {};
-      }
-
-      ValueTypes types{};
-      types.set(std::to_underlying(sourcemeta::core::JSON::Type::Real));
-      types.set(std::to_underlying(sourcemeta::core::JSON::Type::Integer));
-      types.set(std::to_underlying(sourcemeta::core::JSON::Type::Decimal));
-      return {make(InstructionIndex::AssertionTypeStrictAny, context, types)};
-    }
-    if (type == "integer") {
-      // Draft 4 and earlier have no shortcut for an all-integer `enum` here,
-      // and neither does the OpenAPI 3.0 Schema Object, unlike every other
-      // type name. Equality reads a number by its value rather than by how it
-      // is written, so the options admit an instance carrying a fractional
-      // part, which none of these dialects counts as an integer, and so this
-      // assertion always has work left to do
-      return {make(InstructionIndex::AssertionTypeStrict, context,
-                   sourcemeta::core::JSON::Type::Integer)};
-    }
-    if (type == "string") {
-      const auto minimum{
-          unsigned_integer_property(context.schema(), "minLength", 0)};
-      const auto maximum{
-          unsigned_integer_property(context.schema(), "maxLength")};
-
-      const auto fused{fuse_type_size_bound(
-          context, minimum, maximum, InstructionIndex::AssertionTypeStringUpper,
-          InstructionIndex::AssertionTypeStringBounded)};
-      if (fused.has_value()) {
-        return fused.value();
-      }
-
-      if (type_covered_by_enum(context, "string")) {
-        return {};
-      }
-
-      return {make(InstructionIndex::AssertionTypeStrict, context,
-                   sourcemeta::core::JSON::Type::String)};
-    }
-    if (draft3) {
-      // Draft 3 puts no enumeration on `type`, so any name at all satisfies
-      // the meta-schema, and one we do not know constrains nothing
-      return {};
-    }
-    throw_keyword_error(context, EXPECTED_TYPE_NAMES);
+    return draft3_type_assertion_for_name(context, value.to_string(), draft3);
   }
+
   if (value.is_array() && value.size() == 1 && value.front().is_string()) {
     auto assertion{make_type_assertion(context, value.front().to_string())};
     if (assertion.has_value()) {
@@ -2832,143 +2816,14 @@ auto make_openapi_numeric_format_assertion(
                               : ValueNumberType::Double);
 }
 
-auto compiler_draft3_validation_format(const KeywordContext &context,
-                                       const Instructions &) -> Instructions {
-  using Known = sourcemeta::core::SchemaVocabularies::Known;
+// Which assertion a named format asks for, by the dialect that defines
+// it. A format the dialect in force does not name asserts nothing
+auto format_assertion(const KeywordContext &context,
+                      const sourcemeta::core::JSON::String &name)
+    -> Instructions {
   static constexpr auto UNSUPPORTED_DIALECT_MESSAGE{
       "The format assertion tweak not supported in this dialect"};
 
-  const auto is_2019_09_format{
-      context.vocabularies().contains(Known::JSON_SCHEMA_2019_09_FORMAT)};
-  const auto is_2020_12_format_annotation{context.vocabularies().contains(
-      Known::JSON_SCHEMA_2020_12_FORMAT_ANNOTATION)};
-  const auto is_2020_12_format_assertion{context.vocabularies().contains(
-      Known::JSON_SCHEMA_2020_12_FORMAT_ASSERTION)};
-
-  const auto force_assertion{
-      context.schema().is_object() &&
-      context.schema().defines("x-format-assertion") &&
-      context.schema().at("x-format-assertion").is_boolean() &&
-      context.schema().at("x-format-assertion").to_boolean()};
-
-  const auto assert_active{context.global.tweaks.format_assertion ||
-                           force_assertion};
-  if ((is_2019_09_format && assert_active) || is_2020_12_format_assertion ||
-      (is_2020_12_format_annotation && assert_active)) {
-    const auto &format{context.value()};
-    if (!format.is_string()) {
-      return {};
-    }
-
-    const auto &name{format.to_string()};
-
-    // These are the only formats the OpenAPI 3.1 and 3.2 specifications
-    // define themselves, and supporting any other entry of the Format
-    // Registry they defer to is strictly optional
-    // TODO: Consider asserting the numeric and string formats that the
-    // OpenAPI Format Registry defines
-    if (is_openapi_numeric_format(context, format)) {
-      Instructions instructions{
-          make_openapi_numeric_format_assertion(context, name)};
-
-      // Unlike the string formats, the annotation cannot be grouped by the
-      // instance type, as `ControlGroupWhenType` does not take a number
-      if (annotations_enabled(context)) {
-        instructions.push_back(make(InstructionIndex::AnnotationEmit, context,
-                                    sourcemeta::core::JSON{context.value()}));
-      }
-
-      return instructions;
-    }
-
-    ValueStringType type;
-    if (name == "date-time") {
-      type = ValueStringType::DateTime;
-    } else if (name == "date") {
-      type = ValueStringType::Date;
-    } else if (name == "time") {
-      type = ValueStringType::Time;
-    } else if (name == "duration") {
-      type = ValueStringType::Duration;
-    } else if (name == "email") {
-      type = ValueStringType::Email;
-    } else if (name == "idn-email") {
-      type = ValueStringType::IDNEmail;
-    } else if (name == "hostname") {
-      type = ValueStringType::Hostname;
-    } else if (name == "idn-hostname") {
-      type = ValueStringType::IDNHostname;
-    } else if (name == "ipv4") {
-      type = ValueStringType::IPv4;
-    } else if (name == "ipv6") {
-      type = ValueStringType::IPv6;
-    } else if (name == "uri") {
-      type = ValueStringType::URI;
-    } else if (name == "uri-reference") {
-      type = ValueStringType::URIReference;
-    } else if (name == "iri") {
-      type = ValueStringType::IRI;
-    } else if (name == "iri-reference") {
-      type = ValueStringType::IRIReference;
-    } else if (name == "uri-template") {
-      type = ValueStringType::URITemplate;
-    } else if (name == "json-pointer") {
-      type = ValueStringType::JSONPointer;
-    } else if (name == "relative-json-pointer") {
-      type = ValueStringType::RelativeJSONPointer;
-    } else if (name == "regex") {
-      type = ValueStringType::Regex;
-    } else if (name == "uuid") {
-      type = ValueStringType::UUID;
-    } else {
-      return {};
-    }
-
-    Instructions instructions{
-        make(InstructionIndex::AssertionStringType, context, type)};
-
-    if (annotations_enabled(context)) {
-      Instructions annotation_children{
-          make(InstructionIndex::AnnotationEmit, context,
-               sourcemeta::core::JSON{context.value()})};
-      instructions.push_back(make(InstructionIndex::ControlGroupWhenType,
-                                  context.relative(), ValueType::String,
-                                  std::move(annotation_children)));
-    }
-
-    return instructions;
-  }
-
-  if (is_2019_09_format || is_2020_12_format_annotation) {
-    if (!annotations_enabled(context)) {
-      return {};
-    }
-
-    Instructions children{
-        make(InstructionIndex::AnnotationEmit, context,
-             sourcemeta::core::JSON{context.schema().at(context.keyword())})};
-
-    // A format that applies to numbers cannot have its annotation grouped by
-    // the instance type, so emit it the way the assertion path does rather
-    // than collect it for strings alone
-    if (is_openapi_numeric_format(context, context.value())) {
-      return children;
-    }
-
-    return {make(InstructionIndex::ControlGroupWhenType, context.relative(),
-                 ValueType::String, std::move(children))};
-  }
-
-  if (!assert_active) {
-    return {};
-  }
-
-  const auto &format{context.value()};
-  if (!format.is_string()) {
-    return {};
-  }
-
-  const auto &name{format.to_string()};
   ValueStringType type;
 
   const auto draft3{is_draft3(context.vocabularies())};
@@ -3115,6 +2970,143 @@ auto compiler_draft3_validation_format(const KeywordContext &context,
   }
 
   return {make(InstructionIndex::AssertionStringType, context, type)};
+}
+
+auto compiler_draft3_validation_format(const KeywordContext &context,
+                                       const Instructions &) -> Instructions {
+  using Known = sourcemeta::core::SchemaVocabularies::Known;
+
+  const auto is_2019_09_format{
+      context.vocabularies().contains(Known::JSON_SCHEMA_2019_09_FORMAT)};
+  const auto is_2020_12_format_annotation{context.vocabularies().contains(
+      Known::JSON_SCHEMA_2020_12_FORMAT_ANNOTATION)};
+  const auto is_2020_12_format_assertion{context.vocabularies().contains(
+      Known::JSON_SCHEMA_2020_12_FORMAT_ASSERTION)};
+
+  const auto force_assertion{
+      context.schema().is_object() &&
+      context.schema().defines("x-format-assertion") &&
+      context.schema().at("x-format-assertion").is_boolean() &&
+      context.schema().at("x-format-assertion").to_boolean()};
+
+  const auto assert_active{context.global.tweaks.format_assertion ||
+                           force_assertion};
+  if ((is_2019_09_format && assert_active) || is_2020_12_format_assertion ||
+      (is_2020_12_format_annotation && assert_active)) {
+    const auto &format{context.value()};
+    if (!format.is_string()) {
+      return {};
+    }
+
+    const auto &name{format.to_string()};
+
+    // These are the only formats the OpenAPI 3.1 and 3.2 specifications
+    // define themselves, and supporting any other entry of the Format
+    // Registry they defer to is strictly optional
+    // TODO: Consider asserting the numeric and string formats that the
+    // OpenAPI Format Registry defines
+    if (is_openapi_numeric_format(context, format)) {
+      Instructions instructions{
+          make_openapi_numeric_format_assertion(context, name)};
+
+      // Unlike the string formats, the annotation cannot be grouped by the
+      // instance type, as `ControlGroupWhenType` does not take a number
+      if (annotations_enabled(context)) {
+        instructions.push_back(make(InstructionIndex::AnnotationEmit, context,
+                                    sourcemeta::core::JSON{context.value()}));
+      }
+
+      return instructions;
+    }
+
+    ValueStringType type;
+    if (name == "date-time") {
+      type = ValueStringType::DateTime;
+    } else if (name == "date") {
+      type = ValueStringType::Date;
+    } else if (name == "time") {
+      type = ValueStringType::Time;
+    } else if (name == "duration") {
+      type = ValueStringType::Duration;
+    } else if (name == "email") {
+      type = ValueStringType::Email;
+    } else if (name == "idn-email") {
+      type = ValueStringType::IDNEmail;
+    } else if (name == "hostname") {
+      type = ValueStringType::Hostname;
+    } else if (name == "idn-hostname") {
+      type = ValueStringType::IDNHostname;
+    } else if (name == "ipv4") {
+      type = ValueStringType::IPv4;
+    } else if (name == "ipv6") {
+      type = ValueStringType::IPv6;
+    } else if (name == "uri") {
+      type = ValueStringType::URI;
+    } else if (name == "uri-reference") {
+      type = ValueStringType::URIReference;
+    } else if (name == "iri") {
+      type = ValueStringType::IRI;
+    } else if (name == "iri-reference") {
+      type = ValueStringType::IRIReference;
+    } else if (name == "uri-template") {
+      type = ValueStringType::URITemplate;
+    } else if (name == "json-pointer") {
+      type = ValueStringType::JSONPointer;
+    } else if (name == "relative-json-pointer") {
+      type = ValueStringType::RelativeJSONPointer;
+    } else if (name == "regex") {
+      type = ValueStringType::Regex;
+    } else if (name == "uuid") {
+      type = ValueStringType::UUID;
+    } else {
+      return {};
+    }
+
+    Instructions instructions{
+        make(InstructionIndex::AssertionStringType, context, type)};
+
+    if (annotations_enabled(context)) {
+      Instructions annotation_children{
+          make(InstructionIndex::AnnotationEmit, context,
+               sourcemeta::core::JSON{context.value()})};
+      instructions.push_back(make(InstructionIndex::ControlGroupWhenType,
+                                  context.relative(), ValueType::String,
+                                  std::move(annotation_children)));
+    }
+
+    return instructions;
+  }
+
+  if (is_2019_09_format || is_2020_12_format_annotation) {
+    if (!annotations_enabled(context)) {
+      return {};
+    }
+
+    Instructions children{
+        make(InstructionIndex::AnnotationEmit, context,
+             sourcemeta::core::JSON{context.schema().at(context.keyword())})};
+
+    // A format that applies to numbers cannot have its annotation grouped by
+    // the instance type, so emit it the way the assertion path does rather
+    // than collect it for strings alone
+    if (is_openapi_numeric_format(context, context.value())) {
+      return children;
+    }
+
+    return {make(InstructionIndex::ControlGroupWhenType, context.relative(),
+                 ValueType::String, std::move(children))};
+  }
+
+  if (!assert_active) {
+    return {};
+  }
+
+  const auto &format{context.value()};
+  if (!format.is_string()) {
+    return {};
+  }
+
+  return format_assertion(context, format.to_string());
 }
 
 } // namespace sourcemeta::blaze

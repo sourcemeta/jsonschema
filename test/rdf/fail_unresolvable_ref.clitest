@@ -21,6 +21,7 @@ WRITE expected_0.txt UNTIL EOF
 2> error: Could not resolve the reference to an external schema
 2>   at identifier https://example.com/nope
 2>   at file path [CWD]/schema.json
+2>   at location "/properties/foo/$ref"
 2>
 2> This is likely because you forgot to import such schema using `--resolve/-r`
 EOF
@@ -36,7 +37,8 @@ WRITE expected_1.txt UNTIL EOF
 1> {
 1>   "error": "Could not resolve the reference to an external schema",
 1>   "identifier": "https://example.com/nope",
-1>   "filePath": "[CWD]/schema.json"
+1>   "filePath": "[CWD]/schema.json",
+1>   "location": "/properties/foo/$ref"
 1> }
 EOF
 

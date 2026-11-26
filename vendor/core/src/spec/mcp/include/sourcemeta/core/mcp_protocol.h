@@ -13,6 +13,17 @@
 
 namespace sourcemeta::core {
 
+// Clang reads an exhaustive switch as carrying an arm for the value that never
+// arrives and counts it as one nothing took, so the oldest revision opens each
+// switch below through this fold, which closes that arm there while leaving the
+// compilers that read case labels holding every switch to naming them all
+#if defined(__clang__)
+#define SOURCEMETA_CORE_MCP_OLDEST_REVISION default:
+#else
+#define SOURCEMETA_CORE_MCP_OLDEST_REVISION                                    \
+  case MCPProtocolVersion::V_2025_03_26:
+#endif
+
 /// @ingroup mcp
 /// The supported MCP protocol revisions.
 ///
@@ -388,8 +399,8 @@ constexpr JSON::StringView MCP_METHOD_TASKS_RESULT{"tasks/result"};
 mcp_protocol_version_string(const MCPProtocolVersion version) noexcept
     -> JSON::StringView {
   switch (version) {
-    case MCPProtocolVersion::V_2025_03_26:
-      return MCP_PROTOCOL_VERSION_2025_03_26;
+    SOURCEMETA_CORE_MCP_OLDEST_REVISION
+    return MCP_PROTOCOL_VERSION_2025_03_26;
     case MCPProtocolVersion::V_2025_06_18:
       return MCP_PROTOCOL_VERSION_2025_06_18;
     case MCPProtocolVersion::V_2025_11_25:
@@ -867,7 +878,7 @@ mcp_supports_jsonrpc_batching(const MCPProtocolVersion version) noexcept
 mcp_is_request_method(const MCPProtocolVersion version,
                       const JSON::StringView method) noexcept -> bool {
   switch (version) {
-    case MCPProtocolVersion::V_2025_03_26:
+    SOURCEMETA_CORE_MCP_OLDEST_REVISION
     case MCPProtocolVersion::V_2025_06_18:
       return method == MCP_METHOD_COMPLETION_COMPLETE ||
              method == MCP_METHOD_INITIALIZE ||
@@ -935,9 +946,9 @@ mcp_is_request_method(const MCPProtocolVersion version,
 mcp_is_server_request_method(const MCPProtocolVersion version,
                              const JSON::StringView method) noexcept -> bool {
   switch (version) {
-    case MCPProtocolVersion::V_2025_03_26:
-      return method == MCP_METHOD_PING || method == MCP_METHOD_ROOTS_LIST ||
-             method == MCP_METHOD_SAMPLING_CREATE_MESSAGE;
+    SOURCEMETA_CORE_MCP_OLDEST_REVISION
+    return method == MCP_METHOD_PING || method == MCP_METHOD_ROOTS_LIST ||
+           method == MCP_METHOD_SAMPLING_CREATE_MESSAGE;
     case MCPProtocolVersion::V_2025_06_18:
       return method == MCP_METHOD_ELICITATION_CREATE ||
              method == MCP_METHOD_PING || method == MCP_METHOD_ROOTS_LIST ||
@@ -982,7 +993,7 @@ mcp_is_server_request_method(const MCPProtocolVersion version,
 mcp_is_notification_method(const MCPProtocolVersion version,
                            const JSON::StringView method) noexcept -> bool {
   switch (version) {
-    case MCPProtocolVersion::V_2025_03_26:
+    SOURCEMETA_CORE_MCP_OLDEST_REVISION
     case MCPProtocolVersion::V_2025_06_18:
       return method == MCP_METHOD_NOTIFICATIONS_CANCELLED ||
              method == MCP_METHOD_NOTIFICATIONS_INITIALIZED ||
@@ -1044,7 +1055,7 @@ mcp_is_notification_method(const MCPProtocolVersion version,
 mcp_is_input_request_method(const MCPProtocolVersion version,
                             const JSON::StringView method) noexcept -> bool {
   switch (version) {
-    case MCPProtocolVersion::V_2025_03_26:
+    SOURCEMETA_CORE_MCP_OLDEST_REVISION
     case MCPProtocolVersion::V_2025_06_18:
     case MCPProtocolVersion::V_2025_11_25:
       return false;
@@ -1082,29 +1093,29 @@ mcp_is_input_request_method(const MCPProtocolVersion version,
 mcp_supports_method(const MCPProtocolVersion version,
                     const JSON::StringView method) noexcept -> bool {
   switch (version) {
-    case MCPProtocolVersion::V_2025_03_26:
-      return method == MCP_METHOD_COMPLETION_COMPLETE ||
-             method == MCP_METHOD_INITIALIZE ||
-             method == MCP_METHOD_LOGGING_SET_LEVEL ||
-             method == MCP_METHOD_NOTIFICATIONS_CANCELLED ||
-             method == MCP_METHOD_NOTIFICATIONS_INITIALIZED ||
-             method == MCP_METHOD_NOTIFICATIONS_MESSAGE ||
-             method == MCP_METHOD_NOTIFICATIONS_PROGRESS ||
-             method == MCP_METHOD_NOTIFICATIONS_PROMPTS_LIST_CHANGED ||
-             method == MCP_METHOD_NOTIFICATIONS_RESOURCES_LIST_CHANGED ||
-             method == MCP_METHOD_NOTIFICATIONS_RESOURCES_UPDATED ||
-             method == MCP_METHOD_NOTIFICATIONS_ROOTS_LIST_CHANGED ||
-             method == MCP_METHOD_NOTIFICATIONS_TOOLS_LIST_CHANGED ||
-             method == MCP_METHOD_PING || method == MCP_METHOD_PROMPTS_GET ||
-             method == MCP_METHOD_PROMPTS_LIST ||
-             method == MCP_METHOD_RESOURCES_LIST ||
-             method == MCP_METHOD_RESOURCES_READ ||
-             method == MCP_METHOD_RESOURCES_SUBSCRIBE ||
-             method == MCP_METHOD_RESOURCES_TEMPLATES_LIST ||
-             method == MCP_METHOD_RESOURCES_UNSUBSCRIBE ||
-             method == MCP_METHOD_ROOTS_LIST ||
-             method == MCP_METHOD_SAMPLING_CREATE_MESSAGE ||
-             method == MCP_METHOD_TOOLS_CALL || method == MCP_METHOD_TOOLS_LIST;
+    SOURCEMETA_CORE_MCP_OLDEST_REVISION
+    return method == MCP_METHOD_COMPLETION_COMPLETE ||
+           method == MCP_METHOD_INITIALIZE ||
+           method == MCP_METHOD_LOGGING_SET_LEVEL ||
+           method == MCP_METHOD_NOTIFICATIONS_CANCELLED ||
+           method == MCP_METHOD_NOTIFICATIONS_INITIALIZED ||
+           method == MCP_METHOD_NOTIFICATIONS_MESSAGE ||
+           method == MCP_METHOD_NOTIFICATIONS_PROGRESS ||
+           method == MCP_METHOD_NOTIFICATIONS_PROMPTS_LIST_CHANGED ||
+           method == MCP_METHOD_NOTIFICATIONS_RESOURCES_LIST_CHANGED ||
+           method == MCP_METHOD_NOTIFICATIONS_RESOURCES_UPDATED ||
+           method == MCP_METHOD_NOTIFICATIONS_ROOTS_LIST_CHANGED ||
+           method == MCP_METHOD_NOTIFICATIONS_TOOLS_LIST_CHANGED ||
+           method == MCP_METHOD_PING || method == MCP_METHOD_PROMPTS_GET ||
+           method == MCP_METHOD_PROMPTS_LIST ||
+           method == MCP_METHOD_RESOURCES_LIST ||
+           method == MCP_METHOD_RESOURCES_READ ||
+           method == MCP_METHOD_RESOURCES_SUBSCRIBE ||
+           method == MCP_METHOD_RESOURCES_TEMPLATES_LIST ||
+           method == MCP_METHOD_RESOURCES_UNSUBSCRIBE ||
+           method == MCP_METHOD_ROOTS_LIST ||
+           method == MCP_METHOD_SAMPLING_CREATE_MESSAGE ||
+           method == MCP_METHOD_TOOLS_CALL || method == MCP_METHOD_TOOLS_LIST;
     case MCPProtocolVersion::V_2025_06_18:
       return method == MCP_METHOD_COMPLETION_COMPLETE ||
              method == MCP_METHOD_ELICITATION_CREATE ||
@@ -1254,7 +1265,7 @@ mcp_is_cacheable_method(const JSON::StringView method) noexcept -> bool {
 mcp_is_client_notification_method(MCPProtocolVersion version,
                                   JSON::StringView method) noexcept -> bool {
   switch (version) {
-    case MCPProtocolVersion::V_2025_03_26:
+    SOURCEMETA_CORE_MCP_OLDEST_REVISION
     case MCPProtocolVersion::V_2025_06_18:
       return method == "notifications/cancelled" ||
              method == "notifications/initialized" ||
@@ -1298,7 +1309,7 @@ mcp_is_client_notification_method(MCPProtocolVersion version,
 mcp_is_server_notification_method(MCPProtocolVersion version,
                                   JSON::StringView method) noexcept -> bool {
   switch (version) {
-    case MCPProtocolVersion::V_2025_03_26:
+    SOURCEMETA_CORE_MCP_OLDEST_REVISION
     case MCPProtocolVersion::V_2025_06_18:
       return method == "notifications/cancelled" ||
              method == "notifications/progress" ||
@@ -1333,6 +1344,8 @@ mcp_is_server_notification_method(MCPProtocolVersion version,
   std::unreachable();
 #endif
 }
+
+#undef SOURCEMETA_CORE_MCP_OLDEST_REVISION
 
 } // namespace sourcemeta::core
 

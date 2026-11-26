@@ -470,9 +470,6 @@ auto parse_test_suite(const sourcemeta::jsonschema::InputJSON &entry,
   } catch (const sourcemeta::core::SchemaVocabularyError &error) {
     throw sourcemeta::core::FileError<sourcemeta::core::SchemaVocabularyError>{
         entry.resolution_base, error};
-  } catch (const sourcemeta::core::SchemaUnknownDialectError &) {
-    throw sourcemeta::core::FileError<
-        sourcemeta::core::SchemaUnknownDialectError>{entry.resolution_base};
   } catch (const sourcemeta::core::SchemaAnchorCollisionError &error) {
     // No position, as what compiles here is the schema the document targets
     // while the positions on hand describe the test document itself

@@ -1,55 +1,29 @@
+#include <sourcemeta/core/text.h>
 #include <sourcemeta/core/time.h>
 
 #include "helpers.h"
 
-#include <charconv>    // std::from_chars
 #include <chrono>      // std::chrono::system_clock
-#include <cstddef>     // std::size_t
-#include <ctime>       // std::tm
-#include <iomanip>     // std::put_time
-#include <locale>      // std::locale
 #include <optional>    // std::optional, std::nullopt
-#include <sstream>     // std::ostringstream
 #include <string>      // std::string
 #include <string_view> // std::string_view
-
-namespace {
-// The year is rendered separately so it is always four digits, as the basic
-// format is fixed width (ISO 8601-1 §5.4.2.1), which "%Y" does not guarantee
-// for a year below 1000
-constexpr auto FORMAT_ISO8601_BASIC_AFTER_YEAR{"%m%dT%H%M%SZ"};
-
-auto all_digits(const std::string_view value, const std::size_t offset,
-                const std::size_t length) -> bool {
-  for (std::size_t index = offset; index < offset + length; ++index) {
-    // A locale-independent ASCII check, matching what from_chars accepts
-    if (value[index] < '0' || value[index] > '9') {
-      return false;
-    }
-  }
-
-  return true;
-}
-
-auto parse_field(const std::string_view value, const std::size_t offset,
-                 const std::size_t length) -> int {
-  int result = 0;
-  std::from_chars(value.data() + offset, value.data() + offset + length,
-                  result);
-  return result;
-}
-} // namespace
 
 namespace sourcemeta::core {
 
 auto to_iso8601_basic(const std::chrono::system_clock::time_point time)
     -> std::string {
   const auto parts{time_point_to_broken_down(time)};
-  std::ostringstream stream;
-  stream.imbue(std::locale::classic());
-  stream << format_four_digit_year(parts.tm_year + 1900)
-         << std::put_time(&parts, FORMAT_ISO8601_BASIC_AFTER_YEAR);
-  return stream.str();
+  std::string result;
+  result.reserve(16);
+  append_four_digit_year(result, parts.year);
+  append_two_digits(result, parts.month);
+  append_two_digits(result, parts.day);
+  result.push_back('T');
+  append_two_digits(result, parts.hour);
+  append_two_digits(result, parts.minute);
+  append_two_digits(result, parts.second);
+  result.push_back('Z');
+  return result;
 }
 
 auto from_iso8601_basic(const std::string_view value) noexcept
@@ -62,21 +36,21 @@ auto from_iso8601_basic(const std::string_view value) noexcept
   if (value[8] != 'T' || value[15] != 'Z') {
     return std::nullopt;
   }
-  if (!all_digits(value, 0, 8) || !all_digits(value, 9, 6)) {
+  if (!is_digit(value.substr(0, 8)) || !is_digit(value.substr(9, 6))) {
     return std::nullopt;
   }
 
-  std::tm parts = {};
-  parts.tm_year = parse_field(value, 0, 4) - 1900;
-  parts.tm_mon = parse_field(value, 4, 2) - 1;
-  parts.tm_mday = parse_field(value, 6, 2);
-  parts.tm_hour = parse_field(value, 9, 2);
-  parts.tm_min = parse_field(value, 11, 2);
-  parts.tm_sec = parse_field(value, 13, 2);
-  parts.tm_isdst = 0;
+  BrokenDownTime parts{};
+  parts.year = read_four_digits(value, 0);
+  parts.month = read_two_digits(value, 4);
+  parts.day = read_two_digits(value, 6);
+  parts.hour = read_two_digits(value, 9);
+  parts.minute = read_two_digits(value, 11);
+  parts.second = read_two_digits(value, 13);
   if (!is_valid_broken_down_time(parts)) {
     return std::nullopt;
   }
+
   return broken_down_time_to_time_point(parts);
 }
 

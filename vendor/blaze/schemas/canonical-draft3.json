@@ -37,7 +37,7 @@
         },
         "definitions": {
           "type": "object",
-          "minProperties": 1,
+          "required": [ "0" ],
           "propertyNames": {
             "pattern": "^(0|[1-9][0-9]*)$"
           },

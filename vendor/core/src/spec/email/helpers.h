@@ -41,11 +41,13 @@ constexpr auto is_atext(const char character) -> bool {
   }
 }
 
-// RFC 5321 §4.1.2: qtextSMTP = %d32-33 / %d35-91 / %d93-126
+// RFC 5321 §4.1.2: qtextSMTP = %d32-33 / %d35-91 / %d93-126. The two octets
+// the ranges carve out are the quote that ends the string and the backslash
+// that opens a quoted pair, and the scan consumes both of those before asking
+// here, so what is left of the rule is the printable range entire
 constexpr auto is_qtext_smtp(const unsigned char character) -> bool {
-  return (character >= 32 && character <= 33) ||
-         (character >= 35 && character <= 91) ||
-         (character >= 93 && character <= 126);
+  assert(character != '"' && character != '\\');
+  return character >= 32 && character <= 126;
 }
 
 // RFC 5321 §4.1.3: Snum = 1*3DIGIT ; representing a decimal integer

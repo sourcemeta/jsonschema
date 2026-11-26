@@ -139,19 +139,20 @@ auto frame_within(Walk &walk, const JSON &schema,
 // one thing it goes out of its way not to do, as it lets each document go as
 // soon as it is done with it. To have it reached, answer for that meta-schema
 // from the resolver passed in
-auto is_readable(const JSON &document, const SchemaResolver &resolver,
-                 const std::string_view default_dialect) -> bool {
+auto dialect_in_force(const JSON &document, const SchemaResolver &resolver,
+                      const std::string_view default_dialect)
+    -> std::optional<SchemaBaseDialect> {
   try {
-    return base_dialect(document, resolver, default_dialect).has_value();
+    return base_dialect(document, resolver, default_dialect);
   } catch (const SchemaUnknownBaseDialectError &) {
-    return false;
+    return std::nullopt;
   } catch (const SchemaResolutionError &) {
-    return false;
+    return std::nullopt;
   } catch (const SchemaKeywordError &) {
     // A dialect declaration that is not a string, or one that is no URI at
     // all, leaves the document carrying it with nothing to be read against,
     // wherever along the chain the lookup met it
-    return false;
+    return std::nullopt;
   }
 }
 
@@ -235,10 +236,18 @@ auto examine(Walk &walk, const SchemaFrame &frame,
     }
 
     // A boolean schema has nowhere to hold a reference, so it needs no dialect
-    // to be read against and nothing comes of reading it
+    // to be read against and nothing comes of reading it. Which dialect is in
+    // force still settles whether a boolean reads as a schema at all, where
+    // there is one to be had, as every dialect before Draft 6 says a schema is
+    // an object. A document that answers to no dialect leaves that unsettled,
+    // and what a boolean means is then the caller's to say
     const auto standalone{remote.value().is_boolean()};
-    if (!standalone &&
-        !is_readable(remote.value(), walk.resolver, walk.default_dialect)) {
+    const auto dialect{
+        dialect_in_force(remote.value(), walk.resolver, walk.default_dialect)};
+    const auto unreadable{!standalone && !dialect.has_value()};
+    const auto no_schema_at_all{standalone && dialect.has_value() &&
+                                !supports_boolean_schemas(dialect.value())};
+    if (unreadable || no_schema_at_all) {
       throw SchemaReferenceError("The JSON document is not a valid JSON Schema",
                                  reference.base, to_pointer(pointer));
     }
@@ -378,7 +387,8 @@ auto schema_dependencies(const JSON &schema, const SchemaWalker &walker,
     if (unresolved != nullptr) {
       throw SchemaResolutionError(
           "Could not resolve the reference to an external schema",
-          unresolved->destination);
+          unresolved->destination, unresolved->pointer,
+          fragment_of(*unresolved));
     }
   } catch (const ForeignError &caller) {
     std::rethrow_exception(caller.error);

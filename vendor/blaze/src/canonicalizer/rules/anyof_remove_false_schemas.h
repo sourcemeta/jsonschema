@@ -20,8 +20,7 @@ public:
              SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_7,
              SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_6}) &&
         schema.is_object() && schema.defines(KEYWORD) &&
-        schema.at(KEYWORD).is_array() &&
-        schema.at(KEYWORD).contains(sourcemeta::core::JSON{false}));
+        schema.at(KEYWORD).is_array());
     ONLY_CONTINUE_IF(!frame.has_references_through(
         location.pointer,
         sourcemeta::core::WeakPointer::Token{std::cref(KEYWORD)}));
@@ -31,14 +30,14 @@ public:
     const auto &anyof{schema.at(KEYWORD)};
     for (std::size_t index = 0; index < anyof.size(); ++index) {
       const auto &entry{anyof.at(index)};
-      if (entry.is_boolean() && !entry.to_boolean()) {
+      if (says_nothing_satisfies(entry, vocabularies)) {
         false_locations.push_back(sourcemeta::core::Pointer{KEYWORD, index});
       } else {
         has_non_false = true;
       }
     }
 
-    ONLY_CONTINUE_IF(has_non_false);
+    ONLY_CONTINUE_IF(!false_locations.empty() && has_non_false);
     this->locations_ = std::move(false_locations);
     return true;
   }

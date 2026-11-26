@@ -20,6 +20,15 @@
 
 namespace sourcemeta::core {
 
+// Clang reads an exhaustive switch as carrying an arm for the value that never
+// arrives, which this fold closes there while the compilers that read case
+// labels keep holding the switch to naming every scope
+#if defined(__clang__)
+#define SOURCEMETA_CORE_MCP_FIRST_CACHE_SCOPE default:
+#else
+#define SOURCEMETA_CORE_MCP_FIRST_CACHE_SCOPE case MCPCacheScope::Public:
+#endif
+
 /// @ingroup mcp
 /// Cache scope for 2026-07-28 cacheable MCP results.
 ///
@@ -48,8 +57,8 @@ enum class MCPCacheScope : std::uint8_t {
 [[nodiscard]] constexpr auto
 mcp_cache_scope_string(const MCPCacheScope scope) noexcept -> JSON::StringView {
   switch (scope) {
-    case MCPCacheScope::Public:
-      return "public";
+    SOURCEMETA_CORE_MCP_FIRST_CACHE_SCOPE
+    return "public";
     case MCPCacheScope::Private:
       return "private";
   }
@@ -1560,6 +1569,8 @@ mcp_request_subscription_id(MCPProtocolVersion version,
 [[nodiscard]] SOURCEMETA_CORE_MCP_EXPORT auto
 mcp_tool_call_arguments(const sourcemeta::core::JSON &envelope)
     -> const sourcemeta::core::JSON *;
+
+#undef SOURCEMETA_CORE_MCP_FIRST_CACHE_SCOPE
 
 } // namespace sourcemeta::core
 
