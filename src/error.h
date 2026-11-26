@@ -1130,6 +1130,21 @@ inline auto print_exception(const bool is_json, const Exception &exception)
     }
   }
 
+  // An identifier names a document whole, so a reference that wanted a place
+  // within one only says which place through the fragment that the identifier
+  // does not spell
+  if constexpr (requires(const Exception &current) { current.fragment(); }) {
+    if (exception.fragment().has_value()) {
+      if (is_json) {
+        error_json.assign("fragment",
+                          sourcemeta::core::JSON{exception.fragment().value()});
+      } else {
+        std::cerr << "  at fragment \"" << exception.fragment().value()
+                  << "\"\n";
+      }
+    }
+  }
+
   if constexpr (requires(const Exception &current) { current.value(); }) {
     if (is_json) {
       error_json.assign("value", sourcemeta::core::JSON{exception.value()});
