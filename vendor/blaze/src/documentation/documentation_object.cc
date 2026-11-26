@@ -22,6 +22,7 @@
 
 namespace {
 
+using sourcemeta::blaze::also;
 using sourcemeta::blaze::make_value;
 using sourcemeta::core::JSON;
 using sourcemeta::core::Pointer;
@@ -214,6 +215,42 @@ auto property_named(std::vector<JSON> &properties,
   return properties.back();
 }
 
+// A name that only a member, a branch, a condition or a reference uses is held
+// to what every unnamed property holds, so it is shown as a property of its own
+auto hold_to_names(std::vector<JSON> &properties,
+                   std::map<JSON::String, std::size_t> &position,
+                   const std::set<JSON::String> &required,
+                   const std::set<JSON::String> &held,
+                   const std::set<JSON::String> &own,
+                   const std::vector<JSON::String> &own_patterns,
+                   const JSON &other) -> void {
+  for (const auto &name : held) {
+    if (own.contains(name) || matches_any(own_patterns, name)) {
+      continue;
+    }
+
+    auto &property{property_named(properties, position, required, name)};
+    if (property.defines("value")) {
+      also(property.at("value"), JSON{other});
+    } else {
+      property.assign("value", other);
+    }
+  }
+}
+
+// As above for a pattern that this subschema does not carry itself
+auto hold_to_patterns(JSON &pattern_properties,
+                      const std::set<JSON::String> &patterns,
+                      const std::vector<JSON::String> &own_patterns,
+                      const JSON &except, const JSON &other) -> void {
+  for (const auto &pattern : patterns) {
+    if (std::find(own_patterns.cbegin(), own_patterns.cend(), pattern) ==
+        own_patterns.cend()) {
+      pattern_properties.push_back(held_by(&pattern, except, other));
+    }
+  }
+}
+
 } // namespace
 
 namespace sourcemeta::blaze {
@@ -322,28 +359,14 @@ auto object_facts(DocumentationContext &context, JSON &value,
       std::set<JSON::String> held{reach.names};
       held.insert(required.cbegin(), required.cend());
       held.insert(triggers.cbegin(), triggers.cend());
-      for (const auto &name : held) {
-        if (own.contains(name) || matches_any(own_patterns, name)) {
-          continue;
-        }
-
-        auto &property{property_named(properties, position, required, name)};
-        if (property.defines("value")) {
-          also(property.at("value"), JSON{other});
-        } else {
-          property.assign("value", other);
-        }
-      }
+      hold_to_names(properties, position, required, held, own, own_patterns,
+                    other);
 
       // A name this subschema names itself, or matches by a pattern of its
       // own, is not held to it, so what is held leaves those names out.
       const auto except{exceptions(own, own_patterns)};
-      for (const auto &pattern : reach.patterns) {
-        if (std::find(own_patterns.cbegin(), own_patterns.cend(), pattern) ==
-            own_patterns.cend()) {
-          pattern_properties.push_back(held_by(&pattern, except, other));
-        }
-      }
+      hold_to_patterns(pattern_properties, reach.patterns, own_patterns, except,
+                       other);
 
       // A part that says what every property it does not name holds names
       // every property, so the format would count them all as named. Every

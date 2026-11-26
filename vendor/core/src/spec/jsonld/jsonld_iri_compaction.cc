@@ -65,6 +65,304 @@ auto relativize(const JSON::String &iri, const JSON::String &base)
   return relative;
 }
 
+// Steps 2 to 4 of IRI Compaction: the term that the inverse context picks
+// for the value, where it names one (JSON-LD 1.1 API Section 6.2)
+auto select_compact_term(const ActiveContext &active_context,
+                         const JSON &inverse_context,
+                         const JSON::String &variable, const JSON *const value,
+                         const bool vocabulary, const bool reverse)
+    -> std::optional<JSON::String> {
+  if (!vocabulary || !inverse_context.defines(variable)) {
+    return std::nullopt;
+  }
+
+  // When a default base direction is set, the default language is the
+  // language and direction joined by an underscore, even if there is no
+  // default language (Section 6.2.2).
+  JSON::String default_language{KEYWORD_NONE};
+  if (active_context.default_direction.has_value()) {
+    default_language = active_context.default_language.has_value()
+                           ? lowercase(active_context.default_language.value())
+                           : JSON::String{};
+    default_language += "_";
+    default_language += lowercase(active_context.default_direction.value());
+  } else if (active_context.default_language.has_value()) {
+    default_language = lowercase(active_context.default_language.value());
+  }
+
+  std::vector<JSON::String> containers;
+  JSON::String type_language{KEYWORD_LANGUAGE};
+  JSON::String type_language_value{KEYWORD_NULL};
+
+  const bool is_object{value != nullptr && value->is_object()};
+  const bool has_index{is_object &&
+                       value->defines(KEYWORD_INDEX, KEYWORD_INDEX_HASH)};
+  const bool is_graph{is_object &&
+                      value->defines(KEYWORD_GRAPH, KEYWORD_GRAPH_HASH)};
+
+  if (has_index && !is_graph) {
+    containers.emplace_back(KEYWORD_INDEX);
+    containers.emplace_back(JSON::String{KEYWORD_INDEX} +
+                            JSON::String{KEYWORD_SET});
+  }
+
+  if (reverse) {
+    type_language = KEYWORD_TYPE;
+    type_language_value = KEYWORD_REVERSE;
+    containers.emplace_back(KEYWORD_SET);
+    containers.emplace_back(KEYWORD_NONE);
+    // JSON-LD 1.1 API Section 6.2.2: the @index and @index@set candidates are
+    // added only when the processing mode is not json-ld-1.0 and the value
+    // carries no @index entry
+    if (!active_context.processing_1_0 && !has_index) {
+      containers.emplace_back(KEYWORD_INDEX);
+      containers.emplace_back(JSON::String{KEYWORD_INDEX} +
+                              JSON::String{KEYWORD_SET});
+    }
+  } else if (is_graph) {
+    const JSON::String graph{KEYWORD_GRAPH};
+    const JSON::String set{KEYWORD_SET};
+    const bool has_id{value->defines(KEYWORD_ID, KEYWORD_ID_HASH)};
+    // Container preference for a graph object: the @graph@index and @graph@id
+    // variants rank first only when the value carries the matching entry,
+    // otherwise the plain graph containers rank ahead of them (JSON-LD 1.1
+    // API Section 6.2.2)
+    if (has_index) {
+      containers.emplace_back(graph + JSON::String{KEYWORD_INDEX});
+      containers.emplace_back(graph + JSON::String{KEYWORD_INDEX} + set);
+    }
+    if (has_id) {
+      containers.emplace_back(graph + JSON::String{KEYWORD_ID});
+      containers.emplace_back(graph + JSON::String{KEYWORD_ID} + set);
+    }
+    containers.emplace_back(graph);
+    containers.emplace_back(graph + set);
+    containers.emplace_back(KEYWORD_SET);
+    if (!has_index) {
+      containers.emplace_back(graph + JSON::String{KEYWORD_INDEX});
+      containers.emplace_back(graph + JSON::String{KEYWORD_INDEX} + set);
+    }
+    if (!has_id) {
+      containers.emplace_back(graph + JSON::String{KEYWORD_ID});
+      containers.emplace_back(graph + JSON::String{KEYWORD_ID} + set);
+    }
+    containers.emplace_back(KEYWORD_INDEX);
+    containers.emplace_back(JSON::String{KEYWORD_INDEX} + set);
+    // The graph-object candidate list ends with @none as a last resort, after
+    // every graph container above, so a graph object still compacts against a
+    // term with no container mapping when the active context defines no
+    // graph-container term for its property (W3C JSON-LD 1.1 compaction suite
+    // cases 0090 through 0094)
+    containers.emplace_back(KEYWORD_NONE);
+    type_language = KEYWORD_TYPE;
+    type_language_value = KEYWORD_ID;
+  } else if (is_object && value->defines(KEYWORD_LIST, KEYWORD_LIST_HASH)) {
+    if (!has_index) {
+      containers.emplace_back(KEYWORD_LIST);
+    }
+    const auto &list{value->at(KEYWORD_LIST, KEYWORD_LIST_HASH)};
+    std::optional<JSON::String> common_type;
+    std::optional<JSON::String> common_language;
+    if (list.empty()) {
+      common_language = default_language;
+    }
+    for (const auto &item : list.as_array()) {
+      JSON::String item_language{KEYWORD_NONE};
+      JSON::String item_type{KEYWORD_NONE};
+      // What a list holds in expanded form is maps, which the entry point
+      // holds the input to
+      assert(item.is_object());
+      if (item.defines(KEYWORD_VALUE, KEYWORD_VALUE_HASH)) {
+        const bool item_has_language{
+            item.defines(KEYWORD_LANGUAGE, KEYWORD_LANGUAGE_HASH)};
+        const bool item_has_direction{
+            item.defines(KEYWORD_DIRECTION, KEYWORD_DIRECTION_HASH)};
+        if (item_has_language && item_has_direction) {
+          item_language =
+              lowercase(item.at(KEYWORD_LANGUAGE, KEYWORD_LANGUAGE_HASH)
+                            .to_string()) +
+              "_" +
+              lowercase(item.at(KEYWORD_DIRECTION, KEYWORD_DIRECTION_HASH)
+                            .to_string());
+        } else if (item_has_language) {
+          item_language = lowercase(
+              item.at(KEYWORD_LANGUAGE, KEYWORD_LANGUAGE_HASH).to_string());
+        } else if (item_has_direction) {
+          item_language =
+              "_" + lowercase(item.at(KEYWORD_DIRECTION, KEYWORD_DIRECTION_HASH)
+                                  .to_string());
+        } else if (item.defines(KEYWORD_TYPE, KEYWORD_TYPE_HASH)) {
+          item_type = item.at(KEYWORD_TYPE, KEYWORD_TYPE_HASH).to_string();
+        } else {
+          item_language = KEYWORD_NULL;
+        }
+      } else {
+        item_type = KEYWORD_ID;
+      }
+      if (!common_language.has_value()) {
+        common_language = item_language;
+      } else if (common_language.value() != item_language &&
+                 item.defines(KEYWORD_VALUE, KEYWORD_VALUE_HASH)) {
+        common_language = JSON::String{KEYWORD_NONE};
+      }
+      if (!common_type.has_value()) {
+        common_type = item_type;
+      } else if (common_type.value() != item_type) {
+        common_type = JSON::String{KEYWORD_NONE};
+      }
+    }
+    // An empty list takes the default language, and any other settles one
+    // from its first item, so the language is spoken for either way
+    assert(common_language.has_value());
+    if (!common_type.has_value()) {
+      common_type = JSON::String{KEYWORD_NONE};
+    }
+    if (common_type.value() != KEYWORD_NONE) {
+      type_language = KEYWORD_TYPE;
+      type_language_value = common_type.value();
+    } else {
+      type_language_value = common_language.value();
+    }
+    // An empty list matches a term via the @any fallback.
+    if (list.empty()) {
+      type_language = KEYWORD_ANY;
+    }
+    // Fall back to an exact-match term when no list-container term applies.
+    containers.emplace_back(KEYWORD_NONE);
+  } else if (is_object && value->defines(KEYWORD_VALUE, KEYWORD_VALUE_HASH)) {
+    const bool has_language{
+        value->defines(KEYWORD_LANGUAGE, KEYWORD_LANGUAGE_HASH)};
+    const bool has_direction{
+        value->defines(KEYWORD_DIRECTION, KEYWORD_DIRECTION_HASH)};
+    const JSON::String language_set{JSON::String{KEYWORD_LANGUAGE} +
+                                    JSON::String{KEYWORD_SET}};
+    if (has_direction && !has_index) {
+      type_language_value =
+          (has_language
+               ? lowercase(value->at(KEYWORD_LANGUAGE, KEYWORD_LANGUAGE_HASH)
+                               .to_string())
+               : JSON::String{}) +
+          "_" +
+          lowercase(
+              value->at(KEYWORD_DIRECTION, KEYWORD_DIRECTION_HASH).to_string());
+      containers.emplace_back(KEYWORD_LANGUAGE);
+      containers.emplace_back(language_set);
+    } else if (has_language && !has_index) {
+      type_language_value = lowercase(
+          value->at(KEYWORD_LANGUAGE, KEYWORD_LANGUAGE_HASH).to_string());
+      containers.emplace_back(KEYWORD_LANGUAGE);
+      containers.emplace_back(language_set);
+    } else if (value->defines(KEYWORD_TYPE, KEYWORD_TYPE_HASH)) {
+      type_language = KEYWORD_TYPE;
+      type_language_value =
+          value->at(KEYWORD_TYPE, KEYWORD_TYPE_HASH).to_string();
+    }
+    containers.emplace_back(KEYWORD_SET);
+    containers.emplace_back(KEYWORD_NONE);
+    // A value with no @index entry may also match an @index container, but
+    // never under the 1.0 processing mode (JSON-LD 1.1 API Section 6.2.2)
+    if (!active_context.processing_1_0 && !has_index) {
+      containers.emplace_back(KEYWORD_INDEX);
+      containers.emplace_back(JSON::String{KEYWORD_INDEX} +
+                              JSON::String{KEYWORD_SET});
+    }
+    // JSON-LD 1.1 API Section 6.2.2: a value object carrying only @value also
+    // matches a language container term as a last resort, but only when the
+    // processing mode is not json-ld-1.0
+    if (!active_context.processing_1_0 && value->object_size() == 1) {
+      containers.emplace_back(KEYWORD_LANGUAGE);
+      containers.emplace_back(language_set);
+    }
+  } else {
+    type_language = KEYWORD_TYPE;
+    type_language_value = KEYWORD_ID;
+    // Container preference for a node reference or null: the @id and @type
+    // containers first, then a plain @set, then no container, and an @index
+    // container last (JSON-LD 1.1 API Section 6.2.2)
+    containers.emplace_back(KEYWORD_ID);
+    containers.emplace_back(JSON::String{KEYWORD_ID} +
+                            JSON::String{KEYWORD_SET});
+    containers.emplace_back(KEYWORD_TYPE);
+    containers.emplace_back(JSON::String{KEYWORD_SET} +
+                            JSON::String{KEYWORD_TYPE});
+    containers.emplace_back(KEYWORD_SET);
+    containers.emplace_back(KEYWORD_NONE);
+    // JSON-LD 1.1 API Section 6.2.2: the @index and @index@set candidates are
+    // added only when the processing mode is not json-ld-1.0 and the value
+    // carries no @index entry
+    if (!active_context.processing_1_0 && !has_index) {
+      containers.emplace_back(KEYWORD_INDEX);
+      containers.emplace_back(JSON::String{KEYWORD_INDEX} +
+                              JSON::String{KEYWORD_SET});
+    }
+  }
+
+  std::vector<JSON::String> preferred;
+  if (type_language_value == KEYWORD_REVERSE) {
+    preferred.emplace_back(KEYWORD_REVERSE);
+  }
+  if ((type_language_value == KEYWORD_ID ||
+       type_language_value == KEYWORD_REVERSE) &&
+      is_object && value->defines(KEYWORD_ID, KEYWORD_ID_HASH)) {
+    // An identifier is a string in expanded form, which the entry point
+    // holds the input to
+    const auto &identifier{value->at(KEYWORD_ID, KEYWORD_ID_HASH)};
+    assert(identifier.is_string());
+    {
+      const auto compacted_id{compact_iri(active_context, inverse_context,
+                                          identifier.to_string(), nullptr, true,
+                                          false)};
+      // A term whose name carries a colon must expand onto the very IRI it
+      // maps, so a term found under a name settled on above maps that IRI
+      // where it maps anything at all (JSON-LD 1.1 API Section 4.2.2 step 16)
+      const auto iterator{active_context.terms.find(compacted_id)};
+      assert(iterator == active_context.terms.cend() ||
+             !iterator->second.iri.has_value() ||
+             iterator->second.iri.value() == identifier.to_string());
+      if (iterator != active_context.terms.cend() &&
+          iterator->second.iri.has_value()) {
+        preferred.emplace_back(KEYWORD_VOCAB);
+        preferred.emplace_back(KEYWORD_ID);
+        preferred.emplace_back(KEYWORD_NONE);
+      } else {
+        preferred.emplace_back(KEYWORD_ID);
+        preferred.emplace_back(KEYWORD_VOCAB);
+        preferred.emplace_back(KEYWORD_NONE);
+      }
+    }
+  } else if (value == nullptr) {
+    // For a bare value the preferred list is the type or language value
+    // followed by @none (JSON-LD 1.1 API Section 6.2.2). The @vocab candidate
+    // is not literally listed there for this case, but it is load-bearing:
+    // the W3C compaction suite case 0114 regresses without it, so a bare
+    // vocabulary reference must also be allowed to match a term coercing
+    // @vocab, exactly as the @none candidate is required for the graph branch
+    preferred.emplace_back(KEYWORD_ID);
+    preferred.emplace_back(KEYWORD_VOCAB);
+    preferred.emplace_back(KEYWORD_NONE);
+  } else {
+    preferred.emplace_back(type_language_value);
+    preferred.emplace_back(KEYWORD_NONE);
+  }
+  preferred.emplace_back(KEYWORD_ANY);
+
+  // A language-and-direction preferred value also allows matching a term that
+  // only coerces direction, via the substring from the underscore onwards.
+  std::vector<JSON::String> direction_fallbacks;
+  for (const auto &item : preferred) {
+    const auto underscore{item.find('_')};
+    if (underscore != JSON::String::npos) {
+      direction_fallbacks.emplace_back(item.substr(underscore));
+    }
+  }
+  for (auto &fallback : direction_fallbacks) {
+    preferred.push_back(std::move(fallback));
+  }
+
+  const auto term{term_selection(inverse_context, variable, containers,
+                                 type_language, preferred)};
+  return term;
+}
 } // namespace
 
 auto compact_iri(const ActiveContext &active_context,
@@ -75,296 +373,10 @@ auto compact_iri(const ActiveContext &active_context,
     return variable;
   }
 
-  if (vocabulary && inverse_context.defines(variable)) {
-    // When a default base direction is set, the default language is the
-    // language and direction joined by an underscore, even if there is no
-    // default language (Section 6.2.2).
-    JSON::String default_language{KEYWORD_NONE};
-    if (active_context.default_direction.has_value()) {
-      default_language =
-          active_context.default_language.has_value()
-              ? lowercase(active_context.default_language.value())
-              : JSON::String{};
-      default_language += "_";
-      default_language += lowercase(active_context.default_direction.value());
-    } else if (active_context.default_language.has_value()) {
-      default_language = lowercase(active_context.default_language.value());
-    }
-
-    std::vector<JSON::String> containers;
-    JSON::String type_language{KEYWORD_LANGUAGE};
-    JSON::String type_language_value{KEYWORD_NULL};
-
-    const bool is_object{value != nullptr && value->is_object()};
-    const bool has_index{is_object &&
-                         value->defines(KEYWORD_INDEX, KEYWORD_INDEX_HASH)};
-    const bool is_graph{is_object &&
-                        value->defines(KEYWORD_GRAPH, KEYWORD_GRAPH_HASH)};
-
-    if (has_index && !is_graph) {
-      containers.emplace_back(KEYWORD_INDEX);
-      containers.emplace_back(JSON::String{KEYWORD_INDEX} +
-                              JSON::String{KEYWORD_SET});
-    }
-
-    if (reverse) {
-      type_language = KEYWORD_TYPE;
-      type_language_value = KEYWORD_REVERSE;
-      containers.emplace_back(KEYWORD_SET);
-      containers.emplace_back(KEYWORD_NONE);
-      // JSON-LD 1.1 API Section 6.2.2: the @index and @index@set candidates are
-      // added only when the processing mode is not json-ld-1.0 and the value
-      // carries no @index entry
-      if (!active_context.processing_1_0 && !has_index) {
-        containers.emplace_back(KEYWORD_INDEX);
-        containers.emplace_back(JSON::String{KEYWORD_INDEX} +
-                                JSON::String{KEYWORD_SET});
-      }
-    } else if (is_graph) {
-      const JSON::String graph{KEYWORD_GRAPH};
-      const JSON::String set{KEYWORD_SET};
-      const bool has_id{value->defines(KEYWORD_ID, KEYWORD_ID_HASH)};
-      // Container preference for a graph object: the @graph@index and @graph@id
-      // variants rank first only when the value carries the matching entry,
-      // otherwise the plain graph containers rank ahead of them (JSON-LD 1.1
-      // API Section 6.2.2)
-      if (has_index) {
-        containers.emplace_back(graph + JSON::String{KEYWORD_INDEX});
-        containers.emplace_back(graph + JSON::String{KEYWORD_INDEX} + set);
-      }
-      if (has_id) {
-        containers.emplace_back(graph + JSON::String{KEYWORD_ID});
-        containers.emplace_back(graph + JSON::String{KEYWORD_ID} + set);
-      }
-      containers.emplace_back(graph);
-      containers.emplace_back(graph + set);
-      containers.emplace_back(KEYWORD_SET);
-      if (!has_index) {
-        containers.emplace_back(graph + JSON::String{KEYWORD_INDEX});
-        containers.emplace_back(graph + JSON::String{KEYWORD_INDEX} + set);
-      }
-      if (!has_id) {
-        containers.emplace_back(graph + JSON::String{KEYWORD_ID});
-        containers.emplace_back(graph + JSON::String{KEYWORD_ID} + set);
-      }
-      containers.emplace_back(KEYWORD_INDEX);
-      containers.emplace_back(JSON::String{KEYWORD_INDEX} + set);
-      // The graph-object candidate list ends with @none as a last resort, after
-      // every graph container above, so a graph object still compacts against a
-      // term with no container mapping when the active context defines no
-      // graph-container term for its property (W3C JSON-LD 1.1 compaction suite
-      // cases 0090 through 0094)
-      containers.emplace_back(KEYWORD_NONE);
-      type_language = KEYWORD_TYPE;
-      type_language_value = KEYWORD_ID;
-    } else if (is_object && value->defines(KEYWORD_LIST, KEYWORD_LIST_HASH)) {
-      if (!has_index) {
-        containers.emplace_back(KEYWORD_LIST);
-      }
-      const auto &list{value->at(KEYWORD_LIST, KEYWORD_LIST_HASH)};
-      std::optional<JSON::String> common_type;
-      std::optional<JSON::String> common_language;
-      if (list.empty()) {
-        common_language = default_language;
-      }
-      for (const auto &item : list.as_array()) {
-        JSON::String item_language{KEYWORD_NONE};
-        JSON::String item_type{KEYWORD_NONE};
-        // What a list holds in expanded form is maps, which the entry point
-        // holds the input to
-        assert(item.is_object());
-        if (item.defines(KEYWORD_VALUE, KEYWORD_VALUE_HASH)) {
-          const bool item_has_language{
-              item.defines(KEYWORD_LANGUAGE, KEYWORD_LANGUAGE_HASH)};
-          const bool item_has_direction{
-              item.defines(KEYWORD_DIRECTION, KEYWORD_DIRECTION_HASH)};
-          if (item_has_language && item_has_direction) {
-            item_language =
-                lowercase(item.at(KEYWORD_LANGUAGE, KEYWORD_LANGUAGE_HASH)
-                              .to_string()) +
-                "_" +
-                lowercase(item.at(KEYWORD_DIRECTION, KEYWORD_DIRECTION_HASH)
-                              .to_string());
-          } else if (item_has_language) {
-            item_language = lowercase(
-                item.at(KEYWORD_LANGUAGE, KEYWORD_LANGUAGE_HASH).to_string());
-          } else if (item_has_direction) {
-            item_language = "_" + lowercase(item.at(KEYWORD_DIRECTION,
-                                                    KEYWORD_DIRECTION_HASH)
-                                                .to_string());
-          } else if (item.defines(KEYWORD_TYPE, KEYWORD_TYPE_HASH)) {
-            item_type = item.at(KEYWORD_TYPE, KEYWORD_TYPE_HASH).to_string();
-          } else {
-            item_language = KEYWORD_NULL;
-          }
-        } else {
-          item_type = KEYWORD_ID;
-        }
-        if (!common_language.has_value()) {
-          common_language = item_language;
-        } else if (common_language.value() != item_language &&
-                   item.defines(KEYWORD_VALUE, KEYWORD_VALUE_HASH)) {
-          common_language = JSON::String{KEYWORD_NONE};
-        }
-        if (!common_type.has_value()) {
-          common_type = item_type;
-        } else if (common_type.value() != item_type) {
-          common_type = JSON::String{KEYWORD_NONE};
-        }
-      }
-      // An empty list takes the default language, and any other settles one
-      // from its first item, so the language is spoken for either way
-      assert(common_language.has_value());
-      if (!common_type.has_value()) {
-        common_type = JSON::String{KEYWORD_NONE};
-      }
-      if (common_type.value() != KEYWORD_NONE) {
-        type_language = KEYWORD_TYPE;
-        type_language_value = common_type.value();
-      } else {
-        type_language_value = common_language.value();
-      }
-      // An empty list matches a term via the @any fallback.
-      if (list.empty()) {
-        type_language = KEYWORD_ANY;
-      }
-      // Fall back to an exact-match term when no list-container term applies.
-      containers.emplace_back(KEYWORD_NONE);
-    } else if (is_object && value->defines(KEYWORD_VALUE, KEYWORD_VALUE_HASH)) {
-      const bool has_language{
-          value->defines(KEYWORD_LANGUAGE, KEYWORD_LANGUAGE_HASH)};
-      const bool has_direction{
-          value->defines(KEYWORD_DIRECTION, KEYWORD_DIRECTION_HASH)};
-      const JSON::String language_set{JSON::String{KEYWORD_LANGUAGE} +
-                                      JSON::String{KEYWORD_SET}};
-      if (has_direction && !has_index) {
-        type_language_value =
-            (has_language
-                 ? lowercase(value->at(KEYWORD_LANGUAGE, KEYWORD_LANGUAGE_HASH)
-                                 .to_string())
-                 : JSON::String{}) +
-            "_" +
-            lowercase(value->at(KEYWORD_DIRECTION, KEYWORD_DIRECTION_HASH)
-                          .to_string());
-        containers.emplace_back(KEYWORD_LANGUAGE);
-        containers.emplace_back(language_set);
-      } else if (has_language && !has_index) {
-        type_language_value = lowercase(
-            value->at(KEYWORD_LANGUAGE, KEYWORD_LANGUAGE_HASH).to_string());
-        containers.emplace_back(KEYWORD_LANGUAGE);
-        containers.emplace_back(language_set);
-      } else if (value->defines(KEYWORD_TYPE, KEYWORD_TYPE_HASH)) {
-        type_language = KEYWORD_TYPE;
-        type_language_value =
-            value->at(KEYWORD_TYPE, KEYWORD_TYPE_HASH).to_string();
-      }
-      containers.emplace_back(KEYWORD_SET);
-      containers.emplace_back(KEYWORD_NONE);
-      // A value with no @index entry may also match an @index container, but
-      // never under the 1.0 processing mode (JSON-LD 1.1 API Section 6.2.2)
-      if (!active_context.processing_1_0 && !has_index) {
-        containers.emplace_back(KEYWORD_INDEX);
-        containers.emplace_back(JSON::String{KEYWORD_INDEX} +
-                                JSON::String{KEYWORD_SET});
-      }
-      // JSON-LD 1.1 API Section 6.2.2: a value object carrying only @value also
-      // matches a language container term as a last resort, but only when the
-      // processing mode is not json-ld-1.0
-      if (!active_context.processing_1_0 && value->object_size() == 1) {
-        containers.emplace_back(KEYWORD_LANGUAGE);
-        containers.emplace_back(language_set);
-      }
-    } else {
-      type_language = KEYWORD_TYPE;
-      type_language_value = KEYWORD_ID;
-      // Container preference for a node reference or null: the @id and @type
-      // containers first, then a plain @set, then no container, and an @index
-      // container last (JSON-LD 1.1 API Section 6.2.2)
-      containers.emplace_back(KEYWORD_ID);
-      containers.emplace_back(JSON::String{KEYWORD_ID} +
-                              JSON::String{KEYWORD_SET});
-      containers.emplace_back(KEYWORD_TYPE);
-      containers.emplace_back(JSON::String{KEYWORD_SET} +
-                              JSON::String{KEYWORD_TYPE});
-      containers.emplace_back(KEYWORD_SET);
-      containers.emplace_back(KEYWORD_NONE);
-      // JSON-LD 1.1 API Section 6.2.2: the @index and @index@set candidates are
-      // added only when the processing mode is not json-ld-1.0 and the value
-      // carries no @index entry
-      if (!active_context.processing_1_0 && !has_index) {
-        containers.emplace_back(KEYWORD_INDEX);
-        containers.emplace_back(JSON::String{KEYWORD_INDEX} +
-                                JSON::String{KEYWORD_SET});
-      }
-    }
-
-    std::vector<JSON::String> preferred;
-    if (type_language_value == KEYWORD_REVERSE) {
-      preferred.emplace_back(KEYWORD_REVERSE);
-    }
-    if ((type_language_value == KEYWORD_ID ||
-         type_language_value == KEYWORD_REVERSE) &&
-        is_object && value->defines(KEYWORD_ID, KEYWORD_ID_HASH)) {
-      // An identifier is a string in expanded form, which the entry point
-      // holds the input to
-      const auto &identifier{value->at(KEYWORD_ID, KEYWORD_ID_HASH)};
-      assert(identifier.is_string());
-      {
-        const auto compacted_id{compact_iri(active_context, inverse_context,
-                                            identifier.to_string(), nullptr,
-                                            true, false)};
-        // A term whose name carries a colon must expand onto the very IRI it
-        // maps, so a term found under a name settled on above maps that IRI
-        // where it maps anything at all (JSON-LD 1.1 API Section 4.2.2 step 16)
-        const auto iterator{active_context.terms.find(compacted_id)};
-        assert(iterator == active_context.terms.cend() ||
-               !iterator->second.iri.has_value() ||
-               iterator->second.iri.value() == identifier.to_string());
-        if (iterator != active_context.terms.cend() &&
-            iterator->second.iri.has_value()) {
-          preferred.emplace_back(KEYWORD_VOCAB);
-          preferred.emplace_back(KEYWORD_ID);
-          preferred.emplace_back(KEYWORD_NONE);
-        } else {
-          preferred.emplace_back(KEYWORD_ID);
-          preferred.emplace_back(KEYWORD_VOCAB);
-          preferred.emplace_back(KEYWORD_NONE);
-        }
-      }
-    } else if (value == nullptr) {
-      // For a bare value the preferred list is the type or language value
-      // followed by @none (JSON-LD 1.1 API Section 6.2.2). The @vocab candidate
-      // is not literally listed there for this case, but it is load-bearing:
-      // the W3C compaction suite case 0114 regresses without it, so a bare
-      // vocabulary reference must also be allowed to match a term coercing
-      // @vocab, exactly as the @none candidate is required for the graph branch
-      preferred.emplace_back(KEYWORD_ID);
-      preferred.emplace_back(KEYWORD_VOCAB);
-      preferred.emplace_back(KEYWORD_NONE);
-    } else {
-      preferred.emplace_back(type_language_value);
-      preferred.emplace_back(KEYWORD_NONE);
-    }
-    preferred.emplace_back(KEYWORD_ANY);
-
-    // A language-and-direction preferred value also allows matching a term that
-    // only coerces direction, via the substring from the underscore onwards.
-    std::vector<JSON::String> direction_fallbacks;
-    for (const auto &item : preferred) {
-      const auto underscore{item.find('_')};
-      if (underscore != JSON::String::npos) {
-        direction_fallbacks.emplace_back(item.substr(underscore));
-      }
-    }
-    for (auto &fallback : direction_fallbacks) {
-      preferred.push_back(std::move(fallback));
-    }
-
-    const auto term{term_selection(inverse_context, variable, containers,
-                                   type_language, preferred)};
-    if (term.has_value()) {
-      return term.value();
-    }
+  const auto selected{select_compact_term(
+      active_context, inverse_context, variable, value, vocabulary, reverse)};
+  if (selected.has_value()) {
+    return selected.value();
   }
 
   // Compact relative to @vocab.

@@ -38,6 +38,11 @@ namespace sourcemeta::blaze {
 /// sourcemeta::blaze::canonicalize(schema, sourcemeta::core::schema_walker,
 ///                                 sourcemeta::core::schema_resolver);
 /// ```
+///
+/// Up to Draft 7, a reference takes the place of every keyword that sits
+/// beside it. A document that puts one at the top and says anything else
+/// there leaves the given schema untouched and throws
+/// sourcemeta::core::SchemaError, as bundling does.
 SOURCEMETA_BLAZE_CANONICALIZER_EXPORT
 auto canonicalize(sourcemeta::core::JSON &schema,
                   const sourcemeta::core::SchemaWalker &walker,

@@ -3,7 +3,7 @@
 #include <sourcemeta/core/numeric_util.h>
 
 #include <array>        // std::array
-#include <cfenv>        // std::fegetround, FE_TONEAREST
+#include <cfenv>        // std::fegetround, std::fesetround, FE_TONEAREST
 #include <charconv>     // std::from_chars
 #include <cmath>        // std::ldexp, HUGE_VAL
 #include <cstdint>      // std::uint64_t, std::int32_t
@@ -264,18 +264,30 @@ auto to_double(const std::string_view input) noexcept -> std::optional<double> {
     buffer[input.size()] = '\0';
     start = buffer.data();
   } else {
-    try {
-      overflow.assign(input);
-    } catch (...) {
-      return std::nullopt;
-    }
-
+    // Copying a reading too long for the buffer is the one allocation this
+    // function makes. Nothing else here throws, so the copy giving way is
+    // memory running out rather than anything about the input, and it is not a
+    // reading this function can report an absence for
+    overflow.assign(input);
     start = overflow.c_str();
   }
 
   errno = 0;
   char *end{nullptr};
+  // The C library reads a number the way the environment asks it to round,
+  // while every other platform reads to nearest whatever the environment asks
+  // for, so the environment is held to nearest across the call for the two to
+  // answer alike. It is written only when it is not already there
+  const auto rounding{std::fegetround()};
+  if (rounding != FE_TONEAREST) {
+    std::fesetround(FE_TONEAREST);
+  }
+
   const auto value{strtod_l(start, &end, C_LOCALE)};
+  if (rounding != FE_TONEAREST) {
+    std::fesetround(rounding);
+  }
+
   if (end != start + input.size()) {
     return std::nullopt;
   }

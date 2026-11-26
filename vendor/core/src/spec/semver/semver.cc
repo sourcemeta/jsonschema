@@ -92,7 +92,7 @@ auto validate_dot_separated(const std::string_view input) -> bool {
   }
 
   std::size_t start = 0;
-  while (start <= input.size()) {
+  while (true) {
     auto dot_position = input.find('.', start);
     if (dot_position == std::string_view::npos) {
       dot_position = input.size();
@@ -103,13 +103,12 @@ auto validate_dot_separated(const std::string_view input) -> bool {
       return false;
     }
 
-    start = dot_position + 1;
     if (dot_position == input.size()) {
-      break;
+      return true;
     }
-  }
 
-  return true;
+    start = dot_position + 1;
+  }
 }
 
 struct IdentifierInfo {
@@ -155,7 +154,7 @@ auto compare_pre_release(const std::string_view left,
   std::size_t left_position = 0;
   std::size_t right_position = 0;
 
-  while (left_position <= left.size() && right_position <= right.size()) {
+  while (true) {
     auto left_dot = left.find('.', left_position);
     if (left_dot == std::string_view::npos) {
       left_dot = left.size();
@@ -196,9 +195,9 @@ auto compare_pre_release(const std::string_view left,
           return 1;
         }
       }
-    } else if (left_info.is_numeric && !right_info.is_numeric) {
+    } else if (left_info.is_numeric) {
       return -1;
-    } else if (!left_info.is_numeric && right_info.is_numeric) {
+    } else if (right_info.is_numeric) {
       return 1;
     } else {
       if (left_identifier < right_identifier) {
@@ -210,11 +209,8 @@ auto compare_pre_release(const std::string_view left,
       }
     }
 
-    left_position = left_dot + 1;
-    right_position = right_dot + 1;
-
     if (left_dot == left.size() && right_dot == right.size()) {
-      break;
+      return 0;
     }
 
     if (left_dot == left.size()) {
@@ -224,23 +220,19 @@ auto compare_pre_release(const std::string_view left,
     if (right_dot == right.size()) {
       return 1;
     }
-  }
 
-  return 0;
+    left_position = left_dot + 1;
+    right_position = right_dot + 1;
+  }
 }
 
 // A core number runs up to the dot that separates it from the next. The loose
 // reading also lets it run up to the pre-release, the build, or the end of the
 // version itself, which is what stands in for the parts that never arrived
-template <bool Loose>
-auto can_end_core(const std::string_view input, const std::size_t position)
-    -> bool {
-  if (position >= input.size() || input[position] == '-' ||
-      input[position] == '+') {
-    return Loose;
-  }
-
-  return input[position] == '.';
+auto can_end_core_without_dot(const std::string_view input,
+                              const std::size_t position) -> bool {
+  return position >= input.size() || input[position] == '-' ||
+         input[position] == '+';
 }
 
 template <bool ShouldThrow, bool Loose>
@@ -274,14 +266,6 @@ auto parse_semver(const std::string_view input, std::uint64_t &major,
     }
   }
 
-  if (!can_end_core<Loose>(input, position)) {
-    if constexpr (ShouldThrow) {
-      throw sourcemeta::core::SemVerParseError(position + 1);
-    } else {
-      return false;
-    }
-  }
-
   if (position < input.size() && input[position] == '.') {
     ++position;
 
@@ -295,14 +279,6 @@ auto parse_semver(const std::string_view input, std::uint64_t &major,
     }
 
     if (minor_result == NumericParseResult::Invalid) {
-      if constexpr (ShouldThrow) {
-        throw sourcemeta::core::SemVerParseError(position + 1);
-      } else {
-        return false;
-      }
-    }
-
-    if (!can_end_core<Loose>(input, position)) {
       if constexpr (ShouldThrow) {
         throw sourcemeta::core::SemVerParseError(position + 1);
       } else {
@@ -330,6 +306,34 @@ auto parse_semver(const std::string_view input, std::uint64_t &major,
           return false;
         }
       }
+    } else {
+      if constexpr (Loose) {
+        if (!can_end_core_without_dot(input, position)) {
+          if constexpr (ShouldThrow) {
+            throw sourcemeta::core::SemVerParseError(position + 1);
+          } else {
+            return false;
+          }
+        }
+      } else if constexpr (ShouldThrow) {
+        throw sourcemeta::core::SemVerParseError(position + 1);
+      } else {
+        return false;
+      }
+    }
+  } else {
+    if constexpr (Loose) {
+      if (!can_end_core_without_dot(input, position)) {
+        if constexpr (ShouldThrow) {
+          throw sourcemeta::core::SemVerParseError(position + 1);
+        } else {
+          return false;
+        }
+      }
+    } else if constexpr (ShouldThrow) {
+      throw sourcemeta::core::SemVerParseError(position + 1);
+    } else {
+      return false;
     }
   }
 

@@ -11,6 +11,7 @@
 #include <sourcemeta/core/uri.h>
 
 #include <algorithm>        // std::all_of
+#include <cassert>          // assert
 #include <initializer_list> // std::initializer_list
 #include <set>              // std::set
 #include <utility>          // std::move, std::pair
@@ -509,8 +510,11 @@ inline auto sampling_options(const JSON &params) -> bool {
           std::pair{JSON::StringView{"intelligencePriority"},
                     sourcemeta::core::MCP_HASH_INTELLIGENCE_PRIORITY}}) {
       const auto *value{field(*preferences, name, hash)};
-      if ((value != nullptr) && (!value->is_number() || value->as_real() < 0 ||
-                                 value->as_real() > 1)) {
+      // The bounds are compared against the number as it reads rather than
+      // against a binary64 of it, since a number too wide for that format
+      // makes the conversion itself fail where the comparison settles it
+      if ((value != nullptr) &&
+          (!value->is_number() || *value < JSON{0} || *value > JSON{1})) {
         return false;
       }
     }
@@ -1008,7 +1012,10 @@ inline auto valid_input_requests(const JSON &value,
         return false;
       }
     } else if (name == MCP_METHOD_ELICITATION_CREATE) {
-      if ((params == nullptr) || !params->is_object() ||
+      // Parameters that are not an object were turned down above, so what is
+      // left to ask of them is what they carry
+      assert((params == nullptr) || params->is_object());
+      if ((params == nullptr) ||
           !validation::string_field(*params, "message",
                                     sourcemeta::core::MCP_HASH_MESSAGE, true)) {
         return false;
@@ -1055,20 +1062,26 @@ inline auto valid_input_requests(const JSON &value,
         }
       }
     } else if (name == MCP_METHOD_SAMPLING_CREATE_MESSAGE) {
+      assert((params == nullptr) || params->is_object());
       if (!capabilities.sampling || (params == nullptr) ||
-          !params->is_object() || !validation::sampling_options(*params)) {
+          !validation::sampling_options(*params)) {
         return false;
       }
       if (const auto *context{
               validation::field(*params, "includeContext",
                                 sourcemeta::core::MCP_HASH_INCLUDE_CONTEXT)};
           context) {
-        if (!context->is_string() ||
-            (context->to_string() != "none" &&
-             context->to_string() != "thisServer" &&
-             context->to_string() != "allServers") ||
-            (context->to_string() != "none" &&
-             !capabilities.sampling_context)) {
+        if (!context->is_string()) {
+          return false;
+        }
+        // The name is tested against "none" twice, so each test is its own
+        // decision rather than two clauses of one, which no pair of inputs
+        // could tell apart
+        const auto &reach{context->to_string()};
+        if (reach != "none" && reach != "thisServer" && reach != "allServers") {
+          return false;
+        }
+        if (reach != "none" && !capabilities.sampling_context) {
           return false;
         }
       }

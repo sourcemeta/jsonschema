@@ -194,6 +194,22 @@ auto to_operations(const std::vector<bool> &original_changed,
 
 } // namespace
 
+// Each of the enumerations below names one value today, and clang keeps an arm
+// for the value that never arrives and counts it as one that nothing took, so
+// the only one is written as the default there, while the compilers reading a
+// case label are the ones holding each switch to naming them all. The
+// directives stay out of the functions because one inside them reads as a line
+// that never ran
+#if defined(__clang__)
+#define SOURCEMETA_CORE_DIFF_ONLY_MODE default
+#define SOURCEMETA_CORE_DIFF_ONLY_ALGORITHM default
+#define SOURCEMETA_CORE_DIFF_ONLY_FORMAT default
+#else
+#define SOURCEMETA_CORE_DIFF_ONLY_MODE case Diff::Mode::Line
+#define SOURCEMETA_CORE_DIFF_ONLY_ALGORITHM case Diff::Algorithm::Myers
+#define SOURCEMETA_CORE_DIFF_ONLY_FORMAT case Diff::Format::Unified
+#endif
+
 namespace sourcemeta::core {
 
 auto diff(const std::string_view original, const std::string_view modified,
@@ -201,12 +217,12 @@ auto diff(const std::string_view original, const std::string_view modified,
   Diff result;
 
   switch (mode) {
-    case Diff::Mode::Line:
-      result.original_ends_with_newline =
-          tokenise_lines(original, result.original);
-      result.modified_ends_with_newline =
-          tokenise_lines(modified, result.modified);
-      break;
+  SOURCEMETA_CORE_DIFF_ONLY_MODE:
+    result.original_ends_with_newline =
+        tokenise_lines(original, result.original);
+    result.modified_ends_with_newline =
+        tokenise_lines(modified, result.modified);
+    break;
   }
 
   // Lines shared by the head and the tail of both inputs cannot take part in
@@ -250,11 +266,11 @@ auto diff(const std::string_view original, const std::string_view modified,
   std::vector<bool> modified_changed(modified_size, false);
 
   switch (algorithm) {
-    case Diff::Algorithm::Myers:
-      compare_with_myers(original_identities, modified_identities, prefix,
-                         original_end, modified_end, original_changed,
-                         modified_changed);
-      break;
+  SOURCEMETA_CORE_DIFF_ONLY_ALGORITHM:
+    compare_with_myers(original_identities, modified_identities, prefix,
+                       original_end, modified_end, original_changed,
+                       modified_changed);
+    break;
   }
 
   compact_changes(result.original, result.original_ends_with_newline,
@@ -270,10 +286,14 @@ auto stringify(const Diff &document, std::ostream &stream,
                const Diff::Format format, const Diff::FormatOptions &options)
     -> void {
   switch (format) {
-    case Diff::Format::Unified:
-      internal::stringify_diff_unified(document, stream, options);
-      break;
+  SOURCEMETA_CORE_DIFF_ONLY_FORMAT:
+    internal::stringify_diff_unified(document, stream, options);
+    break;
   }
 }
 
 } // namespace sourcemeta::core
+
+#undef SOURCEMETA_CORE_DIFF_ONLY_MODE
+#undef SOURCEMETA_CORE_DIFF_ONLY_ALGORITHM
+#undef SOURCEMETA_CORE_DIFF_ONLY_FORMAT

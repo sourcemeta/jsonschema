@@ -38,7 +38,10 @@ inline auto varint_encode(const std::uint64_t value,
   constexpr std::uint8_t CONTINUATION_BIT{0b10000000};
   constexpr std::uint8_t PAYLOAD_BITS{7};
   std::uint64_t accumulator{value};
-  for (std::size_t index = 0; index < VARINT_MAXIMUM_BYTES; index++) {
+  // The bytes before the last are the ones that may carry a continuation. What
+  // is left after them spans a single bit, so the last byte always terminates
+  // and is written outside the loop rather than through an arm no value reaches
+  for (std::size_t index = 0; index < VARINT_MAXIMUM_BYTES - 1; index++) {
     if (accumulator <= PAYLOAD_MASK) {
       destination[index] = static_cast<std::byte>(accumulator);
       return index + 1;
@@ -50,7 +53,8 @@ inline auto varint_encode(const std::uint64_t value,
     accumulator >>= PAYLOAD_BITS;
   }
 
-  std::unreachable();
+  destination[VARINT_MAXIMUM_BYTES - 1] = static_cast<std::byte>(accumulator);
+  return VARINT_MAXIMUM_BYTES;
 }
 
 /// @ingroup numeric

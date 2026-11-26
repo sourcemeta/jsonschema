@@ -232,10 +232,14 @@ resolve_string_target(const JSON::String *property_target, const JSON &instance,
   }
 }
 
-inline auto named_index(const ValueNamedIndexes &indexes,
-                        const JSON::String &name,
+// The entries a loop matches on, and the entries a loop that counts what it
+// matched holds, differ only in what each entry records, so the lookup is
+// written once over whichever of them it is handed and answers with the entry
+// it matched rather than with any one of that entry's fields
+template <typename Indexes>
+inline auto named_index(const Indexes &indexes, const JSON::String &name,
                         const JSON::Object::hash_type &name_hash) noexcept
-    -> const ValueUnsignedInteger * {
+    -> const Indexes::first_type::value_type * {
   // Few enough names come without a table of contents, as reaching one costs
   // more than scanning them, so the whole range is the candidate range
   std::size_t first{1};
@@ -265,14 +269,14 @@ inline auto named_index(const ValueNamedIndexes &indexes,
     for (auto position = first; position <= last; position++) {
       const auto &entry{indexes.first[position - 1]};
       if (std::get<0>(entry) == name_hash) {
-        return &std::get<1>(entry);
+        return &entry;
       }
     }
   } else {
     for (auto position = first; position <= last; position++) {
       const auto &entry{indexes.first[position - 1]};
       if (std::get<0>(entry) == name_hash && std::get<2>(entry) == name) {
-        return &std::get<1>(entry);
+        return &entry;
       }
     }
   }
@@ -2114,17 +2118,20 @@ INSTRUCTION_HANDLER(LoopPropertiesMatch) {
   // that value is decided here, rather than dispatched to and left to find the
   // property in the object a second time. The evaluation-marking variants of
   // those assertions are deliberately absent, as skipping them would skip the
-  // marker. Children are evaluated at `depth + 1`, which the direct path does
-  // not route through the depth check. Every condition holds for every child,
-  // so decide once rather than per property
+  // marker. Some of them compare against the property name rather than the
+  // value while `propertyNames` is being evaluated, which cannot reach here, as
+  // that evaluation hands its children a null instance that this loop's
+  // precondition rejects. Children are evaluated at `depth + 1`, which the
+  // direct path does not route through the depth check. Every condition holds
+  // for every child, so decide once rather than per property
   const auto direct_children{!HasCallback && depth < DEPTH_LIMIT};
   for (const auto &entry : target.as_object()) {
-    const auto *index{named_index(value, entry.first, entry.hash)};
-    if (!index) {
+    const auto *match{named_index(value, entry.first, entry.hash)};
+    if (!match) {
       continue;
     }
 
-    const auto &subinstruction{instruction.children[*index]};
+    const auto &subinstruction{instruction.children[std::get<1>(*match)]};
     assert(subinstruction.type ==
            sourcemeta::blaze::InstructionIndex::ControlGroup);
     for (const auto &child : subinstruction.children) {
@@ -2146,6 +2153,30 @@ INSTRUCTION_HANDLER(LoopPropertiesMatch) {
           case InstructionIndex::AssertionPropertyTypeStrictAny:
             child_ok = DIRECT(AssertionTypeStrictAny, entry.second,
                               assume_value<ValueTypes>(child.value));
+            break;
+          case InstructionIndex::AssertionTypeAny:
+            child_ok = DIRECT(AssertionTypeAny, entry.second,
+                              assume_value<ValueTypes>(child.value));
+            break;
+          case InstructionIndex::AssertionTypeStringBounded:
+            child_ok = DIRECT(AssertionTypeStringBounded, entry.second,
+                              assume_value<ValueRange>(child.value));
+            break;
+          case InstructionIndex::AssertionTypeArrayBounded:
+            child_ok = DIRECT(AssertionTypeArrayBounded, entry.second,
+                              assume_value<ValueRange>(child.value));
+            break;
+          case InstructionIndex::AssertionEqual:
+            child_ok = DIRECT(AssertionEqual, entry.second,
+                              assume_value<ValueJSON>(child.value));
+            break;
+          case InstructionIndex::AssertionEqualsAny:
+            child_ok = DIRECT(AssertionEqualsAny, entry.second,
+                              assume_value<ValueSet>(child.value));
+            break;
+          case InstructionIndex::AssertionEqualsAnyStringHash:
+            child_ok = DIRECT(AssertionEqualsAnyStringHash, entry.second,
+                              assume_value<ValueStringHashes>(child.value));
             break;
           default:
             child_ok = EVALUATE_RECURSE(child, target);
@@ -2165,27 +2196,42 @@ INSTRUCTION_HANDLER(LoopPropertiesMatch) {
   EVALUATE_END(LoopPropertiesMatch);
 }
 
-INSTRUCTION_HANDLER(LoopPropertiesMatchClosed) {
-  EVALUATE_BEGIN_NON_STRING(LoopPropertiesMatchClosed, target.is_object());
-  const auto &value{assume_value<ValueNamedIndexes>(instruction.value)};
-  assert(!value.first.empty());
+INSTRUCTION_HANDLER(LoopPropertiesMatchRequired) {
+  EVALUATE_BEGIN_NO_PRECONDITION(LoopPropertiesMatchRequired);
+  const auto &target{
+      resolve_instance(instance, instruction.relative_instance_location)};
+  const auto &value{assume_value<ValueNamedIndexesRequired>(instruction.value)};
+  assert(!value.first.first.empty());
+  assert(value.second > 0);
+
+  // This stands for a presence assertion that rejected a non-object outright,
+  // which is what let the compiler leave out the object type check beside it,
+  // so the same refusal has to happen here rather than passing vacuously the
+  // way a loop that only applies subschemas does
+  if (!target.is_object()) [[unlikely]] {
+    EVALUATE_END(LoopPropertiesMatchRequired);
+  }
+
   result = true;
-  // The loop already holds each property's value, so a child that only looks at
-  // that value is decided here, rather than dispatched to and left to find the
-  // property in the object a second time. The evaluation-marking variants of
-  // those assertions are deliberately absent, as skipping them would skip the
-  // marker. Children are evaluated at `depth + 1`, which the direct path does
-  // not route through the depth check. Every condition holds for every child,
-  // so decide once rather than per property
+  // The names a matching object has to define are proven by counting the
+  // required entries this walk matched, as names are unique and an object
+  // holds each of them once. Short-circuiting on a failing child leaves the
+  // count short, which costs nothing, as the verdict is already false
+  ValueUnsignedInteger matched{0};
+  // Children are decided against the value this loop holds under exactly the
+  // conditions `LoopPropertiesMatch` sets out, which this mirrors
   const auto direct_children{!HasCallback && depth < DEPTH_LIMIT};
   for (const auto &entry : target.as_object()) {
-    const auto *index{named_index(value, entry.first, entry.hash)};
-    if (!index) [[unlikely]] {
-      result = false;
-      break;
+    const auto *match{named_index(value.first, entry.first, entry.hash)};
+    if (!match) {
+      continue;
     }
 
-    const auto &subinstruction{instruction.children[*index]};
+    if (std::get<3>(*match)) {
+      matched += 1;
+    }
+
+    const auto &subinstruction{instruction.children[std::get<1>(*match)]};
     assert(subinstruction.type ==
            sourcemeta::blaze::InstructionIndex::ControlGroup);
     for (const auto &child : subinstruction.children) {
@@ -2207,6 +2253,120 @@ INSTRUCTION_HANDLER(LoopPropertiesMatchClosed) {
           case InstructionIndex::AssertionPropertyTypeStrictAny:
             child_ok = DIRECT(AssertionTypeStrictAny, entry.second,
                               assume_value<ValueTypes>(child.value));
+            break;
+          case InstructionIndex::AssertionTypeAny:
+            child_ok = DIRECT(AssertionTypeAny, entry.second,
+                              assume_value<ValueTypes>(child.value));
+            break;
+          case InstructionIndex::AssertionTypeStringBounded:
+            child_ok = DIRECT(AssertionTypeStringBounded, entry.second,
+                              assume_value<ValueRange>(child.value));
+            break;
+          case InstructionIndex::AssertionTypeArrayBounded:
+            child_ok = DIRECT(AssertionTypeArrayBounded, entry.second,
+                              assume_value<ValueRange>(child.value));
+            break;
+          case InstructionIndex::AssertionEqual:
+            child_ok = DIRECT(AssertionEqual, entry.second,
+                              assume_value<ValueJSON>(child.value));
+            break;
+          case InstructionIndex::AssertionEqualsAny:
+            child_ok = DIRECT(AssertionEqualsAny, entry.second,
+                              assume_value<ValueSet>(child.value));
+            break;
+          case InstructionIndex::AssertionEqualsAnyStringHash:
+            child_ok = DIRECT(AssertionEqualsAnyStringHash, entry.second,
+                              assume_value<ValueStringHashes>(child.value));
+            break;
+          default:
+            child_ok = EVALUATE_RECURSE(child, target);
+            break;
+        }
+      } else {
+        child_ok = EVALUATE_RECURSE(child, target);
+      }
+
+      if (!child_ok) [[unlikely]] {
+        result = false;
+        EVALUATE_END(LoopPropertiesMatchRequired);
+      }
+    }
+  }
+
+  result = matched == value.second;
+
+  EVALUATE_END(LoopPropertiesMatchRequired);
+}
+
+INSTRUCTION_HANDLER(LoopPropertiesMatchClosed) {
+  EVALUATE_BEGIN_NON_STRING(LoopPropertiesMatchClosed, target.is_object());
+  const auto &value{assume_value<ValueNamedIndexes>(instruction.value)};
+  assert(!value.first.empty());
+  result = true;
+  // The loop already holds each property's value, so a child that only looks at
+  // that value is decided here, rather than dispatched to and left to find the
+  // property in the object a second time. The evaluation-marking variants of
+  // those assertions are deliberately absent, as skipping them would skip the
+  // marker. Some of them compare against the property name rather than the
+  // value while `propertyNames` is being evaluated, which cannot reach here, as
+  // that evaluation hands its children a null instance that this loop's
+  // precondition rejects. Children are evaluated at `depth + 1`, which the
+  // direct path does not route through the depth check. Every condition holds
+  // for every child, so decide once rather than per property
+  const auto direct_children{!HasCallback && depth < DEPTH_LIMIT};
+  for (const auto &entry : target.as_object()) {
+    const auto *match{named_index(value, entry.first, entry.hash)};
+    if (!match) [[unlikely]] {
+      result = false;
+      break;
+    }
+
+    const auto &subinstruction{instruction.children[std::get<1>(*match)]};
+    assert(subinstruction.type ==
+           sourcemeta::blaze::InstructionIndex::ControlGroup);
+    for (const auto &child : subinstruction.children) {
+      bool child_ok;
+      // A child whose instance location is not just the matched property is not
+      // about the value this loop holds, which inlining a reference into the
+      // group can produce, so it resolves its own target as usual
+      if (direct_children && child.relative_instance_location.size() == 1)
+          [[likely]] {
+        switch (child.type) {
+          case InstructionIndex::AssertionPropertyTypeStrict:
+            child_ok = DIRECT(AssertionTypeStrict, entry.second,
+                              assume_value_copy<ValueType>(child.value));
+            break;
+          case InstructionIndex::AssertionPropertyType:
+            child_ok = DIRECT(AssertionType, entry.second,
+                              assume_value_copy<ValueType>(child.value));
+            break;
+          case InstructionIndex::AssertionPropertyTypeStrictAny:
+            child_ok = DIRECT(AssertionTypeStrictAny, entry.second,
+                              assume_value<ValueTypes>(child.value));
+            break;
+          case InstructionIndex::AssertionTypeAny:
+            child_ok = DIRECT(AssertionTypeAny, entry.second,
+                              assume_value<ValueTypes>(child.value));
+            break;
+          case InstructionIndex::AssertionTypeStringBounded:
+            child_ok = DIRECT(AssertionTypeStringBounded, entry.second,
+                              assume_value<ValueRange>(child.value));
+            break;
+          case InstructionIndex::AssertionTypeArrayBounded:
+            child_ok = DIRECT(AssertionTypeArrayBounded, entry.second,
+                              assume_value<ValueRange>(child.value));
+            break;
+          case InstructionIndex::AssertionEqual:
+            child_ok = DIRECT(AssertionEqual, entry.second,
+                              assume_value<ValueJSON>(child.value));
+            break;
+          case InstructionIndex::AssertionEqualsAny:
+            child_ok = DIRECT(AssertionEqualsAny, entry.second,
+                              assume_value<ValueSet>(child.value));
+            break;
+          case InstructionIndex::AssertionEqualsAnyStringHash:
+            child_ok = DIRECT(AssertionEqualsAnyStringHash, entry.second,
+                              assume_value<ValueStringHashes>(child.value));
             break;
           default:
             child_ok = EVALUATE_RECURSE(child, target);
@@ -3180,7 +3340,7 @@ using DispatchHandler = bool (*)(const sourcemeta::blaze::Instruction &,
 template <bool HasCallback>
 // Must have same order as InstructionIndex
 // NOLINTNEXTLINE(modernize-avoid-c-arrays)
-static constexpr DispatchHandler<HasCallback> HANDLERS[112] = {
+static constexpr DispatchHandler<HasCallback> HANDLERS[113] = {
     AssertionFail,
     AssertionDefines,
     AssertionDefinesStrict,
@@ -3256,6 +3416,7 @@ static constexpr DispatchHandler<HasCallback> HANDLERS[112] = {
     LoopPropertiesUnevaluatedExcept,
     LoopPropertiesMatch,
     LoopPropertiesMatchClosed,
+    LoopPropertiesMatchRequired,
     LoopProperties,
     LoopPropertiesEvaluate,
     LoopPropertiesRegex,

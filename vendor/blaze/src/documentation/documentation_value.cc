@@ -183,6 +183,58 @@ auto inferred_kinds(const JSON &subschema, const Rank rank)
   return result;
 }
 
+// The type names a subschema declares, in the order it declares them
+auto declared_kinds(const JSON &subschema, const bool draft3_type)
+    -> std::vector<std::string> {
+  std::vector<std::string> kinds;
+  if (!defines(subschema, "type") || draft3_type) {
+    return kinds;
+  }
+
+  const auto &type{subschema.at("type")};
+  if (type.is_string()) {
+    assert(is_type_name(type.to_string()));
+    kinds.push_back(type.to_string());
+    return kinds;
+  }
+
+  assert(type.is_array() && !type.empty());
+  std::set<std::string> seen;
+  for (const auto &entry : type.as_array()) {
+    assert(entry.is_string() && is_type_name(entry.to_string()));
+    [[maybe_unused]] const auto unique{seen.insert(entry.to_string()).second};
+    assert(unique);
+    kinds.push_back(entry.to_string());
+  }
+
+  return kinds;
+}
+
+// Whether anything beside the type can forbid a value the type allows
+auto narrows_value(const JSON &subschema) -> bool {
+  static const std::vector<std::string> NARROWING{"allOf",
+                                                  "anyOf",
+                                                  "oneOf",
+                                                  "not",
+                                                  "$ref",
+                                                  "if",
+                                                  "enum",
+                                                  "const",
+                                                  "extends",
+                                                  "disallow",
+                                                  "$dynamicRef",
+                                                  "$recursiveRef",
+                                                  "unevaluatedProperties",
+                                                  "unevaluatedItems"};
+  for (const auto &keyword : NARROWING) {
+    if (subschema.defines(keyword)) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
 auto fill_kind(DocumentationContext &context, JSON &value,
                const JSON &subschema, const Pointer &pointer) -> void {
   const auto &kind{value.at("kind").to_string()};
@@ -484,24 +536,7 @@ auto describe_subschema(DocumentationContext &context, const JSON &subschema,
   }
 
   JSON value{JSON::make_object()};
-  std::vector<std::string> kinds;
-  if (defines(subschema, "type") && !draft3_type) {
-    const auto &type{subschema.at("type")};
-    if (type.is_string()) {
-      assert(is_type_name(type.to_string()));
-      kinds.push_back(type.to_string());
-    } else {
-      assert(type.is_array() && !type.empty());
-      std::set<std::string> seen;
-      for (const auto &entry : type.as_array()) {
-        assert(entry.is_string() && is_type_name(entry.to_string()));
-        [[maybe_unused]] const auto unique{
-            seen.insert(entry.to_string()).second};
-        assert(unique);
-        kinds.push_back(entry.to_string());
-      }
-    }
-  }
+  auto kinds{declared_kinds(subschema, draft3_type)};
 
   const auto has_enumeration{
       defines(subschema, "enum") ||
@@ -509,26 +544,7 @@ auto describe_subschema(DocumentationContext &context, const JSON &subschema,
   // Saying null is also allowed is only true when nothing beside the type can
   // forbid it. Otherwise null stays one of the forms, and the rules beside it
   // narrow the whole value as they do for every other form.
-  static const std::vector<std::string> NARROWING{"allOf",
-                                                  "anyOf",
-                                                  "oneOf",
-                                                  "not",
-                                                  "$ref",
-                                                  "if",
-                                                  "enum",
-                                                  "const",
-                                                  "extends",
-                                                  "disallow",
-                                                  "$dynamicRef",
-                                                  "$recursiveRef",
-                                                  "unevaluatedProperties",
-                                                  "unevaluatedItems"};
-  auto can_narrow{false};
-  for (const auto &keyword : NARROWING) {
-    if (subschema.defines(keyword)) {
-      can_narrow = true;
-    }
-  }
+  const auto can_narrow{narrows_value(subschema)};
 
   auto nullable{false};
   if (kinds.size() > 1 && !can_narrow) {

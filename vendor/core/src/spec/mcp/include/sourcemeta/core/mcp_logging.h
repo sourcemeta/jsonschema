@@ -10,6 +10,15 @@
 
 namespace sourcemeta::core {
 
+// Clang reads an exhaustive switch as carrying an arm for the value that never
+// arrives, which this fold closes there while the compilers that read case
+// labels keep holding the switch to naming every level
+#if defined(__clang__)
+#define SOURCEMETA_CORE_MCP_LOWEST_LEVEL default:
+#else
+#define SOURCEMETA_CORE_MCP_LOWEST_LEVEL case MCPLogLevel::Debug:
+#endif
+
 /// @ingroup mcp
 /// Syslog severity levels, ordered from least to most severe. A request's
 /// logging threshold admits its own level and all more severe levels. The
@@ -58,8 +67,8 @@ enum class MCPLogLevel : std::uint8_t {
 [[nodiscard]] constexpr auto
 mcp_log_level_string(const MCPLogLevel level) noexcept -> JSON::StringView {
   switch (level) {
-    case MCPLogLevel::Debug:
-      return "debug";
+    SOURCEMETA_CORE_MCP_LOWEST_LEVEL
+    return "debug";
     case MCPLogLevel::Info:
       return "info";
     case MCPLogLevel::Notice:
@@ -141,6 +150,8 @@ mcp_log_level_enabled(const MCPLogLevel level,
                       const MCPLogLevel threshold) noexcept -> bool {
   return level >= threshold;
 }
+
+#undef SOURCEMETA_CORE_MCP_LOWEST_LEVEL
 
 } // namespace sourcemeta::core
 #endif

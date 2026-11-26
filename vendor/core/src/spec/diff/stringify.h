@@ -65,6 +65,17 @@ inline auto write_diff_line(std::ostream &stream,
   }
 }
 
+// Clang keeps an arm for the value that never arrives and counts it as one
+// that nothing took, so the first of the three kinds is written as the default
+// there, while the compilers reading a case label are the ones holding the
+// switch below to naming them all. The directives stay out of the function
+// because one inside it reads as a line that never ran
+#if defined(__clang__)
+#define SOURCEMETA_CORE_DIFF_OPERATION_EQUAL default
+#else
+#define SOURCEMETA_CORE_DIFF_OPERATION_EQUAL case Diff::Operation::Type::Equal
+#endif
+
 inline auto stringify_diff_unified(const Diff &document, std::ostream &stream,
                                    const Diff::FormatOptions &options) -> void {
   const auto &operations{document.operations};
@@ -164,15 +175,6 @@ inline auto stringify_diff_unified(const Diff &document, std::ostream &stream,
     for (auto position{change_begin}; position < change_end; ++position) {
       const auto &operation{operations[position]};
       switch (operation.type) {
-        case Diff::Operation::Type::Equal:
-          for (auto line{operation.original_start};
-               line < operation.original_end; ++line) {
-            write_diff_line(
-                stream, options, Diff::FormatOptions::LineType::Context, " ",
-                document.original, line, document.original_ends_with_newline);
-          }
-
-          break;
         case Diff::Operation::Type::Delete:
           for (auto line{operation.original_start};
                line < operation.original_end; ++line) {
@@ -191,6 +193,15 @@ inline auto stringify_diff_unified(const Diff &document, std::ostream &stream,
           }
 
           break;
+        SOURCEMETA_CORE_DIFF_OPERATION_EQUAL:
+          for (auto line{operation.original_start};
+               line < operation.original_end; ++line) {
+            write_diff_line(
+                stream, options, Diff::FormatOptions::LineType::Context, " ",
+                document.original, line, document.original_ends_with_newline);
+          }
+
+          break;
       }
     }
 
@@ -204,6 +215,8 @@ inline auto stringify_diff_unified(const Diff &document, std::ostream &stream,
     index = change_end;
   }
 }
+
+#undef SOURCEMETA_CORE_DIFF_OPERATION_EQUAL
 
 } // namespace sourcemeta::core::internal
 

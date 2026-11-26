@@ -2053,6 +2053,409 @@ auto adopt_mappings(
   return changed;
 }
 
+// One reference the description does not already answer: what it names,
+// which document carries it, and where that lands once gathered in
+template <typename Walk, typename Reference>
+auto expand_openapi_reference(
+    const Reference &reference, JSON &document, const SchemaWalker &walker,
+    const SchemaResolver &schema_resolver, const OpenAPIResolver &resolver,
+    const OpenAPIBundleOptions &options, std::uint64_t &remaining,
+    const Walk &walk, const JSON::String &base,
+    std::map<JSON::String, JSON> &documents,
+    std::map<JSON::String, Pointer> &bundled, OpenAPIInlined &inlined,
+    std::set<JSON::String> &unavailable,
+    std::map<JSON::String, std::pair<JSON::String, Pointer>> &identifiers,
+    std::map<JSON::String, std::vector<OpenAPIPending>> &deferred,
+    std::map<JSON::String, OpenAPIWalk> &walks, const OpenAPIWalk &names,
+    bool &changed) -> void {
+  // Only the shell knows which documents an OpenAPI Description spans. A
+  // Schema Object naming something this does not reach is left exactly as
+  // it was written, for whatever reads inside one to resolve
+  const auto names_a_schema{reference.expected == OpenAPIObjectKind::Schema};
+
+  // Where a reference leads before the document holding it has been read,
+  // which is all a fragment shaped like a pointer ever needs
+  const auto pointed{target_of(reference.destination)};
+  // Which document it leads to, if it names one at all
+  const auto holder{openapi_document_uri(reference.destination)};
+
+  // What another document's Schema Object declares for itself is a name
+  // for a place of that document, so a reference naming one is a reference
+  // into it rather than one to go looking for a document of that name.
+  //
+  // Whatever the description can reach as a document answers ahead of
+  // that, as 3.2.1 Section 4.1.1 has a reference name a document by the URI
+  // that document answers to, and a Schema Object is free to declare an
+  // identifier that collides with one. So this is asked where a fragment
+  // names no place to begin with, and otherwise only once the document has
+  // turned out not to be one
+  std::optional<std::pair<JSON::String, Pointer>> declared;
+  if (names_a_schema &&
+      (!pointed.has_value() || unavailable.contains(holder))) {
+    declared = declared_target(identifiers, reference.destination);
+  }
+
+  const auto initial{declared.has_value()
+                         ? std::optional<Pointer>{declared.value().second}
+                         : pointed};
+  // A fragment shaped like anything else names an identifier or an anchor
+  // rather than a place, and which document declares one is only settled
+  // by framing the documents the description spans. 3.2.1 Section 4.1.2
+  // leaves none of those to be given up on before that has happened, so a
+  // reference of this shape goes on to have its document read rather than
+  // being left here
+  const URI destination{reference.destination};
+  assert(!destination.fragment().has_value() ||
+         !destination.fragment().value().empty());
+  const auto names_an_anchor{names_a_schema && !initial.has_value() &&
+                             destination.fragment().has_value()};
+
+  if (!initial.has_value() && !names_an_anchor) {
+    if (names_a_schema) {
+      if (reference.mapping) {
+        deferred[reference.destination].push_back(reference);
+      }
+
+      return;
+    }
+
+    // OpenAPI Specification 3.2.1, Section 4.30 admits "the URI of a
+    // Security Scheme Object" as a name, and Section 4.1.2 puts "either an
+    // OpenAPI Object or a Schema Object at the root" of every document a
+    // description spans, so a name reaching for a whole document reaches
+    // no scheme whatever that document turns out to hold. Settling that
+    // from the name alone is what keeps a name nobody wrote as a document
+    // from being reported as a document that could not be fetched
+    if (reference.requirement) {
+      throw OpenAPIReferenceError{
+          "This security requirement must name a Security Scheme Object "
+          "within the document it points at",
+          base, reference.origin, reference.destination};
+    }
+
+    // Everything else goes on to have its document read, so that a
+    // reference landing on something that is no OpenAPI Description at all
+    // hears that rather than hearing about the place it did not name.
+    // Naming no place is the lesser of the two complaints, as a document
+    // of the wrong shape holds no place worth naming either
+  }
+
+  const auto identifier{declared.has_value() ? declared.value().first : holder};
+
+  if (names_a_schema && !declared.has_value() &&
+      unavailable.contains(identifier)) {
+    // A mapping whose schema has already been brought in still names the
+    // URI that schema was fetched by, and a revision that gives an
+    // embedded Schema Object no way of keeping that URI leaves nothing in
+    // the result answering to it. Leaving it here would hand back a
+    // description that does not hold what it names, so it goes on to be
+    // pointed at where that schema landed instead.
+    //
+    // A reference of a Schema Object wants nothing of that, as bringing
+    // the schemas of a description in is what settles where it leads, and
+    // it settles it the same way however many positions name one schema
+    if (reference.mapping) {
+      deferred[reference.destination].push_back(reference);
+    }
+
+    return;
+  }
+
+  if (!documents.contains(identifier)) {
+    auto resolved{resolver(identifier)};
+    if (!resolved.has_value()) {
+      if (names_a_schema) {
+        unavailable.insert(identifier);
+        if (reference.mapping) {
+          deferred[reference.destination].push_back(reference);
+        }
+
+        return;
+      }
+
+      throw OpenAPIResolutionError{
+          "Could not resolve the reference to an external document", base,
+          reference.origin, identifier};
+    }
+
+    auto candidate{std::move(resolved).to_owned()};
+    // OpenAPI Specification 3.2.1, Section 4.1.2: "all documents in an
+    // OAD MUST have either an OpenAPI Object or a Schema Object at the
+    // root, and MUST be parsed as complete documents". A Schema Object at
+    // the root is what a Schema Object reference may name, and that
+    // document is one a JSON Schema implementation reads rather than this.
+    //
+    // Only 3.2 carries that sentence. No release of 3.1 or of 3.0 does,
+    // and 3.0 reads the other way: its Reference Object offers
+    // `definitions.json#/Pet` as a worked example, and its Structural
+    // Interoperability section admits a reference target "with the Object
+    // type matching the reference source's context". So holding an earlier
+    // revision to it narrows what that revision allows, and is a choice
+    // this makes rather than a rule it follows.
+    //
+    // What makes the choice is that nothing else tells a document of a
+    // description from any other JSON document. Section 4.1 marks
+    // `openapi` "REQUIRED", and it is the only member a document carries
+    // that says what the document is: every Object this specification
+    // defines is an ordinary JSON object, and most of them are open to a
+    // member nobody expected, so there is no shape to recognise either. A
+    // reader handed a document without that field has nothing to decide
+    // by, and reading one as whichever kind a reference happened to expect
+    // is what Appendix G leaves undefined: "If the same JSON/YAML object
+    // is parsed multiple times and the respective contexts require it to
+    // be parsed as different Object types, the resulting behavior is
+    // implementation defined, and MAY be treated as an error if detected".
+    //
+    // So the rule the latest revision writes down is the one every
+    // revision is held to here. It costs a description that splits itself
+    // into bare Objects, which the earlier revisions permit, and it buys
+    // whatever reads what this produces a document that says what it is
+    if (!openapi_has_version_field(candidate)) {
+      if (names_a_schema) {
+        unavailable.insert(identifier);
+        // Section 4.1.2 puts "either an OpenAPI Object or a Schema Object
+        // at the root" of a document of a description, and a mapping names
+        // the second of those, so one reaching a document that holds no
+        // description has reached a schema that is there to be brought in.
+        // Which resolver a caller answers for such a document with is the
+        // caller's business rather than this one's
+        if (reference.mapping) {
+          deferred[reference.destination].push_back(reference);
+        }
+
+        return;
+      }
+
+      throw OpenAPIReferenceError{"This reference must name a document "
+                                  "that holds an OpenAPI Description",
+                                  base, reference.origin, identifier};
+    }
+
+    // Nothing in the specification asks for this. It says what a
+    // description may span and says nothing of the revisions the documents
+    // it spans declare, so turning one of these down is a choice this
+    // makes rather than a rule it follows.
+    //
+    // What makes the choice is where bundling ends. Section 4.1 has one
+    // document declare one revision, so everything the result holds has to
+    // be what that one revision can express, and there is no revision to
+    // pick that can express both. A 3.2 document holds fields that 3.1 has
+    // no way of spelling, and 3.2.1 Section 2.1 leaves no room to assume
+    // the other direction is safe either: "Occasionally, non-backwards
+    // compatible changes may be made in `minor` versions of the OAS where
+    // impact is believed to be low relative to the benefit provided". So
+    // the choice is between turning such a description down and handing
+    // back a document that says it is one revision while holding what
+    // another one means.
+    //
+    // What the patch component says is no part of this, as 3.2.1
+    // Section 2.1 makes a revision the `major`.`minor` pair alone,
+    // which 3.1.1 says the same of under Section 4.1
+    const auto revision{openapi_version(candidate)};
+    if (revision.has_value() && revision.value() != walk.version) {
+      throw OpenAPIReferenceError{
+          "This reference must name a document of the same OpenAPI "
+          "Specification revision",
+          base, reference.origin, identifier};
+    }
+
+    // The walk keeps a view into the document it read, so the document
+    // takes its place before anything walks it
+    const auto &held{
+        documents.emplace(identifier, std::move(candidate)).first->second};
+    auto analysis{openapi_analyse(held, identifier, remaining, &names)};
+    charge(remaining, analysis.locations.size());
+    const auto &recorded{
+        walks.emplace(identifier, std::move(analysis)).first->second};
+    index_schemas(held, recorded, identifier, walker, schema_resolver,
+                  identifiers, remaining);
+  }
+
+  // A fragment shaped like anything but a pointer names an identifier or
+  // an anchor rather than a place, which only framing the document that
+  // declares it settles. 3.2.1 Section 4.1.2 leaves none of those to be
+  // given up on before that document has been read, so this is asked again
+  // now that it has been. A fragment that is a pointer already named a
+  // place of the document just read, and nothing another document declares
+  // for itself is to take that place from it
+  if (names_a_schema && !declared.has_value() && !pointed.has_value()) {
+    declared = declared_target(identifiers, reference.destination);
+  }
+
+  // A document that holds an OpenAPI Description is never what a reference
+  // from the shell expects to find, so one naming a whole document has
+  // landed on the wrong kind of thing. This is where such a reference is
+  // turned down, once that document has been read and has turned out to
+  // hold a description of the revision this one spans. A fragment shaped
+  // like anything but a pointer names no place of it either, and reaches
+  // here the same way
+  const auto target{declared.has_value()
+                        ? std::optional<Pointer>{declared.value().second}
+                        : target_of(reference.destination)};
+  if (!target.has_value()) {
+    // A mapping is the one name here that a schema of its own may answer
+    // for, as what it reaches is resolved for schemas rather than by the
+    // shell, so it goes on to be told where that schema landed. Every
+    // other name, a reference of a Schema Object among them, has landed
+    // on a document that holds no place answering to it
+    if (reference.mapping) {
+      deferred[reference.destination].push_back(reference);
+      return;
+    }
+
+    // Section 4.3.1 asks for "a requirement to parse complete documents
+    // before deeming a Schema Object reference to be unresolvable", and
+    // reading the whole of the document this names is what meets it: every
+    // place of it is settled, its Schema Objects among them, and a Schema
+    // Object of some document still unread that claimed the URI this one
+    // answers to would be claiming a whole document rather than declaring
+    // the place this names
+    throw OpenAPIReferenceError{"This reference must name a place within "
+                                "the document it points at",
+                                base, reference.origin, reference.destination};
+  }
+
+  const auto &remote_document{documents.at(identifier)};
+  const auto &remote{walks.at(identifier)};
+  // Spelled as the document that holds it spells it, before anything
+  // compares it against what the walk of that document recorded
+  const auto spelled{retype(remote_document, target.value())};
+  // What a reference names is held to the kind the position it sits in
+  // expects, however many references reach the Object that holds it. A
+  // second one that named nothing would otherwise be written out as a
+  // place the result does not hold
+  if (!lands(remote, remote.base, spelled, reference.expected)) {
+    throw OpenAPIReferenceError{
+        "This reference must name an Object of the kind that the "
+        "position it sits in expects",
+        base, reference.origin, reference.destination};
+  }
+
+  // An Operation Object is the one kind the Components Object has no home
+  // for, so what gets embedded is the Path Item Object holding it and the
+  // reference goes on reaching its operation through that
+  const auto names_an_operation{reference.expected ==
+                                OpenAPIObjectKind::Operation};
+  const auto origin{promote(names_an_operation ? path_item_of(remote, spelled)
+                            : names_a_schema   ? schema_of(remote, spelled)
+                                               : spelled)};
+
+  // Where a document was retrieved from is how a resolver is asked for it,
+  // and what it answers to is its own to say. OpenAPI Specification 3.2.1,
+  // Section 4.1.1 lets a document declare the latter and requires the two
+  // to be told apart: "references MUST use the target document's `$self`
+  // URI if the `$self` field is present". So every place of it is named by
+  // the base its own analysis settled on rather than by where it was found
+  const auto key{openapi_location_uri(remote.base, origin)};
+
+  // Before 3.1 the Components Object holds no Path Item Object, so one of
+  // those has nowhere to be moved to and is written into the Object that
+  // referenced it instead. Section 4.3.3 keeps the Paths Object of the
+  // entry document the only thing that "contributes URLs to the described
+  // API", so putting it there is no alternative: that would describe an
+  // endpoint the description never exposed
+  if (reference.expected == OpenAPIObjectKind::PathItem &&
+      !openapi_components_hold_path_items(walk.version)) {
+    const auto host{reference.origin.initial()};
+    // Keyed the way every other map in this file keys a place, by what the
+    // document answers for it rather than by the pointer on its own
+    const auto within{openapi_location_uri(base, host)};
+    if (!inlined[within].insert(key).second) {
+      throw OpenAPIError{
+          "The Path Item Object references must not form a cycle", base,
+          reference.origin};
+    }
+
+    inline_path_item(document, remote_document, remote, origin, host, key, base,
+                     walk.dialect, walker, schema_resolver, options, remaining);
+    changed = true;
+    return;
+  }
+
+  // And an Operation Object of another document is reached through a Path
+  // Item Object that there is likewise nowhere to put, which leaves
+  // nothing to reach it through
+  if (names_an_operation && !openapi_components_hold_path_items(walk.version)) {
+    throw OpenAPIReferenceError{
+        "This revision has nowhere to hold the Path Item Object that "
+        "holds the operation this reference names",
+        base, reference.origin, reference.destination};
+  }
+
+  const auto container{container_of(origin, names_an_operation
+                                                ? OpenAPIObjectKind::PathItem
+                                                : reference.expected)};
+  // Every kind that a reference position expects has a home of its own
+  // once an Operation Object is reached through the Path Item holding it
+  assert(!container.empty());
+
+  if (!bundled.contains(key)) {
+    bundled.emplace(key, adopt(document, remote_document, remote, origin,
+                               container, key, base, walk.dialect, walker,
+                               schema_resolver, options, remaining));
+  }
+
+  // The reference is rewritten as a fragment of the document it now sits
+  // in, rather than as the URI that document answers to, so that bundling
+  // leaves behind an output that keeps working wherever it is moved to
+  const auto landed{spelled.rebase(origin, bundled.at(key))};
+
+  // What a Security Requirement Object names is the member the scopes sit
+  // under, so what makes it whole is renaming that member to whatever the
+  // scheme is called once it sits here, which carries the scopes across
+  // untouched. 3.2.1 Section 4.30 then reads the result as a component name
+  // rather than as a URI: "Property names that are identical to a
+  // component name under the Components Object MUST be treated as a
+  // component name", and the name was taken free of that Object for it
+  if (reference.requirement) {
+    auto &requirement{get(document, reference.origin.initial())};
+    const auto &member{reference.origin.back().to_property()};
+    JSON::String name{landed.back().to_property()};
+    const auto *taken{requirement.try_at(name)};
+    if (taken != nullptr && *taken != requirement.at(member)) {
+      throw OpenAPIError{"A Security Requirement Object that names one "
+                         "security scheme twice over cannot keep a list of "
+                         "scopes for each of them",
+                         base, reference.origin};
+    }
+
+    requirement.rename(member, std::move(name));
+    changed = true;
+    return;
+  }
+
+  // A reference that resolves against the document it sits in is written
+  // as a fragment of it, which is what keeps what bundling produces
+  // working wherever it is moved to. One that resolves against something
+  // else, which is a Schema Object that declares an identifier of its own,
+  // would name a place within that identifier instead, so it cannot be
+  // written that way
+  if (reference.scope == base) {
+    set(document, reference.origin, JSON{to_uri(landed).recompose()});
+    changed = true;
+    return;
+  }
+
+  // What such a reference names instead is what the schema it leads to
+  // says of itself, wherever that schema says anything. JSON Schema
+  // Section 9.3.1 has a reference to an embedded resource "resolve to a
+  // schema using the `$id` of an embedded Schema Resource", and an
+  // identifier holds wherever the description ends up while a place in a
+  // document does not. Only a schema that declares none leaves the
+  // document itself as the sole way to name where it leads
+  const auto *reached{try_get(document, landed)};
+  assert(reached != nullptr);
+  // Section 4.8.24 lets a Schema Object be a boolean, which declares
+  // nothing of itself, so one of those leaves the document holding it as
+  // the only way to name where this leads just as a schema that declares
+  // no identifier does
+  const auto *identity{reached->is_object() ? reached->try_at("$id") : nullptr};
+  assert(identity == nullptr || identity->is_string());
+  set(document, reference.origin,
+      identity != nullptr ? JSON{identity->to_string()}
+                          : JSON{openapi_location_uri(base, landed)});
+  changed = true;
+}
 auto bundle_internal(JSON &document, const SchemaWalker &walker,
                      const SchemaResolver &schema_resolver,
                      const OpenAPIResolver &resolver,
@@ -2130,400 +2533,10 @@ auto bundle_internal(JSON &document, const SchemaWalker &walker,
 
     bool changed{false};
     for (const auto &reference : unresolved) {
-      // Only the shell knows which documents an OpenAPI Description spans. A
-      // Schema Object naming something this does not reach is left exactly as
-      // it was written, for whatever reads inside one to resolve
-      const auto names_a_schema{reference.expected ==
-                                OpenAPIObjectKind::Schema};
-
-      // Where a reference leads before the document holding it has been read,
-      // which is all a fragment shaped like a pointer ever needs
-      const auto pointed{target_of(reference.destination)};
-      // Which document it leads to, if it names one at all
-      const auto holder{openapi_document_uri(reference.destination)};
-
-      // What another document's Schema Object declares for itself is a name
-      // for a place of that document, so a reference naming one is a reference
-      // into it rather than one to go looking for a document of that name.
-      //
-      // Whatever the description can reach as a document answers ahead of
-      // that, as 3.2.1 Section 4.1.1 has a reference name a document by the URI
-      // that document answers to, and a Schema Object is free to declare an
-      // identifier that collides with one. So this is asked where a fragment
-      // names no place to begin with, and otherwise only once the document has
-      // turned out not to be one
-      std::optional<std::pair<JSON::String, Pointer>> declared;
-      if (names_a_schema &&
-          (!pointed.has_value() || unavailable.contains(holder))) {
-        declared = declared_target(identifiers, reference.destination);
-      }
-
-      const auto initial{declared.has_value()
-                             ? std::optional<Pointer>{declared.value().second}
-                             : pointed};
-      // A fragment shaped like anything else names an identifier or an anchor
-      // rather than a place, and which document declares one is only settled
-      // by framing the documents the description spans. 3.2.1 Section 4.1.2
-      // leaves none of those to be given up on before that has happened, so a
-      // reference of this shape goes on to have its document read rather than
-      // being left here
-      const URI destination{reference.destination};
-      assert(!destination.fragment().has_value() ||
-             !destination.fragment().value().empty());
-      const auto names_an_anchor{names_a_schema && !initial.has_value() &&
-                                 destination.fragment().has_value()};
-
-      if (!initial.has_value() && !names_an_anchor) {
-        if (names_a_schema) {
-          if (reference.mapping) {
-            deferred[reference.destination].push_back(reference);
-          }
-
-          continue;
-        }
-
-        // OpenAPI Specification 3.2.1, Section 4.30 admits "the URI of a
-        // Security Scheme Object" as a name, and Section 4.1.2 puts "either an
-        // OpenAPI Object or a Schema Object at the root" of every document a
-        // description spans, so a name reaching for a whole document reaches
-        // no scheme whatever that document turns out to hold. Settling that
-        // from the name alone is what keeps a name nobody wrote as a document
-        // from being reported as a document that could not be fetched
-        if (reference.requirement) {
-          throw OpenAPIReferenceError{
-              "This security requirement must name a Security Scheme Object "
-              "within the document it points at",
-              base, reference.origin, reference.destination};
-        }
-
-        // Everything else goes on to have its document read, so that a
-        // reference landing on something that is no OpenAPI Description at all
-        // hears that rather than hearing about the place it did not name.
-        // Naming no place is the lesser of the two complaints, as a document
-        // of the wrong shape holds no place worth naming either
-      }
-
-      const auto identifier{declared.has_value() ? declared.value().first
-                                                 : holder};
-
-      if (names_a_schema && !declared.has_value() &&
-          unavailable.contains(identifier)) {
-        // A mapping whose schema has already been brought in still names the
-        // URI that schema was fetched by, and a revision that gives an
-        // embedded Schema Object no way of keeping that URI leaves nothing in
-        // the result answering to it. Leaving it here would hand back a
-        // description that does not hold what it names, so it goes on to be
-        // pointed at where that schema landed instead.
-        //
-        // A reference of a Schema Object wants nothing of that, as bringing
-        // the schemas of a description in is what settles where it leads, and
-        // it settles it the same way however many positions name one schema
-        if (reference.mapping) {
-          deferred[reference.destination].push_back(reference);
-        }
-
-        continue;
-      }
-
-      if (!documents.contains(identifier)) {
-        auto resolved{resolver(identifier)};
-        if (!resolved.has_value()) {
-          if (names_a_schema) {
-            unavailable.insert(identifier);
-            if (reference.mapping) {
-              deferred[reference.destination].push_back(reference);
-            }
-
-            continue;
-          }
-
-          throw OpenAPIResolutionError{
-              "Could not resolve the reference to an external document", base,
-              reference.origin, identifier};
-        }
-
-        auto candidate{std::move(resolved).to_owned()};
-        // OpenAPI Specification 3.2.1, Section 4.1.2: "all documents in an
-        // OAD MUST have either an OpenAPI Object or a Schema Object at the
-        // root, and MUST be parsed as complete documents". A Schema Object at
-        // the root is what a Schema Object reference may name, and that
-        // document is one a JSON Schema implementation reads rather than this.
-        //
-        // Only 3.2 carries that sentence. No release of 3.1 or of 3.0 does,
-        // and 3.0 reads the other way: its Reference Object offers
-        // `definitions.json#/Pet` as a worked example, and its Structural
-        // Interoperability section admits a reference target "with the Object
-        // type matching the reference source's context". So holding an earlier
-        // revision to it narrows what that revision allows, and is a choice
-        // this makes rather than a rule it follows.
-        //
-        // What makes the choice is that nothing else tells a document of a
-        // description from any other JSON document. Section 4.1 marks
-        // `openapi` "REQUIRED", and it is the only member a document carries
-        // that says what the document is: every Object this specification
-        // defines is an ordinary JSON object, and most of them are open to a
-        // member nobody expected, so there is no shape to recognise either. A
-        // reader handed a document without that field has nothing to decide
-        // by, and reading one as whichever kind a reference happened to expect
-        // is what Appendix G leaves undefined: "If the same JSON/YAML object
-        // is parsed multiple times and the respective contexts require it to
-        // be parsed as different Object types, the resulting behavior is
-        // implementation defined, and MAY be treated as an error if detected".
-        //
-        // So the rule the latest revision writes down is the one every
-        // revision is held to here. It costs a description that splits itself
-        // into bare Objects, which the earlier revisions permit, and it buys
-        // whatever reads what this produces a document that says what it is
-        if (!openapi_has_version_field(candidate)) {
-          if (names_a_schema) {
-            unavailable.insert(identifier);
-            // Section 4.1.2 puts "either an OpenAPI Object or a Schema Object
-            // at the root" of a document of a description, and a mapping names
-            // the second of those, so one reaching a document that holds no
-            // description has reached a schema that is there to be brought in.
-            // Which resolver a caller answers for such a document with is the
-            // caller's business rather than this one's
-            if (reference.mapping) {
-              deferred[reference.destination].push_back(reference);
-            }
-
-            continue;
-          }
-
-          throw OpenAPIReferenceError{"This reference must name a document "
-                                      "that holds an OpenAPI Description",
-                                      base, reference.origin, identifier};
-        }
-
-        // Nothing in the specification asks for this. It says what a
-        // description may span and says nothing of the revisions the documents
-        // it spans declare, so turning one of these down is a choice this
-        // makes rather than a rule it follows.
-        //
-        // What makes the choice is where bundling ends. Section 4.1 has one
-        // document declare one revision, so everything the result holds has to
-        // be what that one revision can express, and there is no revision to
-        // pick that can express both. A 3.2 document holds fields that 3.1 has
-        // no way of spelling, and 3.2.1 Section 2.1 leaves no room to assume
-        // the other direction is safe either: "Occasionally, non-backwards
-        // compatible changes may be made in `minor` versions of the OAS where
-        // impact is believed to be low relative to the benefit provided". So
-        // the choice is between turning such a description down and handing
-        // back a document that says it is one revision while holding what
-        // another one means.
-        //
-        // What the patch component says is no part of this, as 3.2.1
-        // Section 2.1 makes a revision the `major`.`minor` pair alone,
-        // which 3.1.1 says the same of under Section 4.1
-        const auto revision{openapi_version(candidate)};
-        if (revision.has_value() && revision.value() != walk.version) {
-          throw OpenAPIReferenceError{
-              "This reference must name a document of the same OpenAPI "
-              "Specification revision",
-              base, reference.origin, identifier};
-        }
-
-        // The walk keeps a view into the document it read, so the document
-        // takes its place before anything walks it
-        const auto &held{
-            documents.emplace(identifier, std::move(candidate)).first->second};
-        auto analysis{openapi_analyse(held, identifier, remaining, &names)};
-        charge(remaining, analysis.locations.size());
-        const auto &recorded{
-            walks.emplace(identifier, std::move(analysis)).first->second};
-        index_schemas(held, recorded, identifier, walker, schema_resolver,
-                      identifiers, remaining);
-      }
-
-      // A fragment shaped like anything but a pointer names an identifier or
-      // an anchor rather than a place, which only framing the document that
-      // declares it settles. 3.2.1 Section 4.1.2 leaves none of those to be
-      // given up on before that document has been read, so this is asked again
-      // now that it has been. A fragment that is a pointer already named a
-      // place of the document just read, and nothing another document declares
-      // for itself is to take that place from it
-      if (names_a_schema && !declared.has_value() && !pointed.has_value()) {
-        declared = declared_target(identifiers, reference.destination);
-      }
-
-      // A document that holds an OpenAPI Description is never what a reference
-      // from the shell expects to find, so one naming a whole document has
-      // landed on the wrong kind of thing. This is where such a reference is
-      // turned down, once that document has been read and has turned out to
-      // hold a description of the revision this one spans. A fragment shaped
-      // like anything but a pointer names no place of it either, and reaches
-      // here the same way
-      const auto target{declared.has_value()
-                            ? std::optional<Pointer>{declared.value().second}
-                            : target_of(reference.destination)};
-      if (!target.has_value()) {
-        // A mapping is the one name here that a schema of its own may answer
-        // for, as what it reaches is resolved for schemas rather than by the
-        // shell, so it goes on to be told where that schema landed. Every
-        // other name, a reference of a Schema Object among them, has landed
-        // on a document that holds no place answering to it
-        if (reference.mapping) {
-          deferred[reference.destination].push_back(reference);
-          continue;
-        }
-
-        // Section 4.3.1 asks for "a requirement to parse complete documents
-        // before deeming a Schema Object reference to be unresolvable", and
-        // reading the whole of the document this names is what meets it: every
-        // place of it is settled, its Schema Objects among them, and a Schema
-        // Object of some document still unread that claimed the URI this one
-        // answers to would be claiming a whole document rather than declaring
-        // the place this names
-        throw OpenAPIReferenceError{"This reference must name a place within "
-                                    "the document it points at",
-                                    base, reference.origin,
-                                    reference.destination};
-      }
-
-      const auto &remote_document{documents.at(identifier)};
-      const auto &remote{walks.at(identifier)};
-      // Spelled as the document that holds it spells it, before anything
-      // compares it against what the walk of that document recorded
-      const auto spelled{retype(remote_document, target.value())};
-      // What a reference names is held to the kind the position it sits in
-      // expects, however many references reach the Object that holds it. A
-      // second one that named nothing would otherwise be written out as a
-      // place the result does not hold
-      if (!lands(remote, remote.base, spelled, reference.expected)) {
-        throw OpenAPIReferenceError{
-            "This reference must name an Object of the kind that the "
-            "position it sits in expects",
-            base, reference.origin, reference.destination};
-      }
-
-      // An Operation Object is the one kind the Components Object has no home
-      // for, so what gets embedded is the Path Item Object holding it and the
-      // reference goes on reaching its operation through that
-      const auto names_an_operation{reference.expected ==
-                                    OpenAPIObjectKind::Operation};
-      const auto origin{promote(names_an_operation
-                                    ? path_item_of(remote, spelled)
-                                : names_a_schema ? schema_of(remote, spelled)
-                                                 : spelled)};
-
-      // Where a document was retrieved from is how a resolver is asked for it,
-      // and what it answers to is its own to say. OpenAPI Specification 3.2.1,
-      // Section 4.1.1 lets a document declare the latter and requires the two
-      // to be told apart: "references MUST use the target document's `$self`
-      // URI if the `$self` field is present". So every place of it is named by
-      // the base its own analysis settled on rather than by where it was found
-      const auto key{openapi_location_uri(remote.base, origin)};
-
-      // Before 3.1 the Components Object holds no Path Item Object, so one of
-      // those has nowhere to be moved to and is written into the Object that
-      // referenced it instead. Section 4.3.3 keeps the Paths Object of the
-      // entry document the only thing that "contributes URLs to the described
-      // API", so putting it there is no alternative: that would describe an
-      // endpoint the description never exposed
-      if (reference.expected == OpenAPIObjectKind::PathItem &&
-          !openapi_components_hold_path_items(walk.version)) {
-        const auto host{reference.origin.initial()};
-        // Keyed the way every other map in this file keys a place, by what the
-        // document answers for it rather than by the pointer on its own
-        const auto within{openapi_location_uri(base, host)};
-        if (!inlined[within].insert(key).second) {
-          throw OpenAPIError{
-              "The Path Item Object references must not form a cycle", base,
-              reference.origin};
-        }
-
-        inline_path_item(document, remote_document, remote, origin, host, key,
-                         base, walk.dialect, walker, schema_resolver, options,
-                         remaining);
-        changed = true;
-        continue;
-      }
-
-      // And an Operation Object of another document is reached through a Path
-      // Item Object that there is likewise nowhere to put, which leaves
-      // nothing to reach it through
-      if (names_an_operation &&
-          !openapi_components_hold_path_items(walk.version)) {
-        throw OpenAPIReferenceError{
-            "This revision has nowhere to hold the Path Item Object that "
-            "holds the operation this reference names",
-            base, reference.origin, reference.destination};
-      }
-
-      const auto container{
-          container_of(origin, names_an_operation ? OpenAPIObjectKind::PathItem
-                                                  : reference.expected)};
-      // Every kind that a reference position expects has a home of its own
-      // once an Operation Object is reached through the Path Item holding it
-      assert(!container.empty());
-
-      if (!bundled.contains(key)) {
-        bundled.emplace(key, adopt(document, remote_document, remote, origin,
-                                   container, key, base, walk.dialect, walker,
-                                   schema_resolver, options, remaining));
-      }
-
-      // The reference is rewritten as a fragment of the document it now sits
-      // in, rather than as the URI that document answers to, so that bundling
-      // leaves behind an output that keeps working wherever it is moved to
-      const auto landed{spelled.rebase(origin, bundled.at(key))};
-
-      // What a Security Requirement Object names is the member the scopes sit
-      // under, so what makes it whole is renaming that member to whatever the
-      // scheme is called once it sits here, which carries the scopes across
-      // untouched. 3.2.1 Section 4.30 then reads the result as a component name
-      // rather than as a URI: "Property names that are identical to a
-      // component name under the Components Object MUST be treated as a
-      // component name", and the name was taken free of that Object for it
-      if (reference.requirement) {
-        auto &requirement{get(document, reference.origin.initial())};
-        const auto &member{reference.origin.back().to_property()};
-        JSON::String name{landed.back().to_property()};
-        const auto *taken{requirement.try_at(name)};
-        if (taken != nullptr && *taken != requirement.at(member)) {
-          throw OpenAPIError{"A Security Requirement Object that names one "
-                             "security scheme twice over cannot keep a list of "
-                             "scopes for each of them",
-                             base, reference.origin};
-        }
-
-        requirement.rename(member, std::move(name));
-        changed = true;
-        continue;
-      }
-
-      // A reference that resolves against the document it sits in is written
-      // as a fragment of it, which is what keeps what bundling produces
-      // working wherever it is moved to. One that resolves against something
-      // else, which is a Schema Object that declares an identifier of its own,
-      // would name a place within that identifier instead, so it cannot be
-      // written that way
-      if (reference.scope == base) {
-        set(document, reference.origin, JSON{to_uri(landed).recompose()});
-        changed = true;
-        continue;
-      }
-
-      // What such a reference names instead is what the schema it leads to
-      // says of itself, wherever that schema says anything. JSON Schema
-      // Section 9.3.1 has a reference to an embedded resource "resolve to a
-      // schema using the `$id` of an embedded Schema Resource", and an
-      // identifier holds wherever the description ends up while a place in a
-      // document does not. Only a schema that declares none leaves the
-      // document itself as the sole way to name where it leads
-      const auto *reached{try_get(document, landed)};
-      assert(reached != nullptr);
-      // Section 4.8.24 lets a Schema Object be a boolean, which declares
-      // nothing of itself, so one of those leaves the document holding it as
-      // the only way to name where this leads just as a schema that declares
-      // no identifier does
-      const auto *identity{reached->is_object() ? reached->try_at("$id")
-                                                : nullptr};
-      assert(identity == nullptr || identity->is_string());
-      set(document, reference.origin,
-          identity != nullptr ? JSON{identity->to_string()}
-                              : JSON{openapi_location_uri(base, landed)});
-      changed = true;
+      expand_openapi_reference(reference, document, walker, schema_resolver,
+                               resolver, options, remaining, walk, base,
+                               documents, bundled, inlined, unavailable,
+                               identifiers, deferred, walks, names, changed);
     }
 
     // A pass that leaves the document as it found it is one that has nothing

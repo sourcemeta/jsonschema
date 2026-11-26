@@ -35,6 +35,7 @@ import {
   LOGICAL_WHEN_TYPE, LOGICAL_WHEN_DEFINES, LOGICAL_WHEN_ARRAY_SIZE_GREATER,
   LOOP_PROPERTIES_UNEVALUATED, LOOP_PROPERTIES_UNEVALUATED_EXCEPT,
   LOOP_PROPERTIES_MATCH, LOOP_PROPERTIES_MATCH_CLOSED,
+  LOOP_PROPERTIES_MATCH_REQUIRED,
   LOOP_PROPERTIES, LOOP_PROPERTIES_EVALUATE,
   LOOP_PROPERTIES_REGEX, LOOP_PROPERTIES_REGEX_CLOSED,
   LOOP_PROPERTIES_STARTS_WITH, LOOP_PROPERTIES_EXCEPT,
@@ -814,6 +815,14 @@ export function describe(valid, instruction, evaluatePath,
   if (opcode === ASSERTION_ARRAY_PREFIX ||
       opcode === ASSERTION_ARRAY_PREFIX_EVALUATE) {
     return renderMessage(instruction.message, [ children.length - 1 ]);
+  }
+
+  if (opcode === LOOP_PROPERTIES_MATCH_REQUIRED) {
+    // This one stands for a presence assertion too, so unlike the loops that
+    // only apply subschemas it is reached on a non-object, and that is the one
+    // thing it has to report on its own
+    if (!isObject(target)) return renderMessage(instruction.messageDetail, []);
+    return renderMessage(instruction.message, [ children.length ]);
   }
 
   if (opcode === LOOP_PROPERTIES_MATCH ||

@@ -99,8 +99,10 @@ auto divide_floor(const Dividend &dividend, const Divisor &divisor) {
     if (decimal_dividend >= Decimal{0}) {
       return decimal_dividend.divide_integer(decimal_divisor);
     }
-    const Decimal absolute_dividend{
-        decimal_dividend.is_signed() ? -decimal_dividend : decimal_dividend};
+    // The dividend is held to being integral above, which leaves out a value
+    // that is not a number, so the branch above settles that what reaches here
+    // is negative and negating it is what makes it absolute
+    const Decimal absolute_dividend{-decimal_dividend};
     const Decimal quotient{absolute_dividend.divide_integer(decimal_divisor)};
     if (absolute_dividend % decimal_divisor == Decimal{0}) {
       return -quotient;
@@ -148,8 +150,10 @@ auto divide_ceil(const Dividend &dividend, const Divisor &divisor) {
       }
       return quotient + Decimal{1};
     }
-    const Decimal absolute_dividend{
-        decimal_dividend.is_signed() ? -decimal_dividend : decimal_dividend};
+    // The dividend is held to being integral above, which leaves out a value
+    // that is not a number, so the branch above settles that what reaches here
+    // is negative and negating it is what makes it absolute
+    const Decimal absolute_dividend{-decimal_dividend};
     return -(absolute_dividend.divide_integer(decimal_divisor));
 
   } else {

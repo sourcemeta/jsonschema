@@ -12,6 +12,7 @@
 #include "scanners.h"
 
 #include <array>       // std::array
+#include <cassert>     // assert
 #include <cstddef>     // std::size_t
 #include <cstdint>     // std::uint8_t, std::uint32_t
 #include <string>      // std::string
@@ -31,26 +32,30 @@ constexpr std::array<std::string_view, 9> FILTERED_TAG_NAMES{
 // (>)", where a carriage return reaches the tokenizer as a line feed once the
 // input stream normalizes newlines
 inline auto is_filtered_tag(const std::string_view tag) noexcept -> bool {
-  if (tag.size() < 3 || tag[0] != '<') {
+  // What reaches here is raw HTML read from a less than sign, and a tag takes
+  // a name and a closing sign on top of it
+  assert(!tag.empty() && tag.front() == '<');
+  if (tag.size() < 3) {
     return false;
   }
 
   for (const auto name : FILTERED_TAG_NAMES) {
     std::size_t index{tag[1] == '/' ? 2U : 1U};
     std::size_t name_index{0};
-    while (index < tag.size() && name_index < name.size() &&
-           sourcemeta::core::to_lowercase(tag[index]) == name[name_index]) {
+    while (name_index < name.size() &&
+           sourcemeta::core::to_lowercase(character_at(tag, index)) ==
+               name[name_index]) {
       ++index;
       ++name_index;
     }
 
-    if (name_index < name.size() || index == tag.size()) {
+    if (name_index < name.size()) {
       continue;
     }
 
     // A block holds every one of its lines with a line feed ending, so the
     // whitespace a tag may carry is every kind but a carriage return
-    switch (tag[index]) {
+    switch (character_at(tag, index)) {
       case '\t':
       case '\n':
       case '\f':
@@ -284,9 +289,7 @@ private:
       writer.attribute("class", this->value_.view());
     }
 
-    writer.text(node.literal.data() != nullptr
-                    ? node.literal
-                    : this->document_.content_of(node));
+    writer.text(this->document_.content_of(node));
     writer.close().close().raw("\n");
   }
 
@@ -322,13 +325,27 @@ private:
     }
   }
 
+// Clang keeps an arm for the value that never arrives and counts it as one
+// that nothing took, so the type the document opens with is written as the
+// default there, while the compilers reading a case label are the ones holding
+// the switch below to naming them all. The directives stay out of the function
+// because one inside it reads as a line that never ran
+#if defined(__clang__)
+#define SOURCEMETA_CORE_MARKDOWN_RENDERS_NOTHING                               \
+  default:                                                                     \
+    break;
+#else
+#define SOURCEMETA_CORE_MARKDOWN_RENDERS_NOTHING                               \
+  case NodeType::Document:                                                     \
+    break;
+#endif
+
   auto render_node(const std::uint32_t index, const bool entering) -> void {
     const auto &nodes{this->document_.nodes};
     const auto &node{nodes[index]};
     auto &writer{this->writer_};
     switch (node.type) {
-      case NodeType::Document:
-        break;
+      SOURCEMETA_CORE_MARKDOWN_RENDERS_NOTHING
       case NodeType::BlockQuote:
         writer.ensure_line_feed();
         if (entering) {
@@ -591,10 +608,11 @@ private:
         break;
     }
   }
+#undef SOURCEMETA_CORE_MARKDOWN_RENDERS_NOTHING
 
   auto append_filtered_html(std::string_view html) -> void {
     auto &writer{this->writer_};
-    while (!html.empty()) {
+    while (true) {
       const auto bracket{html.find('<')};
       if (bracket == std::string_view::npos) {
         break;

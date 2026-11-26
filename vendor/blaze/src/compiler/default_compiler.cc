@@ -682,7 +682,7 @@ auto dispatch_keyword(const sourcemeta::blaze::KeywordContext &context,
       return {};
     }
 
-    if (!annotations_enabled(context) || context.local.is_property_name) {
+    if (!annotations_enabled(context)) {
       return {};
     }
 

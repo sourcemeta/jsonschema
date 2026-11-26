@@ -71,7 +71,7 @@
         },
         "definitions": {
           "type": "object",
-          "minProperties": 1,
+          "required": [ "0" ],
           "propertyNames": {
             "pattern": "^(0|[1-9][0-9]*)$"
           },
@@ -108,7 +108,7 @@
             "maxProperties": 1,
             "properties": {
               "$ref": {
-                "pattern": "^#"
+                "pattern": "^(#|$)"
               }
             }
           },
@@ -370,11 +370,23 @@
           "x-lint-exclude": "simple_properties_identifiers",
           "$ref": "#/$defs/metadata",
           "type": "object",
+          "anyOf": [
+            {
+              "properties": {
+                "anyOf": {
+                  "minItems": 2
+                }
+              }
+            },
+            {
+              "minProperties": 2
+            }
+          ],
           "required": [ "anyOf" ],
           "properties": {
             "anyOf": {
               "type": "array",
-              "minItems": 2,
+              "minItems": 1,
               "uniqueItems": true,
               "items": {
                 "$ref": "#/$defs/edge"
@@ -387,11 +399,23 @@
           "x-lint-exclude": "simple_properties_identifiers",
           "$ref": "#/$defs/metadata",
           "type": "object",
+          "anyOf": [
+            {
+              "properties": {
+                "allOf": {
+                  "minItems": 2
+                }
+              }
+            },
+            {
+              "minProperties": 2
+            }
+          ],
           "required": [ "allOf" ],
           "properties": {
             "allOf": {
               "type": "array",
-              "minItems": 2,
+              "minItems": 1,
               "uniqueItems": true,
               "items": {
                 "$ref": "#/$defs/edge"
@@ -404,11 +428,23 @@
           "x-lint-exclude": "simple_properties_identifiers",
           "$ref": "#/$defs/metadata",
           "type": "object",
+          "anyOf": [
+            {
+              "properties": {
+                "oneOf": {
+                  "minItems": 2
+                }
+              }
+            },
+            {
+              "minProperties": 2
+            }
+          ],
           "required": [ "oneOf" ],
           "properties": {
             "oneOf": {
               "type": "array",
-              "minItems": 2,
+              "minItems": 1,
               "items": {
                 "$ref": "#/$defs/edge"
               }

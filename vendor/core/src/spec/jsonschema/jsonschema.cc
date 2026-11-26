@@ -20,6 +20,28 @@ constexpr std::size_t BASE_DIALECT_CHAIN_LIMIT{64};
 
 } // namespace
 
+// A switch that names every enumerator and carries no default of its own
+// still holds an arm for the value outside the enumeration that never
+// arrives, which Clang counts as one that nothing took, and so does the arm
+// of a switch that stands for the values its caller never hands it. Writing
+// the last arm of each switch below as the default there takes that arm away,
+// while the compilers reading a case label keep being the ones that catch a
+// base dialect added later. The directives stay out of the functions because
+// one inside a body reads as a line that never ran
+#if defined(__clang__)
+#define SOURCEMETA_CORE_JSONSCHEMA_LAST_BASE_DIALECT default
+#define SOURCEMETA_CORE_JSONSCHEMA_CORE_OF_2019_09 default
+#define SOURCEMETA_CORE_JSONSCHEMA_LAST_PRE_VOCABULARY default
+#else
+#define SOURCEMETA_CORE_JSONSCHEMA_LAST_BASE_DIALECT                           \
+  case SchemaBaseDialect::JSON_SCHEMA_DRAFT_0_HYPER
+#define SOURCEMETA_CORE_JSONSCHEMA_CORE_OF_2019_09                             \
+  case SchemaBaseDialect::JSON_SCHEMA_2019_09:                                 \
+  case SchemaBaseDialect::JSON_SCHEMA_2019_09_HYPER
+#define SOURCEMETA_CORE_JSONSCHEMA_LAST_PRE_VOCABULARY                         \
+  case SchemaBaseDialect::JSON_SCHEMA_DRAFT_0_HYPER
+#endif
+
 // TODO: Make this function detect schemas only using identifier/comment
 // keywords, etc
 auto sourcemeta::core::base_dialect_uri(const SchemaBaseDialect base_dialect)
@@ -53,7 +75,7 @@ auto sourcemeta::core::base_dialect_uri(const SchemaBaseDialect base_dialect)
       return "http://json-schema.org/draft-02/hyper-schema#";
     case SchemaBaseDialect::JSON_SCHEMA_DRAFT_1_HYPER:
       return "http://json-schema.org/draft-01/hyper-schema#";
-    case SchemaBaseDialect::JSON_SCHEMA_DRAFT_0_HYPER:
+    SOURCEMETA_CORE_JSONSCHEMA_LAST_BASE_DIALECT:
       return "http://json-schema.org/draft-00/hyper-schema#";
   }
 
@@ -340,14 +362,96 @@ static auto base_dialect_of_spelling(const std::string_view dialect)
   return sourcemeta::core::to_base_dialect(settled.value() + "#");
 }
 
+// Walk the chain that one candidate starts, preferring at every link the
+// meta-schema the document embeds over the one the resolver knows about. The
+// candidate stands only if the chain terminates at an official base dialect
+// and every embedded link along it declares its identifier, and sits in a
+// container, in a way that is valid for that base dialect. A chain that can
+// never terminate raises, as a candidate that leads nowhere is a different
+// answer from one that simply does not match
+static auto embedded_metaschema_chain_accepts(
+    const sourcemeta::core::JSON &schema,
+    const sourcemeta::core::EmbeddedMetaschemaLink &candidate,
+    const sourcemeta::core::SchemaKeyword keyword,
+    const sourcemeta::core::SchemaResolver &resolver) -> bool {
+  // A name that is itself an official base dialect settles the chain where it
+  // stands, whichever spelling names it, so the copy a document carries of
+  // that schema is the meta-schema for the name rather than a link to walk
+  // through, and however that copy chains onwards is beside the point
+  const auto starting_terminal{base_dialect_of_spelling(candidate.identifier)};
+  if (starting_terminal.has_value()) {
+    return sourcemeta::core::embedded_metaschema_link_valid(
+        *(candidate.schema), candidate.identifier, candidate.container,
+        starting_terminal.value(), schema);
+  }
+
+  std::unordered_set<std::string_view> visited;
+  std::vector<sourcemeta::core::EmbeddedMetaschemaLink> links{candidate};
+  // Chain links that the resolver knows about are returned by value, so we
+  // keep them alive while we walk the chain, in a container that never
+  // relocates its elements, as we hold views into them
+  std::deque<sourcemeta::core::JSON> resolved;
+  const auto *current{candidate.schema};
+  std::string_view current_identifier{candidate.identifier};
+
+  while (true) {
+    // The meta-schema is present, but its chain can never terminate at an
+    // official base dialect, just like a self-descriptive or cyclic
+    // meta-schema that the resolver knows about. A chain that goes deeper than
+    // any document means is refused here too, as the resolver can answer every
+    // link with a fresh one and so keep this walk going for ever
+    if (visited.size() >= BASE_DIALECT_CHAIN_LIMIT ||
+        !visited.emplace(current_identifier).second || !current->is_object()) {
+      throw sourcemeta::core::SchemaUnknownBaseDialectError();
+    }
+
+    const auto *metaschema_dialect{current->try_at(
+        std::string_view{"$schema"}, sourcemeta::core::JSONSCHEMA_HASH_SCHEMA)};
+    if ((metaschema_dialect == nullptr) || !metaschema_dialect->is_string()) {
+      throw sourcemeta::core::SchemaUnknownBaseDialectError();
+    }
+
+    const auto &dialect_uri{metaschema_dialect->to_string()};
+    const auto terminal{base_dialect_of_spelling(dialect_uri)};
+    if (terminal.has_value()) {
+      for (const auto &link : links) {
+        if (!sourcemeta::core::embedded_metaschema_link_valid(
+                *(link.schema), link.identifier, link.container,
+                terminal.value(), schema)) {
+          return false;
+        }
+      }
+
+      return true;
+    }
+
+    if (sourcemeta::core::URI::is_uri(dialect_uri)) {
+      const auto next{sourcemeta::core::embedded_metaschema_candidates(
+          schema, dialect_uri, keyword)};
+      if (!next.empty()) {
+        links.push_back(next.front());
+        current = links.back().schema;
+        current_identifier = dialect_uri;
+        continue;
+      }
+    }
+
+    auto remote{resolver(dialect_uri)};
+    if (!remote.has_value()) {
+      return false;
+    }
+
+    resolved.push_back(std::move(remote).value());
+    current = &resolved.back();
+    current_identifier = dialect_uri;
+  }
+}
+
 // A meta-schema that the document embeds takes precedence over what the
 // resolver knows about, at every link of the chain, as the document pins the
 // exact meta-schemas it is described by. Across every official base dialect,
 // the only containers that can hold embedded resources are `$defs` and
-// `definitions`, which no custom dialect can redefine away. A candidate only
-// counts if its entire meta-schema chain terminates at an official base
-// dialect and every embedded link declares its identifier and sits in a
-// container in a way that is valid for such base dialect
+// `definitions`, which no custom dialect can redefine away
 auto sourcemeta::core::metaschema_try_embedded(
     const sourcemeta::core::JSON &schema, const std::string_view identifier,
     const SchemaResolver &resolver) -> const sourcemeta::core::JSON * {
@@ -357,101 +461,35 @@ auto sourcemeta::core::metaschema_try_embedded(
     return nullptr;
   }
 
-  const auto candidate{
-      sourcemeta::core::embedded_metaschema_candidate(schema, identifier)};
-  if (candidate.first == nullptr) {
-    return nullptr;
-  }
-
-  // A name that is itself an official base dialect settles the chain where it
-  // stands, whichever spelling names it, so the copy a document carries of
-  // that schema is the meta-schema for the name rather than a link to walk
-  // through, and however that copy chains onwards is beside the point
-  const auto starting_terminal{base_dialect_of_spelling(identifier)};
-  if (starting_terminal.has_value()) {
-    if (!sourcemeta::core::embedded_metaschema_link_valid(
-            *(candidate.first), identifier, candidate.second,
-            starting_terminal.value())) {
-      return nullptr;
-    }
-
-    return candidate.first;
-  }
-
-  std::unordered_set<std::string_view> visited;
-  std::vector<sourcemeta::core::EmbeddedMetaschemaLink> links{
-      {.schema = candidate.first,
-       .identifier = identifier,
-       .container = candidate.second}};
-  // Chain links that the resolver knows about are returned by value, so we
-  // keep them alive while we walk the chain, in a container that never
-  // relocates its elements, as we hold views into them
-  std::deque<sourcemeta::core::JSON> resolved;
-  const auto *current{candidate.first};
-  std::string_view current_identifier{identifier};
-  std::optional<SchemaBaseDialect> terminal;
-
-  while (true) {
-    // The meta-schema is present, but its chain can never terminate at an
-    // official base dialect, just like a self-descriptive or cyclic
-    // meta-schema that the resolver knows about. A chain that goes deeper than
-    // any document means is refused here too, as the resolver can answer every
-    // link with a fresh one and so keep this walk going for ever
-    if (visited.size() >= BASE_DIALECT_CHAIN_LIMIT ||
-        !visited.emplace(current_identifier).second) {
-      throw sourcemeta::core::SchemaUnknownBaseDialectError();
-    }
-
-    if (!current->is_object()) {
-      throw sourcemeta::core::SchemaUnknownBaseDialectError();
-    }
-
-    const auto *metaschema_dialect{
-        current->try_at("$schema"sv, sourcemeta::core::JSONSCHEMA_HASH_SCHEMA)};
-    if ((metaschema_dialect == nullptr) || !metaschema_dialect->is_string()) {
-      throw sourcemeta::core::SchemaUnknownBaseDialectError();
-    }
-
-    const auto &dialect_uri{metaschema_dialect->to_string()};
-    const auto known{base_dialect_of_spelling(dialect_uri)};
-    if (known.has_value()) {
-      terminal = known;
-      break;
-    }
-
-    if (sourcemeta::core::URI::is_uri(dialect_uri)) {
-      const auto next{
-          sourcemeta::core::embedded_metaschema_candidate(schema, dialect_uri)};
-      if (next.first != nullptr) {
-        links.push_back({.schema = next.first,
-                         .identifier = dialect_uri,
-                         .container = next.second});
-        current = next.first;
-        current_identifier = dialect_uri;
-        continue;
+  // A document may spell identifiers with a keyword the dialect in force does
+  // not read, and such a resource is never a link that validation accepts. So
+  // the search runs once per keyword, and within a pass every lookup uses that
+  // one keyword, which keeps a resource spelled the other way from hiding the
+  // one that would have been accepted. A candidate the chain or the validation
+  // rejects does not end a pass either, as another entry may still answer
+  bool unknown_base_dialect{false};
+  for (const auto keyword : sourcemeta::core::EMBEDDED_METASCHEMA_KEYWORDS) {
+    for (const auto &candidate :
+         sourcemeta::core::embedded_metaschema_candidates(schema, identifier,
+                                                          keyword)) {
+      try {
+        if (embedded_metaschema_chain_accepts(schema, candidate, keyword,
+                                              resolver)) {
+          return candidate.schema;
+        }
+      } catch (const sourcemeta::core::SchemaUnknownBaseDialectError &) {
+        // This candidate leads nowhere, but another entry may still answer to
+        // the identifier. The error is only the answer if none of them do
+        unknown_base_dialect = true;
       }
     }
-
-    auto remote{resolver(dialect_uri)};
-    if (!remote.has_value()) {
-      return nullptr;
-    }
-
-    resolved.push_back(std::move(remote).value());
-    current = &resolved.back();
-    current_identifier = dialect_uri;
   }
 
-  assert(terminal.has_value());
-  for (const auto &link : links) {
-    if (!sourcemeta::core::embedded_metaschema_link_valid(
-            *(link.schema), link.identifier, link.container,
-            terminal.value())) {
-      return nullptr;
-    }
+  if (unknown_base_dialect) {
+    throw sourcemeta::core::SchemaUnknownBaseDialectError();
   }
 
-  return candidate.first;
+  return nullptr;
 }
 
 // A resolver that answers to one spelling of a URI answers for the document
@@ -582,12 +620,14 @@ auto core_vocabulary_known(
     case SchemaBaseDialect::JSON_SCHEMA_2020_12:
     case SchemaBaseDialect::JSON_SCHEMA_2020_12_HYPER:
       return SchemaVocabularies::Known::JSON_SCHEMA_2020_12_CORE;
-    case SchemaBaseDialect::JSON_SCHEMA_2019_09:
-    case SchemaBaseDialect::JSON_SCHEMA_2019_09_HYPER:
+    SOURCEMETA_CORE_JSONSCHEMA_CORE_OF_2019_09:
       return SchemaVocabularies::Known::JSON_SCHEMA_2019_09_CORE;
-    // Only the dialects that carry vocabularies reach here
+      // Only the dialects that carry vocabularies reach here, which Clang
+      // settles on its own once the arm above stands for whatever else arrives
+#if !defined(__clang__)
     default:
       std::unreachable();
+#endif
   }
 }
 
@@ -656,11 +696,14 @@ auto base_dialect_to_known(const sourcemeta::core::SchemaBaseDialect dialect)
       return SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_2_HYPER;
     case SchemaBaseDialect::JSON_SCHEMA_DRAFT_1_HYPER:
       return SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_1_HYPER;
-    case SchemaBaseDialect::JSON_SCHEMA_DRAFT_0_HYPER:
+    SOURCEMETA_CORE_JSONSCHEMA_LAST_PRE_VOCABULARY:
       return SchemaVocabularies::Known::JSON_SCHEMA_DRAFT_0_HYPER;
-    // Only the dialects that predate vocabularies reach here
+      // Only the dialects that predate vocabularies reach here, which Clang
+      // settles on its own once the arm above stands for whatever else arrives
+#if !defined(__clang__)
     default:
       std::unreachable();
+#endif
   }
 }
 
@@ -685,24 +728,24 @@ auto is_pre_vocabulary_base_dialect(
   }
 }
 
-auto parse_vocabularies(const sourcemeta::core::JSON &schema,
-                        const sourcemeta::core::SchemaBaseDialect base_dialect,
-                        const std::string_view dialect)
+auto parse_vocabularies(
+    const sourcemeta::core::JSON &schema,
+    [[maybe_unused]] const sourcemeta::core::SchemaBaseDialect base_dialect,
+    const std::string_view dialect)
     -> std::optional<sourcemeta::core::SchemaVocabularies> {
-  if (base_dialect !=
-          sourcemeta::core::SchemaBaseDialect::JSON_SCHEMA_2020_12 &&
-      base_dialect !=
-          sourcemeta::core::SchemaBaseDialect::JSON_SCHEMA_2020_12_HYPER &&
-      base_dialect !=
-          sourcemeta::core::SchemaBaseDialect::JSON_SCHEMA_2019_09 &&
-      base_dialect !=
-          sourcemeta::core::SchemaBaseDialect::JSON_SCHEMA_2019_09_HYPER) {
-    return std::nullopt;
-  }
-
-  if (!schema.is_object()) {
-    return std::nullopt;
-  }
+  // Only a base dialect that carries vocabularies of its own reaches here, as
+  // the caller answers for every other one before asking, and what carries
+  // them is a schema that reads as an object, as a boolean one names the
+  // dialect it was handed and so settles no base dialect at all
+  assert(base_dialect ==
+             sourcemeta::core::SchemaBaseDialect::JSON_SCHEMA_2020_12 ||
+         base_dialect ==
+             sourcemeta::core::SchemaBaseDialect::JSON_SCHEMA_2020_12_HYPER ||
+         base_dialect ==
+             sourcemeta::core::SchemaBaseDialect::JSON_SCHEMA_2019_09 ||
+         base_dialect ==
+             sourcemeta::core::SchemaBaseDialect::JSON_SCHEMA_2019_09_HYPER);
+  assert(schema.is_object());
 
   const auto *vocabulary_entry{schema.try_at(
       "$vocabulary"sv, sourcemeta::core::JSONSCHEMA_HASH_VOCABULARY)};
@@ -834,11 +877,18 @@ auto sourcemeta::core::vocabularies(const SchemaResolver &resolver,
         "The core vocabulary must always be present");
   }
 
+  // The check above settled that the core vocabulary is there, which is what
+  // leaves it a standing of its own to read
   const auto core_status{result.get(core)};
-  if (core_status.has_value() && !core_status.value()) {
+  assert(core_status.has_value());
+  if (!core_status.value()) {
     throw sourcemeta::core::SchemaError(
         "The core vocabulary must always be required");
   }
 
   return result;
 }
+
+#undef SOURCEMETA_CORE_JSONSCHEMA_LAST_BASE_DIALECT
+#undef SOURCEMETA_CORE_JSONSCHEMA_CORE_OF_2019_09
+#undef SOURCEMETA_CORE_JSONSCHEMA_LAST_PRE_VOCABULARY

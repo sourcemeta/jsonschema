@@ -55,6 +55,7 @@ public:
     this->keyword_branch_index_.clear();
     auto disjunctors{sourcemeta::core::JSON::make_array()};
     std::size_t branch_index{0};
+    bool carried_format_assertion{false};
     for (const auto &type : schema.at("type").as_array()) {
       auto branch{sourcemeta::core::JSON::make_object()};
       branch.assign("type", type);
@@ -68,12 +69,18 @@ public:
         }
       }
 
+      carried_format_assertion =
+          move_format_assertion(schema, branch) || carried_format_assertion;
       disjunctors.push_back(std::move(branch));
       branch_index++;
     }
 
     for (const auto &[keyword, instances] : this->keyword_instances_) {
       schema.erase(keyword);
+    }
+
+    if (carried_format_assertion) {
+      schema.erase("x-format-assertion");
     }
 
     static const std::string ANYOF_KEYWORD{"anyOf"};

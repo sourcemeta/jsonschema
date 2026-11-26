@@ -1238,6 +1238,169 @@ private:
     return content_indent;
   }
 
+  // One line of a block scalar's content, answering whether the scan
+  // carries on past it (YAML 1.2.2 Section 8.1)
+  auto scan_block_scalar_line(const ScalarStyle style,
+                              const std::size_t content_indent,
+                              std::string &buffer, std::string *const original,
+                              std::string &original_trailing,
+                              std::string &trailing_newlines,
+                              std::size_t &blank_line_count,
+                              bool &had_line_break,
+                              bool &previous_was_more_indented,
+                              bool &previous_started_with_whitespace) -> bool {
+    std::size_t line_indent{0};
+    while (this->position_ < this->input_.size() && this->peek() == ' ') {
+      line_indent++;
+      this->advance(1);
+    }
+
+    // YAML 1.2.2 Section 6.1: the white space of an empty block scalar line
+    // is indentation, which is made of spaces, so a tab before any space,
+    // leaving the line otherwise blank, is invalid indentation
+    if (line_indent == 0 && this->peek() == '\t') {
+      auto lookahead{this->position_};
+      while (
+          lookahead < this->input_.size() &&
+          (this->input_[lookahead] == ' ' || this->input_[lookahead] == '\t')) {
+        lookahead++;
+      }
+      if (lookahead >= this->input_.size() || this->input_[lookahead] == '\n' ||
+          this->input_[lookahead] == '\r') [[unlikely]] {
+        throw YAMLParseError{"Tab characters cannot be used for indentation",
+                             this->line_, this->column_};
+      }
+    }
+
+    // A line that holds only white space, whether it ends with a line break
+    // or the end of input, is empty. YAML 1.2.2 Section 8.1.1.1 treats the
+    // spaces beyond the content indentation of such a line as content
+    const bool blank_line_at_input_end{this->position_ >= this->input_.size()};
+    if (this->peek() == '\n' || this->peek() == '\r' ||
+        blank_line_at_input_end) {
+      if (style == ScalarStyle::Literal) {
+        if (line_indent > content_indent) {
+          buffer += trailing_newlines;
+          trailing_newlines.clear();
+          for (std::size_t index = content_indent; index < line_indent;
+               ++index) {
+            buffer += ' ';
+          }
+        }
+        trailing_newlines += '\n';
+      } else {
+        blank_line_count++;
+        if (original != nullptr) {
+          if (line_indent > content_indent) {
+            *original += original_trailing;
+            original_trailing.clear();
+            for (std::size_t index = content_indent; index < line_indent;
+                 ++index) {
+              *original += ' ';
+            }
+          }
+          original_trailing += '\n';
+        }
+      }
+      if (blank_line_at_input_end) {
+        return false;
+      }
+      this->advance(1);
+      if (this->input_[this->position_ - 1] == '\r' && this->peek() == '\n') {
+        this->advance(1);
+      }
+      return true;
+    }
+
+    if (line_indent < content_indent) {
+      for (std::size_t index = 0; index < line_indent; ++index) {
+        this->position_--;
+        this->column_--;
+      }
+      return false;
+    }
+
+    // YAML 1.2.2 production 206 forbids a document marker from standing at
+    // the start of a line of the bare document, and the marker is only one
+    // where white space or the end of input follows it, so a line that
+    // merely begins with those three characters is content
+    if (line_indent == 0 && (this->check_document_marker('-') ||
+                             this->check_document_marker('.'))) {
+      return false;
+    }
+
+    if (style == ScalarStyle::Literal) {
+      buffer += trailing_newlines;
+      trailing_newlines.clear();
+    } else {
+      const bool starts_with_whitespace{this->peek() == '\t'};
+      if (had_line_break) {
+        const bool preserve_line_break{
+            previous_was_more_indented || previous_started_with_whitespace ||
+            line_indent > content_indent || starts_with_whitespace};
+        if (blank_line_count == 0 && !preserve_line_break) {
+          buffer += ' ';
+        } else {
+          if (preserve_line_break) {
+            buffer += '\n';
+          }
+          for (std::size_t count = 0; count < blank_line_count; ++count) {
+            buffer += '\n';
+          }
+        }
+      } else if (blank_line_count > 0) {
+        for (std::size_t count = 0; count < blank_line_count; ++count) {
+          buffer += '\n';
+        }
+      }
+      blank_line_count = 0;
+      had_line_break = false;
+      previous_started_with_whitespace = starts_with_whitespace;
+
+      if (original != nullptr) {
+        *original += original_trailing;
+        original_trailing.clear();
+      }
+    }
+
+    for (std::size_t index = content_indent; index < line_indent; ++index) {
+      buffer += ' ';
+      if (original != nullptr) {
+        *original += ' ';
+      }
+    }
+
+    while (this->position_ < this->input_.size() && this->peek() != '\n' &&
+           this->peek() != '\r') {
+      const auto character{this->peek()};
+      buffer += character;
+      if (original != nullptr) {
+        *original += character;
+      }
+      this->advance(1);
+    }
+
+    if (style == ScalarStyle::Folded) {
+      previous_was_more_indented = (line_indent > content_indent);
+    }
+
+    if (this->peek() == '\n' || this->peek() == '\r') {
+      if (style == ScalarStyle::Literal) {
+        trailing_newlines += '\n';
+      } else {
+        had_line_break = true;
+        if (original != nullptr) {
+          original_trailing += '\n';
+        }
+      }
+      this->advance(1);
+      if (this->input_[this->position_ - 1] == '\r' && this->peek() == '\n') {
+        this->advance(1);
+      }
+    }
+
+    return true;
+  }
   auto scan_block_scalar(const ScalarStyle style) -> Token {
     const auto start_line{this->line_};
     const auto start_column{this->column_};
@@ -1316,156 +1479,11 @@ private:
     std::string trailing_newlines;
 
     while (this->position_ < this->input_.size()) {
-      std::size_t line_indent{0};
-      while (this->position_ < this->input_.size() && this->peek() == ' ') {
-        line_indent++;
-        this->advance(1);
-      }
-
-      // YAML 1.2.2 Section 6.1: the white space of an empty block scalar line
-      // is indentation, which is made of spaces, so a tab before any space,
-      // leaving the line otherwise blank, is invalid indentation
-      if (line_indent == 0 && this->peek() == '\t') {
-        auto lookahead{this->position_};
-        while (lookahead < this->input_.size() &&
-               (this->input_[lookahead] == ' ' ||
-                this->input_[lookahead] == '\t')) {
-          lookahead++;
-        }
-        if (lookahead >= this->input_.size() ||
-            this->input_[lookahead] == '\n' || this->input_[lookahead] == '\r')
-            [[unlikely]] {
-          throw YAMLParseError{"Tab characters cannot be used for indentation",
-                               this->line_, this->column_};
-        }
-      }
-
-      // A line that holds only white space, whether it ends with a line break
-      // or the end of input, is empty. YAML 1.2.2 Section 8.1.1.1 treats the
-      // spaces beyond the content indentation of such a line as content
-      const bool blank_line_at_input_end{this->position_ >=
-                                         this->input_.size()};
-      if (this->peek() == '\n' || this->peek() == '\r' ||
-          blank_line_at_input_end) {
-        if (style == ScalarStyle::Literal) {
-          if (line_indent > content_indent) {
-            buffer += trailing_newlines;
-            trailing_newlines.clear();
-            for (std::size_t index = content_indent; index < line_indent;
-                 ++index) {
-              buffer += ' ';
-            }
-          }
-          trailing_newlines += '\n';
-        } else {
-          blank_line_count++;
-          if (original != nullptr) {
-            if (line_indent > content_indent) {
-              *original += original_trailing;
-              original_trailing.clear();
-              for (std::size_t index = content_indent; index < line_indent;
-                   ++index) {
-                *original += ' ';
-              }
-            }
-            original_trailing += '\n';
-          }
-        }
-        if (blank_line_at_input_end) {
-          break;
-        }
-        this->advance(1);
-        if (this->input_[this->position_ - 1] == '\r' && this->peek() == '\n') {
-          this->advance(1);
-        }
-        continue;
-      }
-
-      if (line_indent < content_indent) {
-        for (std::size_t index = 0; index < line_indent; ++index) {
-          this->position_--;
-          this->column_--;
-        }
+      if (!this->scan_block_scalar_line(
+              style, content_indent, buffer, original, original_trailing,
+              trailing_newlines, blank_line_count, had_line_break,
+              previous_was_more_indented, previous_started_with_whitespace)) {
         break;
-      }
-
-      // YAML 1.2.2 production 206 forbids a document marker from standing at
-      // the start of a line of the bare document, and the marker is only one
-      // where white space or the end of input follows it, so a line that
-      // merely begins with those three characters is content
-      if (line_indent == 0 && (this->check_document_marker('-') ||
-                               this->check_document_marker('.'))) {
-        break;
-      }
-
-      if (style == ScalarStyle::Literal) {
-        buffer += trailing_newlines;
-        trailing_newlines.clear();
-      } else {
-        const bool starts_with_whitespace{this->peek() == '\t'};
-        if (had_line_break) {
-          const bool preserve_line_break{
-              previous_was_more_indented || previous_started_with_whitespace ||
-              line_indent > content_indent || starts_with_whitespace};
-          if (blank_line_count == 0 && !preserve_line_break) {
-            buffer += ' ';
-          } else {
-            if (preserve_line_break) {
-              buffer += '\n';
-            }
-            for (std::size_t count = 0; count < blank_line_count; ++count) {
-              buffer += '\n';
-            }
-          }
-        } else if (blank_line_count > 0) {
-          for (std::size_t count = 0; count < blank_line_count; ++count) {
-            buffer += '\n';
-          }
-        }
-        blank_line_count = 0;
-        had_line_break = false;
-        previous_started_with_whitespace = starts_with_whitespace;
-
-        if (original != nullptr) {
-          *original += original_trailing;
-          original_trailing.clear();
-        }
-      }
-
-      for (std::size_t index = content_indent; index < line_indent; ++index) {
-        buffer += ' ';
-        if (original != nullptr) {
-          *original += ' ';
-        }
-      }
-
-      while (this->position_ < this->input_.size() && this->peek() != '\n' &&
-             this->peek() != '\r') {
-        const auto character{this->peek()};
-        buffer += character;
-        if (original != nullptr) {
-          *original += character;
-        }
-        this->advance(1);
-      }
-
-      if (style == ScalarStyle::Folded) {
-        previous_was_more_indented = (line_indent > content_indent);
-      }
-
-      if (this->peek() == '\n' || this->peek() == '\r') {
-        if (style == ScalarStyle::Literal) {
-          trailing_newlines += '\n';
-        } else {
-          had_line_break = true;
-          if (original != nullptr) {
-            original_trailing += '\n';
-          }
-        }
-        this->advance(1);
-        if (this->input_[this->position_ - 1] == '\r' && this->peek() == '\n') {
-          this->advance(1);
-        }
       }
     }
 

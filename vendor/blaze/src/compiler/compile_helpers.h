@@ -5,8 +5,9 @@
 #include <sourcemeta/core/jsonschema.h>
 #include <sourcemeta/core/uri.h>
 
-#include <algorithm> // std::ranges::find, std::ranges::all_of, std::find_if, std::rotate
-#include <cassert>     // assert
+#include <algorithm> // std::ranges::find, std::ranges::all_of, std::ranges::sort, std::find_if, std::rotate
+#include <cassert>   // assert
+#include <cstddef>   // std::size_t
 #include <functional>  // std::cref
 #include <iterator>    // std::distance, std::next
 #include <limits>      // std::numeric_limits
@@ -268,6 +269,62 @@ inline auto bound_is_representable(const sourcemeta::core::JSON &value)
   static const sourcemeta::core::JSON LIMIT{
       std::numeric_limits<sourcemeta::core::JSON::Integer>::max()};
   return value <= LIMIT;
+}
+
+// The balance between walking the instance once and resolving every name
+// directly. A loop only pays when most of the names are optional, as a
+// required one is resolved anyway, and when there are enough of them that
+// resolving each one costs more than a single walk
+inline auto favours_property_loop(const std::size_t size,
+                                  const std::size_t required) noexcept -> bool {
+  return required <= (size / 4) && size > 5;
+}
+
+inline auto to_named_indexes(
+    std::vector<std::pair<ValueString, ValueUnsignedInteger>> &names)
+    -> ValueNamedIndexes {
+  assert(!names.empty());
+  std::ranges::sort(names, [](const auto &left, const auto &right) -> auto {
+    return left.first.size() < right.first.size();
+  });
+
+  // The table of contents costs a load of its own before a lookup can compare
+  // anything, which only pays off once there are enough names that scanning
+  // them all is worse. Below that, the entries are left without one and the
+  // evaluator scans them, as it did before the table of contents existed.
+  // Measured over the end to end corpus, the table already pays from seven
+  // names up, and only sets of three names or fewer lose to the scan
+  constexpr std::size_t MINIMUM_NAMES_FOR_TABLE_OF_CONTENTS{6};
+
+  ValueNamedIndexes result;
+  // The table of contents works as in `to_string_hashes`: each index marks the
+  // starting and end positions of the names whose size is equal to the index
+  if (names.size() > MINIMUM_NAMES_FOR_TABLE_OF_CONTENTS) {
+    result.second.resize(names.back().first.size() + 1, std::make_pair(0, 0));
+  }
+
+  result.first.reserve(names.size());
+  // TODO(C++23): Use std::views::enumerate when available in libc++
+  for (std::size_t index = 0; index < names.size(); index++) {
+    const auto &name{names[index].first};
+    result.first.emplace_back(sourcemeta::core::JSON::Object::hash(name),
+                              names[index].second, name);
+    if (result.second.empty()) {
+      continue;
+    }
+
+    // We leave position 0 to represent the absence of a size
+    const auto position{index + 1};
+    assert(name.size() < result.second.size());
+    auto &bounds{result.second[name.size()]};
+    bounds.first =
+        (bounds.first == 0) ? position : std::min(bounds.first, position);
+    bounds.second =
+        (bounds.second == 0) ? position : std::max(bounds.second, position);
+    assert(bounds.first <= bounds.second);
+  }
+
+  return result;
 }
 
 // Each of these dialects pairs a validation vocabulary with a hyper-schema one
@@ -612,6 +669,13 @@ inline auto tracks_evaluation(const KeywordContext &context) -> bool {
 
 inline auto annotations_enabled(const KeywordContext &context,
                                 const std::string_view keyword) -> bool {
+  // A subschema applied to a property name runs against something that is not
+  // a location in the instance, so an annotation it reports has no location to
+  // attach to and nothing can collect it
+  if (context.local.is_property_name) {
+    return false;
+  }
+
   if (context.global.tweaks.annotations.has_value()) {
     return context.global.tweaks.annotations.value().contains(keyword);
   }

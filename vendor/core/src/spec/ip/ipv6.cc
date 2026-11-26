@@ -82,7 +82,11 @@ auto is_ipv6(const std::string_view address) -> bool {
 
     group_count += 1;
 
-    if (position < size && address[position] == ':') {
+    // The scan above stops at a colon, at a dot, or at the end of the address,
+    // and a dot leaves this loop altogether, so whatever it stopped on here is
+    // a colon
+    if (position < size) {
+      assert(address[position] == ':');
       if (has_compression && position == double_colon) {
         continue;
       }

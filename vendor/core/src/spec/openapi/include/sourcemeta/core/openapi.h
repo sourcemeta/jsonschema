@@ -431,8 +431,7 @@ public:
   /// two colliding on an identifier or on an anchor throw
   /// sourcemeta::core::SchemaFrameError and
   /// sourcemeta::core::SchemaAnchorCollisionError respectively. One whose
-  /// dialect or base dialect cannot be settled at all throws
-  /// sourcemeta::core::SchemaUnknownDialectError or
+  /// base dialect cannot be settled at all throws
   /// sourcemeta::core::SchemaUnknownBaseDialectError
   ///
   /// A document that is not the one a description begins at resolves the

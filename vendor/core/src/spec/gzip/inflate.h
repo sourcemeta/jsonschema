@@ -1320,6 +1320,46 @@ private:
     return this->decode_huffman_careful(buffers);
   }
 
+  // A run of literals from the primary table, which the margins let this
+  // emit without re-checking the buffers between them. Answers whether
+  // the decode loop carries on
+  static auto decode_literal_run(
+      const std::uint32_t *const literal_length_table,
+      std::uint64_t &bit_buffer, unsigned int &bits_available,
+      const std::uint8_t *&input_next, const std::uint8_t *const input_limit,
+      std::uint8_t *&output_next, const std::uint8_t *const output_limit,
+      std::uint32_t &entry) -> bool {
+    // Every literal leaves the entry of the next symbol loaded, and a
+    // refill only appends bits past the ones that entry was read from
+    bit_buffer >>= entry & 0x3fU;
+    bits_available -= entry;
+    *output_next++ = static_cast<std::uint8_t>(entry >> 16);
+    entry = literal_length_table[low_bits(bit_buffer,
+                                          INFLATE_LITERAL_LENGTH_TABLE_BITS)];
+    if ((entry & INFLATE_ENTRY_LITERAL) != 0) {
+      bit_buffer >>= entry & 0x3fU;
+      bits_available -= entry;
+      *output_next++ = static_cast<std::uint8_t>(entry >> 16);
+      entry = literal_length_table[low_bits(bit_buffer,
+                                            INFLATE_LITERAL_LENGTH_TABLE_BITS)];
+      if ((entry & INFLATE_ENTRY_LITERAL) != 0) {
+        bit_buffer >>= entry & 0x3fU;
+        bits_available -= entry;
+        *output_next++ = static_cast<std::uint8_t>(entry >> 16);
+        entry = literal_length_table[low_bits(
+            bit_buffer, INFLATE_LITERAL_LENGTH_TABLE_BITS)];
+      }
+    }
+
+    if (input_next >= input_limit || output_next >= output_limit) {
+      return false;
+    }
+
+    bit_buffer |= load_word(input_next) << (bits_available & 63U);
+    input_next += (63U - (bits_available & 63U)) >> 3;
+    bits_available |= 56;
+    return true;
+  }
   // Returns whether the block ended
   auto decode_huffman_fast(InflateBuffers &buffers) -> bool {
     const auto *literal_length_table{this->literal_length_table_.data()};
@@ -1349,35 +1389,12 @@ private:
           bit_buffer, INFLATE_LITERAL_LENGTH_TABLE_BITS)]};
       while (true) {
         if ((entry & INFLATE_ENTRY_LITERAL) != 0) {
-          // Every literal leaves the entry of the next symbol loaded, and a
-          // refill only appends bits past the ones that entry was read from
-          bit_buffer >>= entry & 0x3fU;
-          bits_available -= entry;
-          *output_next++ = static_cast<std::uint8_t>(entry >> 16);
-          entry = literal_length_table[low_bits(
-              bit_buffer, INFLATE_LITERAL_LENGTH_TABLE_BITS)];
-          if ((entry & INFLATE_ENTRY_LITERAL) != 0) {
-            bit_buffer >>= entry & 0x3fU;
-            bits_available -= entry;
-            *output_next++ = static_cast<std::uint8_t>(entry >> 16);
-            entry = literal_length_table[low_bits(
-                bit_buffer, INFLATE_LITERAL_LENGTH_TABLE_BITS)];
-            if ((entry & INFLATE_ENTRY_LITERAL) != 0) {
-              bit_buffer >>= entry & 0x3fU;
-              bits_available -= entry;
-              *output_next++ = static_cast<std::uint8_t>(entry >> 16);
-              entry = literal_length_table[low_bits(
-                  bit_buffer, INFLATE_LITERAL_LENGTH_TABLE_BITS)];
-            }
-          }
-
-          if (input_next >= input_limit || output_next >= output_limit) {
+          if (!decode_literal_run(literal_length_table, bit_buffer,
+                                  bits_available, input_next, input_limit,
+                                  output_next, output_limit, entry)) {
             break;
           }
 
-          bit_buffer |= load_word(input_next) << (bits_available & 63U);
-          input_next += (63U - (bits_available & 63U)) >> 3;
-          bits_available |= 56;
           continue;
         }
 

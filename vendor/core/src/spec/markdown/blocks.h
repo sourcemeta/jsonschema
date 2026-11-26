@@ -39,14 +39,6 @@ struct TableCellSpan {
   std::size_t length;
 };
 
-inline auto is_block_type(const NodeType type) noexcept -> bool {
-  return type <= NodeType::TableCell;
-}
-
-inline auto is_inline_type(const NodeType type) noexcept -> bool {
-  return type > NodeType::TableCell;
-}
-
 inline auto accepts_lines(const NodeType type) noexcept -> bool {
   return type == NodeType::Paragraph || type == NodeType::Heading ||
          type == NodeType::CodeBlock;
@@ -90,8 +82,7 @@ inline auto parse_table_row(const std::string_view string,
   last_line_offset = 0;
   const auto length{string.size()};
   auto offset{scan_table_cell_end(string, 0)};
-  bool expect_more_cells{true};
-  while (offset < length && expect_more_cells) {
+  while (true) {
     const auto cell_length{scan_table_cell(string, offset)};
     const auto pipe_length{scan_table_cell_end(string, offset + cell_length)};
     if (cell_length > 0 || pipe_length > 0) {
@@ -103,18 +94,20 @@ inline auto parse_table_row(const std::string_view string,
       continue;
     }
 
-    const auto row_end{scan_table_row_end(string, offset)};
-    offset += row_end;
-    if (row_end > 0 && offset != length) {
-      last_line_offset = offset;
-      cells.clear();
-      offset += scan_table_cell_end(string, offset);
-    } else {
-      expect_more_cells = false;
+    // A cell ends at a pipe or at a line ending, and the one above took no
+    // pipe, so a line ending is what follows it
+    assert(string[offset] == '\n');
+    offset += scan_table_row_end(string, offset);
+    if (offset == length) {
+      break;
     }
+
+    last_line_offset = offset;
+    cells.clear();
+    offset += scan_table_cell_end(string, offset);
   }
 
-  return offset == length && !cells.empty();
+  return !cells.empty();
 }
 
 // The block structure of GFM section 4 and 5 and of the table and task list
@@ -177,8 +170,11 @@ private:
     return this->document_.nodes[index];
   }
 
+  // No caller reads before the start of the line, while reading past its end
+  // answers with a character no line carries
   [[nodiscard]] auto peek(const std::ptrdiff_t index) const noexcept -> char {
-    return index >= 0 && static_cast<std::size_t>(index) < this->line_.size()
+    assert(index >= 0);
+    return static_cast<std::size_t>(index) < this->line_.size()
                ? this->line_[static_cast<std::size_t>(index)]
                : '\0';
   }
@@ -225,11 +221,12 @@ private:
     }
 
     auto container{last_matched};
-    this->open_new_blocks(container, all_matched);
+    this->open_new_blocks(container);
     this->add_text_to_container(container, last_matched);
+    // Every open block matching means the walk reached the one that took the
+    // previous line, which is where the check below starts from
     this->blank_line_matched_everything_ =
-        all_matched && last_matched == starting_tip &&
-        this->current_ == starting_tip &&
+        all_matched && this->current_ == starting_tip &&
         this->document_.nodes.size() == starting_nodes && this->blank_ &&
         is_blank_until_line_end(line.substr(starting_offset));
   }
@@ -323,22 +320,22 @@ private:
   auto can_contain(const std::uint32_t parent, const NodeType child) -> bool {
     const auto &parent_node{this->node(parent)};
     switch (parent_node.type) {
+      // Only a block is ever added to a block, which are the types the
+      // enumeration opens with, and an item only ever arrives under the list
+      // that was opened to hold it, so what these take is settled before this
+      // is asked
       case NodeType::Document:
       case NodeType::BlockQuote:
       case NodeType::FootnoteDefinition:
-        return is_block_type(child) && child != NodeType::Item;
       case NodeType::Item:
-        return has_flag(parent_node, FLAG_TASK) ||
-               (is_block_type(child) && child != NodeType::Item);
+        assert(child <= NodeType::TableCell && child != NodeType::Item);
+        return true;
       case NodeType::List:
         return child == NodeType::Item;
       case NodeType::Table:
         return child == NodeType::TableRow;
       case NodeType::TableRow:
         return child == NodeType::TableCell;
-      case NodeType::Paragraph:
-      case NodeType::Heading:
-        return is_inline_type(child);
       // GFM section 4 makes a leaf block out of the lines it is written on, so
       // it holds none of its own, and the walk that asks this climbs out of
       // whatever cannot take what arrived. Naming the rule rather than every
@@ -369,11 +366,11 @@ private:
     auto &target{this->node(index)};
     if (target.content_length == 0) {
       target.content_offset = static_cast<std::uint32_t>(content.size());
-    } else if (target.content_offset + target.content_length !=
-               content.size()) {
-      this->relocation_buffer_.assign(this->document_.content_of(target));
-      target.content_offset = static_cast<std::uint32_t>(content.size());
-      content.append(this->relocation_buffer_);
+    } else {
+      // Only one block takes the lines of the document at a time, and the
+      // cells of a table take theirs from a line of its own, so what a block
+      // holds already ends where the next of its lines goes
+      assert(target.content_offset + target.content_length == content.size());
     }
 
     const auto before{content.size()};
@@ -413,22 +410,16 @@ private:
     return !is_blank_until_line_end(content.substr(position));
   }
 
+  // Whether the last line of what a block holds was blank, which the lines of
+  // the lists and items it ends with were read into
   auto ends_with_blank_line(std::uint32_t index) -> bool {
-    while (true) {
-      auto &current{this->node(index)};
-      if (has_flag(current, FLAG_LAST_LINE_CHECKED)) {
-        return has_flag(current, FLAG_LAST_LINE_BLANK);
-      }
-
-      set_flag(current, FLAG_LAST_LINE_CHECKED, true);
-      if ((current.type == NodeType::List || current.type == NodeType::Item) &&
-          current.last_child != NO_NODE) {
-        index = current.last_child;
-        continue;
-      }
-
-      return has_flag(current, FLAG_LAST_LINE_BLANK);
+    while ((this->node(index).type == NodeType::List ||
+            this->node(index).type == NodeType::Item) &&
+           this->node(index).last_child != NO_NODE) {
+      index = this->node(index).last_child;
     }
+
+    return has_flag(this->node(index), FLAG_LAST_LINE_BLANK);
   }
 
   auto finalize_list(const std::uint32_t index) -> void {
@@ -459,16 +450,12 @@ private:
     auto &target{this->node(index)};
     const auto content{this->document_.content_of(target)};
     if (!has_flag(target, FLAG_FENCED)) {
-      auto end{content.size()};
-      while (end > 0 && (content[end - 1] == ' ' || content[end - 1] == '\t' ||
-                         is_line_end(content[end - 1]))) {
-        --end;
-      }
-
       // A block of this kind only opens on a line that carries something other
-      // than space, tab or a line ending, and that byte is part of what it
-      // holds, so trimming the blanks off the end never reaches the start
-      assert(end > 0);
+      // than space, tab or a line feed, and that byte is part of what it
+      // holds, so there is always one for this to find
+      const auto last{content.find_last_not_of(" \t\n")};
+      assert(last != std::string_view::npos);
+      const auto end{last + 1};
       // The content is built from lines that each end with a line feed, so one
       // always follows the last byte that is not blank
       const auto line_end{content.find('\n', end - 1)};
@@ -487,11 +474,7 @@ private:
                                   content.substr(0, position));
     target.title = this->document_.strings.store(
         sourcemeta::core::trim(this->value_buffer_, is_space));
-    if (character_at(content, position) == '\n') {
-      ++position;
-    }
-
-    position = std::min(position, content.size());
+    ++position;
     target.content_offset += static_cast<std::uint32_t>(position);
     target.content_length -= static_cast<std::uint32_t>(position);
   }
@@ -596,19 +579,49 @@ private:
     return true;
   }
 
+  // Whether the line carries a row of the table, taking its cells apart so
+  // that the row the table opens reads them rather than scanning again
   auto table_row_matches() -> bool {
     std::size_t last_line_offset{0};
-    this->cached_row_valid_ = parse_table_row(
+    return parse_table_row(
         this->line_.substr(static_cast<std::size_t>(this->first_nonspace_)),
         this->cells_, last_line_offset);
-    this->cached_row_line_ = this->line_number_;
-    this->cached_row_offset_ = this->first_nonspace_;
-    return this->cached_row_valid_;
   }
+
+// A list continues with whatever the item that holds the lines does, and it is
+// the only type left that the walk below reaches, as every other one either
+// took its lines already or holds none of its own. Clang keeps an arm for the
+// values that never arrive and counts them as ones nothing took, so they are
+// written as the default there, while the compilers reading a case label are
+// the ones holding the switch to naming them all. The directives stay out of
+// the function because one inside it reads as a line that never ran
+#if defined(__clang__)
+#define SOURCEMETA_CORE_MARKDOWN_ALWAYS_CONTINUES                              \
+  default:                                                                     \
+    return true;
+#else
+#define SOURCEMETA_CORE_MARKDOWN_ALWAYS_CONTINUES                              \
+  case NodeType::List:                                                         \
+  case NodeType::Document:                                                     \
+  case NodeType::TableCell:                                                    \
+  case NodeType::Text:                                                         \
+  case NodeType::SoftBreak:                                                    \
+  case NodeType::LineBreak:                                                    \
+  case NodeType::Code:                                                         \
+  case NodeType::HTMLInline:                                                   \
+  case NodeType::Emphasis:                                                     \
+  case NodeType::Strong:                                                       \
+  case NodeType::Link:                                                         \
+  case NodeType::Image:                                                        \
+  case NodeType::FootnoteReference:                                            \
+  case NodeType::Strikethrough:                                                \
+    return true;
+#endif
 
   auto continues_container(const std::uint32_t index, bool &should_continue)
       -> bool {
     switch (this->node(index).type) {
+      SOURCEMETA_CORE_MARKDOWN_ALWAYS_CONTINUES
       case NodeType::BlockQuote:
         return this->parse_block_quote_prefix();
       case NodeType::Item:
@@ -628,22 +641,7 @@ private:
       case NodeType::Heading:
       case NodeType::ThematicBreak:
       case NodeType::TableRow:
-      case NodeType::TableCell:
         return false;
-      case NodeType::Document:
-      case NodeType::List:
-      case NodeType::Text:
-      case NodeType::SoftBreak:
-      case NodeType::LineBreak:
-      case NodeType::Code:
-      case NodeType::HTMLInline:
-      case NodeType::Emphasis:
-      case NodeType::Strong:
-      case NodeType::Link:
-      case NodeType::Image:
-      case NodeType::FootnoteReference:
-      case NodeType::Strikethrough:
-        return true;
     }
 
       // Clang settles that no other value arrives, so only GCC and MSVC
@@ -652,6 +650,7 @@ private:
     std::unreachable();
 #endif
   }
+#undef SOURCEMETA_CORE_MARKDOWN_ALWAYS_CONTINUES
 
   auto check_open_blocks(bool &all_matched) -> std::uint32_t {
     bool should_continue{true};
@@ -663,9 +662,9 @@ private:
       // Once a blank line has no indentation left, every remaining open block
       // continues without consuming anything if the previous line was blank,
       // matched every open block, and changed nothing, which spares walking
-      // through deeply nested blocks for every blank line
-      if (this->skip_blank_continuations_ && this->blank_ &&
-          this->indent_ == 0) {
+      // through deeply nested blocks for every blank line. Only a line that is
+      // blank of its own gets that far, which is what the skip was settled on
+      if (this->skip_blank_continuations_ && this->indent_ == 0) {
         return this->current_;
       }
 
@@ -803,18 +802,21 @@ private:
 
   auto try_opening_table_header(const std::uint32_t paragraph)
       -> std::uint32_t {
-    this->cached_row_line_ = -1;
     if (has_flag(this->node(paragraph), FLAG_TABLE_VISITED)) {
       return paragraph;
     }
 
     const auto nonspace{static_cast<std::size_t>(this->first_nonspace_)};
     std::size_t last_line_offset{0};
-    if (scan_table_start(this->line_, nonspace) == 0 ||
-        !parse_table_row(this->line_.substr(nonspace), this->cells_,
-                         last_line_offset)) {
+    if (scan_table_start(this->line_, nonspace) == 0) {
       return paragraph;
     }
+
+    // A delimiter row is a row of cells of its own, so reading it as one only
+    // takes the cells apart
+    [[maybe_unused]] const auto delimiters{parse_table_row(
+        this->line_.substr(nonspace), this->cells_, last_line_offset)};
+    assert(delimiters);
 
     this->header_buffer_.assign(
         this->document_.content_of(this->node(paragraph)));
@@ -886,20 +888,12 @@ private:
       return NO_NODE;
     }
 
+    // The table only continues on a line that was read as a row of it, which
+    // left its cells behind, and the line the table opens on is blank from
+    // where its delimiter row ended
     const auto table_index{this->node(table).data};
-
     const auto row{this->add_child(table, NodeType::TableRow)};
     const auto nonspace{static_cast<std::size_t>(this->first_nonspace_)};
-    std::size_t last_line_offset{0};
-    const auto cached{this->cached_row_line_ == this->line_number_ &&
-                      this->cached_row_offset_ == this->first_nonspace_};
-    if (!(cached ? this->cached_row_valid_
-                 : parse_table_row(this->line_.substr(nonspace), this->cells_,
-                                   last_line_offset))) {
-      this->document_.unlink(row);
-      return NO_NODE;
-    }
-
     const auto columns{this->document_.tables[table_index].columns};
     std::size_t index{0};
     for (; index < this->cells_.size() && index < columns; ++index) {
@@ -960,7 +954,7 @@ private:
   }
 
   auto open_block(std::uint32_t &container, const NodeType container_type,
-                  const bool all_matched, const bool maybe_lazy) -> bool {
+                  const bool maybe_lazy) -> bool {
     const auto indented{this->indent_ >= CODE_INDENT};
     const auto nonspace{static_cast<std::size_t>(this->first_nonspace_)};
     const auto character{this->peek(this->first_nonspace_)};
@@ -984,7 +978,7 @@ private:
         container = this->add_child(container, NodeType::Heading);
         auto hash{this->line_.find('#', nonspace)};
         std::uint8_t level{0};
-        while (hash < this->line_.size() && this->line_[hash] == '#') {
+        while (character_at(this->line_, hash) == '#') {
           ++level;
           ++hash;
         }
@@ -1036,7 +1030,6 @@ private:
           auto &heading{this->node(container)};
           heading.type = NodeType::Heading;
           heading.level = level;
-          set_flag(heading, FLAG_SETEXT, true);
           this->advance_to_line_end();
         }
 
@@ -1044,9 +1037,11 @@ private:
       }
     }
 
+    // A paragraph is what the line is added to only where every open block
+    // matched it, so a thematic break of GFM section 4.1 interrupting one is
+    // read wherever the scan below reports it
     if (!indented &&
         (character == '*' || character == '_' || character == '-') &&
-        (container_type != NodeType::Paragraph || all_matched) &&
         this->thematic_break_kill_position_ <= this->first_nonspace_ &&
         this->scan_thematic_break(this->first_nonspace_) > 0) {
       container = this->add_child(container, NodeType::ThematicBreak);
@@ -1058,14 +1053,11 @@ private:
       const auto matched{scan_footnote_definition(this->line_, nonspace)};
       if (matched > 0) {
         auto label{this->line_.substr(nonspace + 2, matched - 2)};
-        while (!label.empty() && label.back() != ']') {
-          label.remove_suffix(1);
-        }
-
         // The scan only reports a definition where a closing bracket follows
-        // the label, so what is left once the rest is dropped is that bracket
-        assert(!label.empty());
-        label.remove_suffix(1);
+        // the label, so there is one to find
+        const auto closing{label.rfind(']')};
+        assert(closing != std::string_view::npos);
+        label = label.substr(0, closing);
 
         const auto stored{this->document_.strings.store(label)};
         this->advance_offset(this->first_nonspace_ +
@@ -1079,10 +1071,11 @@ private:
       }
     }
 
-    if ((character == '*' || character == '-' || character == '+' ||
-         sourcemeta::core::is_digit(character)) &&
-        (!indented || container_type == NodeType::List) &&
-        this->indent_ < CODE_INDENT) {
+    // A marker that the indentation of a code block is reached at opens no
+    // item, which is what the lines of GFM section 5.2 are read against
+    if (!indented &&
+        (character == '*' || character == '-' || character == '+' ||
+         sourcemeta::core::is_digit(character))) {
       ListData data{};
       const auto matched{this->parse_list_marker(
           this->first_nonspace_, container_type == NodeType::Paragraph, data)};
@@ -1160,15 +1153,13 @@ private:
            list.bullet_character == item.bullet_character;
   }
 
-  auto open_new_blocks(std::uint32_t &container, const bool all_matched)
-      -> void {
+  auto open_new_blocks(std::uint32_t &container) -> void {
     bool maybe_lazy{this->node(this->current_).type == NodeType::Paragraph};
     auto container_type{this->node(container).type};
     while (container_type != NodeType::CodeBlock &&
            container_type != NodeType::HTMLBlock) {
       this->find_first_nonspace();
-      if (!this->open_block(container, container_type, all_matched,
-                            maybe_lazy)) {
+      if (!this->open_block(container, container_type, maybe_lazy)) {
         break;
       }
 
@@ -1182,10 +1173,13 @@ private:
   }
 
   auto chop_trailing_hashes() -> void {
-    auto length{this->line_end_};
-    while (length > 0 && is_space(this->peek(length - 1))) {
-      --length;
-    }
+    // An ATX heading of GFM section 4.2 is written with a number sign, which
+    // is what the trim below stops at
+    auto length{static_cast<std::ptrdiff_t>(
+        sourcemeta::core::strip_right(
+            this->line_.substr(0, static_cast<std::size_t>(this->line_end_)),
+            is_space)
+            .size())};
 
     auto position{length - 1};
     while (position >= 0 && this->peek(position) == '#') {
@@ -1194,10 +1188,13 @@ private:
 
     if (position != length - 1 && position >= 0 &&
         is_space_or_tab(this->peek(position))) {
-      length = position;
-      while (length > 0 && is_space(this->peek(length - 1))) {
-        --length;
-      }
+      // The opening sequence of number signs comes before the whitespace this
+      // trims, so it stops within the line as the one above does
+      length = static_cast<std::ptrdiff_t>(
+          sourcemeta::core::strip_right(
+              this->line_.substr(0, static_cast<std::size_t>(position)),
+              is_space)
+              .size());
     }
 
     this->line_end_ = length;
@@ -1233,8 +1230,7 @@ private:
     // when this line matched it and opened blocks under it
     const auto previous_blank{this->last_blank_container_};
     if (previous_blank != NO_NODE && previous_blank == last_matched &&
-        previous_blank != container &&
-        has_flag(this->node(previous_blank), FLAG_OPEN)) {
+        previous_blank != container) {
       set_flag(this->node(previous_blank), FLAG_LAST_LINE_BLANK, false);
     }
 
@@ -1266,8 +1262,10 @@ private:
     } else if (this->blank_) {
       // Blank lines only separate blocks
     } else if (accepts_lines(container_type)) {
-      if (container_type == NodeType::Heading &&
-          !has_flag(this->node(container), FLAG_SETEXT)) {
+      // A setext heading of GFM section 4.3 took the whole of the line its
+      // underline sits on, so a heading a line is added to is an ATX one,
+      // whose closing sequence of number signs GFM section 4.2 drops
+      if (container_type == NodeType::Heading) {
         this->chop_trailing_hashes();
       }
 
@@ -1286,15 +1284,11 @@ private:
   std::string_view line_;
   std::ptrdiff_t line_end_{0};
   std::string line_buffer_;
-  std::string relocation_buffer_;
   std::string label_buffer_;
   std::string value_buffer_;
   std::string header_buffer_;
   std::vector<TableCellSpan> cells_;
   std::vector<TableCellSpan> header_cells_;
-  std::int32_t cached_row_line_{-1};
-  std::ptrdiff_t cached_row_offset_{0};
-  bool cached_row_valid_{false};
   std::uint32_t current_{ROOT_NODE};
   std::int32_t line_number_{0};
   std::ptrdiff_t offset_{0};

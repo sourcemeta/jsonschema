@@ -7,6 +7,7 @@
 #include "document.h"
 #include "scanners.h"
 
+#include <cassert>     // assert
 #include <cstddef>     // std::size_t, std::ptrdiff_t
 #include <string>      // std::string
 #include <string_view> // std::string_view
@@ -163,7 +164,8 @@ inline auto clean_url(Document &document, const std::string_view url,
 }
 
 // Resolve the character references and backslash escapes of a link title,
-// dropping its surrounding delimiters
+// dropping the delimiters that GFM section 6.6 writes it between, which a
+// title that was scanned as one always carries
 inline auto clean_title(Document &document, const std::string_view title,
                         std::string &buffer, const bool stable)
     -> std::string_view {
@@ -171,14 +173,11 @@ inline auto clean_title(Document &document, const std::string_view title,
     return {};
   }
 
-  const auto first{title.front()};
-  const auto last{title.back()};
-  auto inner{title};
-  if ((first == '\'' && last == '\'') || (first == '(' && last == ')') ||
-      (first == '"' && last == '"')) {
-    inner = title.size() < 2 ? std::string_view{}
-                             : title.substr(1, title.size() - 2);
-  }
+  assert((title.front() == '\'' && title.back() == '\'') ||
+         (title.front() == '(' && title.back() == ')') ||
+         (title.front() == '"' && title.back() == '"'));
+  assert(title.size() >= 2);
+  const auto inner{title.substr(1, title.size() - 2)};
 
   if (stable && inner.find_first_of("&\\") == std::string_view::npos) {
     return inner;
@@ -200,14 +199,14 @@ inline auto skip_spaces(const std::string_view input,
 inline auto skip_line_end(const std::string_view input,
                           std::size_t &position) noexcept -> bool {
   // A block holds every one of its lines with a line feed ending, so that is
-  // the only ending there is to step over
-  bool seen{false};
-  if (character_at(input, position) == '\n') {
-    ++position;
-    seen = true;
+  // the only ending there is to step over, and one is always left where a
+  // caller asks for it
+  if (character_at(input, position) != '\n') {
+    return false;
   }
 
-  return seen || position >= input.size();
+  ++position;
+  return true;
 }
 
 // Spaces or tabs, including up to one line ending

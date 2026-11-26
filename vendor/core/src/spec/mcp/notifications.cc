@@ -4,7 +4,7 @@
 #include "validation.h"
 
 #include <algorithm> // std::find
-#include <cmath>     // std::isfinite
+#include <cassert>   // assert
 #include <utility>   // std::move, std::pair
 
 namespace {
@@ -23,9 +23,22 @@ auto optional_string(const JSON &value, const JSON::StringView name,
 // https://modelcontextprotocol.io/specification/2026-07-28/basic/patterns/subscriptions
 auto opt_in(const std::optional<bool> requested,
             const std::optional<bool> supported) -> std::optional<bool> {
-  return requested.value_or(false) && supported.value_or(false)
-             ? std::optional<bool>{true}
-             : std::nullopt;
+  if (requested.value_or(false) && supported.value_or(false)) {
+    return std::optional<bool>{true};
+  }
+
+  return std::nullopt;
+}
+
+// The level names the threshold, so a member that is not a string, or no
+// member at all, names no level to compare against
+auto resolve_level(const sourcemeta::core::JSON *level)
+    -> std::optional<sourcemeta::core::MCPLogLevel> {
+  if (level == nullptr || !level->is_string()) {
+    return std::nullopt;
+  }
+
+  return sourcemeta::core::mcp_resolve_log_level(level->to_string());
 }
 } // namespace
 
@@ -194,28 +207,33 @@ auto mcp_make_notification(const MCPProtocolVersion version,
         parameters.try_at("progress", sourcemeta::core::MCP_HASH_PROGRESS)};
     const auto *total{
         parameters.try_at("total", sourcemeta::core::MCP_HASH_TOTAL)};
-    internal::require(
-        (token != nullptr) && internal::valid_id(*token) &&
-            (progress != nullptr) && progress->is_number() &&
-            std::isfinite(progress->as_real()) &&
-            ((total == nullptr) ||
-             (total->is_number() && std::isfinite(total->as_real()))) &&
-            optional_string(parameters, "message",
-                            sourcemeta::core::MCP_HASH_MESSAGE),
-        "Invalid progress notification");
+    // "The progress and the total values MAY be floating point", and the
+    // specification bounds neither, so any number either field can hold is one
+    // it may carry. A JSON number is finite by construction, so asking a second
+    // time would only turn a number too wide for a binary64 into an error from
+    // the conversion rather than a verdict on the notification
+    // https://modelcontextprotocol.io/specification/2026-07-28/basic/utilities/progress
+    internal::require((token != nullptr) && internal::valid_id(*token) &&
+                          (progress != nullptr) && progress->is_number() &&
+                          ((total == nullptr) || total->is_number()) &&
+                          optional_string(parameters, "message",
+                                          sourcemeta::core::MCP_HASH_MESSAGE),
+                      "Invalid progress notification");
   } else if (method == MCP_METHOD_NOTIFICATIONS_MESSAGE) {
     const auto *level{
         parameters.try_at("level", sourcemeta::core::MCP_HASH_LEVEL)};
-    const auto resolved_level{(level != nullptr && level->is_string())
-                                  ? mcp_resolve_log_level(level->to_string())
-                                  : std::nullopt};
+    const auto resolved_level{resolve_level(level)};
     internal::require(
         resolved_level.has_value() &&
             parameters.defines("data", sourcemeta::core::MCP_HASH_DATA) &&
             optional_string(parameters, "logger",
                             sourcemeta::core::MCP_HASH_LOGGER),
         "Invalid logging notification");
-    if (version == MCPProtocolVersion::V_2026_07_28 && from_server) {
+    // No revision lets a client send a logging notification, which the
+    // direction test above settles, so what is left to ask is whether this
+    // revision carries a per-request threshold
+    assert(from_server);
+    if (version == MCPProtocolVersion::V_2026_07_28) {
       const auto threshold{mcp_resolve_log_level(*request_context->log_level)};
       internal::require(threshold.has_value() &&
                             mcp_log_level_enabled(*resolved_level, *threshold),
@@ -305,9 +323,17 @@ auto mcp_validate_continuation(const MCPProtocolVersion version,
       "requestState", sourcemeta::core::MCP_HASH_REQUEST_STATE)};
   const auto *responses{parameters.try_at(
       "inputResponses", sourcemeta::core::MCP_HASH_INPUT_RESPONSES)};
-  if (((state == nullptr) && (responses == nullptr)) ||
-      ((state != nullptr) && !state->is_string()) ||
-      ((responses != nullptr) && !responses->is_object())) {
+  // A continuation carries state, responses, or both, and each is held to its
+  // own shape. Asking of each whether it is absent and then whether it is
+  // present puts a condition beside its own negation, which no pair of inputs
+  // can tell apart, so the three stand as decisions of their own
+  if ((state == nullptr) && (responses == nullptr)) {
+    return false;
+  }
+  if ((state != nullptr) && !state->is_string()) {
+    return false;
+  }
+  if ((responses != nullptr) && !responses->is_object()) {
     return false;
   }
   if (responses == nullptr) {

@@ -706,6 +706,81 @@ inline auto exceeds_class_depth(const std::string &pattern) -> bool {
   return false;
 }
 
+// A group opener, which this dialect allows only in the forms the
+// specification names (RFC 9485 Section 3)
+inline auto check_group_opener(const std::string &pattern,
+                               const std::size_t position, bool &ecma_valid)
+    -> void {
+  // (*...) backtracking control verbs
+  if (pattern[position + 1] == '*') {
+    ecma_valid = false;
+  }
+  // (?X...): ECMA only allows (?:  (?=  (?!  (?<=  (?<!  (?<name>
+  if (pattern[position + 1] == '?' && position + 2 < pattern.size()) {
+    const char third = pattern[position + 2];
+    bool valid_extension{third == ':' || third == '=' || third == '!'};
+    if (!valid_extension && third == '<' && position + 3 < pattern.size()) {
+      const char fourth = pattern[position + 3];
+      valid_extension =
+          fourth == '=' || fourth == '!' || (fourth >= 'a' && fourth <= 'z') ||
+          (fourth >= 'A' && fourth <= 'Z') || fourth == '_' || fourth == '$';
+    }
+    if (!valid_extension) {
+      ecma_valid = false;
+    }
+  }
+}
+// A `\uXXXX` escape, which this dialect spells as `\x{XXXX}`. Answers
+// whether it consumed the escape (RFC 9485 Section 3)
+inline auto translate_unicode_escape(const std::string &pattern,
+                                     std::size_t &position, std::string &result)
+    -> bool {
+  if (pattern[position + 2] == '{') {
+    result += "\\x{";
+    for (position += 3; position < pattern.size() && pattern[position] != '}';
+         ++position) {
+      result += pattern[position];
+    }
+
+    if (position < pattern.size()) {
+      result += '}';
+    }
+
+    return true;
+  }
+
+  if (position + 5 < pattern.size() && all_hex(pattern, position + 2, 4)) {
+    result += "\\x{" + pattern.substr(position + 2, 4) + '}';
+    position += 5;
+    return true;
+  }
+
+  return false;
+}
+
+// A `\p{...}` or `\P{...}` property escape (RFC 9485 Section 3)
+inline auto translate_property_escape(const std::string &pattern,
+                                      std::size_t &position, const char current,
+                                      const char next, std::string &result)
+    -> void {
+  const auto start = position;
+  std::string name;
+  for (position += 3; position < pattern.size() && pattern[position] != '}';
+       ++position) {
+    name += pattern[position];
+  }
+
+  if (position < pattern.size()) {
+    if (auto translated = translate_property(name, next == 'P')) {
+      result += *translated;
+    } else {
+      result += pattern.substr(start, position - start + 1);
+    }
+  } else {
+    position = start;
+    result += current;
+  }
+}
 inline auto translate_permissive(const std::string &pattern)
     -> PermissiveResult {
   if (exceeds_class_depth(pattern)) {
@@ -723,25 +798,7 @@ inline auto translate_permissive(const std::string &pattern)
     // PCRE-only group constructs that are not part of ECMA-262
     if (current == '(' && !is_escaped(pattern, position) && !in_class &&
         position + 1 < pattern.size()) {
-      // (*...) backtracking control verbs
-      if (pattern[position + 1] == '*') {
-        ecma_valid = false;
-      }
-      // (?X...): ECMA only allows (?:  (?=  (?!  (?<=  (?<!  (?<name>
-      if (pattern[position + 1] == '?' && position + 2 < pattern.size()) {
-        const char third = pattern[position + 2];
-        bool valid_extension{third == ':' || third == '=' || third == '!'};
-        if (!valid_extension && third == '<' && position + 3 < pattern.size()) {
-          const char fourth = pattern[position + 3];
-          valid_extension = fourth == '=' || fourth == '!' ||
-                            (fourth >= 'a' && fourth <= 'z') ||
-                            (fourth >= 'A' && fourth <= 'Z') || fourth == '_' ||
-                            fourth == '$';
-        }
-        if (!valid_extension) {
-          ecma_valid = false;
-        }
-      }
+      check_group_opener(pattern, position, ecma_valid);
     }
 
     // PCRE-only possessive quantifiers: *+ ++ ?+ {n,m}+
@@ -831,24 +888,7 @@ inline auto translate_permissive(const std::string &pattern)
     }
 
     if (next == 'u' && position + 2 < pattern.size()) {
-      if (pattern[position + 2] == '{') {
-        result += "\\x{";
-        for (position += 3;
-             position < pattern.size() && pattern[position] != '}';
-             ++position) {
-          result += pattern[position];
-        }
-
-        if (position < pattern.size()) {
-          result += '}';
-        }
-
-        continue;
-      }
-
-      if (position + 5 < pattern.size() && all_hex(pattern, position + 2, 4)) {
-        result += "\\x{" + pattern.substr(position + 2, 4) + '}';
-        position += 5;
+      if (translate_unicode_escape(pattern, position, result)) {
         continue;
       }
     }
@@ -873,24 +913,7 @@ inline auto translate_permissive(const std::string &pattern)
 
     if ((next == 'p' || next == 'P') && position + 2 < pattern.size() &&
         pattern[position + 2] == '{') {
-      const auto start = position;
-      std::string name;
-      for (position += 3; position < pattern.size() && pattern[position] != '}';
-           ++position) {
-        name += pattern[position];
-      }
-
-      if (position < pattern.size()) {
-        if (auto translated = translate_property(name, next == 'P')) {
-          result += *translated;
-        } else {
-          result += pattern.substr(start, position - start + 1);
-        }
-      } else {
-        position = start;
-        result += current;
-      }
-
+      translate_property_escape(pattern, position, current, next, result);
       continue;
     }
 

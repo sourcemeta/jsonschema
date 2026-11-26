@@ -185,6 +185,241 @@ inline auto enqueue(std::vector<PendingSubschema> &children,
                       .property_name = property_name});
 }
 
+// What each kind of keyword contributes to the traversal, which is a
+// subschema of its own, a map or an array of them, or nothing
+template <typename ObjectEntry>
+inline auto
+walk_keyword(const sourcemeta::core::SchemaKeywordType type,
+             const ObjectEntry &pair,
+             const sourcemeta::core::WeakPointer &pointer,
+             const std::string_view child_dialect,
+             const sourcemeta::core::SchemaBaseDialect child_base_dialect,
+             const std::size_t level, const bool orphan,
+             const bool property_name, std::vector<PendingSubschema> &children)
+    -> void {
+  switch (type) {
+    case sourcemeta::core::SchemaKeywordType::
+        ApplicatorValueTraverseSomeProperty: {
+      sourcemeta::core::WeakPointer new_pointer{pointer};
+      new_pointer.push_back(std::cref(pair.first));
+      enqueue(children, pointer, std::move(new_pointer), pair.second,
+              child_dialect, child_base_dialect, level + 1, orphan, false);
+    } break;
+
+    case sourcemeta::core::SchemaKeywordType::
+        ApplicatorValueTraverseAnyPropertyKey: {
+      sourcemeta::core::WeakPointer new_pointer{pointer};
+      new_pointer.push_back(std::cref(pair.first));
+      enqueue(children, pointer, std::move(new_pointer), pair.second,
+              child_dialect, child_base_dialect, level + 1, orphan, true);
+    } break;
+
+    case sourcemeta::core::SchemaKeywordType::ApplicatorValueTraverseAnyItem: {
+      sourcemeta::core::WeakPointer new_pointer{pointer};
+      new_pointer.push_back(std::cref(pair.first));
+      enqueue(children, pointer, std::move(new_pointer), pair.second,
+              child_dialect, child_base_dialect, level + 1, orphan, false);
+    } break;
+
+    case sourcemeta::core::SchemaKeywordType::ApplicatorValueTraverseSomeItem: {
+      sourcemeta::core::WeakPointer new_pointer{pointer};
+      new_pointer.push_back(std::cref(pair.first));
+      enqueue(children, pointer, std::move(new_pointer), pair.second,
+              child_dialect, child_base_dialect, level + 1, orphan, false);
+    } break;
+
+    case sourcemeta::core::SchemaKeywordType::ApplicatorValueTraverseParent: {
+      sourcemeta::core::WeakPointer new_pointer{pointer};
+      new_pointer.push_back(std::cref(pair.first));
+      enqueue(children, pointer, std::move(new_pointer), pair.second,
+              child_dialect, child_base_dialect, level + 1, orphan, false);
+    } break;
+
+    case sourcemeta::core::SchemaKeywordType::ApplicatorValueInPlaceOther: {
+      sourcemeta::core::WeakPointer new_pointer{pointer};
+      new_pointer.push_back(std::cref(pair.first));
+      enqueue(children, pointer, std::move(new_pointer), pair.second,
+              child_dialect, child_base_dialect, level + 1, orphan,
+              property_name);
+    } break;
+
+    case sourcemeta::core::SchemaKeywordType::ApplicatorValueInPlaceNegate: {
+      sourcemeta::core::WeakPointer new_pointer{pointer};
+      new_pointer.push_back(std::cref(pair.first));
+      enqueue(children, pointer, std::move(new_pointer), pair.second,
+              child_dialect, child_base_dialect, level + 1, orphan,
+              property_name);
+    } break;
+
+    case sourcemeta::core::SchemaKeywordType::ApplicatorValueInPlaceMaybe: {
+      sourcemeta::core::WeakPointer new_pointer{pointer};
+      new_pointer.push_back(std::cref(pair.first));
+      enqueue(children, pointer, std::move(new_pointer), pair.second,
+              child_dialect, child_base_dialect, level + 1, orphan,
+              property_name);
+    } break;
+
+    case sourcemeta::core::SchemaKeywordType::ApplicatorElementsTraverseItem:
+      if (pair.second.is_array()) {
+        for (std::size_t index = 0; index < pair.second.size(); index++) {
+          sourcemeta::core::WeakPointer new_pointer{pointer};
+          new_pointer.push_back(std::cref(pair.first));
+          new_pointer.emplace_back(index);
+          enqueue(children, pointer, std::move(new_pointer),
+                  pair.second.at(index), child_dialect, child_base_dialect,
+                  level + 1, orphan, false);
+        }
+      }
+
+      break;
+
+    case sourcemeta::core::SchemaKeywordType::ApplicatorElementsInPlace:
+      if (pair.second.is_array()) {
+        for (std::size_t index = 0; index < pair.second.size(); index++) {
+          sourcemeta::core::WeakPointer new_pointer{pointer};
+          new_pointer.push_back(std::cref(pair.first));
+          new_pointer.emplace_back(index);
+          enqueue(children, pointer, std::move(new_pointer),
+                  pair.second.at(index), child_dialect, child_base_dialect,
+                  level + 1, orphan, property_name);
+        }
+      }
+
+      break;
+
+    case sourcemeta::core::SchemaKeywordType::ApplicatorElementsInPlaceSome:
+      if (pair.second.is_array()) {
+        for (std::size_t index = 0; index < pair.second.size(); index++) {
+          sourcemeta::core::WeakPointer new_pointer{pointer};
+          new_pointer.push_back(std::cref(pair.first));
+          new_pointer.emplace_back(index);
+          enqueue(children, pointer, std::move(new_pointer),
+                  pair.second.at(index), child_dialect, child_base_dialect,
+                  level + 1, orphan, property_name);
+        }
+      }
+
+      break;
+
+    case sourcemeta::core::SchemaKeywordType::
+        ApplicatorElementsInPlaceSomeNegate:
+      if (pair.second.is_array()) {
+        for (std::size_t index = 0; index < pair.second.size(); index++) {
+          sourcemeta::core::WeakPointer new_pointer{pointer};
+          new_pointer.push_back(std::cref(pair.first));
+          new_pointer.emplace_back(index);
+          enqueue(children, pointer, std::move(new_pointer),
+                  pair.second.at(index), child_dialect, child_base_dialect,
+                  level + 1, orphan, property_name);
+        }
+      }
+
+      break;
+
+    case sourcemeta::core::SchemaKeywordType::
+        ApplicatorMembersTraversePropertyStatic:
+      if (pair.second.is_object()) {
+        for (const auto &subpair : pair.second.as_object()) {
+          sourcemeta::core::WeakPointer new_pointer{pointer};
+          new_pointer.push_back(std::cref(pair.first));
+          new_pointer.push_back(std::cref(subpair.first));
+          enqueue(children, pointer, std::move(new_pointer), subpair.second,
+                  child_dialect, child_base_dialect, level + 1, orphan, false);
+        }
+      }
+
+      break;
+
+    case sourcemeta::core::SchemaKeywordType::
+        ApplicatorMembersTraversePropertyRegex:
+      if (pair.second.is_object()) {
+        for (const auto &subpair : pair.second.as_object()) {
+          sourcemeta::core::WeakPointer new_pointer{pointer};
+          new_pointer.push_back(std::cref(pair.first));
+          new_pointer.push_back(std::cref(subpair.first));
+          enqueue(children, pointer, std::move(new_pointer), subpair.second,
+                  child_dialect, child_base_dialect, level + 1, orphan, false);
+        }
+      }
+
+      break;
+
+    case sourcemeta::core::SchemaKeywordType::ApplicatorMembersInPlaceSome:
+      if (pair.second.is_object()) {
+        for (const auto &subpair : pair.second.as_object()) {
+          sourcemeta::core::WeakPointer new_pointer{pointer};
+          new_pointer.push_back(std::cref(pair.first));
+          new_pointer.push_back(std::cref(subpair.first));
+          enqueue(children, pointer, std::move(new_pointer), subpair.second,
+                  child_dialect, child_base_dialect, level + 1, orphan,
+                  property_name);
+        }
+      }
+
+      break;
+
+    case sourcemeta::core::SchemaKeywordType::LocationMembers:
+      if (pair.second.is_object()) {
+        for (const auto &subpair : pair.second.as_object()) {
+          sourcemeta::core::WeakPointer new_pointer{pointer};
+          new_pointer.push_back(std::cref(pair.first));
+          new_pointer.push_back(std::cref(subpair.first));
+          enqueue(children, pointer, std::move(new_pointer), subpair.second,
+                  child_dialect, child_base_dialect, level + 1, true, false);
+        }
+      }
+
+      break;
+
+    case sourcemeta::core::SchemaKeywordType::
+        ApplicatorValueOrElementsTraverseAnyItemOrItem:
+      if (pair.second.is_array()) {
+        for (std::size_t index = 0; index < pair.second.size(); index++) {
+          sourcemeta::core::WeakPointer new_pointer{pointer};
+          new_pointer.push_back(std::cref(pair.first));
+          new_pointer.emplace_back(index);
+          enqueue(children, pointer, std::move(new_pointer),
+                  pair.second.at(index), child_dialect, child_base_dialect,
+                  level + 1, orphan, false);
+        }
+      } else {
+        sourcemeta::core::WeakPointer new_pointer{pointer};
+        new_pointer.push_back(std::cref(pair.first));
+        enqueue(children, pointer, std::move(new_pointer), pair.second,
+                child_dialect, child_base_dialect, level + 1, orphan, false);
+      }
+
+      break;
+
+    case sourcemeta::core::SchemaKeywordType::ApplicatorValueOrElementsInPlace:
+      if (pair.second.is_array()) {
+        for (std::size_t index = 0; index < pair.second.size(); index++) {
+          sourcemeta::core::WeakPointer new_pointer{pointer};
+          new_pointer.push_back(std::cref(pair.first));
+          new_pointer.emplace_back(index);
+          enqueue(children, pointer, std::move(new_pointer),
+                  pair.second.at(index), child_dialect, child_base_dialect,
+                  level + 1, orphan, property_name);
+        }
+      } else {
+        sourcemeta::core::WeakPointer new_pointer{pointer};
+        new_pointer.push_back(std::cref(pair.first));
+        enqueue(children, pointer, std::move(new_pointer), pair.second,
+                child_dialect, child_base_dialect, level + 1, orphan,
+                property_name);
+      }
+
+      break;
+    case sourcemeta::core::SchemaKeywordType::Assertion:
+    case sourcemeta::core::SchemaKeywordType::Annotation:
+    case sourcemeta::core::SchemaKeywordType::Reference:
+    case sourcemeta::core::SchemaKeywordType::Other:
+    case sourcemeta::core::SchemaKeywordType::Comment:
+    case sourcemeta::core::SchemaKeywordType::Unknown:
+      break;
+  }
+}
+
 // Traversal is driven by an explicit work stack rather than recursion, so that
 // framing a deeply nested schema is bounded by the heap instead of the call
 // stack
@@ -264,9 +499,12 @@ walk(const std::optional<sourcemeta::core::WeakPointer> &root_parent,
     // make the keyword mean something the dialect says it does not. The caller
     // has to name such a dialect from the outside instead
     if (subschema.is_object()) {
+      // A declaration that is not a string names no dialect, which resolving
+      // the dialect right above refuses before this is read
       const auto *declared{
           subschema.try_at("$schema"sv, JSONSCHEMA_HASH_SCHEMA)};
-      if (declared != nullptr && declared->is_string() &&
+      assert(declared == nullptr || declared->is_string());
+      if (declared != nullptr &&
           !declaration_counts(subschema, declared->to_string(), resolver,
                               walker)) {
         throw sourcemeta::core::SchemaDialectImpossibleError(
@@ -313,237 +551,8 @@ walk(const std::optional<sourcemeta::core::WeakPointer> &root_parent,
         continue;
       }
 
-      switch (keyword_info.type) {
-        case sourcemeta::core::SchemaKeywordType::
-            ApplicatorValueTraverseSomeProperty: {
-          sourcemeta::core::WeakPointer new_pointer{pointer};
-          new_pointer.push_back(std::cref(pair.first));
-          enqueue(children, pointer, std::move(new_pointer), pair.second,
-                  child_dialect, child_base_dialect, level + 1, orphan, false);
-        } break;
-
-        case sourcemeta::core::SchemaKeywordType::
-            ApplicatorValueTraverseAnyPropertyKey: {
-          sourcemeta::core::WeakPointer new_pointer{pointer};
-          new_pointer.push_back(std::cref(pair.first));
-          enqueue(children, pointer, std::move(new_pointer), pair.second,
-                  child_dialect, child_base_dialect, level + 1, orphan, true);
-        } break;
-
-        case sourcemeta::core::SchemaKeywordType::
-            ApplicatorValueTraverseAnyItem: {
-          sourcemeta::core::WeakPointer new_pointer{pointer};
-          new_pointer.push_back(std::cref(pair.first));
-          enqueue(children, pointer, std::move(new_pointer), pair.second,
-                  child_dialect, child_base_dialect, level + 1, orphan, false);
-        } break;
-
-        case sourcemeta::core::SchemaKeywordType::
-            ApplicatorValueTraverseSomeItem: {
-          sourcemeta::core::WeakPointer new_pointer{pointer};
-          new_pointer.push_back(std::cref(pair.first));
-          enqueue(children, pointer, std::move(new_pointer), pair.second,
-                  child_dialect, child_base_dialect, level + 1, orphan, false);
-        } break;
-
-        case sourcemeta::core::SchemaKeywordType::
-            ApplicatorValueTraverseParent: {
-          sourcemeta::core::WeakPointer new_pointer{pointer};
-          new_pointer.push_back(std::cref(pair.first));
-          enqueue(children, pointer, std::move(new_pointer), pair.second,
-                  child_dialect, child_base_dialect, level + 1, orphan, false);
-        } break;
-
-        case sourcemeta::core::SchemaKeywordType::ApplicatorValueInPlaceOther: {
-          sourcemeta::core::WeakPointer new_pointer{pointer};
-          new_pointer.push_back(std::cref(pair.first));
-          enqueue(children, pointer, std::move(new_pointer), pair.second,
-                  child_dialect, child_base_dialect, level + 1, orphan,
-                  property_name);
-        } break;
-
-        case sourcemeta::core::SchemaKeywordType::
-            ApplicatorValueInPlaceNegate: {
-          sourcemeta::core::WeakPointer new_pointer{pointer};
-          new_pointer.push_back(std::cref(pair.first));
-          enqueue(children, pointer, std::move(new_pointer), pair.second,
-                  child_dialect, child_base_dialect, level + 1, orphan,
-                  property_name);
-        } break;
-
-        case sourcemeta::core::SchemaKeywordType::ApplicatorValueInPlaceMaybe: {
-          sourcemeta::core::WeakPointer new_pointer{pointer};
-          new_pointer.push_back(std::cref(pair.first));
-          enqueue(children, pointer, std::move(new_pointer), pair.second,
-                  child_dialect, child_base_dialect, level + 1, orphan,
-                  property_name);
-        } break;
-
-        case sourcemeta::core::SchemaKeywordType::
-            ApplicatorElementsTraverseItem:
-          if (pair.second.is_array()) {
-            for (std::size_t index = 0; index < pair.second.size(); index++) {
-              sourcemeta::core::WeakPointer new_pointer{pointer};
-              new_pointer.push_back(std::cref(pair.first));
-              new_pointer.emplace_back(index);
-              enqueue(children, pointer, std::move(new_pointer),
-                      pair.second.at(index), child_dialect, child_base_dialect,
-                      level + 1, orphan, false);
-            }
-          }
-
-          break;
-
-        case sourcemeta::core::SchemaKeywordType::ApplicatorElementsInPlace:
-          if (pair.second.is_array()) {
-            for (std::size_t index = 0; index < pair.second.size(); index++) {
-              sourcemeta::core::WeakPointer new_pointer{pointer};
-              new_pointer.push_back(std::cref(pair.first));
-              new_pointer.emplace_back(index);
-              enqueue(children, pointer, std::move(new_pointer),
-                      pair.second.at(index), child_dialect, child_base_dialect,
-                      level + 1, orphan, property_name);
-            }
-          }
-
-          break;
-
-        case sourcemeta::core::SchemaKeywordType::ApplicatorElementsInPlaceSome:
-          if (pair.second.is_array()) {
-            for (std::size_t index = 0; index < pair.second.size(); index++) {
-              sourcemeta::core::WeakPointer new_pointer{pointer};
-              new_pointer.push_back(std::cref(pair.first));
-              new_pointer.emplace_back(index);
-              enqueue(children, pointer, std::move(new_pointer),
-                      pair.second.at(index), child_dialect, child_base_dialect,
-                      level + 1, orphan, property_name);
-            }
-          }
-
-          break;
-
-        case sourcemeta::core::SchemaKeywordType::
-            ApplicatorElementsInPlaceSomeNegate:
-          if (pair.second.is_array()) {
-            for (std::size_t index = 0; index < pair.second.size(); index++) {
-              sourcemeta::core::WeakPointer new_pointer{pointer};
-              new_pointer.push_back(std::cref(pair.first));
-              new_pointer.emplace_back(index);
-              enqueue(children, pointer, std::move(new_pointer),
-                      pair.second.at(index), child_dialect, child_base_dialect,
-                      level + 1, orphan, property_name);
-            }
-          }
-
-          break;
-
-        case sourcemeta::core::SchemaKeywordType::
-            ApplicatorMembersTraversePropertyStatic:
-          if (pair.second.is_object()) {
-            for (const auto &subpair : pair.second.as_object()) {
-              sourcemeta::core::WeakPointer new_pointer{pointer};
-              new_pointer.push_back(std::cref(pair.first));
-              new_pointer.push_back(std::cref(subpair.first));
-              enqueue(children, pointer, std::move(new_pointer), subpair.second,
-                      child_dialect, child_base_dialect, level + 1, orphan,
-                      false);
-            }
-          }
-
-          break;
-
-        case sourcemeta::core::SchemaKeywordType::
-            ApplicatorMembersTraversePropertyRegex:
-          if (pair.second.is_object()) {
-            for (const auto &subpair : pair.second.as_object()) {
-              sourcemeta::core::WeakPointer new_pointer{pointer};
-              new_pointer.push_back(std::cref(pair.first));
-              new_pointer.push_back(std::cref(subpair.first));
-              enqueue(children, pointer, std::move(new_pointer), subpair.second,
-                      child_dialect, child_base_dialect, level + 1, orphan,
-                      false);
-            }
-          }
-
-          break;
-
-        case sourcemeta::core::SchemaKeywordType::ApplicatorMembersInPlaceSome:
-          if (pair.second.is_object()) {
-            for (const auto &subpair : pair.second.as_object()) {
-              sourcemeta::core::WeakPointer new_pointer{pointer};
-              new_pointer.push_back(std::cref(pair.first));
-              new_pointer.push_back(std::cref(subpair.first));
-              enqueue(children, pointer, std::move(new_pointer), subpair.second,
-                      child_dialect, child_base_dialect, level + 1, orphan,
-                      property_name);
-            }
-          }
-
-          break;
-
-        case sourcemeta::core::SchemaKeywordType::LocationMembers:
-          if (pair.second.is_object()) {
-            for (const auto &subpair : pair.second.as_object()) {
-              sourcemeta::core::WeakPointer new_pointer{pointer};
-              new_pointer.push_back(std::cref(pair.first));
-              new_pointer.push_back(std::cref(subpair.first));
-              enqueue(children, pointer, std::move(new_pointer), subpair.second,
-                      child_dialect, child_base_dialect, level + 1, true,
-                      false);
-            }
-          }
-
-          break;
-
-        case sourcemeta::core::SchemaKeywordType::
-            ApplicatorValueOrElementsTraverseAnyItemOrItem:
-          if (pair.second.is_array()) {
-            for (std::size_t index = 0; index < pair.second.size(); index++) {
-              sourcemeta::core::WeakPointer new_pointer{pointer};
-              new_pointer.push_back(std::cref(pair.first));
-              new_pointer.emplace_back(index);
-              enqueue(children, pointer, std::move(new_pointer),
-                      pair.second.at(index), child_dialect, child_base_dialect,
-                      level + 1, orphan, false);
-            }
-          } else {
-            sourcemeta::core::WeakPointer new_pointer{pointer};
-            new_pointer.push_back(std::cref(pair.first));
-            enqueue(children, pointer, std::move(new_pointer), pair.second,
-                    child_dialect, child_base_dialect, level + 1, orphan,
-                    false);
-          }
-
-          break;
-
-        case sourcemeta::core::SchemaKeywordType::
-            ApplicatorValueOrElementsInPlace:
-          if (pair.second.is_array()) {
-            for (std::size_t index = 0; index < pair.second.size(); index++) {
-              sourcemeta::core::WeakPointer new_pointer{pointer};
-              new_pointer.push_back(std::cref(pair.first));
-              new_pointer.emplace_back(index);
-              enqueue(children, pointer, std::move(new_pointer),
-                      pair.second.at(index), child_dialect, child_base_dialect,
-                      level + 1, orphan, property_name);
-            }
-          } else {
-            sourcemeta::core::WeakPointer new_pointer{pointer};
-            new_pointer.push_back(std::cref(pair.first));
-            enqueue(children, pointer, std::move(new_pointer), pair.second,
-                    child_dialect, child_base_dialect, level + 1, orphan,
-                    property_name);
-          }
-
-          break;
-        case sourcemeta::core::SchemaKeywordType::Assertion:
-        case sourcemeta::core::SchemaKeywordType::Annotation:
-        case sourcemeta::core::SchemaKeywordType::Reference:
-        case sourcemeta::core::SchemaKeywordType::Other:
-        case sourcemeta::core::SchemaKeywordType::Comment:
-        case sourcemeta::core::SchemaKeywordType::Unknown:
-          break;
-      }
+      walk_keyword(keyword_info.type, pair, pointer, child_dialect,
+                   child_base_dialect, level, orphan, property_name, children);
     }
 
     // Push in reverse so that the first child is popped first, which keeps the

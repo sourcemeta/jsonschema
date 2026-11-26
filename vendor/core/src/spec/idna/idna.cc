@@ -263,6 +263,21 @@ auto idna_passes_contextj(const std::u32string_view label,
   return true;
 }
 
+// Clang keeps an arm for the property that never arrives and counts it as one
+// that nothing took, so the property that carries no contextual rule is
+// written as the default there, while the compilers reading a case label are
+// the ones holding the switch below to naming them all. The directives stay
+// out of the function because one inside it reads as a line that never ran
+#if defined(__clang__)
+#define SOURCEMETA_CORE_IDNA_NEEDS_NO_CONTEXT                                  \
+  default:                                                                     \
+    break;
+#else
+#define SOURCEMETA_CORE_IDNA_NEEDS_NO_CONTEXT                                  \
+  case IDNAProperty::PValid:                                                   \
+    break;
+#endif
+
 auto idna_is_valid_u_label(const std::u32string_view label) -> bool {
   if (label.empty()) {
     return false;
@@ -292,8 +307,7 @@ auto idna_is_valid_u_label(const std::u32string_view label) -> bool {
   // CONTEXTJ / CONTEXTO contextual rule. DISALLOWED and UNASSIGNED reject.
   for (std::size_t position = 0; position < label.size(); ++position) {
     switch (idna_property(label[position])) {
-      case IDNAProperty::PValid:
-        break;
+      SOURCEMETA_CORE_IDNA_NEEDS_NO_CONTEXT
       case IDNAProperty::ContextJ:
         if (!idna_passes_contextj(label, position)) {
           return false;
@@ -337,6 +351,8 @@ auto idna_is_valid_u_label(const std::u32string_view label) -> bool {
 
   return true;
 }
+
+#undef SOURCEMETA_CORE_IDNA_NEEDS_NO_CONTEXT
 
 auto idna_passes_bidi_rule(const std::u32string_view label) noexcept -> bool {
   if (label.empty()) {
@@ -482,6 +498,17 @@ auto mapping_replacement(const char32_t codepoint) noexcept
 
 } // namespace
 
+// Clang keeps an arm for the status that never arrives and counts it as one
+// that nothing took, so the status that keeps a codepoint as it is gets
+// written as the default there, while the compilers reading a case label are
+// the ones holding the switch below to naming them all. The directives stay
+// out of the function because one inside it reads as a line that never ran
+#if defined(__clang__)
+#define SOURCEMETA_CORE_IDNA_KEPT_UNCHANGED default:
+#else
+#define SOURCEMETA_CORE_IDNA_KEPT_UNCHANGED case IDNAMappingStatus::Valid:
+#endif
+
 auto idna_uts46_map(const std::u32string_view input) -> std::u32string {
   std::u32string mapped;
   mapped.reserve(input.size());
@@ -491,7 +518,7 @@ auto idna_uts46_map(const std::u32string_view input) -> std::u32string {
       // deviation code points are kept unchanged. Disallowed code points are
       // also left in place, so the later validity check rejects them rather
       // than the mapping silently dropping the whole input.
-      case IDNAMappingStatus::Valid:
+      SOURCEMETA_CORE_IDNA_KEPT_UNCHANGED
       case IDNAMappingStatus::Deviation:
       case IDNAMappingStatus::Disallowed:
         mapped.push_back(codepoint);
@@ -506,5 +533,7 @@ auto idna_uts46_map(const std::u32string_view input) -> std::u32string {
 
   return nfc(mapped);
 }
+
+#undef SOURCEMETA_CORE_IDNA_KEPT_UNCHANGED
 
 } // namespace sourcemeta::core

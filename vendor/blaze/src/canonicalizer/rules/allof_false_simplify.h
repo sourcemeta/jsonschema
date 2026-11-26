@@ -25,7 +25,7 @@ public:
 
     for (std::size_t index = 0; index < all_of->size(); ++index) {
       const auto &entry{all_of->at(index)};
-      if (entry.is_boolean() && !entry.to_boolean()) {
+      if (says_nothing_satisfies(entry, vocabularies)) {
         ONLY_CONTINUE_IF(!frame.has_references_through(
             location.pointer,
             sourcemeta::core::WeakPointer::Token{std::cref(KEYWORD)}));

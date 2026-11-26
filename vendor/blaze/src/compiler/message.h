@@ -846,6 +846,14 @@ inline auto message_template(const Instruction &instruction,
                    "single defined property subschema"
                  : "The object value was expected to validate against the {0} "
                    "defined properties subschemas";
+    case InstructionIndex::LoopPropertiesMatchRequired:
+      return instruction.children.size() == 1
+                 ? "The object value was expected to define the required "
+                   "property and validate against the single defined property "
+                   "subschema"
+                 : "The object value was expected to define the required "
+                   "properties and validate against the {0} defined "
+                   "properties subschemas";
     case InstructionIndex::LoopPropertiesMatchClosed:
       return instruction.children.size() == 1
                  ? "The object value was expected to validate against the "
@@ -949,6 +957,9 @@ inline auto message_detail_template(const Instruction &instruction,
     case InstructionIndex::AssertionDefinesExactly:
       return "The object value was expected to only define properties {0}, "
              "but it also defines {1}";
+    case InstructionIndex::LoopPropertiesMatchRequired:
+      return "The value was expected to be an object that defines the "
+             "required properties";
     case InstructionIndex::AssertionDefinesExactlyStrict:
       return "The value was expected to be an object that only defines "
              "properties {0}, but it also defines {1}";

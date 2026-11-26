@@ -1,6 +1,6 @@
 class UnsatisfiableTypeAndEnum final : public SchemaTransformRule {
 public:
-  using reframe_after_transform = std::false_type;
+  using reframe_after_transform = std::true_type;
   UnsatisfiableTypeAndEnum()
       : SchemaTransformRule{"unsatisfiable_type_and_enum"} {};
 

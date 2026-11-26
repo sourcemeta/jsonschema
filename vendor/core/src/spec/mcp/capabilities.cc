@@ -5,6 +5,7 @@
 
 #include <sourcemeta/core/json.h>
 
+#include <cassert> // assert
 #include <utility> // std::move, std::pair
 
 namespace {
@@ -13,11 +14,16 @@ auto capability_settings(const Capabilities &capabilities,
                          const sourcemeta::core::JSON::StringView name,
                          const sourcemeta::core::JSON::Object::hash_type &hash)
     -> sourcemeta::core::JSON {
-  const auto *value{capabilities.source && capabilities.source->is_object()
-                        ? capabilities.source->try_at(name, hash)
-                        : nullptr};
-  return value && value->is_object() ? *value
-                                     : sourcemeta::core::JSON::make_object();
+  // Each caller turns down a source that is not an object before reaching
+  // here, so the only question left is whether it carries this capability
+  assert(!capabilities.source || capabilities.source->is_object());
+  const auto *value{
+      capabilities.source ? capabilities.source->try_at(name, hash) : nullptr};
+  if (value == nullptr || !value->is_object()) {
+    return sourcemeta::core::JSON::make_object();
+  }
+
+  return *value;
 }
 auto capability_flag(
     const sourcemeta::core::JSON &capabilities,
@@ -26,9 +32,13 @@ auto capability_flag(
     const sourcemeta::core::JSON::StringView name,
     const sourcemeta::core::JSON::Object::hash_type &name_hash) -> bool {
   const auto *settings{capabilities.try_at(parent, parent_hash)};
+  assert(settings == nullptr || settings->is_object());
   const auto *value{settings != nullptr ? settings->try_at(name, name_hash)
                                         : nullptr};
-  return value != nullptr && value->is_boolean() && value->to_boolean();
+  // The capability map was validated before reaching here, which settles that
+  // a flag of this name holds a boolean
+  assert(value == nullptr || value->is_boolean());
+  return value != nullptr && value->to_boolean();
 }
 
 auto emit_capability(
@@ -79,32 +89,39 @@ auto mcp_parse_client_capabilities(const MCPProtocolVersion version,
   internal::require(internal::valid_capabilities(version, capabilities, true),
                     "Invalid client capabilities");
 
+  // The capabilities were validated above, which settles the type of every
+  // field read below, so each test here is one of presence alone
   const auto *roots_field{capabilities.try_at("roots", MCP_HASH_ROOTS)};
-  if (roots_field != nullptr && roots_field->is_object()) {
+  if (roots_field != nullptr) {
+    assert(roots_field->is_object());
     result.roots = true;
     const auto *list_changed_field{
         roots_field->try_at("listChanged", MCP_HASH_LIST_CHANGED)};
     if (version != MCPProtocolVersion::V_2026_07_28 &&
-        list_changed_field != nullptr && list_changed_field->is_boolean()) {
+        list_changed_field != nullptr) {
+      assert(list_changed_field->is_boolean());
       result.roots_list_changed = list_changed_field->to_boolean();
     }
   }
 
   const auto *sampling_field{
       capabilities.try_at("sampling", MCP_HASH_SAMPLING)};
-  if (sampling_field != nullptr && sampling_field->is_object()) {
+  if (sampling_field != nullptr) {
+    assert(sampling_field->is_object());
     result.sampling = true;
     const auto *context_field{
         sampling_field->try_at("context", MCP_HASH_CONTEXT)};
     if (mcp_protocol_version_at_least(version,
                                       MCPProtocolVersion::V_2025_11_25) &&
-        context_field != nullptr && context_field->is_object()) {
+        context_field != nullptr) {
+      assert(context_field->is_object());
       result.sampling_context = true;
     }
     const auto *tools_field{sampling_field->try_at("tools", MCP_HASH_TOOLS)};
     if (mcp_protocol_version_at_least(version,
                                       MCPProtocolVersion::V_2025_11_25) &&
-        tools_field != nullptr && tools_field->is_object()) {
+        tools_field != nullptr) {
+      assert(tools_field->is_object());
       result.sampling_tools = true;
     }
   }
@@ -113,18 +130,21 @@ auto mcp_parse_client_capabilities(const MCPProtocolVersion version,
       capabilities.try_at("elicitation", MCP_HASH_ELICITATION)};
   if (mcp_protocol_version_at_least(version,
                                     MCPProtocolVersion::V_2025_06_18) &&
-      elicitation_field != nullptr && elicitation_field->is_object()) {
+      elicitation_field != nullptr) {
+    assert(elicitation_field->is_object());
     result.elicitation = true;
     const auto *form_field{elicitation_field->try_at("form", MCP_HASH_FORM)};
     if (mcp_protocol_version_at_least(version,
                                       MCPProtocolVersion::V_2025_11_25) &&
-        form_field != nullptr && form_field->is_object()) {
+        form_field != nullptr) {
+      assert(form_field->is_object());
       result.elicitation_form = true;
     }
     const auto *url_field{elicitation_field->try_at("url", MCP_HASH_URL)};
     if (mcp_protocol_version_at_least(version,
                                       MCPProtocolVersion::V_2025_11_25) &&
-        url_field != nullptr && url_field->is_object()) {
+        url_field != nullptr) {
+      assert(url_field->is_object());
       result.elicitation_url = true;
     }
   }
@@ -132,13 +152,15 @@ auto mcp_parse_client_capabilities(const MCPProtocolVersion version,
   const auto *extensions_field{
       capabilities.try_at("extensions", MCP_HASH_EXTENSIONS)};
   if (version == MCPProtocolVersion::V_2026_07_28 &&
-      extensions_field != nullptr && extensions_field->is_object()) {
+      extensions_field != nullptr) {
+    assert(extensions_field->is_object());
     result.extensions = *extensions_field;
   }
 
   const auto *experimental_field{
       capabilities.try_at("experimental", MCP_HASH_EXPERIMENTAL)};
-  if (experimental_field != nullptr && experimental_field->is_object()) {
+  if (experimental_field != nullptr) {
+    assert(experimental_field->is_object());
     result.experimental = *experimental_field;
   }
 
@@ -266,15 +288,15 @@ auto mcp_serialize_client_capabilities(
   }
 
   if (version == MCPProtocolVersion::V_2026_07_28 &&
-      capabilities.extensions.has_value() &&
-      capabilities.extensions->is_object()) {
+      capabilities.extensions.has_value()) {
+    assert(capabilities.extensions->is_object());
     result.assign_assume_new(
         "extensions", sourcemeta::core::JSON{capabilities.extensions.value()},
         sourcemeta::core::MCP_HASH_EXTENSIONS);
   }
 
-  if (capabilities.experimental.has_value() &&
-      capabilities.experimental->is_object()) {
+  if (capabilities.experimental.has_value()) {
+    assert(capabilities.experimental->is_object());
     result.assign_assume_new(
         "experimental",
         sourcemeta::core::JSON{capabilities.experimental.value()},

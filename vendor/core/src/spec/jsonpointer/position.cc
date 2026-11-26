@@ -35,6 +35,24 @@ auto descend_into(std::vector<Node> &trie, Children Node::*children,
 
 } // namespace
 
+// Clang keeps an arm for the value that never arrives and counts it as one
+// that nothing took, so the phase a value opens with and the step that
+// descends nowhere are written as the default there, while the compilers
+// reading a case label are the ones holding the switches below to naming them
+// all. The directives stay out of the functions because one inside them reads
+// as a line that never ran
+#if defined(__clang__)
+#define SOURCEMETA_CORE_JSONPOINTER_ENTERS_A_VALUE default:
+#define SOURCEMETA_CORE_JSONPOINTER_STEPS_NOWHERE                              \
+  default:                                                                     \
+    break;
+#else
+#define SOURCEMETA_CORE_JSONPOINTER_ENTERS_A_VALUE case JSON::ParsePhase::Pre:
+#define SOURCEMETA_CORE_JSONPOINTER_STEPS_NOWHERE                              \
+  case JSON::ParseContext::Root:                                               \
+    break;
+#endif
+
 namespace sourcemeta::core {
 
 auto PointerPositionTracker::ensure_index() const -> void {
@@ -53,11 +71,12 @@ auto PointerPositionTracker::ensure_index() const -> void {
 
   for (const auto &event : this->events_) {
     switch (event.phase) {
-      case JSON::ParsePhase::Pre:
+      SOURCEMETA_CORE_JSONPOINTER_ENTERS_A_VALUE {
         node_stack.emplace_back(current_node,
                                 std::make_pair(event.line, event.column));
 
         switch (event.context) {
+          SOURCEMETA_CORE_JSONPOINTER_STEPS_NOWHERE
           case JSON::ParseContext::Property:
             assert(event.property != nullptr);
             descend_into(this->trie_, &TrieNode::property_children,
@@ -67,11 +86,10 @@ auto PointerPositionTracker::ensure_index() const -> void {
             descend_into(this->trie_, &TrieNode::index_children, event.index,
                          current_node);
             break;
-          case JSON::ParseContext::Root:
-            break;
         }
 
         break;
+      }
       case JSON::ParsePhase::Post:
         assert(!node_stack.empty());
         this->trie_[current_node].position =
@@ -153,9 +171,10 @@ auto PointerPositionTracker::to_json() const -> JSON {
 
   for (const auto &event : this->events_) {
     switch (event.phase) {
-      case JSON::ParsePhase::Pre:
+      SOURCEMETA_CORE_JSONPOINTER_ENTERS_A_VALUE {
         start_stack.emplace_back(event.line, event.column);
         switch (event.context) {
+          SOURCEMETA_CORE_JSONPOINTER_STEPS_NOWHERE
           case JSON::ParseContext::Property:
             assert(event.property != nullptr);
             current.push_back(*event.property);
@@ -163,11 +182,10 @@ auto PointerPositionTracker::to_json() const -> JSON {
           case JSON::ParseContext::Index:
             current.push_back(event.index);
             break;
-          default:
-            break;
         }
 
         break;
+      }
       case JSON::ParsePhase::Post:
         assert(!start_stack.empty());
         result.assign_assume_new(
@@ -190,3 +208,6 @@ auto PointerPositionTracker::to_json() const -> JSON {
 }
 
 } // namespace sourcemeta::core
+
+#undef SOURCEMETA_CORE_JSONPOINTER_ENTERS_A_VALUE
+#undef SOURCEMETA_CORE_JSONPOINTER_STEPS_NOWHERE

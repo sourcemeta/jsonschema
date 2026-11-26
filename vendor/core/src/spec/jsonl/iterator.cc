@@ -65,10 +65,24 @@ auto is_self_delimiting(const JSON &document) -> bool {
  * Parsing
  */
 
+// Clang keeps an arm for the framing that never arrives and counts it as one
+// that nothing took, so the framing a line feed delimits is written as the
+// default there, while the compilers reading a case label are the ones holding
+// the switch below to naming them all. The directives stay out of the function
+// because one inside it reads as a line that never ran
+#if defined(__clang__)
+#define SOURCEMETA_CORE_JSONL_DELIMITED_BY_LINE_FEEDS                          \
+  default:                                                                     \
+    return this->parse_next_line();
+#else
+#define SOURCEMETA_CORE_JSONL_DELIMITED_BY_LINE_FEEDS                          \
+  case JSONLFraming::LineFeed:                                                 \
+    return this->parse_next_line();
+#endif
+
 auto ConstJSONLIterator::parse_next() -> JSON {
   switch (this->framing_) {
-    case JSONLFraming::LineFeed:
-      return this->parse_next_line();
+    SOURCEMETA_CORE_JSONL_DELIMITED_BY_LINE_FEEDS
     case JSONLFraming::RecordSeparator:
       return this->parse_next_record();
   }
@@ -218,9 +232,11 @@ ConstJSONLIterator::~ConstJSONLIterator() = default;
 
 auto operator==(const ConstJSONLIterator &left, const ConstJSONLIterator &right)
     -> bool {
-  return ((left.data_ == nullptr) && (right.data_ == nullptr)) ||
-         ((left.data_ != nullptr) && (right.data_ != nullptr) &&
-          left.internal_->current == right.internal_->current);
+  if ((left.data_ == nullptr) || (right.data_ == nullptr)) {
+    return (left.data_ == nullptr) && (right.data_ == nullptr);
+  }
+
+  return left.internal_->current == right.internal_->current;
 };
 
 auto ConstJSONLIterator::operator*() const -> ConstJSONLIterator::reference {

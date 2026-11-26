@@ -36,8 +36,10 @@ using sourcemeta::blaze::condition_text;
 using sourcemeta::blaze::content_of;
 using sourcemeta::blaze::count;
 using sourcemeta::blaze::Draw;
+using sourcemeta::blaze::facts_of;
 using sourcemeta::blaze::first_example;
 using sourcemeta::blaze::form_text;
+using sourcemeta::blaze::forms_say;
 using sourcemeta::blaze::given;
 using sourcemeta::blaze::Inherited;
 using sourcemeta::blaze::kind;
@@ -50,9 +52,12 @@ using sourcemeta::blaze::not_phrases;
 using sourcemeta::blaze::only_keys;
 using sourcemeta::blaze::OTHER_NAME;
 using sourcemeta::blaze::pattern_name;
+using sourcemeta::blaze::pattern_note;
 using sourcemeta::blaze::piece;
 using sourcemeta::blaze::plain;
+using sourcemeta::blaze::plain_all;
 using sourcemeta::blaze::plural;
+using sourcemeta::blaze::range_word;
 using sourcemeta::blaze::render_group;
 using sourcemeta::blaze::Row;
 using sourcemeta::blaze::row_count;
@@ -596,6 +601,212 @@ auto render_row(Writer &out, const Row &row, Draw &draw,
   }
 }
 
+// What the value is, in one phrase, by the form it takes
+auto value_kind(Writer &out, const JSON *value, const std::string &name,
+                Draw &draw) -> void {
+  if (name == "ref") {
+    link(out, text(value, "ref"), draw);
+  } else if (name == "external") {
+    typed(out, "follows rules kept in another file");
+    external_link(out, value);
+  } else if (name == "array") {
+    const auto *item{at(value, "item")};
+    const auto slots{count(value, "slots")};
+    const auto options{list(item, "options")};
+    if (slots > 0) {
+      typed(out, "a list with " + std::to_string(slots) + " fixed " +
+                     (slots == 1 ? "slot" : "slots"));
+    } else if (truthy(item) && kind(item) == "ref") {
+      out.div().text("a list, each one ");
+      link(out, text(item, "ref"), draw);
+      out.close();
+    } else if (truthy(item) && kind(item) == "choice" && !options.empty() &&
+               std::all_of(options.cbegin(), options.cend(),
+                           [](const auto *option) {
+                             return truthy(option) && kind(option) == "ref";
+                           })) {
+      out.div().text("a list, each entry either ");
+      either(out, options, draw);
+      out.close();
+    } else if (truthy(item) && kind(item) == "choice" && !options.empty() &&
+               (label(item, draw).starts_with("one of") || forms_say(item))) {
+      typed(out, "a list, each entry one of " + std::to_string(options.size()) +
+                     " forms");
+      forms_of(out, options, draw);
+    } else {
+      std::string said{"a list"};
+      if (truthy(item)) {
+        std::vector<std::string> parts;
+        const auto own{facts_of(item)};
+        if (!own.empty()) {
+          parts.push_back(own);
+        }
+
+        const auto forbidden{
+            sourcemeta::core::join(not_phrases(at(item, "not"), draw), "; ")};
+        if (!forbidden.empty()) {
+          parts.push_back(forbidden);
+        }
+
+        said += ", each one " + with_article(label(item, draw));
+        if (!parts.empty()) {
+          said += ", " + sourcemeta::core::join(parts, ", ");
+        }
+      }
+
+      typed(out, said);
+    }
+  } else if (name == "boolean") {
+    typed(out, "yes or no");
+  } else if (name == "enum") {
+    typed(out, count(value, "values") == 1 ? "a fixed value" : "one of these");
+    chips(out, at(value, "values"), at(value, "default"));
+  } else if (name == "choice") {
+    const auto options{list(value, "options")};
+    const auto said{label(value, draw)};
+    const auto group{as_group(value, draw)};
+    if (!options.empty() &&
+        std::all_of(options.cbegin(), options.cend(),
+                    [](const auto *option) {
+                      return truthy(option) && kind(option) == "ref";
+                    }) &&
+        !forms_say(value)) {
+      out.div().text("either ");
+      either(out, options, draw);
+      out.close();
+    } else if (!said.starts_with("one of") && !said.starts_with("either") &&
+               !forms_say(value)) {
+      typed(out, said);
+    } else if (group.has_value()) {
+      std::vector<std::string> others;
+      for (const auto *alternative : group->alternatives) {
+        others.push_back(label(alternative, draw));
+      }
+
+      typed(out, label(group->group, draw));
+      notes(out, [&](Writer &inner) {
+        inner.text("or " + sourcemeta::core::join(others, " or "));
+      });
+    } else {
+      typed(out,
+            std::string{truthy(at(value, "overlap")) ? "one or more" : "one"} +
+                " of " + std::to_string(options.size()) + " forms");
+      forms_of(out, options, draw);
+    }
+  } else if (name == "object") {
+    // A group whose only content is a name the writer picks is a map, and
+    // said on the row itself it is one sentence.
+    const auto *other{at(value, "otherProperties")};
+    const auto patterns{count(value, "patternProperties")};
+    const auto only_other{count(value, "properties") == 0 &&
+                          count(value, "conditions") == 0 &&
+                          ((truthy(other) && patterns == 0) ||
+                           (!truthy(other) && patterns == 1))};
+    if (only_other) {
+      const auto *first{patterns > 0 ? list(value, "patternProperties").front()
+                                     : nullptr};
+      typed(out, "a group where you choose the names, each one");
+      value_cell(out, truthy(other) ? other : at(first, "value"), draw);
+      if (!truthy(other)) {
+        notes(out, [&](Writer &inner) { inner.text(pattern_name(first)); });
+      }
+    } else {
+      typed(out, label(value, draw));
+    }
+  } else {
+    typed(out, label(value, draw));
+  }
+}
+
+// The rules a value carries beside the form it takes
+auto also_cells(Writer &out, const JSON *value, const std::string &name,
+                Draw &draw) -> void {
+  for (const auto *also : list(value, "also")) {
+    const auto also_kind{kind(also)};
+    if (also_kind == "ref") {
+      const auto *found{draw.shape(text(also, "ref"))};
+      // Properties inherited from a group of properties are drawn with the
+      // properties.
+      if (name == "object" && found != nullptr && truthy(at(found, "value")) &&
+          kind(at(found, "value")) == "object") {
+        continue;
+      }
+
+      notes(out, [&](Writer &inner) {
+        inner.text("and follows " +
+                   with_article(draw.name_of(text(also, "ref"))) + " as well");
+      });
+    } else if (also_kind == "external") {
+      notes(out, [](Writer &inner) {
+        inner.text("and follows rules kept in another file as well");
+      });
+      external_link(out, also);
+    } else if (also_kind == "choice" && count(also, "options") > 0) {
+      const auto options{list(also, "options")};
+      if (label(also, draw).starts_with("one of") &&
+          std::any_of(options.cbegin(), options.cend(), [](const auto *option) {
+            return truthy(option) && kind(option) == "object";
+          })) {
+        continue;
+      }
+
+      std::vector<std::string> parts;
+      parts.reserve(options.size());
+      for (const auto *option : options) {
+        parts.push_back(truthy(at(option, "description"))
+                            ? text(option, "description")
+                            : form_text(option, draw));
+      }
+
+      notes(out, [&](Writer &inner) {
+        inner.text(
+            std::string{"and "} +
+            (truthy(at(also, "overlap")) ? "at least one" : "exactly one") +
+            " of these: " + sourcemeta::core::join(parts, "; "));
+      });
+    } else if (!(also_kind == "object" && name == "object")) {
+      std::vector<std::string> extra;
+      if (also_kind == "enum" && at(also, "values") != nullptr &&
+          at(also, "values")->is_array()) {
+        extra.push_back(plain_all(at(also, "values"), ", "));
+      }
+
+      if (const auto *range{at(also, "range")}; truthy(range)) {
+        if (given(at(range, "min"))) {
+          extra.push_back(range_word(range, "min") + " " +
+                          plain(at(range, "min")));
+        }
+
+        if (given(at(range, "max"))) {
+          extra.push_back(range_word(range, "max") + " " +
+                          plain(at(range, "max")));
+        }
+      }
+
+      if (const auto *length{at(also, "length")}; truthy(length)) {
+        if (given(at(length, "min"))) {
+          extra.push_back("at least " + plain(at(length, "min")) + " long");
+        }
+
+        if (given(at(length, "max"))) {
+          extra.push_back("at most " + plain(at(length, "max")) + " long");
+        }
+      }
+
+      const auto said{pattern_note(also)};
+      if (said.has_value()) {
+        extra.push_back(said.value());
+      }
+
+      notes(out, [&](Writer &inner) {
+        inner.text(
+            "and must also be " + with_article(label(also, draw)) +
+            (extra.empty() ? "" : ", " + sourcemeta::core::join(extra, ", ")));
+      });
+    }
+  }
+}
+
 } // namespace
 
 namespace sourcemeta::blaze {
@@ -764,203 +975,9 @@ auto value_cell(Writer &out, const JSON *value, Draw &draw) -> void {
   }
 
   const auto name{kind(value)};
-  if (name == "ref") {
-    link(out, text(value, "ref"), draw);
-  } else if (name == "external") {
-    typed(out, "follows rules kept in another file");
-    external_link(out, value);
-  } else if (name == "array") {
-    const auto *item{at(value, "item")};
-    const auto slots{count(value, "slots")};
-    const auto options{list(item, "options")};
-    if (slots > 0) {
-      typed(out, "a list with " + std::to_string(slots) + " fixed " +
-                     (slots == 1 ? "slot" : "slots"));
-    } else if (truthy(item) && kind(item) == "ref") {
-      out.div().text("a list, each one ");
-      link(out, text(item, "ref"), draw);
-      out.close();
-    } else if (truthy(item) && kind(item) == "choice" && !options.empty() &&
-               std::all_of(options.cbegin(), options.cend(),
-                           [](const auto *option) {
-                             return truthy(option) && kind(option) == "ref";
-                           })) {
-      out.div().text("a list, each entry either ");
-      either(out, options, draw);
-      out.close();
-    } else if (truthy(item) && kind(item) == "choice" && !options.empty() &&
-               (label(item, draw).starts_with("one of") || forms_say(item))) {
-      typed(out, "a list, each entry one of " + std::to_string(options.size()) +
-                     " forms");
-      forms_of(out, options, draw);
-    } else {
-      std::string said{"a list"};
-      if (truthy(item)) {
-        std::vector<std::string> parts;
-        const auto own{facts_of(item)};
-        if (!own.empty()) {
-          parts.push_back(own);
-        }
+  value_kind(out, value, name, draw);
 
-        const auto forbidden{
-            sourcemeta::core::join(not_phrases(at(item, "not"), draw), "; ")};
-        if (!forbidden.empty()) {
-          parts.push_back(forbidden);
-        }
-
-        said += ", each one " + with_article(label(item, draw));
-        if (!parts.empty()) {
-          said += ", " + sourcemeta::core::join(parts, ", ");
-        }
-      }
-
-      typed(out, said);
-    }
-  } else if (name == "boolean") {
-    typed(out, "yes or no");
-  } else if (name == "enum") {
-    typed(out, count(value, "values") == 1 ? "a fixed value" : "one of these");
-    chips(out, at(value, "values"), at(value, "default"));
-  } else if (name == "choice") {
-    const auto options{list(value, "options")};
-    const auto said{label(value, draw)};
-    const auto group{as_group(value, draw)};
-    if (!options.empty() &&
-        std::all_of(options.cbegin(), options.cend(),
-                    [](const auto *option) {
-                      return truthy(option) && kind(option) == "ref";
-                    }) &&
-        !forms_say(value)) {
-      out.div().text("either ");
-      either(out, options, draw);
-      out.close();
-    } else if (!said.starts_with("one of") && !said.starts_with("either") &&
-               !forms_say(value)) {
-      typed(out, said);
-    } else if (group.has_value()) {
-      std::vector<std::string> others;
-      for (const auto *alternative : group->alternatives) {
-        others.push_back(label(alternative, draw));
-      }
-
-      typed(out, label(group->group, draw));
-      notes(out, [&](Writer &inner) {
-        inner.text("or " + sourcemeta::core::join(others, " or "));
-      });
-    } else {
-      typed(out,
-            std::string{truthy(at(value, "overlap")) ? "one or more" : "one"} +
-                " of " + std::to_string(options.size()) + " forms");
-      forms_of(out, options, draw);
-    }
-  } else if (name == "object") {
-    // A group whose only content is a name the writer picks is a map, and
-    // said on the row itself it is one sentence.
-    const auto *other{at(value, "otherProperties")};
-    const auto patterns{count(value, "patternProperties")};
-    const auto only_other{count(value, "properties") == 0 &&
-                          count(value, "conditions") == 0 &&
-                          ((truthy(other) && patterns == 0) ||
-                           (!truthy(other) && patterns == 1))};
-    if (only_other) {
-      const auto *first{patterns > 0 ? list(value, "patternProperties").front()
-                                     : nullptr};
-      typed(out, "a group where you choose the names, each one");
-      value_cell(out, truthy(other) ? other : at(first, "value"), draw);
-      if (!truthy(other)) {
-        notes(out, [&](Writer &inner) { inner.text(pattern_name(first)); });
-      }
-    } else {
-      typed(out, label(value, draw));
-    }
-  } else {
-    typed(out, label(value, draw));
-  }
-
-  for (const auto *also : list(value, "also")) {
-    const auto also_kind{kind(also)};
-    if (also_kind == "ref") {
-      const auto *found{draw.shape(text(also, "ref"))};
-      // Properties inherited from a group of properties are drawn with the
-      // properties.
-      if (name == "object" && found != nullptr && truthy(at(found, "value")) &&
-          kind(at(found, "value")) == "object") {
-        continue;
-      }
-
-      notes(out, [&](Writer &inner) {
-        inner.text("and follows " +
-                   with_article(draw.name_of(text(also, "ref"))) + " as well");
-      });
-    } else if (also_kind == "external") {
-      notes(out, [](Writer &inner) {
-        inner.text("and follows rules kept in another file as well");
-      });
-      external_link(out, also);
-    } else if (also_kind == "choice" && count(also, "options") > 0) {
-      const auto options{list(also, "options")};
-      if (label(also, draw).starts_with("one of") &&
-          std::any_of(options.cbegin(), options.cend(), [](const auto *option) {
-            return truthy(option) && kind(option) == "object";
-          })) {
-        continue;
-      }
-
-      std::vector<std::string> parts;
-      parts.reserve(options.size());
-      for (const auto *option : options) {
-        parts.push_back(truthy(at(option, "description"))
-                            ? text(option, "description")
-                            : form_text(option, draw));
-      }
-
-      notes(out, [&](Writer &inner) {
-        inner.text(
-            std::string{"and "} +
-            (truthy(at(also, "overlap")) ? "at least one" : "exactly one") +
-            " of these: " + sourcemeta::core::join(parts, "; "));
-      });
-    } else if (!(also_kind == "object" && name == "object")) {
-      std::vector<std::string> extra;
-      if (also_kind == "enum" && at(also, "values") != nullptr &&
-          at(also, "values")->is_array()) {
-        extra.push_back(plain_all(at(also, "values"), ", "));
-      }
-
-      if (const auto *range{at(also, "range")}; truthy(range)) {
-        if (given(at(range, "min"))) {
-          extra.push_back(range_word(range, "min") + " " +
-                          plain(at(range, "min")));
-        }
-
-        if (given(at(range, "max"))) {
-          extra.push_back(range_word(range, "max") + " " +
-                          plain(at(range, "max")));
-        }
-      }
-
-      if (const auto *length{at(also, "length")}; truthy(length)) {
-        if (given(at(length, "min"))) {
-          extra.push_back("at least " + plain(at(length, "min")) + " long");
-        }
-
-        if (given(at(length, "max"))) {
-          extra.push_back("at most " + plain(at(length, "max")) + " long");
-        }
-      }
-
-      const auto said{pattern_note(also)};
-      if (said.has_value()) {
-        extra.push_back(said.value());
-      }
-
-      notes(out, [&](Writer &inner) {
-        inner.text(
-            "and must also be " + with_article(label(also, draw)) +
-            (extra.empty() ? "" : ", " + sourcemeta::core::join(extra, ", ")));
-      });
-    }
-  }
+  also_cells(out, value, name, draw);
 
   const auto *bounds{truthy(at(value, "range")) ? at(value, "range")
                                                 : at(value, "length")};

@@ -413,8 +413,11 @@ auto mcp_validate_request_headers(
   std::optional<JSON::StringView> body_version;
   if (identifier != nullptr) {
     const auto *meta{parameters->try_at("_meta", MCP_HASH_META)};
+    // Parameters carrying metadata that is not an object were turned down
+    // above, so what is left to ask is whether the metadata is there at all
+    assert((meta == nullptr) || meta->is_object());
     const auto *field{
-        (meta != nullptr) && meta->is_object()
+        (meta != nullptr)
             ? meta->try_at("io.modelcontextprotocol/protocolVersion",
                            MCP_HASH_META_PROTOCOL_VERSION)
             : nullptr};

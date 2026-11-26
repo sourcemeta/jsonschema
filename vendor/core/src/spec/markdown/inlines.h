@@ -9,13 +9,12 @@
 #include "references.h"
 #include "scanners.h"
 
-#include <algorithm>   // std::min
+#include <algorithm>   // std::max
 #include <array>       // std::array
 #include <cassert>     // assert
 #include <cstddef>     // std::size_t, std::ptrdiff_t
 #include <cstdint>     // std::uint8_t, std::uint32_t
 #include <cstring>     // std::memchr
-#include <functional>  // std::less
 #include <string>      // std::string
 #include <string_view> // std::string_view
 #include <vector>      // std::vector
@@ -65,7 +64,6 @@ struct Delimiter {
 struct Bracket {
   std::uint32_t text{NO_NODE};
   std::size_t position{0};
-  std::ptrdiff_t start_column{0};
   bool image{false};
   bool bracket_after{false};
 };
@@ -90,26 +88,25 @@ inline auto may_precede_extended_autolink(const char character) noexcept
 }
 
 // The end of an extended autolink once its trailing punctuation, unbalanced
-// parentheses, and entity references are removed as GFM section 6.9 describes
+// parentheses, and entity references are removed as GFM section 6.9 describes.
+// What reaches here opens with the `www.` or the scheme that made it an
+// autolink, neither of which the trim takes, so there is always a character
+// left for it to stop on
 inline auto trim_autolink_end(const std::string_view data,
-                              std::size_t link_end) noexcept -> std::size_t {
+                              const std::size_t end) noexcept -> std::size_t {
   std::size_t opening{0};
   std::size_t closing{0};
-  for (std::size_t index{0}; index < link_end; ++index) {
-    const auto character{data[index]};
-    if (character == '<') {
-      link_end = index;
-      break;
-    }
-
-    if (character == '(') {
+  for (std::size_t index{0}; index < end; ++index) {
+    if (data[index] == '(') {
       ++opening;
-    } else if (character == ')') {
+    } else if (data[index] == ')') {
       ++closing;
     }
   }
 
-  while (link_end > 0) {
+  auto link_end{end};
+  while (true) {
+    assert(link_end > 0);
     switch (data[link_end - 1]) {
       case ')':
         if (closing <= opening) {
@@ -132,17 +129,15 @@ inline auto trim_autolink_end(const std::string_view data,
         --link_end;
         break;
       case ';': {
-        if (link_end < 2) {
-          --link_end;
-          break;
-        }
-
         // GFM section 6.9 only excludes a semicolon from an autolink along
         // with an entity reference lookalike, which is "& followed by one or
-        // more alphanumeric characters"
+        // more alphanumeric characters". A domain carries a period and a
+        // scheme carries a colon, so the walk back over the characters such a
+        // reference is written with stops within the link
+        assert(link_end >= 2);
         auto entity_start{link_end - 2};
-        while (entity_start > 0 &&
-               sourcemeta::core::is_alphanum(data[entity_start])) {
+        while (sourcemeta::core::is_alphanum(data[entity_start])) {
+          assert(entity_start > 0);
           --entity_start;
         }
 
@@ -158,8 +153,6 @@ inline auto trim_autolink_end(const std::string_view data,
         return link_end;
     }
   }
-
-  return link_end;
 }
 
 // Whether the lengths of the delimiter runs of an opener and a closer of the
@@ -189,7 +182,6 @@ public:
     this->input_ = sourcemeta::core::strip_right(
         this->document_.content_of(this->document_.nodes[parent]), is_space);
     this->position_ = 0;
-    this->column_offset_ = 0;
     this->last_delimiter_ = NO_DELIMITER;
     this->delimiters_.clear();
     this->brackets_.clear();
@@ -224,10 +216,17 @@ private:
   }
 
   auto append_text_child(const std::uint32_t parent,
-                         const std::string_view literal) -> void {
+                         const std::string_view literal) -> std::uint32_t {
     const auto index{this->document_.create(NodeType::Text)};
     this->node(index).literal = literal;
     this->document_.append_child(parent, index);
+    return index;
+  }
+
+  // Text that the string arena holds rather than the content of the document
+  auto append_stored_text(const std::string_view literal) -> void {
+    const auto index{this->append(NodeType::Text, literal)};
+    set_flag(this->node(index), FLAG_STORED, true);
   }
 
   auto parse_inline() -> void {
@@ -346,7 +345,6 @@ private:
     // the only ending the text of one can carry
     assert(this->input_[this->position_] == '\n');
     ++this->position_;
-    this->column_offset_ = -static_cast<std::ptrdiff_t>(this->position_);
     skip_spaces(this->input_, this->position_);
     if (newline_position > 1 && this->input_[newline_position - 1] == ' ' &&
         this->input_[newline_position - 2] == ' ') {
@@ -362,10 +360,13 @@ private:
     // the rest of the input was scanned, the last position of every backtick
     // string length is known, so an opening backtick string without a closing
     // one of the same length after it is rejected without scanning again
-    if (this->scanned_for_backticks_ &&
-        (opening_length >= this->backticks_.size() ||
-         this->backticks_[opening_length] <= this->position_)) {
-      return 0;
+    if (this->scanned_for_backticks_) {
+      // A scan that reached the end of the input took note of every backtick
+      // string after it, and this one is among them
+      assert(opening_length < this->backticks_.size());
+      if (this->backticks_[opening_length] <= this->position_) {
+        return 0;
+      }
     }
 
     const auto size{this->input_.size()};
@@ -435,8 +436,9 @@ private:
       }
     }
 
-    if (contains_nonspace && write >= 2 && buffer[0] == ' ' &&
-        buffer[write - 1] == ' ') {
+    // A line ending became a space above and something that is not a space is
+    // written here too, so there are at least two characters to read
+    if (contains_nonspace && buffer[0] == ' ' && buffer[write - 1] == ' ') {
       return this->document_.strings.store(
           std::string_view{buffer}.substr(1, write - 2));
     }
@@ -480,7 +482,9 @@ private:
       return;
     }
 
-    this->append(NodeType::Text, "\\");
+    // The backslash stands for itself, and the content holds it where it was
+    // written, so the text around it can be joined with it
+    this->append(NodeType::Text, this->input_.substr(this->position_ - 1, 1));
   }
 
   auto handle_entity() -> void {
@@ -494,31 +498,33 @@ private:
     }
 
     this->position_ += consumed;
-    this->append(NodeType::Text, this->document_.strings.store(this->buffer_));
+    this->append_stored_text(this->document_.strings.store(this->buffer_));
   }
 
   auto make_autolink(const std::string_view contents, const bool is_email)
       -> void {
+    // An autolink of GFM section 6.8 is written with a scheme or an email
+    // address, so its angle brackets always hold something
     const auto trimmed{sourcemeta::core::trim(contents, is_space)};
+    assert(!trimmed.empty());
     const auto link{this->append(NodeType::Link, {})};
-    if (!trimmed.empty()) {
-      this->buffer_.clear();
-      if (is_email) {
-        this->buffer_.append("mailto:");
-      }
-
-      if (!decode_character_references(this->buffer_, trimmed)) {
-        this->buffer_.append(trimmed);
-      }
-
-      this->node(link).literal = this->document_.strings.store(this->buffer_);
+    this->buffer_.clear();
+    if (is_email) {
+      this->buffer_.append("mailto:");
     }
 
+    if (!decode_character_references(this->buffer_, trimmed)) {
+      this->buffer_.append(trimmed);
+    }
+
+    this->node(link).literal = this->document_.strings.store(this->buffer_);
+
     this->buffer_.clear();
-    this->append_text_child(link,
-                            decode_character_references(this->buffer_, trimmed)
-                                ? this->document_.strings.store(this->buffer_)
-                                : trimmed);
+    const auto decoded{decode_character_references(this->buffer_, trimmed)};
+    const auto text{this->append_text_child(
+        link,
+        decoded ? this->document_.strings.store(this->buffer_) : trimmed)};
+    set_flag(this->node(text), FLAG_STORED, decoded);
   }
 
   auto scan_raw_html() -> std::size_t {
@@ -631,9 +637,13 @@ private:
       --index;
     }
 
+    // What a byte sequence that is not well formed stands for is settled on
+    // the whole input before any of it is read apart, and the walk above stops
+    // at the byte that opens the sequence before the position
     const auto preceding{sourcemeta::core::utf8_decode(
         this->input_.substr(index, this->position_ - index), 0)};
-    return preceding.has_value() ? preceding->first : U'\n';
+    assert(preceding.has_value());
+    return preceding->first;
   }
 
   [[nodiscard]] auto character_after_delimiters() const noexcept -> char32_t {
@@ -754,14 +764,10 @@ private:
       this->brackets_.back().bracket_after = true;
     }
 
-    const auto position{static_cast<std::ptrdiff_t>(this->position_)};
-    this->brackets_.push_back(
-        {.text = text,
-         .position = this->position_,
-         .start_column =
-             (image ? position - 1 : position) + this->column_offset_,
-         .image = image,
-         .bracket_after = false});
+    this->brackets_.push_back({.text = text,
+                               .position = this->position_,
+                               .image = image,
+                               .bracket_after = false});
   }
 
   static auto delimiter_index(const char character) noexcept -> std::size_t {
@@ -800,8 +806,11 @@ private:
     this->node(closer_text).literal =
         this->node(closer_text).literal.substr(0, closer_characters);
 
+    // The opener was found by walking back from the closer, so the delimiters
+    // this drops are the ones between them
     auto between{this->delimiters_[closer].previous};
-    while (between != NO_DELIMITER && between != opener) {
+    while (between != opener) {
+      assert(between != NO_DELIMITER);
       const auto previous{this->delimiters_[between].previous};
       this->remove_delimiter(between);
       between = previous;
@@ -836,8 +845,11 @@ private:
     this->wrap_between(opener_text, closer_text, opener_text);
     this->document_.unlink(closer_text);
 
+    // The opener was found by walking back from the closer, so the delimiters
+    // this drops are the ones between them
     auto current{closer};
-    while (current != NO_DELIMITER && current != opener) {
+    while (current != opener) {
+      assert(current != NO_DELIMITER);
       const auto previous{this->delimiters_[current].previous};
       this->remove_delimiter(current);
       current = previous;
@@ -876,9 +888,11 @@ private:
              this->delimiters_[opener].position >= stack_bottom &&
              this->delimiters_[opener].position >=
                  openers_bottom[remainder][kind]) {
+        // Every delimiter the walk reads can open, as one that only closes is
+        // dropped where it finds no opener of its own
         const auto &opener_delimiter{this->delimiters_[opener]};
-        if (opener_delimiter.can_open &&
-            opener_delimiter.character == closer_delimiter.character &&
+        assert(opener_delimiter.can_open);
+        if (opener_delimiter.character == closer_delimiter.character &&
             delimiter_lengths_match(opener_delimiter, closer_delimiter)) {
           opener_found = true;
           break;
@@ -1002,35 +1016,25 @@ private:
   }
 
   // A bracket that is neither a link nor an image might still be a footnote
-  // reference, whose label is the text between its brackets
+  // reference, whose label is the text between its brackets. The label is read
+  // from the input rather than from the nodes that hold it, as those may carry
+  // markup of their own, which is also why the caret that opens a reference
+  // has to be written in the input to open one
   auto handle_unmatched_bracket(const Bracket &opener,
                                 const std::size_t initial_position) -> void {
-    const auto after_opener{this->node(opener.text).next};
-    if (after_opener != NO_NODE &&
-        this->node(after_opener).type == NodeType::Text) {
-      const auto literal{this->node(after_opener).literal};
-      if (!literal.empty() && literal.front() == '^' &&
-          (literal.size() > 1 || this->node(after_opener).next != NO_NODE)) {
+    if (character_at(this->input_, opener.position) == '^') {
+      const auto label_start{opener.position + 1};
+      const auto label{
+          this->input_.substr(label_start, initial_position - 1 - label_start)};
+      // A definition writes its label on a line of its own, so a label that
+      // runs over a line ending names none of them, and one that holds nothing
+      // names nothing at all
+      if (!label.empty() && label.find('\n') == std::string_view::npos) {
         this->position_ = initial_position;
-        const auto end_column{static_cast<std::ptrdiff_t>(this->position_) +
-                              this->column_offset_};
-        const auto length{
-            opener.start_column + 2 <= end_column
-                ? static_cast<std::size_t>(end_column - opener.start_column - 2)
-                : std::size_t{0}};
-        const auto *const label_start{literal.data() + 1};
-        const auto *const input_start{this->input_.data()};
-        const auto *const input_end{this->input_.data() + this->input_.size()};
-        const std::less<const char *> before{};
-        const auto available{
-            !before(label_start, input_start) && !before(input_end, label_start)
-                ? static_cast<std::size_t>(input_end - label_start)
-                : literal.size() - 1};
         const auto reference{
             this->document_.create(NodeType::FootnoteReference)};
         this->document_.footnote_reference_nodes.push_back(reference);
-        this->node(reference).literal =
-            std::string_view{label_start, std::min(length, available)};
+        this->node(reference).literal = label;
         this->document_.insert_before(opener.text, reference);
         this->process_emphasis(opener.position);
         auto current{this->node(opener.text).next};
@@ -1138,10 +1142,6 @@ private:
     }
 
     link_end = trim_autolink_end(data, link_end);
-    if (link_end == 0) {
-      return false;
-    }
-
     this->position_ += link_end;
     this->buffer_.assign("http://");
     this->buffer_.append(data.substr(0, link_end));
@@ -1151,21 +1151,17 @@ private:
     return true;
   }
 
-  auto remove_trailing_text(std::size_t count) -> void {
-    auto index{this->node(this->parent_).last_child};
-    while (count > 0 && index != NO_NODE &&
-           this->node(index).type == NodeType::Text) {
-      auto &literal{this->node(index).literal};
-      if (literal.size() < count) {
-        count -= literal.size();
-        literal = literal.substr(0, 0);
-      } else {
-        literal = literal.substr(0, literal.size() - count);
-        count = 0;
-      }
-
-      index = this->node(index).previous;
-    }
+  // Drop the characters of the scheme that the text before an extended url
+  // autolink took. What may come before one is whitespace, which that text
+  // takes too, or inline markup of its own, so the latest text node holds the
+  // whole of the scheme
+  auto remove_trailing_text(const std::size_t count) -> void {
+    const auto index{this->node(this->parent_).last_child};
+    assert(index != NO_NODE);
+    assert(this->node(index).type == NodeType::Text);
+    auto &literal{this->node(index).literal};
+    assert(count > 0 && count <= literal.size());
+    literal = literal.substr(0, literal.size() - count);
   }
 
   auto match_url_autolink() -> bool {
@@ -1200,10 +1196,6 @@ private:
     }
 
     link_end = trim_autolink_end(data, link_end);
-    if (link_end == 0) {
-      return false;
-    }
-
     this->position_ += link_end;
     this->remove_trailing_text(rewind);
     const auto url{this->input_.substr(start, link_end + rewind)};
@@ -1216,7 +1208,6 @@ private:
   std::uint32_t parent_{NO_NODE};
   std::string_view input_;
   std::size_t position_{0};
-  std::ptrdiff_t column_offset_{0};
   std::uint32_t last_delimiter_{NO_DELIMITER};
   std::vector<Delimiter> delimiters_;
   std::vector<Bracket> brackets_;

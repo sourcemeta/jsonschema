@@ -1,31 +1,20 @@
+#include <sourcemeta/core/text.h>
 #include <sourcemeta/core/time.h>
 
 #include "helpers.h"
 
-#include <algorithm>   // std::ranges::find
-#include <array>       // std::array
-#include <cctype>      // std::isdigit
 #include <chrono>      // std::chrono::system_clock
-#include <ctime>       // std::tm
-#include <iomanip>     // std::put_time, std::get_time
-#include <locale>      // std::locale
+#include <cstddef>     // std::size_t
+#include <cstdint>     // std::int32_t, std::uint8_t
 #include <optional>    // std::optional, std::nullopt
-#include <sstream>     // std::ostringstream, std::istringstream
-#include <string>      // std::string, std::to_string
+#include <string>      // std::string
 #include <string_view> // std::string_view
 
 namespace {
 
-constexpr auto FORMAT_RFC850_OUTPUT{"%A, %d-%b-%y %H:%M:%S GMT"};
-constexpr auto FORMAT_RFC850_NORMALISED_INPUT{"%d-%b-%Y %H:%M:%S GMT"};
-
-constexpr std::array<std::string_view, 7> RFC850_DAY_NAMES{
-    {"Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday",
-     "Sunday"}};
-
-auto current_utc_year() noexcept -> std::optional<int> {
+auto current_utc_year() noexcept -> std::int32_t {
   const auto now{std::chrono::system_clock::now()};
-  return sourcemeta::core::time_point_to_broken_down(now).tm_year + 1900;
+  return sourcemeta::core::time_point_to_broken_down(now).year;
 }
 
 } // namespace
@@ -35,10 +24,28 @@ namespace sourcemeta::core {
 auto to_rfc850_date(const std::chrono::system_clock::time_point time)
     -> std::string {
   const auto parts{time_point_to_broken_down(time)};
-  std::ostringstream stream;
-  stream.imbue(std::locale::classic());
-  stream << std::put_time(&parts, FORMAT_RFC850_OUTPUT);
-  return stream.str();
+  std::string result;
+  result.reserve(33);
+  result.append(LONG_DAY_NAMES[static_cast<std::size_t>(parts.weekday)]);
+  result.append(", ");
+  append_two_digits(result, parts.day);
+  result.push_back('-');
+  result.append(MONTH_NAMES[static_cast<std::size_t>(parts.month - 1)]);
+  result.push_back('-');
+  // RFC 9110 §5.6.7 carries the year as its last two digits. The remainder can
+  // be negative for a year before year zero, which this format has no spelling
+  // for, so it is lifted into the range of the field rather than being left to
+  // carry a sign into it
+  append_two_digits(
+      result, static_cast<std::uint8_t>(((parts.year % 100) + 100) % 100));
+  result.push_back(' ');
+  append_two_digits(result, parts.hour);
+  result.push_back(':');
+  append_two_digits(result, parts.minute);
+  result.push_back(':');
+  append_two_digits(result, parts.second);
+  result.append(" GMT");
+  return result;
 }
 
 auto from_rfc850_date(const std::string_view value)
@@ -47,57 +54,46 @@ auto from_rfc850_date(const std::string_view value)
   if (comma_position == std::string_view::npos) {
     return std::nullopt;
   }
-  const auto day_name{value.substr(0, comma_position)};
-  if (std::ranges::find(RFC850_DAY_NAMES, day_name) == RFC850_DAY_NAMES.end()) {
+  if (!is_long_day_name(value.substr(0, comma_position))) {
     return std::nullopt;
   }
   const auto rest{value.substr(comma_position + 1)};
   if (rest.size() != 23 || rest[0] != ' ' || rest[3] != '-' || rest[7] != '-' ||
-      rest[10] != ' ' || rest.substr(19) != " GMT") {
+      rest[10] != ' ' || rest[13] != ':' || rest[16] != ':' ||
+      rest.substr(19) != " GMT") {
     return std::nullopt;
   }
-  if ((std::isdigit(static_cast<unsigned char>(rest[1])) == 0) ||
-      (std::isdigit(static_cast<unsigned char>(rest[2])) == 0) ||
-      (std::isdigit(static_cast<unsigned char>(rest[8])) == 0) ||
-      (std::isdigit(static_cast<unsigned char>(rest[9])) == 0) ||
-      (std::isdigit(static_cast<unsigned char>(rest[11])) == 0) ||
-      (std::isdigit(static_cast<unsigned char>(rest[12])) == 0) ||
-      (std::isdigit(static_cast<unsigned char>(rest[14])) == 0) ||
-      (std::isdigit(static_cast<unsigned char>(rest[15])) == 0) ||
-      (std::isdigit(static_cast<unsigned char>(rest[17])) == 0) ||
-      (std::isdigit(static_cast<unsigned char>(rest[18])) == 0)) {
+  if (!is_digit(rest.substr(1, 2)) || !is_digit(rest.substr(8, 2)) ||
+      !is_digit(rest.substr(11, 2)) || !is_digit(rest.substr(14, 2)) ||
+      !is_digit(rest.substr(17, 2))) {
     return std::nullopt;
   }
-  const int two_digit_year{((rest[8] - '0') * 10) + (rest[9] - '0')};
+  const auto month{month_from_name(rest.substr(4, 3))};
+  if (!month.has_value()) {
+    return std::nullopt;
+  }
+
+  // RFC 9110 §5.6.7: a timestamp that appears to be more than fifty years in
+  // the future stands for the most recent past year ending in the same two
+  // digits
   const auto current_year{current_utc_year()};
-  if (!current_year.has_value()) {
-    return std::nullopt;
-  }
-  const int current_century{(current_year.value() / 100) * 100};
-  int full_year{current_century + two_digit_year};
-  if (full_year > current_year.value() + 50) {
+  const std::int32_t current_century{(current_year / 100) * 100};
+  std::int32_t full_year{current_century + read_two_digits(rest, 8)};
+  if (full_year > current_year + 50) {
     full_year -= 100;
   }
-  std::string normalised;
-  normalised.reserve(24);
-  normalised.append(rest.substr(1, 7));
-  normalised.append(std::to_string(full_year));
-  normalised.append(rest.substr(10));
-  std::istringstream stream{normalised};
-  stream.imbue(std::locale::classic());
-  std::tm parts = {};
-  stream >> std::get_time(&parts, FORMAT_RFC850_NORMALISED_INPUT);
-  if (stream.fail()) {
-    return std::nullopt;
-  }
+
+  BrokenDownTime parts{};
+  parts.year = full_year;
+  parts.month = month.value();
+  parts.day = read_two_digits(rest, 1);
+  parts.hour = read_two_digits(rest, 11);
+  parts.minute = read_two_digits(rest, 14);
+  parts.second = read_two_digits(rest, 17);
   if (!is_valid_broken_down_time(parts)) {
     return std::nullopt;
   }
-  // RFC 9110 §5.6.7: HTTP-date is case sensitive (the day name is already
-  // matched exactly against the table above)
-  if (!is_case_sensitive_month_abbreviation(rest.substr(4, 3), parts.tm_mon)) {
-    return std::nullopt;
-  }
+
   return broken_down_time_to_time_point(parts);
 }
 

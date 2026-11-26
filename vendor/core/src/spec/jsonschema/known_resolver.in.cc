@@ -79,6 +79,10 @@ enum class KnownSchema : std::uint8_t {
   UNKNOWN
 };
 
+// A dispatch over every identifier that a known schema answers to is a table
+// written as branches, so what it costs to read tracks how many schemas there
+// are rather than how much there is to follow
+// NOLINTNEXTLINE(readability-function-cognitive-complexity)
 static auto parse_identifier(const std::string_view identifier) -> KnownSchema {
   // JSON Schema 2020-12
   if (identifier == "https://json-schema.org/draft/2020-12/schema" ||

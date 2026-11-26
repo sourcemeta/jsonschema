@@ -144,10 +144,15 @@ auto to_valid_utf8(const std::string_view input) -> std::string {
     const auto lead{static_cast<unsigned char>(input[index])};
     const std::size_t width{utf8_lead_byte_size(lead)};
     std::size_t length{width == 0 ? std::size_t{0} : std::size_t{1}};
-    while (length > 0 && length < width && index + length < input.size() &&
+    while (length > 0 && index + length < input.size() &&
            is_utf8_tail(lead, length,
                         static_cast<unsigned char>(input[index + length]))) {
       length += 1;
+      // The sequence this lead opens is not well-formed, which is the only way
+      // this skip is reached, so one of the bytes it calls for has to be
+      // missing or inadmissible before the whole of it is consumed. Counting
+      // the bytes a second time here would be a bound nothing can reach
+      assert(length < width);
     }
 
     index += (length > 0 ? length : 1);

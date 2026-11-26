@@ -45,18 +45,20 @@ constexpr std::uint32_t ROOT_NODE{0};
 
 constexpr std::uint16_t FLAG_OPEN{1U << 0U};
 constexpr std::uint16_t FLAG_LAST_LINE_BLANK{1U << 1U};
-constexpr std::uint16_t FLAG_LAST_LINE_CHECKED{1U << 2U};
-constexpr std::uint16_t FLAG_TABLE_VISITED{1U << 3U};
-constexpr std::uint16_t FLAG_TASK{1U << 4U};
-constexpr std::uint16_t FLAG_CHECKED{1U << 5U};
-constexpr std::uint16_t FLAG_HEADER{1U << 6U};
-constexpr std::uint16_t FLAG_FENCED{1U << 7U};
-constexpr std::uint16_t FLAG_SETEXT{1U << 8U};
-constexpr std::uint16_t FLAG_TIGHT{1U << 9U};
-constexpr std::uint16_t FLAG_REFERENCED{1U << 10U};
-constexpr std::uint16_t FLAG_ATTACHED{1U << 11U};
-constexpr std::uint16_t FLAG_DETACHED{1U << 12U};
-constexpr std::uint16_t FLAG_REFERENCE_LINK{1U << 13U};
+constexpr std::uint16_t FLAG_TABLE_VISITED{1U << 2U};
+constexpr std::uint16_t FLAG_TASK{1U << 3U};
+constexpr std::uint16_t FLAG_CHECKED{1U << 4U};
+constexpr std::uint16_t FLAG_HEADER{1U << 5U};
+constexpr std::uint16_t FLAG_FENCED{1U << 6U};
+constexpr std::uint16_t FLAG_TIGHT{1U << 7U};
+constexpr std::uint16_t FLAG_REFERENCED{1U << 8U};
+constexpr std::uint16_t FLAG_ATTACHED{1U << 9U};
+constexpr std::uint16_t FLAG_DETACHED{1U << 10U};
+constexpr std::uint16_t FLAG_REFERENCE_LINK{1U << 11U};
+// The literal of a text node that the string arena holds rather than the
+// content of the document, which is what the pass that joins neighbouring text
+// reads to tell whether one view can cover both of them
+constexpr std::uint16_t FLAG_STORED{1U << 12U};
 
 // A block or inline element, whose generic fields mean different things for
 // different types of nodes, such as the fence of a code block or the numbering

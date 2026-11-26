@@ -1,6 +1,7 @@
 #ifndef SOURCEMETA_CORE_JSONPOINTER_POINTER_H_
 #define SOURCEMETA_CORE_JSONPOINTER_POINTER_H_
 
+#include <sourcemeta/core/json.h>
 #include <sourcemeta/core/jsonpointer_token.h>
 
 #include <algorithm>        // std::move, std::equal
@@ -637,10 +638,7 @@ public:
     requires(!std::is_same_v<std::decay_t<StringT>, Token>)
   [[nodiscard]] auto starts_with(const GenericPointer<PropertyT, Hash> &other,
                                  const StringT &tail) const -> bool {
-    const auto prefix_size{other.size()};
-    return this->size() > prefix_size && this->starts_with(other) &&
-           this->data_[prefix_size].is_property() &&
-           this->data_[prefix_size].to_property() == tail;
+    return this->starts_with_property(other, tail);
   }
 
   /// Check whether a JSON Pointer starts with another JSON Pointer followed
@@ -662,11 +660,7 @@ public:
   [[nodiscard]] auto starts_with(const GenericPointer<PropertyT, Hash> &other,
                                  const StringLeftT &tail_left,
                                  const StringRightT &tail_right) const -> bool {
-    const auto prefix_size{other.size()};
-    return this->size() > prefix_size + 1 &&
-           this->starts_with(other, tail_left) &&
-           this->data_[prefix_size + 1].is_property() &&
-           this->data_[prefix_size + 1].to_property() == tail_right;
+    return this->starts_with_property(other, tail_left, tail_right);
   }
 
   /// Check whether two JSON Pointers are equal up to a given number of
@@ -964,6 +958,29 @@ public:
   }
 
 private:
+  // The string type a caller spells reaches no further than the templates
+  // above, so each comparison below is written once instead of once per type,
+  // which is also what makes a single decision out of it
+  [[nodiscard]] auto
+  starts_with_property(const GenericPointer<PropertyT, Hash> &other,
+                       const JSON::StringView tail) const -> bool {
+    const auto prefix_size{other.size()};
+    return this->size() > prefix_size && this->starts_with(other) &&
+           this->data_[prefix_size].is_property() &&
+           this->data_[prefix_size].to_property() == tail;
+  }
+
+  [[nodiscard]] auto
+  starts_with_property(const GenericPointer<PropertyT, Hash> &other,
+                       const JSON::StringView tail_left,
+                       const JSON::StringView tail_right) const -> bool {
+    const auto prefix_size{other.size()};
+    return this->size() > prefix_size + 1 &&
+           this->starts_with_property(other, tail_left) &&
+           this->data_[prefix_size + 1].is_property() &&
+           this->data_[prefix_size + 1].to_property() == tail_right;
+  }
+
   Container data_;
 };
 
