@@ -16,7 +16,7 @@ RUN compile schema.json --entrypoint '/$$defs/My%3AName' STDIN /dev/null IN . IN
 
 WRITE expected.txt UNTIL EOF
 1> [
-1>   19,
+1>   20,
 1>   false,
 1>   false,
 1>   [

@@ -588,9 +588,6 @@ auto sourcemeta::jsonschema::inspect(const sourcemeta::core::Options &options)
     throw sourcemeta::core::FileError<
         sourcemeta::core::SchemaUnknownBaseDialectError>(
         schema_resolution_base);
-  } catch (const sourcemeta::core::SchemaUnknownDialectError &) {
-    throw sourcemeta::core::FileError<
-        sourcemeta::core::SchemaUnknownDialectError>(schema_resolution_base);
   } catch (const sourcemeta::core::SchemaError &error) {
     throw sourcemeta::core::FileError<sourcemeta::core::SchemaError>(
         schema_resolution_base, error);

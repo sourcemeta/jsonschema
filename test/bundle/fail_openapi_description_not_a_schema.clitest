@@ -27,6 +27,7 @@ WRITE expected_0.txt UNTIL EOF
 2> error: Could not resolve the reference to an external schema
 2>   at identifier [CWD_URI]/description.json
 2>   at file path [CWD]/schema.json
+2>   at location "/$ref"
 2>
 2> This is likely because the file does not exist, or does not hold a JSON Schema
 EOF
@@ -43,7 +44,8 @@ WRITE expected_1.txt UNTIL EOF
 1> {
 1>   "error": "Could not resolve the reference to an external schema",
 1>   "identifier": "[CWD_URI]/description.json",
-1>   "filePath": "[CWD]/schema.json"
+1>   "filePath": "[CWD]/schema.json",
+1>   "location": "/$ref"
 1> }
 EOF
 

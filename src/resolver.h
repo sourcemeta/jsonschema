@@ -1535,9 +1535,6 @@ private:
       throw sourcemeta::core::FileError<
           sourcemeta::core::SchemaUnknownBaseDialectError>(
           entry.resolution_base);
-    } catch (const sourcemeta::core::SchemaUnknownDialectError &) {
-      throw sourcemeta::core::FileError<
-          sourcemeta::core::SchemaUnknownDialectError>(entry.resolution_base);
     } catch (const sourcemeta::core::SchemaRelativeMetaschemaResolutionError
                  &error) {
       throw sourcemeta::core::FileError<

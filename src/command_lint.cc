@@ -306,9 +306,6 @@ static auto load_rule(sourcemeta::blaze::SchemaTransformer &bundle,
   } catch (const sourcemeta::core::SchemaUnknownBaseDialectError &) {
     throw sourcemeta::core::FileError<
         sourcemeta::core::SchemaUnknownBaseDialectError>(rule_path);
-  } catch (const sourcemeta::core::SchemaUnknownDialectError &) {
-    throw sourcemeta::core::FileError<
-        sourcemeta::core::SchemaUnknownDialectError>(rule_path);
   } catch (const sourcemeta::core::SchemaVocabularyError &error) {
     throw sourcemeta::core::FileError<sourcemeta::core::SchemaVocabularyError>(
         rule_path, error);
@@ -352,6 +349,365 @@ load_rules_from_options(sourcemeta::blaze::SchemaTransformer &bundle,
         options, options.contains("http"), dialect, configuration)};
     load_rule(bundle, rule_names, rule_path, dialect, custom_resolver,
               sourcemeta::jsonschema::format_assertion_tweaks(options), scope);
+  }
+}
+
+[[noreturn]] static auto
+rethrow_lint_entry_error(const sourcemeta::jsonschema::InputJSON &entry,
+                         const bool printed_progress) -> void {
+  try {
+    throw;
+  } catch (const sourcemeta::core::OpenAPIError &error) {
+    if (printed_progress) {
+      std::cerr << "\n";
+    }
+
+    const auto position{entry.positions.get(error.location())};
+    if (position.has_value()) {
+      throw sourcemeta::jsonschema::PositionError<
+          sourcemeta::core::FileError<sourcemeta::core::OpenAPIError>>(
+          std::get<0>(position.value()), std::get<1>(position.value()),
+          entry.resolution_base, error);
+    }
+
+    throw sourcemeta::core::FileError<sourcemeta::core::OpenAPIError>(
+        entry.resolution_base, error);
+  } catch (const sourcemeta::blaze::CompilerInvalidRegexError &error) {
+    if (printed_progress) {
+      std::cerr << "\n";
+    }
+
+    const auto position{entry.positions.get(error.location())};
+    if (position.has_value()) {
+      throw sourcemeta::jsonschema::PositionError<sourcemeta::core::FileError<
+          sourcemeta::blaze::CompilerInvalidRegexError>>(
+          std::get<0>(position.value()), std::get<1>(position.value()),
+          entry.resolution_base, error);
+    }
+
+    throw sourcemeta::core::FileError<
+        sourcemeta::blaze::CompilerInvalidRegexError>(entry.resolution_base,
+                                                      error);
+  } catch (const sourcemeta::blaze::CompilerError &error) {
+    if (printed_progress) {
+      std::cerr << "\n";
+    }
+
+    const auto position{entry.positions.get(error.location())};
+    if (position.has_value()) {
+      throw sourcemeta::jsonschema::PositionError<
+          sourcemeta::core::FileError<sourcemeta::blaze::CompilerError>>(
+          std::get<0>(position.value()), std::get<1>(position.value()),
+          entry.resolution_base, error);
+    }
+
+    throw sourcemeta::core::FileError<sourcemeta::blaze::CompilerError>(
+        entry.resolution_base, error);
+  } catch (
+      const sourcemeta::blaze::CompilerReferenceTargetNotSchemaError &error) {
+    if (printed_progress) {
+      std::cerr << "\n";
+    }
+
+    throw sourcemeta::core::FileError<
+        sourcemeta::blaze::CompilerReferenceTargetNotSchemaError>(
+        entry.resolution_base, error);
+  } catch (const sourcemeta::core::SchemaKeywordError &error) {
+    if (printed_progress) {
+      std::cerr << "\n";
+    }
+
+    throw sourcemeta::core::FileError<sourcemeta::core::SchemaKeywordError>(
+        entry.resolution_base, error);
+  } catch (const sourcemeta::core::SchemaFrameError &error) {
+    if (printed_progress) {
+      std::cerr << "\n";
+    }
+
+    throw sourcemeta::core::FileError<sourcemeta::core::SchemaFrameError>(
+        entry.resolution_base, error);
+  } catch (const sourcemeta::core::SchemaAnchorCollisionError &error) {
+    if (printed_progress) {
+      std::cerr << "\n";
+    }
+
+    const auto position{entry.positions.get(error.location())};
+    if (position.has_value()) {
+      throw sourcemeta::jsonschema::PositionError<sourcemeta::core::FileError<
+          sourcemeta::core::SchemaAnchorCollisionError>>(
+          std::get<0>(position.value()), std::get<1>(position.value()),
+          entry.resolution_base, error);
+    }
+
+    throw sourcemeta::core::FileError<
+        sourcemeta::core::SchemaAnchorCollisionError>(entry.resolution_base,
+                                                      error);
+  } catch (const sourcemeta::core::SchemaDialectImpossibleError &error) {
+    if (printed_progress) {
+      std::cerr << "\n";
+    }
+
+    const auto position{entry.positions.get(error.location())};
+    if (position.has_value()) {
+      throw sourcemeta::jsonschema::PositionError<sourcemeta::core::FileError<
+          sourcemeta::core::SchemaDialectImpossibleError>>(
+          std::get<0>(position.value()), std::get<1>(position.value()),
+          entry.resolution_base, error);
+    }
+
+    throw sourcemeta::core::FileError<
+        sourcemeta::core::SchemaDialectImpossibleError>(entry.resolution_base,
+                                                        error);
+  } catch (const sourcemeta::core::SchemaUnknownBaseDialectError &) {
+    if (printed_progress) {
+      std::cerr << "\n";
+    }
+
+    throw sourcemeta::core::FileError<
+        sourcemeta::core::SchemaUnknownBaseDialectError>(entry.resolution_base);
+  } catch (const sourcemeta::core::SchemaVocabularyError &error) {
+    if (printed_progress) {
+      std::cerr << "\n";
+    }
+
+    throw sourcemeta::core::FileError<sourcemeta::core::SchemaVocabularyError>(
+        entry.resolution_base, error);
+  } catch (const sourcemeta::core::SchemaResolutionError &error) {
+    if (printed_progress) {
+      std::cerr << "\n";
+    }
+
+    throw sourcemeta::core::FileError<sourcemeta::core::SchemaResolutionError>(
+        entry.resolution_base, error);
+  } catch (const sourcemeta::core::SchemaReferenceObjectResourceError &error) {
+    if (printed_progress) {
+      std::cerr << "\n";
+    }
+
+    throw sourcemeta::core::FileError<
+        sourcemeta::core::SchemaReferenceObjectResourceError>(
+        entry.resolution_base, error.identifier());
+  } catch (const sourcemeta::core::SchemaError &error) {
+    if (printed_progress) {
+      std::cerr << "\n";
+    }
+
+    throw sourcemeta::core::FileError<sourcemeta::core::SchemaError>(
+        entry.resolution_base, error);
+  } catch (...) {
+    if (printed_progress) {
+      std::cerr << "\n";
+    }
+
+    throw;
+  }
+}
+
+static auto lint_fix_entry(const sourcemeta::jsonschema::InputJSON &entry,
+                           const sourcemeta::core::Options &options,
+                           sourcemeta::blaze::SchemaTransformer &bundle,
+                           const bool output_json, const bool format_output,
+                           const bool keep_ordering,
+                           const std::size_t indentation,
+                           sourcemeta::core::JSON &errors_array,
+                           std::vector<std::uint8_t> &scores, bool &result)
+    -> void {
+  const auto configuration_path{sourcemeta::jsonschema::find_configuration(
+      options, entry.resolution_base)};
+  const auto &configuration{sourcemeta::jsonschema::read_configuration(
+      options, configuration_path, entry.resolution_base)};
+  const auto dialect{
+      sourcemeta::jsonschema::default_dialect(options, configuration)};
+
+  const auto &custom_resolver{sourcemeta::jsonschema::resolver(
+      options, options.contains("http"), dialect, configuration)};
+  sourcemeta::jsonschema::LOG_VERBOSE(options)
+      << "Linting: " << entry.first << "\n";
+  if (entry.multidocument) {
+    throw sourcemeta::jsonschema::MultiDocumentInputError{
+        "The --fix option is not supported for input with multiple "
+        "documents",
+        entry.resolution_base};
+  }
+
+  if (!entry.second.is_object() && !entry.second.is_boolean()) {
+    throw sourcemeta::jsonschema::NotSchemaError{entry.resolution_base};
+  }
+
+  sourcemeta::jsonschema::reject_unsupported_openapi(entry.second,
+                                                     entry.resolution_base);
+
+  const auto is_openapi{
+      sourcemeta::core::openapi_version(entry.second).has_value()};
+
+  auto copy = entry.second;
+  bool printed_progress{false};
+
+  const auto wrapper_result = sourcemeta::jsonschema::try_catch(options, [&]() {
+    try {
+      const auto apply_result =
+          is_openapi
+              ? apply_openapi(bundle, copy, entry, custom_resolver,
+                              get_lint_callback(errors_array, entry,
+                                                output_json, true,
+                                                printed_progress))
+              : bundle.apply(copy, sourcemeta::core::schema_walker,
+                             custom_resolver,
+                             get_lint_callback(errors_array, entry, output_json,
+                                               true, printed_progress),
+                             dialect, sourcemeta::jsonschema::default_id(entry),
+                             sourcemeta::core::JSON::String{EXCLUDE_KEYWORD});
+      if (printed_progress) {
+        std::cerr << "\n";
+      }
+      scores.emplace_back(apply_result.second);
+      if (!apply_result.first) {
+        return sourcemeta::jsonschema::EXIT_EXPECTED_FAILURE;
+      }
+
+      return EXIT_SUCCESS;
+    } catch (const sourcemeta::blaze::SchemaTransformRuleProcessedTwiceError
+                 &error) {
+      if (printed_progress) {
+        std::cerr << "\n";
+      }
+
+      const auto position{entry.positions.get(error.location())};
+      if (position.has_value()) {
+        throw sourcemeta::jsonschema::PositionError<
+            sourcemeta::jsonschema::LintAutoFixError>{
+            std::get<0>(position.value()), std::get<1>(position.value()),
+            error.what(), entry.resolution_base, error.location()};
+      }
+
+      throw sourcemeta::jsonschema::LintAutoFixError{
+          error.what(), entry.resolution_base, error.location()};
+    } catch (const sourcemeta::blaze::SchemaBrokenReferenceError &error) {
+      if (printed_progress) {
+        std::cerr << "\n";
+      }
+
+      const auto position{entry.positions.get(error.location())};
+      if (position.has_value()) {
+        throw sourcemeta::jsonschema::PositionError<
+            sourcemeta::jsonschema::LintAutoFixError>{
+            std::get<0>(position.value()), std::get<1>(position.value()),
+            "Could not autofix the schema without breaking its "
+            "internal references",
+            entry.resolution_base, error.location()};
+      }
+
+      throw sourcemeta::jsonschema::LintAutoFixError{
+          "Could not autofix the schema without breaking its internal "
+          "references",
+          entry.resolution_base, error.location()};
+    } catch (...) {
+      rethrow_lint_entry_error(entry, printed_progress);
+    }
+  });
+
+  if (wrapper_result == EXIT_SUCCESS ||
+      wrapper_result == sourcemeta::jsonschema::EXIT_EXPECTED_FAILURE) {
+    if (wrapper_result != EXIT_SUCCESS) {
+      result = false;
+    }
+
+    if (entry.from_stdin) {
+      if (format_output) {
+        if (!keep_ordering) {
+          format_document(copy, entry, custom_resolver, dialect, is_openapi);
+        }
+      }
+
+      sourcemeta::jsonschema::write_schema(copy, std::cout, indentation,
+                                           entry.roundtrip);
+    } else if (format_output) {
+      if (!keep_ordering) {
+        format_document(copy, entry, custom_resolver, dialect, is_openapi);
+      }
+
+      std::ostringstream expected;
+      sourcemeta::jsonschema::write_schema(copy, expected, indentation,
+                                           entry.roundtrip);
+
+      const auto current{
+          sourcemeta::core::read_file_to_string(entry.resolution_base)};
+
+      if (current != expected.str()) {
+        sourcemeta::core::atomic_write_file(entry.resolution_base,
+                                            expected.str());
+      }
+    } else if (copy != entry.second) {
+      sourcemeta::core::atomic_write_file(
+          entry.resolution_base,
+          [&copy, &indentation, &entry](std::ostream &stream) -> void {
+            sourcemeta::jsonschema::write_schema(copy, stream, indentation,
+                                                 entry.roundtrip);
+          });
+    }
+  } else {
+    throw sourcemeta::jsonschema::Fail{wrapper_result};
+  }
+}
+
+static auto lint_check_entry(const sourcemeta::jsonschema::InputJSON &entry,
+                             const sourcemeta::core::Options &options,
+                             sourcemeta::blaze::SchemaTransformer &bundle,
+                             const bool output_json,
+                             sourcemeta::core::JSON &errors_array,
+                             std::vector<std::uint8_t> &scores, bool &result)
+    -> void {
+  const auto configuration_path{sourcemeta::jsonschema::find_configuration(
+      options, entry.resolution_base)};
+  const auto &configuration{sourcemeta::jsonschema::read_configuration(
+      options, configuration_path, entry.resolution_base)};
+  const auto dialect{
+      sourcemeta::jsonschema::default_dialect(options, configuration)};
+  const auto &custom_resolver{sourcemeta::jsonschema::resolver(
+      options, options.contains("http"), dialect, configuration)};
+  if (!entry.second.is_object() && !entry.second.is_boolean()) {
+    throw sourcemeta::jsonschema::NotSchemaError{entry.resolution_base};
+  }
+
+  sourcemeta::jsonschema::reject_unsupported_openapi(entry.second,
+                                                     entry.resolution_base);
+
+  sourcemeta::jsonschema::LOG_VERBOSE(options)
+      << "Linting: " << entry.first << "\n";
+
+  const auto is_openapi{
+      sourcemeta::core::openapi_version(entry.second).has_value()};
+  bool printed_progress{false};
+  const auto wrapper_result = sourcemeta::jsonschema::try_catch(options, [&]() {
+    try {
+      const auto subresult =
+          is_openapi
+              ? check_openapi(bundle, entry, custom_resolver,
+                              get_lint_callback(errors_array, entry,
+                                                output_json, false,
+                                                printed_progress))
+              : bundle.check(entry.second, sourcemeta::core::schema_walker,
+                             custom_resolver,
+                             get_lint_callback(errors_array, entry, output_json,
+                                               false, printed_progress),
+                             dialect, sourcemeta::jsonschema::default_id(entry),
+                             sourcemeta::core::JSON::String{EXCLUDE_KEYWORD});
+      scores.emplace_back(subresult.second);
+      if (subresult.first) {
+        return EXIT_SUCCESS;
+      }
+
+      // Return 2 for logical lint failures
+      return sourcemeta::jsonschema::EXIT_EXPECTED_FAILURE;
+    } catch (...) {
+      rethrow_lint_entry_error(entry, false);
+    }
+  });
+
+  if (wrapper_result == sourcemeta::jsonschema::EXIT_EXPECTED_FAILURE) {
+    result = false;
+  } else if (wrapper_result != EXIT_SUCCESS) {
+    throw sourcemeta::jsonschema::Fail{wrapper_result};
   }
 }
 
@@ -518,469 +874,16 @@ auto sourcemeta::jsonschema::lint(const sourcemeta::core::Options &options)
     retag_openapi_stdin(entries);
 
     for (const auto &entry : entries) {
-      const auto configuration_path{
-          find_configuration(options, entry.resolution_base)};
-      const auto &configuration{read_configuration(options, configuration_path,
-                                                   entry.resolution_base)};
-      const auto dialect{default_dialect(options, configuration)};
-
-      const auto &custom_resolver{
-          resolver(options, options.contains("http"), dialect, configuration)};
-      LOG_VERBOSE(options) << "Linting: " << entry.first << "\n";
-      if (entry.multidocument) {
-        throw MultiDocumentInputError{
-            "The --fix option is not supported for input with multiple "
-            "documents",
-            entry.resolution_base};
-      }
-
-      if (!entry.second.is_object() && !entry.second.is_boolean()) {
-        throw NotSchemaError{entry.resolution_base};
-      }
-
-      reject_unsupported_openapi(entry.second, entry.resolution_base);
-
-      const auto is_openapi{
-          sourcemeta::core::openapi_version(entry.second).has_value()};
-
-      auto copy = entry.second;
-      bool printed_progress{false};
-
-      const auto wrapper_result =
-          sourcemeta::jsonschema::try_catch(options, [&]() {
-            try {
-              const auto apply_result =
-                  is_openapi
-                      ? apply_openapi(bundle, copy, entry, custom_resolver,
-                                      get_lint_callback(errors_array, entry,
-                                                        output_json, true,
-                                                        printed_progress))
-                      : bundle.apply(
-                            copy, sourcemeta::core::schema_walker,
-                            custom_resolver,
-                            get_lint_callback(errors_array, entry, output_json,
-                                              true, printed_progress),
-                            dialect, sourcemeta::jsonschema::default_id(entry),
-                            sourcemeta::core::JSON::String{EXCLUDE_KEYWORD});
-              if (printed_progress) {
-                std::cerr << "\n";
-              }
-              scores.emplace_back(apply_result.second);
-              if (!apply_result.first) {
-                return EXIT_EXPECTED_FAILURE;
-              }
-
-              return EXIT_SUCCESS;
-            } catch (const sourcemeta::core::OpenAPIError &error) {
-              if (printed_progress) {
-                std::cerr << "\n";
-              }
-
-              const auto position{entry.positions.get(error.location())};
-              if (position.has_value()) {
-                throw PositionError<sourcemeta::core::FileError<
-                    sourcemeta::core::OpenAPIError>>(
-                    std::get<0>(position.value()),
-                    std::get<1>(position.value()), entry.resolution_base,
-                    error);
-              }
-
-              throw sourcemeta::core::FileError<sourcemeta::core::OpenAPIError>(
-                  entry.resolution_base, error);
-            } catch (
-                const sourcemeta::blaze::SchemaTransformRuleProcessedTwiceError
-                    &error) {
-              if (printed_progress) {
-                std::cerr << "\n";
-              }
-
-              const auto position{entry.positions.get(error.location())};
-              if (position.has_value()) {
-                throw PositionError<LintAutoFixError>{
-                    std::get<0>(position.value()),
-                    std::get<1>(position.value()), error.what(),
-                    entry.resolution_base, error.location()};
-              }
-
-              throw LintAutoFixError{error.what(), entry.resolution_base,
-                                     error.location()};
-            } catch (
-                const sourcemeta::blaze::SchemaBrokenReferenceError &error) {
-              if (printed_progress) {
-                std::cerr << "\n";
-              }
-
-              const auto position{entry.positions.get(error.location())};
-              if (position.has_value()) {
-                throw PositionError<LintAutoFixError>{
-                    std::get<0>(position.value()),
-                    std::get<1>(position.value()),
-                    "Could not autofix the schema without breaking its "
-                    "internal references",
-                    entry.resolution_base, error.location()};
-              }
-
-              throw LintAutoFixError{
-                  "Could not autofix the schema without breaking its internal "
-                  "references",
-                  entry.resolution_base, error.location()};
-            } catch (
-                const sourcemeta::blaze::CompilerInvalidRegexError &error) {
-              if (printed_progress) {
-                std::cerr << "\n";
-              }
-
-              const auto position{entry.positions.get(error.location())};
-              if (position.has_value()) {
-                throw PositionError<sourcemeta::core::FileError<
-                    sourcemeta::blaze::CompilerInvalidRegexError>>(
-                    std::get<0>(position.value()),
-                    std::get<1>(position.value()), entry.resolution_base,
-                    error);
-              }
-
-              throw sourcemeta::core::FileError<
-                  sourcemeta::blaze::CompilerInvalidRegexError>(
-                  entry.resolution_base, error);
-            } catch (const sourcemeta::blaze::CompilerError &error) {
-              if (printed_progress) {
-                std::cerr << "\n";
-              }
-
-              const auto position{entry.positions.get(error.location())};
-              if (position.has_value()) {
-                throw PositionError<sourcemeta::core::FileError<
-                    sourcemeta::blaze::CompilerError>>(
-                    std::get<0>(position.value()),
-                    std::get<1>(position.value()), entry.resolution_base,
-                    error);
-              }
-
-              throw sourcemeta::core::FileError<
-                  sourcemeta::blaze::CompilerError>(entry.resolution_base,
-                                                    error);
-            } catch (
-                const sourcemeta::blaze::CompilerReferenceTargetNotSchemaError
-                    &error) {
-              if (printed_progress) {
-                std::cerr << "\n";
-              }
-
-              throw sourcemeta::core::FileError<
-                  sourcemeta::blaze::CompilerReferenceTargetNotSchemaError>(
-                  entry.resolution_base, error);
-            } catch (const sourcemeta::core::SchemaKeywordError &error) {
-              if (printed_progress) {
-                std::cerr << "\n";
-              }
-
-              throw sourcemeta::core::FileError<
-                  sourcemeta::core::SchemaKeywordError>(entry.resolution_base,
-                                                        error);
-            } catch (const sourcemeta::core::SchemaFrameError &error) {
-              if (printed_progress) {
-                std::cerr << "\n";
-              }
-
-              throw sourcemeta::core::FileError<
-                  sourcemeta::core::SchemaFrameError>(entry.resolution_base,
-                                                      error);
-            } catch (
-                const sourcemeta::core::SchemaAnchorCollisionError &error) {
-              if (printed_progress) {
-                std::cerr << "\n";
-              }
-
-              const auto position{entry.positions.get(error.location())};
-              if (position.has_value()) {
-                throw PositionError<sourcemeta::core::FileError<
-                    sourcemeta::core::SchemaAnchorCollisionError>>(
-                    std::get<0>(position.value()),
-                    std::get<1>(position.value()), entry.resolution_base,
-                    error);
-              }
-
-              throw sourcemeta::core::FileError<
-                  sourcemeta::core::SchemaAnchorCollisionError>(
-                  entry.resolution_base, error);
-            } catch (
-                const sourcemeta::core::SchemaDialectImpossibleError &error) {
-              if (printed_progress) {
-                std::cerr << "\n";
-              }
-
-              const auto position{entry.positions.get(error.location())};
-              if (position.has_value()) {
-                throw PositionError<sourcemeta::core::FileError<
-                    sourcemeta::core::SchemaDialectImpossibleError>>(
-                    std::get<0>(position.value()),
-                    std::get<1>(position.value()), entry.resolution_base,
-                    error);
-              }
-
-              throw sourcemeta::core::FileError<
-                  sourcemeta::core::SchemaDialectImpossibleError>(
-                  entry.resolution_base, error);
-            } catch (const sourcemeta::core::SchemaUnknownBaseDialectError &) {
-              if (printed_progress) {
-                std::cerr << "\n";
-              }
-
-              throw sourcemeta::core::FileError<
-                  sourcemeta::core::SchemaUnknownBaseDialectError>(
-                  entry.resolution_base);
-            } catch (const sourcemeta::core::SchemaUnknownDialectError &) {
-              if (printed_progress) {
-                std::cerr << "\n";
-              }
-
-              throw sourcemeta::core::FileError<
-                  sourcemeta::core::SchemaUnknownDialectError>(
-                  entry.resolution_base);
-            } catch (const sourcemeta::core::SchemaVocabularyError &error) {
-              if (printed_progress) {
-                std::cerr << "\n";
-              }
-
-              throw sourcemeta::core::FileError<
-                  sourcemeta::core::SchemaVocabularyError>(
-                  entry.resolution_base, error);
-            } catch (const sourcemeta::core::SchemaResolutionError &error) {
-              if (printed_progress) {
-                std::cerr << "\n";
-              }
-
-              throw sourcemeta::core::FileError<
-                  sourcemeta::core::SchemaResolutionError>(
-                  entry.resolution_base, error);
-            } catch (const sourcemeta::core::SchemaReferenceObjectResourceError
-                         &error) {
-              if (printed_progress) {
-                std::cerr << "\n";
-              }
-
-              throw sourcemeta::core::FileError<
-                  sourcemeta::core::SchemaReferenceObjectResourceError>(
-                  entry.resolution_base, error.identifier());
-            } catch (const sourcemeta::core::SchemaError &error) {
-              if (printed_progress) {
-                std::cerr << "\n";
-              }
-
-              throw sourcemeta::core::FileError<sourcemeta::core::SchemaError>(
-                  entry.resolution_base, error);
-            } catch (...) {
-              if (printed_progress) {
-                std::cerr << "\n";
-              }
-
-              throw;
-            }
-          });
-
-      if (wrapper_result == EXIT_SUCCESS ||
-          wrapper_result == EXIT_EXPECTED_FAILURE) {
-        if (wrapper_result != EXIT_SUCCESS) {
-          result = false;
-        }
-
-        if (entry.from_stdin) {
-          if (format_output) {
-            if (!keep_ordering) {
-              format_document(copy, entry, custom_resolver, dialect,
-                              is_openapi);
-            }
-          }
-
-          sourcemeta::jsonschema::write_schema(copy, std::cout, indentation,
-                                               entry.roundtrip);
-        } else if (format_output) {
-          if (!keep_ordering) {
-            format_document(copy, entry, custom_resolver, dialect, is_openapi);
-          }
-
-          std::ostringstream expected;
-          sourcemeta::jsonschema::write_schema(copy, expected, indentation,
-                                               entry.roundtrip);
-
-          const auto current{
-              sourcemeta::core::read_file_to_string(entry.resolution_base)};
-
-          if (current != expected.str()) {
-            sourcemeta::core::atomic_write_file(entry.resolution_base,
-                                                expected.str());
-          }
-        } else if (copy != entry.second) {
-          sourcemeta::core::atomic_write_file(
-              entry.resolution_base,
-              [&copy, &indentation, &entry](std::ostream &stream) -> void {
-                sourcemeta::jsonschema::write_schema(copy, stream, indentation,
-                                                     entry.roundtrip);
-              });
-        }
-      } else {
-        throw Fail{wrapper_result};
-      }
+      lint_fix_entry(entry, options, bundle, output_json, format_output,
+                     keep_ordering, indentation, errors_array, scores, result);
     }
   } else {
     auto entries = for_each_json(options);
     retag_openapi_stdin(entries);
 
     for (const auto &entry : entries) {
-      const auto configuration_path{
-          find_configuration(options, entry.resolution_base)};
-      const auto &configuration{read_configuration(options, configuration_path,
-                                                   entry.resolution_base)};
-      const auto dialect{default_dialect(options, configuration)};
-      const auto &custom_resolver{
-          resolver(options, options.contains("http"), dialect, configuration)};
-      if (!entry.second.is_object() && !entry.second.is_boolean()) {
-        throw NotSchemaError{entry.resolution_base};
-      }
-
-      reject_unsupported_openapi(entry.second, entry.resolution_base);
-
-      LOG_VERBOSE(options) << "Linting: " << entry.first << "\n";
-
-      const auto is_openapi{
-          sourcemeta::core::openapi_version(entry.second).has_value()};
-      bool printed_progress{false};
-      const auto wrapper_result =
-          sourcemeta::jsonschema::try_catch(options, [&]() {
-            try {
-              const auto subresult =
-                  is_openapi
-                      ? check_openapi(bundle, entry, custom_resolver,
-                                      get_lint_callback(errors_array, entry,
-                                                        output_json, false,
-                                                        printed_progress))
-                      : bundle.check(
-                            entry.second, sourcemeta::core::schema_walker,
-                            custom_resolver,
-                            get_lint_callback(errors_array, entry, output_json,
-                                              false, printed_progress),
-                            dialect, sourcemeta::jsonschema::default_id(entry),
-                            sourcemeta::core::JSON::String{EXCLUDE_KEYWORD});
-              scores.emplace_back(subresult.second);
-              if (subresult.first) {
-                return EXIT_SUCCESS;
-              }
-
-              // Return 2 for logical lint failures
-              return EXIT_EXPECTED_FAILURE;
-            } catch (const sourcemeta::core::OpenAPIError &error) {
-              const auto position{entry.positions.get(error.location())};
-              if (position.has_value()) {
-                throw PositionError<sourcemeta::core::FileError<
-                    sourcemeta::core::OpenAPIError>>(
-                    std::get<0>(position.value()),
-                    std::get<1>(position.value()), entry.resolution_base,
-                    error);
-              }
-
-              throw sourcemeta::core::FileError<sourcemeta::core::OpenAPIError>(
-                  entry.resolution_base, error);
-            } catch (
-                const sourcemeta::blaze::CompilerInvalidRegexError &error) {
-              const auto position{entry.positions.get(error.location())};
-              if (position.has_value()) {
-                throw PositionError<sourcemeta::core::FileError<
-                    sourcemeta::blaze::CompilerInvalidRegexError>>(
-                    std::get<0>(position.value()),
-                    std::get<1>(position.value()), entry.resolution_base,
-                    error);
-              }
-
-              throw sourcemeta::core::FileError<
-                  sourcemeta::blaze::CompilerInvalidRegexError>(
-                  entry.resolution_base, error);
-            } catch (const sourcemeta::blaze::CompilerError &error) {
-              const auto position{entry.positions.get(error.location())};
-              if (position.has_value()) {
-                throw PositionError<sourcemeta::core::FileError<
-                    sourcemeta::blaze::CompilerError>>(
-                    std::get<0>(position.value()),
-                    std::get<1>(position.value()), entry.resolution_base,
-                    error);
-              }
-
-              throw sourcemeta::core::FileError<
-                  sourcemeta::blaze::CompilerError>(entry.resolution_base,
-                                                    error);
-            } catch (
-                const sourcemeta::blaze::CompilerReferenceTargetNotSchemaError
-                    &error) {
-              throw sourcemeta::core::FileError<
-                  sourcemeta::blaze::CompilerReferenceTargetNotSchemaError>(
-                  entry.resolution_base, error);
-            } catch (const sourcemeta::core::SchemaKeywordError &error) {
-              throw sourcemeta::core::FileError<
-                  sourcemeta::core::SchemaKeywordError>(entry.resolution_base,
-                                                        error);
-            } catch (const sourcemeta::core::SchemaFrameError &error) {
-              throw sourcemeta::core::FileError<
-                  sourcemeta::core::SchemaFrameError>(entry.resolution_base,
-                                                      error);
-            } catch (
-                const sourcemeta::core::SchemaAnchorCollisionError &error) {
-              const auto position{entry.positions.get(error.location())};
-              if (position.has_value()) {
-                throw PositionError<sourcemeta::core::FileError<
-                    sourcemeta::core::SchemaAnchorCollisionError>>(
-                    std::get<0>(position.value()),
-                    std::get<1>(position.value()), entry.resolution_base,
-                    error);
-              }
-
-              throw sourcemeta::core::FileError<
-                  sourcemeta::core::SchemaAnchorCollisionError>(
-                  entry.resolution_base, error);
-            } catch (
-                const sourcemeta::core::SchemaDialectImpossibleError &error) {
-              const auto position{entry.positions.get(error.location())};
-              if (position.has_value()) {
-                throw PositionError<sourcemeta::core::FileError<
-                    sourcemeta::core::SchemaDialectImpossibleError>>(
-                    std::get<0>(position.value()),
-                    std::get<1>(position.value()), entry.resolution_base,
-                    error);
-              }
-
-              throw sourcemeta::core::FileError<
-                  sourcemeta::core::SchemaDialectImpossibleError>(
-                  entry.resolution_base, error);
-            } catch (const sourcemeta::core::SchemaUnknownBaseDialectError &) {
-              throw sourcemeta::core::FileError<
-                  sourcemeta::core::SchemaUnknownBaseDialectError>(
-                  entry.resolution_base);
-            } catch (const sourcemeta::core::SchemaUnknownDialectError &) {
-              throw sourcemeta::core::FileError<
-                  sourcemeta::core::SchemaUnknownDialectError>(
-                  entry.resolution_base);
-            } catch (const sourcemeta::core::SchemaVocabularyError &error) {
-              throw sourcemeta::core::FileError<
-                  sourcemeta::core::SchemaVocabularyError>(
-                  entry.resolution_base, error);
-            } catch (const sourcemeta::core::SchemaResolutionError &error) {
-              throw sourcemeta::core::FileError<
-                  sourcemeta::core::SchemaResolutionError>(
-                  entry.resolution_base, error);
-            } catch (const sourcemeta::core::SchemaReferenceObjectResourceError
-                         &error) {
-              throw sourcemeta::core::FileError<
-                  sourcemeta::core::SchemaReferenceObjectResourceError>(
-                  entry.resolution_base, error.identifier());
-            } catch (const sourcemeta::core::SchemaError &error) {
-              throw sourcemeta::core::FileError<sourcemeta::core::SchemaError>(
-                  entry.resolution_base, error);
-            }
-          });
-
-      if (wrapper_result == EXIT_EXPECTED_FAILURE) {
-        result = false;
-      } else if (wrapper_result != EXIT_SUCCESS) {
-        throw Fail{wrapper_result};
-      }
+      lint_check_entry(entry, options, bundle, output_json, errors_array,
+                       scores, result);
     }
   }
 
